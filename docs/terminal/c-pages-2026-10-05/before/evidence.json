@@ -1,0 +1,963 @@
+{
+  "mocked": true,
+  "root": "/workspace/scratch/0535040d28c6/terminal-job-c",
+  "results": [
+    {
+      "tab": "gravity",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T08:32:39.128Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1922,
+      "scrollWidth": 1280,
+      "screens": 2.4025,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n6. Gravity map\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Gravity · Change view\n⏰ Time Gravity Map\n\nMU • 249.35\n\n68%\nConfidence\n🎯\nTARGET ACTIVE: 253.00\nAlignment: 68%\n5 active targets\n⚠️ Moderate gravity zone at 253.00 | Confidence: 68%\nPRICE GRAVITY MAP\nCurrent: 249.35\n254.34\n89%\n253.84\n92%\n253.34\n93%\n252.84\n100%\n252.34\n87%\n251.84\n52%\n251.35\n54%\n250.85\n56%\n250.35\n45%\n249.85\n37%\n249.35\n32%\n248.85\n28%\n248.35\n25%\n247.85\n23%\n247.36\n21%\n246.86\n19%\n246.36\n18%\n245.86\n16%\n245.36\n15%\n244.86\n14%\n244.36\n13%\nAOI TARGET ZONES\n#1\n252.00–254.00\n68%\n1H • 4H • 1D\n⚠️ 5 debt\nAI ANALYST\n⚠️ Moderate gravity zone at 253.00 | Confidence: 68%\nStrongest gravity above at 253.00 (1H, 4H, 1D). 0 active decompression windows. 2 TFs in 1 close stack(s). 3 TF(s) close today (highest: 1D).\n💡 Monitor for decompression window activation\nMIDPOINT LADDER\n5Y\n—\n1Y\n—\n3M\n—\n1M\n10-02 20:00 UTC\n🔴\n254.00\n(253–254)\n+1.00%\n1W\n10-02 20:00 UTC\n🔴\n253.50\n(253–254)\n+1.00%\n1D\n10-02 20:00 UTC\n🔴\n253.00\n(252–253)\n+1.00%\n8H\n—\n6H\n—\n4H\n10-02 20:00 UTC\n🔴\n252.50\n(252–253)\n+1.00%\n2H\n—\n1H\n10-02 20:00 UTC\n🔴\n252.00\n(251–252)\n+1.00%\n30m\n—\n15m\n—\n🔴 Debt | 🔵 Active | 🟡 Pre-Window | 🟢 Tagged | ⚪ Compression\nDECOMPRESSION WINDOWS\n15m\n—\n30m\n—\n1H\nCOMPRESSION\n0h 21m\n0%\n2H\n—\n4H\nCOMPRESSION\n0h 18m\n0%\n6H\n—\n8H\n—\n1D\nCOMPRESSION\n3h 30m\n0%\n1W\nCOMPRESSION\n46h 0m\n0%\n1M\nCOMPRESSION\n674h 30m\n0%\nMIDPOINT DEBT\n5\nUnresolved\n0\nTagged\n1\nClusters\nTop Cluster\n253.00\n5 midpoints • Gravity: 30\nCLOSE CONFLUENCE\n📅\n3 TFs close today\n(highest: 1D)\n⚡\n1H + 4H\n1.15x\nWindow: 0m\nQuality: 21%\nΣw: 5.5\nDATA COVERAGE\n100%\n1H\n4H\n1D\n1W\n1M\nLast update: 7:32:38 PM\n5 active • 0 tagged",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0,
+      "verdicts": [],
+      "sourceCount": 0,
+      "allOpen": {
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n6. Gravity map\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Gravity · Change view\n⏰ Time Gravity Map\n\nMU • 249.35\n\n68%\nConfidence\n🎯\nTARGET ACTIVE: 253.00\nAlignment: 68%\n5 active targets\n⚠️ Moderate gravity zone at 253.00 | Confidence: 68%\nPRICE GRAVITY MAP\nCurrent: 249.35\n254.34\n89%\n253.84\n92%\n253.34\n93%\n252.84\n100%\n252.34\n87%\n251.84\n52%\n251.35\n54%\n250.85\n56%\n250.35\n45%\n249.85\n37%\n249.35\n32%\n248.85\n28%\n248.35\n25%\n247.85\n23%\n247.36\n21%\n246.86\n19%\n246.36\n18%\n245.86\n16%\n245.36\n15%\n244.86\n14%\n244.36\n13%\nAOI TARGET ZONES\n#1\n252.00–254.00\n68%\n1H • 4H • 1D\n⚠️ 5 debt\nAI ANALYST\n⚠️ Moderate gravity zone at 253.00 | Confidence: 68%\nStrongest gravity above at 253.00 (1H, 4H, 1D). 0 active decompression windows. 2 TFs in 1 close stack(s). 3 TF(s) close today (highest: 1D).\n💡 Monitor for decompression window activation\nMIDPOINT LADDER\n5Y\n—\n1Y\n—\n3M\n—\n1M\n10-02 20:00 UTC\n🔴\n254.00\n(253–254)\n+1.00%\n1W\n10-02 20:00 UTC\n🔴\n253.50\n(253–254)\n+1.00%\n1D\n10-02 20:00 UTC\n🔴\n253.00\n(252–253)\n+1.00%\n8H\n—\n6H\n—\n4H\n10-02 20:00 UTC\n🔴\n252.50\n(252–253)\n+1.00%\n2H\n—\n1H\n10-02 20:00 UTC\n🔴\n252.00\n(251–252)\n+1.00%\n30m\n—\n15m\n—\n🔴 Debt | 🔵 Active | 🟡 Pre-Window | 🟢 Tagged | ⚪ Compression\nDECOMPRESSION WINDOWS\n15m\n—\n30m\n—\n1H\nCOMPRESSION\n0h 21m\n0%\n2H\n—\n4H\nCOMPRESSION\n0h 18m\n0%\n6H\n—\n8H\n—\n1D\nCOMPRESSION\n3h 30m\n0%\n1W\nCOMPRESSION\n46h 0m\n0%\n1M\nCOMPRESSION\n674h 30m\n0%\nMIDPOINT DEBT\n5\nUnresolved\n0\nTagged\n1\nClusters\nTop Cluster\n253.00\n5 midpoints • Gravity: 30\nCLOSE CONFLUENCE\n📅\n3 TFs close today\n(highest: 1D)\n⚡\n1H + 4H\n1.15x\nWindow: 0m\nQuality: 21%\nΣw: 5.5\nDATA COVERAGE\n100%\n1H\n4H\n1D\n1W\n1M\nLast update: 7:32:38 PM\n5 active • 0 tagged",
+        "scrollWidth": 1280,
+        "sourceCount": 0
+      }
+    },
+    {
+      "tab": "gravity",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T08:32:41.321Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 2939,
+      "scrollWidth": 390,
+      "screens": 3.4822274881516586,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n6. Gravity map\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Gravity · Change view\n⏰ Time Gravity Map\n\nMU • 249.35\n\n68%\nConfidence\n🎯\nTARGET ACTIVE: 253.00\nAlignment: 68%\n5 active targets\n⚠️ Moderate gravity zone at 253.00 | Confidence: 68%\nPRICE GRAVITY MAP\nCurrent: 249.35\n254.34\n89%\n253.84\n92%\n253.34\n93%\n252.84\n100%\n252.34\n87%\n251.84\n52%\n251.35\n54%\n250.85\n56%\n250.35\n45%\n249.85\n37%\n249.35\n32%\n248.85\n28%\n248.35\n25%\n247.85\n23%\n247.36\n21%\n246.86\n19%\n246.36\n18%\n245.86\n16%\n245.36\n15%\n244.86\n14%\n244.36\n13%\nAOI TARGET ZONES\n#1\n252.00–254.00\n68%\n1H • 4H • 1D\n⚠️ 5 debt\nAI ANALYST\n⚠️ Moderate gravity zone at 253.00 | Confidence: 68%\nStrongest gravity above at 253.00 (1H, 4H, 1D). 0 active decompression windows. 2 TFs in 1 close stack(s). 3 TF(s) close today (highest: 1D).\n💡 Monitor for decompression window activation\nMIDPOINT LADDER\n5Y\n—\n1Y\n—\n3M\n—\n1M\n10-02 20:00 UTC\n🔴\n254.00\n(253–254)\n+1.00%\n1W\n10-02 20:00 UTC\n🔴\n253.50\n(253–254)\n+1.00%\n1D\n10-02 20:00 UTC\n🔴\n253.00\n(252–253)\n+1.00%\n8H\n—\n6H\n—\n4H\n10-02 20:00 UTC\n🔴\n252.50\n(252–253)\n+1.00%\n2H\n—\n1H\n10-02 20:00 UTC\n🔴\n252.00\n(251–252)\n+1.00%\n30m\n—\n15m\n—\n🔴 Debt | 🔵 Active | 🟡 Pre-Window | 🟢 Tagged | ⚪ Compression\nDECOMPRESSION WINDOWS\n15m\n—\n30m\n—\n1H\nCOMPRESSION\n0h 21m\n0%\n2H\n—\n4H\nCOMPRESSION\n0h 18m\n0%\n6H\n—\n8H\n—\n1D\nCOMPRESSION\n3h 30m\n0%\n1W\nCOMPRESSION\n46h 0m\n0%\n1M\nCOMPRESSION\n674h 30m\n0%\nMIDPOINT DEBT\n5\nUnresolved\n0\nTagged\n1\nClusters\nTop Cluster\n253.00\n5 midpoints • Gravity: 30\nCLOSE CONFLUENCE\n📅\n3 TFs close today\n(highest: 1D)\n⚡\n1H + 4H\n1.15x\nWindow: 0m\nQuality: 21%\nΣw: 5.5\nDATA COVERAGE\n100%\n1H\n4H\n1D\n1W\n1M\nLast update: 7:32:40 PM\n5 active • 0 tagged",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0,
+      "verdicts": [],
+      "sourceCount": 0,
+      "allOpen": {
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n6. Gravity map\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Gravity · Change view\n⏰ Time Gravity Map\n\nMU • 249.35\n\n68%\nConfidence\n🎯\nTARGET ACTIVE: 253.00\nAlignment: 68%\n5 active targets\n⚠️ Moderate gravity zone at 253.00 | Confidence: 68%\nPRICE GRAVITY MAP\nCurrent: 249.35\n254.34\n89%\n253.84\n92%\n253.34\n93%\n252.84\n100%\n252.34\n87%\n251.84\n52%\n251.35\n54%\n250.85\n56%\n250.35\n45%\n249.85\n37%\n249.35\n32%\n248.85\n28%\n248.35\n25%\n247.85\n23%\n247.36\n21%\n246.86\n19%\n246.36\n18%\n245.86\n16%\n245.36\n15%\n244.86\n14%\n244.36\n13%\nAOI TARGET ZONES\n#1\n252.00–254.00\n68%\n1H • 4H • 1D\n⚠️ 5 debt\nAI ANALYST\n⚠️ Moderate gravity zone at 253.00 | Confidence: 68%\nStrongest gravity above at 253.00 (1H, 4H, 1D). 0 active decompression windows. 2 TFs in 1 close stack(s). 3 TF(s) close today (highest: 1D).\n💡 Monitor for decompression window activation\nMIDPOINT LADDER\n5Y\n—\n1Y\n—\n3M\n—\n1M\n10-02 20:00 UTC\n🔴\n254.00\n(253–254)\n+1.00%\n1W\n10-02 20:00 UTC\n🔴\n253.50\n(253–254)\n+1.00%\n1D\n10-02 20:00 UTC\n🔴\n253.00\n(252–253)\n+1.00%\n8H\n—\n6H\n—\n4H\n10-02 20:00 UTC\n🔴\n252.50\n(252–253)\n+1.00%\n2H\n—\n1H\n10-02 20:00 UTC\n🔴\n252.00\n(251–252)\n+1.00%\n30m\n—\n15m\n—\n🔴 Debt | 🔵 Active | 🟡 Pre-Window | 🟢 Tagged | ⚪ Compression\nDECOMPRESSION WINDOWS\n15m\n—\n30m\n—\n1H\nCOMPRESSION\n0h 21m\n0%\n2H\n—\n4H\nCOMPRESSION\n0h 18m\n0%\n6H\n—\n8H\n—\n1D\nCOMPRESSION\n3h 30m\n0%\n1W\nCOMPRESSION\n46h 0m\n0%\n1M\nCOMPRESSION\n674h 30m\n0%\nMIDPOINT DEBT\n5\nUnresolved\n0\nTagged\n1\nClusters\nTop Cluster\n253.00\n5 midpoints • Gravity: 30\nCLOSE CONFLUENCE\n📅\n3 TFs close today\n(highest: 1D)\n⚡\n1H + 4H\n1.15x\nWindow: 0m\nQuality: 21%\nΣw: 5.5\nDATA COVERAGE\n100%\n1H\n4H\n1D\n1W\n1M\nLast update: 7:32:40 PM\n5 active • 0 tagged",
+        "scrollWidth": 390,
+        "sourceCount": 0
+      }
+    },
+    {
+      "tab": "capital",
+      "symbol": "SPY",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T08:32:42.940Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1637,
+      "scrollWidth": 1280,
+      "screens": 2.04625,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n5. Capital pressure\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nSPY\nMore symbols\nCapital Pressure · Change view\nCapital Flow — SPY\nas of 6:00:00 AM\n↻ Refresh\n\nUnavailable: US equity market closed (weekend or holiday). Next-open read: Trade Permission Score 42 is below the standard 68. Directional scores and scenario weights are indicator summaries, not calibrated outcome probabilities; permission takes precedence.\n\nBIAS\nBullish\nMODE\nPin\nGAMMA\nUNKNOWN\nUnavailable (no gamma input in this response)\nDIRECTIONAL SCORE\n74\nSPOT\n$249.35\nScenario weights · heuristic\nCONTINUATION\n60/100\nPIN / REVERSION\n20/100\nEXPANSION\n20/100\nREGIME\nNO TREND\nContinuation\nPin\nExpansion\nBrain Decision\nBRAIN SCORE\n71\nSTATUS\nNOT ALIGNED\nRISK MODE\nDEFENSIVE\nREGIME\nNO TREND\nIndicator Alignment\nTPS\n42\nRisk Mode\n—\nWeighting Factor\n0.00x\nAnalysis Mode\n—\nUnavailable: US equity market closed (weekend or holiday). Next-open read: Trade Permission Score 42 is below the standard 68\nRisk Analysis\nIRS Score\n32\nRisk Mode\nDEFENSIVE\nConditions\nNot Aligned\nVol Regime\n—\nWeighting\n—\nLiquidity Levels\nLEVEL\tLABEL\tHEURISTIC WEIGHT\n$245.00\tPDL\t63/100\n$256.00\tPDH\t45/100\nKey Strikes\n$250\nGravity:\nCALL HEAVY\nFlip Zones\n$248\nBULLISH ABOVE",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "SPY"
+        }
+      ],
+      "openFolds": 0,
+      "verdicts": [],
+      "sourceCount": 0,
+      "allOpen": {
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n5. Capital pressure\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nSPY\nMore symbols\nCapital Pressure · Change view\nCapital Flow — SPY\nas of 6:00:00 AM\n↻ Refresh\n\nUnavailable: US equity market closed (weekend or holiday). Next-open read: Trade Permission Score 42 is below the standard 68. Directional scores and scenario weights are indicator summaries, not calibrated outcome probabilities; permission takes precedence.\n\nBIAS\nBullish\nMODE\nPin\nGAMMA\nUNKNOWN\nUnavailable (no gamma input in this response)\nDIRECTIONAL SCORE\n74\nSPOT\n$249.35\nScenario weights · heuristic\nCONTINUATION\n60/100\nPIN / REVERSION\n20/100\nEXPANSION\n20/100\nREGIME\nNO TREND\nContinuation\nPin\nExpansion\nBrain Decision\nBRAIN SCORE\n71\nSTATUS\nNOT ALIGNED\nRISK MODE\nDEFENSIVE\nREGIME\nNO TREND\nIndicator Alignment\nTPS\n42\nRisk Mode\n—\nWeighting Factor\n0.00x\nAnalysis Mode\n—\nUnavailable: US equity market closed (weekend or holiday). Next-open read: Trade Permission Score 42 is below the standard 68\nRisk Analysis\nIRS Score\n32\nRisk Mode\nDEFENSIVE\nConditions\nNot Aligned\nVol Regime\n—\nWeighting\n—\nLiquidity Levels\nLEVEL\tLABEL\tHEURISTIC WEIGHT\n$245.00\tPDL\t63/100\n$256.00\tPDH\t45/100\nKey Strikes\n$250\nGravity:\nCALL HEAVY\nFlip Zones\n$248\nBULLISH ABOVE",
+        "scrollWidth": 1280,
+        "sourceCount": 0
+      }
+    },
+    {
+      "tab": "capital",
+      "symbol": "SPY",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T08:32:44.872Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 2660,
+      "scrollWidth": 390,
+      "screens": 3.1516587677725116,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n5. Capital pressure\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nSPY\nMore symbols\nCapital Pressure · Change view\nCapital Flow — SPY\nas of 6:00:00 AM\n↻ Refresh\n\nUnavailable: US equity market closed (weekend or holiday). Next-open read: Trade Permission Score 42 is below the standard 68. Directional scores and scenario weights are indicator summaries, not calibrated outcome probabilities; permission takes precedence.\n\nBIAS\nBullish\nMODE\nPin\nGAMMA\nUNKNOWN\nUnavailable (no gamma input in this response)\nDIRECTIONAL SCORE\n74\nSPOT\n$249.35\nScenario weights · heuristic\nCONTINUATION\n60/100\nPIN / REVERSION\n20/100\nEXPANSION\n20/100\nREGIME\nNO TREND\nContinuation\nPin\nExpansion\nBrain Decision\nBRAIN SCORE\n71\nSTATUS\nNOT ALIGNED\nRISK MODE\nDEFENSIVE\nREGIME\nNO TREND\nIndicator Alignment\nTPS\n42\nRisk Mode\n—\nWeighting Factor\n0.00x\nAnalysis Mode\n—\nUnavailable: US equity market closed (weekend or holiday). Next-open read: Trade Permission Score 42 is below the standard 68\nRisk Analysis\nIRS Score\n32\nRisk Mode\nDEFENSIVE\nConditions\nNot Aligned\nVol Regime\n—\nWeighting\n—\nLiquidity Levels\nLEVEL\tLABEL\tHEURISTIC WEIGHT\n$245.00\tPDL\t63/100\n$256.00\tPDH\t45/100\nKey Strikes\n$250\nGravity:\nCALL HEAVY\nFlip Zones\n$248\nBULLISH ABOVE",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "SPY"
+        }
+      ],
+      "openFolds": 0,
+      "verdicts": [],
+      "sourceCount": 0,
+      "allOpen": {
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n5. Capital pressure\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nSPY\nMore symbols\nCapital Pressure · Change view\nCapital Flow — SPY\nas of 6:00:00 AM\n↻ Refresh\n\nUnavailable: US equity market closed (weekend or holiday). Next-open read: Trade Permission Score 42 is below the standard 68. Directional scores and scenario weights are indicator summaries, not calibrated outcome probabilities; permission takes precedence.\n\nBIAS\nBullish\nMODE\nPin\nGAMMA\nUNKNOWN\nUnavailable (no gamma input in this response)\nDIRECTIONAL SCORE\n74\nSPOT\n$249.35\nScenario weights · heuristic\nCONTINUATION\n60/100\nPIN / REVERSION\n20/100\nEXPANSION\n20/100\nREGIME\nNO TREND\nContinuation\nPin\nExpansion\nBrain Decision\nBRAIN SCORE\n71\nSTATUS\nNOT ALIGNED\nRISK MODE\nDEFENSIVE\nREGIME\nNO TREND\nIndicator Alignment\nTPS\n42\nRisk Mode\n—\nWeighting Factor\n0.00x\nAnalysis Mode\n—\nUnavailable: US equity market closed (weekend or holiday). Next-open read: Trade Permission Score 42 is below the standard 68\nRisk Analysis\nIRS Score\n32\nRisk Mode\nDEFENSIVE\nConditions\nNot Aligned\nVol Regime\n—\nWeighting\n—\nLiquidity Levels\nLEVEL\tLABEL\tHEURISTIC WEIGHT\n$245.00\tPDL\t63/100\n$256.00\tPDH\t45/100\nKey Strikes\n$250\nGravity:\nCALL HEAVY\nFlip Zones\n$248\nBULLISH ABOVE",
+        "scrollWidth": 390,
+        "sourceCount": 0
+      }
+    },
+    {
+      "tab": "options-confluence",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T08:32:47.626Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 2095,
+      "scrollWidth": 1280,
+      "screens": 2.61875,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n3. Options setup\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nOptions Confluence · Change view\nWhy this can fail: options flow, Greeks, dealer exposure, expected move, and cross-asset readings are derived estimates. They can break during news, liquidity gaps, volatility repricing, stale data, or regime shifts. Treat all outputs as educational scenario context only.\nMU\nSTATUS: NO TRADE\nCONFIDENCE: 73%\nDATA: REALTIME\nMODE: TREND ACCELERATION\nCOMPACT\nNORMAL\nFOCUS\nCONTEXT\nBias & Regime\nMU • BULLISH\nRegime: UNCERTAIN REGIME\nSession: REGULAR\nANALYSIS\nSetup Status\nWATCH\nPipeline: 1/5\nCanonical (daily): unavailable\nOptions confluence (secondary): 73%\nLEVELS\nRisk & Trigger\nTrigger: No active trigger\nRisk: HIGH\nData: REALTIME\n\nDirection: bullish — Measured daily bars lean upward.\n\nTimeframe pull (display only, no tested edge)\n\nCONFLUENCE\n3 TF\nFLOW\nBULLISH\nEXPECTED MOVE\n4.2%\nCONDITIONS\nWATCH\nMODE\nTREND ACCELERATION\nUPDATED\n217967s\nAI Co-Pilot\n•\nMarket State: TREND ACCELERATION\n•\nConfluence: 68/100\n•\nWatching: CHART + EXECUTION\nMODE: TREND | ATTENTION: BUILDING | WATCHING: CHART + EXECUTION • WAIT | Grade B\nANALYSIS PANEL\nVIEW MODE\nGUIDED\nADVANCED\nWORKFLOW SUGGESTIONS\nREFRESH\nProposal API failed: Fixture feed not collected\nNo active suggestions. New decision packets will repopulate this queue.\nScalping (5-15m) (0-2 DTE)\n30 Minute (1-3 DTE)\n1 Hour (2-5 DTE)\n4 Hour (3-7 DTE)\nDaily (5-14 DTE)\n3-Day (1-3 weeks)\nWeekly (2-4 weeks)\nMonthly (30-60 DTE)\nLEAPS (60+ DTE)\nAuto-select expiry\n9 Oct 2026 • 201,721 OI\nRun Options Research\nRefresh\nLast updated: 6:00:00 AM\nOPTIONS RESEARCH PACKET\nSCENARIO • EVIDENCE • INVALIDATION • DATA TRUST\nDEALER:\nUNKNOWN\n•\nFlip N/A\nSCENARIO\nMU • BULLISH • Not Aligned\nResearch observation needs confirmation\nCONFLUENCE\n73%\nCONTRACT FOCUS\n250 CALL\nATM\nEXPIRY FOCUS\n7 DTE\n2026-10-09\nREFERENCE ZONE\nN/A\nTrigger: No active trigger\nWHY THIS APPEARED\nMeasured evidence\nMeasured evidence\nMeasured alignment\nDO NOTHING BECAUSE\nScenario is still waiting for confirmation.\nNo clean reference zone is available yet.\nResearch observation needs confirmation\nINVALIDATES IF\nNo measured invalidation\nOPTIONS SNAPSHOT\nP/C: 0.85\nIV Rank: Unavailable\nStrategy: N/A\nExpected Move: 4.2%\nTheta: MODERATE\nDATA TRUST\nData: REALTIME\nOptions: alpha vantage\nGreeks from API\nOI usable\nRESEARCH STATE\nNOT ALIGNED\nGuided mode keeps Analyst sections collapsed for faster decision flow.\nSHOW FULL ANALYSIS\n1) EVIDENCE\n(3 TF)\n2) CONTRACTS & GREEKS\n(Ready)\n1) EVIDENCE • COLLAPSED\nConfluence map, decision card, and setup proof stack\nClick to expand\n2) CONTRACTS & GREEKS • COLLAPSED\nStrike, expiry, open interest, greeks, and risk setup\nClick to expand",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        },
+        {
+          "label": "Stock symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0,
+      "verdicts": [],
+      "sourceCount": 0,
+      "allOpen": {
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n3. Options setup\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nOptions Confluence · Change view\nWhy this can fail: options flow, Greeks, dealer exposure, expected move, and cross-asset readings are derived estimates. They can break during news, liquidity gaps, volatility repricing, stale data, or regime shifts. Treat all outputs as educational scenario context only.\nMU\nSTATUS: NO TRADE\nCONFIDENCE: 73%\nDATA: REALTIME\nMODE: TREND ACCELERATION\nCOMPACT\nNORMAL\nFOCUS\nCONTEXT\nBias & Regime\nMU • BULLISH\nRegime: UNCERTAIN REGIME\nSession: REGULAR\nANALYSIS\nSetup Status\nWATCH\nPipeline: 1/5\nCanonical (daily): unavailable\nOptions confluence (secondary): 73%\nLEVELS\nRisk & Trigger\nTrigger: No active trigger\nRisk: HIGH\nData: REALTIME\n\nDirection: bullish — Measured daily bars lean upward.\n\nTimeframe pull (display only, no tested edge)\n\nCONFLUENCE\n3 TF\nFLOW\nBULLISH\nEXPECTED MOVE\n4.2%\nCONDITIONS\nWATCH\nMODE\nTREND ACCELERATION\nUPDATED\n217967s\nAI Co-Pilot\n•\nMarket State: TREND ACCELERATION\n•\nConfluence: 68/100\n•\nWatching: CHART + EXECUTION\nMODE: TREND | ATTENTION: BUILDING | WATCHING: CHART + EXECUTION • WAIT | Grade B\nANALYSIS PANEL\nVIEW MODE\nGUIDED\nADVANCED\nWORKFLOW SUGGESTIONS\nREFRESH\nProposal API failed: Fixture feed not collected\nNo active suggestions. New decision packets will repopulate this queue.\nScalping (5-15m) (0-2 DTE)\n30 Minute (1-3 DTE)\n1 Hour (2-5 DTE)\n4 Hour (3-7 DTE)\nDaily (5-14 DTE)\n3-Day (1-3 weeks)\nWeekly (2-4 weeks)\nMonthly (30-60 DTE)\nLEAPS (60+ DTE)\nAuto-select expiry\n9 Oct 2026 • 201,721 OI\nRun Options Research\nRefresh\nLast updated: 6:00:00 AM\nOPTIONS RESEARCH PACKET\nSCENARIO • EVIDENCE • INVALIDATION • DATA TRUST\nDEALER:\nUNKNOWN\n•\nFlip N/A\nSCENARIO\nMU • BULLISH • Not Aligned\nResearch observation needs confirmation\nCONFLUENCE\n73%\nCONTRACT FOCUS\n250 CALL\nATM\nEXPIRY FOCUS\n7 DTE\n2026-10-09\nREFERENCE ZONE\nN/A\nTrigger: No active trigger\nWHY THIS APPEARED\nMeasured evidence\nMeasured evidence\nMeasured alignment\nDO NOTHING BECAUSE\nScenario is still waiting for confirmation.\nNo clean reference zone is available yet.\nResearch observation needs confirmation\nINVALIDATES IF\nNo measured invalidation\nOPTIONS SNAPSHOT\nP/C: 0.85\nIV Rank: Unavailable\nStrategy: N/A\nExpected Move: 4.2%\nTheta: MODERATE\nDATA TRUST\nData: REALTIME\nOptions: alpha vantage\nGreeks from API\nOI usable\nRESEARCH STATE\nNOT ALIGNED\nGuided mode keeps Analyst sections collapsed for faster decision flow.\nSHOW FULL ANALYSIS\n1) EVIDENCE\n(3 TF)\n2) CONTRACTS & GREEKS\n(Ready)\n1) EVIDENCE • COLLAPSED\nConfluence map, decision card, and setup proof stack\nClick to expand\n2) CONTRACTS & GREEKS • COLLAPSED\nStrike, expiry, open interest, greeks, and risk setup\nClick to expand",
+        "scrollWidth": 1280,
+        "sourceCount": 0
+      }
+    },
+    {
+      "tab": "options-confluence",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T08:32:50.760Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 4125,
+      "scrollWidth": 390,
+      "screens": 4.887440758293839,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n3. Options setup\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nOptions Confluence · Change view\nWhy this can fail: options flow, Greeks, dealer exposure, expected move, and cross-asset readings are derived estimates. They can break during news, liquidity gaps, volatility repricing, stale data, or regime shifts. Treat all outputs as educational scenario context only.\nMU\nSTATUS: NO TRADE\nCONFIDENCE: 73%\nDATA: REALTIME\nMODE: TREND ACCELERATION\nCOMPACT\nNORMAL\nFOCUS\nCONTEXT\nBias & Regime\nMU • BULLISH\nRegime: UNCERTAIN REGIME\nSession: REGULAR\nANALYSIS\nSetup Status\nWATCH\nPipeline: 1/5\nCanonical (daily): unavailable\nOptions confluence (secondary): 73%\nLEVELS\nRisk & Trigger\nTrigger: No active trigger\nRisk: HIGH\nData: REALTIME\n\nDirection: bullish — Measured daily bars lean upward.\n\nTimeframe pull (display only, no tested edge)\n\nCONFLUENCE\n3 TF\nFLOW\nBULLISH\nEXPECTED MOVE\n4.2%\nCONDITIONS\nWATCH\nMODE\nTREND ACCELERATION\nUPDATED\n217970s\nAI Co-Pilot\n•\nMarket State: TREND ACCELERATION\n•\nConfluence: 68/100\n•\nWatching: CHART + EXECUTION\nMODE: TREND | ATTENTION: BUILDING | WATCHING: CHART + EXECUTION • WAIT | Grade B\nANALYSIS PANEL\nVIEW MODE\nGUIDED\nADVANCED\nWORKFLOW SUGGESTIONS\nREFRESH\nProposal API failed: Fixture feed not collected\nNo active suggestions. New decision packets will repopulate this queue.\nScalping (5-15m) (0-2 DTE)\n30 Minute (1-3 DTE)\n1 Hour (2-5 DTE)\n4 Hour (3-7 DTE)\nDaily (5-14 DTE)\n3-Day (1-3 weeks)\nWeekly (2-4 weeks)\nMonthly (30-60 DTE)\nLEAPS (60+ DTE)\nAuto-select expiry\n9 Oct 2026 • 201,721 OI\nRun Options Research\nRefresh\nLast updated: 6:00:00 AM\nOPTIONS RESEARCH PACKET\nSCENARIO • EVIDENCE • INVALIDATION • DATA TRUST\nDEALER:\nUNKNOWN\n•\nFlip N/A\nSCENARIO\nMU • BULLISH • Not Aligned\nResearch observation needs confirmation\nCONFLUENCE\n73%\nCONTRACT FOCUS\n250 CALL\nATM\nEXPIRY FOCUS\n7 DTE\n2026-10-09\nREFERENCE ZONE\nN/A\nTrigger: No active trigger\nWHY THIS APPEARED\nMeasured evidence\nMeasured evidence\nMeasured alignment\nDO NOTHING BECAUSE\nScenario is still waiting for confirmation.\nNo clean reference zone is available yet.\nResearch observation needs confirmation\nINVALIDATES IF\nNo measured invalidation\nOPTIONS SNAPSHOT\nP/C: 0.85\nIV Rank: Unavailable\nStrategy: N/A\nExpected Move: 4.2%\nTheta: MODERATE\nDATA TRUST\nData: REALTIME\nOptions: alpha vantage\nGreeks from API\nOI usable\nRESEARCH STATE\nNOT ALIGNED\nGuided mode keeps Analyst sections collapsed for faster decision flow.\nSHOW FULL ANALYSIS\n1) EVIDENCE\n(3 TF)\n2) CONTRACTS & GREEKS\n(Ready)\n1) EVIDENCE • COLLAPSED\nConfluence map, decision card, and setup proof stack\nClick to expand\n2) CONTRACTS & GREEKS • COLLAPSED\nStrike, expiry, open interest, greeks, and risk setup\nClick to expand",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        },
+        {
+          "label": "Stock symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0,
+      "verdicts": [],
+      "sourceCount": 0,
+      "allOpen": {
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n3. Options setup\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nOptions Confluence · Change view\nWhy this can fail: options flow, Greeks, dealer exposure, expected move, and cross-asset readings are derived estimates. They can break during news, liquidity gaps, volatility repricing, stale data, or regime shifts. Treat all outputs as educational scenario context only.\nMU\nSTATUS: NO TRADE\nCONFIDENCE: 73%\nDATA: REALTIME\nMODE: TREND ACCELERATION\nCOMPACT\nNORMAL\nFOCUS\nCONTEXT\nBias & Regime\nMU • BULLISH\nRegime: UNCERTAIN REGIME\nSession: REGULAR\nANALYSIS\nSetup Status\nWATCH\nPipeline: 1/5\nCanonical (daily): unavailable\nOptions confluence (secondary): 73%\nLEVELS\nRisk & Trigger\nTrigger: No active trigger\nRisk: HIGH\nData: REALTIME\n\nDirection: bullish — Measured daily bars lean upward.\n\nTimeframe pull (display only, no tested edge)\n\nCONFLUENCE\n3 TF\nFLOW\nBULLISH\nEXPECTED MOVE\n4.2%\nCONDITIONS\nWATCH\nMODE\nTREND ACCELERATION\nUPDATED\n217971s\nAI Co-Pilot\n•\nMarket State: TREND ACCELERATION\n•\nConfluence: 68/100\n•\nWatching: CHART + EXECUTION\nMODE: TREND | ATTENTION: BUILDING | WATCHING: CHART + EXECUTION • WAIT | Grade B\nANALYSIS PANEL\nVIEW MODE\nGUIDED\nADVANCED\nWORKFLOW SUGGESTIONS\nREFRESH\nProposal API failed: Fixture feed not collected\nNo active suggestions. New decision packets will repopulate this queue.\nScalping (5-15m) (0-2 DTE)\n30 Minute (1-3 DTE)\n1 Hour (2-5 DTE)\n4 Hour (3-7 DTE)\nDaily (5-14 DTE)\n3-Day (1-3 weeks)\nWeekly (2-4 weeks)\nMonthly (30-60 DTE)\nLEAPS (60+ DTE)\nAuto-select expiry\n9 Oct 2026 • 201,721 OI\nRun Options Research\nRefresh\nLast updated: 6:00:00 AM\nOPTIONS RESEARCH PACKET\nSCENARIO • EVIDENCE • INVALIDATION • DATA TRUST\nDEALER:\nUNKNOWN\n•\nFlip N/A\nSCENARIO\nMU • BULLISH • Not Aligned\nResearch observation needs confirmation\nCONFLUENCE\n73%\nCONTRACT FOCUS\n250 CALL\nATM\nEXPIRY FOCUS\n7 DTE\n2026-10-09\nREFERENCE ZONE\nN/A\nTrigger: No active trigger\nWHY THIS APPEARED\nMeasured evidence\nMeasured evidence\nMeasured alignment\nDO NOTHING BECAUSE\nScenario is still waiting for confirmation.\nNo clean reference zone is available yet.\nResearch observation needs confirmation\nINVALIDATES IF\nNo measured invalidation\nOPTIONS SNAPSHOT\nP/C: 0.85\nIV Rank: Unavailable\nStrategy: N/A\nExpected Move: 4.2%\nTheta: MODERATE\nDATA TRUST\nData: REALTIME\nOptions: alpha vantage\nGreeks from API\nOI usable\nRESEARCH STATE\nNOT ALIGNED\nGuided mode keeps Analyst sections collapsed for faster decision flow.\nSHOW FULL ANALYSIS\n1) EVIDENCE\n(3 TF)\n2) CONTRACTS & GREEKS\n(Ready)\n1) EVIDENCE • COLLAPSED\nConfluence map, decision card, and setup proof stack\nClick to expand\n2) CONTRACTS & GREEKS • COLLAPSED\nStrike, expiry, open interest, greeks, and risk setup\nClick to expand",
+        "scrollWidth": 390,
+        "sourceCount": 0
+      }
+    }
+  ],
+  "requests": [
+    {
+      "url": "http://127.0.0.1:3126/api/disclosure/status",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/me",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/context/heartbeat",
+      "method": "POST",
+      "body": "{\"sessionId\":\"op_1791189157753_bet8lh4p\",\"page\":\"tools\",\"route\":\"/tools/terminal\",\"symbols\":[\"MU\"],\"timeframes\":[],\"attention\":{\"primarySymbol\":\"MU\",\"dwellMs\":0,\"scrollDepth\":0},\"viewState\":{\"query\":\"tab=gravity&symbol=MU&type=equity\"}}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/analytics/heartbeat",
+      "method": "POST",
+      "body": "{\"session_id\":\"ses_1791189157768_dc7ljl5g\",\"current_path\":\"/tools/terminal\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/health/data",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/scanner/top-cached?type=all&limit=5&_ts=1791189157793",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"mode\":\"calendar\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/risk/governor/preferences",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/time-gravity-map?symbol=MU&assetType=stock",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"mode\":\"calendar\",\"assetType\":\"equity\",\"sessionMode\":\"regular\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/quote?symbol=MU&type=stock",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/time-gravity-map?symbol=MU&price=100&assetType=stock",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"mode\":\"calendar\",\"assetType\":\"equity\",\"sessionMode\":\"regular\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/disclosure/status",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/me",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/context/heartbeat",
+      "method": "POST",
+      "body": "{\"sessionId\":\"op_1791189160143_8e0gssk3\",\"page\":\"tools\",\"route\":\"/tools/terminal\",\"symbols\":[\"MU\"],\"timeframes\":[],\"attention\":{\"primarySymbol\":\"MU\",\"dwellMs\":0,\"scrollDepth\":0},\"viewState\":{\"query\":\"tab=gravity&symbol=MU&type=equity\"}}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/analytics/heartbeat",
+      "method": "POST",
+      "body": "{\"session_id\":\"ses_1791189160156_52qty22o\",\"current_path\":\"/tools/terminal\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/health/data",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/scanner/top-cached?type=all&limit=5&_ts=1791189160175",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"mode\":\"calendar\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/risk/governor/preferences",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/time-gravity-map?symbol=MU&assetType=stock",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"mode\":\"calendar\",\"assetType\":\"equity\",\"sessionMode\":\"regular\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/quote?symbol=MU&type=stock",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/time-gravity-map?symbol=MU&price=100&assetType=stock",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"mode\":\"calendar\",\"assetType\":\"equity\",\"sessionMode\":\"regular\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/disclosure/status",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/me",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/context/heartbeat",
+      "method": "POST",
+      "body": "{\"sessionId\":\"op_1791189162172_9rmscji9\",\"page\":\"tools\",\"route\":\"/tools/terminal\",\"symbols\":[\"SPY\"],\"timeframes\":[],\"attention\":{\"primarySymbol\":\"SPY\",\"dwellMs\":0,\"scrollDepth\":0},\"viewState\":{\"query\":\"tab=capital&symbol=SPY&type=equity\"}}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/analytics/heartbeat",
+      "method": "POST",
+      "body": "{\"session_id\":\"ses_1791189162184_z1etavck\",\"current_path\":\"/tools/terminal\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/health/data",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/scanner/top-cached?type=all&limit=5&_ts=1791189162198",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"SPY\",\"mode\":\"calendar\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/flow?symbol=SPY&marketType=equity",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/risk/governor/preferences",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/disclosure/status",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/me",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/context/heartbeat",
+      "method": "POST",
+      "body": "{\"sessionId\":\"op_1791189164087_76f09ljq\",\"page\":\"tools\",\"route\":\"/tools/terminal\",\"symbols\":[\"SPY\"],\"timeframes\":[],\"attention\":{\"primarySymbol\":\"SPY\",\"dwellMs\":0,\"scrollDepth\":0},\"viewState\":{\"query\":\"tab=capital&symbol=SPY&type=equity\"}}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/analytics/heartbeat",
+      "method": "POST",
+      "body": "{\"session_id\":\"ses_1791189164093_dijm3ajb\",\"current_path\":\"/tools/terminal\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/health/data",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/scanner/top-cached?type=all&limit=5&_ts=1791189164124",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"SPY\",\"mode\":\"calendar\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/flow?symbol=SPY&marketType=equity",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/risk/governor/preferences",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/disclosure/status",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/me",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/context/heartbeat",
+      "method": "POST",
+      "body": "{\"sessionId\":\"op_1791189165939_fbcq072l\",\"page\":\"tools\",\"route\":\"/tools/terminal\",\"symbols\":[\"MU\"],\"timeframes\":[],\"attention\":{\"primarySymbol\":\"MU\",\"dwellMs\":0,\"scrollDepth\":0},\"viewState\":{\"query\":\"tab=options-confluence&symbol=MU&type=equity\"}}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/analytics/heartbeat",
+      "method": "POST",
+      "body": "{\"session_id\":\"ses_1791189165947_shy48oy4\",\"current_path\":\"/tools/terminal\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/health/data",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/scanner/top-cached?type=all&limit=5&_ts=1791189165991",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"mode\":\"calendar\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/risk/governor/preferences",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/operator/proposals?limit=6",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/journal",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/options/expirations?symbol=MU",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/options-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"scanMode\":\"swing_1d\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/operator/state",
+      "method": "POST",
+      "body": "{\"current_focus\":\"MU\",\"active_candidates\":[\"MU\"],\"risk_environment\":\"HIGH\",\"ai_attention_score\":73,\"user_mode\":\"EVALUATE\",\"cognitive_load\":35,\"context_state\":{\"bias\":\"BULLISH\",\"action\":\"WAIT\",\"next\":\"Research observation needs confirmation\",\"updated_at\":\"2026-10-05T08:32:46.934Z\"},\"last_actions\":[{\"action\":\"WAIT\",\"note\":\"Research observation needs confirmation\",\"at\":\"2026-10-05T08:32:46.934Z\"}],\"source_module\":\"operator_state_client\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/workflow/events",
+      "method": "POST",
+      "body": "{\"events\":[{\"event_id\":\"evt_6752689e-f2a4-4104-889d-69482ee26696\",\"event_type\":\"signal.created\",\"event_version\":1,\"occurred_at\":\"2026-10-05T08:32:46.936Z\",\"actor\":{\"actor_type\":\"user\",\"user_id\":null,\"anonymous_id\":null,\"session_id\":null},\"context\":{\"tenant_id\":\"msp\",\"app\":{\"name\":\"MarketScannerPros\",\"env\":\"dev\"},\"page\":{\"route\":\"/tools/terminal?tab=options-confluence\",\"module\":\"options_confluence\"},\"device\":{\"platform\":\"web\",\"ua\":\"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36\"},\"geo\":{\"tz\":\"Australia/Sydney\"}},\"entity\":{\"entity_type\":\"signal\",\"entity_id\":\"sig_opt_MU_1791189166935\",\"symbol\":\"MU\",\"asset_class\":\"options\"},\"correlation\":{\"workflow_id\":\"wf_options_MU_20261005\",\"trace_id\":\"trc_08ffdf5d-afc0-41ad-90ea-3a069414a4d3\",\"parent_event_id\":null},\"payload\":{\"signal_id\":\"sig_opt_MU_1791189166935\",\"created_at\":\"2026-10-05T08:32:46.935Z\",\"symbol\":\"MU\",\"asset_class\":\"options\",\"timeframe\":\"swing_1d\",\"signal_type\":\"options_confluence\",\"direction\":\"long\",\"confidence\":73,\"quality_tier\":\"B\",\"source\":{\"module\":\"options_confluence\",\"submodule\":\"scan\",\"strategy\":\"options_flow\"},\"evidence\":{\"trade_quality\":\"B\",\"confluence_stack\":3,\"iv_rank\":null,\"unusual_activity\":false}}},{\"event_id\":\"evt_f5df663d-76d7-4384-a8aa-46bde756c86f\",\"event_type\":\"candidate.created\",\"event_version\":1,\"occurred_at\":\"2026-10-05T08:32:46.936Z\",\"actor\":{\"actor_type\":\"user\",\"user_id\":null,\"anonymous_id\":null,\"session_id\":null},\"context\":{\"tenant_id\":\"msp\",\"app\":{\"name\":\"MarketScannerPros\",\"env\":\"dev\"},\"page\":{\"route\":\"/tools/terminal?tab=options-confluence\",\"module\":\"options_confluence\"},\"device\":{\"platform\":\"web\",\"ua\":\"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36\"},\"geo\":{\"tz\":\"Australia/Sydney\"}},\"entity\":{\"entity_type\":\"candidate\",\"entity_id\":\"cand_opt_MU_1791189166935\",\"symbol\":\"MU\",\"asset_class\":\"options\"},\"correlation\":{\"workflow_id\":\"wf_options_MU_20261005\",\"trace_id\":\"trc_89ee0a89-6420-4c20-9a55-725dca45db81\",\"parent_event_id\":\"evt_6752689e-f2a4-4104-889d-69482ee26696\"},\"payload\":{\"candidate_id\":\"cand_opt_MU_1791189166935\",\"signal_id\":\"sig_opt_MU_1791189166935\",\"evaluated_at\":\"2026-10-05T08:32:46.936Z\",\"result\":\"pass\",\"confidence_delta\":0,\"final_confidence\":73,\"checks\":[{\"name\":\"options_confidence\",\"status\":\"pass\",\"detail\":\"Composite confidence 73\"},{\"name\":\"entry_defined\",\"status\":\"warn\",\"detail\":\"Trade levels missing\"}],\"notes\":\"Research observation needs confirmation\",\"decision_packet\":{\"id\":\"dp_041a94fe-ad29-44a0-bcc2-eabe6b0bdc45\",\"createdAt\":\"2026-10-05T08:32:46.935Z\",\"symbol\":\"MU\",\"market\":\"options\",\"signalSource\":\"options.confluence\",\"signalScore\":73,\"bias\":\"bullish\",\"timeframeBias\":[\"swing_1d\"],\"entryZone\":249.3506,\"targets\":[],\"riskScore\":85,\"status\":\"candidate\"}}}]}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/disclosure/status",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/me",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/context/heartbeat",
+      "method": "POST",
+      "body": "{\"sessionId\":\"op_1791189168756_do0nt1ys\",\"page\":\"tools\",\"route\":\"/tools/terminal\",\"symbols\":[\"MU\"],\"timeframes\":[],\"attention\":{\"primarySymbol\":\"MU\",\"dwellMs\":0,\"scrollDepth\":0},\"viewState\":{\"query\":\"tab=options-confluence&symbol=MU&type=equity\"}}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/analytics/heartbeat",
+      "method": "POST",
+      "body": "{\"session_id\":\"ses_1791189168759_h81aw9p2\",\"current_path\":\"/tools/terminal\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/health/data",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/scanner/top-cached?type=all&limit=5&_ts=1791189168774",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"mode\":\"calendar\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/risk/governor/preferences",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/operator/proposals?limit=6",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/journal",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/options/expirations?symbol=MU",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/options-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"scanMode\":\"swing_1d\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/operator/state",
+      "method": "POST",
+      "body": "{\"current_focus\":\"MU\",\"active_candidates\":[\"MU\"],\"risk_environment\":\"HIGH\",\"ai_attention_score\":73,\"user_mode\":\"EVALUATE\",\"cognitive_load\":35,\"context_state\":{\"bias\":\"BULLISH\",\"action\":\"WAIT\",\"next\":\"Research observation needs confirmation\",\"updated_at\":\"2026-10-05T08:32:50.068Z\"},\"last_actions\":[{\"action\":\"WAIT\",\"note\":\"Research observation needs confirmation\",\"at\":\"2026-10-05T08:32:50.068Z\"}],\"source_module\":\"operator_state_client\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3126/api/workflow/events",
+      "method": "POST",
+      "body": "{\"events\":[{\"event_id\":\"evt_f5c8fdfc-1779-4b62-9528-274be3412da9\",\"event_type\":\"signal.created\",\"event_version\":1,\"occurred_at\":\"2026-10-05T08:32:50.069Z\",\"actor\":{\"actor_type\":\"user\",\"user_id\":null,\"anonymous_id\":null,\"session_id\":null},\"context\":{\"tenant_id\":\"msp\",\"app\":{\"name\":\"MarketScannerPros\",\"env\":\"dev\"},\"page\":{\"route\":\"/tools/terminal?tab=options-confluence\",\"module\":\"options_confluence\"},\"device\":{\"platform\":\"web\",\"ua\":\"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36\"},\"geo\":{\"tz\":\"Australia/Sydney\"}},\"entity\":{\"entity_type\":\"signal\",\"entity_id\":\"sig_opt_MU_1791189170069\",\"symbol\":\"MU\",\"asset_class\":\"options\"},\"correlation\":{\"workflow_id\":\"wf_options_MU_20261005\",\"trace_id\":\"trc_f86eb880-0577-4225-9d93-13da8c3cb5c1\",\"parent_event_id\":null},\"payload\":{\"signal_id\":\"sig_opt_MU_1791189170069\",\"created_at\":\"2026-10-05T08:32:50.069Z\",\"symbol\":\"MU\",\"asset_class\":\"options\",\"timeframe\":\"swing_1d\",\"signal_type\":\"options_confluence\",\"direction\":\"long\",\"confidence\":73,\"quality_tier\":\"B\",\"source\":{\"module\":\"options_confluence\",\"submodule\":\"scan\",\"strategy\":\"options_flow\"},\"evidence\":{\"trade_quality\":\"B\",\"confluence_stack\":3,\"iv_rank\":null,\"unusual_activity\":false}}},{\"event_id\":\"evt_70e08068-dbd6-4674-bf8c-7de86b93a5e6\",\"event_type\":\"candidate.created\",\"event_version\":1,\"occurred_at\":\"2026-10-05T08:32:50.069Z\",\"actor\":{\"actor_type\":\"user\",\"user_id\":null,\"anonymous_id\":null,\"session_id\":null},\"context\":{\"tenant_id\":\"msp\",\"app\":{\"name\":\"MarketScannerPros\",\"env\":\"dev\"},\"page\":{\"route\":\"/tools/terminal?tab=options-confluence\",\"module\":\"options_confluence\"},\"device\":{\"platform\":\"web\",\"ua\":\"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36\"},\"geo\":{\"tz\":\"Australia/Sydney\"}},\"entity\":{\"entity_type\":\"candidate\",\"entity_id\":\"cand_opt_MU_1791189170069\",\"symbol\":\"MU\",\"asset_class\":\"options\"},\"correlation\":{\"workflow_id\":\"wf_options_MU_20261005\",\"trace_id\":\"trc_42d274b2-366e-4a55-b012-4ab40f5a876d\",\"parent_event_id\":\"evt_f5c8fdfc-1779-4b62-9528-274be3412da9\"},\"payload\":{\"candidate_id\":\"cand_opt_MU_1791189170069\",\"signal_id\":\"sig_opt_MU_1791189170069\",\"evaluated_at\":\"2026-10-05T08:32:50.069Z\",\"result\":\"pass\",\"confidence_delta\":0,\"final_confidence\":73,\"checks\":[{\"name\":\"options_confidence\",\"status\":\"pass\",\"detail\":\"Composite confidence 73\"},{\"name\":\"entry_defined\",\"status\":\"warn\",\"detail\":\"Trade levels missing\"}],\"notes\":\"Research observation needs confirmation\",\"decision_packet\":{\"id\":\"dp_b996b68a-83f8-4045-afbb-03aa7cf3467c\",\"createdAt\":\"2026-10-05T08:32:50.069Z\",\"symbol\":\"MU\",\"market\":\"options\",\"signalSource\":\"options.confluence\",\"signalScore\":73,\"bias\":\"bullish\",\"timeframeBias\":[\"swing_1d\"],\"entryZone\":249.3506,\"targets\":[],\"riskScore\":85,\"status\":\"candidate\"}}}]}",
+      "status": 200,
+      "action": "mocked"
+    }
+  ],
+  "errors": []
+}

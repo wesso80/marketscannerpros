@@ -57,17 +57,25 @@ export default function AllToolsPage() {
                   <li key={tool.href}>
                     <Link
                       href={tool.href}
-                      className="flex min-h-10 items-center gap-2 py-2 text-sm hover:text-[var(--msp-accent)]"
+                      className={`flex min-h-10 items-center gap-2 py-2 text-sm ${tool.comingSoon ? "text-[var(--msp-text-muted)]" : "hover:text-[var(--msp-accent)]"}`}
                     >
                       <span className="min-w-0 flex-1">
-                        <span className="font-medium">{tool.label}</span>
+                        <span className={tool.comingSoon ? "font-medium text-[var(--msp-text-muted)]" : "font-medium"}>
+                          {tool.label}
+                        </span>
                         <span className="ml-2 text-xs text-[var(--msp-text-muted)]">
                           {tool.description}
                         </span>
                       </span>
-                      <span className="shrink-0 rounded-full border border-[var(--msp-border)] px-2 py-1 text-xs">
-                        {tool.tier === "pro" ? "Pro" : "Free"}
-                      </span>
+                      {tool.comingSoon ? (
+                        <span className="shrink-0 text-xs text-[var(--msp-text-muted)]">
+                          Coming soon
+                        </span>
+                      ) : (
+                        <span className="shrink-0 rounded-full border border-[var(--msp-border)] px-2 py-1 text-xs">
+                          {tool.tier === "pro" ? "Pro" : "Free"}
+                        </span>
+                      )}
                     </Link>
                   </li>
                 ))}

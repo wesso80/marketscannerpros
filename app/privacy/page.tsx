@@ -30,7 +30,7 @@ export default function PrivacyPage() {
         <li><strong>Billing:</strong> Processed by Stripe (web/Android) or Apple (iOS); we store minimal subscription status and payment metadata.</li>
         <li><strong>Trial Usage Tracking:</strong> Email address, plan type, workspace ID, and Stripe customer ID stored to prevent trial abuse (one trial per email per plan).</li>
         <li><strong>Usage &amp; Logs:</strong> Diagnostics, error tracking (via Sentry), and server logs for reliability and abuse prevention.</li>
-        <li><strong>AI Interactions:</strong> Questions asked to ARCA AI (AI chatbot) are tracked by workspace ID for tier limit enforcement. We store question count, tier level, and timestamps. Question content may be logged for debugging but is not used for training.</li>
+        <li><strong>AI Interactions:</strong> Questions asked to MSP AI (AI chatbot) are tracked by workspace ID for tier limit enforcement. We store question count, tier level, and timestamps. Question content may be logged for debugging but is not used for training.</li>
         <li><strong>Edge Profile &amp; Personalisation Data:</strong> If you use the trade journal, we analyse your closed trade history to generate Edge Profile insights (win rates, patterns, strategy performance). This data is derived from your own journal entries and is processed only within your workspace.</li>
         <li><strong>Adaptive Personality Data:</strong> Your interaction patterns, scan preferences, and tool usage may be used to personalise the dashboard experience. This data remains within your workspace and is not shared with third parties.</li>
         <li><strong>Portfolio &amp; Journal Data:</strong> Paper trade positions, closed trade history, and journal entries are stored in our database for cross-device sync. This is simulation data for educational purposes only &mdash; we do not connect to or access any live brokerage accounts.</li>
@@ -55,7 +55,7 @@ export default function PrivacyPage() {
       <h2>Sharing &amp; processors</h2>
       <ul>
         <li><strong>Stripe</strong> (payments &amp; portal).</li>
-        <li><strong>OpenAI</strong> (ARCA AI chatbot powered by GPT-4 - does not train on your data).</li>
+        <li><strong>OpenAI</strong> (MSP AI chatbot powered by GPT-4 - does not train on your data).</li>
         <li><strong>Alpha Vantage</strong> (real-time and historical market data provider).</li>
         <li><strong>Render</strong> (application hosting and web services).</li>
         <li><strong>Neon</strong> (PostgreSQL database hosting).</li>

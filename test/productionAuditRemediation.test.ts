@@ -16,8 +16,8 @@ describe('2026-09-21 production audit remediations', () => {
     expect(api).toContain("const gateCommodities = commodities.filter(c => c.eligibleForGate)");
     expect(api).toContain("staleSymbols");
     expect(api).toContain("sourceAsOf");
-    expect(page).toContain("Data degraded — stale rows excluded from analysis");
-    expect(page).toContain("Latest eligible source date");
+    expect(page).toContain("Stale data limits this assessment; excluded observations are not used.");
+    expect(page).toContain("Latest included observation");
     expect(page).toContain(".filter((item) => item.eligibleForGate)");
   });
 

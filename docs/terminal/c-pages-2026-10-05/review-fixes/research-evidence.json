@@ -1,0 +1,983 @@
+{
+  "mocked": true,
+  "root": "/workspace/scratch/0535040d28c6/terminal-research",
+  "results": [
+    {
+      "tab": "gravity",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T09:44:31.655Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 897,
+      "scrollWidth": 1280,
+      "screens": 1.12125,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n6. Gravity map\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Gravity · Change view\n\nUnreached midpoint levels remain\n\nRefresh\n\nHistorical candle midpoints describe reference levels; they do not predict price movement.\n\nSpot\n$249.35\nReference midpoint\n$253.00\nAlignment\n68%\nMeasured points\n5\nRanked midpoint zones\n$252.00–$254.00\n1H · 4H · 1D · 68% alignment\nMidpoint evidence\nTiming and coverage\n\nSource: Time Gravity midpoint analysis · received 5 Oct 2026, 09:44 UTC. Receipt time is not a market observation timestamp.",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "Unreached midpoint levels remain",
+          "top": 516.390625,
+          "bottom": 546.390625
+        }
+      ],
+      "sourceCount": 1,
+      "allOpen": {
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n6. Gravity map\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Gravity · Change view\n\nUnreached midpoint levels remain\n\nRefresh\n\nHistorical candle midpoints describe reference levels; they do not predict price movement.\n\nSpot\n$249.35\nReference midpoint\n$253.00\nAlignment\n68%\nMeasured points\n5\nRanked midpoint zones\n$252.00–$254.00\n1H · 4H · 1D · 68% alignment\nMidpoint evidence\n1H · $252.00\n1% from spot\n4H · $252.50\n1% from spot\n1D · $253.00\n1% from spot\n1W · $253.50\n1% from spot\n1M · $254.00\n1% from spot\nTiming and coverage\n\n0 midpoint levels reached in this cycle; 5 remain.\n\n100% timeframe coverage. Measured: 1H · 4H · 1D · 1W · 1M. Missing: none.\n\nClose calendar not supplied.\n\nClosing timeframes: 2; active windows: 0.\n\nSource: Time Gravity midpoint analysis · received 5 Oct 2026, 09:44 UTC. Receipt time is not a market observation timestamp.",
+        "researchText": "Unreached midpoint levels remainRefreshHistorical candle midpoints describe reference levels; they do not predict price movement.Spot$249.35Reference midpoint$253.00Alignment68%Measured points5Ranked midpoint zones$252.00–$254.001H · 4H · 1D · 68% alignmentMidpoint evidence1H · $252.001% from spot4H · $252.501% from spot1D · $253.001% from spot1W · $253.501% from spot1M · $254.001% from spotTiming and coverage0 midpoint levels reached in this cycle; 5 remain.100% timeframe coverage. Measured: 1H · 4H · 1D · 1W · 1M. Missing: none.Close calendar not supplied.Closing timeframes: 2; active windows: 0.Source: Time Gravity midpoint analysis · received 5 Oct 2026, 09:44 UTC. Receipt time is not a market observation timestamp.",
+        "scrollWidth": 1280,
+        "sourceCount": 1
+      }
+    },
+    {
+      "tab": "gravity",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T09:44:33.580Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1249,
+      "scrollWidth": 390,
+      "screens": 1.4798578199052133,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n6. Gravity map\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Gravity · Change view\n\nUnreached midpoint levels remain\n\nRefresh\n\nHistorical candle midpoints describe reference levels; they do not predict price movement.\n\nSpot\n$249.35\nReference midpoint\n$253.00\nAlignment\n68%\nMeasured points\n5\nRanked midpoint zones\n$252.00–$254.00\n1H · 4H · 1D · 68% alignment\nMidpoint evidence\nTiming and coverage\n\nSource: Time Gravity midpoint analysis · received 5 Oct 2026, 09:44 UTC. Receipt time is not a market observation timestamp.",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "Unreached midpoint levels remain",
+          "top": 675.875,
+          "bottom": 731.875
+        }
+      ],
+      "sourceCount": 1,
+      "allOpen": {
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n6. Gravity map\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Gravity · Change view\n\nUnreached midpoint levels remain\n\nRefresh\n\nHistorical candle midpoints describe reference levels; they do not predict price movement.\n\nSpot\n$249.35\nReference midpoint\n$253.00\nAlignment\n68%\nMeasured points\n5\nRanked midpoint zones\n$252.00–$254.00\n1H · 4H · 1D · 68% alignment\nMidpoint evidence\n1H · $252.00\n1% from spot\n4H · $252.50\n1% from spot\n1D · $253.00\n1% from spot\n1W · $253.50\n1% from spot\n1M · $254.00\n1% from spot\nTiming and coverage\n\n0 midpoint levels reached in this cycle; 5 remain.\n\n100% timeframe coverage. Measured: 1H · 4H · 1D · 1W · 1M. Missing: none.\n\nClose calendar not supplied.\n\nClosing timeframes: 2; active windows: 0.\n\nSource: Time Gravity midpoint analysis · received 5 Oct 2026, 09:44 UTC. Receipt time is not a market observation timestamp.",
+        "researchText": "Unreached midpoint levels remainRefreshHistorical candle midpoints describe reference levels; they do not predict price movement.Spot$249.35Reference midpoint$253.00Alignment68%Measured points5Ranked midpoint zones$252.00–$254.001H · 4H · 1D · 68% alignmentMidpoint evidence1H · $252.001% from spot4H · $252.501% from spot1D · $253.001% from spot1W · $253.501% from spot1M · $254.001% from spotTiming and coverage0 midpoint levels reached in this cycle; 5 remain.100% timeframe coverage. Measured: 1H · 4H · 1D · 1W · 1M. Missing: none.Close calendar not supplied.Closing timeframes: 2; active windows: 0.Source: Time Gravity midpoint analysis · received 5 Oct 2026, 09:44 UTC. Receipt time is not a market observation timestamp.",
+        "scrollWidth": 390,
+        "sourceCount": 1
+      }
+    },
+    {
+      "tab": "capital",
+      "symbol": "SPY",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T09:44:35.035Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 965,
+      "scrollWidth": 1280,
+      "screens": 1.20625,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n5. Capital pressure\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nSPY\nMore symbols\nCapital Pressure · Change view\n\nPressure conditions are not aligned\n\nRefresh\n\nDirectional scores and scenario weights are indicator summaries, not calibrated outcome probabilities.\n\nMarket mode\nPin\nSpot\n$249.35\nScenario weights · heuristic\nContinuation\n60\nPin / reversion\n20\nExpansion\n20\n\nEach weight is out of 100. No clear trend.\n\nPressure and risk evidence\nReference levels\n\nSource: Capital flow analysis · 2 Oct 2026, 20:00 UTC",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "SPY"
+        }
+      ],
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "Pressure conditions are not aligned",
+          "top": 516.390625,
+          "bottom": 544.390625
+        }
+      ],
+      "sourceCount": 1,
+      "allOpen": {
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n5. Capital pressure\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nSPY\nMore symbols\nCapital Pressure · Change view\n\nPressure conditions are not aligned\n\nRefresh\n\nDirectional scores and scenario weights are indicator summaries, not calibrated outcome probabilities.\n\nMarket mode\nPin\nSpot\n$249.35\nScenario weights · heuristic\nContinuation\n60\nPin / reversion\n20\nExpansion\n20\n\nEach weight is out of 100. No clear trend.\n\nPressure and risk evidence\nPrice direction\nUpward\nDirectional score\n74\nGamma\nNot measured\nCombined score\n71\nAlignment score\n42\nRisk score\n32\nRisk mode\nReduced risk tolerance\nSession phase\nNot measured\n\nUS equity market closed (weekend or holiday). Next-open read: Alignment score 42 is below the standard 68\n\nReference levels\nPrior day low\n$245.00 · 63/100 weight\nPrior day high\n$256.00 · 45/100 weight\nStrike $250.00\nGamma flip $248.00\n\nSource: Capital flow analysis · 2 Oct 2026, 20:00 UTC",
+        "researchText": "Pressure conditions are not alignedRefreshDirectional scores and scenario weights are indicator summaries, not calibrated outcome probabilities.Market modePinSpot$249.35Scenario weights · heuristicContinuation60Pin / reversion20Expansion20Each weight is out of 100. No clear trend.Pressure and risk evidencePrice directionUpwardDirectional score74GammaNot measuredCombined score71Alignment score42Risk score32Risk modeReduced risk toleranceSession phaseNot measuredUS equity market closed (weekend or holiday). Next-open read: Alignment score 42 is below the standard 68Reference levelsPrior day low$245.00 · 63/100 weightPrior day high$256.00 · 45/100 weightStrike $250.00Gamma flip $248.00Source: Capital flow analysis · 2 Oct 2026, 20:00 UTC",
+        "scrollWidth": 1280,
+        "sourceCount": 1
+      }
+    },
+    {
+      "tab": "capital",
+      "symbol": "SPY",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T09:44:37.437Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1209,
+      "scrollWidth": 390,
+      "screens": 1.4324644549763033,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n5. Capital pressure\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nSPY\nMore symbols\nCapital Pressure · Change view\n\nPressure conditions are not aligned\n\nRefresh\n\nDirectional scores and scenario weights are indicator summaries, not calibrated outcome probabilities.\n\nMarket mode\nPin\nSpot\n$249.35\nScenario weights · heuristic\nContinuation\n60\nPin / reversion\n20\nExpansion\n20\n\nEach weight is out of 100. No clear trend.\n\nPressure and risk evidence\nReference levels\n\nSource: Capital flow analysis · 2 Oct 2026, 20:00 UTC",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "SPY"
+        }
+      ],
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "Pressure conditions are not aligned",
+          "top": 675.875,
+          "bottom": 731.875
+        }
+      ],
+      "sourceCount": 1,
+      "allOpen": {
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n5. Capital pressure\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nSPY\nMore symbols\nCapital Pressure · Change view\n\nPressure conditions are not aligned\n\nRefresh\n\nDirectional scores and scenario weights are indicator summaries, not calibrated outcome probabilities.\n\nMarket mode\nPin\nSpot\n$249.35\nScenario weights · heuristic\nContinuation\n60\nPin / reversion\n20\nExpansion\n20\n\nEach weight is out of 100. No clear trend.\n\nPressure and risk evidence\nPrice direction\nUpward\nDirectional score\n74\nGamma\nNot measured\nCombined score\n71\nAlignment score\n42\nRisk score\n32\nRisk mode\nReduced risk tolerance\nSession phase\nNot measured\n\nUS equity market closed (weekend or holiday). Next-open read: Alignment score 42 is below the standard 68\n\nReference levels\nPrior day low\n$245.00 · 63/100 weight\nPrior day high\n$256.00 · 45/100 weight\nStrike $250.00\nGamma flip $248.00\n\nSource: Capital flow analysis · 2 Oct 2026, 20:00 UTC",
+        "researchText": "Pressure conditions are not alignedRefreshDirectional scores and scenario weights are indicator summaries, not calibrated outcome probabilities.Market modePinSpot$249.35Scenario weights · heuristicContinuation60Pin / reversion20Expansion20Each weight is out of 100. No clear trend.Pressure and risk evidencePrice directionUpwardDirectional score74GammaNot measuredCombined score71Alignment score42Risk score32Risk modeReduced risk toleranceSession phaseNot measuredUS equity market closed (weekend or holiday). Next-open read: Alignment score 42 is below the standard 68Reference levelsPrior day low$245.00 · 63/100 weightPrior day high$256.00 · 45/100 weightStrike $250.00Gamma flip $248.00Source: Capital flow analysis · 2 Oct 2026, 20:00 UTC",
+        "scrollWidth": 390,
+        "sourceCount": 1
+      }
+    },
+    {
+      "tab": "options-confluence",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T09:44:40.454Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 877,
+      "scrollWidth": 1280,
+      "screens": 1.09625,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n3. Options setup\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nOptions Confluence · Change view\n\nOptions evidence needs confirmation\n\nOptions estimates can fail during news, liquidity gaps or stale observations. Educational scenario context only.\n\nUnderlying reference\n$249.35\nChain status\nProvider current\nSelected expiry\n2026-10-09\nConfluence timeframes\n3\nAnalysis timeframe\nScalping (5-15m)\n30 Minute\n1 Hour\n4 Hour\nDaily\n3-Day\nWeekly\nMonthly\nLEAPS\nExpiry\nShared default\n2026-10-09\nRun again\nContract and open-interest evidence\nMeasured context\n\nSource: Alpha Vantage · 2 Oct 2026, 20:00 UTC",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "Options evidence needs confirmation",
+          "top": 516.390625,
+          "bottom": 544.390625
+        }
+      ],
+      "sourceCount": 1,
+      "allOpen": {
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n3. Options setup\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nOptions Confluence · Change view\n\nOptions evidence needs confirmation\n\nOptions estimates can fail during news, liquidity gaps or stale observations. Educational scenario context only.\n\nUnderlying reference\n$249.35\nChain status\nProvider current\nSelected expiry\n2026-10-09\nConfluence timeframes\n3\nAnalysis timeframe\nScalping (5-15m)\n30 Minute\n1 Hour\n4 Hour\nDaily\n3-Day\nWeekly\nMonthly\nLEAPS\nExpiry\nShared default\n2026-10-09\nRun again\nContract and open-interest evidence\nCall open interest\n109,234\nPut open interest\n92,487\nPut / call ratio\n0.85\nOI expiry\nFri 9 Oct\n\nSelected call: $250.00 · At the money.\n\n$250.00 call\n3,456 open interest\nMeasured context\nCurrent implied volatility\n49.4%\nTimeframe coverage\nNo missing timeframes reported\nOptions quality score\n79\nExpected move\n4.2%\n\nScores describe indicator alignment and are not calibrated probabilities. Dealer inventory is not supplied.\n\nSource: Alpha Vantage · 2 Oct 2026, 20:00 UTC",
+        "researchText": "Options evidence needs confirmationOptions estimates can fail during news, liquidity gaps or stale observations. Educational scenario context only.Underlying reference$249.35Chain statusProvider currentSelected expiry2026-10-09Confluence timeframes3Analysis timeframeScalping (5-15m)30 Minute1 Hour4 HourDaily3-DayWeeklyMonthlyLEAPSExpiryShared default2026-10-09Run againContract and open-interest evidenceCall open interest109,234Put open interest92,487Put / call ratio0.85OI expiryFri 9 OctSelected call: $250.00 · At the money.$250.00 call3,456 open interestMeasured contextCurrent implied volatility49.4%Timeframe coverageNo missing timeframes reportedOptions quality score79Expected move4.2%Scores describe indicator alignment and are not calibrated probabilities. Dealer inventory is not supplied.Source: Alpha Vantage · 2 Oct 2026, 20:00 UTC",
+        "scrollWidth": 1280,
+        "sourceCount": 1
+      }
+    },
+    {
+      "tab": "options-confluence",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T09:44:43.352Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1266,
+      "scrollWidth": 390,
+      "screens": 1.5,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n3. Options setup\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nOptions Confluence · Change view\n\nOptions evidence needs confirmation\n\nOptions estimates can fail during news, liquidity gaps or stale observations. Educational scenario context only.\n\nUnderlying reference\n$249.35\nChain status\nProvider current\nSelected expiry\n2026-10-09\nConfluence timeframes\n3\nAnalysis timeframe\nScalping (5-15m)\n30 Minute\n1 Hour\n4 Hour\nDaily\n3-Day\nWeekly\nMonthly\nLEAPS\nExpiry\nShared default\n2026-10-09\nRun again\nContract and open-interest evidence\nMeasured context\n\nSource: Alpha Vantage · 2 Oct 2026, 20:00 UTC",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "Options evidence needs confirmation",
+          "top": 671.875,
+          "bottom": 727.875
+        }
+      ],
+      "sourceCount": 1,
+      "allOpen": {
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n3. Options setup\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nOptions Confluence · Change view\n\nOptions evidence needs confirmation\n\nOptions estimates can fail during news, liquidity gaps or stale observations. Educational scenario context only.\n\nUnderlying reference\n$249.35\nChain status\nProvider current\nSelected expiry\n2026-10-09\nConfluence timeframes\n3\nAnalysis timeframe\nScalping (5-15m)\n30 Minute\n1 Hour\n4 Hour\nDaily\n3-Day\nWeekly\nMonthly\nLEAPS\nExpiry\nShared default\n2026-10-09\nRun again\nContract and open-interest evidence\nCall open interest\n109,234\nPut open interest\n92,487\nPut / call ratio\n0.85\nOI expiry\nFri 9 Oct\n\nSelected call: $250.00 · At the money.\n\n$250.00 call\n3,456 open interest\nMeasured context\nCurrent implied volatility\n49.4%\nTimeframe coverage\nNo missing timeframes reported\nOptions quality score\n79\nExpected move\n4.2%\n\nScores describe indicator alignment and are not calibrated probabilities. Dealer inventory is not supplied.\n\nSource: Alpha Vantage · 2 Oct 2026, 20:00 UTC",
+        "researchText": "Options evidence needs confirmationOptions estimates can fail during news, liquidity gaps or stale observations. Educational scenario context only.Underlying reference$249.35Chain statusProvider currentSelected expiry2026-10-09Confluence timeframes3Analysis timeframeScalping (5-15m)30 Minute1 Hour4 HourDaily3-DayWeeklyMonthlyLEAPSExpiryShared default2026-10-09Run againContract and open-interest evidenceCall open interest109,234Put open interest92,487Put / call ratio0.85OI expiryFri 9 OctSelected call: $250.00 · At the money.$250.00 call3,456 open interestMeasured contextCurrent implied volatility49.4%Timeframe coverageNo missing timeframes reportedOptions quality score79Expected move4.2%Scores describe indicator alignment and are not calibrated probabilities. Dealer inventory is not supplied.Source: Alpha Vantage · 2 Oct 2026, 20:00 UTC",
+        "scrollWidth": 390,
+        "sourceCount": 1
+      }
+    }
+  ],
+  "requests": [
+    {
+      "url": "http://127.0.0.1:3122/api/disclosure/status",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/me",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/context/heartbeat",
+      "method": "POST",
+      "body": "{\"sessionId\":\"op_1791193470459_c8n81dd0\",\"page\":\"tools\",\"route\":\"/tools/terminal\",\"symbols\":[\"MU\"],\"timeframes\":[],\"attention\":{\"primarySymbol\":\"MU\",\"dwellMs\":0,\"scrollDepth\":0},\"viewState\":{\"query\":\"tab=gravity&symbol=MU&type=equity\"}}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/analytics/heartbeat",
+      "method": "POST",
+      "body": "{\"session_id\":\"ses_1791193470475_qlmh9tux\",\"current_path\":\"/tools/terminal\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/health/data",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/scanner/top-cached?type=all&limit=5&_ts=1791193470514",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"mode\":\"calendar\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/risk/governor/preferences",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/time-gravity-map?symbol=MU&assetType=stock",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"mode\":\"calendar\",\"assetType\":\"equity\",\"sessionMode\":\"regular\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/quote?symbol=MU&type=stock",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/time-gravity-map?symbol=MU&price=100&assetType=stock",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"mode\":\"calendar\",\"assetType\":\"equity\",\"sessionMode\":\"regular\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/disclosure/status",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/me",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/context/heartbeat",
+      "method": "POST",
+      "body": "{\"sessionId\":\"op_1791193472388_nmdbvz98\",\"page\":\"tools\",\"route\":\"/tools/terminal\",\"symbols\":[\"MU\"],\"timeframes\":[],\"attention\":{\"primarySymbol\":\"MU\",\"dwellMs\":0,\"scrollDepth\":0},\"viewState\":{\"query\":\"tab=gravity&symbol=MU&type=equity\"}}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/analytics/heartbeat",
+      "method": "POST",
+      "body": "{\"session_id\":\"ses_1791193472396_lss25yvy\",\"current_path\":\"/tools/terminal\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/health/data",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/scanner/top-cached?type=all&limit=5&_ts=1791193472420",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"mode\":\"calendar\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/risk/governor/preferences",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/time-gravity-map?symbol=MU&assetType=stock",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"mode\":\"calendar\",\"assetType\":\"equity\",\"sessionMode\":\"regular\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/quote?symbol=MU&type=stock",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/time-gravity-map?symbol=MU&price=100&assetType=stock",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"mode\":\"calendar\",\"assetType\":\"equity\",\"sessionMode\":\"regular\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/disclosure/status",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/me",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/context/heartbeat",
+      "method": "POST",
+      "body": "{\"sessionId\":\"op_1791193474256_n9injh4e\",\"page\":\"tools\",\"route\":\"/tools/terminal\",\"symbols\":[\"SPY\"],\"timeframes\":[],\"attention\":{\"primarySymbol\":\"SPY\",\"dwellMs\":0,\"scrollDepth\":0},\"viewState\":{\"query\":\"tab=capital&symbol=SPY&type=equity\"}}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/analytics/heartbeat",
+      "method": "POST",
+      "body": "{\"session_id\":\"ses_1791193474273_ibm3ygw5\",\"current_path\":\"/tools/terminal\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/health/data",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/scanner/top-cached?type=all&limit=5&_ts=1791193474289",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"SPY\",\"mode\":\"calendar\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/flow?symbol=SPY&marketType=equity",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/risk/governor/preferences",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/disclosure/status",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/me",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/scanner/top-cached?type=all&limit=5&_ts=1791193476220",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"SPY\",\"mode\":\"calendar\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/flow?symbol=SPY&marketType=equity",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/risk/governor/preferences",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/context/heartbeat",
+      "method": "POST",
+      "body": "{\"sessionId\":\"op_1791193476265_qswkixo4\",\"page\":\"tools\",\"route\":\"/tools/terminal\",\"symbols\":[\"SPY\"],\"timeframes\":[],\"attention\":{\"primarySymbol\":\"SPY\",\"dwellMs\":1,\"scrollDepth\":0},\"viewState\":{\"query\":\"tab=capital&symbol=SPY&type=equity\"}}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/analytics/heartbeat",
+      "method": "POST",
+      "body": "{\"session_id\":\"ses_1791193476276_t3to5h6i\",\"current_path\":\"/tools/terminal\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/health/data",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/disclosure/status",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/me",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/scanner/top-cached?type=all&limit=5&_ts=1791193478474",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"mode\":\"calendar\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/risk/governor/preferences",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/journal",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/context/heartbeat",
+      "method": "POST",
+      "body": "{\"sessionId\":\"op_1791193478529_spvzt1k1\",\"page\":\"tools\",\"route\":\"/tools/terminal\",\"symbols\":[\"MU\"],\"timeframes\":[],\"attention\":{\"primarySymbol\":\"MU\",\"dwellMs\":0,\"scrollDepth\":0},\"viewState\":{\"query\":\"tab=options-confluence&symbol=MU&type=equity\"}}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/analytics/heartbeat",
+      "method": "POST",
+      "body": "{\"session_id\":\"ses_1791193478534_fqshsszi\",\"current_path\":\"/tools/terminal\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/health/data",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/options/expirations?symbol=MU",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/options-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"scanMode\":\"swing_1d\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/operator/state",
+      "method": "POST",
+      "body": "{\"current_focus\":\"MU\",\"active_candidates\":[\"MU\"],\"risk_environment\":\"HIGH\",\"ai_attention_score\":73,\"user_mode\":\"EVALUATE\",\"cognitive_load\":35,\"context_state\":{\"bias\":\"BULLISH\",\"action\":\"WAIT\",\"next\":\"Research observation needs confirmation\",\"updated_at\":\"2026-10-05T09:44:39.764Z\"},\"last_actions\":[{\"action\":\"WAIT\",\"note\":\"Research observation needs confirmation\",\"at\":\"2026-10-05T09:44:39.764Z\"}],\"source_module\":\"operator_state_client\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/workflow/events",
+      "method": "POST",
+      "body": "{\"events\":[{\"event_id\":\"evt_c5b6e9f0-fa91-4b99-abfa-e3c9609d64fc\",\"event_type\":\"signal.created\",\"event_version\":1,\"occurred_at\":\"2026-10-05T09:44:39.765Z\",\"actor\":{\"actor_type\":\"user\",\"user_id\":null,\"anonymous_id\":null,\"session_id\":null},\"context\":{\"tenant_id\":\"msp\",\"app\":{\"name\":\"MarketScannerPros\",\"env\":\"dev\"},\"page\":{\"route\":\"/tools/terminal?tab=options-confluence\",\"module\":\"options_confluence\"},\"device\":{\"platform\":\"web\",\"ua\":\"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36\"},\"geo\":{\"tz\":\"Australia/Sydney\"}},\"entity\":{\"entity_type\":\"signal\",\"entity_id\":\"sig_opt_MU_1791193479765\",\"symbol\":\"MU\",\"asset_class\":\"options\"},\"correlation\":{\"workflow_id\":\"wf_options_MU_20261005\",\"trace_id\":\"trc_59a7bbf0-d84a-46ab-be16-f71744fde926\",\"parent_event_id\":null},\"payload\":{\"signal_id\":\"sig_opt_MU_1791193479765\",\"created_at\":\"2026-10-05T09:44:39.765Z\",\"symbol\":\"MU\",\"asset_class\":\"options\",\"timeframe\":\"swing_1d\",\"signal_type\":\"options_confluence\",\"direction\":\"long\",\"confidence\":73,\"quality_tier\":\"B\",\"source\":{\"module\":\"options_confluence\",\"submodule\":\"scan\",\"strategy\":\"options_flow\"},\"evidence\":{\"trade_quality\":\"B\",\"confluence_stack\":3,\"iv_rank\":null,\"unusual_activity\":false}}},{\"event_id\":\"evt_02931cbe-e98e-4985-a47c-604782da5bbd\",\"event_type\":\"candidate.created\",\"event_version\":1,\"occurred_at\":\"2026-10-05T09:44:39.765Z\",\"actor\":{\"actor_type\":\"user\",\"user_id\":null,\"anonymous_id\":null,\"session_id\":null},\"context\":{\"tenant_id\":\"msp\",\"app\":{\"name\":\"MarketScannerPros\",\"env\":\"dev\"},\"page\":{\"route\":\"/tools/terminal?tab=options-confluence\",\"module\":\"options_confluence\"},\"device\":{\"platform\":\"web\",\"ua\":\"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36\"},\"geo\":{\"tz\":\"Australia/Sydney\"}},\"entity\":{\"entity_type\":\"candidate\",\"entity_id\":\"cand_opt_MU_1791193479765\",\"symbol\":\"MU\",\"asset_class\":\"options\"},\"correlation\":{\"workflow_id\":\"wf_options_MU_20261005\",\"trace_id\":\"trc_4f4d8dde-1aaa-4c75-9d62-59063c7854b9\",\"parent_event_id\":\"evt_c5b6e9f0-fa91-4b99-abfa-e3c9609d64fc\"},\"payload\":{\"candidate_id\":\"cand_opt_MU_1791193479765\",\"signal_id\":\"sig_opt_MU_1791193479765\",\"evaluated_at\":\"2026-10-05T09:44:39.765Z\",\"result\":\"pass\",\"confidence_delta\":0,\"final_confidence\":73,\"checks\":[{\"name\":\"options_confidence\",\"status\":\"pass\",\"detail\":\"Composite confidence 73\"},{\"name\":\"entry_defined\",\"status\":\"warn\",\"detail\":\"Trade levels missing\"}],\"notes\":\"Research observation needs confirmation\",\"decision_packet\":{\"id\":\"dp_cab4e10b-e4f7-4829-91db-02ebcc0decf7\",\"createdAt\":\"2026-10-05T09:44:39.765Z\",\"symbol\":\"MU\",\"market\":\"options\",\"signalSource\":\"options.confluence\",\"signalScore\":73,\"bias\":\"bullish\",\"timeframeBias\":[\"swing_1d\"],\"entryZone\":249.3506,\"targets\":[],\"riskScore\":85,\"status\":\"candidate\"}}}]}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/disclosure/status",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/me",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/auth/session",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/scanner/top-cached?type=all&limit=5&_ts=1791193481466",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/confluence-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"mode\":\"calendar\",\"anchor\":\"TODAY\",\"horizonDays\":1}",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/risk/governor/preferences",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": null,
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/regime",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/journal",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/context/heartbeat",
+      "method": "POST",
+      "body": "{\"sessionId\":\"op_1791193481406_9vckbfsh\",\"page\":\"tools\",\"route\":\"/tools/terminal\",\"symbols\":[\"MU\"],\"timeframes\":[],\"attention\":{\"primarySymbol\":\"MU\",\"dwellMs\":0,\"scrollDepth\":0},\"viewState\":{\"query\":\"tab=options-confluence&symbol=MU&type=equity\"}}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/analytics/heartbeat",
+      "method": "POST",
+      "body": "{\"session_id\":\"ses_1791193481573_6viqb03l\",\"current_path\":\"/tools/terminal\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/health/data",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/options/expirations?symbol=MU",
+      "method": "GET",
+      "body": null,
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/options-scan",
+      "method": "POST",
+      "body": "{\"symbol\":\"MU\",\"scanMode\":\"swing_1d\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/operator/state",
+      "method": "POST",
+      "body": "{\"current_focus\":\"MU\",\"active_candidates\":[\"MU\"],\"risk_environment\":\"HIGH\",\"ai_attention_score\":73,\"user_mode\":\"EVALUATE\",\"cognitive_load\":35,\"context_state\":{\"bias\":\"BULLISH\",\"action\":\"WAIT\",\"next\":\"Research observation needs confirmation\",\"updated_at\":\"2026-10-05T09:44:42.664Z\"},\"last_actions\":[{\"action\":\"WAIT\",\"note\":\"Research observation needs confirmation\",\"at\":\"2026-10-05T09:44:42.664Z\"}],\"source_module\":\"operator_state_client\"}",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/workflow/events",
+      "method": "POST",
+      "body": "{\"events\":[{\"event_id\":\"evt_4542ba6a-2c96-4ca6-9261-27e65f53cdc3\",\"event_type\":\"signal.created\",\"event_version\":1,\"occurred_at\":\"2026-10-05T09:44:42.665Z\",\"actor\":{\"actor_type\":\"user\",\"user_id\":null,\"anonymous_id\":null,\"session_id\":null},\"context\":{\"tenant_id\":\"msp\",\"app\":{\"name\":\"MarketScannerPros\",\"env\":\"dev\"},\"page\":{\"route\":\"/tools/terminal?tab=options-confluence\",\"module\":\"options_confluence\"},\"device\":{\"platform\":\"web\",\"ua\":\"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36\"},\"geo\":{\"tz\":\"Australia/Sydney\"}},\"entity\":{\"entity_type\":\"signal\",\"entity_id\":\"sig_opt_MU_1791193482665\",\"symbol\":\"MU\",\"asset_class\":\"options\"},\"correlation\":{\"workflow_id\":\"wf_options_MU_20261005\",\"trace_id\":\"trc_1a8f2051-aac5-46a6-b50b-78ddd023d54a\",\"parent_event_id\":null},\"payload\":{\"signal_id\":\"sig_opt_MU_1791193482665\",\"created_at\":\"2026-10-05T09:44:42.665Z\",\"symbol\":\"MU\",\"asset_class\":\"options\",\"timeframe\":\"swing_1d\",\"signal_type\":\"options_confluence\",\"direction\":\"long\",\"confidence\":73,\"quality_tier\":\"B\",\"source\":{\"module\":\"options_confluence\",\"submodule\":\"scan\",\"strategy\":\"options_flow\"},\"evidence\":{\"trade_quality\":\"B\",\"confluence_stack\":3,\"iv_rank\":null,\"unusual_activity\":false}}},{\"event_id\":\"evt_039afae4-c5fd-4ba4-9ced-1d45dfae5c03\",\"event_type\":\"candidate.created\",\"event_version\":1,\"occurred_at\":\"2026-10-05T09:44:42.666Z\",\"actor\":{\"actor_type\":\"user\",\"user_id\":null,\"anonymous_id\":null,\"session_id\":null},\"context\":{\"tenant_id\":\"msp\",\"app\":{\"name\":\"MarketScannerPros\",\"env\":\"dev\"},\"page\":{\"route\":\"/tools/terminal?tab=options-confluence\",\"module\":\"options_confluence\"},\"device\":{\"platform\":\"web\",\"ua\":\"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36\"},\"geo\":{\"tz\":\"Australia/Sydney\"}},\"entity\":{\"entity_type\":\"candidate\",\"entity_id\":\"cand_opt_MU_1791193482665\",\"symbol\":\"MU\",\"asset_class\":\"options\"},\"correlation\":{\"workflow_id\":\"wf_options_MU_20261005\",\"trace_id\":\"trc_3b1e9bc7-5182-4204-8b35-dcaad3b6751c\",\"parent_event_id\":\"evt_4542ba6a-2c96-4ca6-9261-27e65f53cdc3\"},\"payload\":{\"candidate_id\":\"cand_opt_MU_1791193482665\",\"signal_id\":\"sig_opt_MU_1791193482665\",\"evaluated_at\":\"2026-10-05T09:44:42.665Z\",\"result\":\"pass\",\"confidence_delta\":0,\"final_confidence\":73,\"checks\":[{\"name\":\"options_confidence\",\"status\":\"pass\",\"detail\":\"Composite confidence 73\"},{\"name\":\"entry_defined\",\"status\":\"warn\",\"detail\":\"Trade levels missing\"}],\"notes\":\"Research observation needs confirmation\",\"decision_packet\":{\"id\":\"dp_f8cd5b11-471a-408a-951a-c7079d4a8ee8\",\"createdAt\":\"2026-10-05T09:44:42.665Z\",\"symbol\":\"MU\",\"market\":\"options\",\"signalSource\":\"options.confluence\",\"signalScore\":73,\"bias\":\"bullish\",\"timeframeBias\":[\"swing_1d\"],\"entryZone\":249.3506,\"targets\":[],\"riskScore\":85,\"status\":\"candidate\"}}}]}",
+      "status": 200,
+      "action": "mocked"
+    }
+  ],
+  "errors": []
+}

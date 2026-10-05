@@ -7,6 +7,8 @@ export interface ToolPage {
   icon: string;
   category: string;
   tier?: "free" | "pro";
+  /** Shown muted in the menu and All tools. The route still resolves. */
+  comingSoon?: boolean;
   /** Retired names matched by All tools search. Not shown in the catalog. */
   aliases?: string[];
 }
@@ -293,6 +295,7 @@ export const TOOL_CATALOG: ToolPage[] = primaryNavTools.flatMap((group) =>
         icon: data?.icon ?? "MSP",
         category: group.label,
         tier: data?.tier ?? "free",
+        comingSoon: item.comingSoon,
         aliases: legacySearchNames[item.href],
       };
     }),

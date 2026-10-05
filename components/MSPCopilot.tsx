@@ -465,9 +465,9 @@ export default function MSPCopilot({
             border: '1px solid rgba(16, 185, 129, 0.3)',
             boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
           }}
-          title="Show ARCA AI"
+          title="Show MSP AI"
         >
-          <img src="/logos/arcxa-chip.png" alt="ARCA AI" style={{ height: '1.25rem', width: '1.25rem', borderRadius: '3px', objectFit: 'cover' }} />
+          <img src="/logos/arcxa-chip.png" alt="MSP AI" style={{ height: '1.25rem', width: '1.25rem', borderRadius: '3px', objectFit: 'cover' }} />
         </button>
       );
     }
@@ -487,7 +487,7 @@ export default function MSPCopilot({
             fontSize: '0.75rem',
             lineHeight: 1,
           }}
-          title="Minimize ARCA AI"
+          title="Minimize MSP AI"
         >
           ✕
         </button>
@@ -501,8 +501,8 @@ export default function MSPCopilot({
             boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4)',
           }}
         >
-          <img src="/logos/arcxa-chip.png" alt="ARCA AI" style={{ height: '1.75rem', width: '1.75rem', borderRadius: '4px', objectFit: 'cover' }} />
-          <span>ARCA AI</span>
+          <img src="/logos/arcxa-chip.png" alt="MSP AI" style={{ height: '1.75rem', width: '1.75rem', borderRadius: '4px', objectFit: 'cover' }} />
+          <span>MSP AI</span>
         </button>
       </div>
     );
@@ -532,9 +532,9 @@ export default function MSPCopilot({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <img src="/logos/arcxa-chip.png" alt="ARCA AI" style={{ height: '2rem', width: '2rem', borderRadius: '4px', objectFit: 'cover' }} />
+          <img src="/logos/arcxa-chip.png" alt="MSP AI" style={{ height: '2rem', width: '2rem', borderRadius: '4px', objectFit: 'cover' }} />
           <div>
-            <div style={{ fontWeight: '700', color: 'var(--msp-text)' }}>ARCA AI</div>
+            <div style={{ fontWeight: '700', color: 'var(--msp-text)' }}>MSP AI</div>
             <div style={{ fontSize: '0.75rem', color: 'var(--msp-text-muted)' }}>{skillConfig.displayName}</div>
           </div>
         </div>

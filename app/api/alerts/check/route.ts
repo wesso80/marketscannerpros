@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { q } from '@/lib/db';
 import { describeConditionMet, parseGlobalQuote, type AlertQuote } from '@/lib/alerts/priceConditions';
-import { sendAlertEmail } from '@/lib/email';
+import { deliverUserAlertEmail } from '@/lib/alerts/emailControls';
 import { sendPushToUser, PushTemplates } from '@/lib/pushServer';
 import { getPriceBySymbol } from '@/lib/coingecko';
 import { avTakeToken } from '@/lib/avRateGovernor';
@@ -295,9 +295,11 @@ async function triggerAlert(alert: Alert, quote: AlertQuote) {
   if (alert.notify_email && userEmail) {
     try {
       const formattedPrice = triggerPrice >= 1 ? triggerPrice.toFixed(2) : triggerPrice.toFixed(6);
-      await sendAlertEmail({
+      const delivered = await deliverUserAlertEmail({
+        workspaceId: alert.workspace_id,
         to: userEmail,
         subject: `🔔 Price Alert: ${alert.symbol} - ${alert.name || conditionMet}`,
+        line: `${alert.symbol}: ${conditionMet}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #0f172a; color: #fff;">
             <h1 style="color: #10b981; margin-bottom: 20px;">🔔 Price Alert Triggered</h1>
@@ -338,7 +340,7 @@ async function triggerAlert(alert: Alert, quote: AlertQuote) {
           </div>
         `,
       });
-      console.log(`📧 Alert email sent to ${userEmail}: ${alert.symbol}`);
+      console.log(`📧 Alert email ${delivered.action} for ${alert.symbol} (${delivered.reason})`);
     } catch (emailError) {
       console.error(`Failed to send alert email:`, emailError);
     }

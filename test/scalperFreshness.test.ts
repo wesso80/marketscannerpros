@@ -83,11 +83,14 @@ describe('scalper bar freshness', () => {
 
 describe('MATIC -> POL in default crypto watchlists', () => {
   it('scalper defaults list POL, not MATIC', () => {
-    for (const file of ['app/tools/scalper/page.tsx', 'app/api/scalper/run/route.ts', 'app/admin/scalper/page.tsx', 'lib/operator/watchlists.ts']) {
+    for (const file of ['app/api/scalper/run/route.ts', 'app/admin/scalper/page.tsx', 'lib/operator/watchlists.ts']) {
       const src = readFileSync(file, 'utf8');
       expect(src, file).not.toMatch(/'MATIC'/);
       expect(src, file).toMatch(/'POL'/);
     }
+    const page = readFileSync('app/tools/scalper/page.tsx', 'utf8');
+    expect(page).not.toMatch(/'MATIC'/);
+    expect(page).not.toMatch(/'POL'/);
   });
 
   it('POL maps to CoinGecko while MATIC stays mapped for old data', () => {

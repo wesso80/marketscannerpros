@@ -103,21 +103,21 @@ it('keeps Run Educational Scan outside Advanced filters after a preset', () => {
   expect(screen.getByTestId('run-educational-scan').textContent).toMatch(/Run Educational Scan/);
 });
 
-it('shows the liquidity example to a free user and does not scan', async () => {
+it('shows the locked liquidity preview to a free user and does not scan', async () => {
   tierState.tier = 'free';
   tierState.isLoggedIn = true;
   render(<LiquiditySweepPage />);
-  await waitFor(() => expect(document.querySelector('[data-liquidity-example]')).toBeTruthy());
-  expect(document.querySelector('[data-liquidity-example]')?.textContent).toContain('Example');
+  await waitFor(() => expect(screen.getByRole('heading', {name: 'Liquidity Sweep'})).toBeTruthy());
+  expect(screen.queryByRole('button', {name: 'Run scan'})).toBeNull();
   expect(sweepCalls()).toHaveLength(0);
   expect(screen.queryByText(/Scan failed/)).toBeNull();
 });
 
-it('shows the liquidity example to an anonymous user and does not scan', async () => {
+it('shows the locked liquidity preview to an anonymous user and does not scan', async () => {
   tierState.tier = 'anonymous';
   tierState.isLoggedIn = false;
   render(<LiquiditySweepPage />);
-  await waitFor(() => expect(document.querySelector('[data-liquidity-example]')).toBeTruthy());
+  await waitFor(() => expect(screen.getByRole('heading', {name: 'Liquidity Sweep'})).toBeTruthy());
   expect(sweepCalls()).toHaveLength(0);
   expect(screen.queryByText(/Scan failed/)).toBeNull();
 });
@@ -126,7 +126,7 @@ it('does not scan liquidity while the tier is still loading', async () => {
   tierState.tier = 'anonymous';
   tierState.isLoading = true;
   render(<LiquiditySweepPage />);
-  await waitFor(() => expect(document.querySelector('[data-liquidity-example]')).toBeTruthy());
+  expect(screen.getByRole('status').textContent).toContain('Loading access');
   expect(sweepCalls()).toHaveLength(0);
   expect(screen.queryByText(/Scan failed/)).toBeNull();
 });

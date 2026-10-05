@@ -127,18 +127,18 @@ export default function CommandHub() {
           <div className="relative mb-4">
             <img
               src="/logos/arcxa-chip.png"
-              alt="ARCxA Intelligence Engine"
+              alt="MSP AI"
               className="relative h-16 w-auto rounded-lg md:h-20"
               loading="lazy"
             />
           </div>
 
           <h2 className="text-2xl font-bold tracking-tight text-white md:text-3xl">
-            Powered by <span className="text-emerald-400">ARCxA</span>
+            Powered by <span className="text-emerald-400">MSP AI</span>
           </h2>
 
           <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-slate-400 md:text-base">
-            ARCxA helps organize scanner, regime, volatility, flow, and market-structure
+            MSP AI helps organize scanner, regime, volatility, flow, and market-structure
             context into educational research summaries — a copilot for review, not a trade oracle.
           </p>
 

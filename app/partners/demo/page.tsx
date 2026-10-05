@@ -17,7 +17,7 @@ const capabilities = [
   },
   {
     icon: "AI",
-    title: "ARCA AI Analyst",
+    title: "MSP AI",
     description: "GPT-4.1 powered Q&A system for market analysis, technical commentary, and Pine Script development. Mandatory disclaimers on every response.",
     tier: "All tiers",
   },
@@ -211,7 +211,7 @@ export default function PartnerDemoPage() {
               {
                 stat: "GPT-4.1",
                 label: "AI Engine",
-                detail: "ARCA AI analyst provides market commentary, scenario analysis, and Pine Script development â€” with mandatory disclaimers",
+                detail: "MSP AI provides market commentary, scenario analysis, and Pine Script development â€” with mandatory disclaimers",
               },
               {
                 stat: "0",
@@ -512,7 +512,7 @@ export default function PartnerDemoPage() {
             {[
               { href: "/tools/scanner", label: "Market Scanner" },
               { href: "/tools/golden-egg", label: "Golden Egg" },
-              { href: "/tools/scanner", label: "ARCA AI Panel" },
+              { href: "/tools/scanner", label: "MSP AI" },
               { href: "/tools/terminal?tab=options-confluence", label: "Options Terminal" },
               { href: "/tools/explorer?tab=crypto-command", label: "Crypto Terminal" },
               { href: "/tools/workspace?tab=backtest", label: "Backtester" },

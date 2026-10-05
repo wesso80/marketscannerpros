@@ -1,5 +1,7 @@
 import {createHash} from 'crypto';
 import {getRedis} from '@/lib/redis';
+import {resolveAlertsFromEmail} from '@/lib/email';
+import {assessOutgoingAlert,cryptoSetupAlertUserId,noteProviderSuppression,releaseAlertSendSlot} from '@/lib/alerts/emailControls';
 import {setupRead,setupReadText} from './cryptoJevEvidence';
 import {cryptoMarketsPaused} from './cryptoMarketsPause';
 import type {MomentumScan} from './cryptoVolumeMomentum';
@@ -11,18 +13,34 @@ export async function cryptoSetupEmailState(){
 }
 async function deliver(identity:string,subject:string,text:string){
  const redis=getRedis();if(!redis)throw Error('Email deduplication storage unavailable');
- const hash=createHash('sha256').update(recipient()+'|'+identity).digest('hex'),key=`${KEY}:${hash}`;
+ const to=recipient();
+ const userId=cryptoSetupAlertUserId(to);
+ const hash=createHash('sha256').update(to+'|'+identity).digest('hex'),key=`${KEY}:${hash}`;
  if(await redis.get(`${key}:sent`))return false;
  if(!await redis.set(`${key}:lock`,'reserved',{nx:true,ex:30}))return false;
+ const assessed=await assessOutgoingAlert({workspaceId:userId,to,subject,text,line:subject});
+ if(assessed.action!=='send'){
+  if(!(assessed.action==='skipped'&&assessed.reason==='schema'))await redis.set(`${key}:sent`,assessed.action,{ex:604800});
+  return false;
+ }
  // Freeze the body before the first attempt so an uncertain retry remains idempotent.
- await redis.set(`${key}:payload`,{from:process.env.RESEND_FROM_EMAIL||'MarketScanner Pros <alerts@marketscannerpros.app>',to:[recipient()],subject,text},{nx:true,ex:604800});
+ await redis.set(`${key}:payload`,{from:resolveAlertsFromEmail(),to:[to],subject,text:assessed.text,html:assessed.html,headers:assessed.headers},{nx:true,ex:604800});
  const payload=await redis.get(`${key}:payload`);if(!payload)throw Error('Email payload storage unavailable');
- const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${process.env.RESEND_API_KEY}`,'Content-Type':'application/json','Idempotency-Key':`crypto-setup-${hash}`},body:JSON.stringify(payload),signal:AbortSignal.timeout(10000)});
- const body=await response.json();
- if(!response.ok||!body.id)throw Error(`Email provider rejected request (${response.status}): ${String(body.message??'No email ID').slice(0,180)}`);
- await redis.set(`${key}:sent`,body.id,{ex:604800});
- await redis.set(`${KEY}:last`,{status:'ACCEPTED',at:new Date().toISOString(),subject,providerId:body.id});
- return true;
+ try{
+  const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${process.env.RESEND_API_KEY}`,'Content-Type':'application/json','Idempotency-Key':`crypto-setup-${hash}`},body:JSON.stringify(payload),signal:AbortSignal.timeout(10000)});
+  const body=await response.json().catch(()=>({}));
+  if(!response.ok||!body.id){
+   const message=String(body.message??'');
+   if(/suppress/i.test(message))await noteProviderSuppression(to,message).catch(()=>{});
+   throw Error(`Email provider rejected request (${response.status}): ${message.slice(0,180)||'No email ID'}`);
+  }
+  await redis.set(`${key}:sent`,body.id,{ex:604800});
+  await redis.set(`${KEY}:last`,{status:'ACCEPTED',at:new Date().toISOString(),subject,providerId:body.id});
+  return true;
+ }catch(error){
+  await releaseAlertSendSlot(userId,assessed.day).catch(()=>{});
+  throw error;
+ }
 }
 export async function sendCryptoSetupEmails(scan:MomentumScan,now=Date.now()){
  if(cryptoMarketsPaused())return {enabled:false,accepted:0,paused:true,skipped:true,reason:'crypto_markets_paused'};

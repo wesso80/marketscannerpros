@@ -1,0 +1,364 @@
+{
+  "mocked": true,
+  "root": "/workspace/scratch/0535040d28c6/symbol-w1-baseline",
+  "results": [
+    {
+      "type": "equity",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "closed": {
+        "observedAt": "2026-10-05T08:10:48.100Z",
+        "width": 1280,
+        "height": 800,
+        "scrollWidth": 1280,
+        "screens": 5.01375,
+        "cards": 0,
+        "sourceCount": 0,
+        "legendCount": 0,
+        "verdicts": [],
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nⓘ General Information Only — educational use only.\nRead ▾\nLiquidity sweep scanner\nEQUITY mode\nFilter all\nDetect stop hunts before sizing risk.\n\nDetect liquidity sweeps at PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, and ROUND levels — confirm stop-hunt patterns before placing or invalidating a trade.\n\nRun scan\nOpen Golden Egg\nOpen Terminal\nMode\nEquity\nSweep detection\nSweeps\n18\nLatest completed candle observations\nFilter\nAll\nResult filter applied\nUpdated\n04:10 am\nLocal time\nEQUITY\nCRYPTO\nAll Results\nSweeps Only\nObservations (Sweep + Near Level)\nSCAN FOR SWEEPS\n36 scanned • 18 sweeps • 18 near level • 1s\nAAPL\n$100+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMSFT\n$101+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNVDA\n$102+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAMD\n$103+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMU\n$104+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nTSLA\n$105+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAAPL6\n$106+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMSFT7\n$107+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNVDA8\n$108+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAMD9\n$109+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMU10\n$110+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nTSLA11\n$111+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAAPL12\n$112+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMSFT13\n$113+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNVDA14\n$114+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAMD15\n$115+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMU16\n$116+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nTSLA17\n$117+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAAPL18\n$118+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMSFT19\n$119+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNVDA20\n$120+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAMD21\n$121+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMU22\n$122+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nTSLA23\n$123+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAAPL24\n$124+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMSFT25\n$125+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNVDA26\n$126+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAMD27\n$127+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMU28\n$128+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nTSLA29\n$129+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAAPL30\n$130+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMSFT31\n$131+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNVDA32\n$132+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAMD33\n$133+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMU34\n$134+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nTSLA35\n$135+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nLiquidity sweep detection is for educational purposes only. Sweeps are technical price-pattern observations and do not predict future direction or provide buy/sell signals. Not financial advice. Sweep observations describe possible stop-hunt behavior but do not guarantee reversal.\n✕\nARCA AI"
+      },
+      "requests": [
+        {
+          "path": "/api/disclosure/status",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/auth/session",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/me",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/context/heartbeat",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/analytics/heartbeat",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/auth/session",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/health/data",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/regime",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/favorites",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/liquidity-sweep",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/risk/governor/preferences",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/risk/governor/permission-snapshot",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/regime",
+          "method": "GET",
+          "mocked": true
+        }
+      ],
+      "errors": []
+    },
+    {
+      "type": "equity",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "closed": {
+        "observedAt": "2026-10-05T08:10:52.823Z",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "screens": 15.614928909952607,
+        "cards": 0,
+        "sourceCount": 0,
+        "legendCount": 0,
+        "verdicts": [],
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nⓘ General Information Only — educational use only.\nRead ▾\nLiquidity sweep scanner\nEQUITY mode\nFilter all\nDetect stop hunts before sizing risk.\n\nDetect liquidity sweeps at PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, and ROUND levels — confirm stop-hunt patterns before placing or invalidating a trade.\n\nRun scan\nOpen Golden Egg\nOpen Terminal\nMode\nEquity\nSweep detection\nSweeps\n18\nLatest completed candle observations\nFilter\nAll\nResult filter applied\nUpdated\n04:10 am\nLocal time\nEQUITY\nCRYPTO\nAll Results\nSweeps Only\nObservations (Sweep + Near Level)\nSCAN FOR SWEEPS\n36 scanned • 18 sweeps • 18 near level • 1s\nAAPL\n$100+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMSFT\n$101+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNVDA\n$102+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAMD\n$103+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMU\n$104+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nTSLA\n$105+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAAPL6\n$106+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMSFT7\n$107+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNVDA8\n$108+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAMD9\n$109+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMU10\n$110+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nTSLA11\n$111+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAAPL12\n$112+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMSFT13\n$113+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNVDA14\n$114+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAMD15\n$115+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMU16\n$116+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nTSLA17\n$117+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAAPL18\n$118+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMSFT19\n$119+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNVDA20\n$120+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAMD21\n$121+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMU22\n$122+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nTSLA23\n$123+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAAPL24\n$124+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMSFT25\n$125+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNVDA26\n$126+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAMD27\n$127+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMU28\n$128+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nTSLA29\n$129+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAAPL30\n$130+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMSFT31\n$131+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNVDA32\n$132+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nAMD33\n$133+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nMU34\n$134+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nTSLA35\n$135+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nLiquidity sweep detection is for educational purposes only. Sweeps are technical price-pattern observations and do not predict future direction or provide buy/sell signals. Not financial advice. Sweep observations describe possible stop-hunt behavior but do not guarantee reversal.\n✕\nARCA AI"
+      },
+      "requests": [
+        {
+          "path": "/api/disclosure/status",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/auth/session",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/me",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/auth/session",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/regime",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/favorites",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/liquidity-sweep",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/risk/governor/preferences",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/risk/governor/permission-snapshot",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/regime",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/context/heartbeat",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/health/data",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/analytics/heartbeat",
+          "method": "POST",
+          "mocked": true
+        }
+      ],
+      "errors": []
+    },
+    {
+      "type": "crypto",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "closed": {
+        "observedAt": "2026-10-05T08:10:57.863Z",
+        "width": 1280,
+        "height": 800,
+        "scrollWidth": 1280,
+        "screens": 5.01375,
+        "cards": 0,
+        "sourceCount": 0,
+        "legendCount": 0,
+        "verdicts": [],
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nⓘ General Information Only — educational use only.\nRead ▾\nLiquidity sweep scanner\nCRYPTO mode\nFilter all\nDetect stop hunts before sizing risk.\n\nDetect liquidity sweeps at PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, and ROUND levels — confirm stop-hunt patterns before placing or invalidating a trade.\n\nRun scan\nOpen Golden Egg\nOpen Terminal\nMode\nCrypto\nSweep detection\nSweeps\n18\nLatest completed candle observations\nFilter\nAll\nResult filter applied\nUpdated\n04:10 am\nLocal time\nEQUITY\nCRYPTO\nAll Results\nSweeps Only\nObservations (Sweep + Near Level)\nSCAN FOR SWEEPS\n36 scanned • 18 sweeps • 18 near level • 1s\nBTC\n$100+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nETH\n$101+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nSOL\n$102+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNEAR\n$103+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nLINK\n$104+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nXRP\n$105+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nBTC6\n$106+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nETH7\n$107+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nSOL8\n$108+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNEAR9\n$109+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nLINK10\n$110+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nXRP11\n$111+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nBTC12\n$112+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nETH13\n$113+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nSOL14\n$114+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNEAR15\n$115+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nLINK16\n$116+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nXRP17\n$117+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nBTC18\n$118+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nETH19\n$119+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nSOL20\n$120+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNEAR21\n$121+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nLINK22\n$122+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nXRP23\n$123+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nBTC24\n$124+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nETH25\n$125+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nSOL26\n$126+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNEAR27\n$127+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nLINK28\n$128+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nXRP29\n$129+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nBTC30\n$130+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nETH31\n$131+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nSOL32\n$132+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNEAR33\n$133+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nLINK34\n$134+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nXRP35\n$135+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nLiquidity sweep detection is for educational purposes only. Sweeps are technical price-pattern observations and do not predict future direction or provide buy/sell signals. Not financial advice. Sweep observations describe possible stop-hunt behavior but do not guarantee reversal.\n✕\nARCA AI"
+      },
+      "requests": [
+        {
+          "path": "/api/disclosure/status",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/auth/session",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/me",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/auth/session",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/regime",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/liquidity-sweep",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/favorites",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/risk/governor/preferences",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/risk/governor/permission-snapshot",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/regime",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/context/heartbeat",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/analytics/heartbeat",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/health/data",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/liquidity-sweep",
+          "method": "POST",
+          "mocked": true
+        }
+      ],
+      "errors": []
+    },
+    {
+      "type": "crypto",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "closed": {
+        "observedAt": "2026-10-05T08:11:01.418Z",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "screens": 15.614928909952607,
+        "cards": 0,
+        "sourceCount": 0,
+        "legendCount": 0,
+        "verdicts": [],
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nⓘ General Information Only — educational use only.\nRead ▾\nLiquidity sweep scanner\nCRYPTO mode\nFilter all\nDetect stop hunts before sizing risk.\n\nDetect liquidity sweeps at PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, and ROUND levels — confirm stop-hunt patterns before placing or invalidating a trade.\n\nRun scan\nOpen Golden Egg\nOpen Terminal\nMode\nCrypto\nSweep detection\nSweeps\n18\nLatest completed candle observations\nFilter\nAll\nResult filter applied\nUpdated\n04:11 am\nLocal time\nEQUITY\nCRYPTO\nAll Results\nSweeps Only\nObservations (Sweep + Near Level)\nSCAN FOR SWEEPS\n36 scanned • 18 sweeps • 18 near level • 1s\nBTC\n$100+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nETH\n$101+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nSOL\n$102+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNEAR\n$103+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nLINK\n$104+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nXRP\n$105+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nBTC6\n$106+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nETH7\n$107+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nSOL8\n$108+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNEAR9\n$109+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nLINK10\n$110+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nXRP11\n$111+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nBTC12\n$112+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nETH13\n$113+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nSOL14\n$114+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNEAR15\n$115+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nLINK16\n$116+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nXRP17\n$117+1.12% · completed 2026-10-02\nACTIVE SWEEP\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nBTC18\n$118+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nETH19\n$119+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nSOL20\n$120+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNEAR21\n$121+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nLINK22\n$122+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nXRP23\n$123+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nBTC24\n$124+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nETH25\n$125+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nSOL26\n$126+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNEAR27\n$127+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nLINK28\n$128+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nXRP29\n$129+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nBTC30\n$130+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nETH31\n$131+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nSOL32\n$132+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nNEAR33\n$133+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nLINK34\n$134+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBEARISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nXRP35\n$135+1.12% · completed 2026-10-02\nNEAR LEVEL\n65\nBULLISH CONTEXT\nPDL bullish context\nNearest: PDL @ $99.00\n0.50% away\nPDL\nEQH\nATR: 2.0%\nLevels: 2\nLiquidity sweep detection is for educational purposes only. Sweeps are technical price-pattern observations and do not predict future direction or provide buy/sell signals. Not financial advice. Sweep observations describe possible stop-hunt behavior but do not guarantee reversal.\n✕\nARCA AI"
+      },
+      "requests": [
+        {
+          "path": "/api/disclosure/status",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/auth/session",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/me",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/context/heartbeat",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/analytics/heartbeat",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/auth/session",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/health/data",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/regime",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/favorites",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/liquidity-sweep",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/risk/governor/preferences",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/risk/governor/permission-snapshot",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/regime",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/liquidity-sweep",
+          "method": "POST",
+          "mocked": true
+        }
+      ],
+      "errors": []
+    }
+  ]
+}

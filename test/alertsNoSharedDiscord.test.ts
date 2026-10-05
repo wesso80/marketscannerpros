@@ -8,6 +8,7 @@ vi.mock('@/lib/db', () => ({ q: mocks.q }));
 vi.mock('@/lib/coingecko', () => ({ getPriceBySymbol: mocks.crypto }));
 vi.mock('@/lib/avRateGovernor', () => ({ avTakeToken: async () => undefined }));
 vi.mock('@/lib/email', () => ({ sendAlertEmail: mocks.email }));
+vi.mock('@/lib/alerts/emailControls', () => ({ deliverUserAlertEmail: (input: unknown) => mocks.email(input) }));
 vi.mock('@/lib/pushServer', () => ({ sendPushToUser: mocks.push, PushTemplates: {} }));
 vi.mock('@/lib/discord-bridge', () => ({
   postToDiscord: mocks.discord,

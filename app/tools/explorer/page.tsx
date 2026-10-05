@@ -146,22 +146,23 @@ export default function ExplorerPage() {
         subtitle="Scan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens."
         actions={[
           { label: 'Open Scanner', variant: 'primary', href: '/tools/scanner' },
-          { label: 'Open Golden Egg', variant: 'secondary', href: '/tools/golden-egg' },
+          { label: 'Open Symbol', variant: 'secondary', href: '/tools/golden-egg' },
           { label: 'Open Macro Lens', variant: 'ghost', href: '/tools/dashboard?tab=macro' },
         ]}
         metrics={[
           { label: 'Sectors leading', value: sectorData.length ? `${sectorData.filter((s: SectorData) => (s.changePercent ?? 0) > 0).length}/${sectorData.length} green` : '—', tone: 'bull', detail: sectorData.length ? `Top: ${[...sectorData].sort((a: SectorData, b: SectorData) => (b.changePercent ?? 0) - (a.changePercent ?? 0))[0]?.name}` : 'Sector data loading' },
           { label: 'Crypto cap', value: cryptoData?.totalMarketCapFormatted || '—', tone: 'info', detail: cryptoData ? `BTC ${cryptoData.btcDominance.toFixed(1)}% · ETH ${cryptoData.ethDominance.toFixed(1)}%` : 'Crypto market loading' },
           { label: 'Top gainer', value: allGainers[0] ? proDisplaySymbol(allGainers[0].ticker, allGainers[0].asset_class) : '—', tone: 'warn', detail: allGainers[0] ? `+${allGainers[0].change_percentage} (${allGainers[0].asset_class})` : 'Movers loading' },
-          { label: 'Next check', value: tab, tone: 'warn', detail: 'Pick one lens, then drop into Scanner or Golden Egg' },
+          { label: 'Next check', value: tab, tone: 'warn', detail: 'Pick one lens, then drop into Scanner or Symbol' },
         ]}
       />
   );
 
   return (
     <div className="space-y-3">
-      {tab !== 'Movers' && hero}
+      {tab !== 'Movers' && tab !== 'Commodities' && hero}
 
+      {tab === 'Commodities' ? <div className="flex flex-wrap items-center justify-between gap-2"><h1 className="text-xl font-semibold">Markets</h1><label className="text-xs text-slate-400">View <select aria-label="Market view" className="ml-2 rounded border border-slate-700 bg-slate-900 p-2 text-white" value={tab} onChange={e => setTab(e.target.value as ExplorerTab)}>{TABS.map(t => <option key={t} value={t}>{t.replace('Deep-Dive', 'research').replace('Crypto Command', 'Crypto overview').replace('Crypto Intel', 'Crypto news')}</option>)}</select></label></div> : <>
       {/* Tabs */}
       <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
         <div className="flex items-center gap-1 overflow-x-auto">
@@ -173,6 +174,7 @@ export default function ExplorerPage() {
         </div>
       </div>
 
+      </>}
       {(tier === 'free' || tier === 'anonymous') && (
         <div className="text-xs text-center text-slate-400 bg-slate-800/50 border border-slate-700/30 rounded-lg px-3 py-2">
           <a href="/pricing" className="inline-flex min-h-10 items-center underline">{FREE_COPY.upgrade}</a>
@@ -203,7 +205,7 @@ export default function ExplorerPage() {
                         backgroundColor: pct == null ? 'rgba(148, 163, 184, 0.1)' : pct > 0 ? `rgba(16, 185, 129, ${Math.min(Math.abs(pct) / 3, 0.6)})` : pct < 0 ? `rgba(239, 68, 68, ${Math.min(Math.abs(pct) / 3, 0.6)})` : 'rgba(148, 163, 184, 0.1)',
                       }}
                       onClick={() => openGoldenEgg(s.symbol)}
-                      aria-label={`Open ${s.symbol} in Golden Egg`}
+                      aria-label={`Open ${s.symbol} in Symbol`}
                     >
                       <div className="text-[11px] text-white font-semibold">{s.symbol}</div>
                       <div className="text-[11px] text-slate-300 truncate">{s.name}</div>
@@ -227,7 +229,7 @@ export default function ExplorerPage() {
               ) : (
                 <div className="space-y-1">
                   {eqGainers.map((m: Mover) => (
-                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker, m.asset_class)} aria-label={`Open ${m.ticker} in Golden Egg`}>
+                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker, m.asset_class)} aria-label={`Open ${m.ticker} in Symbol`}>
                       <span className="font-semibold text-white w-16">{m.ticker}</span>
                       <span className="text-slate-300 font-mono">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                       <span className="text-emerald-400 font-mono w-20 text-right">+{m.change_percentage}</span>
@@ -243,7 +245,7 @@ export default function ExplorerPage() {
               ) : (
                 <div className="space-y-1">
                   {eqLosers.map((m: Mover) => (
-                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker, m.asset_class)} aria-label={`Open ${m.ticker} in Golden Egg`}>
+                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker, m.asset_class)} aria-label={`Open ${m.ticker} in Symbol`}>
                       <span className="font-semibold text-white w-16">{m.ticker}</span>
                       <span className="text-slate-300 font-mono">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                       <span className="text-red-400 font-mono w-20 text-right">{m.change_percentage}</span>
@@ -321,7 +323,7 @@ export default function ExplorerPage() {
               ) : (
                 <div className="space-y-1">
                   {cryptoGainers.map((m: Mover) => (
-                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker, m.asset_class)} aria-label={`Open ${proDisplaySymbol(m.ticker, m.asset_class)} in Golden Egg`}>
+                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker, m.asset_class)} aria-label={`Open ${proDisplaySymbol(m.ticker, m.asset_class)} in Symbol`}>
                       <span className="font-semibold text-white w-20 truncate">{proDisplaySymbol(m.ticker, m.asset_class)}</span>
                       <span className="text-slate-300 font-mono">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
                       <span className="text-emerald-400 font-mono w-20 text-right">+{m.change_percentage}</span>
@@ -337,7 +339,7 @@ export default function ExplorerPage() {
               ) : (
                 <div className="space-y-1">
                   {cryptoLosers.map((m: Mover) => (
-                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker, m.asset_class)} aria-label={`Open ${proDisplaySymbol(m.ticker, m.asset_class)} in Golden Egg`}>
+                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker, m.asset_class)} aria-label={`Open ${proDisplaySymbol(m.ticker, m.asset_class)} in Symbol`}>
                       <span className="font-semibold text-white w-20 truncate">{proDisplaySymbol(m.ticker, m.asset_class)}</span>
                       <span className="text-slate-300 font-mono">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
                       <span className="text-red-400 font-mono w-20 text-right">{m.change_percentage}</span>

@@ -13,9 +13,9 @@ describe('RS-9: no doubled "Blocked: BLOCKED:" prefix', () => {
     expect(stripBlockedPrefix('Unavailable in midday session: y')).toBe('Unavailable in midday session: y');
   });
   it('the Terminal uses the helpers instead of prepending its own prefix', () => {
-    const page = readFileSync(resolve(__dirname, '../app/tools/terminal/page.tsx'), 'utf8');
+    const page = readFileSync(resolve(__dirname, '../components/terminal/CapitalPressureView.tsx'), 'utf8');
     expect(page).not.toContain('`Blocked: ${perm.noTradeMode?.reason');
     expect(page).not.toContain('`Analysis paused: ${perm.noTradeMode?.reason');
-    expect(page).toContain('blockedReasonLabel(perm.noTradeMode?.reason)');
+    expect(page).toContain('researchReason(perm.noTradeMode?.reason)');
   });
 });

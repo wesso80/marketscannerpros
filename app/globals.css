@@ -257,7 +257,8 @@ a:hover {
 
 .header {
   border-bottom: 1px solid var(--msp-border);
-  overflow: hidden;
+  /* visible: overflow:hidden clipped sticky-header dropdowns (nav overflow fix) */
+  overflow: visible;
   width: 100%;
 }
 

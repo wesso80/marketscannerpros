@@ -1,0 +1,1739 @@
+
+ RUN  v3.2.4 /workspace/scratch/0535040d28c6/symbol-w1-baseline
+
+ ❯ test/liquiditySweepCompact.test.tsx (6 tests | 5 failed) 2591ms
+   × shows six of 36 in provider order, one legend, one scan and one source; Show all preserves order 1109ms
+     → expected  to have a length of 6 but got +0
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<main[39m
+        [33mclass[39m=[32m"py-6"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"msp-container"[39m
+          [33mstyle[39m=[32m"display: grid; gap: var(--msp-section-gap);"[39m
+        [36m>[39m
+          [36m<section>[39m
+            [36m<section[39m
+              [33maria-label[39m=[32m"Liquidity Sweep command header"[39m
+              [33mstyle[39m=[32m"background: var(--msp-panel); border-radius: var(--msp-radius-card); padding: 16px;"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.85fr)]"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"min-w-0"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"flex flex-wrap items-center gap-2"[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [36m<span>[39m
+                      [0mLiquidity sweep scanner[0m
+                    [36m</span>[39m
+                    [36m<span[39m
+                      [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                    [36m>[39m
+                      [0mEQUITY mode[0m
+                    [36m</span>[39m
+                    [36m<span[39m
+                      [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                    [36m>[39m
+                      [0mFilter all[0m
+                    [36m</span>[39m
+                  [36m</div>[39m
+                  [36m<h1[39m
+                    [33mclass[39m=[32m"mt-1"[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h1); font-weight: 500; color: var(--msp-text); line-height: 1.25;"[39m
+                  [36m>[39m
+                    [0mDetect stop hunts before sizing risk.[0m
+                  [36m</h1>[39m
+                  [36m<p[39m
+                    [33mclass[39m=[32m"mt-1 max-w-3xl"[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-body-sm); color: var(--msp-text-muted); line-height: 1.5;"[39m
+                  [36m>[39m
+                    [0mDetect liquidity sweeps at PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, and ROUND levels — confirm stop-hunt patterns before placing or invalidating a trade.[0m
+                  [36m</p>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"mt-3 flex flex-wrap gap-2"[39m
+                  [36m>[39m
+                    [36m<button[39m
+                      [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: var(--msp-accent); color: var(--msp-bg); border: 1px solid var(--msp-accent);"[39m
+                    [36m>[39m
+                      [0mRun scan[0m
+                    [36m</button>[39m
+                    [36m<button[39m
+                      [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid var(--msp-border-strong);"[39m
+                    [36m>[39m
+                      [0mOpen Golden Egg[0m
+                    [36m</button>[39m
+                    [36m<button[39m
+                      [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid transparent;"[39m
+                    [36m>[39m
+                      [0mOpen Terminal[0m
+                    [36m</button>[39m
+                  [36m</div>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"grid min-w-0 grid-cols-1 self-start gap-1.5 sm:grid-cols-2"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                    [36m>[39m
+                      [0mMode[0m
+                    [36m</span>[39m
+                    [36m<span[39m
+                      [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-info); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                      [33mtitle[39m=[32m"Equity"[39m
+                    [36m>[39m
+                      [0mEquity[0m
+                    [36m</span>[39m
+                    [36m<span[39m
+                      [33mstyle[39m=[32m"font-size: 11px; color: var(--msp-text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                      [33mtitle[39m=[32m"Sweep detection"[39m
+                    [36m>[39m
+                      [0mSweep detection[0m
+                    [36m</span>[39m
+                  [36m</div>[39m
+                  [36m<div[39m
+                    [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                    [36m>[39m
+                      [0mSweeps[0m
+                    [36m</span>[39...
+   × preserves the existing locked-preview component and makes no request for free 161ms
+     → Unable to find an accessible element with the role "heading" and name "Liquidity Sweep"
+
+Here are the accessible roles:
+
+  main:
+
+  Name "":
+  [36m<main[39m
+    [33mclass[39m=[32m"py-6"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  region:
+
+  Name "Liquidity Sweep command header":
+  [36m<section[39m
+    [33maria-label[39m=[32m"Liquidity Sweep command header"[39m
+    [33mstyle[39m=[32m"background: var(--msp-panel); border-radius: var(--msp-radius-card); padding: 16px;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Detect stop hunts before sizing risk.":
+  [36m<h1[39m
+    [33mclass[39m=[32m"mt-1"[39m
+    [33mstyle[39m=[32m"font-size: var(--msp-text-h1); font-weight: 500; color: var(--msp-text); line-height: 1.25;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"mt-1 max-w-3xl"[39m
+    [33mstyle[39m=[32m"font-size: var(--msp-text-body-sm); color: var(--msp-text-muted); line-height: 1.5;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "Run scan":
+  [36m<button[39m
+    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: var(--msp-accent); color: var(--msp-bg); border: 1px solid var(--msp-accent);"[39m
+  [36m/>[39m
+
+  Name "Open Golden Egg":
+  [36m<button[39m
+    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid var(--msp-border-strong);"[39m
+  [36m/>[39m
+
+  Name "Open Terminal":
+  [36m<button[39m
+    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid transparent;"[39m
+  [36m/>[39m
+
+  Name "Equity":
+  [36m<button[39m
+    [33mstyle[39m=[32m"padding: 6px 16px; font-size: 12px; font-weight: 700; border-radius: 8px; cursor: pointer; text-transform: uppercase; background: var(--msp-accent-tint); color: var(--msp-accent); border: 1px solid var(--msp-accent);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Crypto":
+  [36m<button[39m
+    [33mstyle[39m=[32m"padding: 6px 16px; font-size: 12px; font-weight: 700; border-radius: 8px; cursor: pointer; text-transform: uppercase; background: var(--msp-panel-2); color: var(--msp-text-muted); border: 1px solid var(--msp-border);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Scan for Sweeps":
+  [36m<button[39m
+    [33mstyle[39m=[32m"padding: 8px 24px; font-size: 13px; font-weight: 800; border-radius: 10px; cursor: pointer; background: var(--msp-accent); color: rgb(255, 255, 255); letter-spacing: 0.04em; text-transform: uppercase;"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  combobox:
+
+  Name "":
+  [36m<select[39m
+    [33mstyle[39m=[32m"padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 8px; background: var(--msp-panel-2); color: var(--msp-text); border: 1px solid var(--msp-border);"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  option:
+
+  Name "All Results":
+  [36m<option[39m
+    [33mvalue[39m=[32m"all"[39m
+  [36m/>[39m
+
+  Name "Sweeps Only":
+  [36m<option[39m
+    [33mvalue[39m=[32m"sweep"[39m
+  [36m/>[39m
+
+  Name "Observations (Sweep + Near Level)":
+  [36m<option[39m
+    [33mvalue[39m=[32m"near"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33mclass[39m=[32m"py-6"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"msp-container"[39m
+        [33mstyle[39m=[32m"display: grid; gap: var(--msp-section-gap);"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<section[39m
+            [33maria-label[39m=[32m"Liquidity Sweep command header"[39m
+            [33mstyle[39m=[32m"background: var(--msp-panel); border-radius: var(--msp-radius-card); padding: 16px;"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.85fr)]"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"min-w-0"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"flex flex-wrap items-center gap-2"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-label); color: var(--msp-text-muted);"[39m
+                [36m>[39m
+                  [36m<span>[39m
+                    [0mLiquidity sweep scanner[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mEQUITY mode[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mFilter all[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<h1[39m
+                  [33mclass[39m=[32m"mt-1"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-h1); font-weight: 500; color: var(--msp-text); line-height: 1.25;"[39m
+                [36m>[39m
+                  [0mDetect stop hunts before sizing risk.[0m
+                [36m</h1>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 max-w-3xl"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-body-sm); color: var(--msp-text-muted); line-height: 1.5;"[39m
+                [36m>[39m
+                  [0mDetect liquidity sweeps at PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, and ROUND levels — confirm stop-hunt patterns before placing or invalidating a trade.[0m
+                [36m</p>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mt-3 flex flex-wrap gap-2"[39m
+                [36m>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: var(--msp-accent); color: var(--msp-bg); border: 1px solid var(--msp-accent);"[39m
+                  [36m>[39m
+                    [0mRun scan[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid var(--msp-border-strong);"[39m
+                  [36m>[39m
+                    [0mOpen Golden Egg[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid transparent;"[39m
+                  [36m>[39m
+                    [0mOpen Terminal[0m
+                  [36m</button>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"grid min-w-0 grid-cols-1 self-start gap-1.5 sm:grid-cols-2"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mMode[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-info); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                    [33mtitle[39m=[32m"Equity"[39m
+                  [36m>[39m
+                    [0mEquity[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: 11px; color: var(--msp-text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                    [33mtitle[39m=[32m"Sweep detection"[39m
+                  [36m>[39m
+                    [0mSweep detection[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mSweeps[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-bull); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ell...
+   × preserves the existing locked-preview component and makes no request for anonymous 102ms
+     → Unable to find an accessible element with the role "heading" and name "Liquidity Sweep"
+
+Here are the accessible roles:
+
+  main:
+
+  Name "":
+  [36m<main[39m
+    [33mclass[39m=[32m"py-6"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  region:
+
+  Name "Liquidity Sweep command header":
+  [36m<section[39m
+    [33maria-label[39m=[32m"Liquidity Sweep command header"[39m
+    [33mstyle[39m=[32m"background: var(--msp-panel); border-radius: var(--msp-radius-card); padding: 16px;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Detect stop hunts before sizing risk.":
+  [36m<h1[39m
+    [33mclass[39m=[32m"mt-1"[39m
+    [33mstyle[39m=[32m"font-size: var(--msp-text-h1); font-weight: 500; color: var(--msp-text); line-height: 1.25;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"mt-1 max-w-3xl"[39m
+    [33mstyle[39m=[32m"font-size: var(--msp-text-body-sm); color: var(--msp-text-muted); line-height: 1.5;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "Run scan":
+  [36m<button[39m
+    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: var(--msp-accent); color: var(--msp-bg); border: 1px solid var(--msp-accent);"[39m
+  [36m/>[39m
+
+  Name "Open Golden Egg":
+  [36m<button[39m
+    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid var(--msp-border-strong);"[39m
+  [36m/>[39m
+
+  Name "Open Terminal":
+  [36m<button[39m
+    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid transparent;"[39m
+  [36m/>[39m
+
+  Name "Equity":
+  [36m<button[39m
+    [33mstyle[39m=[32m"padding: 6px 16px; font-size: 12px; font-weight: 700; border-radius: 8px; cursor: pointer; text-transform: uppercase; background: var(--msp-accent-tint); color: var(--msp-accent); border: 1px solid var(--msp-accent);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Crypto":
+  [36m<button[39m
+    [33mstyle[39m=[32m"padding: 6px 16px; font-size: 12px; font-weight: 700; border-radius: 8px; cursor: pointer; text-transform: uppercase; background: var(--msp-panel-2); color: var(--msp-text-muted); border: 1px solid var(--msp-border);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Scan for Sweeps":
+  [36m<button[39m
+    [33mstyle[39m=[32m"padding: 8px 24px; font-size: 13px; font-weight: 800; border-radius: 10px; cursor: pointer; background: var(--msp-accent); color: rgb(255, 255, 255); letter-spacing: 0.04em; text-transform: uppercase;"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  combobox:
+
+  Name "":
+  [36m<select[39m
+    [33mstyle[39m=[32m"padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 8px; background: var(--msp-panel-2); color: var(--msp-text); border: 1px solid var(--msp-border);"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  option:
+
+  Name "All Results":
+  [36m<option[39m
+    [33mvalue[39m=[32m"all"[39m
+  [36m/>[39m
+
+  Name "Sweeps Only":
+  [36m<option[39m
+    [33mvalue[39m=[32m"sweep"[39m
+  [36m/>[39m
+
+  Name "Observations (Sweep + Near Level)":
+  [36m<option[39m
+    [33mvalue[39m=[32m"near"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33mclass[39m=[32m"py-6"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"msp-container"[39m
+        [33mstyle[39m=[32m"display: grid; gap: var(--msp-section-gap);"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<section[39m
+            [33maria-label[39m=[32m"Liquidity Sweep command header"[39m
+            [33mstyle[39m=[32m"background: var(--msp-panel); border-radius: var(--msp-radius-card); padding: 16px;"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.85fr)]"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"min-w-0"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"flex flex-wrap items-center gap-2"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-label); color: var(--msp-text-muted);"[39m
+                [36m>[39m
+                  [36m<span>[39m
+                    [0mLiquidity sweep scanner[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mEQUITY mode[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mFilter all[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<h1[39m
+                  [33mclass[39m=[32m"mt-1"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-h1); font-weight: 500; color: var(--msp-text); line-height: 1.25;"[39m
+                [36m>[39m
+                  [0mDetect stop hunts before sizing risk.[0m
+                [36m</h1>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 max-w-3xl"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-body-sm); color: var(--msp-text-muted); line-height: 1.5;"[39m
+                [36m>[39m
+                  [0mDetect liquidity sweeps at PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, and ROUND levels — confirm stop-hunt patterns before placing or invalidating a trade.[0m
+                [36m</p>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mt-3 flex flex-wrap gap-2"[39m
+                [36m>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: var(--msp-accent); color: var(--msp-bg); border: 1px solid var(--msp-accent);"[39m
+                  [36m>[39m
+                    [0mRun scan[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid var(--msp-border-strong);"[39m
+                  [36m>[39m
+                    [0mOpen Golden Egg[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid transparent;"[39m
+                  [36m>[39m
+                    [0mOpen Terminal[0m
+                  [36m</button>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"grid min-w-0 grid-cols-1 self-start gap-1.5 sm:grid-cols-2"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mMode[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-info); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                    [33mtitle[39m=[32m"Equity"[39m
+                  [36m>[39m
+                    [0mEquity[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: 11px; color: var(--msp-text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                    [33mtitle[39m=[32m"Sweep detection"[39m
+                  [36m>[39m
+                    [0mSweep detection[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mSweeps[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-bull); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ell...
+   × does not scan or show invented results while resolving access 122ms
+     → Unable to find an accessible element with the role "status"
+
+Here are the accessible roles:
+
+  main:
+
+  Name "":
+  [36m<main[39m
+    [33mclass[39m=[32m"py-6"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  region:
+
+  Name "Liquidity Sweep command header":
+  [36m<section[39m
+    [33maria-label[39m=[32m"Liquidity Sweep command header"[39m
+    [33mstyle[39m=[32m"background: var(--msp-panel); border-radius: var(--msp-radius-card); padding: 16px;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Detect stop hunts before sizing risk.":
+  [36m<h1[39m
+    [33mclass[39m=[32m"mt-1"[39m
+    [33mstyle[39m=[32m"font-size: var(--msp-text-h1); font-weight: 500; color: var(--msp-text); line-height: 1.25;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"mt-1 max-w-3xl"[39m
+    [33mstyle[39m=[32m"font-size: var(--msp-text-body-sm); color: var(--msp-text-muted); line-height: 1.5;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "Run scan":
+  [36m<button[39m
+    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: var(--msp-accent); color: var(--msp-bg); border: 1px solid var(--msp-accent);"[39m
+  [36m/>[39m
+
+  Name "Open Golden Egg":
+  [36m<button[39m
+    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid var(--msp-border-strong);"[39m
+  [36m/>[39m
+
+  Name "Open Terminal":
+  [36m<button[39m
+    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid transparent;"[39m
+  [36m/>[39m
+
+  Name "Equity":
+  [36m<button[39m
+    [33mstyle[39m=[32m"padding: 6px 16px; font-size: 12px; font-weight: 700; border-radius: 8px; cursor: pointer; text-transform: uppercase; background: var(--msp-accent-tint); color: var(--msp-accent); border: 1px solid var(--msp-accent);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Crypto":
+  [36m<button[39m
+    [33mstyle[39m=[32m"padding: 6px 16px; font-size: 12px; font-weight: 700; border-radius: 8px; cursor: pointer; text-transform: uppercase; background: var(--msp-panel-2); color: var(--msp-text-muted); border: 1px solid var(--msp-border);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Scan for Sweeps":
+  [36m<button[39m
+    [33mstyle[39m=[32m"padding: 8px 24px; font-size: 13px; font-weight: 800; border-radius: 10px; cursor: pointer; background: var(--msp-accent); color: rgb(255, 255, 255); letter-spacing: 0.04em; text-transform: uppercase;"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  combobox:
+
+  Name "":
+  [36m<select[39m
+    [33mstyle[39m=[32m"padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 8px; background: var(--msp-panel-2); color: var(--msp-text); border: 1px solid var(--msp-border);"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  option:
+
+  Name "All Results":
+  [36m<option[39m
+    [33mvalue[39m=[32m"all"[39m
+  [36m/>[39m
+
+  Name "Sweeps Only":
+  [36m<option[39m
+    [33mvalue[39m=[32m"sweep"[39m
+  [36m/>[39m
+
+  Name "Observations (Sweep + Near Level)":
+  [36m<option[39m
+    [33mvalue[39m=[32m"near"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33mclass[39m=[32m"py-6"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"msp-container"[39m
+        [33mstyle[39m=[32m"display: grid; gap: var(--msp-section-gap);"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<section[39m
+            [33maria-label[39m=[32m"Liquidity Sweep command header"[39m
+            [33mstyle[39m=[32m"background: var(--msp-panel); border-radius: var(--msp-radius-card); padding: 16px;"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.85fr)]"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"min-w-0"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"flex flex-wrap items-center gap-2"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-label); color: var(--msp-text-muted);"[39m
+                [36m>[39m
+                  [36m<span>[39m
+                    [0mLiquidity sweep scanner[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mEQUITY mode[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mFilter all[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<h1[39m
+                  [33mclass[39m=[32m"mt-1"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-h1); font-weight: 500; color: var(--msp-text); line-height: 1.25;"[39m
+                [36m>[39m
+                  [0mDetect stop hunts before sizing risk.[0m
+                [36m</h1>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 max-w-3xl"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-body-sm); color: var(--msp-text-muted); line-height: 1.5;"[39m
+                [36m>[39m
+                  [0mDetect liquidity sweeps at PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, and ROUND levels — confirm stop-hunt patterns before placing or invalidating a trade.[0m
+                [36m</p>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mt-3 flex flex-wrap gap-2"[39m
+                [36m>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: var(--msp-accent); color: var(--msp-bg); border: 1px solid var(--msp-accent);"[39m
+                  [36m>[39m
+                    [0mRun scan[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid var(--msp-border-strong);"[39m
+                  [36m>[39m
+                    [0mOpen Golden Egg[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid transparent;"[39m
+                  [36m>[39m
+                    [0mOpen Terminal[0m
+                  [36m</button>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"grid min-w-0 grid-cols-1 self-start gap-1.5 sm:grid-cols-2"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mMode[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-info); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                    [33mtitle[39m=[32m"Equity"[39m
+                  [36m>[39m
+                    [0mEquity[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: 11px; color: var(--msp-text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                    [33mtitle[39m=[32m"Sweep detection"[39m
+                  [36m>[39m
+                    [0mSweep detection[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mSweeps[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-bull); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ell...
+   ✓ keeps truthful mixed-session context and formats levels and prices 3ms
+   × does not fetch on Show all, collapse or filter actions 1093ms
+     → Unable to find role="button" and name "Show all (36)"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33mclass[39m=[32m"py-6"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"msp-container"[39m
+        [33mstyle[39m=[32m"display: grid; gap: var(--msp-section-gap);"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<section[39m
+            [33maria-label[39m=[32m"Liquidity Sweep command header"[39m
+            [33mstyle[39m=[32m"background: var(--msp-panel); border-radius: var(--msp-radius-card); padding: 16px;"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.85fr)]"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"min-w-0"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"flex flex-wrap items-center gap-2"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-label); color: var(--msp-text-muted);"[39m
+                [36m>[39m
+                  [36m<span>[39m
+                    [0mLiquidity sweep scanner[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mEQUITY mode[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mFilter all[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<h1[39m
+                  [33mclass[39m=[32m"mt-1"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-h1); font-weight: 500; color: var(--msp-text); line-height: 1.25;"[39m
+                [36m>[39m
+                  [0mDetect stop hunts before sizing risk.[0m
+                [36m</h1>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 max-w-3xl"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-body-sm); color: var(--msp-text-muted); line-height: 1.5;"[39m
+                [36m>[39m
+                  [0mDetect liquidity sweeps at PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, and ROUND levels — confirm stop-hunt patterns before placing or invalidating a trade.[0m
+                [36m</p>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mt-3 flex flex-wrap gap-2"[39m
+                [36m>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: var(--msp-accent); color: var(--msp-bg); border: 1px solid var(--msp-accent);"[39m
+                  [36m>[39m
+                    [0mRun scan[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid var(--msp-border-strong);"[39m
+                  [36m>[39m
+                    [0mOpen Golden Egg[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid transparent;"[39m
+                  [36m>[39m
+                    [0mOpen Terminal[0m
+                  [36m</button>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"grid min-w-0 grid-cols-1 self-start gap-1.5 sm:grid-cols-2"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mMode[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-info); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                    [33mtitle[39m=[32m"Equity"[39m
+                  [36m>[39m
+                    [0mEquity[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: 11px; color: var(--msp-text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                    [33mtitle[39m=[32m"Sweep detection"[39m
+                  [36m>[39m
+                    [0mSweep detection[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mSweeps[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-bull); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ell...
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33mclass[39m=[32m"py-6"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"msp-container"[39m
+        [33mstyle[39m=[32m"display: grid; gap: var(--msp-section-gap);"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<section[39m
+            [33maria-label[39m=[32m"Liquidity Sweep command header"[39m
+            [33mstyle[39m=[32m"background: var(--msp-panel); border-radius: var(--msp-radius-card); padding: 16px;"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.85fr)]"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"min-w-0"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"flex flex-wrap items-center gap-2"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-label); color: var(--msp-text-muted);"[39m
+                [36m>[39m
+                  [36m<span>[39m
+                    [0mLiquidity sweep scanner[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mEQUITY mode[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mFilter all[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<h1[39m
+                  [33mclass[39m=[32m"mt-1"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-h1); font-weight: 500; color: var(--msp-text); line-height: 1.25;"[39m
+                [36m>[39m
+                  [0mDetect stop hunts before sizing risk.[0m
+                [36m</h1>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 max-w-3xl"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-body-sm); color: var(--msp-text-muted); line-height: 1.5;"[39m
+                [36m>[39m
+                  [0mDetect liquidity sweeps at PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, and ROUND levels — confirm stop-hunt patterns before placing or invalidating a trade.[0m
+                [36m</p>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mt-3 flex flex-wrap gap-2"[39m
+                [36m>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: var(--msp-accent); color: var(--msp-bg); border: 1px solid var(--msp-accent);"[39m
+                  [36m>[39m
+                    [0mRun scan[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid var(--msp-border-strong);"[39m
+                  [36m>[39m
+                    [0mOpen Golden Egg[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid transparent;"[39m
+                  [36m>[39m
+                    [0mOpen Terminal[0m
+                  [36m</button>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"grid min-w-0 grid-cols-1 self-start gap-1.5 sm:grid-cols-2"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mMode[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-info); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                    [33mtitle[39m=[32m"Equity"[39m
+                  [36m>[39m
+                    [0mEquity[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: 11px; color: var(--msp-text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                    [33mtitle[39m=[32m"Sweep detection"[39m
+                  [36m>[39m
+                    [0mSweep detection[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mSweeps[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-bull); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ell...
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/liquiditySweepCompact.test.tsx > shows six of 36 in provider order, one legend, one scan and one source; Show all preserves order
+AssertionError: expected  to have a length of 6 but got +0
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<main[39m
+        [33mclass[39m=[32m"py-6"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"msp-container"[39m
+          [33mstyle[39m=[32m"display: grid; gap: var(--msp-section-gap);"[39m
+        [36m>[39m
+          [36m<section>[39m
+            [36m<section[39m
+              [33maria-label[39m=[32m"Liquidity Sweep command header"[39m
+              [33mstyle[39m=[32m"background: var(--msp-panel); border-radius: var(--msp-radius-card); padding: 16px;"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.85fr)]"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"min-w-0"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"flex flex-wrap items-center gap-2"[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [36m<span>[39m
+                      [0mLiquidity sweep scanner[0m
+                    [36m</span>[39m
+                    [36m<span[39m
+                      [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                    [36m>[39m
+                      [0mEQUITY mode[0m
+                    [36m</span>[39m
+                    [36m<span[39m
+                      [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                    [36m>[39m
+                      [0mFilter all[0m
+                    [36m</span>[39m
+                  [36m</div>[39m
+                  [36m<h1[39m
+                    [33mclass[39m=[32m"mt-1"[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h1); font-weight: 500; color: var(--msp-text); line-height: 1.25;"[39m
+                  [36m>[39m
+                    [0mDetect stop hunts before sizing risk.[0m
+                  [36m</h1>[39m
+                  [36m<p[39m
+                    [33mclass[39m=[32m"mt-1 max-w-3xl"[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-body-sm); color: var(--msp-text-muted); line-height: 1.5;"[39m
+                  [36m>[39m
+                    [0mDetect liquidity sweeps at PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, and ROUND levels — confirm stop-hunt patterns before placing or invalidating a trade.[0m
+                  [36m</p>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"mt-3 flex flex-wrap gap-2"[39m
+                  [36m>[39m
+                    [36m<button[39m
+                      [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: var(--msp-accent); color: var(--msp-bg); border: 1px solid var(--msp-accent);"[39m
+                    [36m>[39m
+                      [0mRun scan[0m
+                    [36m</button>[39m
+                    [36m<button[39m
+                      [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid var(--msp-border-strong);"[39m
+                    [36m>[39m
+                      [0mOpen Golden Egg[0m
+                    [36m</button>[39m
+                    [36m<button[39m
+                      [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid transparent;"[39m
+                    [36m>[39m
+                      [0mOpen Terminal[0m
+                    [36m</button>[39m
+                  [36m</div>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"grid min-w-0 grid-cols-1 self-start gap-1.5 sm:grid-cols-2"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                    [36m>[39m
+                      [0mMode[0m
+                    [36m</span>[39m
+                    [36m<span[39m
+                      [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-info); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                      [33mtitle[39m=[32m"Equity"[39m
+                    [36m>[39m
+                      [0mEquity[0m
+                    [36m</span>[39m
+                    [36m<span[39m
+                      [33mstyle[39m=[32m"font-size: 11px; color: var(--msp-text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                      [33mtitle[39m=[32m"Sweep detection"[39m
+                    [36m>[39m
+                      [0mSweep detection[0m
+                    [36m</span>[39m
+                  [36m</div>[39m
+                  [36m<div[39m
+                    [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                    [36m>[39m
+                      [0mSweeps[0m
+                    [36m</span>[39...
+
+- Expected
++ Received
+
+- 6
++ 0
+
+ ❯ test/liquiditySweepCompact.test.tsx:15:110
+
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  test/liquiditySweepCompact.test.tsx > preserves the existing locked-preview component and makes no request for free
+ FAIL  test/liquiditySweepCompact.test.tsx > preserves the existing locked-preview component and makes no request for anonymous
+TestingLibraryElementError: Unable to find an accessible element with the role "heading" and name "Liquidity Sweep"
+
+Here are the accessible roles:
+
+  main:
+
+  Name "":
+  [36m<main[39m
+    [33mclass[39m=[32m"py-6"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  region:
+
+  Name "Liquidity Sweep command header":
+  [36m<section[39m
+    [33maria-label[39m=[32m"Liquidity Sweep command header"[39m
+    [33mstyle[39m=[32m"background: var(--msp-panel); border-radius: var(--msp-radius-card); padding: 16px;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Detect stop hunts before sizing risk.":
+  [36m<h1[39m
+    [33mclass[39m=[32m"mt-1"[39m
+    [33mstyle[39m=[32m"font-size: var(--msp-text-h1); font-weight: 500; color: var(--msp-text); line-height: 1.25;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"mt-1 max-w-3xl"[39m
+    [33mstyle[39m=[32m"font-size: var(--msp-text-body-sm); color: var(--msp-text-muted); line-height: 1.5;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "Run scan":
+  [36m<button[39m
+    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: var(--msp-accent); color: var(--msp-bg); border: 1px solid var(--msp-accent);"[39m
+  [36m/>[39m
+
+  Name "Open Golden Egg":
+  [36m<button[39m
+    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid var(--msp-border-strong);"[39m
+  [36m/>[39m
+
+  Name "Open Terminal":
+  [36m<button[39m
+    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid transparent;"[39m
+  [36m/>[39m
+
+  Name "Equity":
+  [36m<button[39m
+    [33mstyle[39m=[32m"padding: 6px 16px; font-size: 12px; font-weight: 700; border-radius: 8px; cursor: pointer; text-transform: uppercase; background: var(--msp-accent-tint); color: var(--msp-accent); border: 1px solid var(--msp-accent);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Crypto":
+  [36m<button[39m
+    [33mstyle[39m=[32m"padding: 6px 16px; font-size: 12px; font-weight: 700; border-radius: 8px; cursor: pointer; text-transform: uppercase; background: var(--msp-panel-2); color: var(--msp-text-muted); border: 1px solid var(--msp-border);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Scan for Sweeps":
+  [36m<button[39m
+    [33mstyle[39m=[32m"padding: 8px 24px; font-size: 13px; font-weight: 800; border-radius: 10px; cursor: pointer; background: var(--msp-accent); color: rgb(255, 255, 255); letter-spacing: 0.04em; text-transform: uppercase;"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  combobox:
+
+  Name "":
+  [36m<select[39m
+    [33mstyle[39m=[32m"padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 8px; background: var(--msp-panel-2); color: var(--msp-text); border: 1px solid var(--msp-border);"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  option:
+
+  Name "All Results":
+  [36m<option[39m
+    [33mvalue[39m=[32m"all"[39m
+  [36m/>[39m
+
+  Name "Sweeps Only":
+  [36m<option[39m
+    [33mvalue[39m=[32m"sweep"[39m
+  [36m/>[39m
+
+  Name "Observations (Sweep + Near Level)":
+  [36m<option[39m
+    [33mvalue[39m=[32m"near"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33mclass[39m=[32m"py-6"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"msp-container"[39m
+        [33mstyle[39m=[32m"display: grid; gap: var(--msp-section-gap);"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<section[39m
+            [33maria-label[39m=[32m"Liquidity Sweep command header"[39m
+            [33mstyle[39m=[32m"background: var(--msp-panel); border-radius: var(--msp-radius-card); padding: 16px;"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.85fr)]"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"min-w-0"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"flex flex-wrap items-center gap-2"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-label); color: var(--msp-text-muted);"[39m
+                [36m>[39m
+                  [36m<span>[39m
+                    [0mLiquidity sweep scanner[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mEQUITY mode[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mFilter all[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<h1[39m
+                  [33mclass[39m=[32m"mt-1"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-h1); font-weight: 500; color: var(--msp-text); line-height: 1.25;"[39m
+                [36m>[39m
+                  [0mDetect stop hunts before sizing risk.[0m
+                [36m</h1>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 max-w-3xl"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-body-sm); color: var(--msp-text-muted); line-height: 1.5;"[39m
+                [36m>[39m
+                  [0mDetect liquidity sweeps at PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, and ROUND levels — confirm stop-hunt patterns before placing or invalidating a trade.[0m
+                [36m</p>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mt-3 flex flex-wrap gap-2"[39m
+                [36m>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: var(--msp-accent); color: var(--msp-bg); border: 1px solid var(--msp-accent);"[39m
+                  [36m>[39m
+                    [0mRun scan[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid var(--msp-border-strong);"[39m
+                  [36m>[39m
+                    [0mOpen Golden Egg[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid transparent;"[39m
+                  [36m>[39m
+                    [0mOpen Terminal[0m
+                  [36m</button>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"grid min-w-0 grid-cols-1 self-start gap-1.5 sm:grid-cols-2"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mMode[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-info); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                    [33mtitle[39m=[32m"Equity"[39m
+                  [36m>[39m
+                    [0mEquity[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: 11px; color: var(--msp-text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                    [33mtitle[39m=[32m"Sweep detection"[39m
+                  [36m>[39m
+                    [0mSweep detection[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mSweeps[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-bull); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ell...
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ test/liquiditySweepCompact.test.tsx:26:49
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  test/liquiditySweepCompact.test.tsx > does not scan or show invented results while resolving access
+TestingLibraryElementError: Unable to find an accessible element with the role "status"
+
+Here are the accessible roles:
+
+  main:
+
+  Name "":
+  [36m<main[39m
+    [33mclass[39m=[32m"py-6"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  region:
+
+  Name "Liquidity Sweep command header":
+  [36m<section[39m
+    [33maria-label[39m=[32m"Liquidity Sweep command header"[39m
+    [33mstyle[39m=[32m"background: var(--msp-panel); border-radius: var(--msp-radius-card); padding: 16px;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  heading:
+
+  Name "Detect stop hunts before sizing risk.":
+  [36m<h1[39m
+    [33mclass[39m=[32m"mt-1"[39m
+    [33mstyle[39m=[32m"font-size: var(--msp-text-h1); font-weight: 500; color: var(--msp-text); line-height: 1.25;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mclass[39m=[32m"mt-1 max-w-3xl"[39m
+    [33mstyle[39m=[32m"font-size: var(--msp-text-body-sm); color: var(--msp-text-muted); line-height: 1.5;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "Run scan":
+  [36m<button[39m
+    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: var(--msp-accent); color: var(--msp-bg); border: 1px solid var(--msp-accent);"[39m
+  [36m/>[39m
+
+  Name "Open Golden Egg":
+  [36m<button[39m
+    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid var(--msp-border-strong);"[39m
+  [36m/>[39m
+
+  Name "Open Terminal":
+  [36m<button[39m
+    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid transparent;"[39m
+  [36m/>[39m
+
+  Name "Equity":
+  [36m<button[39m
+    [33mstyle[39m=[32m"padding: 6px 16px; font-size: 12px; font-weight: 700; border-radius: 8px; cursor: pointer; text-transform: uppercase; background: var(--msp-accent-tint); color: var(--msp-accent); border: 1px solid var(--msp-accent);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Crypto":
+  [36m<button[39m
+    [33mstyle[39m=[32m"padding: 6px 16px; font-size: 12px; font-weight: 700; border-radius: 8px; cursor: pointer; text-transform: uppercase; background: var(--msp-panel-2); color: var(--msp-text-muted); border: 1px solid var(--msp-border);"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Scan for Sweeps":
+  [36m<button[39m
+    [33mstyle[39m=[32m"padding: 8px 24px; font-size: 13px; font-weight: 800; border-radius: 10px; cursor: pointer; background: var(--msp-accent); color: rgb(255, 255, 255); letter-spacing: 0.04em; text-transform: uppercase;"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  combobox:
+
+  Name "":
+  [36m<select[39m
+    [33mstyle[39m=[32m"padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 8px; background: var(--msp-panel-2); color: var(--msp-text); border: 1px solid var(--msp-border);"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  option:
+
+  Name "All Results":
+  [36m<option[39m
+    [33mvalue[39m=[32m"all"[39m
+  [36m/>[39m
+
+  Name "Sweeps Only":
+  [36m<option[39m
+    [33mvalue[39m=[32m"sweep"[39m
+  [36m/>[39m
+
+  Name "Observations (Sweep + Near Level)":
+  [36m<option[39m
+    [33mvalue[39m=[32m"near"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33mclass[39m=[32m"py-6"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"msp-container"[39m
+        [33mstyle[39m=[32m"display: grid; gap: var(--msp-section-gap);"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<section[39m
+            [33maria-label[39m=[32m"Liquidity Sweep command header"[39m
+            [33mstyle[39m=[32m"background: var(--msp-panel); border-radius: var(--msp-radius-card); padding: 16px;"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.85fr)]"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"min-w-0"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"flex flex-wrap items-center gap-2"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-label); color: var(--msp-text-muted);"[39m
+                [36m>[39m
+                  [36m<span>[39m
+                    [0mLiquidity sweep scanner[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mEQUITY mode[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mFilter all[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<h1[39m
+                  [33mclass[39m=[32m"mt-1"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-h1); font-weight: 500; color: var(--msp-text); line-height: 1.25;"[39m
+                [36m>[39m
+                  [0mDetect stop hunts before sizing risk.[0m
+                [36m</h1>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 max-w-3xl"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-body-sm); color: var(--msp-text-muted); line-height: 1.5;"[39m
+                [36m>[39m
+                  [0mDetect liquidity sweeps at PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, and ROUND levels — confirm stop-hunt patterns before placing or invalidating a trade.[0m
+                [36m</p>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mt-3 flex flex-wrap gap-2"[39m
+                [36m>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: var(--msp-accent); color: var(--msp-bg); border: 1px solid var(--msp-accent);"[39m
+                  [36m>[39m
+                    [0mRun scan[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid var(--msp-border-strong);"[39m
+                  [36m>[39m
+                    [0mOpen Golden Egg[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid transparent;"[39m
+                  [36m>[39m
+                    [0mOpen Terminal[0m
+                  [36m</button>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"grid min-w-0 grid-cols-1 self-start gap-1.5 sm:grid-cols-2"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mMode[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-info); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                    [33mtitle[39m=[32m"Equity"[39m
+                  [36m>[39m
+                    [0mEquity[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: 11px; color: var(--msp-text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                    [33mtitle[39m=[32m"Sweep detection"[39m
+                  [36m>[39m
+                    [0mSweep detection[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mSweeps[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-bull); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ell...
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ test/liquiditySweepCompact.test.tsx:28:125
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  test/liquiditySweepCompact.test.tsx > does not fetch on Show all, collapse or filter actions
+TestingLibraryElementError: Unable to find role="button" and name "Show all (36)"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33mclass[39m=[32m"py-6"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"msp-container"[39m
+        [33mstyle[39m=[32m"display: grid; gap: var(--msp-section-gap);"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<section[39m
+            [33maria-label[39m=[32m"Liquidity Sweep command header"[39m
+            [33mstyle[39m=[32m"background: var(--msp-panel); border-radius: var(--msp-radius-card); padding: 16px;"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.85fr)]"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"min-w-0"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"flex flex-wrap items-center gap-2"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-label); color: var(--msp-text-muted);"[39m
+                [36m>[39m
+                  [36m<span>[39m
+                    [0mLiquidity sweep scanner[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mEQUITY mode[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mFilter all[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<h1[39m
+                  [33mclass[39m=[32m"mt-1"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-h1); font-weight: 500; color: var(--msp-text); line-height: 1.25;"[39m
+                [36m>[39m
+                  [0mDetect stop hunts before sizing risk.[0m
+                [36m</h1>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 max-w-3xl"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-body-sm); color: var(--msp-text-muted); line-height: 1.5;"[39m
+                [36m>[39m
+                  [0mDetect liquidity sweeps at PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, and ROUND levels — confirm stop-hunt patterns before placing or invalidating a trade.[0m
+                [36m</p>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mt-3 flex flex-wrap gap-2"[39m
+                [36m>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: var(--msp-accent); color: var(--msp-bg); border: 1px solid var(--msp-accent);"[39m
+                  [36m>[39m
+                    [0mRun scan[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid var(--msp-border-strong);"[39m
+                  [36m>[39m
+                    [0mOpen Golden Egg[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid transparent;"[39m
+                  [36m>[39m
+                    [0mOpen Terminal[0m
+                  [36m</button>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"grid min-w-0 grid-cols-1 self-start gap-1.5 sm:grid-cols-2"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mMode[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-info); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                    [33mtitle[39m=[32m"Equity"[39m
+                  [36m>[39m
+                    [0mEquity[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: 11px; color: var(--msp-text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                    [33mtitle[39m=[32m"Sweep detection"[39m
+                  [36m>[39m
+                    [0mSweep detection[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mSweeps[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-bull); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ell...
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33mclass[39m=[32m"py-6"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"msp-container"[39m
+        [33mstyle[39m=[32m"display: grid; gap: var(--msp-section-gap);"[39m
+      [36m>[39m
+        [36m<section>[39m
+          [36m<section[39m
+            [33maria-label[39m=[32m"Liquidity Sweep command header"[39m
+            [33mstyle[39m=[32m"background: var(--msp-panel); border-radius: var(--msp-radius-card); padding: 16px;"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.85fr)]"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"min-w-0"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"flex flex-wrap items-center gap-2"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-label); color: var(--msp-text-muted);"[39m
+                [36m>[39m
+                  [36m<span>[39m
+                    [0mLiquidity sweep scanner[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mEQUITY mode[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 2px 8px; font-size: 11px; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mFilter all[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<h1[39m
+                  [33mclass[39m=[32m"mt-1"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-h1); font-weight: 500; color: var(--msp-text); line-height: 1.25;"[39m
+                [36m>[39m
+                  [0mDetect stop hunts before sizing risk.[0m
+                [36m</h1>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"mt-1 max-w-3xl"[39m
+                  [33mstyle[39m=[32m"font-size: var(--msp-text-body-sm); color: var(--msp-text-muted); line-height: 1.5;"[39m
+                [36m>[39m
+                  [0mDetect liquidity sweeps at PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, and ROUND levels — confirm stop-hunt patterns before placing or invalidating a trade.[0m
+                [36m</p>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"mt-3 flex flex-wrap gap-2"[39m
+                [36m>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: var(--msp-accent); color: var(--msp-bg); border: 1px solid var(--msp-accent);"[39m
+                  [36m>[39m
+                    [0mRun scan[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid var(--msp-border-strong);"[39m
+                  [36m>[39m
+                    [0mOpen Golden Egg[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mstyle[39m=[32m"display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; line-height: 1.2; border-radius: var(--msp-radius-control); cursor: pointer; opacity: 1; transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease; padding: 6px 10px; font-size: var(--msp-text-label); min-height: 28px; background: transparent; color: var(--msp-text); border: 1px solid transparent;"[39m
+                  [36m>[39m
+                    [0mOpen Terminal[0m
+                  [36m</button>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"grid min-w-0 grid-cols-1 self-start gap-1.5 sm:grid-cols-2"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mMode[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-info); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                    [33mtitle[39m=[32m"Equity"[39m
+                  [36m>[39m
+                    [0mEquity[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: 11px; color: var(--msp-text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"[39m
+                    [33mtitle[39m=[32m"Sweep detection"[39m
+                  [36m>[39m
+                    [0mSweep detection[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mstyle[39m=[32m"background: var(--msp-card-2); border-radius: var(--msp-radius-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-height: 3.5rem;"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-label); font-weight: 500; color: var(--msp-text-muted);"[39m
+                  [36m>[39m
+                    [0mSweeps[0m
+                  [36m</span>[39m
+                  [36m<span[39m
+                    [33mstyle[39m=[32m"font-size: var(--msp-text-h2); font-weight: 500; color: var(--msp-bull); font-variant-numeric: tabular-nums; line-height: 1.15; overflow: hidden; text-overflow: ell...
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ test/liquiditySweepCompact.test.tsx:35:100
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 1 passed (6)
+   Start at  04:12:57
+   Duration  3.84s (transform 219ms, setup 0ms, collect 426ms, tests 2.59s, environment 385ms, prepare 120ms)
+
