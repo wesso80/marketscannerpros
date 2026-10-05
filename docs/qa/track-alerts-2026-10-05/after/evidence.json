@@ -1,0 +1,989 @@
+{
+  "mocked": true,
+  "results": [
+    {
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:00:29.904Z",
+      "finalUrl": "http://127.0.0.1:3121/tools/workspace?tab=Alerts",
+      "rowCount": 5,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1445,
+      "scrollWidth": 1280,
+      "screens": 1.80625,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nAlerts\nNew alert\n\n12 active user-defined notifications.\n\nAlerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.\n\n12\n\nActive\n\n2\n\nTriggers · last 24h\n\n0%\n\nSmart / strategy share\n\nPush (this browser): Blocked\nWebhook: Not Set\n12 checked active · 0 other saved alerts\nBasic\nStrategy\nSmart\nTriggered\n5 of 12 shown\nAlerts Console\nAAPL\nprice above $250\nBasic\nTriggered 1x\nArmed\n…\nNEAR\nprice below $5.12\nBasic\nTriggered 1x\nArmed\n…\nAAPL\nprice above $252\nBasic\nTriggered 0x\nArmed\n…\nNEAR\nprice below $5.12\nBasic\nTriggered 0x\nArmed\n…\nAAPL\nprice above $254\nBasic\nTriggered 0x\nArmed\n…\nShow all 12 alerts\nTrigger summary5 Oct 2026, 10:59 pm AEDT\nTrigger log\n2 loaded records\nExpand\nAlert Capabilities\nCreate alerts and view existing plan limits\nExpand\n\nSource · Saved alert rules and trigger history · 23:00 AEDT Mon 5 Oct · Loaded for this view; delivery state shown for this browser\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "12 active user-defined notifications.",
+          "top": 311,
+          "bottom": 331
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nAlerts\nNew alert\n\n12 active user-defined notifications.\n\nAlerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.\n\n12\n\nActive\n\n2\n\nTriggers · last 24h\n\n0%\n\nSmart / strategy share\n\nPush (this browser): Blocked\nWebhook: Not Set\n12 checked active · 0 other saved alerts\nBasic\nStrategy\nSmart\nTriggered\n5 of 12 shown\nAlerts Console\nAAPL\nprice above $250\nBasic\nTriggered 1x\nArmed\n…\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nBasic\nTriggered 1x\nArmed\n…\nEdit\nPause\nDelete\nAAPL\nprice above $252\nBasic\nTriggered 0x\nArmed\n…\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nBasic\nTriggered 0x\nArmed\n…\nEdit\nPause\nDelete\nAAPL\nprice above $254\nBasic\nTriggered 0x\nArmed\n…\nEdit\nPause\nDelete\nShow all 12 alerts\nTrigger summary5 Oct 2026, 10:59 pm AEDT\nLast Trigger: 5 Oct 2026, 10:59 pm AEDT\nMost Active Symbol: AAPL\nAvg Re-trigger Interval (same alert): 2.0h\nPending Cooldowns: 0\nScanner\nJournal\nTrigger log\n2 loaded records\nExpand\nTime\tSymbol\tCondition\tAction Taken\tResult\n5 Oct 2026, 10:59 pm AEDT\tAAPL\tprice above 250\tNo action\tNo response recorded\n5 Oct 2026, 9:00 pm AEDT\tAAPL\tprice above 250\tNo action\tNo response recorded\nAlert Capabilities\nCreate alerts and view existing plan limits\nExpand\nPRICE ALERTS\nThreshold, percent move, and volume spike conditions.\nMULTI-CONDITION\nNot available yet: combined conditions are not checked, so they can't be created.\nSMART ALERTS\nStrategy/scanner-linked triggers with cooldown intelligence.\nPLAN & LIMITS\nFree\n3 active alerts\nPro\n999 active alerts\nBasic\nStrategy\n🔔\nAlert Intelligence\n12/999 alerts\n+ New Alert\nBasic (12)\nStrategy (0)\n🧠 AI Smart (0)\nTriggered (0)\nAAPL\nprice above $250\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $252\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $254\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $256\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $258\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $260\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\n🔕\nPush Notifications\nEnable\n⚠️ Blocked in browser settings\n\nSource · Saved alert rules and trigger history · 23:00 AEDT Mon 5 Oct · Loaded for this view; delivery state shown for this browser\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "hits": []
+    },
+    {
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:00:32.099Z",
+      "finalUrl": "http://127.0.0.1:3121/tools/workspace?tab=alerts",
+      "rowCount": 5,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1833,
+      "scrollWidth": 390,
+      "screens": 2.1718009478672986,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nAlerts\nNew alert\n\n12 active user-defined notifications.\n\nAlerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.\n\n12\n\nActive\n\n2\n\nTriggers · last 24h\n\n0%\n\nSmart / strategy share\n\nPush (this browser): Blocked\nWebhook: Not Set\n12 checked active · 0 other saved alerts\nBasic\nStrategy\nSmart\nTriggered\n5 of 12 shown\nAlerts Console\nAAPL\nprice above $250\nArmed\n…\nNEAR\nprice below $5.12\nArmed\n…\nAAPL\nprice above $252\nArmed\n…\nNEAR\nprice below $5.12\nArmed\n…\nAAPL\nprice above $254\nArmed\n…\nShow all 12 alerts\nTrigger summary5 Oct 2026, 10:59 pm AEDT\nTrigger log\n2 loaded records\nExpand\nAlert Capabilities\nCreate alerts and view existing plan limits\nExpand\n\nSource · Saved alert rules and trigger history · 23:00 AEDT Mon 5 Oct · Loaded for this view; delivery state shown for this browser\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "12 active user-defined notifications.",
+          "top": 386.5,
+          "bottom": 406.5
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nAlerts\nNew alert\n\n12 active user-defined notifications.\n\nAlerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.\n\n12\n\nActive\n\n2\n\nTriggers · last 24h\n\n0%\n\nSmart / strategy share\n\nPush (this browser): Blocked\nWebhook: Not Set\n12 checked active · 0 other saved alerts\nBasic\nStrategy\nSmart\nTriggered\n5 of 12 shown\nAlerts Console\nAAPL\nprice above $250\nArmed\n…\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nArmed\n…\nEdit\nPause\nDelete\nAAPL\nprice above $252\nArmed\n…\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nArmed\n…\nEdit\nPause\nDelete\nAAPL\nprice above $254\nArmed\n…\nEdit\nPause\nDelete\nShow all 12 alerts\nTrigger summary5 Oct 2026, 10:59 pm AEDT\nLast Trigger: 5 Oct 2026, 10:59 pm AEDT\nMost Active Symbol: AAPL\nAvg Re-trigger Interval (same alert): 2.0h\nPending Cooldowns: 0\nScanner\nJournal\nTrigger log\n2 loaded records\nExpand\nTime\tSymbol\tCondition\tAction Taken\tResult\n5 Oct 2026, 10:59 pm AEDT\tAAPL\tprice above 250\tNo action\tNo response recorded\n5 Oct 2026, 9:00 pm AEDT\tAAPL\tprice above 250\tNo action\tNo response recorded\nAlert Capabilities\nCreate alerts and view existing plan limits\nExpand\nPRICE ALERTS\nThreshold, percent move, and volume spike conditions.\nMULTI-CONDITION\nNot available yet: combined conditions are not checked, so they can't be created.\nSMART ALERTS\nStrategy/scanner-linked triggers with cooldown intelligence.\nPLAN & LIMITS\nFree\n3 active alerts\nPro\n999 active alerts\nBasic\nStrategy\n🔔\nAlert Intelligence\n12/999 alerts\n+ New Alert\nBasic (12)\nStrategy (0)\n🧠 AI Smart (0)\nTriggered (0)\nAAPL\nprice above $250\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $252\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $254\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $256\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $258\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $260\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\n🔕\nPush Notifications\nEnable\n⚠️ Blocked in browser settings\n\nSource · Saved alert rules and trigger history · 23:00 AEDT Mon 5 Oct · Loaded for this view; delivery state shown for this browser\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "hits": [],
+      "allRows": 12
+    },
+    {
+      "tier": "pro",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:00:34.264Z",
+      "finalUrl": "http://127.0.0.1:3121/tools/workspace?tab=alerts",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1110,
+      "scrollWidth": 1280,
+      "screens": 1.3875,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nAlerts\nNew alert\n\n0 active user-defined notifications.\n\nAlerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.\n\n0\n\nActive\n\n0\n\nTriggers · last 24h\n\n0%\n\nSmart / strategy share\n\nPush (this browser): Blocked\nWebhook: Not Set\nBasic\nStrategy\nSmart\nTriggered\n0 shown\nAlerts Console\nNo active alerts. Create a notification with New alert.\nTrigger summaryNot triggered yet\nTrigger log\n0 loaded records\nExpand\nAlert Capabilities\nCreate alerts and view existing plan limits\nExpand\n\nSource · Saved alert rules and trigger history · 23:00 AEDT Mon 5 Oct · Loaded for this view; delivery state shown for this browser\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "0 active user-defined notifications.",
+          "top": 311,
+          "bottom": 331
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nAlerts\nNew alert\n\n0 active user-defined notifications.\n\nAlerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.\n\n0\n\nActive\n\n0\n\nTriggers · last 24h\n\n0%\n\nSmart / strategy share\n\nPush (this browser): Blocked\nWebhook: Not Set\nBasic\nStrategy\nSmart\nTriggered\n0 shown\nAlerts Console\nNo active alerts. Create a notification with New alert.\nTrigger summaryNot triggered yet\nLast Trigger: Not triggered yet\nMost Active Symbol: Not triggered yet\nAvg Re-trigger Interval (same alert): Needs two triggers for the same alert\nPending Cooldowns: 0\nScanner\nJournal\nTrigger log\n0 loaded records\nExpand\nTime\tSymbol\tCondition\tAction Taken\tResult\nNo triggers logged yet.\nAlert Capabilities\nCreate alerts and view existing plan limits\nExpand\nPRICE ALERTS\nThreshold, percent move, and volume spike conditions.\nMULTI-CONDITION\nNot available yet: combined conditions are not checked, so they can't be created.\nSMART ALERTS\nStrategy/scanner-linked triggers with cooldown intelligence.\nPLAN & LIMITS\nFree\n3 active alerts\nPro\n999 active alerts\nBasic\nStrategy\n🔔\nAlert Intelligence\n0/999 alerts\n+ New Alert\nBasic (0)\nStrategy (0)\n🧠 AI Smart (0)\nTriggered (0)\n\nNo basic alerts yet\n\nCreate baseline price alerts to anchor your event flow\n\n🔕\nPush Notifications\nEnable\n⚠️ Blocked in browser settings\n\nSource · Saved alert rules and trigger history · 23:00 AEDT Mon 5 Oct · Loaded for this view; delivery state shown for this browser\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "hits": []
+    },
+    {
+      "tier": "pro",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:00:36.496Z",
+      "finalUrl": "http://127.0.0.1:3121/tools/workspace?tab=alerts",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1438,
+      "scrollWidth": 390,
+      "screens": 1.7037914691943128,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nAlerts\nNew alert\n\n0 active user-defined notifications.\n\nAlerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.\n\n0\n\nActive\n\n0\n\nTriggers · last 24h\n\n0%\n\nSmart / strategy share\n\nPush (this browser): Blocked\nWebhook: Not Set\nBasic\nStrategy\nSmart\nTriggered\n0 shown\nAlerts Console\nNo active alerts. Create a notification with New alert.\nTrigger summaryNot triggered yet\nTrigger log\n0 loaded records\nExpand\nAlert Capabilities\nCreate alerts and view existing plan limits\nExpand\n\nSource · Saved alert rules and trigger history · 23:00 AEDT Mon 5 Oct · Loaded for this view; delivery state shown for this browser\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "0 active user-defined notifications.",
+          "top": 386.5,
+          "bottom": 406.5
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nAlerts\nNew alert\n\n0 active user-defined notifications.\n\nAlerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.\n\n0\n\nActive\n\n0\n\nTriggers · last 24h\n\n0%\n\nSmart / strategy share\n\nPush (this browser): Blocked\nWebhook: Not Set\nBasic\nStrategy\nSmart\nTriggered\n0 shown\nAlerts Console\nNo active alerts. Create a notification with New alert.\nTrigger summaryNot triggered yet\nLast Trigger: Not triggered yet\nMost Active Symbol: Not triggered yet\nAvg Re-trigger Interval (same alert): Needs two triggers for the same alert\nPending Cooldowns: 0\nScanner\nJournal\nTrigger log\n0 loaded records\nExpand\nTime\tSymbol\tCondition\tAction Taken\tResult\nNo triggers logged yet.\nAlert Capabilities\nCreate alerts and view existing plan limits\nExpand\nPRICE ALERTS\nThreshold, percent move, and volume spike conditions.\nMULTI-CONDITION\nNot available yet: combined conditions are not checked, so they can't be created.\nSMART ALERTS\nStrategy/scanner-linked triggers with cooldown intelligence.\nPLAN & LIMITS\nFree\n3 active alerts\nPro\n999 active alerts\nBasic\nStrategy\n🔔\nAlert Intelligence\n0/999 alerts\n+ New Alert\nBasic (0)\nStrategy (0)\n🧠 AI Smart (0)\nTriggered (0)\n\nNo basic alerts yet\n\nCreate baseline price alerts to anchor your event flow\n\n🔕\nPush Notifications\nEnable\n⚠️ Blocked in browser settings\n\nSource · Saved alert rules and trigger history · 23:00 AEDT Mon 5 Oct · Loaded for this view; delivery state shown for this browser\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "hits": []
+    },
+    {
+      "tier": "free",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:00:38.596Z",
+      "finalUrl": "http://127.0.0.1:3121/tools/workspace?tab=alerts",
+      "rowCount": 5,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1445,
+      "scrollWidth": 1280,
+      "screens": 1.80625,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nAlerts\nNew alert\n\n12 active user-defined notifications.\n\nAlerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.\n\n12\n\nActive\n\n2\n\nTriggers · last 24h\n\n0%\n\nSmart / strategy share\n\nPush (this browser): Blocked\nWebhook: Not Set\n12 checked active · 0 other saved alerts\nBasic\nStrategy\nSmart\nTriggered\n5 of 12 shown\nAlerts Console\nAAPL\nprice above $250\nBasic\nTriggered 1x\nArmed\n…\nNEAR\nprice below $5.12\nBasic\nTriggered 1x\nArmed\n…\nAAPL\nprice above $252\nBasic\nTriggered 0x\nArmed\n…\nNEAR\nprice below $5.12\nBasic\nTriggered 0x\nArmed\n…\nAAPL\nprice above $254\nBasic\nTriggered 0x\nArmed\n…\nShow all 12 alerts\nTrigger summary5 Oct 2026, 10:59 pm AEDT\nTrigger log\n2 loaded records\nExpand\nAlert Capabilities\nCreate alerts and view existing plan limits\nExpand\n\nSource · Saved alert rules and trigger history · 23:00 AEDT Mon 5 Oct · Loaded for this view; delivery state shown for this browser\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "12 active user-defined notifications.",
+          "top": 311,
+          "bottom": 331
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nAlerts\nNew alert\n\n12 active user-defined notifications.\n\nAlerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.\n\n12\n\nActive\n\n2\n\nTriggers · last 24h\n\n0%\n\nSmart / strategy share\n\nPush (this browser): Blocked\nWebhook: Not Set\n12 checked active · 0 other saved alerts\nBasic\nStrategy\nSmart\nTriggered\n5 of 12 shown\nAlerts Console\nAAPL\nprice above $250\nBasic\nTriggered 1x\nArmed\n…\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nBasic\nTriggered 1x\nArmed\n…\nEdit\nPause\nDelete\nAAPL\nprice above $252\nBasic\nTriggered 0x\nArmed\n…\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nBasic\nTriggered 0x\nArmed\n…\nEdit\nPause\nDelete\nAAPL\nprice above $254\nBasic\nTriggered 0x\nArmed\n…\nEdit\nPause\nDelete\nShow all 12 alerts\nTrigger summary5 Oct 2026, 10:59 pm AEDT\nLast Trigger: 5 Oct 2026, 10:59 pm AEDT\nMost Active Symbol: AAPL\nAvg Re-trigger Interval (same alert): 2.0h\nPending Cooldowns: 0\nScanner\nJournal\nTrigger log\n2 loaded records\nExpand\nTime\tSymbol\tCondition\tAction Taken\tResult\n5 Oct 2026, 10:59 pm AEDT\tAAPL\tprice above 250\tNo action\tNo response recorded\n5 Oct 2026, 9:00 pm AEDT\tAAPL\tprice above 250\tNo action\tNo response recorded\nAlert Capabilities\nCreate alerts and view existing plan limits\nExpand\nPRICE ALERTS\nThreshold, percent move, and volume spike conditions.\nMULTI-CONDITION\nNot available yet: combined conditions are not checked, so they can't be created.\nSMART ALERTS\nStrategy/scanner-linked triggers with cooldown intelligence.\nPLAN & LIMITS\nFree\n3 active alerts\nPro\n999 active alerts\nBasic\nStrategy\n🔔\nAlert Intelligence\n12/3 alerts\n+ New Alert\nBasic (12)\nStrategy (0)\n🧠 AI Smart (0)\nTriggered (0)\nAAPL\nprice above $250\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $252\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $254\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $256\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $258\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $260\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\n\n⚠️ Alert limit reached. Delete an alert to add a new one.\n\n🔕\nPush Notifications\nEnable\n⚠️ Blocked in browser settings\nPro Feature\n\nmore price alerts is available on the Pro plan.\n\nUnlock Pro\n$24.99/month\nUpgrade to Pro\n\n7-day money-back guarantee • Cancel anytime\n\nSource · Saved alert rules and trigger history · 23:00 AEDT Mon 5 Oct · Loaded for this view; delivery state shown for this browser\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "hits": []
+    },
+    {
+      "tier": "free",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:00:40.730Z",
+      "finalUrl": "http://127.0.0.1:3121/tools/workspace?tab=alerts",
+      "rowCount": 5,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1833,
+      "scrollWidth": 390,
+      "screens": 2.1718009478672986,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nAlerts\nNew alert\n\n12 active user-defined notifications.\n\nAlerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.\n\n12\n\nActive\n\n2\n\nTriggers · last 24h\n\n0%\n\nSmart / strategy share\n\nPush (this browser): Blocked\nWebhook: Not Set\n12 checked active · 0 other saved alerts\nBasic\nStrategy\nSmart\nTriggered\n5 of 12 shown\nAlerts Console\nAAPL\nprice above $250\nArmed\n…\nNEAR\nprice below $5.12\nArmed\n…\nAAPL\nprice above $252\nArmed\n…\nNEAR\nprice below $5.12\nArmed\n…\nAAPL\nprice above $254\nArmed\n…\nShow all 12 alerts\nTrigger summary5 Oct 2026, 10:59 pm AEDT\nTrigger log\n2 loaded records\nExpand\nAlert Capabilities\nCreate alerts and view existing plan limits\nExpand\n\nSource · Saved alert rules and trigger history · 23:00 AEDT Mon 5 Oct · Loaded for this view; delivery state shown for this browser\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "12 active user-defined notifications.",
+          "top": 386.5,
+          "bottom": 406.5
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nAlerts\nNew alert\n\n12 active user-defined notifications.\n\nAlerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.\n\n12\n\nActive\n\n2\n\nTriggers · last 24h\n\n0%\n\nSmart / strategy share\n\nPush (this browser): Blocked\nWebhook: Not Set\n12 checked active · 0 other saved alerts\nBasic\nStrategy\nSmart\nTriggered\n5 of 12 shown\nAlerts Console\nAAPL\nprice above $250\nArmed\n…\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nArmed\n…\nEdit\nPause\nDelete\nAAPL\nprice above $252\nArmed\n…\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nArmed\n…\nEdit\nPause\nDelete\nAAPL\nprice above $254\nArmed\n…\nEdit\nPause\nDelete\nShow all 12 alerts\nTrigger summary5 Oct 2026, 10:59 pm AEDT\nLast Trigger: 5 Oct 2026, 10:59 pm AEDT\nMost Active Symbol: AAPL\nAvg Re-trigger Interval (same alert): 2.0h\nPending Cooldowns: 0\nScanner\nJournal\nTrigger log\n2 loaded records\nExpand\nTime\tSymbol\tCondition\tAction Taken\tResult\n5 Oct 2026, 10:59 pm AEDT\tAAPL\tprice above 250\tNo action\tNo response recorded\n5 Oct 2026, 9:00 pm AEDT\tAAPL\tprice above 250\tNo action\tNo response recorded\nAlert Capabilities\nCreate alerts and view existing plan limits\nExpand\nPRICE ALERTS\nThreshold, percent move, and volume spike conditions.\nMULTI-CONDITION\nNot available yet: combined conditions are not checked, so they can't be created.\nSMART ALERTS\nStrategy/scanner-linked triggers with cooldown intelligence.\nPLAN & LIMITS\nFree\n3 active alerts\nPro\n999 active alerts\nBasic\nStrategy\n🔔\nAlert Intelligence\n12/3 alerts\n+ New Alert\nBasic (12)\nStrategy (0)\n🧠 AI Smart (0)\nTriggered (0)\nAAPL\nprice above $250\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $252\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $254\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $256\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $258\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\nAAPL\nprice above $260\n⏸\n🗑\nNEAR\nprice below $5.12\n⏸\n🗑\n\n⚠️ Alert limit reached. Delete an alert to add a new one.\n\n🔕\nPush Notifications\nEnable\n⚠️ Blocked in browser settings\nPro Feature\n\nmore price alerts is available on the Pro plan.\n\nUnlock Pro\n$24.99/month\nUpgrade to Pro\n\n7-day money-back guarantee • Cancel anytime\n\nSource · Saved alert rules and trigger history · 23:00 AEDT Mon 5 Oct · Loaded for this view; delivery state shown for this browser\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "hits": []
+    },
+    {
+      "tier": "anonymous",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:00:41.989Z",
+      "finalUrl": "http://127.0.0.1:3121/tools/workspace?tab=alerts",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nTrack is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nTrack is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "hits": []
+    },
+    {
+      "tier": "anonymous",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:00:43.423Z",
+      "finalUrl": "http://127.0.0.1:3121/tools/workspace?tab=alerts",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nTrack is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nTrack is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "hits": []
+    }
+  ],
+  "requests": [
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts/history",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts/history",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts/history",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts/history",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts/history",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts/history",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    }
+  ],
+  "errors": []
+}

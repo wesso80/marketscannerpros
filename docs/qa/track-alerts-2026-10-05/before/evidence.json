@@ -1,0 +1,940 @@
+{
+  "mocked": true,
+  "results": [
+    {
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T11:53:37.678Z",
+      "finalUrl": "http://127.0.0.1:3120/tools/workspace?tab=Alerts",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1641,
+      "scrollWidth": 1280,
+      "screens": 2.05125,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nAlerts review\n12 active\n2 in 24h\nAlert radar console\n\nUser-defined notifications, delivery status, triggered history, and alert cleanup.\n\nNew alert\nQuick alert\nAll tools\nActive\n12\nOpen notifications\nLast 24h\n2\nTriggers in the last 24 hours\nSmart %\n0%\nSmart/strategy share of checked alerts\nTracking\nOpen\nNo guard active\nAlerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.\nACTIVE\n12\nLAST 24H\n2\nSMART %\n0%\nPush (this browser): Blocked\nWebhook: Not Set\nBasic\nStrategy\nQuick Alert\n+ New Alert\nBasic\nStrategy\nSmart\nTriggered\n12 shown\nAlerts Console\nAAPL\nprice above $250\nBasic\nTriggered 1x\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nBasic\nTriggered 1x\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $252\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $254\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $256\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $258\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $260\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nTrigger Summary\nLast Trigger: 10/5/2026, 10:52:36 PM\nMost Active Symbol: AAPL\nAvg Re-trigger Interval (same alert): 2.0h\nPending Cooldowns: 0\nScanner\nJournal\nTrigger Log + Intelligence\nLive educational tracking outcomes and response behavior\nCollapse\nTime\tSymbol\tCondition\tAction Taken\tResult\n10/5/2026, 10:52:36 PM\tAAPL\tprice above 250\tNo action\tIgnored\n10/5/2026, 8:53:36 PM\tAAPL\tprice above 250\tNo action\tIgnored\nAlert Capabilities\nFeature set and plan limits (collapsed by default)\nExpand\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T11:53:39.858Z",
+      "finalUrl": "http://127.0.0.1:3120/tools/workspace?tab=alerts",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 2635,
+      "scrollWidth": 390,
+      "screens": 3.1220379146919433,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nAlerts review\n12 active\n2 in 24h\nAlert radar console\n\nUser-defined notifications, delivery status, triggered history, and alert cleanup.\n\nNew alert\nQuick alert\nAll tools\nActive\n12\nOpen notifications\nLast 24h\n2\nTriggers in the last 24 hours\nSmart %\n0%\nSmart/strategy share of checked alerts\nTracking\nOpen\nNo guard active\nAlerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.\nACTIVE\n12\nLAST 24H\n2\nSMART %\n0%\nPush (this browser): Blocked\nWebhook: Not Set\nBasic\nStrategy\nQuick Alert\n+ New Alert\nBasic\nStrategy\nSmart\nTriggered\n12 shown\nAlerts Console\nAAPL\nprice above $250\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $252\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $254\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $256\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $258\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $260\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nArmed\nEdit\nPause\nDelete\nTrigger Summary\nLast Trigger: 10/5/2026, 10:52:38 PM\nMost Active Symbol: AAPL\nAvg Re-trigger Interval (same alert): 2.0h\nPending Cooldowns: 0\nScanner\nJournal\nTrigger Log + Intelligence\nLive educational tracking outcomes and response behavior\nCollapse\nTime\tSymbol\tCondition\tAction Taken\tResult\n10/5/2026, 10:52:38 PM\tAAPL\tprice above 250\tNo action\tIgnored\n10/5/2026, 8:53:38 PM\tAAPL\tprice above 250\tNo action\tIgnored\nAlert Capabilities\nFeature set and plan limits (collapsed by default)\nExpand\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tier": "pro",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T11:53:42.058Z",
+      "finalUrl": "http://127.0.0.1:3120/tools/workspace?tab=alerts",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1332,
+      "scrollWidth": 1280,
+      "screens": 1.665,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nAlerts review\n0 active\n0 in 24h\nAlert radar console\n\nUser-defined notifications, delivery status, triggered history, and alert cleanup.\n\nNew alert\nQuick alert\nAll tools\nActive\n0\nOpen notifications\nLast 24h\n0\nTriggers in the last 24 hours\nSmart %\n0%\nSmart/strategy share of checked alerts\nTracking\nOpen\nNo guard active\nAlerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.\nACTIVE\n0\nLAST 24H\n0\nSMART %\n0%\nPush (this browser): Blocked\nWebhook: Not Set\nBasic\nStrategy\nQuick Alert\n+ New Alert\nBasic\nStrategy\nSmart\nTriggered\n0 shown\nAlerts Console\nNo active alerts. Use Quick Alert or New Alert to arm your radar.\nTrigger Summary\nLast Trigger: —\nMost Active Symbol: N/A\nAvg Re-trigger Interval (same alert): N/A\nPending Cooldowns: 0\nScanner\nJournal\nTrigger Log + Intelligence\nLive educational tracking outcomes and response behavior\nCollapse\nTime\tSymbol\tCondition\tAction Taken\tResult\nNo triggers logged yet.\nAlert Capabilities\nFeature set and plan limits (collapsed by default)\nExpand\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tier": "pro",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T11:53:44.040Z",
+      "finalUrl": "http://127.0.0.1:3120/tools/workspace?tab=alerts",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 2153,
+      "scrollWidth": 390,
+      "screens": 2.550947867298578,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nAlerts review\n0 active\n0 in 24h\nAlert radar console\n\nUser-defined notifications, delivery status, triggered history, and alert cleanup.\n\nNew alert\nQuick alert\nAll tools\nActive\n0\nOpen notifications\nLast 24h\n0\nTriggers in the last 24 hours\nSmart %\n0%\nSmart/strategy share of checked alerts\nTracking\nOpen\nNo guard active\nAlerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.\nACTIVE\n0\nLAST 24H\n0\nSMART %\n0%\nPush (this browser): Blocked\nWebhook: Not Set\nBasic\nStrategy\nQuick Alert\n+ New Alert\nBasic\nStrategy\nSmart\nTriggered\n0 shown\nAlerts Console\nNo active alerts. Use Quick Alert or New Alert to arm your radar.\nTrigger Summary\nLast Trigger: —\nMost Active Symbol: N/A\nAvg Re-trigger Interval (same alert): N/A\nPending Cooldowns: 0\nScanner\nJournal\nTrigger Log + Intelligence\nLive educational tracking outcomes and response behavior\nCollapse\nTime\tSymbol\tCondition\tAction Taken\tResult\nNo triggers logged yet.\nAlert Capabilities\nFeature set and plan limits (collapsed by default)\nExpand\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tier": "free",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T11:53:46.005Z",
+      "finalUrl": "http://127.0.0.1:3120/tools/workspace?tab=alerts",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1641,
+      "scrollWidth": 1280,
+      "screens": 2.05125,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nAlerts review\n12 active\n2 in 24h\nAlert radar console\n\nUser-defined notifications, delivery status, triggered history, and alert cleanup.\n\nNew alert\nQuick alert\nAll tools\nActive\n12\nOpen notifications\nLast 24h\n2\nTriggers in the last 24 hours\nSmart %\n0%\nSmart/strategy share of checked alerts\nTracking\nOpen\nNo guard active\nAlerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.\nACTIVE\n12\nLAST 24H\n2\nSMART %\n0%\nPush (this browser): Blocked\nWebhook: Not Set\nBasic\nStrategy\nQuick Alert\n+ New Alert\nBasic\nStrategy\nSmart\nTriggered\n12 shown\nAlerts Console\nAAPL\nprice above $250\nBasic\nTriggered 1x\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nBasic\nTriggered 1x\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $252\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $254\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $256\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $258\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $260\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nBasic\nTriggered 0x\nArmed\nEdit\nPause\nDelete\nTrigger Summary\nLast Trigger: 10/5/2026, 10:52:44 PM\nMost Active Symbol: AAPL\nAvg Re-trigger Interval (same alert): 2.0h\nPending Cooldowns: 0\nScanner\nJournal\nTrigger Log + Intelligence\nLive educational tracking outcomes and response behavior\nCollapse\nTime\tSymbol\tCondition\tAction Taken\tResult\n10/5/2026, 10:52:44 PM\tAAPL\tprice above 250\tNo action\tIgnored\n10/5/2026, 8:53:44 PM\tAAPL\tprice above 250\tNo action\tIgnored\nAlert Capabilities\nFeature set and plan limits (collapsed by default)\nExpand\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tier": "free",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T11:53:47.992Z",
+      "finalUrl": "http://127.0.0.1:3120/tools/workspace?tab=alerts",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 2635,
+      "scrollWidth": 390,
+      "screens": 3.1220379146919433,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nAlerts review\n12 active\n2 in 24h\nAlert radar console\n\nUser-defined notifications, delivery status, triggered history, and alert cleanup.\n\nNew alert\nQuick alert\nAll tools\nActive\n12\nOpen notifications\nLast 24h\n2\nTriggers in the last 24 hours\nSmart %\n0%\nSmart/strategy share of checked alerts\nTracking\nOpen\nNo guard active\nAlerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.\nACTIVE\n12\nLAST 24H\n2\nSMART %\n0%\nPush (this browser): Blocked\nWebhook: Not Set\nBasic\nStrategy\nQuick Alert\n+ New Alert\nBasic\nStrategy\nSmart\nTriggered\n12 shown\nAlerts Console\nAAPL\nprice above $250\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $252\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $254\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $256\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $258\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nArmed\nEdit\nPause\nDelete\nAAPL\nprice above $260\nArmed\nEdit\nPause\nDelete\nNEAR\nprice below $5.12\nArmed\nEdit\nPause\nDelete\nTrigger Summary\nLast Trigger: 10/5/2026, 10:52:46 PM\nMost Active Symbol: AAPL\nAvg Re-trigger Interval (same alert): 2.0h\nPending Cooldowns: 0\nScanner\nJournal\nTrigger Log + Intelligence\nLive educational tracking outcomes and response behavior\nCollapse\nTime\tSymbol\tCondition\tAction Taken\tResult\n10/5/2026, 10:52:46 PM\tAAPL\tprice above 250\tNo action\tIgnored\n10/5/2026, 8:53:46 PM\tAAPL\tprice above 250\tNo action\tIgnored\nAlert Capabilities\nFeature set and plan limits (collapsed by default)\nExpand\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tier": "anonymous",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T11:53:49.223Z",
+      "finalUrl": "http://127.0.0.1:3120/tools/workspace?tab=alerts",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nTrack is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tier": "anonymous",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T11:53:50.655Z",
+      "finalUrl": "http://127.0.0.1:3120/tools/workspace?tab=alerts",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nTrack is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    }
+  ],
+  "requests": [
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts/history",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts/history",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts/history",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts/history",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts/history",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts/history",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    }
+  ],
+  "errors": []
+}
