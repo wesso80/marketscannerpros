@@ -1,0 +1,20 @@
+{
+  "AAPL": {
+    "confluenceScore": 76,
+    "assessment": "ALIGNED",
+    "grade": "A",
+    "canonical": null
+  },
+  "NVDA": {
+    "confluenceScore": 76,
+    "assessment": "ALIGNED",
+    "grade": "A",
+    "canonical": null
+  },
+  "BTC": {
+    "confluenceScore": 86,
+    "assessment": "ALIGNED",
+    "grade": "A",
+    "canonical": null
+  }
+}
