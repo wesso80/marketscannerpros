@@ -1,0 +1,1041 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+   ▲ Next.js 16.0.10 (Turbopack)
+   - Experiments (use with caution):
+     · optimizePackageImports
+
+ ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+   Creating an optimized production build ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+ ✓ Compiled successfully in 16.1s
+   Running TypeScript ...
+   Collecting page data using 8 workers ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+{"level":"error","message":"Environment validation failed","timestamp":"2026-10-05T01:28:56.519Z","service":"msp-api"}
+Error: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ ENVIRONMENT CONFIGURATION ERROR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The following environment variables are missing or invalid:
+
+  - APP_SIGNING_SECRET: APP_SIGNING_SECRET must be at least 32 characters for security
+  - STRIPE_SECRET_KEY: STRIPE_SECRET_KEY must start with sk_
+  - DATABASE_URL: DATABASE_URL must be a valid PostgreSQL connection string
+  - OPENAI_API_KEY: OPENAI_API_KEY must start with sk-
+
+Required environment variables:
+  • APP_SIGNING_SECRET - JWT signing key (32+ characters)
+  • STRIPE_SECRET_KEY - Stripe API key (starts with sk_)
+  • OPENAI_API_KEY - OpenAI API key (starts with sk-)
+  • DATABASE_URL or POSTGRES_URL - PostgreSQL connection string
+
+Please check your .env.local file or deployment environment variables.
+
+For local development, copy .env.example to .env.local and fill in the values.
+For production, ensure all environment variables are set in your hosting platform.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    at <unknown> (.next/server/chunks/ssr/_85437c05._.js:41:82)
+    at module evaluation (.next/server/chunks/ssr/_85437c05._.js:41:100)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.esmImport [as i] (.next/server/chunks/ssr/[turbopack]_runtime.js:228:20)
+    at module evaluation (.next/server/chunks/ssr/[root-of-the-server]__a30beb5d._.js:1:272)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.commonJsRequire [as r] (.next/server/chunks/ssr/[turbopack]_runtime.js:249:12)
+ ⚠ Using edge runtime on a page currently disables static generation for that page
+{"level":"error","message":"Environment validation failed","timestamp":"2026-10-05T01:28:57.236Z","service":"msp-api"}
+Error: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ ENVIRONMENT CONFIGURATION ERROR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The following environment variables are missing or invalid:
+
+  - APP_SIGNING_SECRET: APP_SIGNING_SECRET must be at least 32 characters for security
+  - STRIPE_SECRET_KEY: STRIPE_SECRET_KEY must start with sk_
+  - DATABASE_URL: DATABASE_URL must be a valid PostgreSQL connection string
+  - OPENAI_API_KEY: OPENAI_API_KEY must start with sk-
+
+Required environment variables:
+  • APP_SIGNING_SECRET - JWT signing key (32+ characters)
+  • STRIPE_SECRET_KEY - Stripe API key (starts with sk_)
+  • OPENAI_API_KEY - OpenAI API key (starts with sk-)
+  • DATABASE_URL or POSTGRES_URL - PostgreSQL connection string
+
+Please check your .env.local file or deployment environment variables.
+
+For local development, copy .env.example to .env.local and fill in the values.
+For production, ensure all environment variables are set in your hosting platform.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    at <unknown> (.next/server/chunks/ssr/_85437c05._.js:41:82)
+    at module evaluation (.next/server/chunks/ssr/_85437c05._.js:41:100)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.esmImport [as i] (.next/server/chunks/ssr/[turbopack]_runtime.js:228:20)
+    at module evaluation (.next/server/chunks/ssr/[root-of-the-server]__b27d6975._.js:1:272)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.commonJsRequire [as r] (.next/server/chunks/ssr/[turbopack]_runtime.js:249:12)
+    at J.layout (.next/server/chunks/ssr/_45efd3a6._.js:1:984)
+{"level":"error","message":"Environment validation failed","timestamp":"2026-10-05T01:28:57.247Z","service":"msp-api"}
+Error: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ ENVIRONMENT CONFIGURATION ERROR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The following environment variables are missing or invalid:
+
+  - APP_SIGNING_SECRET: APP_SIGNING_SECRET must be at least 32 characters for security
+  - STRIPE_SECRET_KEY: STRIPE_SECRET_KEY must start with sk_
+  - DATABASE_URL: DATABASE_URL must be a valid PostgreSQL connection string
+  - OPENAI_API_KEY: OPENAI_API_KEY must start with sk-
+
+Required environment variables:
+  • APP_SIGNING_SECRET - JWT signing key (32+ characters)
+  • STRIPE_SECRET_KEY - Stripe API key (starts with sk_)
+  • OPENAI_API_KEY - OpenAI API key (starts with sk-)
+  • DATABASE_URL or POSTGRES_URL - PostgreSQL connection string
+
+Please check your .env.local file or deployment environment variables.
+
+For local development, copy .env.example to .env.local and fill in the values.
+For production, ensure all environment variables are set in your hosting platform.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    at <unknown> (.next/server/chunks/ssr/_85437c05._.js:41:82)
+    at module evaluation (.next/server/chunks/ssr/_85437c05._.js:41:100)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.esmImport [as i] (.next/server/chunks/ssr/[turbopack]_runtime.js:228:20)
+    at module evaluation (.next/server/chunks/ssr/[root-of-the-server]__b985764f._.js:1:272)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.commonJsRequire [as r] (.next/server/chunks/ssr/[turbopack]_runtime.js:249:12)
+    at J.layout (.next/server/chunks/ssr/_c094663e._.js:1:974)
+{"level":"error","message":"Environment validation failed","timestamp":"2026-10-05T01:28:57.268Z","service":"msp-api"}
+{"level":"error","message":"Environment validation failed","timestamp":"2026-10-05T01:28:57.274Z","service":"msp-api"}
+Error: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ ENVIRONMENT CONFIGURATION ERROR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The following environment variables are missing or invalid:
+
+  - APP_SIGNING_SECRET: APP_SIGNING_SECRET must be at least 32 characters for security
+  - STRIPE_SECRET_KEY: STRIPE_SECRET_KEY must start with sk_
+  - DATABASE_URL: DATABASE_URL must be a valid PostgreSQL connection string
+  - OPENAI_API_KEY: OPENAI_API_KEY must start with sk-
+
+Required environment variables:
+  • APP_SIGNING_SECRET - JWT signing key (32+ characters)
+  • STRIPE_SECRET_KEY - Stripe API key (starts with sk_)
+  • OPENAI_API_KEY - OpenAI API key (starts with sk-)
+  • DATABASE_URL or POSTGRES_URL - PostgreSQL connection string
+
+Please check your .env.local file or deployment environment variables.
+
+For local development, copy .env.example to .env.local and fill in the values.
+For production, ensure all environment variables are set in your hosting platform.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    at <unknown> (.next/server/chunks/ssr/_85437c05._.js:41:82)
+    at module evaluation (.next/server/chunks/ssr/_85437c05._.js:41:100)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.esmImport [as i] (.next/server/chunks/ssr/[turbopack]_runtime.js:228:20)
+    at module evaluation (.next/server/chunks/ssr/[root-of-the-server]__17571b0e._.js:1:272)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.commonJsRequire [as r] (.next/server/chunks/ssr/[turbopack]_runtime.js:249:12)
+    at J.layout (.next/server/chunks/ssr/_fe871274._.js:1:970)
+Error: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ ENVIRONMENT CONFIGURATION ERROR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The following environment variables are missing or invalid:
+
+  - APP_SIGNING_SECRET: APP_SIGNING_SECRET must be at least 32 characters for security
+  - STRIPE_SECRET_KEY: STRIPE_SECRET_KEY must start with sk_
+  - DATABASE_URL: DATABASE_URL must be a valid PostgreSQL connection string
+  - OPENAI_API_KEY: OPENAI_API_KEY must start with sk-
+
+Required environment variables:
+  • APP_SIGNING_SECRET - JWT signing key (32+ characters)
+  • STRIPE_SECRET_KEY - Stripe API key (starts with sk_)
+  • OPENAI_API_KEY - OpenAI API key (starts with sk-)
+  • DATABASE_URL or POSTGRES_URL - PostgreSQL connection string
+
+Please check your .env.local file or deployment environment variables.
+
+For local development, copy .env.example to .env.local and fill in the values.
+For production, ensure all environment variables are set in your hosting platform.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    at <unknown> (.next/server/chunks/ssr/_85437c05._.js:41:82)
+    at module evaluation (.next/server/chunks/ssr/_85437c05._.js:41:100)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.esmImport [as i] (.next/server/chunks/ssr/[turbopack]_runtime.js:228:20)
+    at module evaluation (.next/server/chunks/ssr/[root-of-the-server]__b7c9741b._.js:1:272)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.commonJsRequire [as r] (.next/server/chunks/ssr/[turbopack]_runtime.js:249:12)
+    at J.layout (.next/server/chunks/ssr/_af6364f4._.js:1:926)
+{"level":"error","message":"Environment validation failed","timestamp":"2026-10-05T01:28:57.293Z","service":"msp-api"}
+{"level":"error","message":"Environment validation failed","timestamp":"2026-10-05T01:28:57.298Z","service":"msp-api"}
+Error: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ ENVIRONMENT CONFIGURATION ERROR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The following environment variables are missing or invalid:
+
+  - APP_SIGNING_SECRET: APP_SIGNING_SECRET must be at least 32 characters for security
+  - STRIPE_SECRET_KEY: STRIPE_SECRET_KEY must start with sk_
+  - DATABASE_URL: DATABASE_URL must be a valid PostgreSQL connection string
+  - OPENAI_API_KEY: OPENAI_API_KEY must start with sk-
+
+Required environment variables:
+  • APP_SIGNING_SECRET - JWT signing key (32+ characters)
+  • STRIPE_SECRET_KEY - Stripe API key (starts with sk_)
+  • OPENAI_API_KEY - OpenAI API key (starts with sk-)
+  • DATABASE_URL or POSTGRES_URL - PostgreSQL connection string
+
+Please check your .env.local file or deployment environment variables.
+
+For local development, copy .env.example to .env.local and fill in the values.
+For production, ensure all environment variables are set in your hosting platform.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    at <unknown> (.next/server/chunks/ssr/_85437c05._.js:41:82)
+    at module evaluation (.next/server/chunks/ssr/_85437c05._.js:41:100)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.esmImport [as i] (.next/server/chunks/ssr/[turbopack]_runtime.js:228:20)
+    at module evaluation (.next/server/chunks/ssr/[root-of-the-server]__c29f2967._.js:1:272)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.commonJsRequire [as r] (.next/server/chunks/ssr/[turbopack]_runtime.js:249:12)
+    at J.layout (.next/server/chunks/ssr/_6d98ede9._.js:1:947)
+Error: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ ENVIRONMENT CONFIGURATION ERROR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The following environment variables are missing or invalid:
+
+  - APP_SIGNING_SECRET: APP_SIGNING_SECRET must be at least 32 characters for security
+  - STRIPE_SECRET_KEY: STRIPE_SECRET_KEY must start with sk_
+  - DATABASE_URL: DATABASE_URL must be a valid PostgreSQL connection string
+  - OPENAI_API_KEY: OPENAI_API_KEY must start with sk-
+
+Required environment variables:
+  • APP_SIGNING_SECRET - JWT signing key (32+ characters)
+  • STRIPE_SECRET_KEY - Stripe API key (starts with sk_)
+  • OPENAI_API_KEY - OpenAI API key (starts with sk-)
+  • DATABASE_URL or POSTGRES_URL - PostgreSQL connection string
+
+Please check your .env.local file or deployment environment variables.
+
+For local development, copy .env.example to .env.local and fill in the values.
+For production, ensure all environment variables are set in your hosting platform.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    at <unknown> (.next/server/chunks/ssr/_85437c05._.js:41:82)
+    at module evaluation (.next/server/chunks/ssr/_85437c05._.js:41:100)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.esmImport [as i] (.next/server/chunks/ssr/[turbopack]_runtime.js:228:20)
+    at module evaluation (.next/server/chunks/ssr/[root-of-the-server]__9719c881._.js:1:272)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.commonJsRequire [as r] (.next/server/chunks/ssr/[turbopack]_runtime.js:249:12)
+    at J.layout (.next/server/chunks/ssr/_f950ebd9._.js:1:944)
+{"level":"error","message":"Environment validation failed","timestamp":"2026-10-05T01:28:57.368Z","service":"msp-api"}
+Error: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ ENVIRONMENT CONFIGURATION ERROR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The following environment variables are missing or invalid:
+
+  - APP_SIGNING_SECRET: APP_SIGNING_SECRET must be at least 32 characters for security
+  - STRIPE_SECRET_KEY: STRIPE_SECRET_KEY must start with sk_
+  - DATABASE_URL: DATABASE_URL must be a valid PostgreSQL connection string
+  - OPENAI_API_KEY: OPENAI_API_KEY must start with sk-
+
+Required environment variables:
+  • APP_SIGNING_SECRET - JWT signing key (32+ characters)
+  • STRIPE_SECRET_KEY - Stripe API key (starts with sk_)
+  • OPENAI_API_KEY - OpenAI API key (starts with sk-)
+  • DATABASE_URL or POSTGRES_URL - PostgreSQL connection string
+
+Please check your .env.local file or deployment environment variables.
+
+For local development, copy .env.example to .env.local and fill in the values.
+For production, ensure all environment variables are set in your hosting platform.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    at <unknown> (.next/server/chunks/ssr/_85437c05._.js:41:82)
+    at module evaluation (.next/server/chunks/ssr/_85437c05._.js:41:100)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.esmImport [as i] (.next/server/chunks/ssr/[turbopack]_runtime.js:228:20)
+    at module evaluation (.next/server/chunks/ssr/[root-of-the-server]__273820ca._.js:1:272)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.commonJsRequire [as r] (.next/server/chunks/ssr/[turbopack]_runtime.js:249:12)
+    at J.layout (.next/server/chunks/ssr/_4155facc._.js:1:1059)
+   Generating static pages using 8 workers (0/401) ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+{"level":"error","message":"Environment validation failed","timestamp":"2026-10-05T01:28:57.949Z","service":"msp-api"}
+Error: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ ENVIRONMENT CONFIGURATION ERROR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The following environment variables are missing or invalid:
+
+  - APP_SIGNING_SECRET: APP_SIGNING_SECRET must be at least 32 characters for security
+  - STRIPE_SECRET_KEY: STRIPE_SECRET_KEY must start with sk_
+  - DATABASE_URL: DATABASE_URL must be a valid PostgreSQL connection string
+  - OPENAI_API_KEY: OPENAI_API_KEY must start with sk-
+
+Required environment variables:
+  • APP_SIGNING_SECRET - JWT signing key (32+ characters)
+  • STRIPE_SECRET_KEY - Stripe API key (starts with sk_)
+  • OPENAI_API_KEY - OpenAI API key (starts with sk-)
+  • DATABASE_URL or POSTGRES_URL - PostgreSQL connection string
+
+Please check your .env.local file or deployment environment variables.
+
+For local development, copy .env.example to .env.local and fill in the values.
+For production, ensure all environment variables are set in your hosting platform.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    at <unknown> (.next/server/chunks/ssr/_85437c05._.js:41:82)
+    at module evaluation (.next/server/chunks/ssr/_85437c05._.js:41:100)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.esmImport [as i] (.next/server/chunks/ssr/[turbopack]_runtime.js:228:20)
+    at module evaluation (.next/server/chunks/ssr/[root-of-the-server]__cd5a76ba._.js:1:272)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.commonJsRequire [as r] (.next/server/chunks/ssr/[turbopack]_runtime.js:249:12)
+    at J.layout (.next/server/chunks/ssr/_305d2b12._.js:1:1169)
+{"level":"error","message":"Environment validation failed","timestamp":"2026-10-05T01:28:57.979Z","service":"msp-api"}
+Error: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ ENVIRONMENT CONFIGURATION ERROR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The following environment variables are missing or invalid:
+
+  - APP_SIGNING_SECRET: APP_SIGNING_SECRET must be at least 32 characters for security
+  - STRIPE_SECRET_KEY: STRIPE_SECRET_KEY must start with sk_
+  - DATABASE_URL: DATABASE_URL must be a valid PostgreSQL connection string
+  - OPENAI_API_KEY: OPENAI_API_KEY must start with sk-
+
+Required environment variables:
+  • APP_SIGNING_SECRET - JWT signing key (32+ characters)
+  • STRIPE_SECRET_KEY - Stripe API key (starts with sk_)
+  • OPENAI_API_KEY - OpenAI API key (starts with sk-)
+  • DATABASE_URL or POSTGRES_URL - PostgreSQL connection string
+
+Please check your .env.local file or deployment environment variables.
+
+For local development, copy .env.example to .env.local and fill in the values.
+For production, ensure all environment variables are set in your hosting platform.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    at <unknown> (.next/server/chunks/ssr/_85437c05._.js:41:82)
+    at module evaluation (.next/server/chunks/ssr/_85437c05._.js:41:100)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.esmImport [as i] (.next/server/chunks/ssr/[turbopack]_runtime.js:228:20)
+    at module evaluation (.next/server/chunks/ssr/[root-of-the-server]__a30beb5d._.js:1:272)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.commonJsRequire [as r] (.next/server/chunks/ssr/[turbopack]_runtime.js:249:12)
+{"level":"error","message":"Environment validation failed","timestamp":"2026-10-05T01:28:58.028Z","service":"msp-api"}
+Error: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ ENVIRONMENT CONFIGURATION ERROR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The following environment variables are missing or invalid:
+
+  - APP_SIGNING_SECRET: APP_SIGNING_SECRET must be at least 32 characters for security
+  - STRIPE_SECRET_KEY: STRIPE_SECRET_KEY must start with sk_
+  - DATABASE_URL: DATABASE_URL must be a valid PostgreSQL connection string
+  - OPENAI_API_KEY: OPENAI_API_KEY must start with sk-
+
+Required environment variables:
+  • APP_SIGNING_SECRET - JWT signing key (32+ characters)
+  • STRIPE_SECRET_KEY - Stripe API key (starts with sk_)
+  • OPENAI_API_KEY - OpenAI API key (starts with sk-)
+  • DATABASE_URL or POSTGRES_URL - PostgreSQL connection string
+
+Please check your .env.local file or deployment environment variables.
+
+For local development, copy .env.example to .env.local and fill in the values.
+For production, ensure all environment variables are set in your hosting platform.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    at <unknown> (.next/server/chunks/ssr/_85437c05._.js:41:82)
+    at module evaluation (.next/server/chunks/ssr/_85437c05._.js:41:100)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.esmImport [as i] (.next/server/chunks/ssr/[turbopack]_runtime.js:228:20)
+    at module evaluation (.next/server/chunks/ssr/[root-of-the-server]__5f661d93._.js:1:272)
+    at instantiateModule (.next/server/chunks/ssr/[turbopack]_runtime.js:715:9)
+    at getOrInstantiateModuleFromParent (.next/server/chunks/ssr/[turbopack]_runtime.js:738:12)
+    at Context.commonJsRequire [as r] (.next/server/chunks/ssr/[turbopack]_runtime.js:249:12)
+    at J.layout (.next/server/chunks/ssr/_dece1ce1._.js:1:984)
+   Generating static pages using 8 workers (100/401) 
+   Generating static pages using 8 workers (200/401) 
+[db] query failed {
+  fingerprint: '43b04b8e8487',
+  operation: 'SELECT',
+  durationMs: 37,
+  code: 'EAI_AGAIN',
+  atomic: false
+}
+[db] connection acquisition failed { total: 0, idle: 0, waiting: 0 }
+[daily-pick/feed] query failed: Error: getaddrinfo EAI_AGAIN base
+    at async c (.next/server/chunks/[root-of-the-server]__33b62011._.js:1:5927)
+    at async u (.next/server/chunks/[root-of-the-server]__b835b281._.js:1:15043) {
+  errno: -3001,
+  code: 'EAI_AGAIN',
+  syscall: 'getaddrinfo',
+  hostname: 'base'
+}
+   Generating static pages using 8 workers (300/401) 
+ ✓ Generating static pages using 8 workers (401/401) in 1605.9ms
+   Finalizing page optimization ...
+
+Route (app)                                      Revalidate  Expire
+┌ ○ /
+├ ○ /_not-found
+├ ○ /about
+├ ○ /account
+├ ƒ /admin
+├ ○ /admin/ai-usage
+├ ○ /admin/alerts
+├ ○ /admin/analogues
+├ ○ /admin/backtest-lab
+├ ○ /admin/behavioral-drift
+├ ○ /admin/command
+├ ○ /admin/commander
+├ ○ /admin/costs
+├ ○ /admin/cross-asset
+├ ○ /admin/crypto-discovery
+├ ○ /admin/crypto-markets
+├ ○ /admin/daily-brief
+├ ○ /admin/daily-packet
+├ ○ /admin/data-health
+├ ○ /admin/delete-requests
+├ ○ /admin/diagnostics
+├ ○ /admin/discord-bridge
+├ ○ /admin/doctrine
+├ ○ /admin/earnings-analyzer
+├ ○ /admin/edge-ledger
+├ ○ /admin/engine-health
+├ ○ /admin/equity-research
+├ ○ /admin/evening-packet
+├ ○ /admin/growth-command-centre
+├ ○ /admin/growth-commander
+├ ○ /admin/health
+├ ○ /admin/income
+├ ○ /admin/insider
+├ ƒ /admin/jarvis/daily
+├ ○ /admin/journal-learning
+├ ○ /admin/learning-engine
+├ ƒ /admin/live-scanner
+├ ○ /admin/logs
+├ ○ /admin/macro-outlook
+├ ○ /admin/macro-pulse
+├ ○ /admin/marketing-queue
+├ ○ /admin/ml-scorer
+├ ○ /admin/model-diagnostics
+├ ○ /admin/morning-brief
+├ ○ /admin/operator-health
+├ ƒ /admin/operator-terminal
+├ ƒ /admin/opportunity-board
+├ ○ /admin/options-architect
+├ ○ /admin/outcomes
+├ ○ /admin/outcomes/scorecard
+├ ○ /admin/overview
+├ ○ /admin/packet-replay
+├ ○ /admin/paused
+├ ○ /admin/playbooks
+├ ○ /admin/portfolio-lab
+├ ○ /admin/portfolio-lab/analytics
+├ ○ /admin/portfolio-lab/edge-packets
+├ ○ /admin/portfolio-lab/holdings
+├ ○ /admin/portfolio-lab/journal
+├ ○ /admin/portfolio-lab/orders
+├ ○ /admin/portfolio-lab/performance
+├ ○ /admin/portfolio-lab/playbooks
+├ ○ /admin/portfolio-lab/positions
+├ ○ /admin/portfolio-lab/reports
+├ ○ /admin/portfolio-lab/risk
+├ ○ /admin/portfolio-lab/settings
+├ ○ /admin/portfolio-lab/trades
+├ ○ /admin/pre-trade-checklist
+├ ○ /admin/priority-desk
+├ ○ /admin/quant
+├ ○ /admin/quant-screener
+├ ○ /admin/research-scheduler
+├ ○ /admin/risk
+├ ○ /admin/risk-assessment
+├ ○ /admin/scalper
+├ ○ /admin/sector-rotation
+├ ○ /admin/settings
+├ ○ /admin/subscriptions
+├ ƒ /admin/symbol/[symbol]
+├ ○ /admin/system
+├ ƒ /admin/terminal/[symbol]
+├ ○ /admin/transcripts
+├ ○ /admin/trials
+├ ○ /admin/universe
+├ ○ /admin/usage-analytics
+├ ○ /after-checkout
+├ ƒ /api/actions/execute
+├ ƒ /api/adaptive/profile
+├ ƒ /api/admin/ai-usage
+├ ƒ /api/admin/analogues
+├ ƒ /api/admin/arca
+├ ƒ /api/admin/backtest-lab
+├ ƒ /api/admin/behavioral-drift
+├ ƒ /api/admin/brain/engine-health
+├ ƒ /api/admin/calibration
+├ ƒ /api/admin/cg-usage
+├ ƒ /api/admin/change-tape
+├ ƒ /api/admin/check-db
+├ ƒ /api/admin/claude/growth
+├ ƒ /api/admin/commander-mode
+├ ƒ /api/admin/contest
+├ ƒ /api/admin/costs
+├ ƒ /api/admin/cross-asset
+├ ƒ /api/admin/crypto-discovery
+├ ƒ /api/admin/crypto-discovery/analyze
+├ ƒ /api/admin/crypto-markets/backtest
+├ ƒ /api/admin/crypto-markets/bases
+├ ƒ /api/admin/crypto-markets/breakout-verdicts
+├ ƒ /api/admin/crypto-markets/calibration
+├ ƒ /api/admin/crypto-markets/context
+├ ƒ /api/admin/crypto-markets/early-momentum
+├ ƒ /api/admin/crypto-markets/forward-score
+├ ƒ /api/admin/crypto-markets/harness
+├ ƒ /api/admin/crypto-markets/history
+├ ƒ /api/admin/crypto-markets/jev
+├ ƒ /api/admin/crypto-markets/learning
+├ ƒ /api/admin/crypto-markets/market-data
+├ ƒ /api/admin/crypto-markets/momentum
+├ ƒ /api/admin/crypto-markets/new-listings
+├ ƒ /api/admin/crypto-markets/paper
+├ ƒ /api/admin/crypto-markets/recommendations
+├ ƒ /api/admin/crypto-markets/rotation
+├ ƒ /api/admin/crypto-markets/setup-email
+├ ƒ /api/admin/crypto-markets/summary
+├ ƒ /api/admin/crypto-markets/volume
+├ ƒ /api/admin/daily-brief
+├ ƒ /api/admin/daily-packet
+├ ƒ /api/admin/data-health
+├ ƒ /api/admin/debates
+├ ƒ /api/admin/decision-desk
+├ ƒ /api/admin/decision-records
+├ ƒ /api/admin/delete-requests
+├ ƒ /api/admin/diagnostics/scanners
+├ ƒ /api/admin/discord-bridge
+├ ƒ /api/admin/discord/test
+├ ƒ /api/admin/doctrine
+├ ƒ /api/admin/doctrine/reviews
+├ ƒ /api/admin/earnings-analyzer
+├ ƒ /api/admin/edge-ledger
+├ ƒ /api/admin/equity-news-jev
+├ ƒ /api/admin/equity-research
+├ ƒ /api/admin/evening-packet
+├ ƒ /api/admin/growth/campaigns
+├ ƒ /api/admin/growth/generate
+├ ƒ /api/admin/growth/metrics
+├ ƒ /api/admin/growth/posts
+├ ƒ /api/admin/growth/posts/[id]
+├ ƒ /api/admin/growth/posts/[id]/publish
+├ ƒ /api/admin/health
+├ ƒ /api/admin/income
+├ ƒ /api/admin/info-edge
+├ ƒ /api/admin/insider
+├ ƒ /api/admin/jarvis/daily
+├ ƒ /api/admin/jarvis/daily/archive
+├ ƒ /api/admin/journal-learning
+├ ƒ /api/admin/kill-switch
+├ ƒ /api/admin/learning-engine/dashboard
+├ ƒ /api/admin/macro-outlook
+├ ƒ /api/admin/macro-pulse
+├ ƒ /api/admin/marketing/drafts
+├ ƒ /api/admin/marketing/drafts/publish
+├ ƒ /api/admin/marketing/x/callback
+├ ƒ /api/admin/marketing/x/connect
+├ ƒ /api/admin/marketing/x/status
+├ ƒ /api/admin/mistakes
+├ ƒ /api/admin/ml-scorer
+├ ƒ /api/admin/model-diagnostics
+├ ƒ /api/admin/morning-brief
+├ ƒ /api/admin/morning-brief/actions
+├ ƒ /api/admin/morning-brief/feedback
+├ ƒ /api/admin/no-trade-alpha
+├ ƒ /api/admin/opportunities
+├ ƒ /api/admin/options-architect
+├ ƒ /api/admin/packet-replay
+├ ƒ /api/admin/playbooks
+├ ƒ /api/admin/portfolio-lab/analytics
+├ ƒ /api/admin/portfolio-lab/correlation
+├ ƒ /api/admin/portfolio-lab/create-default
+├ ƒ /api/admin/portfolio-lab/create-sim-order
+├ ƒ /api/admin/portfolio-lab/edge-packets
+├ ƒ /api/admin/portfolio-lab/holdings
+├ ƒ /api/admin/portfolio-lab/journal
+├ ƒ /api/admin/portfolio-lab/monte-carlo
+├ ƒ /api/admin/portfolio-lab/orders
+├ ƒ /api/admin/portfolio-lab/performance
+├ ƒ /api/admin/portfolio-lab/playbooks
+├ ƒ /api/admin/portfolio-lab/positions
+├ ƒ /api/admin/portfolio-lab/regime-policy
+├ ƒ /api/admin/portfolio-lab/reports
+├ ƒ /api/admin/portfolio-lab/reset
+├ ƒ /api/admin/portfolio-lab/risk
+├ ƒ /api/admin/portfolio-lab/risk/ack
+├ ƒ /api/admin/portfolio-lab/settings
+├ ƒ /api/admin/portfolio-lab/simulate-cycle
+├ ƒ /api/admin/portfolio-lab/status
+├ ƒ /api/admin/portfolio-lab/summary
+├ ƒ /api/admin/portfolio-lab/trades
+├ ƒ /api/admin/position-history
+├ ƒ /api/admin/pre-trade-checklist
+├ ƒ /api/admin/priority-desk
+├ ƒ /api/admin/quant-screener
+├ ƒ /api/admin/queue
+├ ƒ /api/admin/rank-calibration
+├ ƒ /api/admin/regime-matrix
+├ ƒ /api/admin/regret-map
+├ ƒ /api/admin/research-alerts
+├ ƒ /api/admin/research-alerts/settings
+├ ƒ /api/admin/research-cases
+├ ƒ /api/admin/research-events
+├ ƒ /api/admin/research-packet
+├ ƒ /api/admin/research-scheduler
+├ ƒ /api/admin/risk-assessment
+├ ƒ /api/admin/risk/capture
+├ ƒ /api/admin/risk/state
+├ ƒ /api/admin/scan
+├ ƒ /api/admin/scanner/live
+├ ƒ /api/admin/sector-rotation
+├ ƒ /api/admin/self-critique
+├ ƒ /api/admin/signals
+├ ƒ /api/admin/signals/scorecard
+├ ƒ /api/admin/signals/stats
+├ ƒ /api/admin/stats
+├ ƒ /api/admin/subscriptions
+├ ƒ /api/admin/symbol/[symbol]
+├ ƒ /api/admin/sync-stripe
+├ ƒ /api/admin/system/health
+├ ƒ /api/admin/time-to-decision
+├ ƒ /api/admin/transcripts
+├ ƒ /api/admin/trials
+├ ƒ /api/admin/universe
+├ ƒ /api/admin/usage-analytics
+├ ƒ /api/admin/verify
+├ ƒ /api/ai-market-focus
+├ ƒ /api/ai-scanner/alert
+├ ƒ /api/ai-scanner/alerts
+├ ƒ /api/ai-scanner/status
+├ ƒ /api/ai-scanner/test
+├ ƒ /api/ai-signals
+├ ƒ /api/ai/accuracy
+├ ƒ /api/ai/actions
+├ ƒ /api/ai/analyst-context
+├ ƒ /api/ai/context
+├ ƒ /api/ai/copilot
+├ ƒ /api/ai/events
+├ ƒ /api/ai/explain
+├ ƒ /api/ai/feedback
+├ ƒ /api/ai/memory
+├ ƒ /api/ai/suggest
+├ ƒ /api/alerts
+├ ƒ /api/alerts/acknowledge
+├ ƒ /api/alerts/check
+├ ƒ /api/alerts/create-from-focus
+├ ƒ /api/alerts/debug
+├ ƒ /api/alerts/history
+├ ƒ /api/alerts/recent
+├ ƒ /api/alerts/signal-check
+├ ƒ /api/alerts/smart-check
+├ ƒ /api/alerts/strategy-check
+├ ƒ /api/alerts/test-trigger
+├ ƒ /api/alerts/unread
+├ ƒ /api/analyst-ratings
+├ ƒ /api/analytics/heartbeat
+├ ƒ /api/analytics/online
+├ ƒ /api/auth/admin-login
+├ ƒ /api/auth/debug
+├ ƒ /api/auth/delete-request
+├ ƒ /api/auth/health
+├ ƒ /api/auth/login
+├ ƒ /api/auth/logout
+├ ƒ /api/auth/magic-link
+├ ƒ /api/auth/magic-link/verify
+├ ƒ /api/auth/session
+├ ƒ /api/backtest
+├ ƒ /api/backtest/brain
+├ ƒ /api/backtest/options
+├ ƒ /api/backtest/scanner
+├ ƒ /api/backtest/symbol-range
+├ ƒ /api/backtest/time-scanner
+├ ƒ /api/bars
+├ ƒ /api/cached/bulk-quotes
+├ ƒ /api/cached/indicators
+├ ƒ /api/cached/quote
+├ ƒ /api/cached/scanner
+├ ƒ /api/cached/status
+├ ƒ /api/cached/symbol
+├ ƒ /api/cached/universe
+├ ƒ /api/catalyst/events
+├ ƒ /api/catalyst/ingest
+├ ƒ /api/catalyst/study
+├ ƒ /api/catalyst/study/compute
+├ ƒ /api/command-hub/summary
+├ ƒ /api/commodities
+├ ƒ /api/company-overview
+├ ƒ /api/confluence-scan
+├ ƒ /api/context/heartbeat
+├ ƒ /api/correlation
+├ ƒ /api/correlation-regime
+├ ƒ /api/cron/admin-scan
+├ ƒ /api/cron/arca-cycle
+├ ƒ /api/cron/arca-daily-report
+├ ƒ /api/cron/edge-label-outcomes
+├ ƒ /api/cron/edge-rebuild-matrix
+├ ƒ /api/cron/evening-packet
+├ ƒ /api/cron/global-m2-ingest
+├ ƒ /api/cron/label-ai-outcomes
+├ ƒ /api/cron/macro-ingest
+├ ƒ /api/cron/persist-edge-packets
+├ ƒ /api/cron/refresh-fundamentals
+├ ƒ /api/cross-market-confluence
+├ ƒ /api/crypto-derivatives
+├ ƒ /api/crypto-derivatives/history
+├ ƒ /api/crypto-time-confluence
+├ ƒ /api/crypto/breakdown
+├ ƒ /api/crypto/categories
+├ ƒ /api/crypto/cg-news
+├ ƒ /api/crypto/defi
+├ ƒ /api/crypto/defi-stats
+├ ƒ /api/crypto/detail
+├ ƒ /api/crypto/dex-pools
+├ ƒ /api/crypto/exchange-rates
+├ ƒ /api/crypto/exchanges
+├ ƒ /api/crypto/heatmap
+├ ƒ /api/crypto/liquidations
+├ ƒ /api/crypto/market-overview
+├ ƒ /api/crypto/new-listings
+├ ƒ /api/crypto/new-pools
+├ ƒ /api/crypto/open-interest
+├ ƒ /api/crypto/pool-pressure
+├ ƒ /api/crypto/public-treasury
+├ ƒ /api/crypto/search
+├ ƒ /api/crypto/tickers
+├ ƒ /api/crypto/token-info
+├ ƒ /api/crypto/top-movers
+├ ƒ /api/crypto/top-traders
+├ ƒ /api/crypto/trending
+├ ƒ /api/crypto/trending-pools
+├ ƒ /api/deep-analysis
+├ ƒ /api/disclosure/accept
+├ ƒ /api/disclosure/status
+├ ƒ /api/dividends
+├ ƒ /api/doctrine/outcome
+├ ƒ /api/doctrine/playbooks
+├ ƒ /api/doctrine/profile
+├ ƒ /api/dve
+├ ƒ /api/earnings
+├ ƒ /api/earnings-calendar
+├ ƒ /api/earnings-estimates
+├ ƒ /api/economic-calendar
+├ ƒ /api/economic-indicators
+├ ƒ /api/economics
+├ ƒ /api/edge-profile
+├ ƒ /api/entitlements
+├ ƒ /api/env-check
+├ ƒ /api/equity/detail
+├ ƒ /api/evolution
+├ ƒ /api/execute-trade
+├ ƒ /api/favorites
+├ ƒ /api/fear-greed
+├ ƒ /api/fear-greed-custom
+├ ƒ /api/fear-greed/stocks
+├ ƒ /api/flow
+├ ƒ /api/flow-intelligence
+├ ƒ /api/fundamentals
+├ ƒ /api/funding-rates
+├ ƒ /api/golden-egg
+├ ƒ /api/health
+├ ƒ /api/health/data
+├ ƒ /api/health/status
+├ ƒ /api/insider-transactions
+├ ƒ /api/institutional-holdings
+├ ƒ /api/intelligence/auction
+├ ƒ /api/intelligence/edge-profile
+├ ƒ /api/intelligence/fragility
+├ ƒ /api/intelligence/global-m2
+├ ƒ /api/intelligence/ingest-outcomes
+├ ƒ /api/intelligence/lead-lag
+├ ƒ /api/intelligence/liquidity
+├ ƒ /api/intelligence/master
+├ ƒ /api/intelligence/nq-pressure
+├ ƒ /api/intelligence/status
+├ ƒ /api/internal/verify-tier
+├ ƒ /api/intraday
+├ ƒ /api/ipo-calendar
+├ ƒ /api/jobs/arca-marketing-sweep
+├ ƒ /api/jobs/email-best-opportunities
+├ ƒ /api/jobs/email-daily-review
+├ ƒ /api/jobs/email-morning-brief
+├ ƒ /api/jobs/generate-market-focus
+├ ƒ /api/jobs/journal-auto-close
+├ ƒ /api/jobs/learning-outcomes
+├ ƒ /api/jobs/opportunity-scan
+├ ƒ /api/jobs/quant-scan
+├ ƒ /api/jobs/scan-daily
+├ ƒ /api/jobs/scan-universe
+├ ƒ /api/jobs/signal-lifecycle
+├ ƒ /api/jobs/snapshot-open-interest
+├ ƒ /api/journal
+├ ƒ /api/journal/add-trade
+├ ƒ /api/journal/analyze
+├ ƒ /api/journal/auto-log
+├ ƒ /api/journal/clear
+├ ƒ /api/journal/close-trade
+├ ƒ /api/journal/exit-verdict
+├ ƒ /api/journal/option-quote
+├ ƒ /api/journal/trade/[id]
+├ ƒ /api/journal/trade/[id]/snapshot
+├ ƒ /api/liquidity-sweep
+├ ƒ /api/long-short-ratio
+├ ƒ /api/market-focus/candidates
+├ ƒ /api/market-focus/generate
+├ ƒ /api/market-movers
+├ ƒ /api/market-pressure
+├ ƒ /api/market-status
+├ ƒ /api/me
+├ ƒ /api/midpoints
+├ ƒ /api/migrations/daily-picks
+├ ƒ /api/migrations/market-focus
+├ ƒ /api/msp-analyst
+├ ƒ /api/msp-radar/archive
+├ ƒ /api/msp-radar/daily
+├ ƒ /api/msp-radar/preview
+├ ƒ /api/news-sentiment
+├ ƒ /api/notifications
+├ ƒ /api/notifications/prefs
+├ ƒ /api/og/scan
+├ ƒ /api/onboarding/progress
+├ ƒ /api/open-interest
+├ ƒ /api/operator/attention
+├ ƒ /api/operator/engine/approve
+├ ƒ /api/operator/engine/auto-scan
+├ ƒ /api/operator/engine/health
+├ ƒ /api/operator/engine/kill-switch
+├ ƒ /api/operator/engine/learning
+├ ƒ /api/operator/engine/radar
+├ ƒ /api/operator/engine/replay
+├ ƒ /api/operator/engine/scan
+├ ƒ /api/operator/focus/pin
+├ ƒ /api/operator/focus/snooze
+├ ƒ /api/operator/presence
+├ ƒ /api/operator/proposals
+├ ƒ /api/operator/risk-governor
+├ ƒ /api/operator/state
+├ ƒ /api/options
+├ ƒ /api/options-chain
+├ ƒ /api/options-flow
+├ ƒ /api/options-scan
+├ ƒ /api/options/expirations
+├ ƒ /api/options/gex
+├ ƒ /api/ownership
+├ ƒ /api/payments/checkout
+├ ƒ /api/payments/portal
+├ ƒ /api/plans/draft-from-focus
+├ ƒ /api/portfolio
+├ ƒ /api/portfolio/analyze
+├ ƒ /api/probability-matrix
+├ ƒ /api/promo
+├ ƒ /api/push/send
+├ ƒ /api/push/subscribe
+├ ƒ /api/push/test
+├ ƒ /api/quant/evidence/[symbol]
+├ ƒ /api/quant/regime
+├ ƒ /api/quant/scan
+├ ƒ /api/quant/signals
+├ ƒ /api/quant/test-email
+├ ƒ /api/quote
+├ ƒ /api/referral
+├ ƒ /api/referral/dashboard
+├ ƒ /api/referral/track
+├ ƒ /api/regime
+├ ƒ /api/regime-engine
+├ ƒ /api/research-case
+├ ƒ /api/risk/governor/evaluate
+├ ƒ /api/risk/governor/permission-snapshot
+├ ƒ /api/risk/governor/preferences
+├ ƒ /api/scalper/run
+├ ƒ /api/scanner/bulk
+├ ƒ /api/scanner/candidates
+├ ƒ /api/scanner/daily-picks
+├ ƒ /api/scanner/low-float
+├ ƒ /api/scanner/quotes
+├ ƒ /api/scanner/run
+├ ƒ /api/scanner/top-cached
+├ ƒ /api/scanner/usage
+├ ƒ /api/sectors/etf-profile
+├ ƒ /api/sectors/heatmap
+├ ƒ /api/share/m2/[file]
+├ ƒ /api/share/radar/[file]
+├ ƒ /api/share/setup/[file]
+├ ƒ /api/signals/label-outcomes
+├ ƒ /api/sse/stream
+├ ƒ /api/stablecoin-liquidity
+├ ƒ /api/state-machine
+├ ƒ /api/stripe/confirm
+├ ƒ /api/subscription/update
+├ ƒ /api/suggestions
+├ ƒ /api/suggestions/[id]/accept
+├ ƒ /api/suggestions/[id]/reject
+├ ƒ /api/symbol-search
+├ ƒ /api/terminal/futures
+├ ƒ /api/test-email
+├ ƒ /api/time-gravity-map
+├ ƒ /api/trade-proposal
+├ ƒ /api/trades/close
+├ ƒ /api/upe/crcs/latest
+├ ƒ /api/upe/crcs/symbol
+├ ƒ /api/upe/snapshot/global
+├ ƒ /api/user/settings
+├ ƒ /api/watchlists
+├ ƒ /api/watchlists/items
+├ ƒ /api/watchlists/quick-add
+├ ƒ /api/webhooks/coingecko
+├ ƒ /api/webhooks/stripe
+├ ƒ /api/workflow/decision-packet
+├ ƒ /api/workflow/events
+├ ƒ /api/workflow/feedback
+├ ƒ /api/workflow/tasks
+├ ƒ /api/workflow/today
+├ ○ /auth
+├ ○ /auth/verify
+├ ○ /blog
+├ ● /blog/[slug]
+│ ├ /blog/what-is-short-squeeze
+│ ├ /blog/best-free-crypto-screeners-2025
+│ └ /blog/multi-timeframe-confluence-trading
+├ ○ /compliance-hub
+├ ○ /contact
+├ ○ /cookie-policy
+├ ƒ /daily-pick
+├ ○ /daily-pick/feed.xml                                 1h      1y
+├ ƒ /dashboard
+├ ○ /disclaimer
+├ ƒ /guide
+├ ○ /guide/open-interest
+├ ○ /icon.svg
+├ ○ /intelligence
+├ ○ /intelligence/auction
+├ ○ /intelligence/fragility
+├ ○ /intelligence/global-m2
+├ ○ /intelligence/history
+├ ○ /intelligence/lead-lag
+├ ○ /intelligence/liquidity
+├ ○ /intelligence/master
+├ ○ /intelligence/nq-pressure
+├ ƒ /launch
+├ ○ /legal/cookie-policy
+├ ○ /legal/privacy
+├ ○ /legal/refund-policy
+├ ○ /legal/terms
+├ ○ /methodology
+├ ○ /opengraph-image
+├ ƒ /operator
+├ ƒ /operator/engine
+├ ○ /partners
+├ ○ /partners/demo
+├ ○ /pricing
+├ ○ /privacy
+├ ○ /refund-policy
+├ ○ /resources
+├ ○ /resources/platform-guide
+├ ○ /resources/trading-guides
+├ ○ /reviews
+├ ○ /robots.txt
+├ ƒ /share/scan/[symbol]
+├ ○ /sitemap.xml
+├ ○ /terms
+├ ƒ /tools
+├ ƒ /tools/ai-tools
+├ ƒ /tools/alerts
+├ ƒ /tools/command-center
+├ ƒ /tools/commodities
+├ ƒ /tools/company-overview
+├ ƒ /tools/confluence-scanner
+├ ƒ /tools/crypto
+├ ƒ /tools/crypto-dashboard
+├ ƒ /tools/crypto-explorer
+├ ƒ /tools/crypto-heatmap
+├ ƒ /tools/crypto-intel
+├ ƒ /tools/dashboard
+├ ƒ /tools/deep-analysis
+├ ƒ /tools/desktop-app
+├ ƒ /tools/economic-calendar
+├ ƒ /tools/equity-explorer
+├ ƒ /tools/explorer
+├ ƒ /tools/golden-egg
+├ ƒ /tools/intraday-charts
+├ ƒ /tools/liquidity-sweep
+├ ƒ /tools/macro
+├ ƒ /tools/market-movers
+├ ƒ /tools/msp-radar
+├ ƒ /tools/news
+├ ƒ /tools/options
+├ ƒ /tools/options-confluence
+├ ƒ /tools/options-flow
+├ ƒ /tools/portfolio
+├ ƒ /tools/referrals
+├ ƒ /tools/research
+├ ƒ /tools/scalper
+├ ƒ /tools/scanner
+├ ƒ /tools/signal-accuracy
+├ ƒ /tools/start
+├ ƒ /tools/terminal
+├ ƒ /tools/time
+├ ƒ /tools/time-scanner
+├ ƒ /tools/volatility-engine
+└ ƒ /tools/workspace
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+

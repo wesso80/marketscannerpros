@@ -1,0 +1,14 @@
+ FAIL  test/backtestStrategySignals.test.ts > slippage model — direction and magnitude > functional: LONG entry price after slippage exceeds raw close (adverse fill)
+ FAIL  test/backtestStrategySignals.test.ts > slippage model — direction and magnitude > functional: LONG exit price after slippage is below raw close (adverse fill)
+ FAIL  test/backtestStrategySignals.test.ts > end-of-data exit — functional > position not closed by signal before end of data exits with exitReason end_of_data
+ FAIL  test/backtestStrategySignals.test.ts > end-of-data exit — functional > end-of-data exit date matches the last date in the dataset
+ FAIL  test/bulkSelectionRoute.test.ts > bulk scanner (Pro crypto is Deep-only) > runs a leftover Fast (light) crypto request as a Deep scan instead of the retired market-data ranking
+ FAIL  test/commanderCommandState.test.ts > admin commander command state strip > surfaces hard command state, risk source, alert posture, data age, and allowed action
+ FAIL  test/cryptoScanAliasRows.test.ts > Pro crypto scan: no phantom alias rows > lists each coin once and reports the aliases as duplicates
+ FAIL  test/operatorMarketDataAccuracy.test.ts > daily bars / key levels come from the lib/marketData cache > equity key levels use cached daily bars and make no direct AV call
+ FAIL  test/workerEquityBulkWiring.test.ts > worker equities wiring (source guard) > writes the same quotes_latest columns as the per-symbol upsert
+ FAIL  test/intelligence/globalM2Reliability.test.ts > Persisted source-of-truth fallback > persist:false keeps deterministic behaviour (no store access)
+ Test Files  7 failed | 550 passed | 2 skipped (559)
+      Tests  10 failed | 4896 passed | 13 skipped (4919)
+   Start at  21:17:14
+   Duration  38.85s (transform 20.69s, setup 0ms, collect 60.89s, tests 53.89s, environment 6.99s, prepare 42.16s)

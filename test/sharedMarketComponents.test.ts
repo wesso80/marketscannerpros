@@ -41,7 +41,7 @@ describe('shared market truth components', () => {
     expect(page).toContain("import MarketStatusStrip from '@/components/market/MarketStatusStrip'");
     expect(page).toContain("import RiskFlagPanel");
     expect(page).toContain('buildMarketDataProviderStatus');
-    expect(page).toContain('<EvidenceStack title="Golden Egg Evidence Stack"');
+    expect(page).toContain('<EvidenceStack title="Symbol Evidence Stack"');
     expect(page).toContain('<MarketStatusStrip items={geMarketStatusItems}');
     expect(page).toContain('<RiskFlagPanel title="Research Case Invalidates If"');
     expect(page).not.toContain('geFreshness.map');

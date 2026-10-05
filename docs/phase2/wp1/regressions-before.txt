@@ -1,0 +1,9 @@
+ FAIL  test/wp1SymbolBefore.test.tsx > preserves BTC rule stage and verdict inputs, with shared parts and no per-card source stamps
+ FAIL  test/wp1SymbolBefore.test.tsx > compact crypto uses closed native folds and one source line, evidence opens on demand
+ FAIL  test/wp1SymbolBefore.test.tsx > folded heavy tools do not mount or fetch until explicitly opened
+ FAIL  test/wp1SymbolBefore.test.tsx > compact header omits absent quote and raw trust labels (quiet=false)
+ FAIL  test/wp1SymbolBefore.test.tsx > paid failed crypto feed is an amber fault, never an upgrade card
+ Test Files  1 failed (1)
+      Tests  5 failed | 1 passed (6)
+   Start at  21:18:26
+   Duration  2.06s (transform 340ms, setup 0ms, collect 775ms, tests 327ms, environment 437ms, prepare 100ms)

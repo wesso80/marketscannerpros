@@ -12,9 +12,9 @@ describe('Symbol header hierarchy', () => {
   });
   it('removes header composite displays but retains the lower evidence block', () => {
     const source = readFileSync('app/tools/golden-egg/page.tsx', 'utf8');
-    const start = source.indexOf('<PageHero');
+    const start = source.indexOf('<SymbolSnapshotHeader');
     const header = source.slice(start, source.indexOf('/>', start));
-    expect(header).toContain('titleAs="h2"');
+    expect(header).toContain('compact');
     expect(header).not.toMatch(/Indicator composite|INDICATOR_COMPOSITE_LABEL|geConfluenceScore/);
     expect(source.slice(source.indexOf(header) + header.length)).toContain('INDICATOR_COMPOSITE_LABEL');
     expect(source).toContain('CANONICAL_SETUP_TOOLTIP');

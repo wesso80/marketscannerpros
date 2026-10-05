@@ -8,7 +8,7 @@ const state = vi.hoisted(() => ({ symbol: 'AAPL', status: 403 as 401 | 403 }));
 vi.mock('next/link', () => ({ default: ({ children, ...props }: any) => <a {...props}>{children}</a> }));
 vi.mock('next/dynamic', () => ({ default: () => () => null }));
 vi.mock('next/navigation', () => ({
-  useSearchParams: () => ({ get: () => null }),
+  useSearchParams: () => ({ get: (key:string) => key==='symbol'?state.symbol:null }),
   useRouter: () => ({ push: () => undefined, replace: () => undefined }),
   usePathname: () => '/tools/golden-egg',
 }));
@@ -74,4 +74,12 @@ it.each(['AAPL', 'LINK-USD'])('401 on %s shows Sign in back to that symbol', asy
   expect(screen.queryByRole('link', { name: 'Unlock with Pro' })).toBeNull();
   expect(screen.queryByText('Example')).toBeNull();
   expect(document.body.textContent).not.toMatch(/Awaiting data|\bDEGRADED\b|\bUnknown\b|\bMISSING\b/);
+});
+
+it('WP1 defaults an empty symbol URL to AAPL without exposing raw locked-state labels', async () => {
+  state.symbol = '';
+  render(<GoldenEggPage />);
+  await screen.findByRole('link', { name: 'Unlock with Pro' });
+  expect(screen.getByRole('heading', {level:1}).textContent).toBe('AAPL');
+  expect(document.body.textContent).not.toMatch(/Unknown|UNKNOWN|Awaiting data|DEGRADED|MISSING|basis unknown|source unknown|time unknown/);
 });
