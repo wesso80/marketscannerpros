@@ -12,13 +12,13 @@ export default function EvidenceModule({ data }: { data: EvidenceModuleModel }) 
         <div key={item.tradeId} className="inline-flex items-center gap-1.5 rounded-lg border border-white/5 bg-white/5 px-2.5 py-1.5">
           <span className="font-semibold text-slate-100">{item.symbol}</span>
           {item.scanner && (
-            <Link className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-emerald-300 hover:bg-emerald-500/30" href={`/tools/scanner?symbol=${encodeURIComponent(item.symbol)}`}>Scan</Link>
+            <Link className="rounded bg-white/10 px-1.5 py-0.5 text-slate-300 hover:bg-white/20" href={`/tools/scanner?symbol=${encodeURIComponent(item.symbol)}`}>Scan</Link>
           )}
           {item.options && (
-            <Link className="rounded bg-cyan-500/20 px-1.5 py-0.5 text-cyan-300 hover:bg-cyan-500/30" href={`/tools/options?symbol=${encodeURIComponent(item.symbol)}`}>Opts</Link>
+            <Link className="rounded bg-white/10 px-1.5 py-0.5 text-slate-300 hover:bg-white/20" href={`/tools/options?symbol=${encodeURIComponent(item.symbol)}`}>Opts</Link>
           )}
           {item.time && (
-            <Link className="rounded bg-violet-500/20 px-1.5 py-0.5 text-violet-300 hover:bg-violet-500/30" href={`/tools/time?symbol=${encodeURIComponent(item.symbol)}`}>Time</Link>
+            <Link className="rounded bg-white/10 px-1.5 py-0.5 text-slate-300 hover:bg-white/20" href={`/tools/time?symbol=${encodeURIComponent(item.symbol)}`}>Time</Link>
           )}
         </div>
       ))}

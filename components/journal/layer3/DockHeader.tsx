@@ -13,17 +13,17 @@ export default function DockHeader({ summary, onExpandAll, onCollapseAll }: Dock
         <span className="font-semibold">Journal Intelligence Dock</span>
         <span className="rounded-full bg-white/10 px-2 py-1 text-xs">Open {summary.openTrades}</span>
         <span className={`rounded-full px-2 py-1 text-xs ${summary.missingStops > 0 ? 'bg-rose-500/20 text-rose-200' : 'bg-emerald-500/20 text-emerald-200'}`}>
-          {summary.missingStops > 0 ? `Missing Stops ${summary.missingStops}` : 'Stops ✓'}
+          {summary.missingStops > 0 ? `Stops not recorded ${summary.missingStops}` : 'Stops ✓'}
         </span>
         <span className={`rounded-full px-2 py-1 text-xs ${summary.missingOutcomes > 0 ? 'bg-amber-500/20 text-amber-200' : 'bg-emerald-500/20 text-emerald-200'}`}>
-          {summary.missingOutcomes > 0 ? `Missing Outcomes ${summary.missingOutcomes}` : 'Outcomes ✓'}
+          {summary.missingOutcomes > 0 ? `Outcomes not recorded ${summary.missingOutcomes}` : 'Outcomes ✓'}
         </span>
         {summary.reviewQueue > 0 && (
           <span className="rounded-full bg-white/10 px-2 py-1 text-xs">Review Queue {summary.reviewQueue}</span>
         )}
         {typeof summary.playbookSamples === 'number' && summary.playbookSamples > 0 && (
           <span className={`rounded-full px-2 py-1 text-xs ${summary.playbookSampleStatus === 'minimum_met' ? 'bg-emerald-500/20 text-emerald-200' : summary.playbookSampleStatus === 'developing' ? 'bg-amber-500/20 text-amber-200' : 'bg-rose-500/20 text-rose-200'}`}>
-            Playbook samples {summary.playbookSampleStatus === 'minimum_met' ? 'ready' : summary.playbookSampleStatus === 'developing' ? 'developing' : 'thin'}
+            Setup samples {summary.playbookSampleStatus === 'minimum_met' ? 'ready' : summary.playbookSampleStatus === 'developing' ? 'developing' : 'thin'}
           </span>
         )}
       </div>

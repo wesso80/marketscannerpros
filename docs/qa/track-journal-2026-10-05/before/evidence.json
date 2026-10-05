@@ -1,0 +1,780 @@
+{
+  "mocked": true,
+  "results": [
+    {
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T11:30:32.420Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 2704,
+      "scrollWidth": 1280,
+      "screens": 3.38,
+      "text": "MarketScannerPros\nMenu\nJournal\nPortfolio\nWatchlists\nAlerts\nBacktest\nLearning\nSettings\nSignal Accuracy\nMy Pages\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nWorkflow memory\n2. Trade journal\nTier Pro\nWorkspace\n\nWatchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.\n\nOpen watchlists\nOpen Portfolio\nAll tools\nActive tab\nJournal\n2. Trade journal\nTier\nPro\nSubscription level\nFocus\nTrade journal\nCurrent workbench focus\nNext tab\nPortfolio\nContinue the workspace loop\n1. Symbol shortlist\nWatchlists\n2. Trade journal\nJournal\n3. Open exposure\nPortfolio\n4. Doctrine\nLearning\n5. Historical test\nBacktest\n6. Triggers\nAlerts\n7. Account\nSettings\nThis page displays historical journal records and descriptive summaries only. It does not suggest future actions, strategy changes, or trading decisions.\nJOURNAL REVIEW\nTrade Journal\n\nHistorical journal, live open P&L, and review evidence for your saved trades.\n\nData Health: ok\nNew Trade\nExport\nClear All\nCompact\nRecorded realized P&L (all time)\n$99,920.00\nRealized P&L (30d)\n$99,920.00\nEstimated open P&L\n$80.00\nWin Rate (30d)\n36.4%\nProfit Factor (30d)\n1428.43\nClosed P&L drawdown (90d)\n$30.00\nAvg R (30d)\n0.10R\n\nSummaries include all loaded journal records, including automated research records. Periods use close dates. Open P&L is an estimate before fees; these figures are not account equity.\n\n⚠️\nLoss Chasing — 3 consecutive losses detected in recorded data\nAll\nOpen\nClosed\nAsset Class\nCrypto\nStocks\nOptions\nSide\nLong\nShort\nSymbol\nAAPL\nNEAR\nRESEARCH\nStrategy\nManual\nmanual\nscanner_signal\nReset\nMy Trades\n12\n▾ Hide\nSymbol\tStatus\tSide\tEntry\tQty\tStop / Target\tCurrent/Exit\tP&L\tR\tStrategy\tActions\nAAPL\topen\tshort\t240.00 · 10/1/2026\t2\t230.00 / 260.00\t\nEst.\n$250.00 · last close · Mon 5 Oct (New York) · journal quote\n\t-$20.00 / -4.17%\t-1.00\tmanual\t\nView\nSnapshot\nClose\nExpand\n\nNEAR\topen\tlong\t4.00 · 10/1/2026\t100\t3.00 / 6.00\t\nEst.\n$5.00 · last close · 22:30 AEDT Mon 5 Oct · journal quote\n\t+$100.00 / +25.00%\t1.00\tmanual\t\nView\nSnapshot\nClose\nExpand\n\nAAPL\tclosed\tlong\t240.00 · 10/1/2026\t2\t230.00 / 260.00\t245.00\t-$10.00 / -2.00%\t-0.50\tmanual\t\nView\nSnapshot\nClose\nExpand\n\nNEAR\tclosed\tshort\t4.00 · 10/1/2026\t100\t3.00 / 6.00\t5.00\t+$30.00 / +5.00%\t1.50\tmanual\t\nView\nSnapshot\nClose\nExpand\n\nAAPL\tclosed\tlong\t240.00 · 10/1/2026\t2\t230.00 / 260.00\t245.00\t-$10.00 / -2.00%\t-0.50\tmanual\t\nView\nSnapshot\nClose\nExpand\n\nNEAR\tclosed\tlong\t4.00 · 10/1/2026\t100\t3.00 / 6.00\t5.00\t-$10.00 / -2.00%\t-0.50\tmanual\t\nView\nSnapshot\nClose\nExpand\n\nAAPL\tclosed\tshort\t240.00 · 10/1/2026\t2\t230.00 / 260.00\t245.00\t+$30.00 / +5.00%\t1.50\tmanual\t\nView\nSnapshot\nClose\nExpand\n\nNEAR\tclosed\tlong\t4.00 · 10/1/2026\t100\t3.00 / 6.00\t5.00\t-$10.00 / -2.00%\t-0.50\tmanual\t\nView\nSnapshot\nClose\nExpand\n\nAAPL\tclosed\tlong\t240.00 · 10/1/2026\t2\t230.00 / 260.00\t245.00\t-$10.00 / -2.00%\t-0.50\tmanual\t\nView\nSnapshot\nClose\nExpand\n\nNEAR\tclosed\tshort\t4.00 · 10/1/2026\t100\t3.00 / 6.00\t5.00\t+$30.00 / +5.00%\t1.50\tmanual\t\nView\nSnapshot\nClose\nExpand\n\nAAPL\tclosed\tlong\t240.00 · 10/1/2026\t2\t230.00 / 260.00\t245.00\t-$10.00 / -2.00%\t-0.50\tmanual\t\nView\nSnapshot\nClose\nExpand\n\nNEAR\tclosed\tlong\t4.00 · 10/1/2026\t100\t3.00 / 6.00\t5.00\t-$10.00 / -2.00%\t-0.50\tmanual\t\nView\nSnapshot\nClose\nExpand\nAutomated research records\n1\n▾ Hide\nSymbol\tStatus\tSide\tEntry\tQty\tStop / Target\tCurrent/Exit\tP&L\tR\tStrategy\tActions\nRESEARCH\tclosed\tlong\t100.00 · 10/1/2026\t1\t— / —\t100,000.00\t+$99,900.00 / +99900.00%\t—\tscanner_signal\t\nView\nSnapshot\nClose\nExpand\nPage 1 of 1 • 13 trades\nPrev\nNext\nCumulative closed P&L\n11 closed trades\n+99,920.00 USD\n10/2/2026\n+20.00\n10/2/2026\n+10.00\n10/2/2026\n+40.00\n10/2/2026\n+30.00\n10/2/2026\n+20.00\n10/2/2026\n+99920.00\nJournal Intelligence Dock\nOpen 2\nStops ✓\nMissing Outcomes 1\nPlaybook samples developing\nExpand all\nCollapse all\nRisk\nExpand\nReview\nExpand\nLabeling\nExpand\nEvidence\nExpand\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T11:30:34.748Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 3913,
+      "scrollWidth": 390,
+      "screens": 4.636255924170616,
+      "text": "MSP\nMenu\nJournal\nPortfolio\nWatchlists\nAlerts\nBacktest\nLearning\nSettings\nSignal Accuracy\nMy Pages\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nWorkflow memory\n2. Trade journal\nTier Pro\nWorkspace\n\nWatchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.\n\nOpen watchlists\nOpen Portfolio\nAll tools\nActive tab\nJournal\n2. Trade journal\nTier\nPro\nSubscription level\nFocus\nTrade journal\nCurrent workbench focus\nNext tab\nPortfolio\nContinue the workspace loop\n1. Symbol shortlist\nWatchlists\n2. Trade journal\nJournal\n3. Open exposure\nPortfolio\n4. Doctrine\nLearning\n5. Historical test\nBacktest\n6. Triggers\nAlerts\n7. Account\nSettings\nThis page displays historical journal records and descriptive summaries only. It does not suggest future actions, strategy changes, or trading decisions.\nJOURNAL REVIEW\nTrade Journal\n\nHistorical journal, live open P&L, and review evidence for your saved trades.\n\nData Health: ok\nNew Trade\nExport\nClear All\nCompact\nRecorded realized P&L (all time)\n$99,920.00\nRealized P&L (30d)\n$99,920.00\nEstimated open P&L\n$80.00\nWin Rate (30d)\n36.4%\nProfit Factor (30d)\n1428.43\nClosed P&L drawdown (90d)\n$30.00\nAvg R (30d)\n0.10R\n\nSummaries include all loaded journal records, including automated research records. Periods use close dates. Open P&L is an estimate before fees; these figures are not account equity.\n\n⚠️\nLoss Chasing — 3 consecutive losses detected in recorded data\n🔍 Filters\ntap to expand ▸\nMy Trades\n12\n▾ Hide\nAAPL\nSHORT\nOPEN\n-$20.00\n▸\nNEAR\nLONG\nOPEN\n+$100.00\n▸\nAAPL\nLONG\nCLOSED\n-$10.00\n▸\nNEAR\nSHORT\nCLOSED\n+$30.00\n▸\nAAPL\nLONG\nCLOSED\n-$10.00\n▸\nNEAR\nLONG\nCLOSED\n-$10.00\n▸\nAAPL\nSHORT\nCLOSED\n+$30.00\n▸\nNEAR\nLONG\nCLOSED\n-$10.00\n▸\nAAPL\nLONG\nCLOSED\n-$10.00\n▸\nNEAR\nSHORT\nCLOSED\n+$30.00\n▸\nAAPL\nLONG\nCLOSED\n-$10.00\n▸\nNEAR\nLONG\nCLOSED\n-$10.00\n▸\nAutomated research records\n1\n▾ Hide\nRESEARCH\nLONG\nCLOSED\n+$99,900.00\n▸\nPage 1 of 1 • 13 trades\nPrev\nNext\nCumulative closed P&L\n11 closed trades\n+99,920.00 USD\n10/2/2026\n+20.00\n10/2/2026\n+10.00\n10/2/2026\n+40.00\n10/2/2026\n+30.00\n10/2/2026\n+20.00\n10/2/2026\n+99920.00\nJournal Intelligence Dock\nOpen 2\nStops ✓\nMissing Outcomes 1\nPlaybook samples developing\nExpand all\nCollapse all\nRisk\nExpand\nReview\nExpand\nLabeling\nExpand\nEvidence\nExpand\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tier": "pro",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T11:30:36.474Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1528,
+      "scrollWidth": 1280,
+      "screens": 1.91,
+      "text": "MarketScannerPros\nMenu\nJournal\nPortfolio\nWatchlists\nAlerts\nBacktest\nLearning\nSettings\nSignal Accuracy\nMy Pages\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nWorkflow memory\n2. Trade journal\nTier Pro\nWorkspace\n\nWatchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.\n\nOpen watchlists\nOpen Portfolio\nAll tools\nActive tab\nJournal\n2. Trade journal\nTier\nPro\nSubscription level\nFocus\nTrade journal\nCurrent workbench focus\nNext tab\nPortfolio\nContinue the workspace loop\n1. Symbol shortlist\nWatchlists\n2. Trade journal\nJournal\n3. Open exposure\nPortfolio\n4. Doctrine\nLearning\n5. Historical test\nBacktest\n6. Triggers\nAlerts\n7. Account\nSettings\nThis page displays historical journal records and descriptive summaries only. It does not suggest future actions, strategy changes, or trading decisions.\nJOURNAL REVIEW\nTrade Journal\n\nHistorical journal, live open P&L, and review evidence for your saved trades.\n\nData Health: ok\nNew Trade\nExport\nClear All\nCompact\nRecorded realized P&L (all time)\n$0.00\nRealized P&L (30d)\n$0.00\nEstimated open P&L\n$0.00\nWin Rate (30d)\nUnavailable\nProfit Factor (30d)\nNo closed trades\nClosed P&L drawdown (90d)\n$0.00\n\nSummaries include all loaded journal records, including automated research records. Periods use close dates. Open P&L is an estimate before fees; these figures are not account equity.\n\nAll\nOpen\nClosed\nAsset Class\nCrypto\nStocks\nOptions\nSide\nLong\nShort\nSymbol\nStrategy\nManual\nReset\nMy Trades\n0\n▾ Hide\nSymbol\tStatus\tSide\tEntry\tQty\tStop / Target\tCurrent/Exit\tP&L\tR\tStrategy\tActions\nNo trades found for current filters.\nPage 1 of 1 • 0 trades\nPrev\nNext\nCumulative closed P&L\n0 closed trades\n+0.00 USD\nJournal Intelligence Dock\nOpen 0\nStops ✓\nOutcomes ✓\nExpand all\nCollapse all\nRisk\nExpand\nReview\nExpand\nLabeling\nExpand\nEvidence\nExpand\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tier": "pro",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T11:30:38.746Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 2873,
+      "scrollWidth": 390,
+      "screens": 3.404028436018957,
+      "text": "MSP\nMenu\nJournal\nPortfolio\nWatchlists\nAlerts\nBacktest\nLearning\nSettings\nSignal Accuracy\nMy Pages\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nWorkflow memory\n2. Trade journal\nTier Pro\nWorkspace\n\nWatchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.\n\nOpen watchlists\nOpen Portfolio\nAll tools\nActive tab\nJournal\n2. Trade journal\nTier\nPro\nSubscription level\nFocus\nTrade journal\nCurrent workbench focus\nNext tab\nPortfolio\nContinue the workspace loop\n1. Symbol shortlist\nWatchlists\n2. Trade journal\nJournal\n3. Open exposure\nPortfolio\n4. Doctrine\nLearning\n5. Historical test\nBacktest\n6. Triggers\nAlerts\n7. Account\nSettings\nThis page displays historical journal records and descriptive summaries only. It does not suggest future actions, strategy changes, or trading decisions.\nJOURNAL REVIEW\nTrade Journal\n\nHistorical journal, live open P&L, and review evidence for your saved trades.\n\nData Health: ok\nNew Trade\nExport\nClear All\nCompact\nRecorded realized P&L (all time)\n$0.00\nRealized P&L (30d)\n$0.00\nEstimated open P&L\n$0.00\nWin Rate (30d)\nUnavailable\nProfit Factor (30d)\nNo closed trades\nClosed P&L drawdown (90d)\n$0.00\n\nSummaries include all loaded journal records, including automated research records. Periods use close dates. Open P&L is an estimate before fees; these figures are not account equity.\n\n🔍 Filters\ntap to expand ▸\nMy Trades\n0\n▾ Hide\nNo trades found for current filters.\nPage 1 of 1 • 0 trades\nPrev\nNext\nCumulative closed P&L\n0 closed trades\n+0.00 USD\nJournal Intelligence Dock\nOpen 0\nStops ✓\nOutcomes ✓\nExpand all\nCollapse all\nRisk\nExpand\nReview\nExpand\nLabeling\nExpand\nEvidence\nExpand\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tier": "free",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T11:30:41.414Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 2568,
+      "scrollWidth": 1280,
+      "screens": 3.21,
+      "text": "MarketScannerPros\nMenu\nJournal\nPortfolio\nWatchlists\nAlerts\nBacktest\nLearning\nSettings\nSignal Accuracy\nMy Pages\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nWorkflow memory\n2. Trade journal\nTier Free\nWorkspace\n\nWatchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.\n\nOpen watchlists\nOpen Portfolio\nAll tools\nActive tab\nJournal\n2. Trade journal\nTier\nFree\nSubscription level\nFocus\nTrade journal\nCurrent workbench focus\nNext tab\nPortfolio\nContinue the workspace loop\n1. Symbol shortlist\nWatchlists\n2. Trade journal\nJournal\n3. Open exposure\nPortfolio\n4. Doctrine\nLearning\n5. Historical test\nBacktest\n6. Triggers\nAlerts\n7. Account\nSettings\n\n2 of 5 open entries\n\nThis page displays historical journal records and descriptive summaries only. It does not suggest future actions, strategy changes, or trading decisions.\nJOURNAL REVIEW\nTrade Journal\n\nHistorical journal, live open P&L, and review evidence for your saved trades.\n\nData Health: ok\nNew Trade\nExport\nClear All\nCompact\nRecorded realized P&L (all time)\n$99,920.00\nRealized P&L (30d)\n$99,920.00\nEstimated open P&L\n$80.00\nWin Rate (30d)\n36.4%\nProfit Factor (30d)\n1428.43\nClosed P&L drawdown (90d)\n$30.00\nAvg R (30d)\n0.10R\n\nSummaries include all loaded journal records, including automated research records. Periods use close dates. Open P&L is an estimate before fees; these figures are not account equity.\n\n⚠️\nLoss Chasing — 3 consecutive losses detected in recorded data\nAll\nOpen\nClosed\nAsset Class\nCrypto\nStocks\nOptions\nSide\nLong\nShort\nSymbol\nAAPL\nNEAR\nRESEARCH\nStrategy\nManual\nmanual\nscanner_signal\nReset\nMy Trades\n12\n▾ Hide\nSymbol\tStatus\tSide\tEntry\tQty\tStop / Target\tCurrent/Exit\tP&L\tR\tStrategy\tActions\nAAPL\topen\tshort\t240.00 · 10/1/2026\t2\t230.00 / 260.00\t\nEst.\n$250.00 · last close · Mon 5 Oct (New York) · journal quote\n\t-$20.00 / -4.17%\t-1.00\tmanual\t\nView\nClose\nExpand\n\nNEAR\topen\tlong\t4.00 · 10/1/2026\t100\t3.00 / 6.00\t\nEst.\n$5.00 · last close · 22:30 AEDT Mon 5 Oct · journal quote\n\t+$100.00 / +25.00%\t1.00\tmanual\t\nView\nClose\nExpand\n\nAAPL\tclosed\tlong\t240.00 · 10/1/2026\t2\t230.00 / 260.00\t245.00\t-$10.00 / -2.00%\t-0.50\tmanual\t\nView\nClose\nExpand\n\nNEAR\tclosed\tshort\t4.00 · 10/1/2026\t100\t3.00 / 6.00\t5.00\t+$30.00 / +5.00%\t1.50\tmanual\t\nView\nClose\nExpand\n\nAAPL\tclosed\tlong\t240.00 · 10/1/2026\t2\t230.00 / 260.00\t245.00\t-$10.00 / -2.00%\t-0.50\tmanual\t\nView\nClose\nExpand\n\nNEAR\tclosed\tlong\t4.00 · 10/1/2026\t100\t3.00 / 6.00\t5.00\t-$10.00 / -2.00%\t-0.50\tmanual\t\nView\nClose\nExpand\n\nAAPL\tclosed\tshort\t240.00 · 10/1/2026\t2\t230.00 / 260.00\t245.00\t+$30.00 / +5.00%\t1.50\tmanual\t\nView\nClose\nExpand\n\nNEAR\tclosed\tlong\t4.00 · 10/1/2026\t100\t3.00 / 6.00\t5.00\t-$10.00 / -2.00%\t-0.50\tmanual\t\nView\nClose\nExpand\n\nAAPL\tclosed\tlong\t240.00 · 10/1/2026\t2\t230.00 / 260.00\t245.00\t-$10.00 / -2.00%\t-0.50\tmanual\t\nView\nClose\nExpand\n\nNEAR\tclosed\tshort\t4.00 · 10/1/2026\t100\t3.00 / 6.00\t5.00\t+$30.00 / +5.00%\t1.50\tmanual\t\nView\nClose\nExpand\n\nAAPL\tclosed\tlong\t240.00 · 10/1/2026\t2\t230.00 / 260.00\t245.00\t-$10.00 / -2.00%\t-0.50\tmanual\t\nView\nClose\nExpand\n\nNEAR\tclosed\tlong\t4.00 · 10/1/2026\t100\t3.00 / 6.00\t5.00\t-$10.00 / -2.00%\t-0.50\tmanual\t\nView\nClose\nExpand\nAutomated research records\n1\n▾ Hide\nSymbol\tStatus\tSide\tEntry\tQty\tStop / Target\tCurrent/Exit\tP&L\tR\tStrategy\tActions\nRESEARCH\tclosed\tlong\t100.00 · 10/1/2026\t1\t— / —\t100,000.00\t+$99,900.00 / +99900.00%\t—\tscanner_signal\t\nView\nClose\nExpand\nPage 1 of 1 • 13 trades\nPrev\nNext\nCumulative closed P&L\n0 closed trades\n+0.00 USD\n\nIntelligence Dock — Pro Feature\n\nUpgrade to Pro for automated trade data analysis, risk scoring, labeling, evidence snapshots, and AI-powered summaries.\n\nUpgrade to Pro\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tier": "free",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T11:30:44.246Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 3497,
+      "scrollWidth": 390,
+      "screens": 4.143364928909953,
+      "text": "MSP\nMenu\nJournal\nPortfolio\nWatchlists\nAlerts\nBacktest\nLearning\nSettings\nSignal Accuracy\nMy Pages\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nWorkflow memory\n2. Trade journal\nTier Free\nWorkspace\n\nWatchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.\n\nOpen watchlists\nOpen Portfolio\nAll tools\nActive tab\nJournal\n2. Trade journal\nTier\nFree\nSubscription level\nFocus\nTrade journal\nCurrent workbench focus\nNext tab\nPortfolio\nContinue the workspace loop\n1. Symbol shortlist\nWatchlists\n2. Trade journal\nJournal\n3. Open exposure\nPortfolio\n4. Doctrine\nLearning\n5. Historical test\nBacktest\n6. Triggers\nAlerts\n7. Account\nSettings\n\n2 of 5 open entries\n\nThis page displays historical journal records and descriptive summaries only. It does not suggest future actions, strategy changes, or trading decisions.\nJOURNAL REVIEW\nTrade Journal\n\nHistorical journal, live open P&L, and review evidence for your saved trades.\n\nData Health: ok\nNew Trade\nExport\nClear All\nCompact\nRecorded realized P&L (all time)\n$99,920.00\nRealized P&L (30d)\n$99,920.00\nEstimated open P&L\n$80.00\nWin Rate (30d)\n36.4%\nProfit Factor (30d)\n1428.43\nClosed P&L drawdown (90d)\n$30.00\nAvg R (30d)\n0.10R\n\nSummaries include all loaded journal records, including automated research records. Periods use close dates. Open P&L is an estimate before fees; these figures are not account equity.\n\n⚠️\nLoss Chasing — 3 consecutive losses detected in recorded data\n🔍 Filters\ntap to expand ▸\nMy Trades\n12\n▾ Hide\nAAPL\nSHORT\nOPEN\n-$20.00\n▸\nNEAR\nLONG\nOPEN\n+$100.00\n▸\nAAPL\nLONG\nCLOSED\n-$10.00\n▸\nNEAR\nSHORT\nCLOSED\n+$30.00\n▸\nAAPL\nLONG\nCLOSED\n-$10.00\n▸\nNEAR\nLONG\nCLOSED\n-$10.00\n▸\nAAPL\nSHORT\nCLOSED\n+$30.00\n▸\nNEAR\nLONG\nCLOSED\n-$10.00\n▸\nAAPL\nLONG\nCLOSED\n-$10.00\n▸\nNEAR\nSHORT\nCLOSED\n+$30.00\n▸\nAAPL\nLONG\nCLOSED\n-$10.00\n▸\nNEAR\nLONG\nCLOSED\n-$10.00\n▸\nAutomated research records\n1\n▾ Hide\nRESEARCH\nLONG\nCLOSED\n+$99,900.00\n▸\nPage 1 of 1 • 13 trades\nPrev\nNext\nCumulative closed P&L\n0 closed trades\n+0.00 USD\n\nIntelligence Dock — Pro Feature\n\nUpgrade to Pro for automated trade data analysis, risk scoring, labeling, evidence snapshots, and AI-powered summaries.\n\nUpgrade to Pro\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tier": "anonymous",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T11:30:45.678Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nJournal\nPortfolio\nWatchlists\nAlerts\nBacktest\nLearning\nSettings\nSignal Accuracy\nMy Pages\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nYour Workspace is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tier": "anonymous",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T11:30:47.211Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 967,
+      "scrollWidth": 390,
+      "screens": 1.1457345971563981,
+      "text": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nJournal\nPortfolio\nWatchlists\nAlerts\nBacktest\nLearning\nSettings\nSignal Accuracy\nMy Pages\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nYour Workspace is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    }
+  ],
+  "requests": [
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/journal",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/journal",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/journal",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/journal",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/journal",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/journal",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    }
+  ],
+  "errors": []
+}

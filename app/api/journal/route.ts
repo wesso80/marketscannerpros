@@ -412,6 +412,7 @@ export async function GET(req: NextRequest) {
       emotions: e.emotions || '',
       outcome: e.outcome || 'open',
       tags: e.tags || [],
+      executionMode: e.execution_mode || undefined,
       isOpen: e.is_open,
       exitDate: e.exit_date || undefined,
       status: e.status || (e.is_open ? 'OPEN' : 'CLOSED'),

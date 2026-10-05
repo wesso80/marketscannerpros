@@ -13,21 +13,9 @@ import {
   TradeRowModel,
 } from '@/types/journal';
 
-/** Known auto-trader strategy tags from the auto-log pipeline */
-const AUTO_STRATEGY_TAGS = new Set([
-  'scanner_signal',
-  'strategy_signal',
-  'alert_intelligence',
-  'confluence_scan',
-  'confluence_scanner',
-  'options_confluence_scanner',
-]);
-
-function isAutoTrade(row: TradeRowModel): boolean {
-  if (!row.strategyTag) return false;
-  const tag = row.strategyTag.toLowerCase();
-  return AUTO_STRATEGY_TAGS.has(tag);
-}
+import { isResearchRecord as isAutoTrade } from '@/lib/journal/researchRecords';
+import TabBar from '@/components/visual/TabBar';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
 
 type Layer2TradeInventoryProps = {
   filtersMeta?: FiltersMetaModel;
@@ -83,24 +71,26 @@ export default function Layer2TradeInventory(props: Layer2TradeInventoryProps) {
   const hasManual = manualRows.length > 0;
 
   return (
-    <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+    <section className="space-y-3">
+      <EquityCurveCard equityCurve={props.equityCurve} />
+      <TabBar label="Record status" items={[{id:'all',label:'All'},{id:'open',label:'Open'},{id:'closed',label:'Closed'}]} activeId={props.query.status} onChange={status=>props.onQueryChange({status:status as JournalQueryState['status'],page:1})}/>
       <div className="space-y-3 lg:col-span-2">
-        <TradeFiltersBar
+        <CollapsibleSection title="Filters" summary={`${props.total} records match`}><button type="button" className="mb-2 min-h-10 rounded border border-slate-600 px-3 text-sm" onClick={()=>props.onSort({key:'r_multiple',dir:props.sort.key==='r_multiple'&&props.sort.dir==='desc'?'asc':'desc'})}>Sort by recorded R</button><TradeFiltersBar
           filtersMeta={props.filtersMeta}
           filters={props.query}
           onChange={props.onQueryChange}
           onReset={props.onResetFilters}
-        />
+        /></CollapsibleSection>
 
         {/* ── Manual Trades Section ── */}
-        <SectionHeader
-          label="My Trades"
+        {props.query.research && <SectionHeader
+          label="Personal records on this page"
           count={manualRows.length}
           loading={props.loading}
           open={manualOpen}
           onToggle={() => setManualOpen((v) => !v)}
-          accent="text-emerald-400"
-        />
+          accent="text-slate-300"
+        />}
         {manualOpen && (
           <TradeTable
             rows={manualRows}
@@ -114,12 +104,13 @@ export default function Layer2TradeInventory(props: Layer2TradeInventoryProps) {
           />
         )}
 
-        {hasAuto && <>
-          <SectionHeader label="Automated research records" count={autoRows.length} open={autoOpen} onToggle={() => setAutoOpen((value) => !value)} accent="text-sky-300" />
+        {props.query.research && hasAuto && <>
+          <SectionHeader label="Research records (automated, paper)" count={autoRows.length} open={autoOpen} onToggle={() => setAutoOpen((value) => !value)} accent="text-slate-300" />
           {autoOpen && <TradeTable rows={autoRows} sort={props.sort} onSort={props.onSort} onSelectTrade={props.onSelectTrade} onQuickClose={props.onQuickClose} onSnapshot={props.onSnapshot} loading={props.loading} error={props.error} />}
         </>}
 
         <PaginationBar
+          onShowAll={props.total > 10 ? () => props.onQueryChange({page:1,pageSize:props.query.pageSize===10?props.total:10}) : undefined}
           page={props.query.page}
           pageSize={props.query.pageSize}
           total={props.total}
@@ -127,9 +118,7 @@ export default function Layer2TradeInventory(props: Layer2TradeInventoryProps) {
         />
       </div>
 
-      <div>
-        <EquityCurveCard equityCurve={props.equityCurve} />
-      </div>
+
     </section>
   );
 }

@@ -7,7 +7,7 @@ export default function RiskModule({ data }: { data: RiskModuleModel }) {
     <div className="space-y-2 text-sm text-slate-200">
       <div className="grid grid-cols-2 gap-2">
         <div className={`rounded-lg border px-3 py-2 ${data.missingStops > 0 ? 'border-rose-500/25 bg-rose-500/10 text-rose-200' : 'border-white/5 bg-white/5 text-slate-300'}`}>
-          <span className="text-xs text-slate-400">Missing Stops</span>
+          <span className="text-xs text-slate-400">Stops not recorded</span>
           <div className="text-base font-semibold">{data.missingStops}</div>
         </div>
         <div className={`rounded-lg border px-3 py-2 ${data.oversizeFlags > 0 ? 'border-amber-500/25 bg-amber-500/10 text-amber-200' : 'border-white/5 bg-white/5 text-slate-300'}`}>

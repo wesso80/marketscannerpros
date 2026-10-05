@@ -1,55 +1,53 @@
-import { JournalHeaderActions, JournalHeaderModel } from '@/types/journal';
-import TerminalPageHeader from '@/components/terminal/TerminalPageHeader';
+import { JournalHeaderActions, JournalHeaderModel } from "@/types/journal";
+import TerminalPageHeader from "@/components/terminal/TerminalPageHeader";
 
 type JournalCommandBarProps = {
   embeddedInWorkspace?: boolean;
   header?: JournalHeaderModel;
   actions: JournalHeaderActions;
-  viewMode: 'normal' | 'compact';
+  viewMode: "normal" | "compact";
   onToggleViewMode: () => void;
 };
 
-function healthTone(health?: JournalHeaderModel['health']) {
-  if (health === 'down') return 'bg-rose-500/20 text-rose-200';
-  if (health === 'degraded') return 'bg-amber-500/20 text-amber-200';
-  return 'bg-emerald-500/20 text-emerald-200';
-}
-
-export default function JournalCommandBar({ embeddedInWorkspace = false, header, actions, viewMode, onToggleViewMode }: JournalCommandBarProps) {
+export default function JournalCommandBar({
+  embeddedInWorkspace = false,
+  header,
+  actions,
+  viewMode,
+  onToggleViewMode,
+}: JournalCommandBarProps) {
   const headerActions = (
-    <>
-      <button type="button" onClick={actions.onNewTrade} className="rounded-md border border-emerald-500/30 bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-200">New Trade</button>
-      <button type="button" onClick={actions.onExport} className="rounded-md border border-white/10 bg-white/10 px-3 py-1.5 text-xs text-slate-100">Export</button>
-      {actions.onImport && (
-        <button type="button" onClick={actions.onImport} className="rounded-md border border-white/10 bg-white/10 px-3 py-1.5 text-xs text-slate-100">Import</button>
-      )}
-      {actions.onClear && (
-        <button type="button" onClick={actions.onClear} className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-200">Clear All</button>
-      )}
-      <button type="button" aria-pressed={viewMode === 'compact'} onClick={onToggleViewMode} className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs text-slate-100">{viewMode === 'normal' ? 'Compact' : 'Normal'}</button>
-    </>
+    <button
+      type="button"
+      onClick={actions.onNewTrade}
+      className="min-h-10 rounded-lg border border-slate-600 px-3 text-sm"
+    >
+      New Trade
+    </button>
   );
-
-  const headerMeta = (
-    <span className={`inline-flex rounded-md px-2 py-0.5 text-[11px] ${healthTone(header?.health)}`}>
-      Data Health: {header?.health || 'ok'}
-    </span>
-  );
+  const headerMeta =
+    header?.health && header.health !== "ok" ? (
+      <span className="text-sm text-amber-300">
+        Saved journal data could not be fully loaded
+      </span>
+    ) : null;
 
   if (embeddedInWorkspace) {
     return (
       <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Journal review</div>
-            <h2 className="mt-1 text-base font-black text-white">{header?.title || 'Trade Journal'}</h2>
-            <p className="mt-1 text-xs leading-5 text-slate-400">Historical journal, live open P&L, and review evidence for your saved trades.</p>
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {headerMeta}
-            {headerActions}
-          </div>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="!text-base font-semibold text-white">
+            {header?.title || "Journal"}
+          </h2>
+          {headerActions}
         </div>
+        <p
+          data-journal-verdict
+          className="mt-1 text-xs leading-5 text-slate-400"
+        >
+          Personal performance excludes automated research.
+        </p>
+        {headerMeta}
       </div>
     );
   }
@@ -57,8 +55,8 @@ export default function JournalCommandBar({ embeddedInWorkspace = false, header,
   return (
     <TerminalPageHeader
       badge="TRADE JOURNAL"
-      title={header?.title || 'Trade Journal'}
-      subtitle={header?.subtitle || 'Learning loop + truth source for scanner, options, and time.'}
+      title={header?.title || "Trade Journal"}
+      subtitle={header?.subtitle || "Personal journal records"}
       icon="🧾"
       image="/assets/platform-tools/trade-journal.png"
       actions={headerActions}

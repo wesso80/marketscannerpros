@@ -73,6 +73,8 @@ export type TradeRowModel = {
   pnlPct?: number;
   rMultiple?: number;
   strategyTag?: string;
+  tags?: string[];
+  executionMode?: string;
   notesPreview?: string[];
   /** Full saved notes (the drawer's Notes tab). */
   notes?: string;
@@ -164,6 +166,7 @@ export type TradeSortKey = 'entry_ts' | 'pnl_usd' | 'r_multiple' | 'symbol';
 export type SortModel = { key: TradeSortKey; dir: 'asc' | 'desc' };
 
 export type JournalFilters = {
+  research?: boolean;
   status: 'open' | 'closed' | 'all';
   symbol?: string;
   strategyTag?: string;
