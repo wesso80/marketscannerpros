@@ -22,7 +22,7 @@ import { hasCommoditySessionMap } from '@/lib/terminal/futures/cashBridgeMap';
 const OptionsTerminalView = dynamic(() => import('@/components/options-terminal/OptionsTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div> });
 const CryptoTerminalView = dynamic(() => import('@/components/crypto-terminal/CryptoTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div> });
 const FuturesTerminalPanel = dynamic(() => import('@/components/terminal/futures/FuturesTerminalPanel'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Futures Terminal…</div> });
-const OptionsConfluence = dynamic(() => import('@/components/options-terminal/OptionsConfluenceScanner'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Confluence Engine…</div> });
+const OptionsConfluence = dynamic(() => import('@/components/options-terminal/OptionsConfluenceScanner'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Confluence…</div> });
 const OptionsFlow = dynamic(() => import('@/components/options-terminal/OptionsFlowView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Flow…</div> });
 const TimeScanner = dynamic(() => import('@/app/tools/time-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Gravity…</div> });
 const ConfluenceScanner = dynamic(() => import('@/app/tools/confluence-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Confluence Scanner…</div> });
@@ -215,30 +215,6 @@ function TerminalTabRail({
   );
 }
 
-const TERMINAL_SUBVIEW_FOCUS: Record<Exclude<TerminalTab, 'Close Calendar'>, string> = {
-  'Options Terminal': 'Chain Quality',
-  'Options Confluence': 'Setup Alignment',
-  'Options Flow': 'Flow Estimate',
-  Crypto: 'Derivatives Map',
-  'Futures Session': 'Session Transitions',
-  'Cash Bridge': 'Bridge Alignment',
-  'Commodity Session Map': 'Commodity Session Logic',
-  'Liquidity & Volume': 'Participation Context',
-  'Capital Pressure': 'Capital Pressure',
-  'Time Gravity': 'Gravity Map',
-  'Time Confluence': 'Final Timing Check',
-};
-
-function TerminalSubviewMetric({ label, value, tone = 'var(--msp-text)', detail }: { label: string; value: string; tone?: string; detail: string }) {
-  return (
-    <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
-      <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
-      <div className="mt-0.5 truncate text-sm font-black" style={{ color: tone }} title={value}>{value}</div>
-      <div className="mt-0.5 truncate text-[11px] text-slate-500" title={detail}>{detail}</div>
-    </div>
-  );
-}
-
 function TerminalSubviewFrame({
   tab,
   symbol,
@@ -410,38 +386,6 @@ export default function TerminalPage() {
   /* Flow */
   const flow = useFlow(sym, flowMarketType);
   const activeMeta = TERMINAL_TAB_META[tab];
-  const terminalDataState = marketPath === 'futures'
-    ? tab === 'Close Calendar'
-      ? futuresTerminal.error
-        ? 'Calendar issue'
-        : futuresTerminal.loading
-          ? 'Loading'
-          : futuresTerminal.data
-            ? `Futures ${futuresTerminal.data.dataState}`
-            : 'Waiting'
-      : futuresTerminal.data?.dataState === 'partial'
-        ? 'Futures partial'
-        : 'Lens ready'
-    : tab === 'Close Calendar'
-      ? calendar.error
-        ? 'Calendar issue'
-        : calendar.loading
-          ? 'Loading'
-          : calData
-            ? 'Ready'
-            : 'Waiting'
-      : 'Lens ready';
-  const terminalDataTone = terminalDataState.includes('issue') ? 'var(--msp-warn)' : terminalDataState === 'Loading' ? '#38BDF8' : 'var(--msp-bull)';
-  const nextTerminalAction = marketPath === 'futures' && tab === 'Close Calendar'
-    ? 'Review Phantom Time / Cash Bridge'
-    : tab === 'Close Calendar'
-      ? 'Review close cluster timing'
-      : tab === 'Crypto'
-        ? 'Check derivatives pressure'
-        : tab === 'Capital Pressure'
-          ? 'Review capital pressure'
-          : 'Validate mechanics context';
-
   const quickSymbolRows = (
     <>
       <div className="flex flex-wrap items-center gap-1">
@@ -473,15 +417,12 @@ export default function TerminalPage() {
 
   return (
     <div className="flex min-w-0 max-w-full flex-col gap-3">
-      <ComplianceDisclaimer compact variant={asset === 'crypto' ? 'cryptoDerivatives' : 'options'} />
+      <div className={tab === 'Options Flow' ? 'order-last' : undefined}><ComplianceDisclaimer compact variant={asset === 'crypto' ? 'cryptoDerivatives' : 'options'} /></div>
 
       <PageHero
         ariaLabel="Terminal command header"
         eyebrow="Workflow step 3 · Market mechanics check"
-        badges={[
-          { label: activeMeta.eyebrow },
-          
-        ]}
+        badges={[{ label: activeMeta.eyebrow }]}
         title="Terminal"
         subtitle="Symbol checks the setup. Terminal shows timing and market mechanics."
         actions={[
