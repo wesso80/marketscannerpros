@@ -166,7 +166,7 @@ it('keeps the market-wide crypto link as a secondary action on the Terminal page
   expect(page).toContain('<TerminalCryptoDesk symbol={sym} />');
   expect(page).toContain('href="/tools/crypto-dashboard"');
   expect(page).not.toContain('crypto-dashboard?symbol=');
-  expect(page).toContain('Back to Golden Egg');
+  expect(page).not.toContain('Back to Golden Egg');
   expect(page).toContain('Back to Symbol');
-  expect(page).toContain('Symbol validates the symbol.');
+  expect(page).toContain('Symbol checks the setup.');
 });

@@ -16,7 +16,6 @@ import { isPaidTier } from '@/lib/tiers';
 import { useCachedTopSymbols } from '@/hooks/useCachedTopSymbols';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { detectMarketPath, type MarketPath } from '@/lib/terminal/marketPath';
-import { terminalUsesSymbolLabel } from '@/lib/terminal/symbolLabel';
 import TerminalCryptoDesk from '@/components/terminal/TerminalCryptoDesk';
 import { hasCommoditySessionMap } from '@/lib/terminal/futures/cashBridgeMap';
 
@@ -134,7 +133,7 @@ const TERMINAL_TAB_META: Record<TerminalTab, { eyebrow: string; description: str
   },
   'Capital Pressure': {
     eyebrow: '5. Capital pressure',
-    description: 'Read flow, probability, gamma, liquidity, and session context together.',
+    description: 'Read flow, gamma, liquidity, and session context together.',
   },
   'Time Gravity': {
     eyebrow: '6. Gravity map',
@@ -179,7 +178,8 @@ function TerminalTabRail({
   const pathLabel = marketPath === 'crypto' ? 'Crypto path' : marketPath === 'futures' ? 'Futures path' : 'Equity path';
 
   return (
-    <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2" aria-label="Terminal market mechanics views">
+    <details className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2" aria-label="Terminal market mechanics views">
+      <summary className="min-h-10 cursor-pointer py-2 text-sm text-slate-200">{activeTab} · Change view</summary>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div>
           <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Mechanics workbench</div>
@@ -211,7 +211,7 @@ function TerminalTabRail({
           );
         })}
       </div>
-    </div>
+    </details>
   );
 }
 
@@ -256,52 +256,10 @@ function TerminalSubviewFrame({
   onSelectTab: (tab: TerminalTab) => void;
   children: React.ReactNode;
 }) {
-  // These three tabs carry their own one-line state. Skip the second hero and the four repeated tiles so that state sits in the first screen.
-  if (tab === 'Options Flow' || tab === 'Crypto' || tab === 'Time Confluence') {
-    return <div className="min-w-0 space-y-3">{children}</div>;
-  }
-
-  const meta = TERMINAL_TAB_META[tab];
-  const sequence: TerminalTab[] = visibleTabsForPath(marketPath, commodityFutures).filter((t): t is Exclude<TerminalTab, 'Close Calendar'> => t !== 'Close Calendar');
-  const idx = sequence.indexOf(tab);
-  const adjacentTab: TerminalTab = idx >= 0 && idx < sequence.length - 1 ? sequence[idx + 1] : sequence[0];
-  const focusLabel = TERMINAL_SUBVIEW_FOCUS[tab];
-  const pathTone = marketPath === 'crypto' ? 'var(--msp-warn)' : marketPath === 'futures' ? '#22D3EE' : '#818CF8';
-
-  return (
-    <div className="space-y-3">
-      <section
-        className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
-        aria-label={`Terminal ${tab} command header`}
-      >
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
-          <div>
-            <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
-              <span className="text-emerald-300">Terminal subview</span>
-              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">{meta.eyebrow}</span>
-              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">Symbol {symbol}</span>
-            </div>
-            <h2 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">{tab} check for {symbol}</h2>
-            <p className="mt-1 text-xs leading-5 text-slate-400">{meta.description}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" onClick={() => onSelectTab('Close Calendar')} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15">Back to Calendar</button>
-              <button type="button" onClick={() => onSelectTab(adjacentTab)} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15">Open {adjacentTab}</button>
-              <a href={`/tools/workspace?tab=backtest&symbol=${encodeURIComponent(symbol)}&type=${marketPath}${timeframe ? `&timeframe=${encodeURIComponent(timeframe)}` : ''}`} className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Backtest</a>
-            </div>
-          </div>
-
-          <div className="grid self-start gap-1.5 sm:grid-cols-2">
-            <TerminalSubviewMetric label="Symbol" value={symbol} tone={pathTone} detail={`${marketPath.toUpperCase()} mechanics path`} />
-            <TerminalSubviewMetric label="View" value={tab} tone="#10B981" detail={meta.eyebrow} />
-            <TerminalSubviewMetric label="Focus" value={focusLabel} tone="#A5B4FC" detail="Completes the mechanics packet" />
-            <TerminalSubviewMetric label="Next Check" value={adjacentTab} tone="#38BDF8" detail="Continue the mechanics sequence" />
-          </div>
-        </div>
-      </section>
-      {children}
-    </div>
-  );
+  // Each subview owns its measured state; the page supplies the only Terminal hero.
+  return <div className="min-w-0 space-y-3">{children}</div>;
 }
+
 const ANCHOR_OPTIONS: { value: CloseCalendarAnchor; label: string }[] = [
   { value: 'NOW', label: 'Now' },
   { value: 'TODAY', label: 'Today' },
@@ -522,29 +480,20 @@ export default function TerminalPage() {
         eyebrow="Workflow step 3 · Market mechanics check"
         badges={[
           { label: activeMeta.eyebrow },
-          { label: `${asset.toUpperCase()} path` },
+          
         ]}
-        title="Use Terminal before Backtest."
-        subtitle={terminalUsesSymbolLabel(tab)
-          ? 'Symbol validates the symbol.'
-          : 'Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically.'}
+        title="Terminal"
+        subtitle="Symbol checks the setup. Terminal shows timing and market mechanics."
         actions={[
-          { label: terminalUsesSymbolLabel(tab) ? 'Back to Symbol' : 'Back to Golden Egg', variant: 'primary', href: `/tools/golden-egg?symbol=${encodeURIComponent(sym)}&type=${marketPath}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
+          { label: 'Back to Symbol', variant: 'primary', href: `/tools/golden-egg?symbol=${encodeURIComponent(sym)}&type=${marketPath}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
           { label: 'Continue to Backtest', variant: 'secondary', href: `/tools/workspace?tab=backtest&symbol=${encodeURIComponent(sym)}&type=${marketPath}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
           { label: 'All tools', variant: 'ghost', href: '/tools' },
         ]}
-        metrics={terminalUsesSymbolLabel(tab) ? [
-          { label: 'Symbol', value: sym, tone: asset === 'crypto' ? 'warn' : 'info', detail: `${asset.toUpperCase()} mechanics path` },
-        ] : [
-          { label: 'Symbol', value: sym, tone: asset === 'crypto' ? 'warn' : 'info', detail: `${asset.toUpperCase()} mechanics path` },
-          { label: 'Active lens', value: tab, tone: 'bull', detail: activeMeta.eyebrow },
-          { label: 'Data state', value: terminalDataState, tone: terminalDataState.includes('issue') ? 'warn' : terminalDataState === 'Loading' ? 'info' : 'bull', detail: calendar.error || 'No blocking route errors' },
-          { label: 'Next check', value: nextTerminalAction, tone: 'info', detail: 'Complete before historical testing' },
-        ]}
+
       />
 
-      {/* Symbol Bar. On the three layout-gate tabs it follows the tab state so that state is in the first screen. */}
-      <Card className={terminalUsesSymbolLabel(tab) ? 'order-last' : ''}>
+      {/* One shared symbol picker for all subviews. */}
+      <Card>
         <div className="space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
             <input
@@ -552,32 +501,24 @@ export default function TerminalPage() {
               onChange={e => setSymInput(e.target.value.toUpperCase())}
               onKeyDown={e => e.key === 'Enter' && handleSymSubmit()}
               placeholder="Symbol..."
+              aria-label="Terminal symbol"
               className="w-28 bg-[#0A101C] border border-[var(--msp-border)] rounded-lg text-xs px-3 py-2 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-600/40 font-mono"
             />
             <button type="button" onClick={handleSymSubmit} className="px-3 py-2 text-xs rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30 transition-colors">
               Load
             </button>
             <span className="text-xs text-slate-400 ml-1">{sym}</span>
-            <Badge label={marketPath.toUpperCase()} color={marketPath === 'crypto' ? 'var(--msp-warn)' : marketPath === 'futures' ? '#22D3EE' : '#6366F1'} small />
-            <div className="ml-auto rounded-md border border-cyan-500/35 bg-cyan-500/10 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-cyan-200">
-              {marketPath === 'futures' ? 'FUTURES PATH' : marketPath === 'crypto' ? 'CRYPTO PATH' : 'EQUITY PATH'}
-            </div>
+
           </div>
 
-          {terminalUsesSymbolLabel(tab) ? (
-            <details className="rounded-md border border-slate-800">
-              <summary className="min-h-10 cursor-pointer list-none px-2 py-2 text-xs text-slate-300">More symbols</summary>
-              <div className="space-y-1 px-2 pb-2">
-                {quickSymbolRows}
-              </div>
-            </details>
-          ) : (
-            <div className="space-y-1">{quickSymbolRows}</div>
-          )}
+          <details className="rounded-md border border-slate-800">
+            <summary className="min-h-10 cursor-pointer list-none px-2 py-2 text-xs text-slate-300">More symbols</summary>
+            <div className="space-y-1 px-2 pb-2">{quickSymbolRows}</div>
+          </details>
         </div>
       </Card>
 
-      <div className={terminalUsesSymbolLabel(tab) ? 'order-last' : undefined}>
+      <div>
         <TerminalTabRail activeTab={tab} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={selectTab} />
       </div>
 

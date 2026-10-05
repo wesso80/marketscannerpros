@@ -58,8 +58,8 @@ export default function TimeScannerPage({ symbol: propSymbol, assetType, embedde
           </p>
         </div>}
 
-        {/* Controls */}
-        <div className={`${embeddedInTerminal ? 'mb-4' : 'max-w-4xl mx-auto mb-8'}`}>
+        {/* Standalone controls; Terminal supplies the selected symbol and quote. */}
+        {!embeddedInTerminal && <div className="max-w-4xl mx-auto mb-8">
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -98,7 +98,7 @@ export default function TimeScannerPage({ symbol: propSymbol, assetType, embedde
               </div>
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* Main Time Gravity Map Widget — handles its own data fetching */}
         <div className={embeddedInTerminal ? '' : 'max-w-7xl mx-auto'}>

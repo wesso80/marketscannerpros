@@ -1,0 +1,1969 @@
+{
+  "mocked": true,
+  "root": "/workspace/scratch/0535040d28c6/terminal-job-c",
+  "results": [
+    {
+      "tab": "gravity",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T08:22:11.936Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n6. Gravity map\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Gravity · Change view\n🧲 Time Gravity Map\nFixture feed not collected\n🔄 Generate Data for MU",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0
+    },
+    {
+      "tab": "gravity",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T08:22:13.687Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n6. Gravity map\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Gravity · Change view\n🧲 Time Gravity Map\nFixture feed not collected\n🔄 Generate Data for MU",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0
+    },
+    {
+      "tab": "options-confluence",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T08:22:15.648Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1271,
+      "scrollWidth": 1280,
+      "screens": 1.58875,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n3. Options setup\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nOptions Confluence · Change view\nWhy this can fail: options flow, Greeks, dealer exposure, expected move, and cross-asset readings are derived estimates. They can break during news, liquidity gaps, volatility repricing, stale data, or regime shifts. Treat all outputs as educational scenario context only.\nANALYSIS PANEL\nVIEW MODE\nGUIDED\nADVANCED\nWORKFLOW SUGGESTIONS\nREFRESH\nProposal API failed: Fixture feed not collected\nNo active suggestions. New decision packets will repopulate this queue.\nScalping (5-15m) (0-2 DTE)\n30 Minute (1-3 DTE)\n1 Hour (2-5 DTE)\n4 Hour (3-7 DTE)\nDaily (5-14 DTE)\n3-Day (1-3 weeks)\nWeekly (2-4 weeks)\nMonthly (30-60 DTE)\nLEAPS (60+ DTE)\nExpirations unavailable\nFixture feed not collected\nRun Options Research\nHow It Works\nTime Confluence\n\nClock and prior-candle midpoints. Display only; not used in the grade, direction or WAIT decision.\n\nScans multiple timeframes for decompression events - when candles are gravitating toward their 50% levels.\nStrike Selection\nIdentifies strikes based on 50% level clusters and target zones from decompressing timeframes.\nExpiration Logic\nMatches expiration to the selected timeframe - scalping gets 0-2 DTE, swing scenarios get weekly/monthly options.\nGreeks-Aware\nProvides delta targets, theta decay warnings, and gamma considerations based on your chosen timeframe.\nRisk Warning: Options involve significant risk. This tool provides confluence-based research, not financial advice. Review your own risk tolerance and validate scenarios independently before making any financial decision.",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        },
+        {
+          "label": "Stock symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0
+    },
+    {
+      "tab": "options-confluence",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T08:22:17.251Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 2227,
+      "scrollWidth": 390,
+      "screens": 2.6386255924170614,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n3. Options setup\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nOptions Confluence · Change view\nWhy this can fail: options flow, Greeks, dealer exposure, expected move, and cross-asset readings are derived estimates. They can break during news, liquidity gaps, volatility repricing, stale data, or regime shifts. Treat all outputs as educational scenario context only.\nANALYSIS PANEL\nVIEW MODE\nGUIDED\nADVANCED\nWORKFLOW SUGGESTIONS\nREFRESH\nProposal API failed: Fixture feed not collected\nNo active suggestions. New decision packets will repopulate this queue.\nScalping (5-15m) (0-2 DTE)\n30 Minute (1-3 DTE)\n1 Hour (2-5 DTE)\n4 Hour (3-7 DTE)\nDaily (5-14 DTE)\n3-Day (1-3 weeks)\nWeekly (2-4 weeks)\nMonthly (30-60 DTE)\nLEAPS (60+ DTE)\nExpirations unavailable\nFixture feed not collected\nRun Options Research\nHow It Works\nTime Confluence\n\nClock and prior-candle midpoints. Display only; not used in the grade, direction or WAIT decision.\n\nScans multiple timeframes for decompression events - when candles are gravitating toward their 50% levels.\nStrike Selection\nIdentifies strikes based on 50% level clusters and target zones from decompressing timeframes.\nExpiration Logic\nMatches expiration to the selected timeframe - scalping gets 0-2 DTE, swing scenarios get weekly/monthly options.\nGreeks-Aware\nProvides delta targets, theta decay warnings, and gamma considerations based on your chosen timeframe.\nRisk Warning: Options involve significant risk. This tool provides confluence-based research, not financial advice. Review your own risk tolerance and validate scenarios independently before making any financial decision.",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        },
+        {
+          "label": "Stock symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0
+    },
+    {
+      "tab": "capital",
+      "symbol": "SPY",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T08:22:18.706Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 871,
+      "scrollWidth": 1280,
+      "screens": 1.08875,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n5. Capital pressure\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nSPY\nMore symbols\nCapital Pressure · Change view\nCapital Flow — SPY\nas of 6:00:00 AM\n↻ Refresh\n\nBlocked: Score below research threshold Directional scores and scenario weights are indicator summaries, not calibrated outcome probabilities; permission takes precedence.\n\nBIAS\nNeutral\nMODE\nMixed\nDIRECTIONAL SCORE\n54\nSPOT\n$100.00\nIndicator Alignment\nTPS\n54\nRisk Mode\n—\nWeighting Factor\n0.00x\nAnalysis Mode\n—\nAnalysis paused: Score below research threshold",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "SPY"
+        }
+      ],
+      "openFolds": 0
+    },
+    {
+      "tab": "capital",
+      "symbol": "SPY",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T08:22:20.284Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1355,
+      "scrollWidth": 390,
+      "screens": 1.6054502369668247,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n5. Capital pressure\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nSPY\nMore symbols\nCapital Pressure · Change view\nCapital Flow — SPY\nas of 6:00:00 AM\n↻ Refresh\n\nBlocked: Score below research threshold Directional scores and scenario weights are indicator summaries, not calibrated outcome probabilities; permission takes precedence.\n\nBIAS\nNeutral\nMODE\nMixed\nDIRECTIONAL SCORE\n54\nSPOT\n$100.00\nIndicator Alignment\nTPS\n54\nRisk Mode\n—\nWeighting Factor\n0.00x\nAnalysis Mode\n—\nAnalysis paused: Score below research threshold",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "SPY"
+        }
+      ],
+      "openFolds": 0
+    },
+    {
+      "tab": "options-flow",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T08:22:21.885Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n4. Flow estimate\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nOptions Flow · Change view\nFigures are estimates from options-chain snapshots, not trade prints. They do not name either side, institutional positioning, hedging intent, or a future price path.\nANALYZE FLOW\nOptions flow feed not collected in this fixture\nOptions flow classification uses bid/ask inference from snapshot data, not real-time trade prints. Direction classification is approximate. Not financial advice.",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        },
+        {
+          "label": "Ticker symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0
+    },
+    {
+      "tab": "options-flow",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T08:22:23.546Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 978,
+      "scrollWidth": 390,
+      "screens": 1.1587677725118484,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n4. Flow estimate\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nOptions Flow · Change view\nFigures are estimates from options-chain snapshots, not trade prints. They do not name either side, institutional positioning, hedging intent, or a future price path.\nANALYZE FLOW\nOptions flow feed not collected in this fixture\nOptions flow classification uses bid/ask inference from snapshot data, not real-time trade prints. Direction classification is approximate. Not financial advice.",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        },
+        {
+          "label": "Ticker symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0
+    },
+    {
+      "tab": "crypto",
+      "symbol": "BTCUSD",
+      "type": "crypto",
+      "tier": "pro",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T08:22:25.107Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n2. Derivatives map\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nCrypto · Change view\nNot collected for BTC\n\nFunding, open interest and long/short are not in this response. Liquidations are not collected.\n\nOpen market-wide crypto derivatives",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "BTCUSD"
+        }
+      ],
+      "openFolds": 0
+    },
+    {
+      "tab": "crypto",
+      "symbol": "BTCUSD",
+      "type": "crypto",
+      "tier": "pro",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T08:22:26.629Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n2. Derivatives map\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nCrypto · Change view\nNot collected for BTC\n\nFunding, open interest and long/short are not in this response. Liquidations are not collected.\n\nOpen market-wide crypto derivatives",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "BTCUSD"
+        }
+      ],
+      "openFolds": 0
+    },
+    {
+      "tab": "time-confluence",
+      "symbol": "BTCUSD",
+      "type": "crypto",
+      "tier": "pro",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T08:22:28.062Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nTime Confluence · Change view\nRun Time Confluence for BTCUSD\nRun Time Confluence",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "BTCUSD"
+        }
+      ],
+      "openFolds": 0
+    },
+    {
+      "tab": "time-confluence",
+      "symbol": "BTCUSD",
+      "type": "crypto",
+      "tier": "pro",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T08:22:30.080Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nTime Confluence · Change view\nRun Time Confluence for BTCUSD\nRun Time Confluence",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "BTCUSD"
+        }
+      ],
+      "openFolds": 0
+    },
+    {
+      "tab": "gravity",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "free",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T08:22:31.463Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n6. Gravity map\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Gravity · Change view\nTime Scanner\nThis feature requires the Pro plan.\nUpgrade to Pro →\nTime Gravity Map\nThis feature requires the Pro plan.\nUpgrade to Pro →",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0
+    },
+    {
+      "tab": "gravity",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "free",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T08:22:33.024Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 872,
+      "scrollWidth": 390,
+      "screens": 1.033175355450237,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n6. Gravity map\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Gravity · Change view\nTime Scanner\nThis feature requires the Pro plan.\nUpgrade to Pro →\nTime Gravity Map\nThis feature requires the Pro plan.\nUpgrade to Pro →",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0
+    },
+    {
+      "tab": "gravity",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "anonymous",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T08:22:34.961Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 853,
+      "scrollWidth": 1280,
+      "screens": 1.06625,
+      "text": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n6. Gravity map\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Gravity · Change view\nTime Scanner\nThis feature requires the Pro plan.\nUpgrade to Pro →\nTime Gravity Map\nThis feature requires the Pro plan.\nUpgrade to Pro →",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0
+    },
+    {
+      "tab": "gravity",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "anonymous",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T08:22:36.330Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1081,
+      "scrollWidth": 390,
+      "screens": 1.2808056872037914,
+      "text": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n6. Gravity map\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Gravity · Change view\nTime Scanner\nThis feature requires the Pro plan.\nUpgrade to Pro →\nTime Gravity Map\nThis feature requires the Pro plan.\nUpgrade to Pro →",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0
+    }
+  ],
+  "requests": [
+    {
+      "url": "http://127.0.0.1:3105/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/scanner/top-cached?type=all&limit=5&_ts=1791188531209",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/time-gravity-map?symbol=MU&assetType=stock",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/quote?symbol=MU&type=stock",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/time-gravity-map?symbol=MU&price=100&assetType=stock",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/scanner/top-cached?type=all&limit=5&_ts=1791188532946",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/time-gravity-map?symbol=MU&assetType=stock",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/quote?symbol=MU&type=stock",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/time-gravity-map?symbol=MU&price=100&assetType=stock",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/scanner/top-cached?type=all&limit=5&_ts=1791188534716",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/operator/proposals?limit=6",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/journal",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/options/expirations?symbol=MU",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/scanner/top-cached?type=all&limit=5&_ts=1791188536361",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/operator/proposals?limit=6",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/journal",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/options/expirations?symbol=MU",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/scanner/top-cached?type=all&limit=5&_ts=1791188538034",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/flow?symbol=SPY&marketType=equity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/scanner/top-cached?type=all&limit=5&_ts=1791188539640",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/flow?symbol=SPY&marketType=equity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/scanner/top-cached?type=all&limit=5&_ts=1791188541234",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/options-flow?symbol=MU",
+      "method": "GET",
+      "status": 403,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/scanner/top-cached?type=all&limit=5&_ts=1791188542913",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/options-flow?symbol=MU",
+      "method": "GET",
+      "status": 403,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/funding-rates",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/long-short-ratio",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/crypto/open-interest",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/scanner/top-cached?type=all&limit=5&_ts=1791188544453",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/flow?symbol=BTCUSD&marketType=crypto",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/funding-rates",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/long-short-ratio",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/crypto/open-interest",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/scanner/top-cached?type=all&limit=5&_ts=1791188545993",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/flow?symbol=BTCUSD&marketType=crypto",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/scanner/top-cached?type=all&limit=5&_ts=1791188547398",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/flow?symbol=BTCUSD&marketType=crypto",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/scanner/top-cached?type=all&limit=5&_ts=1791188548868",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/flow?symbol=BTCUSD&marketType=crypto",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/scanner/top-cached?type=all&limit=5&_ts=1791188550507",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/quote?symbol=MU&type=stock",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/scanner/top-cached?type=all&limit=5&_ts=1791188552088",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/quote?symbol=MU&type=stock",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/scanner/top-cached?type=all&limit=5&_ts=1791188553587",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/quote?symbol=MU&type=stock",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/scanner/top-cached?type=all&limit=5&_ts=1791188555659",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/quote?symbol=MU&type=stock",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3105/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    }
+  ],
+  "errors": []
+}
