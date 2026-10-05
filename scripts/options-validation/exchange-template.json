@@ -1,0 +1,8 @@
+{
+  "source": "REPLACE with exchange/source URL or saved evidence reference",
+  "observedAt": null,
+  "contracts": [
+    {"symbol":"AAPL","expiry":null,"strike":330,"type":"call","openInterest":null,"oiAsOfDate":null},
+    {"symbol":"AAPL","expiry":null,"strike":325,"type":"put","openInterest":null,"oiAsOfDate":null}
+  ]
+}

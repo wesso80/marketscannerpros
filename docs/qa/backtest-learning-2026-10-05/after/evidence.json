@@ -1,0 +1,1666 @@
+{
+  "mocked": true,
+  "results": [
+    {
+      "tab": "backtest",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:33:20.065Z",
+      "finalUrl": "http://127.0.0.1:3124/tools/workspace?tab=backtest",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBacktest\n\nNo simulation has been run in this view.\n\nGeneral information only, not financial advice.\n\nSample chart · illustrative only, not a simulation result\n\nOpen simulation settings below, then select Run Backtest. No dates, prices or returns are assigned to this sample.\n\nSimulation settingsAAPL · Daily\n\nSource · Illustrative sample; no market observations · 23:33 AEDT Mon 5 Oct · View timestamp; sample is not market data\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "No simulation has been run in this view.",
+          "top": 294,
+          "bottom": 314
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBacktest\n\nNo simulation has been run in this view.\n\nGeneral information only, not financial advice.\n\nSample chart · illustrative only, not a simulation result\n\nOpen simulation settings below, then select Run Backtest. No dates, prices or returns are assigned to this sample.\n\nSimulation settingsAAPL · Daily\nBACKTEST METHOD\nChoose a method and review the historical simulation.\nStrategy\nScanner\nSYMBOL\nTIMEFRAME\n5m\n15m\n30m\n1H\n4H\nDaily\nWeekly\nSTART\nEND\nEDGE GROUP\nMSP AIO Systems\nScalping Edge\nTrend Following\nMean Reversion\nBreakdown Play (Bears)\nBreakout\nLiquidity Play\nTime Confluence\nSTRATEGY\n🧠 Brain Signal Replay (Decision Packets)\n⏱️ Time Scanner Replay\nMSP Day Trader AIO (Score 5+)\nMSP Day Trader Strict (Score 6+)\n📈 Day Trader v3 Optimized (More Trades)\n🚀 Day Trader v3 Aggressive (Max Trades)\nMSP Multi-TF Dashboard (Bias 6+)\nMSP Multi-TF Strict (Bias 8+)\nMSP Trend Pullback\nMSP Liquidity Reversal\nCAPITAL ($)\nRun Backtest\n\nSource · Illustrative sample; no market observations · 23:33 AEDT Mon 5 Oct · View timestamp; sample is not market data\n\n✕\nMSP AI",
+      "hits": [],
+      "requestsBeforeRun": 0,
+      "result": {
+        "screens": 1.09875,
+        "scrollWidth": 1280,
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBacktest\n\nAAPL: 2 simulated trades, +12.3% historical return.\n\nGeneral information only, not financial advice.\n\nMarked Equity\n2025-01-01\n$11,235\n2025-12-31\nSimulation settingsAAPL · Daily\nSimulation details2 trades\n\nSource · Historical simulation · 23:33 AEDT Mon 5 Oct · Response received; historical inputs\n\n✕\nMSP AI",
+        "sourceCount": 1,
+        "samples": 0
+      }
+    },
+    {
+      "tab": "backtest",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:33:22.446Z",
+      "finalUrl": "http://127.0.0.1:3124/tools/workspace?tab=backtest",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 846,
+      "scrollWidth": 390,
+      "screens": 1.0023696682464456,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBacktest\n\nNo simulation has been run in this view.\n\nGeneral information only, not financial advice.\n\nSample chart · illustrative only, not a simulation result\n\nOpen simulation settings below, then select Run Backtest. No dates, prices or returns are assigned to this sample.\n\nSimulation settingsAAPL · Daily\n\nSource · Illustrative sample; no market observations · 23:33 AEDT Mon 5 Oct · View timestamp; sample is not market data\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "No simulation has been run in this view.",
+          "top": 369.5,
+          "bottom": 389.5
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBacktest\n\nNo simulation has been run in this view.\n\nGeneral information only, not financial advice.\n\nSample chart · illustrative only, not a simulation result\n\nOpen simulation settings below, then select Run Backtest. No dates, prices or returns are assigned to this sample.\n\nSimulation settingsAAPL · Daily\nBACKTEST METHOD\nChoose a method and review the historical simulation.\nStrategy\nScanner\nSYMBOL\nTIMEFRAME\n5m\n15m\n30m\n1H\n4H\nDaily\nWeekly\nSTART\nEND\nEDGE GROUP\nMSP AIO Systems\nScalping Edge\nTrend Following\nMean Reversion\nBreakdown Play (Bears)\nBreakout\nLiquidity Play\nTime Confluence\nSTRATEGY\n🧠 Brain Signal Replay (Decision Packets)\n⏱️ Time Scanner Replay\nMSP Day Trader AIO (Score 5+)\nMSP Day Trader Strict (Score 6+)\n📈 Day Trader v3 Optimized (More Trades)\n🚀 Day Trader v3 Aggressive (Max Trades)\nMSP Multi-TF Dashboard (Bias 6+)\nMSP Multi-TF Strict (Bias 8+)\nMSP Trend Pullback\nMSP Liquidity Reversal\nCAPITAL ($)\nRun Backtest\n\nSource · Illustrative sample; no market observations · 23:33 AEDT Mon 5 Oct · View timestamp; sample is not market data\n\n✕\nMSP AI",
+      "hits": [],
+      "requestsBeforeRun": 0,
+      "result": {
+        "screens": 1.150473933649289,
+        "scrollWidth": 390,
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBacktest\n\nAAPL: 2 simulated trades, +12.3% historical return.\n\nGeneral information only, not financial advice.\n\nMarked Equity\n2025-01-01\n$11,235\n2025-12-31\nSimulation settingsAAPL · Daily\nSimulation details2 trades\n\nSource · Historical simulation · 23:33 AEDT Mon 5 Oct · Response received; historical inputs\n\n✕\nMSP AI",
+        "sourceCount": 1,
+        "samples": 0
+      }
+    },
+    {
+      "tab": "backtest",
+      "tier": "pro",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:33:25.549Z",
+      "finalUrl": "http://127.0.0.1:3124/tools/workspace?tab=backtest",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBacktest\n\nNo simulation has been run in this view.\n\nGeneral information only, not financial advice.\n\nSample chart · illustrative only, not a simulation result\n\nOpen simulation settings below, then select Run Backtest. No dates, prices or returns are assigned to this sample.\n\nSimulation settingsAAPL · Daily\n\nSource · Illustrative sample; no market observations · 23:33 AEDT Mon 5 Oct · View timestamp; sample is not market data\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "No simulation has been run in this view.",
+          "top": 294,
+          "bottom": 314
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBacktest\n\nNo simulation has been run in this view.\n\nGeneral information only, not financial advice.\n\nSample chart · illustrative only, not a simulation result\n\nOpen simulation settings below, then select Run Backtest. No dates, prices or returns are assigned to this sample.\n\nSimulation settingsAAPL · Daily\nBACKTEST METHOD\nChoose a method and review the historical simulation.\nStrategy\nScanner\nSYMBOL\nTIMEFRAME\n5m\n15m\n30m\n1H\n4H\nDaily\nWeekly\nSTART\nEND\nEDGE GROUP\nMSP AIO Systems\nScalping Edge\nTrend Following\nMean Reversion\nBreakdown Play (Bears)\nBreakout\nLiquidity Play\nTime Confluence\nSTRATEGY\n🧠 Brain Signal Replay (Decision Packets)\n⏱️ Time Scanner Replay\nMSP Day Trader AIO (Score 5+)\nMSP Day Trader Strict (Score 6+)\n📈 Day Trader v3 Optimized (More Trades)\n🚀 Day Trader v3 Aggressive (Max Trades)\nMSP Multi-TF Dashboard (Bias 6+)\nMSP Multi-TF Strict (Bias 8+)\nMSP Trend Pullback\nMSP Liquidity Reversal\nCAPITAL ($)\nRun Backtest\n\nSource · Illustrative sample; no market observations · 23:33 AEDT Mon 5 Oct · View timestamp; sample is not market data\n\n✕\nMSP AI",
+      "hits": []
+    },
+    {
+      "tab": "backtest",
+      "tier": "pro",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:33:28.168Z",
+      "finalUrl": "http://127.0.0.1:3124/tools/workspace?tab=backtest",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 846,
+      "scrollWidth": 390,
+      "screens": 1.0023696682464456,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBacktest\n\nNo simulation has been run in this view.\n\nGeneral information only, not financial advice.\n\nSample chart · illustrative only, not a simulation result\n\nOpen simulation settings below, then select Run Backtest. No dates, prices or returns are assigned to this sample.\n\nSimulation settingsAAPL · Daily\n\nSource · Illustrative sample; no market observations · 23:33 AEDT Mon 5 Oct · View timestamp; sample is not market data\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "No simulation has been run in this view.",
+          "top": 369.5,
+          "bottom": 389.5
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBacktest\n\nNo simulation has been run in this view.\n\nGeneral information only, not financial advice.\n\nSample chart · illustrative only, not a simulation result\n\nOpen simulation settings below, then select Run Backtest. No dates, prices or returns are assigned to this sample.\n\nSimulation settingsAAPL · Daily\nBACKTEST METHOD\nChoose a method and review the historical simulation.\nStrategy\nScanner\nSYMBOL\nTIMEFRAME\n5m\n15m\n30m\n1H\n4H\nDaily\nWeekly\nSTART\nEND\nEDGE GROUP\nMSP AIO Systems\nScalping Edge\nTrend Following\nMean Reversion\nBreakdown Play (Bears)\nBreakout\nLiquidity Play\nTime Confluence\nSTRATEGY\n🧠 Brain Signal Replay (Decision Packets)\n⏱️ Time Scanner Replay\nMSP Day Trader AIO (Score 5+)\nMSP Day Trader Strict (Score 6+)\n📈 Day Trader v3 Optimized (More Trades)\n🚀 Day Trader v3 Aggressive (Max Trades)\nMSP Multi-TF Dashboard (Bias 6+)\nMSP Multi-TF Strict (Bias 8+)\nMSP Trend Pullback\nMSP Liquidity Reversal\nCAPITAL ($)\nRun Backtest\n\nSource · Illustrative sample; no market observations · 23:33 AEDT Mon 5 Oct · View timestamp; sample is not market data\n\n✕\nMSP AI",
+      "hits": []
+    },
+    {
+      "tab": "backtest",
+      "tier": "free",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:33:31.279Z",
+      "finalUrl": "http://127.0.0.1:3124/tools/workspace?tab=backtest",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBacktest\n\nNo simulation has been run in this view.\n\nGeneral information only, not financial advice.\n\nSample chart · illustrative only, not a simulation result\n\nOpen simulation settings below, then select Run Backtest. No dates, prices or returns are assigned to this sample.\n\nSimulation settingsAAPL · Daily\n\nSource · Illustrative sample; no market observations · 23:33 AEDT Mon 5 Oct · View timestamp; sample is not market data\n\nStrategy Backtesting Engine\nThis feature requires the Pro plan.\nUpgrade to Pro →\nBacktest Engine\nThis feature requires the Pro plan.\nUpgrade to Pro →\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "No simulation has been run in this view.",
+          "top": 294,
+          "bottom": 314
+        }
+      ],
+      "closedHits": [
+        "Strategy Backtesting Engine",
+        "Backtest Engine"
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBacktest\n\nNo simulation has been run in this view.\n\nGeneral information only, not financial advice.\n\nSample chart · illustrative only, not a simulation result\n\nOpen simulation settings below, then select Run Backtest. No dates, prices or returns are assigned to this sample.\n\nSimulation settingsAAPL · Daily\nBACKTEST METHOD\nChoose a method and review the historical simulation.\nStrategy\nScanner\nSYMBOL\nTIMEFRAME\n5m\n15m\n30m\n1H\n4H\nDaily\nWeekly\nSTART\nEND\nEDGE GROUP\nMSP AIO Systems\nScalping Edge\nTrend Following\nMean Reversion\nBreakdown Play (Bears)\nBreakout\nLiquidity Play\nTime Confluence\nSTRATEGY\n🧠 Brain Signal Replay (Decision Packets)\n⏱️ Time Scanner Replay\nMSP Day Trader AIO (Score 5+)\nMSP Day Trader Strict (Score 6+)\n📈 Day Trader v3 Optimized (More Trades)\n🚀 Day Trader v3 Aggressive (Max Trades)\nMSP Multi-TF Dashboard (Bias 6+)\nMSP Multi-TF Strict (Bias 8+)\nMSP Trend Pullback\nMSP Liquidity Reversal\nCAPITAL ($)\nRun Backtest\n\nSource · Illustrative sample; no market observations · 23:33 AEDT Mon 5 Oct · View timestamp; sample is not market data\n\nStrategy Backtesting Engine\nThis feature requires the Pro plan.\nUpgrade to Pro →\nBacktest Engine\nThis feature requires the Pro plan.\nUpgrade to Pro →\n✕\nMSP AI",
+      "hits": [
+        "Strategy Backtesting Engine",
+        "Backtest Engine"
+      ]
+    },
+    {
+      "tab": "backtest",
+      "tier": "free",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:33:32.816Z",
+      "finalUrl": "http://127.0.0.1:3124/tools/workspace?tab=backtest",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBacktest\n\nNo simulation has been run in this view.\n\nGeneral information only, not financial advice.\n\nSample chart · illustrative only, not a simulation result\n\nOpen simulation settings below, then select Run Backtest. No dates, prices or returns are assigned to this sample.\n\nSimulation settingsAAPL · Daily\n\nSource · Illustrative sample; no market observations · 23:33 AEDT Mon 5 Oct · View timestamp; sample is not market data\n\nStrategy Backtesting Engine\nThis feature requires the Pro plan.\nUpgrade to Pro →\nBacktest Engine\nThis feature requires the Pro plan.\nUpgrade to Pro →\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "No simulation has been run in this view.",
+          "top": 369.5,
+          "bottom": 389.5
+        }
+      ],
+      "closedHits": [
+        "Strategy Backtesting Engine",
+        "Backtest Engine"
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBacktest\n\nNo simulation has been run in this view.\n\nGeneral information only, not financial advice.\n\nSample chart · illustrative only, not a simulation result\n\nOpen simulation settings below, then select Run Backtest. No dates, prices or returns are assigned to this sample.\n\nSimulation settingsAAPL · Daily\nBACKTEST METHOD\nChoose a method and review the historical simulation.\nStrategy\nScanner\nSYMBOL\nTIMEFRAME\n5m\n15m\n30m\n1H\n4H\nDaily\nWeekly\nSTART\nEND\nEDGE GROUP\nMSP AIO Systems\nScalping Edge\nTrend Following\nMean Reversion\nBreakdown Play (Bears)\nBreakout\nLiquidity Play\nTime Confluence\nSTRATEGY\n🧠 Brain Signal Replay (Decision Packets)\n⏱️ Time Scanner Replay\nMSP Day Trader AIO (Score 5+)\nMSP Day Trader Strict (Score 6+)\n📈 Day Trader v3 Optimized (More Trades)\n🚀 Day Trader v3 Aggressive (Max Trades)\nMSP Multi-TF Dashboard (Bias 6+)\nMSP Multi-TF Strict (Bias 8+)\nMSP Trend Pullback\nMSP Liquidity Reversal\nCAPITAL ($)\nRun Backtest\n\nSource · Illustrative sample; no market observations · 23:33 AEDT Mon 5 Oct · View timestamp; sample is not market data\n\nStrategy Backtesting Engine\nThis feature requires the Pro plan.\nUpgrade to Pro →\nBacktest Engine\nThis feature requires the Pro plan.\nUpgrade to Pro →\n✕\nMSP AI",
+      "hits": [
+        "Strategy Backtesting Engine",
+        "Backtest Engine"
+      ]
+    },
+    {
+      "tab": "backtest",
+      "tier": "anonymous",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:33:34.330Z",
+      "finalUrl": "http://127.0.0.1:3124/tools/workspace?tab=backtest",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nTrack is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nTrack is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "hits": []
+    },
+    {
+      "tab": "backtest",
+      "tier": "anonymous",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:33:35.842Z",
+      "finalUrl": "http://127.0.0.1:3124/tools/workspace?tab=backtest",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nTrack is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nTrack is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "hits": []
+    },
+    {
+      "tab": "learning",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:33:38.158Z",
+      "finalUrl": "http://127.0.0.1:3124/tools/workspace?tab=learning",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 988,
+      "scrollWidth": 1280,
+      "screens": 1.235,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nLearning\n\n24 recorded trades in your learning profile.\n\nGeneral information only, not financial advice.\n\n62\n\nEdge Score\n\n58%\n\nWin Rate\n\n1.4\n\nAvg R:R\n\n24\n\nTotal Trades\n\nRecorded win rate by framework\nCompression → Expansion\n50%\nVolatility Expansion Breakout\n55%\nTrend Continuation\n60%\nTrend Pullback Entry\n65%\nHistorical comparisons24 trades\nFramework statistics4 frameworks\nFramework library10 frameworks\n\nSource · Saved learning records and framework definitions · 23:33 AEDT Mon 5 Oct · Page load time; historical records\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "24 recorded trades in your learning profile.",
+          "top": 294,
+          "bottom": 314
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nLearning\n\n24 recorded trades in your learning profile.\n\nGeneral information only, not financial advice.\n\n62\n\nEdge Score\n\n58%\n\nWin Rate\n\n1.4\n\nAvg R:R\n\n24\n\nTotal Trades\n\nRecorded win rate by framework\nCompression → Expansion\n50%\nVolatility Expansion Breakout\n55%\nTrend Continuation\n60%\nTrend Pullback Entry\n65%\nHistorical comparisons24 trades\nBest Doctrine\nTrend continuation\n65% win · 6 trades\nWorst Doctrine\nCompression expansion\n50% win · 6 trades\nBest Regime\nTrend\n65% win · 6 trades\nWorst Regime\nRange\n50% win · 6 trades\nFramework statistics4 frameworks\nDoctrine\tTrades\tWin%\tAvg R\tPF\nCompression Breakout\t6\t50%\t1.2\t1.30\nVol Expansion Breakout\t6\t55%\t1.3\t1.40\nTrend Continuation\t6\t60%\t1.4\t1.50\nTrend Pullback\t6\t65%\t1.5\t1.60\nFramework library10 frameworks\nCompression → Expansion\nEither direction\n\nVolatility coils tight (BBWP < 20), then breaks out with volume expansion.\n\nVolatility Expansion Breakout\nEither direction\n\nDVE shifts to expansion regime with increasing BBWP and volume surge.\n\nTrend Continuation\nEither direction\n\nStrong trend with pullback absorbed, momentum resuming.\n\nTrend Pullback Entry\nEither direction\n\nEstablished trend, price pulls back to key structure level for entry.\n\nLiquidity Sweep → Reversal\nEither direction\n\nPrice wicks beyond key level sweeping stops, then snaps back inside range.\n\nRange High/Low Fade\nEither direction\n\nPrice approaches range extremes with rejection signals.\n\nGamma Pin Near Expiry\nEither direction\n\nPrice gravitates toward max OI/gamma strike as expiry approaches.\n\nGamma Squeeze\nEither direction\n\nNegative gamma environment causes dealer hedging to amplify the move.\n\nMean Reversion\nEither direction\n\nOverextended price snaps back to moving average or VWAP.\n\nMomentum Burst\nEither direction\n\nStrong directional momentum with volume confirmation, ride the wave.\n\nSource · Saved learning records and framework definitions · 23:33 AEDT Mon 5 Oct · Page load time; historical records\n\n✕\nMSP AI",
+      "hits": [],
+      "frameworkDetailHits": []
+    },
+    {
+      "tab": "learning",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:33:40.429Z",
+      "finalUrl": "http://127.0.0.1:3124/tools/workspace?tab=learning",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1182,
+      "scrollWidth": 390,
+      "screens": 1.400473933649289,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nLearning\n\n24 recorded trades in your learning profile.\n\nGeneral information only, not financial advice.\n\n62\n\nEdge Score\n\n58%\n\nWin Rate\n\n1.4\n\nAvg R:R\n\n24\n\nTotal Trades\n\nRecorded win rate by framework\nCompression → Expansion\n50%\nVolatility Expansion Breakout\n55%\nTrend Continuation\n60%\nTrend Pullback Entry\n65%\nHistorical comparisons24 trades\nFramework statistics4 frameworks\nFramework library10 frameworks\n\nSource · Saved learning records and framework definitions · 23:33 AEDT Mon 5 Oct · Page load time; historical records\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "24 recorded trades in your learning profile.",
+          "top": 369.5,
+          "bottom": 389.5
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nLearning\n\n24 recorded trades in your learning profile.\n\nGeneral information only, not financial advice.\n\n62\n\nEdge Score\n\n58%\n\nWin Rate\n\n1.4\n\nAvg R:R\n\n24\n\nTotal Trades\n\nRecorded win rate by framework\nCompression → Expansion\n50%\nVolatility Expansion Breakout\n55%\nTrend Continuation\n60%\nTrend Pullback Entry\n65%\nHistorical comparisons24 trades\nBest Doctrine\nTrend continuation\n65% win · 6 trades\nWorst Doctrine\nCompression expansion\n50% win · 6 trades\nBest Regime\nTrend\n65% win · 6 trades\nWorst Regime\nRange\n50% win · 6 trades\nFramework statistics4 frameworks\nDoctrine\tTrades\tWin%\tAvg R\tPF\nCompression Breakout\t6\t50%\t1.2\t1.30\nVol Expansion Breakout\t6\t55%\t1.3\t1.40\nTrend Continuation\t6\t60%\t1.4\t1.50\nTrend Pullback\t6\t65%\t1.5\t1.60\nFramework library10 frameworks\nCompression → Expansion\nEither direction\n\nVolatility coils tight (BBWP < 20), then breaks out with volume expansion.\n\nVolatility Expansion Breakout\nEither direction\n\nDVE shifts to expansion regime with increasing BBWP and volume surge.\n\nTrend Continuation\nEither direction\n\nStrong trend with pullback absorbed, momentum resuming.\n\nTrend Pullback Entry\nEither direction\n\nEstablished trend, price pulls back to key structure level for entry.\n\nLiquidity Sweep → Reversal\nEither direction\n\nPrice wicks beyond key level sweeping stops, then snaps back inside range.\n\nRange High/Low Fade\nEither direction\n\nPrice approaches range extremes with rejection signals.\n\nGamma Pin Near Expiry\nEither direction\n\nPrice gravitates toward max OI/gamma strike as expiry approaches.\n\nGamma Squeeze\nEither direction\n\nNegative gamma environment causes dealer hedging to amplify the move.\n\nMean Reversion\nEither direction\n\nOverextended price snaps back to moving average or VWAP.\n\nMomentum Burst\nEither direction\n\nStrong directional momentum with volume confirmation, ride the wave.\n\nSource · Saved learning records and framework definitions · 23:33 AEDT Mon 5 Oct · Page load time; historical records\n\n✕\nMSP AI",
+      "hits": [],
+      "frameworkDetailHits": []
+    },
+    {
+      "tab": "learning",
+      "tier": "pro",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:33:42.711Z",
+      "finalUrl": "http://127.0.0.1:3124/tools/workspace?tab=learning",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nLearning\n\nNo recorded learning history yet.\n\nGeneral information only, not financial advice.\n\nAdd your first journal record\nExample · illustrative layout, no account data\nOpen Journal\nFramework library10 frameworks\n\nSource · Saved learning records and framework definitions · 23:33 AEDT Mon 5 Oct · Page load time; historical records\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "No recorded learning history yet.",
+          "top": 294,
+          "bottom": 314
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nLearning\n\nNo recorded learning history yet.\n\nGeneral information only, not financial advice.\n\nAdd your first journal record\nExample · illustrative layout, no account data\nOpen Journal\nFramework library10 frameworks\nCompression → Expansion\nEither direction\n\nVolatility coils tight (BBWP < 20), then breaks out with volume expansion.\n\nVolatility Expansion Breakout\nEither direction\n\nDVE shifts to expansion regime with increasing BBWP and volume surge.\n\nTrend Continuation\nEither direction\n\nStrong trend with pullback absorbed, momentum resuming.\n\nTrend Pullback Entry\nEither direction\n\nEstablished trend, price pulls back to key structure level for entry.\n\nLiquidity Sweep → Reversal\nEither direction\n\nPrice wicks beyond key level sweeping stops, then snaps back inside range.\n\nRange High/Low Fade\nEither direction\n\nPrice approaches range extremes with rejection signals.\n\nGamma Pin Near Expiry\nEither direction\n\nPrice gravitates toward max OI/gamma strike as expiry approaches.\n\nGamma Squeeze\nEither direction\n\nNegative gamma environment causes dealer hedging to amplify the move.\n\nMean Reversion\nEither direction\n\nOverextended price snaps back to moving average or VWAP.\n\nMomentum Burst\nEither direction\n\nStrong directional momentum with volume confirmation, ride the wave.\n\nSource · Saved learning records and framework definitions · 23:33 AEDT Mon 5 Oct · Page load time; historical records\n\n✕\nMSP AI",
+      "hits": []
+    },
+    {
+      "tab": "learning",
+      "tier": "pro",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:33:44.596Z",
+      "finalUrl": "http://127.0.0.1:3124/tools/workspace?tab=learning",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 902,
+      "scrollWidth": 390,
+      "screens": 1.0687203791469195,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nLearning\n\nNo recorded learning history yet.\n\nGeneral information only, not financial advice.\n\nAdd your first journal record\nExample · illustrative layout, no account data\nOpen Journal\nFramework library10 frameworks\n\nSource · Saved learning records and framework definitions · 23:33 AEDT Mon 5 Oct · Page load time; historical records\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "No recorded learning history yet.",
+          "top": 369.5,
+          "bottom": 389.5
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nLearning\n\nNo recorded learning history yet.\n\nGeneral information only, not financial advice.\n\nAdd your first journal record\nExample · illustrative layout, no account data\nOpen Journal\nFramework library10 frameworks\nCompression → Expansion\nEither direction\n\nVolatility coils tight (BBWP < 20), then breaks out with volume expansion.\n\nVolatility Expansion Breakout\nEither direction\n\nDVE shifts to expansion regime with increasing BBWP and volume surge.\n\nTrend Continuation\nEither direction\n\nStrong trend with pullback absorbed, momentum resuming.\n\nTrend Pullback Entry\nEither direction\n\nEstablished trend, price pulls back to key structure level for entry.\n\nLiquidity Sweep → Reversal\nEither direction\n\nPrice wicks beyond key level sweeping stops, then snaps back inside range.\n\nRange High/Low Fade\nEither direction\n\nPrice approaches range extremes with rejection signals.\n\nGamma Pin Near Expiry\nEither direction\n\nPrice gravitates toward max OI/gamma strike as expiry approaches.\n\nGamma Squeeze\nEither direction\n\nNegative gamma environment causes dealer hedging to amplify the move.\n\nMean Reversion\nEither direction\n\nOverextended price snaps back to moving average or VWAP.\n\nMomentum Burst\nEither direction\n\nStrong directional momentum with volume confirmation, ride the wave.\n\nSource · Saved learning records and framework definitions · 23:33 AEDT Mon 5 Oct · Page load time; historical records\n\n✕\nMSP AI",
+      "hits": []
+    },
+    {
+      "tab": "learning",
+      "tier": "free",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:33:46.848Z",
+      "finalUrl": "http://127.0.0.1:3124/tools/workspace?tab=learning",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 988,
+      "scrollWidth": 1280,
+      "screens": 1.235,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nLearning\n\n24 recorded trades in your learning profile.\n\nGeneral information only, not financial advice.\n\n62\n\nEdge Score\n\n58%\n\nWin Rate\n\n1.4\n\nAvg R:R\n\n24\n\nTotal Trades\n\nRecorded win rate by framework\nCompression → Expansion\n50%\nVolatility Expansion Breakout\n55%\nTrend Continuation\n60%\nTrend Pullback Entry\n65%\nHistorical comparisons24 trades\nFramework statistics4 frameworks\nFramework library10 frameworks\n\nSource · Saved learning records and framework definitions · 23:33 AEDT Mon 5 Oct · Page load time; historical records\n\nDoctrine Learning\nThis feature requires the Pro plan.\nUpgrade to Pro →\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "24 recorded trades in your learning profile.",
+          "top": 294,
+          "bottom": 314
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nLearning\n\n24 recorded trades in your learning profile.\n\nGeneral information only, not financial advice.\n\n62\n\nEdge Score\n\n58%\n\nWin Rate\n\n1.4\n\nAvg R:R\n\n24\n\nTotal Trades\n\nRecorded win rate by framework\nCompression → Expansion\n50%\nVolatility Expansion Breakout\n55%\nTrend Continuation\n60%\nTrend Pullback Entry\n65%\nHistorical comparisons24 trades\nBest Doctrine\nTrend continuation\n65% win · 6 trades\nWorst Doctrine\nCompression expansion\n50% win · 6 trades\nBest Regime\nTrend\n65% win · 6 trades\nWorst Regime\nRange\n50% win · 6 trades\nFramework statistics4 frameworks\nDoctrine\tTrades\tWin%\tAvg R\tPF\nCompression Breakout\t6\t50%\t1.2\t1.30\nVol Expansion Breakout\t6\t55%\t1.3\t1.40\nTrend Continuation\t6\t60%\t1.4\t1.50\nTrend Pullback\t6\t65%\t1.5\t1.60\nFramework library10 frameworks\nCompression → Expansion\nEither direction\n\nVolatility coils tight (BBWP < 20), then breaks out with volume expansion.\n\nVolatility Expansion Breakout\nEither direction\n\nDVE shifts to expansion regime with increasing BBWP and volume surge.\n\nTrend Continuation\nEither direction\n\nStrong trend with pullback absorbed, momentum resuming.\n\nTrend Pullback Entry\nEither direction\n\nEstablished trend, price pulls back to key structure level for entry.\n\nLiquidity Sweep → Reversal\nEither direction\n\nPrice wicks beyond key level sweeping stops, then snaps back inside range.\n\nRange High/Low Fade\nEither direction\n\nPrice approaches range extremes with rejection signals.\n\nGamma Pin Near Expiry\nEither direction\n\nPrice gravitates toward max OI/gamma strike as expiry approaches.\n\nGamma Squeeze\nEither direction\n\nNegative gamma environment causes dealer hedging to amplify the move.\n\nMean Reversion\nEither direction\n\nOverextended price snaps back to moving average or VWAP.\n\nMomentum Burst\nEither direction\n\nStrong directional momentum with volume confirmation, ride the wave.\n\nSource · Saved learning records and framework definitions · 23:33 AEDT Mon 5 Oct · Page load time; historical records\n\nDoctrine Learning\nThis feature requires the Pro plan.\nUpgrade to Pro →\n✕\nMSP AI",
+      "hits": []
+    },
+    {
+      "tab": "learning",
+      "tier": "free",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:33:48.527Z",
+      "finalUrl": "http://127.0.0.1:3124/tools/workspace?tab=learning",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1182,
+      "scrollWidth": 390,
+      "screens": 1.400473933649289,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nLearning\n\n24 recorded trades in your learning profile.\n\nGeneral information only, not financial advice.\n\n62\n\nEdge Score\n\n58%\n\nWin Rate\n\n1.4\n\nAvg R:R\n\n24\n\nTotal Trades\n\nRecorded win rate by framework\nCompression → Expansion\n50%\nVolatility Expansion Breakout\n55%\nTrend Continuation\n60%\nTrend Pullback Entry\n65%\nHistorical comparisons24 trades\nFramework statistics4 frameworks\nFramework library10 frameworks\n\nSource · Saved learning records and framework definitions · 23:33 AEDT Mon 5 Oct · Page load time; historical records\n\nDoctrine Learning\nThis feature requires the Pro plan.\nUpgrade to Pro →\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "24 recorded trades in your learning profile.",
+          "top": 369.5,
+          "bottom": 389.5
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nLearning\n\n24 recorded trades in your learning profile.\n\nGeneral information only, not financial advice.\n\n62\n\nEdge Score\n\n58%\n\nWin Rate\n\n1.4\n\nAvg R:R\n\n24\n\nTotal Trades\n\nRecorded win rate by framework\nCompression → Expansion\n50%\nVolatility Expansion Breakout\n55%\nTrend Continuation\n60%\nTrend Pullback Entry\n65%\nHistorical comparisons24 trades\nBest Doctrine\nTrend continuation\n65% win · 6 trades\nWorst Doctrine\nCompression expansion\n50% win · 6 trades\nBest Regime\nTrend\n65% win · 6 trades\nWorst Regime\nRange\n50% win · 6 trades\nFramework statistics4 frameworks\nDoctrine\tTrades\tWin%\tAvg R\tPF\nCompression Breakout\t6\t50%\t1.2\t1.30\nVol Expansion Breakout\t6\t55%\t1.3\t1.40\nTrend Continuation\t6\t60%\t1.4\t1.50\nTrend Pullback\t6\t65%\t1.5\t1.60\nFramework library10 frameworks\nCompression → Expansion\nEither direction\n\nVolatility coils tight (BBWP < 20), then breaks out with volume expansion.\n\nVolatility Expansion Breakout\nEither direction\n\nDVE shifts to expansion regime with increasing BBWP and volume surge.\n\nTrend Continuation\nEither direction\n\nStrong trend with pullback absorbed, momentum resuming.\n\nTrend Pullback Entry\nEither direction\n\nEstablished trend, price pulls back to key structure level for entry.\n\nLiquidity Sweep → Reversal\nEither direction\n\nPrice wicks beyond key level sweeping stops, then snaps back inside range.\n\nRange High/Low Fade\nEither direction\n\nPrice approaches range extremes with rejection signals.\n\nGamma Pin Near Expiry\nEither direction\n\nPrice gravitates toward max OI/gamma strike as expiry approaches.\n\nGamma Squeeze\nEither direction\n\nNegative gamma environment causes dealer hedging to amplify the move.\n\nMean Reversion\nEither direction\n\nOverextended price snaps back to moving average or VWAP.\n\nMomentum Burst\nEither direction\n\nStrong directional momentum with volume confirmation, ride the wave.\n\nSource · Saved learning records and framework definitions · 23:33 AEDT Mon 5 Oct · Page load time; historical records\n\nDoctrine Learning\nThis feature requires the Pro plan.\nUpgrade to Pro →\n✕\nMSP AI",
+      "hits": []
+    },
+    {
+      "tab": "learning",
+      "tier": "anonymous",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:33:49.728Z",
+      "finalUrl": "http://127.0.0.1:3124/tools/workspace?tab=learning",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nTrack is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nTrack is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "hits": []
+    },
+    {
+      "tab": "learning",
+      "tier": "anonymous",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:33:51.228Z",
+      "finalUrl": "http://127.0.0.1:3124/tools/workspace?tab=learning",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nTrack is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nTrack is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "hits": []
+    }
+  ],
+  "requests": [
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/backtest",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/backtest",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/profile",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/playbooks",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/profile",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/playbooks",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/profile",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/playbooks",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/profile",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/playbooks",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/profile",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/playbooks",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/profile",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/playbooks",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    }
+  ],
+  "errors": []
+}

@@ -90,6 +90,6 @@ describe('alerts page summary wiring', () => {
   it('uses the server rolling 24h count and labels it as such', () => {
     expect(src).toContain('historyJson?.stats?.last24h');
     expect(src).not.toMatch(/toDateString\(\) === today\.toDateString\(\)/);
-    expect(src).toContain('label="Last 24h"');
+    expect(src).toContain('label="Triggers · last 24h"');
   });
 });

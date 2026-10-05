@@ -1,0 +1,441 @@
+[
+  {
+    "function": "REALTIME_OPTIONS",
+    "symbol": "AAPL",
+    "method": "GET",
+    "url": "https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol=AAPL&require_greeks=true&apikey=%5BREDACTED%5D",
+    "startedAt": "2026-10-05T13:45:00.000Z",
+    "mode": "fixture",
+    "finishedAt": "2026-10-05T13:45:00.000Z",
+    "httpStatus": 200,
+    "sha256": "dc891d96dca4f940dea684ce1995bbad88852eba36b821ee710fb0f4ff3be1be",
+    "body": {
+      "data": [
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261009C325",
+          "expiration": "2026-10-09",
+          "strike": "325",
+          "type": "call",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261009P325",
+          "expiration": "2026-10-09",
+          "strike": "325",
+          "type": "put",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "5",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "-0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261009C330",
+          "expiration": "2026-10-09",
+          "strike": "330",
+          "type": "call",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "10",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261009P330",
+          "expiration": "2026-10-09",
+          "strike": "330",
+          "type": "put",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "-0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261009C335",
+          "expiration": "2026-10-09",
+          "strike": "335",
+          "type": "call",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261009P335",
+          "expiration": "2026-10-09",
+          "strike": "335",
+          "type": "put",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "-0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261016C325",
+          "expiration": "2026-10-16",
+          "strike": "325",
+          "type": "call",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261016P325",
+          "expiration": "2026-10-16",
+          "strike": "325",
+          "type": "put",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "5",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "-0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261016C330",
+          "expiration": "2026-10-16",
+          "strike": "330",
+          "type": "call",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "10",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261016P330",
+          "expiration": "2026-10-16",
+          "strike": "330",
+          "type": "put",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "-0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261016C335",
+          "expiration": "2026-10-16",
+          "strike": "335",
+          "type": "call",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "0.5",
+          "gamma": "0.01"
+        },
+        {
+          "symbol": "AAPL",
+          "contractID": "AAPL20261016P335",
+          "expiration": "2026-10-16",
+          "strike": "335",
+          "type": "put",
+          "bid": "2",
+          "ask": "2.2",
+          "open_interest": "20",
+          "volume": "10",
+          "date": "2026-10-05",
+          "implied_volatility": "0.25",
+          "delta": "-0.5",
+          "gamma": "0.01"
+        }
+      ]
+    }
+  },
+  {
+    "function": "GLOBAL_QUOTE",
+    "symbol": "AAPL",
+    "method": "GET",
+    "url": "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=%5BREDACTED%5D&entitlement=realtime",
+    "startedAt": "2026-10-05T13:45:00.000Z",
+    "mode": "fixture",
+    "finishedAt": "2026-10-05T13:45:00.000Z",
+    "httpStatus": 200,
+    "sha256": "9bed9ccd98df9155e84a1470c97c999794b7f2520a3a80a2c28def39b0b5c2c1",
+    "body": {
+      "Global Quote": {
+        "01. symbol": "AAPL",
+        "05. price": "329",
+        "07. latest trading day": "2026-10-05",
+        "09. change": "1",
+        "10. change percent": "0.3%"
+      }
+    }
+  },
+  {
+    "function": "TIME_SERIES_DAILY",
+    "symbol": "AAPL",
+    "method": "GET",
+    "url": "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=AAPL&apikey=%5BREDACTED%5D&outputsize=compact",
+    "startedAt": "2026-10-05T13:45:00.000Z",
+    "mode": "fixture",
+    "finishedAt": "2026-10-05T13:45:00.000Z",
+    "httpStatus": 200,
+    "sha256": "032e7adf956055d3e3bcd15771abae28120f0cc247d38dc6d2d46224778a604f",
+    "body": {
+      "Time Series (Daily)": {
+        "2026-08-31": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-01": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-02": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-03": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-04": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-05": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-06": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-07": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-08": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-09": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-10": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-11": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-12": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-13": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-14": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-15": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-16": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-17": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-18": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-19": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-20": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-21": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-22": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-23": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        },
+        "2026-09-24": {
+          "1. open": "329",
+          "2. high": "332",
+          "3. low": "328",
+          "4. close": "330",
+          "5. volume": "1000000"
+        }
+      }
+    }
+  },
+  {
+    "function": "GLOBAL_QUOTE",
+    "symbol": "FIXTURE",
+    "method": "GET",
+    "url": "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=FIXTURE&apikey=%5BREDACTED%5D&entitlement=realtime",
+    "startedAt": "2026-10-05T13:45:00.000Z",
+    "mode": "fixture",
+    "finishedAt": "2026-10-05T13:45:00.000Z",
+    "httpStatus": 200,
+    "sha256": "1ccc54766e43bb98a24d85263b3fe850b37c98c1fb564e6e10c7cceb3a1f7751",
+    "body": {
+      "Global Quote": {
+        "01. symbol": "FIXTURE",
+        "05. price": "100",
+        "07. latest trading day": "2026-10-05",
+        "09. change": "1",
+        "10. change percent": "0.3%"
+      }
+    }
+  },
+  {
+    "function": "TIME_SERIES_DAILY",
+    "symbol": "FIXTURE",
+    "method": "GET",
+    "url": "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=FIXTURE&apikey=%5BREDACTED%5D&outputsize=compact",
+    "startedAt": "2026-10-05T13:45:00.000Z",
+    "mode": "fixture",
+    "finishedAt": "2026-10-05T13:45:00.000Z",
+    "httpStatus": 200,
+    "sha256": "cdaea35fb2d10466626faacd560b875273ad2275f07590d7077a5c7a6a3e6999",
+    "body": {
+      "Time Series (Daily)": {}
+    }
+  }
+]

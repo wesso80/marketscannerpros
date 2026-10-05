@@ -118,8 +118,8 @@ describe('bounded data requests', () => {
 describe('alert threshold display', () => {
   it('accepts numeric database strings without confusing a missing threshold with zero', () => {
     expect(alertConditionLabel('price_above', '105.25')).toBe('price above $105.25');
-    expect(alertConditionLabel('price_above', null)).toContain('threshold unavailable');
-    expect(alertConditionLabel('price_above', 0)).toContain('threshold unavailable');
+    expect(alertConditionLabel('price_above', null)).toContain('threshold not recorded');
+    expect(alertConditionLabel('price_above', 0)).toContain('threshold not recorded');
     expect(alertConditionLabel('percent_change_up', 5)).toBe('percent change up 5%');
     expect(alertConditionLabel('macd_cross_up', null)).toBe('macd cross up');
   });

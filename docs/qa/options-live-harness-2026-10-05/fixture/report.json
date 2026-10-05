@@ -1,0 +1,390 @@
+{
+  "mode": "fixture",
+  "liveEvidenceChecksPassed": false,
+  "liveAcceptance": false,
+  "discrepancyFixedClaim": false,
+  "revision": "39215dcd65fd698395e8725e2965581c7095856e",
+  "actualStartedAt": "2026-10-05T12:50:10.851Z",
+  "startedAt": "2026-10-05T13:45:00.000Z",
+  "finishedAt": "2026-10-05T13:45:00.000Z",
+  "window": {
+    "start": "2026-10-05T13:30:00.000Z",
+    "end": "2026-10-05T15:00:00.000Z",
+    "label": "Tue 6 Oct 2026, 00:30–02:00 AEDT"
+  },
+  "selectedExpiry": "2026-10-09",
+  "underlyingSpot": {
+    "price": 329,
+    "change": 1,
+    "changePercent": 0.3,
+    "asOf": "2026-10-05",
+    "basis": "provider trading day; intraday time unavailable"
+  },
+  "atmStrike": 330,
+  "providerOrder": [
+    "REALTIME_OPTIONS",
+    "HISTORICAL_OPTIONS"
+  ],
+  "checks": [
+    {
+      "id": "CHAIN_AVAILABLE",
+      "pass": true,
+      "evidence": {
+        "provider": "REALTIME_OPTIONS",
+        "quoteBasis": "realtime",
+        "asOfDate": "2026-10-05",
+        "quoteCoverage": 1,
+        "cacheHit": false
+      }
+    },
+    {
+      "id": "SELECTED_EXPIRY",
+      "pass": true,
+      "evidence": {
+        "requestedExpiry": null,
+        "selectedExpiry": "2026-10-09",
+        "listedExpiries": [
+          "2026-10-09",
+          "2026-10-16"
+        ],
+        "selection": "existing selectOptionsExpiry helper; no substitute for unavailable requested expiry"
+      }
+    },
+    {
+      "id": "UNDERLYING_SPOT_BASIS",
+      "pass": true,
+      "evidence": {
+        "price": 329,
+        "change": 1,
+        "changePercent": 0.3,
+        "asOf": "2026-10-05",
+        "basis": "provider trading day; intraday time unavailable"
+      }
+    },
+    {
+      "id": "CANONICAL_ATM",
+      "pass": true,
+      "evidence": {
+        "strike": 330,
+        "spot": 329,
+        "expiry": "2026-10-09",
+        "selection": "existing atmStrike helper; lower strike wins equal-distance ties"
+      }
+    },
+    {
+      "id": "LIVE_QUOTE_BASIS",
+      "pass": true,
+      "evidence": {
+        "quoteBasis": "realtime",
+        "asOfDate": "2026-10-05",
+        "note": "Historical fallback is captured but cannot pass live-quote acceptance."
+      }
+    },
+    {
+      "id": "EXCHANGE_REFERENCE_WINDOW",
+      "pass": true,
+      "evidence": {
+        "observedAt": "2026-10-05T13:44:00.000Z",
+        "source": "https://example.test/fixture-exchange-not-live"
+      }
+    },
+    {
+      "id": "AAPL_330C_PROVIDER_VALUE",
+      "pass": true,
+      "evidence": {
+        "expiry": "2026-10-09",
+        "matches": 1,
+        "contractId": "AAPL20261009C330",
+        "rawOpenInterest": "10",
+        "openInterest": 10,
+        "contractDate": "2026-10-05"
+      }
+    },
+    {
+      "id": "AAPL_330C_EXCHANGE_COMPARISON",
+      "pass": true,
+      "evidence": {
+        "providerOi": 10,
+        "exchangeOi": 10,
+        "ratio": 1,
+        "difference": 0,
+        "source": "https://example.test/fixture-exchange-not-live",
+        "referenceObservedAt": "2026-10-05T13:44:00.000Z",
+        "providerContractDate": "2026-10-05",
+        "exchangeOiAsOfDate": "2026-10-05",
+        "datesMatch": true,
+        "note": "Provider contract/chain date is the available date basis, not an independently supplied OI timestamp. Exact equality alone does not prove the reported provider discrepancy is fixed."
+      }
+    },
+    {
+      "id": "AAPL_325P_PROVIDER_VALUE",
+      "pass": true,
+      "evidence": {
+        "expiry": "2026-10-09",
+        "matches": 1,
+        "contractId": "AAPL20261009P325",
+        "rawOpenInterest": "5",
+        "openInterest": 5,
+        "contractDate": "2026-10-05"
+      }
+    },
+    {
+      "id": "AAPL_325P_EXCHANGE_COMPARISON",
+      "pass": true,
+      "evidence": {
+        "providerOi": 5,
+        "exchangeOi": 5,
+        "ratio": 1,
+        "difference": 0,
+        "source": "https://example.test/fixture-exchange-not-live",
+        "referenceObservedAt": "2026-10-05T13:44:00.000Z",
+        "providerContractDate": "2026-10-05",
+        "exchangeOiAsOfDate": "2026-10-05",
+        "datesMatch": true,
+        "note": "Provider contract/chain date is the available date basis, not an independently supplied OI timestamp. Exact equality alone does not prove the reported provider discrepancy is fixed."
+      }
+    },
+    {
+      "id": "SUFFICIENT_HISTORY_LEVELS",
+      "pass": true,
+      "evidence": {
+        "symbol": "AAPL",
+        "basis": "provider daily history; local existing helpers",
+        "inputPrice": 329,
+        "controlledDayRange": {
+          "high": 334,
+          "low": 324,
+          "note": "Intentional nonzero day range to detect forbidden ATR substitution; not a market observation"
+        },
+        "observedAt": "2026-10-05T13:45:00.000Z",
+        "barCount": 25,
+        "firstBarDate": "2026-08-31T00:00:00.000Z",
+        "lastBarDate": "2026-09-24T00:00:00.000Z",
+        "atr": 4,
+        "upsideLevels": {
+          "entryZone": {
+            "low": 328,
+            "high": 329
+          },
+          "stopLoss": 322.4,
+          "stopLossPercent": 2.00607902735563,
+          "target1": {
+            "price": 337,
+            "reason": "Model target: 2 × measured ATR14",
+            "takeProfit": 50
+          },
+          "target2": {
+            "price": 343.4,
+            "reason": "Extended target (1.8× T1 distance)",
+            "takeProfit": 30
+          },
+          "target3": null,
+          "riskRewardRatio": 1.212121212121208,
+          "reasoning": "Entry above $328.00-$329.00. Stop at $322.40 (2.0% risk). Target 1: $337.00 (take 50%). Target 2: $343.40 (take 30%). R:R = 1.2:1"
+        },
+        "downsideLevels": {
+          "entryZone": {
+            "low": 329,
+            "high": 330
+          },
+          "stopLoss": 335.6,
+          "stopLossPercent": 2.00607902735563,
+          "target1": {
+            "price": 321,
+            "reason": "Model target: 2 × measured ATR14",
+            "takeProfit": 50
+          },
+          "target2": {
+            "price": 314.6,
+            "reason": "Extended target (1.8× T1 distance)",
+            "takeProfit": 30
+          },
+          "target3": null,
+          "riskRewardRatio": 1.212121212121208,
+          "reasoning": "Entry below $329.00-$330.00. Stop at $335.60 (2.0% risk). Target 1: $321.00 (take 50%). Target 2: $314.60 (take 30%). R:R = 1.2:1"
+        },
+        "symbolPayload": {
+          "atr": 4,
+          "invalidation": 323,
+          "scenarioInvalidation": 323,
+          "reactionZones": [
+            {
+              "price": 337.4,
+              "rMultiple": 1,
+              "note": "Model zone (1.0× reference-to-invalidation risk)"
+            },
+            {
+              "price": 341,
+              "rMultiple": 1.5,
+              "note": "Model zone (1.5× reference-to-invalidation risk)"
+            },
+            {
+              "price": 348.2,
+              "rMultiple": 2.5,
+              "note": "Model zone (2.5× reference-to-invalidation risk)"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "CONTROLLED_MISSING_HISTORY",
+      "pass": true,
+      "evidence": {
+        "symbol": "AAPL",
+        "basis": "CONTROLLED history removal; behavioral check, not a live missing-history symbol",
+        "inputPrice": 329,
+        "controlledDayRange": {
+          "high": 334,
+          "low": 324,
+          "note": "Intentional nonzero day range to detect forbidden ATR substitution; not a market observation"
+        },
+        "observedAt": "2026-10-05T13:45:00.000Z",
+        "barCount": 0,
+        "firstBarDate": null,
+        "lastBarDate": null,
+        "atr": null,
+        "upsideLevels": null,
+        "downsideLevels": null,
+        "symbolPayload": {
+          "atr": null,
+          "invalidation": null,
+          "scenarioInvalidation": null,
+          "reactionZones": []
+        }
+      }
+    },
+    {
+      "id": "LIVE_MISSING_HISTORY_WITNESS",
+      "pass": true,
+      "evidence": {
+        "spot": {
+          "price": 100,
+          "change": 1,
+          "changePercent": 0.3,
+          "asOf": "2026-10-05",
+          "basis": "provider trading day; intraday time unavailable"
+        },
+        "responseHasSeries": true,
+        "symbol": "FIXTURE",
+        "basis": "provider response; no history rows removed",
+        "inputPrice": 100,
+        "controlledDayRange": {
+          "high": 105,
+          "low": 95,
+          "note": "Intentional nonzero day range to detect forbidden ATR substitution; not a market observation"
+        },
+        "observedAt": "2026-10-05T13:45:00.000Z",
+        "barCount": 0,
+        "firstBarDate": null,
+        "lastBarDate": null,
+        "atr": null,
+        "upsideLevels": null,
+        "downsideLevels": null,
+        "symbolPayload": {
+          "atr": null,
+          "invalidation": null,
+          "scenarioInvalidation": null,
+          "reactionZones": []
+        }
+      }
+    },
+    {
+      "id": "PRODUCTION_DEMO_DISABLED",
+      "pass": true,
+      "evidence": "Existing production demo guard; no production route was contacted."
+    },
+    {
+      "id": "SCHEDULED_SESSION_WINDOW",
+      "pass": true,
+      "evidence": {
+        "startedAt": "2026-10-05T13:45:00.000Z",
+        "finishedAt": "2026-10-05T13:45:00.000Z",
+        "window": {
+          "start": "2026-10-05T13:30:00.000Z",
+          "end": "2026-10-05T15:00:00.000Z",
+          "label": "Tue 6 Oct 2026, 00:30–02:00 AEDT"
+        },
+        "fixtureClock": "2026-10-05T13:45:00.000Z"
+      }
+    },
+    {
+      "id": "READ_ONLY_BOUNDARY",
+      "pass": true,
+      "evidence": {
+        "databaseAttempts": 0,
+        "suppressedCacheWrites": 1,
+        "recorderAttempts": 0,
+        "networkRequests": 0,
+        "requestCount": 5,
+        "productionRoutesCalled": 0,
+        "redis": "disabled; writes suppressed in process",
+        "database": "mock rejects access"
+      }
+    }
+  ],
+  "requests": [
+    {
+      "function": "REALTIME_OPTIONS",
+      "symbol": "AAPL",
+      "method": "GET",
+      "url": "https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol=AAPL&require_greeks=true&apikey=%5BREDACTED%5D",
+      "startedAt": "2026-10-05T13:45:00.000Z",
+      "mode": "fixture",
+      "finishedAt": "2026-10-05T13:45:00.000Z",
+      "httpStatus": 200,
+      "sha256": "dc891d96dca4f940dea684ce1995bbad88852eba36b821ee710fb0f4ff3be1be"
+    },
+    {
+      "function": "GLOBAL_QUOTE",
+      "symbol": "AAPL",
+      "method": "GET",
+      "url": "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=%5BREDACTED%5D&entitlement=realtime",
+      "startedAt": "2026-10-05T13:45:00.000Z",
+      "mode": "fixture",
+      "finishedAt": "2026-10-05T13:45:00.000Z",
+      "httpStatus": 200,
+      "sha256": "9bed9ccd98df9155e84a1470c97c999794b7f2520a3a80a2c28def39b0b5c2c1"
+    },
+    {
+      "function": "TIME_SERIES_DAILY",
+      "symbol": "AAPL",
+      "method": "GET",
+      "url": "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=AAPL&apikey=%5BREDACTED%5D&outputsize=compact",
+      "startedAt": "2026-10-05T13:45:00.000Z",
+      "mode": "fixture",
+      "finishedAt": "2026-10-05T13:45:00.000Z",
+      "httpStatus": 200,
+      "sha256": "032e7adf956055d3e3bcd15771abae28120f0cc247d38dc6d2d46224778a604f"
+    },
+    {
+      "function": "GLOBAL_QUOTE",
+      "symbol": "FIXTURE",
+      "method": "GET",
+      "url": "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=FIXTURE&apikey=%5BREDACTED%5D&entitlement=realtime",
+      "startedAt": "2026-10-05T13:45:00.000Z",
+      "mode": "fixture",
+      "finishedAt": "2026-10-05T13:45:00.000Z",
+      "httpStatus": 200,
+      "sha256": "1ccc54766e43bb98a24d85263b3fe850b37c98c1fb564e6e10c7cceb3a1f7751"
+    },
+    {
+      "function": "TIME_SERIES_DAILY",
+      "symbol": "FIXTURE",
+      "method": "GET",
+      "url": "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=FIXTURE&apikey=%5BREDACTED%5D&outputsize=compact",
+      "startedAt": "2026-10-05T13:45:00.000Z",
+      "mode": "fixture",
+      "finishedAt": "2026-10-05T13:45:00.000Z",
+      "httpStatus": 200,
+      "sha256": "cdaea35fb2d10466626faacd560b875273ad2275f07590d7077a5c7a6a3e6999"
+    }
+  ],
+  "limitations": [
+    "Runs current checkout helpers locally, not deployed UI/auth/route acceptance.",
+    "Provider contract date is available; a separate provider OI observation time is not exposed.",
+    "Independent same-expiry exchange evidence and a natural missing-history symbol are required.",
+    "The roughly 9x provider discrepancy is not claimed fixed."
+  ],
+  "fatal": null
+}

@@ -1,0 +1,1504 @@
+{
+  "mocked": true,
+  "results": [
+    {
+      "tab": "backtest",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:32:12.320Z",
+      "finalUrl": "http://127.0.0.1:3123/tools/workspace?tab=backtest",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 879,
+      "scrollWidth": 1280,
+      "screens": 1.09875,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBACKTEST LAB\n\nStrategy & scanner backtesting engine\n\nBACKTEST METHOD\nChoose one engine, then read the full result stack below.\nStrategy\nScanner\nSYMBOL\nTIMEFRAME\n5m\n15m\n30m\n1H\n4H\nDaily\nWeekly\nSTART\nEND\nEDGE GROUP\nMSP AIO Systems\nScalping Edge\nTrend Following\nMean Reversion\nBreakdown Play (Bears)\nBreakout\nLiquidity Play\nTime Confluence\nSTRATEGY\n🧠 Brain Signal Replay (Decision Packets)\n⏱️ Time Scanner Replay\nMSP Day Trader AIO (Score 5+)\nMSP Day Trader Strict (Score 6+)\n📈 Day Trader v3 Optimized (More Trades)\n🚀 Day Trader v3 Aggressive (Max Trades)\nMSP Multi-TF Dashboard (Bias 6+)\nMSP Multi-TF Strict (Bias 8+)\nMSP Trend Pullback\nMSP Liquidity Reversal\nCAPITAL ($)\nRun Backtest\n🧪\nConfigure your strategy parameters above and click Run Backtest\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tab": "backtest",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:32:14.168Z",
+      "finalUrl": "http://127.0.0.1:3123/tools/workspace?tab=backtest",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1331,
+      "scrollWidth": 390,
+      "screens": 1.5770142180094786,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBACKTEST LAB\n\nStrategy & scanner backtesting engine\n\nBACKTEST METHOD\nChoose one engine, then read the full result stack below.\nStrategy\nScanner\nSYMBOL\nTIMEFRAME\n5m\n15m\n30m\n1H\n4H\nDaily\nWeekly\nSTART\nEND\nEDGE GROUP\nMSP AIO Systems\nScalping Edge\nTrend Following\nMean Reversion\nBreakdown Play (Bears)\nBreakout\nLiquidity Play\nTime Confluence\nSTRATEGY\n🧠 Brain Signal Replay (Decision Packets)\n⏱️ Time Scanner Replay\nMSP Day Trader AIO (Score 5+)\nMSP Day Trader Strict (Score 6+)\n📈 Day Trader v3 Optimized (More Trades)\n🚀 Day Trader v3 Aggressive (Max Trades)\nMSP Multi-TF Dashboard (Bias 6+)\nMSP Multi-TF Strict (Bias 8+)\nMSP Trend Pullback\nMSP Liquidity Reversal\nCAPITAL ($)\nRun Backtest\n🧪\nConfigure your strategy parameters above and click Run Backtest\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tab": "backtest",
+      "tier": "pro",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:32:15.764Z",
+      "finalUrl": "http://127.0.0.1:3123/tools/workspace?tab=backtest",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 879,
+      "scrollWidth": 1280,
+      "screens": 1.09875,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBACKTEST LAB\n\nStrategy & scanner backtesting engine\n\nBACKTEST METHOD\nChoose one engine, then read the full result stack below.\nStrategy\nScanner\nSYMBOL\nTIMEFRAME\n5m\n15m\n30m\n1H\n4H\nDaily\nWeekly\nSTART\nEND\nEDGE GROUP\nMSP AIO Systems\nScalping Edge\nTrend Following\nMean Reversion\nBreakdown Play (Bears)\nBreakout\nLiquidity Play\nTime Confluence\nSTRATEGY\n🧠 Brain Signal Replay (Decision Packets)\n⏱️ Time Scanner Replay\nMSP Day Trader AIO (Score 5+)\nMSP Day Trader Strict (Score 6+)\n📈 Day Trader v3 Optimized (More Trades)\n🚀 Day Trader v3 Aggressive (Max Trades)\nMSP Multi-TF Dashboard (Bias 6+)\nMSP Multi-TF Strict (Bias 8+)\nMSP Trend Pullback\nMSP Liquidity Reversal\nCAPITAL ($)\nRun Backtest\n🧪\nConfigure your strategy parameters above and click Run Backtest\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tab": "backtest",
+      "tier": "pro",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:32:17.731Z",
+      "finalUrl": "http://127.0.0.1:3123/tools/workspace?tab=backtest",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1331,
+      "scrollWidth": 390,
+      "screens": 1.5770142180094786,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBACKTEST LAB\n\nStrategy & scanner backtesting engine\n\nBACKTEST METHOD\nChoose one engine, then read the full result stack below.\nStrategy\nScanner\nSYMBOL\nTIMEFRAME\n5m\n15m\n30m\n1H\n4H\nDaily\nWeekly\nSTART\nEND\nEDGE GROUP\nMSP AIO Systems\nScalping Edge\nTrend Following\nMean Reversion\nBreakdown Play (Bears)\nBreakout\nLiquidity Play\nTime Confluence\nSTRATEGY\n🧠 Brain Signal Replay (Decision Packets)\n⏱️ Time Scanner Replay\nMSP Day Trader AIO (Score 5+)\nMSP Day Trader Strict (Score 6+)\n📈 Day Trader v3 Optimized (More Trades)\n🚀 Day Trader v3 Aggressive (Max Trades)\nMSP Multi-TF Dashboard (Bias 6+)\nMSP Multi-TF Strict (Bias 8+)\nMSP Trend Pullback\nMSP Liquidity Reversal\nCAPITAL ($)\nRun Backtest\n🧪\nConfigure your strategy parameters above and click Run Backtest\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tab": "backtest",
+      "tier": "free",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:32:19.225Z",
+      "finalUrl": "http://127.0.0.1:3123/tools/workspace?tab=backtest",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 855,
+      "scrollWidth": 1280,
+      "screens": 1.06875,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBACKTEST LAB\n\nStrategy & scanner backtesting engine\n\nBACKTEST METHOD\nChoose one engine, then read the full result stack below.\nStrategy\nScanner\nSYMBOL\nTIMEFRAME\n5m\n15m\n30m\n1H\n4H\nDaily\nWeekly\nSTART\nEND\nEDGE GROUP\nMSP AIO Systems\nScalping Edge\nTrend Following\nMean Reversion\nBreakdown Play (Bears)\nBreakout\nLiquidity Play\nTime Confluence\nSTRATEGY\n🧠 Brain Signal Replay (Decision Packets)\n⏱️ Time Scanner Replay\nMSP Day Trader AIO (Score 5+)\nMSP Day Trader Strict (Score 6+)\n📈 Day Trader v3 Optimized (More Trades)\n🚀 Day Trader v3 Aggressive (Max Trades)\nMSP Multi-TF Dashboard (Bias 6+)\nMSP Multi-TF Strict (Bias 8+)\nMSP Trend Pullback\nMSP Liquidity Reversal\nCAPITAL ($)\nRun Backtest\n🧪\nConfigure your strategy parameters above and click Run Backtest\nStrategy Backtesting Engine\nThis feature requires the Pro plan.\nUpgrade to Pro →\nBacktest Engine\nThis feature requires the Pro plan.\nUpgrade to Pro →\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tab": "backtest",
+      "tier": "free",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:32:21.614Z",
+      "finalUrl": "http://127.0.0.1:3123/tools/workspace?tab=backtest",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1307,
+      "scrollWidth": 390,
+      "screens": 1.5485781990521328,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nBACKTEST LAB\n\nStrategy & scanner backtesting engine\n\nBACKTEST METHOD\nChoose one engine, then read the full result stack below.\nStrategy\nScanner\nSYMBOL\nTIMEFRAME\n5m\n15m\n30m\n1H\n4H\nDaily\nWeekly\nSTART\nEND\nEDGE GROUP\nMSP AIO Systems\nScalping Edge\nTrend Following\nMean Reversion\nBreakdown Play (Bears)\nBreakout\nLiquidity Play\nTime Confluence\nSTRATEGY\n🧠 Brain Signal Replay (Decision Packets)\n⏱️ Time Scanner Replay\nMSP Day Trader AIO (Score 5+)\nMSP Day Trader Strict (Score 6+)\n📈 Day Trader v3 Optimized (More Trades)\n🚀 Day Trader v3 Aggressive (Max Trades)\nMSP Multi-TF Dashboard (Bias 6+)\nMSP Multi-TF Strict (Bias 8+)\nMSP Trend Pullback\nMSP Liquidity Reversal\nCAPITAL ($)\nRun Backtest\n🧪\nConfigure your strategy parameters above and click Run Backtest\nStrategy Backtesting Engine\nThis feature requires the Pro plan.\nUpgrade to Pro →\nBacktest Engine\nThis feature requires the Pro plan.\nUpgrade to Pro →\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tab": "backtest",
+      "tier": "anonymous",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:32:23.263Z",
+      "finalUrl": "http://127.0.0.1:3123/tools/workspace?tab=backtest",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nTrack is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tab": "backtest",
+      "tier": "anonymous",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:32:25.062Z",
+      "finalUrl": "http://127.0.0.1:3123/tools/workspace?tab=backtest",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nTrack is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tab": "learning",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:32:27.288Z",
+      "finalUrl": "http://127.0.0.1:3123/tools/workspace?tab=learning",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1324,
+      "scrollWidth": 1280,
+      "screens": 1.655,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nEdge Score\n62\nWin Rate\n58%\nAvg R:R\n1.4\nTotal Trades\n24\nBest Doctrine\nTrend continuation\n65% win · 6 trades\nWorst Doctrine\nCompression expansion\n50% win · 6 trades\nBest Regime\nTrend\n65% win · 6 trades\nWorst Regime\nRange\n50% win · 6 trades\nDoctrine Performance\nDoctrine\tTrades\tWin%\tAvg R\tPF\nCompression Breakout\t6\t50%\t1.2\t1.30\nVol Expansion Breakout\t6\t55%\t1.3\t1.40\nTrend Continuation\t6\t60%\t1.4\t1.50\nTrend Pullback\t6\t65%\t1.5\t1.60\nMSP AI Framework Library\nCompression → Expansion\neither\n\nVolatility coils tight (BBWP < 20), then breaks out with volume expansion.\n\nVolatility Expansion Breakout\neither\n\nDVE shifts to expansion regime with increasing BBWP and volume surge.\n\nTrend Continuation\neither\n\nStrong trend with pullback absorbed, momentum resuming.\n\nTrend Pullback Entry\neither\n\nEstablished trend, price pulls back to key structure level for entry.\n\nLiquidity Sweep → Reversal\neither\n\nPrice wicks beyond key level sweeping stops, then snaps back inside range.\n\nRange High/Low Fade\neither\n\nPrice approaches range extremes with rejection signals.\n\nGamma Pin Near Expiry\neither\n\nPrice gravitates toward max OI/gamma strike as expiry approaches.\n\nGamma Squeeze\neither\n\nNegative gamma environment causes dealer hedging to amplify the move.\n\nMean Reversion\neither\n\nOverextended price snaps back to moving average or VWAP.\n\nMomentum Burst\neither\n\nStrong directional momentum with volume confirmation, ride the wave.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tab": "learning",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:32:29.367Z",
+      "finalUrl": "http://127.0.0.1:3123/tools/workspace?tab=learning",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 2260,
+      "scrollWidth": 390,
+      "screens": 2.677725118483412,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nEdge Score\n62\nWin Rate\n58%\nAvg R:R\n1.4\nTotal Trades\n24\nBest Doctrine\nTrend continuation\n65% win · 6 trades\nWorst Doctrine\nCompression expansion\n50% win · 6 trades\nBest Regime\nTrend\n65% win · 6 trades\nWorst Regime\nRange\n50% win · 6 trades\nDoctrine Performance\nDoctrine\tTrades\tWin%\tAvg R\tPF\nCompression Breakout\t6\t50%\t1.2\t1.30\nVol Expansion Breakout\t6\t55%\t1.3\t1.40\nTrend Continuation\t6\t60%\t1.4\t1.50\nTrend Pullback\t6\t65%\t1.5\t1.60\nMSP AI Framework Library\nCompression → Expansion\neither\n\nVolatility coils tight (BBWP < 20), then breaks out with volume expansion.\n\nVolatility Expansion Breakout\neither\n\nDVE shifts to expansion regime with increasing BBWP and volume surge.\n\nTrend Continuation\neither\n\nStrong trend with pullback absorbed, momentum resuming.\n\nTrend Pullback Entry\neither\n\nEstablished trend, price pulls back to key structure level for entry.\n\nLiquidity Sweep → Reversal\neither\n\nPrice wicks beyond key level sweeping stops, then snaps back inside range.\n\nRange High/Low Fade\neither\n\nPrice approaches range extremes with rejection signals.\n\nGamma Pin Near Expiry\neither\n\nPrice gravitates toward max OI/gamma strike as expiry approaches.\n\nGamma Squeeze\neither\n\nNegative gamma environment causes dealer hedging to amplify the move.\n\nMean Reversion\neither\n\nOverextended price snaps back to moving average or VWAP.\n\nMomentum Burst\neither\n\nStrong directional momentum with volume confirmation, ride the wave.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tab": "learning",
+      "tier": "pro",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:32:31.535Z",
+      "finalUrl": "http://127.0.0.1:3123/tools/workspace?tab=learning",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 936,
+      "scrollWidth": 1280,
+      "screens": 1.17,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\n\nNo Doctrine History Yet\n\nWhen you take trades using Golden Egg doctrine matches, your personal edge profile will appear here.\n\nMSP AI Framework Library\nCompression → Expansion\neither\n\nVolatility coils tight (BBWP < 20), then breaks out with volume expansion.\n\nVolatility Expansion Breakout\neither\n\nDVE shifts to expansion regime with increasing BBWP and volume surge.\n\nTrend Continuation\neither\n\nStrong trend with pullback absorbed, momentum resuming.\n\nTrend Pullback Entry\neither\n\nEstablished trend, price pulls back to key structure level for entry.\n\nLiquidity Sweep → Reversal\neither\n\nPrice wicks beyond key level sweeping stops, then snaps back inside range.\n\nRange High/Low Fade\neither\n\nPrice approaches range extremes with rejection signals.\n\nGamma Pin Near Expiry\neither\n\nPrice gravitates toward max OI/gamma strike as expiry approaches.\n\nGamma Squeeze\neither\n\nNegative gamma environment causes dealer hedging to amplify the move.\n\nMean Reversion\neither\n\nOverextended price snaps back to moving average or VWAP.\n\nMomentum Burst\neither\n\nStrong directional momentum with volume confirmation, ride the wave.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tab": "learning",
+      "tier": "pro",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:32:33.908Z",
+      "finalUrl": "http://127.0.0.1:3123/tools/workspace?tab=learning",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1612,
+      "scrollWidth": 390,
+      "screens": 1.9099526066350712,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\n\nNo Doctrine History Yet\n\nWhen you take trades using Golden Egg doctrine matches, your personal edge profile will appear here.\n\nMSP AI Framework Library\nCompression → Expansion\neither\n\nVolatility coils tight (BBWP < 20), then breaks out with volume expansion.\n\nVolatility Expansion Breakout\neither\n\nDVE shifts to expansion regime with increasing BBWP and volume surge.\n\nTrend Continuation\neither\n\nStrong trend with pullback absorbed, momentum resuming.\n\nTrend Pullback Entry\neither\n\nEstablished trend, price pulls back to key structure level for entry.\n\nLiquidity Sweep → Reversal\neither\n\nPrice wicks beyond key level sweeping stops, then snaps back inside range.\n\nRange High/Low Fade\neither\n\nPrice approaches range extremes with rejection signals.\n\nGamma Pin Near Expiry\neither\n\nPrice gravitates toward max OI/gamma strike as expiry approaches.\n\nGamma Squeeze\neither\n\nNegative gamma environment causes dealer hedging to amplify the move.\n\nMean Reversion\neither\n\nOverextended price snaps back to moving average or VWAP.\n\nMomentum Burst\neither\n\nStrong directional momentum with volume confirmation, ride the wave.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tab": "learning",
+      "tier": "free",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:32:36.415Z",
+      "finalUrl": "http://127.0.0.1:3123/tools/workspace?tab=learning",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1324,
+      "scrollWidth": 1280,
+      "screens": 1.655,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nEdge Score\n62\nWin Rate\n58%\nAvg R:R\n1.4\nTotal Trades\n24\nBest Doctrine\nTrend continuation\n65% win · 6 trades\nWorst Doctrine\nCompression expansion\n50% win · 6 trades\nBest Regime\nTrend\n65% win · 6 trades\nWorst Regime\nRange\n50% win · 6 trades\nDoctrine Performance\nDoctrine\tTrades\tWin%\tAvg R\tPF\nCompression Breakout\t6\t50%\t1.2\t1.30\nVol Expansion Breakout\t6\t55%\t1.3\t1.40\nTrend Continuation\t6\t60%\t1.4\t1.50\nTrend Pullback\t6\t65%\t1.5\t1.60\nMSP AI Framework Library\nCompression → Expansion\neither\n\nVolatility coils tight (BBWP < 20), then breaks out with volume expansion.\n\nVolatility Expansion Breakout\neither\n\nDVE shifts to expansion regime with increasing BBWP and volume surge.\n\nTrend Continuation\neither\n\nStrong trend with pullback absorbed, momentum resuming.\n\nTrend Pullback Entry\neither\n\nEstablished trend, price pulls back to key structure level for entry.\n\nLiquidity Sweep → Reversal\neither\n\nPrice wicks beyond key level sweeping stops, then snaps back inside range.\n\nRange High/Low Fade\neither\n\nPrice approaches range extremes with rejection signals.\n\nGamma Pin Near Expiry\neither\n\nPrice gravitates toward max OI/gamma strike as expiry approaches.\n\nGamma Squeeze\neither\n\nNegative gamma environment causes dealer hedging to amplify the move.\n\nMean Reversion\neither\n\nOverextended price snaps back to moving average or VWAP.\n\nMomentum Burst\neither\n\nStrong directional momentum with volume confirmation, ride the wave.\n\nDoctrine Learning\nThis feature requires the Pro plan.\nUpgrade to Pro →\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tab": "learning",
+      "tier": "free",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:32:38.632Z",
+      "finalUrl": "http://127.0.0.1:3123/tools/workspace?tab=learning",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 2260,
+      "scrollWidth": 390,
+      "screens": 2.677725118483412,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nEdge Score\n62\nWin Rate\n58%\nAvg R:R\n1.4\nTotal Trades\n24\nBest Doctrine\nTrend continuation\n65% win · 6 trades\nWorst Doctrine\nCompression expansion\n50% win · 6 trades\nBest Regime\nTrend\n65% win · 6 trades\nWorst Regime\nRange\n50% win · 6 trades\nDoctrine Performance\nDoctrine\tTrades\tWin%\tAvg R\tPF\nCompression Breakout\t6\t50%\t1.2\t1.30\nVol Expansion Breakout\t6\t55%\t1.3\t1.40\nTrend Continuation\t6\t60%\t1.4\t1.50\nTrend Pullback\t6\t65%\t1.5\t1.60\nMSP AI Framework Library\nCompression → Expansion\neither\n\nVolatility coils tight (BBWP < 20), then breaks out with volume expansion.\n\nVolatility Expansion Breakout\neither\n\nDVE shifts to expansion regime with increasing BBWP and volume surge.\n\nTrend Continuation\neither\n\nStrong trend with pullback absorbed, momentum resuming.\n\nTrend Pullback Entry\neither\n\nEstablished trend, price pulls back to key structure level for entry.\n\nLiquidity Sweep → Reversal\neither\n\nPrice wicks beyond key level sweeping stops, then snaps back inside range.\n\nRange High/Low Fade\neither\n\nPrice approaches range extremes with rejection signals.\n\nGamma Pin Near Expiry\neither\n\nPrice gravitates toward max OI/gamma strike as expiry approaches.\n\nGamma Squeeze\neither\n\nNegative gamma environment causes dealer hedging to amplify the move.\n\nMean Reversion\neither\n\nOverextended price snaps back to moving average or VWAP.\n\nMomentum Burst\neither\n\nStrong directional momentum with volume confirmation, ride the wave.\n\nDoctrine Learning\nThis feature requires the Pro plan.\nUpgrade to Pro →\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tab": "learning",
+      "tier": "anonymous",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:32:40.182Z",
+      "finalUrl": "http://127.0.0.1:3123/tools/workspace?tab=learning",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nTrack is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "tab": "learning",
+      "tier": "anonymous",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:32:41.833Z",
+      "finalUrl": "http://127.0.0.1:3123/tools/workspace?tab=learning",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nSign in required\nTrack is tied to your account\n\nWatchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.\n\nSign In\nSee Pricing\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": []
+    }
+  ],
+  "requests": [
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/profile",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/playbooks",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/profile",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/playbooks",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/profile",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/playbooks",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/profile",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/playbooks",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/profile",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/playbooks",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/profile",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/doctrine/playbooks",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    }
+  ],
+  "errors": []
+}

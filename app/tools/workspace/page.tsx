@@ -18,7 +18,6 @@ const JournalPageV1 = dynamic(() => import('@/components/journal/JournalPage'), 
 const PortfolioV1 = dynamic(() => import('@/app/tools/portfolio/page').then(m => ({ default: m.PortfolioContent })), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
 const AlertsContentV1 = dynamic(() => import('@/app/tools/alerts/page').then(m => ({ default: m.AlertsContent })), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
 const BacktestPage = dynamic(() => import('@/components/backtest/BacktestHub'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
-const AccountSection = dynamic(() => import('./AccountSection'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
 const LearningTab = dynamic(() => import('./LearningTab'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
 
 const TABS = ['Watchlists', 'Journal', 'Portfolio', 'Learning', 'Backtest', 'Alerts', 'Settings'] as const;
@@ -44,10 +43,12 @@ function WorkspaceContent() {
   // Do NOT depend on `tab` here — that would force user clicks back to the URL value.
   useEffect(() => {
     const requestedTab = TABS.find(t => t.toLowerCase() === urlTabParam);
-    if (requestedTab) setTab(requestedTab);
-  }, [urlTabParam]);
+    if (requestedTab === 'Settings') router.replace('/account');
+    else if (requestedTab) setTab(requestedTab);
+  }, [urlTabParam, router]);
 
   const selectWorkspaceTab = (nextTab: WorkspaceTab) => {
+    if (nextTab === 'Settings') { router.replace('/account'); return; }
     setTab(nextTab);
     const query = new URLSearchParams(searchParams.toString());
     query.set('tab', nextTab.toLowerCase());
@@ -95,7 +96,7 @@ function WorkspaceContent() {
 
       {/* -- BACKTEST ------------------------------------------------- */}
       {tab === 'Backtest' && (
-        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Backtest Engine">
+        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Backtest">
           <BacktestPage embeddedInWorkspace />
         </UpgradeGate>
       )}
@@ -104,7 +105,7 @@ function WorkspaceContent() {
       {tab === 'Alerts' && <RiskPermissionProvider><AlertsContentV1 embeddedInWorkspace /></RiskPermissionProvider>}
 
       {/* -- SETTINGS / ACCOUNT -------------------------------------- */}
-      {tab === 'Settings' && <AccountSection />}
+      {tab === 'Settings' && <p className="text-sm text-slate-400">Opening account settings…</p>}
     </div>
   );
 }

@@ -731,8 +731,12 @@ async function ensureJournalSchema() {
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS broker_order_id VARCHAR(120)`);
 }
 
+/** Default off. Workflow events auto-create journal drafts only when this is explicitly set true. */
+const AUTO_CREATE_JOURNAL_DRAFT_FOR_EVENT_ENABLED: boolean = false;
+
 async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEvent) {
   if (event.event_type !== 'trade.plan.created') return false;
+  if (!AUTO_CREATE_JOURNAL_DRAFT_FOR_EVENT_ENABLED) return false;
 
   const payload = event.payload as Record<string, any>;
   const planPayload = getPlanPayload(payload);

@@ -1,0 +1,22 @@
+{
+  "source": "https://example.test/fixture-exchange-not-live",
+  "observedAt": "2026-10-05T13:44:00.000Z",
+  "contracts": [
+    {
+      "symbol": "AAPL",
+      "expiry": "2026-10-09",
+      "strike": 330,
+      "type": "call",
+      "openInterest": 10,
+      "oiAsOfDate": "2026-10-05"
+    },
+    {
+      "symbol": "AAPL",
+      "expiry": "2026-10-09",
+      "strike": 325,
+      "type": "put",
+      "openInterest": 5,
+      "oiAsOfDate": "2026-10-05"
+    }
+  ]
+}
