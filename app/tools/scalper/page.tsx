@@ -101,8 +101,24 @@ function normalizeScalpRows(rows: ScalpResult[]): ScalpResult[] {
   );
 }
 
-/* ─── Component ─── */
+// Keep the existing scanner implementation dormant until a real 5-minute scan is verified.
 export default function ScalperPage() {
+  return (
+    <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 text-white">
+      <header>
+        <h1 className="text-2xl font-bold">Scalping scanner</h1>
+        <p className="mt-2 text-sm text-slate-400">Short-timeframe research scan.</p>
+      </header>
+      <section role="status" className="rounded-xl border border-amber-400/35 bg-amber-400/10 p-5 text-amber-200">
+        Live scalping scan not available yet. Coming soon.
+      </section>
+      <ComplianceDisclaimer variant="intraday" />
+    </main>
+  );
+}
+
+/* ─── Component ─── */
+function DormantScalperScanner() {
   const { tier, isLoading: tierLoading, isLoggedIn } = useUserTier();
   const canAccess = canAccessScalper(tier);
 
