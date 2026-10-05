@@ -1,8 +1,10 @@
+import { redirect } from 'next/navigation';
 import IntelligenceUnderConstruction from '@/components/intelligence/IntelligenceUnderConstruction';
 
 export const dynamic = 'force-static';
 
 export default function LeadLagPage() {
+  redirect('/intelligence');
   return (
     <IntelligenceUnderConstruction
       moduleName="Cross-Asset Lead/Lag"
