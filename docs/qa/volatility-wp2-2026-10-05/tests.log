@@ -32,4 +32,3 @@ stdout | test/dveFreshness.test.ts > DVE freshness comes from the data age, not 
       Tests  18 passed (18)
    Start at  13:12:03
    Duration  1.34s (transform 531ms, setup 0ms, collect 928ms, tests 212ms, environment 371ms, prepare 292ms)
-
