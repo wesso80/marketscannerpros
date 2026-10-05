@@ -1,0 +1,33 @@
+
+ RUN  v3.2.4 /workspace/scratch/0535040d28c6/terminal-research
+
+stdout | test/twoTierAccess.test.ts > central paid-tier helpers > hasPaidSessionAccess passes for pro
+[access] Temporary Pro Trader bypass not configured
+
+stdout | test/twoTierAccess.test.ts > central paid-tier helpers > hasPaidSessionAccess passes for pro_trader
+[access] Temporary Pro Trader bypass not configured
+
+ ✓ test/layoutFlowAudit.test.ts (22 tests) 73ms
+stdout | test/twoTierAccess.test.ts > central paid-tier helpers > hasPaidSessionAccess fails for free
+[access] Temporary Pro Trader bypass not configured
+
+stdout | test/twoTierAccess.test.ts > central paid-tier helpers > hasPaidSessionAccess fails for anonymous
+[access] Temporary Pro Trader bypass not configured
+
+stdout | test/twoTierAccess.test.ts > central paid-tier helpers > hasPaidSessionAccess fails for cancelled
+[access] Temporary Pro Trader bypass not configured
+
+ ✓ test/scalperFreshness.test.ts (8 tests) 26ms
+ ✓ test/productionAuditRemediation.test.ts (9 tests) 9ms
+ ✓ test/scalperVolume.test.ts (9 tests) 9ms
+ ✓ test/capitalPressureBlockedPrefix.test.ts (2 tests) 4ms
+ ✓ test/terminalResearchViews.test.tsx (10 tests) 261ms
+ ✓ test/scalperUnavailable.test.tsx (6 tests) 129ms
+ ✓ test/terminalShell.test.tsx (7 tests) 207ms
+ ✓ test/wp8bTerminalEmptyTabs.test.tsx (8 tests) 169ms
+ ✓ test/twoTierAccess.test.ts (134 tests) 1881ms
+
+ Test Files  10 passed (10)
+      Tests  215 passed (215)
+   Start at  05:52:43
+   Duration  2.51s (transform 2.04s, setup 0ms, collect 3.59s, tests 2.77s, environment 1.69s, prepare 749ms)

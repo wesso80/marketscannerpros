@@ -16,14 +16,14 @@ import { isPaidTier } from '@/lib/tiers';
 import { useCachedTopSymbols } from '@/hooks/useCachedTopSymbols';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { detectMarketPath, type MarketPath } from '@/lib/terminal/marketPath';
-import { terminalUsesSymbolLabel } from '@/lib/terminal/symbolLabel';
+import CapitalPressureView from '@/components/terminal/CapitalPressureView';
 import TerminalCryptoDesk from '@/components/terminal/TerminalCryptoDesk';
 import { hasCommoditySessionMap } from '@/lib/terminal/futures/cashBridgeMap';
 
 const OptionsTerminalView = dynamic(() => import('@/components/options-terminal/OptionsTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div> });
 const CryptoTerminalView = dynamic(() => import('@/components/crypto-terminal/CryptoTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div> });
 const FuturesTerminalPanel = dynamic(() => import('@/components/terminal/futures/FuturesTerminalPanel'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Futures Terminal…</div> });
-const OptionsConfluence = dynamic(() => import('@/components/options-terminal/OptionsConfluenceScanner'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Confluence Engine…</div> });
+const OptionsConfluence = dynamic(() => import('@/components/options-terminal/OptionsConfluenceScanner'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Confluence…</div> });
 const OptionsFlow = dynamic(() => import('@/components/options-terminal/OptionsFlowView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Flow…</div> });
 const TimeScanner = dynamic(() => import('@/app/tools/time-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Gravity…</div> });
 const ConfluenceScanner = dynamic(() => import('@/app/tools/confluence-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Confluence Scanner…</div> });
@@ -39,8 +39,6 @@ import {
 } from '@/app/v2/_lib/api';
 import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
 import { PageHero } from '@/components/ui';
-import { blockedReasonLabel, stripBlockedPrefix } from '@/lib/flow-trade-permission';
-import { describeGammaInput } from '@/lib/options/dealerGammaInput';
 
 function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
@@ -134,7 +132,7 @@ const TERMINAL_TAB_META: Record<TerminalTab, { eyebrow: string; description: str
   },
   'Capital Pressure': {
     eyebrow: '5. Capital pressure',
-    description: 'Read flow, probability, gamma, liquidity, and session context together.',
+    description: 'Read flow, gamma, liquidity, and session context together.',
   },
   'Time Gravity': {
     eyebrow: '6. Gravity map',
@@ -179,7 +177,8 @@ function TerminalTabRail({
   const pathLabel = marketPath === 'crypto' ? 'Crypto path' : marketPath === 'futures' ? 'Futures path' : 'Equity path';
 
   return (
-    <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2" aria-label="Terminal market mechanics views">
+    <details className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2" aria-label="Terminal market mechanics views">
+      <summary className="min-h-10 cursor-pointer py-2 text-sm text-slate-200">{activeTab} · Change view</summary>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div>
           <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Mechanics workbench</div>
@@ -211,31 +210,7 @@ function TerminalTabRail({
           );
         })}
       </div>
-    </div>
-  );
-}
-
-const TERMINAL_SUBVIEW_FOCUS: Record<Exclude<TerminalTab, 'Close Calendar'>, string> = {
-  'Options Terminal': 'Chain Quality',
-  'Options Confluence': 'Setup Alignment',
-  'Options Flow': 'Flow Estimate',
-  Crypto: 'Derivatives Map',
-  'Futures Session': 'Session Transitions',
-  'Cash Bridge': 'Bridge Alignment',
-  'Commodity Session Map': 'Commodity Session Logic',
-  'Liquidity & Volume': 'Participation Context',
-  'Capital Pressure': 'Capital Pressure',
-  'Time Gravity': 'Gravity Map',
-  'Time Confluence': 'Final Timing Check',
-};
-
-function TerminalSubviewMetric({ label, value, tone = 'var(--msp-text)', detail }: { label: string; value: string; tone?: string; detail: string }) {
-  return (
-    <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
-      <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
-      <div className="mt-0.5 truncate text-sm font-black" style={{ color: tone }} title={value}>{value}</div>
-      <div className="mt-0.5 truncate text-[11px] text-slate-500" title={detail}>{detail}</div>
-    </div>
+    </details>
   );
 }
 
@@ -256,52 +231,10 @@ function TerminalSubviewFrame({
   onSelectTab: (tab: TerminalTab) => void;
   children: React.ReactNode;
 }) {
-  // These three tabs carry their own one-line state. Skip the second hero and the four repeated tiles so that state sits in the first screen.
-  if (tab === 'Options Flow' || tab === 'Crypto' || tab === 'Time Confluence') {
-    return <div className="min-w-0 space-y-3">{children}</div>;
-  }
-
-  const meta = TERMINAL_TAB_META[tab];
-  const sequence: TerminalTab[] = visibleTabsForPath(marketPath, commodityFutures).filter((t): t is Exclude<TerminalTab, 'Close Calendar'> => t !== 'Close Calendar');
-  const idx = sequence.indexOf(tab);
-  const adjacentTab: TerminalTab = idx >= 0 && idx < sequence.length - 1 ? sequence[idx + 1] : sequence[0];
-  const focusLabel = TERMINAL_SUBVIEW_FOCUS[tab];
-  const pathTone = marketPath === 'crypto' ? 'var(--msp-warn)' : marketPath === 'futures' ? '#22D3EE' : '#818CF8';
-
-  return (
-    <div className="space-y-3">
-      <section
-        className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
-        aria-label={`Terminal ${tab} command header`}
-      >
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
-          <div>
-            <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
-              <span className="text-emerald-300">Terminal subview</span>
-              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">{meta.eyebrow}</span>
-              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">Symbol {symbol}</span>
-            </div>
-            <h2 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">{tab} check for {symbol}</h2>
-            <p className="mt-1 text-xs leading-5 text-slate-400">{meta.description}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" onClick={() => onSelectTab('Close Calendar')} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15">Back to Calendar</button>
-              <button type="button" onClick={() => onSelectTab(adjacentTab)} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15">Open {adjacentTab}</button>
-              <a href={`/tools/workspace?tab=backtest&symbol=${encodeURIComponent(symbol)}&type=${marketPath}${timeframe ? `&timeframe=${encodeURIComponent(timeframe)}` : ''}`} className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Backtest</a>
-            </div>
-          </div>
-
-          <div className="grid self-start gap-1.5 sm:grid-cols-2">
-            <TerminalSubviewMetric label="Symbol" value={symbol} tone={pathTone} detail={`${marketPath.toUpperCase()} mechanics path`} />
-            <TerminalSubviewMetric label="View" value={tab} tone="#10B981" detail={meta.eyebrow} />
-            <TerminalSubviewMetric label="Focus" value={focusLabel} tone="#A5B4FC" detail="Completes the mechanics packet" />
-            <TerminalSubviewMetric label="Next Check" value={adjacentTab} tone="#38BDF8" detail="Continue the mechanics sequence" />
-          </div>
-        </div>
-      </section>
-      {children}
-    </div>
-  );
+  // Each subview owns its measured state; the page supplies the only Terminal hero.
+  return <div className="min-w-0 space-y-3">{children}</div>;
 }
+
 const ANCHOR_OPTIONS: { value: CloseCalendarAnchor; label: string }[] = [
   { value: 'NOW', label: 'Now' },
   { value: 'TODAY', label: 'Today' },
@@ -452,38 +385,6 @@ export default function TerminalPage() {
   /* Flow */
   const flow = useFlow(sym, flowMarketType);
   const activeMeta = TERMINAL_TAB_META[tab];
-  const terminalDataState = marketPath === 'futures'
-    ? tab === 'Close Calendar'
-      ? futuresTerminal.error
-        ? 'Calendar issue'
-        : futuresTerminal.loading
-          ? 'Loading'
-          : futuresTerminal.data
-            ? `Futures ${futuresTerminal.data.dataState}`
-            : 'Waiting'
-      : futuresTerminal.data?.dataState === 'partial'
-        ? 'Futures partial'
-        : 'Lens ready'
-    : tab === 'Close Calendar'
-      ? calendar.error
-        ? 'Calendar issue'
-        : calendar.loading
-          ? 'Loading'
-          : calData
-            ? 'Ready'
-            : 'Waiting'
-      : 'Lens ready';
-  const terminalDataTone = terminalDataState.includes('issue') ? 'var(--msp-warn)' : terminalDataState === 'Loading' ? '#38BDF8' : 'var(--msp-bull)';
-  const nextTerminalAction = marketPath === 'futures' && tab === 'Close Calendar'
-    ? 'Review Phantom Time / Cash Bridge'
-    : tab === 'Close Calendar'
-      ? 'Review close cluster timing'
-      : tab === 'Crypto'
-        ? 'Check derivatives pressure'
-        : tab === 'Capital Pressure'
-          ? 'Review capital pressure'
-          : 'Validate mechanics context';
-
   const quickSymbolRows = (
     <>
       <div className="flex flex-wrap items-center gap-1">
@@ -515,36 +416,24 @@ export default function TerminalPage() {
 
   return (
     <div className="flex min-w-0 max-w-full flex-col gap-3">
-      <ComplianceDisclaimer compact variant={asset === 'crypto' ? 'cryptoDerivatives' : 'options'} />
+      <div className={tab === 'Options Flow' ? 'order-last' : undefined}><ComplianceDisclaimer compact variant={asset === 'crypto' ? 'cryptoDerivatives' : 'options'} /></div>
 
       <PageHero
         ariaLabel="Terminal command header"
         eyebrow="Workflow step 3 · Market mechanics check"
-        badges={[
-          { label: activeMeta.eyebrow },
-          { label: `${asset.toUpperCase()} path` },
-        ]}
-        title="Use Terminal before Backtest."
-        subtitle={terminalUsesSymbolLabel(tab)
-          ? 'Symbol validates the symbol.'
-          : 'Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically.'}
+        badges={[{ label: activeMeta.eyebrow }]}
+        title="Terminal"
+        subtitle="Symbol checks the setup. Terminal shows timing and market mechanics."
         actions={[
-          { label: terminalUsesSymbolLabel(tab) ? 'Back to Symbol' : 'Back to Golden Egg', variant: 'primary', href: `/tools/golden-egg?symbol=${encodeURIComponent(sym)}&type=${marketPath}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
+          { label: 'Back to Symbol', variant: 'primary', href: `/tools/golden-egg?symbol=${encodeURIComponent(sym)}&type=${marketPath}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
           { label: 'Continue to Backtest', variant: 'secondary', href: `/tools/workspace?tab=backtest&symbol=${encodeURIComponent(sym)}&type=${marketPath}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
           { label: 'All tools', variant: 'ghost', href: '/tools' },
         ]}
-        metrics={terminalUsesSymbolLabel(tab) ? [
-          { label: 'Symbol', value: sym, tone: asset === 'crypto' ? 'warn' : 'info', detail: `${asset.toUpperCase()} mechanics path` },
-        ] : [
-          { label: 'Symbol', value: sym, tone: asset === 'crypto' ? 'warn' : 'info', detail: `${asset.toUpperCase()} mechanics path` },
-          { label: 'Active lens', value: tab, tone: 'bull', detail: activeMeta.eyebrow },
-          { label: 'Data state', value: terminalDataState, tone: terminalDataState.includes('issue') ? 'warn' : terminalDataState === 'Loading' ? 'info' : 'bull', detail: calendar.error || 'No blocking route errors' },
-          { label: 'Next check', value: nextTerminalAction, tone: 'info', detail: 'Complete before historical testing' },
-        ]}
+
       />
 
-      {/* Symbol Bar. On the three layout-gate tabs it follows the tab state so that state is in the first screen. */}
-      <Card className={terminalUsesSymbolLabel(tab) ? 'order-last' : ''}>
+      {/* One shared symbol picker for all subviews. */}
+      <Card>
         <div className="space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
             <input
@@ -552,32 +441,24 @@ export default function TerminalPage() {
               onChange={e => setSymInput(e.target.value.toUpperCase())}
               onKeyDown={e => e.key === 'Enter' && handleSymSubmit()}
               placeholder="Symbol..."
+              aria-label="Terminal symbol"
               className="w-28 bg-[#0A101C] border border-[var(--msp-border)] rounded-lg text-xs px-3 py-2 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-600/40 font-mono"
             />
             <button type="button" onClick={handleSymSubmit} className="px-3 py-2 text-xs rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30 transition-colors">
               Load
             </button>
             <span className="text-xs text-slate-400 ml-1">{sym}</span>
-            <Badge label={marketPath.toUpperCase()} color={marketPath === 'crypto' ? 'var(--msp-warn)' : marketPath === 'futures' ? '#22D3EE' : '#6366F1'} small />
-            <div className="ml-auto rounded-md border border-cyan-500/35 bg-cyan-500/10 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-cyan-200">
-              {marketPath === 'futures' ? 'FUTURES PATH' : marketPath === 'crypto' ? 'CRYPTO PATH' : 'EQUITY PATH'}
-            </div>
+
           </div>
 
-          {terminalUsesSymbolLabel(tab) ? (
-            <details className="rounded-md border border-slate-800">
-              <summary className="min-h-10 cursor-pointer list-none px-2 py-2 text-xs text-slate-300">More symbols</summary>
-              <div className="space-y-1 px-2 pb-2">
-                {quickSymbolRows}
-              </div>
-            </details>
-          ) : (
-            <div className="space-y-1">{quickSymbolRows}</div>
-          )}
+          <details className="rounded-md border border-slate-800">
+            <summary className="min-h-10 cursor-pointer list-none px-2 py-2 text-xs text-slate-300">More symbols</summary>
+            <div className="space-y-1 px-2 pb-2">{quickSymbolRows}</div>
+          </details>
         </div>
       </Card>
 
-      <div className={terminalUsesSymbolLabel(tab) ? 'order-last' : undefined}>
+      <div>
         <TerminalTabRail activeTab={tab} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={selectTab} />
       </div>
 
@@ -811,340 +692,12 @@ export default function TerminalPage() {
         </TerminalSubviewFrame>
       )}
       {/* -- FLOW ----------------------------------------------------- */}
-      {tab === 'Capital Pressure' && (() => {
-        if (!isPaidTier(tier)) return <UpgradeGate requiredTier="pro" currentTier={tier} feature="Capital Flow Analysis"><div className="py-12" /></UpgradeGate>;
-        const fd = flow.data?.data;
-        const brain = fd?.brain_decision_v1;
-        const rg = fd?.institutional_risk_governor;
-        const pm = fd?.probability_matrix;
-        const perm = fd?.flow_trade_permission;
-        const fs = fd?.flow_state;
-        const session = fd?.session_overlay;
-        const biasColor = fd?.bias === 'bullish' ? 'text-emerald-400' : fd?.bias === 'bearish' ? 'text-red-400' : 'text-slate-300';
-        const modeColor = fd?.market_mode === 'launch' ? 'text-emerald-400' : fd?.market_mode === 'pin' ? 'text-amber-400' : 'text-slate-400';
-        const gammaColor = fd?.gamma_state === 'Positive' ? 'text-emerald-400' : fd?.gamma_state === 'Negative' ? 'text-red-400' : 'text-amber-400';
-
-        return (
+      {tab === 'Capital Pressure' && (
+        !isPaidTier(tier) ? <UpgradeGate requiredTier="pro" currentTier={tier} feature="Capital Flow Analysis"><div className="py-12" /></UpgradeGate> :
         <TerminalSubviewFrame tab="Capital Pressure" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
-        <div className="space-y-4">
-          {flow.loading ? (
-            <Card><div className="space-y-3 py-8">{[1,2,3].map(i => <Skel key={i} h="h-10" />)}</div></Card>
-          ) : flow.error ? (
-            <Card><div className="text-xs text-red-400/60 py-4 text-center">Flow data unavailable: {flow.error}</div></Card>
-          ) : fd ? (
-            <>
-              {/* Header Strip */}
-              <Card>
-                <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-                  <h3 className="text-sm font-semibold text-white">Capital Flow — {sym}</h3>
-                  <div className="flex items-center gap-2">
-                    {fd.asof && <span className="text-[11px] text-slate-500">as of {new Date(fd.asof).toLocaleTimeString()}</span>}
-                    <button type="button" onClick={() => flow.refetch()} className="px-2 py-1 text-[11px] rounded border border-slate-700 text-slate-300 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/50">
-                      ↻ Refresh
-                    </button>
-                  </div>
-                </div>
-                <p className="mb-3 text-xs text-amber-200">{!perm ? 'Permission unavailable.' : perm.blocked ? (perm.sessionLimited ? `${perm.noTradeMode?.reason}.` : blockedReasonLabel(perm.noTradeMode?.reason)) : 'Permission conditions met.'} Directional scores and scenario weights are indicator summaries, not calibrated outcome probabilities; permission takes precedence.</p>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                  <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                    <div className="text-[11px] text-slate-500 uppercase">Bias</div>
-                    <div className={`text-lg font-bold capitalize ${biasColor}`}>{fd.bias || 'Not available right now'}</div>
-                  </div>
-                  <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                    <div className="text-[11px] text-slate-500 uppercase">Mode</div>
-                    <div className={`text-lg font-bold capitalize ${modeColor}`}>{fd.market_mode || 'Not available right now'}</div>
-                  </div>
-                  {fd.gamma_state && !/unavailable/i.test(fd.gamma_state) ? (
-                  <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                    <div className="text-xs text-slate-500 uppercase">Gamma</div>
-                    <div className={`text-lg font-bold ${gammaColor}`}>{fd.gamma_state}</div>
-                    <div className="mt-1 text-xs leading-snug text-slate-500" title={fd.gamma_input?.convention ?? undefined}>{describeGammaInput(fd.gamma_input)}</div>
-                  </div>
-                  ) : null}
-                  <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                    <div className="text-[11px] text-slate-500 uppercase">Directional score</div>
-                    <div className="text-lg font-bold text-white">{fd.conviction?.toFixed(0) ?? 'Not available right now'}</div>
-                  </div>
-                  <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                    <div className="text-[11px] text-slate-500 uppercase">Spot</div>
-                    <div className="text-lg font-bold text-white">{fd.spot != null ? `$${fd.spot.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Not available right now'}</div>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Probability Matrix */}
-              {pm && (
-                <Card>
-                  <h3 className="text-sm font-semibold text-white mb-3">Scenario weights · heuristic</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                    <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
-                      <div className="text-[11px] text-slate-500 uppercase">Continuation</div>
-                      <div className="text-base font-bold text-white">{pm.continuation.toFixed(0)}/100</div>
-                    </div>
-                    <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
-                      <div className="text-[11px] text-slate-500 uppercase">Pin / Reversion</div>
-                      <div className="text-base font-bold text-white">{pm.pinReversion.toFixed(0)}/100</div>
-                    </div>
-                    <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
-                      <div className="text-[11px] text-slate-500 uppercase">Expansion</div>
-                      <div className="text-base font-bold text-white">{pm.expansion.toFixed(0)}/100</div>
-                    </div>
-                    <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
-                      <div className="text-[11px] text-slate-500 uppercase">Regime</div>
-                      <div className={`text-base font-bold ${pm.regime === 'TRENDING' ? 'text-emerald-400' : pm.regime === 'NO_TREND' || pm.regime === 'MIXED' ? 'text-slate-300' : 'text-amber-400'}`} title="Largest scenario weight; TRENDING only when daily ADX (or gamma) measured a trend">{pm.regime.replace(/_/g, ' ')}</div>
-                    </div>
-                  </div>
-                  <div data-capital-chart className="space-y-1" aria-label="Scenario weight chart">
-                    {([['Continuation', pm.continuation], ['Pin', pm.pinReversion], ['Expansion', pm.expansion]] as const).map(([label, value]) => (
-                      <div key={label} className="grid grid-cols-[7rem_1fr] items-center gap-2 text-sm">
-                        <span>{label}</span>
-                        <span className="block h-2 rounded bg-white/10" aria-hidden="true"><span className="block h-2 rounded" style={{ width: `${Math.max(0, Math.min(100, value))}%`, background: 'var(--msp-bull)' }} /></span>
-                      </div>
-                    ))}
-                  </div>
-                  {perm && !perm.blocked && pm.decision && <div className="text-sm text-slate-400 bg-[var(--msp-panel-2)]/80 rounded-lg px-3 py-2">{pm.decision.replace(/_/g, ' ')}</div>}
-                </Card>
-              )}
-
-              {/* Brain Decision */}
-              {brain && (
-                <Card>
-                  <h3 className="text-sm font-semibold text-white mb-3">Brain Decision</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                    <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
-                      <div className="text-[11px] text-slate-500 uppercase">Brain Score</div>
-                      <div className="text-base font-bold text-white">{brain.brain_score?.score?.toFixed(0) ?? fd.brain_decision?.score?.toFixed(0) ?? '—'}</div>
-                    </div>
-                    <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
-                      <div className="text-[11px] text-slate-500 uppercase">Status</div>
-                      <div className={`text-base font-bold ${brain.brain_score?.permission === 'ALLOW' || fd.brain_decision?.permission === 'ALLOW' ? 'text-emerald-400' : brain.brain_score?.permission === 'BLOCK' || fd.brain_decision?.permission === 'BLOCK' ? 'text-red-400' : 'text-amber-400'}`}>
-                        {(brain.brain_score?.permission ?? fd.brain_decision?.permission ?? '—').replace('ALLOW', 'ALIGNED').replace('BLOCK', 'NOT ALIGNED')}
-                      </div>
-                    </div>
-                    <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
-                      <div className="text-[11px] text-slate-500 uppercase">Risk Mode</div>
-                      <div className="text-base font-bold text-white">{brain.brain_score?.mode ?? fd.brain_decision?.mode ?? '—'}</div>
-                    </div>
-                    <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
-                      <div className="text-[11px] text-slate-500 uppercase">Regime</div>
-                      <div className="text-base font-bold text-white">{brain.market_regime?.regime?.replace(/_/g, ' ') ?? '—'}</div>
-                    </div>
-                  </div>
-                  {(brain.brain_score?.state_summary ?? fd.brain_decision?.stateSummary) && (
-                    <div className="text-xs text-slate-400 bg-[var(--msp-panel-2)]/80 rounded-lg px-3 py-2">
-                      {brain.brain_score?.state_summary ?? fd.brain_decision?.stateSummary}
-                    </div>
-                  )}
-                </Card>
-              )}
-
-              {/* Execution Plan */}
-              {(brain?.execution_plan || fd.brain_decision?.plan) && (() => {
-                const plan = brain?.execution_plan || fd.brain_decision?.plan;
-                return (
-                <Card>
-                  <h3 className="text-sm font-semibold text-white mb-3">Reference Levels</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                    <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                      <div className="text-[11px] text-slate-500 uppercase">Signal Type</div>
-                      <div className="text-sm font-bold text-white capitalize">{plan.entry_type ?? plan.entryType ?? '—'}</div>
-                    </div>
-                    <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                      <div className="text-[11px] text-slate-500 uppercase">Weighting</div>
-                      <div className="text-sm font-bold text-white">{typeof plan.size === 'number' ? `${(plan.size * 100).toFixed(0)}%` : '—'}</div>
-                    </div>
-                    <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                      <div className="text-[11px] text-slate-500 uppercase">Invalidation Rule</div>
-                      <div className="text-xs text-slate-300">{plan.stop_rule ?? plan.stopRule ?? '—'}</div>
-                    </div>
-                  </div>
-                  {(plan.triggers || plan.targets) && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {plan.triggers?.length > 0 && (
-                        <div className="bg-[var(--msp-panel-2)]/80 rounded-lg px-3 py-2">
-                          <div className="text-[11px] text-slate-500 uppercase mb-1">Triggers</div>
-                          {plan.triggers.map((t: string, i: number) => <div key={i} className="text-xs text-slate-300">• {t}</div>)}
-                        </div>
-                      )}
-                      {plan.targets?.length > 0 && (
-                        <div className="bg-[var(--msp-panel-2)]/80 rounded-lg px-3 py-2">
-                          <div className="text-[11px] text-slate-500 uppercase mb-1">Key Levels</div>
-                          {plan.targets.map((t: string, i: number) => <div key={i} className="text-xs text-slate-300">• {t}</div>)}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </Card>
-                );
-              })()}
-
-              {/* Indicator Alignment & Risk Analysis */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {perm && (
-                  <Card>
-                    <h3 className="text-sm font-semibold text-white mb-3">Indicator Alignment</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">TPS</span>
-                        <span className="text-white font-mono">{perm.tps?.toFixed(0) ?? '—'}</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">Risk Mode</span>
-                        <span className="text-white">{perm.riskMode ?? '—'}</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">Weighting Factor</span>
-                        <span className="text-white font-mono">{perm.blocked ? '0.00' : perm.sizeMultiplier?.toFixed(2) ?? '—'}x</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">Analysis Mode</span>
-                        <span className="text-white">{perm.stopStyle?.replace(/_/g, ' ') ?? '—'}</span>
-                      </div>
-                      {perm.blocked && <div className={`mt-2 text-[11px] rounded px-2 py-1 ${perm.sessionLimited ? 'text-amber-300 bg-amber-500/10' : 'text-red-400 bg-red-500/10'}`}>{perm.sessionLimited ? perm.noTradeMode?.reason : `Analysis paused: ${stripBlockedPrefix(perm.noTradeMode?.reason) || 'conditions not met'}`}</div>}
-                      {!perm.blocked && perm.allowed?.length > 0 && (
-                        <div className="mt-2">
-                          <div className="text-[11px] text-slate-500 uppercase mb-1">Aligned</div>
-                          <div className="flex flex-wrap gap-1">
-                            {perm.allowed.map((a: string, i: number) => <span key={i} className="text-[11px] bg-emerald-500/10 text-emerald-400 rounded px-1.5 py-0.5">{a}</span>)}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                )}
-
-                {rg && (
-                  <Card>
-                    <h3 className="text-sm font-semibold text-white mb-3">Risk Analysis</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">IRS Score</span>
-                        <span className="text-white font-mono">{rg.irs?.toFixed(0) ?? '—'}</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">Risk Mode</span>
-                        <span className={`font-semibold ${rg.riskMode === 'FULL_OFFENSE' ? 'text-emerald-400' : rg.riskMode === 'LOCKDOWN' ? 'text-red-400' : rg.riskMode === 'DEFENSIVE' ? 'text-amber-400' : 'text-white'}`}>{rg.riskMode ?? '—'}</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">Conditions</span>
-                        <span className={rg.executionAllowed ? 'text-emerald-400' : 'text-red-400'}>{rg.executionAllowed ? 'Aligned' : 'Not Aligned'}</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">Vol Regime</span>
-                        <span className="text-white">{rg.volatility?.regime ?? '—'}</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">Weighting</span>
-                        <span className="text-white font-mono">{typeof rg.sizing?.finalSize === 'number' ? `${(rg.sizing.finalSize * 100).toFixed(0)}%` : '—'}</span>
-                      </div>
-                      {rg.hardBlocked && rg.hardBlockReasons?.length > 0 && (
-                        <div className="mt-2 text-[11px] text-red-400 bg-red-500/10 rounded px-2 py-1">
-                          <span aria-hidden="true">? </span>{rg.hardBlockReasons.join('; ')}
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                )}
-              </div>
-
-              {/* Liquidity Levels */}
-              {fd.liquidity_levels?.length > 0 && (
-                <Card>
-                  <h3 className="text-sm font-semibold text-white mb-3">Liquidity Levels</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-[var(--msp-border)]">
-                          <th scope="col" className="text-left py-2 px-2 text-[11px] uppercase text-slate-500">Level</th>
-                          <th scope="col" className="text-left py-2 px-2 text-[11px] uppercase text-slate-500">Label</th>
-                          <th scope="col" className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">Heuristic weight</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {fd.liquidity_levels.map((lv: any, i: number) => (
-                          <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20">
-                            <td className="py-2 px-2 font-mono text-white">${lv.level?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                            <td className="py-2 px-2">
-                              <Badge label={lv.label?.replace(/_/g, ' ')} color={
-                                lv.label?.includes('HIGH') || lv.label === 'ONH' || lv.label === 'PDH' || lv.label === 'EQH' ? 'var(--msp-bear)'
-                                : lv.label?.includes('LOW') || lv.label === 'ONL' || lv.label === 'PDL' || lv.label === 'EQL' ? 'var(--msp-bull)'
-                                : 'var(--msp-flat)'
-                              } small />
-                            </td>
-                            <td className="py-2 px-2 text-right font-mono text-slate-300">{typeof lv.prob === 'number' ? `${(lv.prob * 100).toFixed(0)}/100` : '—'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
-              )}
-
-              {/* Key Strikes & Flip Zones */}
-              {(fd.key_strikes?.length > 0 || fd.flip_zones?.length > 0) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {fd.key_strikes?.length > 0 && (
-                    <Card>
-                      <h3 className="text-sm font-semibold text-white mb-3">Key Strikes</h3>
-                      <div className="space-y-1">
-                        {fd.key_strikes.map((ks: any, i: number) => (
-                          <div key={i} className="flex justify-between text-xs py-1 border-b border-slate-800/30">
-                            <span className="font-mono text-white">${ks.strike?.toLocaleString()}</span>
-                            <span className="text-slate-400">Gravity: {ks.gravity?.toFixed(1)}</span>
-                            <Badge label={ks.type?.replace(/-/g, ' ')} color={ks.type === 'call-heavy' ? 'var(--msp-bull)' : ks.type === 'put-heavy' ? 'var(--msp-bear)' : 'var(--msp-flat)'} small />
-                          </div>
-                        ))}
-                      </div>
-                    </Card>
-                  )}
-                  {fd.flip_zones?.length > 0 && (
-                    <Card>
-                      <h3 className="text-sm font-semibold text-white mb-3">Flip Zones</h3>
-                      <div className="space-y-1">
-                        {fd.flip_zones.map((fz: any, i: number) => (
-                          <div key={i} className="flex justify-between text-xs py-1 border-b border-slate-800/30">
-                            <span className="font-mono text-white">${fz.level?.toLocaleString()}</span>
-                            <Badge label={fz.direction?.replace(/_/g, ' ')} color={fz.direction?.includes('bullish') ? 'var(--msp-bull)' : 'var(--msp-bear)'} small />
-                          </div>
-                        ))}
-                      </div>
-                    </Card>
-                  )}
-                </div>
-              )}
-
-              {/* Session Overlay */}
-              {session && (
-                <Card>
-                  <h3 className="text-sm font-semibold text-white mb-3">Session Context</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
-                      <div className="text-[11px] text-slate-500 uppercase">Phase</div>
-                      <div className="text-sm font-bold text-white capitalize">{session.phase?.replace(/_/g, ' ') ?? '—'}</div>
-                    </div>
-                    <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
-                      <div className="text-[11px] text-slate-500 uppercase">Exposure Cap</div>
-                      <div className="text-sm font-bold text-white">{typeof session.size_cap_multiplier === 'number' ? `${(session.size_cap_multiplier * 100).toFixed(0)}%` : '—'}</div>
-                    </div>
-                    <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
-                      <div className="text-[11px] text-slate-500 uppercase">Active Session</div>
-                      <div className={`text-sm font-bold ${session.tradable ? 'text-emerald-400' : 'text-red-400'}`}>{session.tradable ? 'Yes' : 'No'}</div>
-                    </div>
-                    <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
-                      <div className="text-[11px] text-slate-500 uppercase">Short-Term OK</div>
-                      <div className={`text-sm font-bold ${session.scalp_ok ? 'text-emerald-400' : 'text-slate-500'}`}>{session.scalp_ok ? 'Yes' : 'No'}</div>
-                    </div>
-                  </div>
-                </Card>
-              )}
-            </>
-          ) : (
-            <Card><div className="text-xs text-slate-500 py-8 text-center">Enter a symbol above and load to see capital flow data</div></Card>
-          )}
-        </div>
+          <CapitalPressureView symbol={sym} data={flow.data} loading={flow.loading} error={flow.error} onRefresh={() => flow.refetch()} />
         </TerminalSubviewFrame>
-        );
-      })()}
+      )}
 
       {/* ─── Options Confluence (v1 flagship decision engine) ─── */}
       {tab === 'Options Confluence' && (

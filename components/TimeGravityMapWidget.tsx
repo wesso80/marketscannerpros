@@ -1,5 +1,6 @@
 'use client';
 
+import GravityResearchView from '@/components/terminal/GravityResearchView';
 import React, { useState, useEffect, useCallback } from 'react';
 import { computeTimeGravityMap, type TimeGravityMap, type GravityZone, type GravityPoint, type TargetStatus, type CloseConfluence, type CoverageDiagnostics } from '@/lib/time/timeGravityMap';
 import type { MidpointRecord } from '@/lib/time/midpointDebt';
@@ -18,7 +19,7 @@ interface TimeGravityMapWidgetProps {
   autoRefresh?: boolean;
   /** Refresh interval in ms (default: 120000 = 2 minutes) */
   refreshInterval?: number;
-  variant?: 'full' | 'compact';
+  variant?: 'full' | 'compact' | 'terminal';
   className?: string;
 }
 
@@ -1099,6 +1100,10 @@ export default function TimeGravityMapWidget({
   const generationFailed = generationInfo?.attempted && generationInfo.stored === 0;
   const wasRateLimited = generationInfo?.rateLimited;
   
+  if (variant === 'terminal') {
+    return <GravityResearchView symbol={symbol} tgm={tgm} coverage={coverage} calendar={calendar} receivedAt={lastUpdate} empty={hasNoData} localDemo={localDemoInfo.active} error={error} loading={loading} onRefresh={() => fetchTGM()} />;
+  }
+
   if (variant === 'compact') {
     return (
       <div className={`bg-gray-900 border border-gray-800 rounded-lg p-4 ${className}`}>
