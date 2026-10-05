@@ -1,0 +1,127 @@
+{
+  "controlled": {
+    "symbol": "AAPL",
+    "basis": "CONTROLLED history removal; behavioral check, not a live missing-history symbol",
+    "inputPrice": 329,
+    "controlledDayRange": {
+      "high": 334,
+      "low": 324,
+      "note": "Intentional nonzero day range to detect forbidden ATR substitution; not a market observation"
+    },
+    "observedAt": "2026-10-05T13:45:00.000Z",
+    "barCount": 0,
+    "firstBarDate": null,
+    "lastBarDate": null,
+    "atr": null,
+    "upsideLevels": null,
+    "downsideLevels": null,
+    "symbolPayload": {
+      "atr": null,
+      "invalidation": null,
+      "scenarioInvalidation": null,
+      "reactionZones": []
+    }
+  },
+  "natural": {
+    "symbol": "FIXTURE",
+    "basis": "provider response; no history rows removed",
+    "inputPrice": 100,
+    "controlledDayRange": {
+      "high": 105,
+      "low": 95,
+      "note": "Intentional nonzero day range to detect forbidden ATR substitution; not a market observation"
+    },
+    "observedAt": "2026-10-05T13:45:00.000Z",
+    "barCount": 0,
+    "firstBarDate": null,
+    "lastBarDate": null,
+    "atr": null,
+    "upsideLevels": null,
+    "downsideLevels": null,
+    "symbolPayload": {
+      "atr": null,
+      "invalidation": null,
+      "scenarioInvalidation": null,
+      "reactionZones": []
+    }
+  },
+  "sufficient": {
+    "symbol": "AAPL",
+    "basis": "provider daily history; local existing helpers",
+    "inputPrice": 329,
+    "controlledDayRange": {
+      "high": 334,
+      "low": 324,
+      "note": "Intentional nonzero day range to detect forbidden ATR substitution; not a market observation"
+    },
+    "observedAt": "2026-10-05T13:45:00.000Z",
+    "barCount": 25,
+    "firstBarDate": "2026-08-31T00:00:00.000Z",
+    "lastBarDate": "2026-09-24T00:00:00.000Z",
+    "atr": 4,
+    "upsideLevels": {
+      "entryZone": {
+        "low": 328,
+        "high": 329
+      },
+      "stopLoss": 322.4,
+      "stopLossPercent": 2.00607902735563,
+      "target1": {
+        "price": 337,
+        "reason": "Model target: 2 × measured ATR14",
+        "takeProfit": 50
+      },
+      "target2": {
+        "price": 343.4,
+        "reason": "Extended target (1.8× T1 distance)",
+        "takeProfit": 30
+      },
+      "target3": null,
+      "riskRewardRatio": 1.212121212121208,
+      "reasoning": "Entry above $328.00-$329.00. Stop at $322.40 (2.0% risk). Target 1: $337.00 (take 50%). Target 2: $343.40 (take 30%). R:R = 1.2:1"
+    },
+    "downsideLevels": {
+      "entryZone": {
+        "low": 329,
+        "high": 330
+      },
+      "stopLoss": 335.6,
+      "stopLossPercent": 2.00607902735563,
+      "target1": {
+        "price": 321,
+        "reason": "Model target: 2 × measured ATR14",
+        "takeProfit": 50
+      },
+      "target2": {
+        "price": 314.6,
+        "reason": "Extended target (1.8× T1 distance)",
+        "takeProfit": 30
+      },
+      "target3": null,
+      "riskRewardRatio": 1.212121212121208,
+      "reasoning": "Entry below $329.00-$330.00. Stop at $335.60 (2.0% risk). Target 1: $321.00 (take 50%). Target 2: $314.60 (take 30%). R:R = 1.2:1"
+    },
+    "symbolPayload": {
+      "atr": 4,
+      "invalidation": 323,
+      "scenarioInvalidation": 323,
+      "reactionZones": [
+        {
+          "price": 337.4,
+          "rMultiple": 1,
+          "note": "Model zone (1.0× reference-to-invalidation risk)"
+        },
+        {
+          "price": 341,
+          "rMultiple": 1.5,
+          "note": "Model zone (1.5× reference-to-invalidation risk)"
+        },
+        {
+          "price": 348.2,
+          "rMultiple": 2.5,
+          "note": "Model zone (2.5× reference-to-invalidation risk)"
+        }
+      ]
+    }
+  }
+}
