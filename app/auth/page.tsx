@@ -132,7 +132,12 @@ function AuthContent() {
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setStatus({ tone: "error", text: data?.error || "Could not send sign-in link." });
+        const serverText = typeof data?.error === "string" && data.error
+          ? data.error
+          : typeof data?.message === "string" && data.message
+            ? data.message
+            : "";
+        setStatus({ tone: "error", text: serverText || "Could not send sign-in link." });
         return;
       }
 
