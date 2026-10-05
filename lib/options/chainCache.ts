@@ -19,6 +19,7 @@
  */
 import { isAlphaVantageSampleChain, usableOptionRows } from '@/lib/options/avChain';
 import { getCached, setCached } from '@/lib/redis';
+import { registerMemoryGauge } from '@/lib/memory/debugLog';
 
 export type AvChainFunction = 'REALTIME_OPTIONS_FMV' | 'REALTIME_OPTIONS' | 'HISTORICAL_OPTIONS';
 
@@ -67,6 +68,15 @@ const store = globalThis as typeof globalThis & {
 const memory = (store.__mspOptionsChainMemory ??= new Map<string, MemoryEntry>());
 const inflight = (store.__mspOptionsChainInflight ??= new Map<string, Promise<SharedOptionsChain | null>>());
 const providerSkip = (store.__mspOptionsProviderSkip ??= new Map<AvChainFunction, number>());
+
+/** In-process chains (capped at MAX_MEMORY_ENTRIES) and the contract rows they hold. */
+export function sharedOptionsChainMemoryStats(): { entries: number; rows: number } {
+  let rows = 0;
+  for (const entry of memory.values()) rows += entry.value.rows?.length ?? 0;
+  return { entries: memory.size, rows };
+}
+
+registerMemoryGauge('optionsRawChains', () => sharedOptionsChainMemoryStats());
 
 export function clearSharedOptionsChainCache(): void {
   memory.clear();

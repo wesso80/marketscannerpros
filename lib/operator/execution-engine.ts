@@ -11,10 +11,18 @@ import type {
   TargetOrder, OrderType, TimeInForce, IdempotencyRecord, EnvironmentMode,
 } from '@/types/operator';
 import { generateId, hashIntent, ENVIRONMENT_MODE, isLiveExecution } from './shared';
+import { registerMemoryGauge } from '@/lib/memory/debugLog';
 
 /* ── Idempotency Store §13.5 ───────────────────────────────── */
 
 const idempotencyStore = new Map<string, IdempotencyRecord>();
+
+/** Order-intent records held for the life of the process. */
+export function idempotencyStoreSize(): number {
+  return idempotencyStore.size;
+}
+
+registerMemoryGauge('idempotency', () => ({ entries: idempotencyStoreSize() }));
 
 function buildIdempotencyKey(req: ExecutionPlanRequest): string {
   const raw = [

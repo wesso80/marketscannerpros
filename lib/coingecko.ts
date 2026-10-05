@@ -39,6 +39,7 @@ import {
   recordProviderFailure,
   recordProviderSuccess,
 } from '@/lib/admin/providerTelemetry';
+import { registerMemoryGauge } from '@/lib/memory/debugLog';
 
 // Request headers with API key
 const getHeaders = (): HeadersInit => {
@@ -68,6 +69,16 @@ let derivativesRetryAt = 0;
 const symbolResolutionCache = new Map<string, { id: string | null; expiresAt: number }>();
 const symbolResolutionInFlight = new Map<string, Promise<string | null>>();
 const providerErrorCooldown = new Map<string, { error: Error; expiresAt: number }>();
+
+/** Process caches. Expired symbol ids stay until that symbol is resolved again. */
+export function coinGeckoProcessCacheStats(): { symbolResolutions: number; derivativeTickers: number } {
+  return {
+    symbolResolutions: symbolResolutionCache.size,
+    derivativeTickers: derivativesCache?.value.length ?? 0,
+  };
+}
+
+registerMemoryGauge('coinGecko', () => coinGeckoProcessCacheStats());
 
 type CoinGeckoErrorCode = 10002 | 10005 | 10010 | 10011;
 

@@ -22,6 +22,7 @@ import {
   type SessionMode,
 } from '@/lib/time/sessionCloseEngine';
 import { isUSMarketHoliday, isUSEquityEarlyClose, isNonTradingDay, lastTradingDayOfMonth } from '@/lib/time/marketHolidays';
+import { registerMemoryGauge } from '@/lib/memory/debugLog';
 
 export type { SessionMode } from '@/lib/time/sessionCloseEngine';
 
@@ -621,6 +622,11 @@ export class ConfluenceLearningAgent {
     this.openai = process.env.OPENAI_API_KEY ? new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     }) : null;
+  }
+
+  /** Symbols whose learning summary is held in this process. */
+  learningCacheSize(): number {
+    return this.learningCache.size;
   }
 
   private async getLearningStats(symbol: string): Promise<{
@@ -4313,3 +4319,7 @@ Be direct and actionable. Focus on TIMING (when will price move) and DIRECTION.`
 
 // Export singleton instance
 export const confluenceLearningAgent = new ConfluenceLearningAgent();
+
+registerMemoryGauge('confluenceLearning', () => ({
+  symbols: confluenceLearningAgent.learningCacheSize(),
+}));

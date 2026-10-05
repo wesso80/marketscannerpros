@@ -22,6 +22,7 @@
 
 import { Pool } from 'pg';
 import { computeSignalBucket } from './signals/signalBucket';
+import { registerMemoryGauge } from '@/lib/memory/debugLog';
 
 // Lazy pool for worker context (allows dotenv to run first)
 let _pool: Pool | null = null;
@@ -35,6 +36,17 @@ function getPool(): Pool {
   }
   return _pool;
 }
+
+/** This module's pool, or null before the first signal query. Does not connect. */
+export function signalPoolStats(): { total: number; idle: number; waiting: number } | null {
+  if (!_pool) return null;
+  return { total: _pool.totalCount, idle: _pool.idleCount, waiting: _pool.waitingCount };
+}
+
+registerMemoryGauge('signalPg', () => {
+  const stats = signalPoolStats();
+  return stats ?? { total: 0, idle: 0, waiting: 0 };
+});
 
 async function q<T = any>(sql: string, params: any[] = []): Promise<T[]> {
   const { rows } = await getPool().query(sql, params);

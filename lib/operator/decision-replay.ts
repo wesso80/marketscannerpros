@@ -18,12 +18,22 @@ import { generateId, nowISO } from './shared';
 import { ENGINE_VERSIONS } from './version-registry';
 import { ENVIRONMENT_MODE } from './shared';
 import { q } from '@/lib/db';
+import { registerMemoryGauge } from '@/lib/memory/debugLog';
 
 /* ── In-memory snapshot store (bounded ring buffer) ─────────── */
 
 const MAX_SNAPSHOTS = 500;
 const snapshotStore = new Map<string, DecisionSnapshot>();
 const snapshotOrder: string[] = [];
+
+/** Ring-buffer snapshots and the bar arrays they still point at. */
+export function decisionSnapshotMemoryStats(): { snapshots: number; bars: number } {
+  let bars = 0;
+  for (const snapshot of snapshotStore.values()) bars += snapshot.inputs?.bars?.length ?? 0;
+  return { snapshots: snapshotStore.size, bars };
+}
+
+registerMemoryGauge('decisionSnapshots', () => decisionSnapshotMemoryStats());
 
 /* ── Capture ────────────────────────────────────────────────── */
 

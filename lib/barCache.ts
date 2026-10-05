@@ -1,5 +1,6 @@
 import type { OHLCVBar } from '@/lib/indicators';
 import { logger } from '@/lib/logger';
+import { registerMemoryGauge } from '@/lib/memory/debugLog';
 
 export type BarTimeframe = '1min' | '5min' | '15min' | '30min' | '60min' | 'daily' | 'weekly' | 'monthly' | string;
 export type BarMarket = 'equity' | 'crypto' | 'forex' | 'commodity' | 'options' | string;
@@ -21,6 +22,15 @@ interface CacheEntry {
 
 const memoryCache = new Map<string, CacheEntry>();
 const MAX_CACHE_ENTRIES = 750;
+
+/** Entry count and retained bars. The cap is entries, not bytes. */
+export function barCacheMemoryStats(): { entries: number; bars: number } {
+  let bars = 0;
+  for (const entry of memoryCache.values()) bars += entry.bars.length;
+  return { entries: memoryCache.size, bars };
+}
+
+registerMemoryGauge('barCache', () => barCacheMemoryStats());
 
 export function barCacheTtlMs(timeframe: BarTimeframe): number {
   const tf = String(timeframe).toLowerCase();

@@ -18,6 +18,7 @@ import { nyWallTimeToUtcMs } from '@/lib/time/nyWallClock';
 import { getBars as getCachedBars } from '@/lib/marketData';
 import { vixWithAlphaVantagePrimary } from '@/lib/scoring/canonical/regimeOverlayData';
 import { isCoinGeckoEnabled } from '@/lib/admin/adminCrypto';
+import { registerMemoryGauge } from '@/lib/memory/debugLog';
 
 const AV_KEY = () => process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -356,6 +357,24 @@ const CRYPTO_POSITION_MIN_BARS = 250;
 const CRYPTO_POSITION_BARS_TTL_MS = 6 * 60 * 60 * 1000;
 const CRYPTO_POSITION_BARS = new Map<string, { bars: Bar[]; expiresAt: number }>();
 const CRYPTO_POSITION_INFLIGHT = new Map<string, Promise<Bar[]>>();
+
+function retainedBars(map: Map<string, { bars: Bar[] }>): number {
+  let bars = 0;
+  for (const entry of map.values()) bars += entry.bars.length;
+  return bars;
+}
+
+/** In-process crypto daily series. Caps are entry counts; position bars are the unsliced provider series. */
+export function cryptoProcessBarCacheStats(): { levelEntries: number; levelBars: number; positionEntries: number; positionBars: number } {
+  return {
+    levelEntries: CRYPTO_LEVEL_BARS_CACHE.size,
+    levelBars: retainedBars(CRYPTO_LEVEL_BARS_CACHE),
+    positionEntries: CRYPTO_POSITION_BARS.size,
+    positionBars: retainedBars(CRYPTO_POSITION_BARS),
+  };
+}
+
+registerMemoryGauge('cryptoBars', () => cryptoProcessBarCacheStats());
 
 /** @internal test hook */
 export function resetCryptoPositionBarCache(): void {
