@@ -315,8 +315,28 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
         </div>
       </div>
 
+      {decisionReady && conditions && (
+        <section aria-label="Conditions" className="mb-4 rounded-xl border border-white/10 bg-white/5 px-3 py-3 md:px-4">
+          <h2 className="text-sm font-semibold text-white">Conditions</h2>
+          <p data-derivatives-summary role="status" className="mt-1 text-lg font-semibold text-white">{conditions}</p>
+          <CollapsibleSection title="Conditions evidence">
+          <p className="mt-1 text-sm text-white/80">
+            {[pressure, rotation, volRegime ? `24h move ${volRegime}` : null, liquidityState ? `OI trend ${liquidityState}` : null].filter(Boolean).join(' · ')}
+          </p>
+          <p className="mt-2 text-xs text-[var(--msp-warn)]">{DERIVATIVE_FEED_BASIS}</p>
+          <ul className="mt-3 grid gap-2">
+            {[fundingDriver, oiDriver].filter(Boolean).map((item) => (
+              <li key={item} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white">{item}</li>
+            ))}
+          </ul>
+          </CollapsibleSection>
+        </section>
+      )}
+
+      {(!decisionReady || !conditions) && <p data-derivatives-summary role="status" className="mb-4 text-lg font-semibold text-white">{loading ? 'Loading derivatives observations…' : 'Not enough feed coverage to assess conditions.'}</p>}
+
       <div className="mb-4">
-        <ComplianceDisclaimer compact={embeddedInDashboard} variant="cryptoDerivatives" />
+        <ComplianceDisclaimer collapsible variant="cryptoDerivatives" />
       </div>
 
       {partial && (
@@ -339,7 +359,8 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
         <p className="mb-4 text-sm text-[var(--msp-warn)]">{oiReason}</p>
       )}
 
-      <div className="mb-4 grid gap-3 lg:grid-cols-2">
+      <div className="mb-4"><CollapsibleSection title="Funding and account-ratio charts">
+      <div className="grid gap-3 lg:grid-cols-2">
         <BarChart
           title="Funding"
           empty={data.fundingRates ? null : 'Funding is not in this response.'}
@@ -359,22 +380,7 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
           })).filter((row) => row.label)}
         />
       </div>
-
-      {decisionReady && conditions && (
-        <section aria-label="Conditions" className="mb-4 rounded-xl border border-white/10 bg-white/5 px-3 py-3 md:px-4">
-          <h2 className="text-sm font-semibold text-white">Conditions</h2>
-          <p className="mt-1 text-lg font-semibold text-white">{conditions}</p>
-          <p className="mt-1 text-sm text-white/80">
-            {[pressure, rotation, volRegime ? `24h move ${volRegime}` : null, liquidityState ? `OI trend ${liquidityState}` : null].filter(Boolean).join(' · ')}
-          </p>
-          <p className="mt-2 text-xs text-[var(--msp-warn)]">{DERIVATIVE_FEED_BASIS}</p>
-          <ul className="mt-3 grid gap-2">
-            {[fundingDriver, oiDriver].filter(Boolean).map((item) => (
-              <li key={item} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white">{item}</li>
-            ))}
-          </ul>
-        </section>
-      )}
+      </CollapsibleSection></div>
 
       <div className="mb-4">
         <ChipRow items={chips} />
@@ -390,8 +396,7 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
 
       <SourceLine
         source="Funding and long/short: OKX · OI: CoinGecko, top 3 exchanges"
-        asOf={lastUpdate ? lastUpdate.toISOString() : null}
-        basis="8h funding equivalents · account ratios · pinned perpetual contracts"
+        basis={`8h funding equivalents · account ratios · pinned perpetual contracts · no shared provider observation time supplied${lastUpdate ? ` · Last response with data received ${lastUpdate.toISOString()} (request completion, not a provider observation time)` : ''}`}
       />
       <CoinGeckoCredit className="mt-2 text-center" />
     </div>

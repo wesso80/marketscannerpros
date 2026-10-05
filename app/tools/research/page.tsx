@@ -1,5 +1,7 @@
 'use client';
 
+import { savedCaseLabel } from '@/lib/savedCasePresentation';
+import EarningsView from '@/components/research/EarningsView';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import TabBar from '@/components/visual/TabBar';
@@ -13,12 +15,12 @@ import PaidPreviewGate from '@/components/free/PaidPreviewGate';
    Real API data: /api/news-sentiment + /api/economic-calendar + /api/earnings
    --------------------------------------------------------------------------- */
 
-import { useState, useMemo, useEffect, useCallback, type KeyboardEvent } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { useV2 } from '@/app/v2/_lib/V2Context';
-import { useNews, useEconomicCalendar, useEarningsCalendar, type NewsArticle, type EconomicEvent, type EarningsEntry } from '@/app/v2/_lib/api';
-import { Card, Badge, ImpactDot, UpgradeGate } from '@/app/v2/_components/ui';
+import { useNews, useEconomicCalendar, useEarningsCalendar, type NewsArticle, type EconomicEvent } from '@/app/v2/_lib/api';
+import { Card, ImpactDot, UpgradeGate } from '@/app/v2/_components/ui';
 import LockedPreview from '@/components/free/LockedPreview';
 import FreeLoading from '@/components/free/Loading';
 import { useUserTier } from '@/lib/useUserTier';
@@ -94,24 +96,9 @@ function savedCaseSummary(item: SavedResearchCaseSummary): string {
     || 'Saved educational research case.';
 }
 
-function savedCaseMissingCount(item: SavedResearchCaseSummary): number {
+function savedCaseMissingCount(item: SavedResearchCaseSummary): number | null {
   const truthLayer = item.researchCase?.truthLayer as Record<string, unknown> | undefined;
-  return Array.isArray(truthLayer?.whatWeDoNotKnow) ? truthLayer.whatWeDoNotKnow.length : 0;
-}
-
-function lifecycleColor(state: string | null | undefined): string {
-  if (state === 'ARMED' || state === 'MANAGE') return 'var(--msp-bull)';
-  if (state === 'STALK' || state === 'WATCH') return 'var(--msp-warn)';
-  if (state === 'BLOCKED' || state === 'COOLDOWN') return 'var(--msp-bear)';
-  return 'var(--msp-text-muted)';
-}
-
-function outcomeColor(status: string | null | undefined): string {
-  if (status === 'confirmed') return 'var(--msp-bull)';
-  if (status === 'invalidated') return 'var(--msp-bear)';
-  if (status === 'expired') return 'var(--msp-flat)';
-  if (status === 'reviewed') return 'var(--msp-info)';
-  return 'var(--msp-warn)';
+  return Array.isArray(truthLayer?.whatWeDoNotKnow) ? truthLayer.whatWeDoNotKnow.length : null;
 }
 
 const OUTCOME_ACTIONS: Array<{ label: string; status: SavedResearchCaseOutcome }> = [
@@ -134,6 +121,7 @@ function ResearchPagePaid() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [viewerZone, setViewerZone] = useState('UTC');
   useEffect(() => { setViewerZone(Intl.DateTimeFormat().resolvedOptions().timeZone); }, []);
+  const [showAllSavedCases, setShowAllSavedCases] = useState(false);
   const [savedCases, setSavedCases] = useState<SavedResearchCaseSummary[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
   const [savedError, setSavedError] = useState<string | null>(null);
@@ -196,13 +184,6 @@ function ResearchPagePaid() {
         : (result.status === 401 ? 'signin' : 'error'),
     }));
   }, []);
-
-  const onSymbolRowKey = useCallback((event: KeyboardEvent, symbol: string) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      openGoldenEgg(symbol);
-    }
-  }, [openGoldenEgg]);
 
   const refreshSavedCases = useCallback(async () => {
     setSavedLoading(true);
@@ -360,73 +341,9 @@ function ResearchPagePaid() {
 
       {/* -- EARNINGS ------------------------------------------------- */}
       {tab === 'Earnings' && (
-        <Card>
-          {earnings.loading ? <SkeletonRows n={8} /> : (
-            <div className="space-y-4">
-              {[
-                { label: 'This Week', items: thisWeek },
-                { label: 'Next Week', items: nextWeek },
-                { label: 'Major Earnings', items: majorEarnings },
-              ].map(group => (
-                <div key={group.label}>
-                  <div className="text-[10px] text-slate-500 uppercase mb-2">{group.label} ({group.items.length})</div>
-                  {group.items.length === 0 ? (
-                    <div className="text-[10px] text-slate-600 py-2">None</div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b border-[var(--msp-border)]">
-                            <th scope="col" className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Symbol</th>
-                            <th scope="col" className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Company</th>
-                            <th scope="col" className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Report Date</th>
-                            <th scope="col" className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Estimate</th>
-                            <th scope="col" className="text-right py-1.5 px-2 text-[10px] uppercase text-slate-500">Save</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {group.items.map((e: EarningsEntry, i: number) => (
-                            <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(e.symbol)} onKeyDown={(event) => onSymbolRowKey(event, e.symbol)} tabIndex={0} aria-label={`Open ${e.symbol} earnings in Symbol`}>
-                              <td className="py-1.5 px-2 text-emerald-400 font-semibold">{e.symbol}</td>
-                              <td className="py-1.5 px-2 text-white">{e.name}</td>
-                              <td className="py-1.5 px-2 text-slate-400">{e.reportDate}</td>
-                              <td className="py-1.5 px-2 text-slate-300">{e.estimate != null ? `$${e.estimate.toFixed(2)}` : '—'}</td>
-                              <td className="py-1.5 px-2 text-right">
-                                {(() => {
-                                  const st = watchlistStatus[e.symbol];
-                                  const label = st === 'adding' ? 'Adding…'
-                                    : st === 'added' ? 'Added ✓'
-                                    : st === 'exists' ? 'On list ✓'
-                                    : st === 'signin' ? 'Sign in'
-                                    : st === 'error' ? 'Retry'
-                                    : '+ Watchlist';
-                                  const done = st === 'added' || st === 'exists';
-                                  return (
-                                    <button
-                                      type="button"
-                                      onClick={(ev) => { ev.stopPropagation(); if (st !== 'adding' && !done) handleAddToWatchlist(e.symbol); }}
-                                      disabled={st === 'adding' || done}
-                                      className={`rounded border px-2 py-0.5 text-[10px] font-semibold transition ${done ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300' : 'border-white/15 bg-white/[0.04] text-slate-300 hover:border-emerald-400/40 hover:text-emerald-200'}`}
-                                      aria-label={`Add ${e.symbol} to watchlist`}
-                                      title={st === 'signin' ? 'Sign in to save to your workspace watchlist' : `Add ${e.symbol} to your workspace watchlist`}
-                                    >
-                                      {label}
-                                    </button>
-                                  );
-                                })()}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          {earnings.error && <div className="text-[10px] text-red-400/60 mt-2">Error: {earnings.error}</div>}
-        </Card>
+        <Card><EarningsView thisWeek={thisWeek} nextWeek={nextWeek} majorEarnings={majorEarnings}
+          loading={earnings.loading} error={earnings.error} watchlistStatus={watchlistStatus}
+          onOpenSymbol={openGoldenEgg} onAddToWatchlist={handleAddToWatchlist} /></Card>
       )}
 
       {/* -- SAVED CASES --------------------------------------------- */}
@@ -434,69 +351,62 @@ function ResearchPagePaid() {
         <Card>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <div className="text-xs font-semibold text-white">Saved Research Cases</div>
+              <p data-research-verdict role="status" className="text-lg font-semibold">{savedLoading ? 'Loading saved research…' : savedError ? 'The last request did not complete.' : savedCases.length ? `${savedCases.length} saved research cases loaded` : 'No saved research cases yet.'}</p>
               <div className="text-[10px] text-slate-500">Educational scenario records saved from Scanner and Symbol.</div>
             </div>
             <button
               type="button"
               onClick={refreshSavedCases}
               disabled={savedLoading}
-              className="rounded border border-slate-700 bg-slate-950/60 px-2.5 py-1 text-[10px] font-semibold text-slate-300 hover:border-emerald-500/40 hover:text-emerald-300 disabled:cursor-wait disabled:opacity-60"
+              className="min-h-10 rounded border border-slate-700 bg-slate-950/60 px-2.5 py-1 text-[10px] font-semibold text-slate-300 hover:border-emerald-500/40 hover:text-emerald-300 disabled:cursor-wait disabled:opacity-60"
             >
               {savedLoading ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
 
-          {savedError && <div className="mb-3 rounded border border-red-500/30 bg-red-950/30 px-3 py-2 text-xs text-red-300">{savedError}</div>}
+          {savedError && <div className="mb-3 rounded border border-red-500/30 bg-red-950/30 px-3 py-2 text-xs text-red-300">The request could not be completed. {savedCases.length > 0 ? 'Previously loaded cases remain below.' : 'Use Refresh to try again.'}</div>}
 
-          {savedLoading && savedCases.length === 0 ? <SkeletonRows n={6} /> : savedCases.length === 0 ? (
+          {savedLoading && savedCases.length === 0 ? <SkeletonRows n={6} /> : savedCases.length === 0 && !savedError ? (
             <div className="py-8 text-center text-xs text-slate-500">No saved research cases yet. Save a case from Scanner or Symbol to build a research archive.</div>
           ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {savedCases.map((item) => (
-                <div key={item.id} className="rounded-lg border border-slate-800/70 bg-slate-950/40 p-3">
+            <div className="space-y-2">
+              {(showAllSavedCases ? savedCases : savedCases.slice(0, 5)).map((item) => (
+                <div key={item.id} data-saved-case className="rounded-lg border border-slate-800/70 bg-slate-950/40 p-3">
                   <div className="mb-2 flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <button
                         type="button"
                         onClick={() => openGoldenEgg(item.symbol)}
                         aria-label={`Open ${item.symbol} saved research case in Symbol`}
-                        className="truncate text-left text-sm font-bold text-white hover:text-emerald-400"
+                        className="min-h-10 line-clamp-2 break-words text-left text-sm font-bold text-white hover:text-emerald-400"
                       >
-                        {item.title || `${item.symbol} Research Case`}
+                        {marketText(item.title || `${item.symbol} Research Case`)}
                       </button>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500">
                         <span className="font-semibold text-emerald-400">{item.symbol}</span>
-                        <span>{item.assetClass}</span>
-                        <span>{item.sourceType.replace(/-/g, ' ')}</span>
-                        <span>{formatSavedDate(item.generatedAt || item.createdAt)}</span>
+                        <span>{marketText(item.assetClass)}</span>
+                        <span>Saved {formatSavedDate(item.createdAt)}</span>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge
-                        label={item.dataQuality}
-                        color={item.dataQuality === 'GOOD' || item.dataQuality === 'LIVE' ? 'var(--msp-bull)' : item.dataQuality === 'DEGRADED' || item.dataQuality === 'STALE' ? 'var(--msp-warn)' : 'var(--msp-bear)'}
-                        small
-                      />
-                      {item.lifecycleState && <Badge label={item.lifecycleState} color={lifecycleColor(item.lifecycleState)} small />}
-                      <Badge label={item.outcomeStatus || 'pending'} color={outcomeColor(item.outcomeStatus)} small />
-                    </div>
                   </div>
-                  <p className="mb-3 line-clamp-3 text-xs leading-relaxed text-slate-400">{savedCaseSummary(item)}</p>
+                  <CollapsibleSection title="Case details and actions" summary={savedCaseLabel(item.outcomeStatus)}>
+                    <p className="mb-2 text-xs text-slate-400">Data: {savedCaseLabel(item.dataQuality)} · Stage: {savedCaseLabel(item.lifecycleState)}</p>
+                    <p className="mb-2 text-xs text-slate-400">Saved from {marketText(item.sourceType).replaceAll('-', ' ')} · snapshot generated {formatSavedDate(item.generatedAt)} · record saved {formatSavedDate(item.createdAt)}</p>
+                  <p className="mb-3 line-clamp-3 text-xs leading-relaxed text-slate-400">{marketText(savedCaseSummary(item))}</p>
                   {item.outcomeStatus === 'pending' && item.outcomeSuggestion && item.outcomeSuggestion.status !== 'pending' && (
                     <div className="mb-2 rounded border border-blue-500/25 bg-blue-500/10 px-2.5 py-2 text-[10px] text-blue-200">
                       <div className="mb-1 flex items-center justify-between gap-2">
-                        <span className="font-semibold uppercase tracking-[0.05em]">Suggested: {item.outcomeSuggestion.status}</span>
+                        <span className="font-semibold uppercase tracking-[0.05em]">Suggested: {savedCaseLabel(item.outcomeSuggestion.status)}</span>
                         <button
                           type="button"
                           onClick={() => handleApplySuggestion(item)}
                           disabled={updatingOutcomeId === item.id}
-                          className="rounded border border-blue-400/40 bg-blue-400/10 px-2 py-0.5 font-semibold text-blue-100 hover:bg-blue-400/20 disabled:cursor-wait disabled:opacity-60"
+                          className="min-h-10 rounded border border-blue-400/40 bg-blue-400/10 px-2 py-0.5 font-semibold text-blue-100 hover:bg-blue-400/20 disabled:cursor-wait disabled:opacity-60"
                         >
                           {updatingOutcomeId === item.id ? 'Applying...' : 'Apply'}
                         </button>
                       </div>
-                      <div className="text-blue-200/80">{item.outcomeSuggestion.reason}</div>
+                      <div className="text-blue-200/80">{marketText(item.outcomeSuggestion.reason)}</div>
                     </div>
                   )}
                   <div className="mb-2 flex flex-wrap gap-1.5">
@@ -506,7 +416,7 @@ function ResearchPagePaid() {
                         type="button"
                         onClick={() => handleOutcomeUpdate(item.id, action.status)}
                         disabled={updatingOutcomeId === item.id || item.outcomeStatus === action.status}
-                        className="rounded border border-slate-700/70 bg-slate-900/60 px-2 py-1 text-[10px] font-semibold text-slate-300 hover:border-emerald-500/40 hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-45"
+                        className="min-h-10 rounded border border-slate-700/70 bg-slate-900/60 px-2 py-1 text-[10px] font-semibold text-slate-300 hover:border-emerald-500/40 hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-45"
                       >
                         {updatingOutcomeId === item.id ? 'Saving...' : action.label}
                       </button>
@@ -514,22 +424,25 @@ function ResearchPagePaid() {
                   </div>
                   <div className="flex items-center justify-between gap-3 border-t border-slate-800/60 pt-2">
                     <div className="text-[10px] text-slate-500">
-                      Missing evidence: <span className="text-slate-300">{savedCaseMissingCount(item)}</span>
-                      {item.lifecycleUpdatedAt && <span className="ml-2">Lifecycle: <span className="text-slate-300">{formatSavedDate(item.lifecycleUpdatedAt)}</span></span>}
+                      Recorded evidence gaps: <span className="text-slate-300">{savedCaseMissingCount(item) ?? 'Not supplied'}</span>
+                      {item.lifecycleUpdatedAt && <span className="ml-2">Stage updated: <span className="text-slate-300">{formatSavedDate(item.lifecycleUpdatedAt)}</span></span>}
                     </div>
                     <button
                       type="button"
                       onClick={() => handleDeleteSavedCase(item.id)}
                       disabled={deletingCaseId === item.id}
-                      className="rounded border border-red-500/30 bg-red-500/10 px-2 py-1 text-[10px] font-semibold text-red-300 hover:bg-red-500/20 disabled:cursor-wait disabled:opacity-60"
+                      className="min-h-10 rounded border border-red-500/30 bg-red-500/10 px-2 py-1 text-[10px] font-semibold text-red-300 hover:bg-red-500/20 disabled:cursor-wait disabled:opacity-60"
                     >
                       {deletingCaseId === item.id ? 'Deleting...' : 'Delete'}
                     </button>
                   </div>
+                  </CollapsibleSection>
                 </div>
               ))}
             </div>
           )}
+          {savedCases.length > 5 && <button type="button" className="mt-3 min-h-10 rounded-lg border border-slate-700 px-3 text-sm" onClick={() => setShowAllSavedCases(!showAllSavedCases)}>{showAllSavedCases ? 'Show five' : `Show all ${savedCases.length}`}</button>}
+          {!savedLoading && (savedCases.length > 0 || !savedError) && <SourceLine source="Saved research cases" basis="Stored snapshots · up to 50 records loaded · individual saved/generated dates in case details; not current market observations" />}
         </Card>
       )}
 
