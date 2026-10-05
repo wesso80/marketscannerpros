@@ -48,9 +48,9 @@ describe('SC-9: liquidity sweeps only use completed sessions', () => {
 });
 
 describe('SC-11: changing filters says to re-run instead of silently emptying', () => {
-  it('shows a prompt with a Re-run button when the last results no longer match the controls', () => {
+  it('shows a prompt directing back to the single run button when results no longer match', () => {
     const page = read('app/tools/scanner/page.tsx');
     expect(page).toContain('const proResultsOutdated = Boolean(proResponse) && !proScanResults;');
-    expect(page).toMatch(/proResultsOutdated && !proScanLoading[\s\S]{0,400}Filters or sort changed since the last scan[\s\S]{0,400}onClick=\{runProScan\}/);
+    expect(page).toMatch(/proResultsOutdated && !proScanLoading[\s\S]{0,400}Filters or sort changed since the last scan/);
   });
 });

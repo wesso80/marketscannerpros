@@ -1,0 +1,73 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+ RUN  v3.2.4 /workspace/scratch/0535040d28c6/mobile-scanner
+
+ ✓ test/scannerRequestIntegrity.test.ts (3 tests) 5ms
+ ✓ test/layoutScanner.test.ts (2 tests) 3ms
+ ✓ test/scannerScoreLabels.test.ts (9 tests) 11ms
+ ✓ test/scannerRankedVerdictBadge.test.ts (5 tests) 11ms
+ ✓ test/scannerProMinors.test.ts (7 tests) 16ms
+ ✓ test/scannerRankedPhonePrice.test.ts (3 tests) 2ms
+ ✓ test/scannerDataIntegrity.test.ts (24 tests) 64ms
+stdout | test/proScannerDefaultFilters.test.ts > Pro Scanner returns candidates at default filters > equity (worker cache path) — the Factor agreement regression
+[bulk-scan/cached] Scanning equities from worker cache (0 AV calls)...
+
+stdout | test/proScannerDefaultFilters.test.ts > Pro Scanner returns candidates at default filters > equity (worker cache path) — the Factor agreement regression
+[bulk-scan] Loaded 12 equity symbols from symbol_universe
+
+stderr | test/proScannerDefaultFilters.test.ts > Pro Scanner returns candidates at default filters > equity (worker cache path) — the Factor agreement regression
+[avTopMovers] realtime TOP_GAINERS_LOSERS gave no rows: no mover lists in the response (keys: top_gainers, top_losers, most_actively_traded); trying the end-of-day list
+
+stderr | test/proScannerDefaultFilters.test.ts > Pro Scanner returns candidates at default filters > equity (worker cache path) — the Factor agreement regression
+[avTopMovers] end-of-day TOP_GAINERS_LOSERS also failed: no mover lists in the response (keys: top_gainers, top_losers, most_actively_traded)
+
+stderr | test/proScannerDefaultFilters.test.ts > Pro Scanner returns candidates at default filters > equity (worker cache path) — the Factor agreement regression
+[avIndexData] INDEX_DATA VIX failed: [vitest] No "avFetch" export is defined on the "@/lib/avRateGovernor" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+
+stderr | test/proScannerDefaultFilters.test.ts > Pro Scanner returns candidates at default filters > equity (worker cache path) — the Factor agreement regression
+[regimeOverlayData] SPY daily fallback failed: [vitest] No "avFetch" export is defined on the "@/lib/avRateGovernor" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+[regimeOverlayData] QQQ daily fallback failed: [vitest] No "avFetch" export is defined on the "@/lib/avRateGovernor" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+[fredCsv] BAMLH0A0HYM2 fallback fetch failed: FRED CSV HTTP 404
+
+stderr | test/proScannerDefaultFilters.test.ts > Pro Scanner returns candidates at default filters > equity (worker cache path) — the Factor agreement regression
+[fredCsv] VIXCLS fallback fetch failed: FRED CSV HTTP 404
+
+stdout | test/proScannerDefaultFilters.test.ts > Pro Scanner returns candidates at default filters > crypto (Deep): no-setup rows keep their factor-bias side instead of vanishing
+[bulk-scan] Loaded 12 crypto symbols from symbol_universe
+
+stdout | test/proScannerDefaultFilters.test.ts > Pro Scanner returns candidates at default filters > crypto (Deep): no-setup rows keep their factor-bias side instead of vanishing
+[bulk-scan] Scanning 12 crypto on 1d timeframe...
+
+stdout | test/proScannerDefaultFilters.test.ts > Pro Scanner returns candidates at default filters > crypto (Deep): no-setup rows keep their factor-bias side instead of vanishing
+[bulk-scan] Complete in 0.0s. Top: TBX:18, TEX:82, THX:18, TCX:78, TFX:22, TIX:78, TKX:74, TAX:61, TDX:39, TGX:61, TJX:39, TLX:46
+
+stdout | test/proScannerDefaultFilters.test.ts > Pro Scanner returns candidates at default filters > crypto hard blocks (liquidity) are excluded with a named reason, not "Factor agreement"
+[bulk-scan] Loaded 4 crypto symbols from symbol_universe
+
+stdout | test/proScannerDefaultFilters.test.ts > Pro Scanner returns candidates at default filters > crypto hard blocks (liquidity) are excluded with a named reason, not "Factor agreement"
+[bulk-scan] Scanning 4 crypto on 1d timeframe...
+
+stdout | test/proScannerDefaultFilters.test.ts > Pro Scanner returns candidates at default filters > crypto hard blocks (liquidity) are excluded with a named reason, not "Factor agreement"
+[bulk-scan] Complete in 0.0s. Top: TBX:18, TCX:78, TAX:61, TDX:39
+
+stdout | test/proScannerDefaultFilters.test.ts > Pro Scanner returns candidates at default filters > forex (bar time attached, so rows are no longer "data unreliable")
+[bulk-scan] Loaded 4 forex symbols from symbol_universe
+
+stdout | test/proScannerDefaultFilters.test.ts > Pro Scanner returns candidates at default filters > forex (bar time attached, so rows are no longer "data unreliable")
+[bulk-scan/forex] Scanning 4 forex pairs on 1d...
+
+ ✓ test/proScannerDefaultFilters.test.ts (4 tests) 162ms
+ ✓ test/scannerManualRun.test.tsx (2 tests) 195ms
+ ✓ test/scannerPhoneLayout.test.ts (1 test) 221ms
+
+ Test Files  10 passed (10)
+      Tests  60 passed (60)
+   Start at  12:21:45
+   Duration  2.23s (transform 2.04s, setup 0ms, collect 4.19s, tests 692ms, environment 769ms, prepare 1.10s)
+
