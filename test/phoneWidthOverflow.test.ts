@@ -11,8 +11,9 @@ describe('phone width: no horizontal overflow (RS-11)', () => {
   });
   it('Research lens tabs wrap instead of scrolling off-screen', () => {
     const research = readFileSync('app/tools/research/page.tsx', 'utf8');
-    const strip = research.slice(research.indexOf('{TABS.map(t => (') - 200, research.indexOf('{TABS.map(t => ('));
-    expect(strip).toContain('flex flex-wrap items-center gap-1');
-    expect(strip).not.toContain('overflow-x-auto');
+    expect(research).toContain('<TabBar label="Research views"');
+    const shared = readFileSync('components/visual/TabBar.tsx', 'utf8');
+    expect(shared).toContain('flex flex-wrap gap-1');
+    expect(shared).not.toContain('overflow-x-auto');
   });
 });
