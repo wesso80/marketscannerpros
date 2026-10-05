@@ -1,0 +1,358 @@
+{
+  "mocked": true,
+  "fixtureBasis": "Deterministic intercepted /api fixtures. External origins aborted. Not live-provider acceptance.",
+  "route": "/tools/explorer?tab=movers",
+  "tip": "audit/movers-compact",
+  "viewports": [
+    "1280x800",
+    "390x844"
+  ],
+  "hardMaxScreens390": 2.3,
+  "targetScreens390": 2,
+  "maxScreens390Closed": 1.8293838862559242,
+  "maxScreens1280Closed": 1.68125,
+  "results": [
+    {
+      "id": "populated-closed",
+      "dataCase": "populated",
+      "action": "closed",
+      "route": "/tools/explorer?tab=movers",
+      "pngFull": "shots/populated-closed-1280-full.png",
+      "pngFold": "shots/populated-closed-1280-fold.png",
+      "observedAt": "2026-10-05T18:20:11.271Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1345,
+      "screens": 1.68125,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · End of day · crypto market snapshot · 07:00 AEDT Sun 4 Oct · Equity observation time when supplied · crypto observations have a separate feed basis; no shared observation time supplied"
+      ],
+      "verdicts": [
+        {
+          "attr": "data-movers-verdict",
+          "text": "Conditions support further research.",
+          "top": 246,
+          "bottom": 266,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "parentVerdictCount": 0,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "rowCount": 5,
+      "showAll": [
+        "Show all 10"
+      ],
+      "scrollY": 0
+    },
+    {
+      "id": "populated-closed",
+      "dataCase": "populated",
+      "action": "closed",
+      "route": "/tools/explorer?tab=movers",
+      "pngFull": "shots/populated-closed-390-full.png",
+      "pngFold": "shots/populated-closed-390-fold.png",
+      "observedAt": "2026-10-05T18:20:11.765Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1544,
+      "screens": 1.8293838862559242,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · End of day · crypto market snapshot · 07:00 AEDT Sun 4 Oct · Equity observation time when supplied · crypto observations have a separate feed basis; no shared observation time supplied"
+      ],
+      "verdicts": [
+        {
+          "attr": "data-movers-verdict",
+          "text": "Conditions support further research.",
+          "top": 365.5,
+          "bottom": 385.5,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "parentVerdictCount": 0,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "rowCount": 5,
+      "showAll": [
+        "Show all 10"
+      ],
+      "scrollY": 0
+    },
+    {
+      "id": "populated-show-all",
+      "dataCase": "populated",
+      "action": "show-all",
+      "route": "/tools/explorer?tab=movers",
+      "pngFull": "shots/populated-show-all-1280-full.png",
+      "pngFold": "shots/populated-show-all-1280-fold.png",
+      "observedAt": "2026-10-05T18:20:12.264Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1915,
+      "screens": 2.39375,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · End of day · crypto market snapshot · 07:00 AEDT Sun 4 Oct · Equity observation time when supplied · crypto observations have a separate feed basis; no shared observation time supplied"
+      ],
+      "verdicts": [
+        {
+          "attr": "data-movers-verdict",
+          "text": "Conditions support further research.",
+          "top": 246,
+          "bottom": 266,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "parentVerdictCount": 0,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "rowCount": 10,
+      "showAll": [
+        "Show five"
+      ],
+      "scrollY": 0
+    },
+    {
+      "id": "populated-show-all",
+      "dataCase": "populated",
+      "action": "show-all",
+      "route": "/tools/explorer?tab=movers",
+      "pngFull": "shots/populated-show-all-390-full.png",
+      "pngFold": "shots/populated-show-all-390-fold.png",
+      "observedAt": "2026-10-05T18:20:12.796Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 2114,
+      "screens": 2.504739336492891,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · End of day · crypto market snapshot · 07:00 AEDT Sun 4 Oct · Equity observation time when supplied · crypto observations have a separate feed basis; no shared observation time supplied"
+      ],
+      "verdicts": [
+        {
+          "attr": "data-movers-verdict",
+          "text": "Conditions support further research.",
+          "top": 365.5,
+          "bottom": 385.5,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "parentVerdictCount": 0,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "rowCount": 10,
+      "showAll": [
+        "Show five"
+      ],
+      "scrollY": 0
+    },
+    {
+      "id": "empty",
+      "dataCase": "empty",
+      "action": "closed",
+      "route": "/tools/explorer?tab=movers",
+      "pngFull": "shots/empty-1280-full.png",
+      "pngFold": "shots/empty-1280-fold.png",
+      "observedAt": "2026-10-05T18:20:13.281Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "screens": 1,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · End of day · crypto market snapshot · 07:00 AEDT Sun 4 Oct · Equity observation time when supplied · crypto observations have a separate feed basis; no shared observation time supplied"
+      ],
+      "verdicts": [
+        {
+          "attr": "data-movers-verdict",
+          "text": "No mover observations collected.",
+          "top": 246,
+          "bottom": 266,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "parentVerdictCount": 0,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "rowCount": 0,
+      "showAll": [],
+      "scrollY": 0
+    },
+    {
+      "id": "empty",
+      "dataCase": "empty",
+      "action": "closed",
+      "route": "/tools/explorer?tab=movers",
+      "pngFull": "shots/empty-390-full.png",
+      "pngFold": "shots/empty-390-fold.png",
+      "observedAt": "2026-10-05T18:20:13.728Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "screens": 1,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · End of day · crypto market snapshot · 07:00 AEDT Sun 4 Oct · Equity observation time when supplied · crypto observations have a separate feed basis; no shared observation time supplied"
+      ],
+      "verdicts": [
+        {
+          "attr": "data-movers-verdict",
+          "text": "No mover observations collected.",
+          "top": 365.5,
+          "bottom": 385.5,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "parentVerdictCount": 0,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "rowCount": 0,
+      "showAll": [],
+      "scrollY": 0
+    },
+    {
+      "id": "error",
+      "dataCase": "error",
+      "action": "closed",
+      "route": "/tools/explorer?tab=movers",
+      "pngFull": "shots/error-1280-full.png",
+      "pngFold": "shots/error-1280-fold.png",
+      "observedAt": "2026-10-05T18:20:14.150Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "screens": 1,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 0,
+      "sourceText": [],
+      "verdicts": [
+        {
+          "attr": "data-movers-verdict",
+          "text": "Movers could not be collected.",
+          "top": 280,
+          "bottom": 300,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "parentVerdictCount": 0,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "rowCount": 0,
+      "showAll": [],
+      "scrollY": 0
+    },
+    {
+      "id": "error",
+      "dataCase": "error",
+      "action": "closed",
+      "route": "/tools/explorer?tab=movers",
+      "pngFull": "shots/error-390-full.png",
+      "pngFold": "shots/error-390-fold.png",
+      "observedAt": "2026-10-05T18:20:14.613Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "screens": 1,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 0,
+      "sourceText": [],
+      "verdicts": [
+        {
+          "attr": "data-movers-verdict",
+          "text": "Movers could not be collected.",
+          "top": 399.5,
+          "bottom": 419.5,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "parentVerdictCount": 0,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "rowCount": 0,
+      "showAll": [],
+      "scrollY": 0
+    }
+  ],
+  "errors": [],
+  "externalAborted": 0
+}

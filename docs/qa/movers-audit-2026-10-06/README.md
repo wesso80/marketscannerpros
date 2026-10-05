@@ -13,17 +13,17 @@ Five initial rows with Show all; one assessment; folded filters, row evidence, c
 
 ## Hard layout gate
 
-| Gate | Status |
-|---|---|
-| One verdict above first fold | One summary verified in DOM tests; placement for Pip |
-| About two screens, folds closed | Pending Pip measurement |
-| No sideways scroll at 390 | Pending Pip |
-| No fake/empty tool | Empty/error states tested |
-| No banned/engine words | Fixture copy tested; Pip to inspect populated expanded evidence |
-| Readable numbers + one source line | Rounding/source/date assertions pass |
-| Screenshots 1280 and 390 | Pending Pip; no screenshots claimed |
-| Symbol / Overview / Track chrome | Symbol links retained; shared chrome unchanged |
+Measured on `/tools/explorer?tab=movers` with mocked Pro fixtures. Details, PNG paths, and raw `scrollHeight` values are in [evidence.md](evidence.md) and [evidence.json](evidence.json).
 
-**Pip to check:** capture populated Markets → Movers at 1280×800 and 390×844 with folds closed; record document height/screen count, overflow and first-fold verdict. Exercise Show all, asset/setup filters, row details, equity/crypto Symbol handoff, and error/empty states. Check parent Markets chrome for duplicate verdict/source. Capture before/after against the batch base.
+| # | Gate | Status |
+|---|---|---|
+| 1 | One verdict above first fold | Pass. One `[data-movers-verdict]`, fully inside 1280×800 (y 246–266) and 390×844 (y 365.5–385.5). No parent Markets verdict. |
+| 2 | About two screens, folds closed | **Pass.** Closed max 1.681 at 1280 and 1.829 at 390. Hard max 2.3 and target 2.0 both met. Show all is 2.394 / 2.505 and is not the closed gate. |
+| 3 | No sideways scroll at 390 | **Pass.** Document and body width 390 in every captured case. Markets tab list wraps (`scrollWidth` = `clientWidth`). |
+| 4 | No fake/empty tool | Empty and error captures show the explicit sentence and no retained rows. |
+| 5 | No banned/engine words | Not re-scanned in this visual pass. |
+| 6 | Readable numbers + one source line | Populated and empty: one SourceLine. Error: zero source lines. |
+| 7 | Screenshots 1280 and 390 | **Pass.** Full-page PNGs at both viewports for populated closed, Show all, empty, and error. Pixel height matches `scrollHeight`. |
+| 8 | Symbol / Overview / Track chrome | Unchanged by this evidence commit. |
 
-Browser security policy blocked local file preview. User assigned visual verification to Pip. Keep draft/HOLD until that evidence is attached. No merge or deploy.
+Before screenshots against `batch/oct-wp` @ `9c9d40a8` were not taken. Keep draft. No merge or deploy.
