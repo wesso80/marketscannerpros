@@ -1,0 +1,440 @@
+{
+  "mocked": true,
+  "root": "/workspace/scratch/0535040d28c6/liquidity-sweep",
+  "results": [
+    {
+      "type": "equity",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "closed": {
+        "observedAt": "2026-10-05T08:15:51.371Z",
+        "width": 1280,
+        "height": 800,
+        "scrollWidth": 1280,
+        "screens": 1.0925,
+        "cards": 6,
+        "sourceCount": 1,
+        "legendCount": 1,
+        "verdicts": [
+          {
+            "text": "18 sweep observations across 36 symbols",
+            "top": 205
+          }
+        ],
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nⓘ General Information Only — educational use only.\nRead ▾\nLiquidity Sweep\n\n18 sweep observations across 36 symbols\n\nCompleted-candle observations around recorded price levels.\n\nRun scan\nOpen Symbol\nOpen Terminal\nEquity\nCrypto\nAll observations\nSweeps only\nSweeps and nearby levels\n36 scanned · 36 matching\n\nLast session · Fri 2 Oct · Source: Alpha Vantage completed daily candles\n\n● Active sweep means a recorded candle crossed a level. It is a price-pattern observation.\n\nAAPL●\n$100.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept above\nLevel details\nMSFT●\n$101.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept below\nLevel details\nNVDA●\n$102.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept above\nLevel details\nAMD●\n$103.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept below\nLevel details\nMU●\n$104.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept above\nLevel details\nTSLA●\n$105.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept below\nLevel details\nShow all (36)\nLiquidity sweep detection is for educational purposes only. Sweeps are technical price-pattern observations and do not predict future direction or provide buy/sell signals. Not financial advice. Sweep observations describe possible stop-hunt behavior but do not guarantee reversal.\n✕\nMSP AI"
+      },
+      "interactions": {
+        "allCount": 36,
+        "collapsedCount": 6,
+        "scansBefore": 1,
+        "scansAfter": 1,
+        "openText": [
+          "AAPL●$100.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept aboveLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "MSFT●$101.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept belowLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "NVDA●$102.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept aboveLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "AMD●$103.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept belowLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "MU●$104.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept aboveLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "TSLA●$105.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept belowLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels"
+        ]
+      },
+      "requests": [
+        {
+          "path": "/api/disclosure/status",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/auth/session",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/me",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/auth/session",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/regime",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/favorites",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/liquidity-sweep",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/risk/governor/preferences",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/risk/governor/permission-snapshot",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/regime",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/context/heartbeat",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/analytics/heartbeat",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/health/data",
+          "method": "GET",
+          "mocked": true
+        }
+      ],
+      "errors": []
+    },
+    {
+      "type": "equity",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "closed": {
+        "observedAt": "2026-10-05T08:15:53.549Z",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "screens": 1.9514218009478672,
+        "cards": 6,
+        "sourceCount": 1,
+        "legendCount": 1,
+        "verdicts": [
+          {
+            "text": "18 sweep observations across 36 symbols",
+            "top": 236.5
+          }
+        ],
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nⓘ General Information Only — educational use only.\nRead ▾\nLiquidity Sweep\n\n18 sweep observations across 36 symbols\n\nCompleted-candle observations around recorded price levels.\n\nRun scan\nOpen Symbol\nOpen Terminal\nEquity\nCrypto\nAll observations\nSweeps only\nSweeps and nearby levels\n36 scanned · 36 matching\n\nLast session · Fri 2 Oct · Source: Alpha Vantage completed daily candles\n\n● Active sweep means a recorded candle crossed a level. It is a price-pattern observation.\n\nAAPL●\n$100.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept above\nLevel details\nMSFT●\n$101.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept below\nLevel details\nNVDA●\n$102.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept above\nLevel details\nAMD●\n$103.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept below\nLevel details\nMU●\n$104.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept above\nLevel details\nTSLA●\n$105.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept below\nLevel details\nShow all (36)\nLiquidity sweep detection is for educational purposes only. Sweeps are technical price-pattern observations and do not predict future direction or provide buy/sell signals. Not financial advice. Sweep observations describe possible stop-hunt behavior but do not guarantee reversal.\n✕\nMSP AI"
+      },
+      "interactions": {
+        "allCount": 36,
+        "collapsedCount": 6,
+        "scansBefore": 1,
+        "scansAfter": 1,
+        "openText": [
+          "AAPL●$100.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept aboveLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "MSFT●$101.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept belowLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "NVDA●$102.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept aboveLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "AMD●$103.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept belowLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "MU●$104.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept aboveLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "TSLA●$105.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept belowLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels"
+        ]
+      },
+      "requests": [
+        {
+          "path": "/api/disclosure/status",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/auth/session",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/me",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/context/heartbeat",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/analytics/heartbeat",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/health/data",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/regime",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/favorites",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/risk/governor/preferences",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/risk/governor/permission-snapshot",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/regime",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/auth/session",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/liquidity-sweep",
+          "method": "POST",
+          "mocked": true
+        }
+      ],
+      "errors": []
+    },
+    {
+      "type": "crypto",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "closed": {
+        "observedAt": "2026-10-05T08:15:55.737Z",
+        "width": 1280,
+        "height": 800,
+        "scrollWidth": 1280,
+        "screens": 1.0925,
+        "cards": 6,
+        "sourceCount": 1,
+        "legendCount": 1,
+        "verdicts": [
+          {
+            "text": "18 sweep observations across 36 symbols",
+            "top": 205
+          }
+        ],
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nⓘ General Information Only — educational use only.\nRead ▾\nLiquidity Sweep\n\n18 sweep observations across 36 symbols\n\nCompleted-candle observations around recorded price levels.\n\nRun scan\nOpen Symbol\nOpen Terminal\nEquity\nCrypto\nAll observations\nSweeps only\nSweeps and nearby levels\n36 scanned · 36 matching\n\nLast session · Fri 2 Oct · Source: CoinGecko completed daily candles\n\n● Active sweep means a recorded candle crossed a level. It is a price-pattern observation.\n\nBTC●\n$100.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept above\nLevel details\nETH●\n$101.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept below\nLevel details\nSOL●\n$102.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept above\nLevel details\nNEAR●\n$103.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept below\nLevel details\nLINK●\n$104.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept above\nLevel details\nXRP●\n$105.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept below\nLevel details\nShow all (36)\nLiquidity sweep detection is for educational purposes only. Sweeps are technical price-pattern observations and do not predict future direction or provide buy/sell signals. Not financial advice. Sweep observations describe possible stop-hunt behavior but do not guarantee reversal.\n✕\nMSP AI"
+      },
+      "interactions": {
+        "allCount": 36,
+        "collapsedCount": 6,
+        "scansBefore": 2,
+        "scansAfter": 2,
+        "openText": [
+          "BTC●$100.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept aboveLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "ETH●$101.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept belowLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "SOL●$102.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept aboveLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "NEAR●$103.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept belowLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "LINK●$104.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept aboveLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "XRP●$105.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept belowLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels"
+        ]
+      },
+      "requests": [
+        {
+          "path": "/api/disclosure/status",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/auth/session",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/me",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/auth/session",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/regime",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/favorites",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/liquidity-sweep",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/risk/governor/preferences",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/risk/governor/permission-snapshot",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/regime",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/context/heartbeat",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/analytics/heartbeat",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/health/data",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/liquidity-sweep",
+          "method": "POST",
+          "mocked": true
+        }
+      ],
+      "errors": []
+    },
+    {
+      "type": "crypto",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "closed": {
+        "observedAt": "2026-10-05T08:15:57.972Z",
+        "width": 390,
+        "height": 844,
+        "scrollWidth": 390,
+        "screens": 1.9514218009478672,
+        "cards": 6,
+        "sourceCount": 1,
+        "legendCount": 1,
+        "verdicts": [
+          {
+            "text": "18 sweep observations across 36 symbols",
+            "top": 236.5
+          }
+        ],
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nⓘ General Information Only — educational use only.\nRead ▾\nLiquidity Sweep\n\n18 sweep observations across 36 symbols\n\nCompleted-candle observations around recorded price levels.\n\nRun scan\nOpen Symbol\nOpen Terminal\nEquity\nCrypto\nAll observations\nSweeps only\nSweeps and nearby levels\n36 scanned · 36 matching\n\nLast session · Fri 2 Oct · Source: CoinGecko completed daily candles\n\n● Active sweep means a recorded candle crossed a level. It is a price-pattern observation.\n\nBTC●\n$100.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept above\nLevel details\nETH●\n$101.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept below\nLevel details\nSOL●\n$102.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept above\nLevel details\nNEAR●\n$103.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept below\nLevel details\nLINK●\n$104.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept above\nLevel details\nXRP●\n$105.00 +1.1%\n\nPrior day low · $99.00 · 0.5% away\n\nSwept below\nLevel details\nShow all (36)\nLiquidity sweep detection is for educational purposes only. Sweeps are technical price-pattern observations and do not predict future direction or provide buy/sell signals. Not financial advice. Sweep observations describe possible stop-hunt behavior but do not guarantee reversal.\n✕\nMSP AI"
+      },
+      "interactions": {
+        "allCount": 36,
+        "collapsedCount": 6,
+        "scansBefore": 2,
+        "scansAfter": 2,
+        "openText": [
+          "BTC●$100.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept aboveLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "ETH●$101.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept belowLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "SOL●$102.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept aboveLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "NEAR●$103.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept belowLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "LINK●$104.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept aboveLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels",
+          "XRP●$105.00 +1.1%Prior day low · $99.00 · 0.5% awaySwept belowLevel detailsPrior day low · $99.00Equal highs · $105.00Measured range: 2.0%Pattern score: 652 recorded levels"
+        ]
+      },
+      "requests": [
+        {
+          "path": "/api/disclosure/status",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/auth/session",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/me",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/context/heartbeat",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/analytics/heartbeat",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/auth/session",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/health/data",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/regime",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/favorites",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/liquidity-sweep",
+          "method": "POST",
+          "mocked": true
+        },
+        {
+          "path": "/api/risk/governor/preferences",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/risk/governor/permission-snapshot",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/regime",
+          "method": "GET",
+          "mocked": true
+        },
+        {
+          "path": "/api/liquidity-sweep",
+          "method": "POST",
+          "mocked": true
+        }
+      ],
+      "errors": []
+    }
+  ]
+}

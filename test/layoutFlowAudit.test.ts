@@ -923,13 +923,13 @@ describe('layout and flow audit regressions', () => {
     expect(regimeBanner).not.toContain('permissionColors');
     expect(regimeBanner).not.toContain('Sizing:');
     expect(regimeBanner).not.toContain('⚠ Stale signals');
-    expect(liquiditySweepPage).toContain('function observationBadge');
-    expect(liquiditySweepPage).toContain('NO OBSERVATION');
-    expect(liquiditySweepPage).toContain('Observations (Sweep + Near Level)');
+    expect(liquiditySweepPage).toContain('data-sweep-verdict');
+    expect(liquiditySweepPage).toContain('No observations match this filter.');
+    expect(liquiditySweepPage).toContain('Sweeps and nearby levels');
     expect(liquiditySweepPage).toContain("{t === 'equity' ? 'Equity' : 'Crypto'}");
-    expect(liquiditySweepPage).toContain("{loading ? 'Scanning...' : 'Scan for Sweeps'}");
+    expect(liquiditySweepPage).toContain("{loading ? 'Scanning…' : 'Run scan'}");
     expect(liquiditySweepPage).toContain('Liquidity sweep detection is for educational purposes only.');
-    expect(liquiditySweepPage).toContain("{r.direction === 'bullish' ? 'Bullish' : 'Bearish'} context");
+    expect(liquiditySweepPage).toContain('price-pattern observation');
     expect(liquiditySweepPage).not.toContain('function setupBadge');
     expect(liquiditySweepPage).not.toContain('NO SETUP');
     expect(liquiditySweepPage).not.toContain('🔍 Scan for Sweeps');
@@ -1284,8 +1284,8 @@ describe('layout and flow audit regressions', () => {
     expect(researchPage).toContain('RESEARCH_TAB_META');
     expect(researchPage).toContain('function ResearchMetric');
 
-    expect(liquiditySweepPage).toContain("ariaLabel=\"Liquidity Sweep command header\"");
-    expect(liquiditySweepPage).toContain('Open Golden Egg');
+    expect(liquiditySweepPage).toContain('data-sweep-verdict');
+    expect(liquiditySweepPage).toContain('Open Symbol');
 
     expect(scalperPage).toContain('aria-label="Scalper command header"');
     expect(scalperPage).toContain('Open Symbol');
