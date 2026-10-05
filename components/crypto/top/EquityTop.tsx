@@ -3,11 +3,13 @@ import {useEffect,useState} from 'react';
 import type {GoldenEggPayload} from '@/src/features/goldenEgg/types';
 import {SymbolSummary} from './CryptoTop';
 import type {DisplayChart} from './BaseChart';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import RuleChips from './RuleChips';
 import type {DisplayStat} from './StatCards';
 
 
 /** Presentation only: no stock stage/base is inferred from crypto rules. */
-export default function EquityTop({data,assessment,pick}:{data:GoldenEggPayload;assessment:string;pick?:{grade?:string|null;scan_date?:string}|null}){
+export default function EquityTop({data,pick}:{data:GoldenEggPayload;pick?:{grade?:string|null;scan_date?:string}|null}){
  const [bars,setBars]=useState<DisplayChart['bars']>([]),[error,setError]=useState(false);
  useEffect(()=>{const abort=new AbortController();setBars([]);setError(false);
   fetch(`/api/bars?symbol=${encodeURIComponent(data.meta.symbol)}&timeframe=daily&limit=140`,{signal:abort.signal}).then(async r=>{if(!r.ok)throw Error();const body=await r.json();if(!body.ok||!Array.isArray(body.candles))throw Error();if(!abort.signal.aborted)setBars(body.candles.filter((c:any)=>Number.isFinite(c.c)&&Number.isFinite(Date.parse(c.t))).map((c:any)=>({t:c.t,close:c.c,high:c.h,low:c.l})));}).catch(()=>{if(!abort.signal.aborted)setError(true);});
@@ -18,8 +20,12 @@ export default function EquityTop({data,assessment,pick}:{data:GoldenEggPayload;
  const tiles:DisplayStat[]=levels.slice(0,2).map(l=>({label:l.label,value:l.price.toLocaleString(undefined,{maximumFractionDigits:2}),detail:data.meta.price?`${((l.price/data.meta.price-1)*100).toFixed(1)}% away`:undefined}));
  if(c?.options?.expectedMovePct!=null)tiles.push({label:'Expected move',value:`±${c.options.expectedMovePct.toFixed(2)}%`,detail:c.options.expiry});
  if(pick?.grade)tiles.push({label:"Daily pick grade",value:pick.grade,detail:pick.scan_date?.slice(0,10)});
- const rules=engine?.factors?.slice(0,5).map(f=>({name:f.name,value:f.value==null?'Not measured':`${Math.round(f.value*100)}%`,limit:'',pass:f.pass}));
+ const labels:Record<string,string>={trendQuality:'Trend strength',entryLocation:'Price location',volatilityRegime:'Volatility',volume:'Volume',momentum:'Momentum',structureRoom:'Room to next level',pullbackLocation:'Pullback depth',momentumReset:'Momentum reset',volumeDryUp:'Volume contraction',compression:'Range compression',directionalBias:'Direction checks',catalystPending:'Upcoming event',quietVolume:'Quiet volume',stretch:'Price stretch',rsiRollover:'Momentum cooling',climax:'Volume peak',atOpposingLevel:'Nearby opposing level',trendNotAccelerating:'Trend acceleration'};
+ const rules=(engine?.factors??[]).filter(f=>f.value!=null&&Number.isFinite(f.value)).map(f=>({name:labels[f.name]??f.name.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/_/g,' '),value:`${Math.round(f.value!*100)}%`,limit:'',pass:f.pass}));
+ const passed=rules.filter(r=>r.pass===true).length;
+ const verdict=rules.length?`${passed} of ${rules.length} measured checks meet their recorded thresholds.`:'No measured checks were returned in this packet.';
  return <div className="space-y-3">{error&&<p role="status" className="text-xs text-amber-300">Daily chart feed failed. Other observations retain their own dates.</p>}
- <SymbolSummary stage={<span data-stage-badge className="rounded border border-current px-3 py-1 text-sm text-amber-300">{assessment}</span>} verdict={`Daily close ${bars.at(-1)?.close.toLocaleString(undefined,{maximumFractionDigits:2})??data.meta.price.toLocaleString(undefined,{maximumFractionDigits:2})} · ${levels.length} recorded key levels.`} rules={rules??[]} chart={{bars,levels:levels.map(l=>({name:l.label,value:l.price})),basis:'Alpha Vantage daily bars'}} tiles={tiles}/>
+ <SymbolSummary stage={null} verdict={verdict} rules={rules.slice(0,4)} chart={{bars,levels:levels.map(l=>({name:l.label,value:l.price})),basis:'Alpha Vantage daily bars'}} tiles={tiles}/>
+ {rules.length>4&&<CollapsibleSection deferMount title="Additional checks" summary={`${rules.length-4} more measured ${rules.length===5?'check':'checks'}`}><RuleChips items={rules.slice(4)} showSource={false}/></CollapsibleSection>}
  </div>;
 }

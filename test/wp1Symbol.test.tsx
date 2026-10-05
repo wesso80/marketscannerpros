@@ -22,13 +22,13 @@ function equity(symbol:string):GoldenEggPayload{return {meta:{symbol,assetClass:
 beforeEach(()=>{vi.stubGlobal('React',React);vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({ok:true,candles:daily.map(b=>({t:b.t,c:b.close,h:b.high,l:b.low}))})})));});
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 it.each(['AAPL','NVDA'])('uses the shared chart, rule chips and stat tiles for %s without mutating its verdict',async symbol=>{
- const payload=equity(symbol),before=JSON.stringify(payload);const {container}=render(<EquityTop data={payload} assessment="WATCH"/>);
+ const payload=equity(symbol),before=JSON.stringify(payload);const {container}=render(<EquityTop data={payload}/>);
  await screen.findByRole('img');expect(container.querySelector('[data-symbol-summary]')).toBeTruthy();expect(container.querySelector('[data-rule-chip]')).toBeTruthy();expect(container.querySelector('[data-symbol-stats]')).toBeTruthy();expect(container.querySelector('[data-base-box]')).toBeNull();expect(JSON.stringify(payload)).toBe(before);
  expect(fetch).toHaveBeenCalledTimes(1);expect(String(vi.mocked(fetch).mock.calls[0][0])).toContain('timeframe=daily');
 });
 it('preserves BTC rule stage and verdict inputs, with shared parts and no per-card source stamps',()=>{
  const d=crypto(),before=JSON.stringify(d);const {container}=render(<CryptoTop data={d} showSource={false}/>);
- expect(container.querySelector('[data-symbol-summary]')).toBeTruthy();expect(container.querySelector('[data-stage-badge]')?.textContent).toBe(d.top!.stage);expect(container.querySelectorAll('[data-rule-chip]')).toHaveLength(4);expect(container.querySelectorAll('[data-top-source]')).toHaveLength(0);expect(JSON.stringify(d)).toBe(before);
+ expect(container.querySelector('[data-symbol-summary]')).toBeTruthy();expect(container.querySelector('[data-stage-badge]')?.textContent).toBe(d.top!.stage);expect(container.querySelectorAll('[data-rule-chip]')).toHaveLength(4);expect(container.querySelectorAll('[data-top-source]')).toHaveLength(0);expect(container.querySelector('[data-stage-badge]')?.getAttribute('style')).not.toContain('var(--msp-bull)');expect(JSON.stringify(d)).toBe(before);
 });
 it('compact crypto uses closed native folds and one source line, evidence opens on demand',async()=>{
  const d=crypto();vi.mocked(fetch).mockResolvedValue({ok:true,json:async()=>d} as Response);
@@ -50,4 +50,15 @@ it.each([true,false])('compact header omits absent quote and raw trust labels (q
 it('paid failed crypto feed is an amber fault, never an upgrade card',async()=>{
  vi.mocked(fetch).mockResolvedValue({ok:false,status:503} as Response);render(<CryptoBreakdown compact symbol="BTC" timeframe="daily"/>);
  expect((await screen.findByRole('alert')).textContent).toContain('Crypto data feed failed');expect(screen.queryByText('Unlock with Pro')).toBeNull();
+});
+
+it('stock shows four readable checks and discloses every additional measured check',async()=>{
+ const p=equity('AAPL');p.canonicalVerdict!.factors=['trendQuality','entryLocation','volatilityRegime','volume','momentum'].map(name=>({name,value:.7,pass:true} as any));
+ const {container}=render(<EquityTop data={p}/>);await screen.findByRole('img');
+ expect(container.querySelectorAll('[data-rule-chip]')).toHaveLength(4);
+ expect(container.querySelector('[data-stage-badge]')).toBeNull();
+ expect(screen.getByText('5 of 5 measured checks meet their recorded thresholds.')).toBeTruthy();
+ expect(container.textContent).not.toMatch(/trendQuality|entryLocation|volatilityRegime/);
+ const fold=container.querySelector('details')!;expect(fold.textContent).toContain('1 more measured check');fold.open=true;fireEvent(fold,new Event('toggle'));
+ await waitFor(()=>expect(container.querySelectorAll('[data-rule-chip]')).toHaveLength(5));
 });

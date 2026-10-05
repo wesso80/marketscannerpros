@@ -470,7 +470,7 @@ export default function GoldenEggPage() {
   const geMarketStatusItems = [
     {
       label: 'Quote',
-      statusLabel: geCanonical?.priceTs ? 'OBSERVED' : 'UNVERIFIED',
+      statusLabel: geCanonical?.priceTs ? 'OBSERVED' : 'Date not recorded',
       warnings: [`Price observation: ${geCanonical?.priceTs || 'unavailable'}. Packet calculation time is not quote time.`],
       status: buildMarketDataProviderStatus({
         source: 'quote',
@@ -487,7 +487,7 @@ export default function GoldenEggPage() {
     },
     {
       label: 'Regime',
-      statusLabel: regime.data ? 'COMPUTED' : 'UNAVAILABLE',
+      statusLabel: regime.data ? 'COMPUTED' : 'Not collected',
       status: buildMarketDataProviderStatus({
         source: 'regime',
         provider: 'cross-market regime',
@@ -497,7 +497,7 @@ export default function GoldenEggPage() {
     },
     {
       label: 'DVE',
-      statusLabel: d ? 'COMPUTED' : 'UNAVAILABLE',
+      statusLabel: d ? 'COMPUTED' : 'Not collected',
       status: buildMarketDataProviderStatus({
         source: 'dve',
         provider: 'volatility engine',
@@ -507,7 +507,7 @@ export default function GoldenEggPage() {
     },
     {
       label: ge?.meta?.assetClass === 'crypto' ? 'Derivatives' : 'Options',
-      statusLabel: geCanonical?.options?.quality.level ?? (geCanonical?.derivatives ? 'PARTIAL' : 'UNAVAILABLE'),
+      statusLabel: geCanonical?.options?.quality.level ?? (geCanonical?.derivatives ? 'PARTIAL' : 'Not collected'),
       status: buildMarketDataProviderStatus({
         source: ge?.meta?.assetClass === 'crypto' ? 'derivatives' : 'options',
         provider: ge?.meta?.assetClass === 'crypto' ? 'derivatives evidence' : 'options evidence',
@@ -517,7 +517,7 @@ export default function GoldenEggPage() {
     },
     {
       label: 'Time',
-      statusLabel: ge?.layer3?.timeConfluence?.enabled ? 'COMPUTED' : 'UNAVAILABLE',
+      statusLabel: ge?.layer3?.timeConfluence?.enabled ? 'COMPUTED' : 'Not collected',
       status: buildMarketDataProviderStatus({
         source: 'time-confluence',
         provider: 'time confluence',
@@ -664,7 +664,7 @@ export default function GoldenEggPage() {
       </CollapsibleSection>}
 
       {isAuthBlocked && goldenEgg.isUpgradeRequired && (
-        <LockedPreview tool="Golden Egg" description={FREE_COPY.goldenEgg} />
+        <LockedPreview tool="Symbol breakdown" description={FREE_COPY.goldenEgg} />
       )}
       {isAuthBlocked && !goldenEgg.isUpgradeRequired && (
         <Card>
@@ -689,13 +689,13 @@ export default function GoldenEggPage() {
       )}
 
       {!isAuthBlocked && (quoteType==='crypto'?<CryptoBreakdown compact showSource={false} onStamp={setCryptoStamp} symbol={sym} timeframe={timeframe} coinId={searchParams.get('id')??undefined}/>:<>
-        {ge&&!loading&&<EquityTop data={ge} assessment={geAssessmentLabel} pick={findSymbolPick(dailyPicks.data,sym,'equity')}/>}
+        {ge&&!loading&&<EquityTop data={ge} pick={findSymbolPick(dailyPicks.data,sym,'equity')}/>}
         {goldenEgg.error&&!loading&&<p role="alert" className="text-sm text-amber-300">Symbol data feed failed. <button className="min-h-10 underline" onClick={()=>goldenEgg.refetch()}>Retry</button></p>}
         {ge&&<>
         <CollapsibleSection deferMount title="Scenario map" summary={`${ge.layer2.setup.keyLevels.length} recorded levels`}><p>{ge.layer2.scenario.referenceTrigger}</p><p>{ge.layer2.scenario.invalidationLevel.logic}</p></CollapsibleSection>
         <CollapsibleSection deferMount title="Options" summary={geCanonical?.options?`Expiry ${geCanonical.options.expiry}`:'No options snapshot in this packet'}><SymbolOptionsContext compact symbol={sym} expiry={searchParams.get('expiry')??undefined}/></CollapsibleSection>
-        <CollapsibleSection deferMount title="Fundamentals" summary={geCanonical?.fundamentals?.name??sym}><CompanyOverview symbol={sym}/><OwnershipFlowPanel symbol={sym}/></CollapsibleSection>
-        <ChipRow items={[{id:'evidence',label:`${geDataQuality==='GOOD'?'Evidence and data checks':'Some data checks failed'} · ${geEvidenceItems.length} checks`,warning:geDataQuality!=='GOOD',detail:<EvidenceStack title="Evidence" items={geEvidenceItems}/>}]} />
+        {geCanonical?.fundamentals?.marketCap!=null&&<CollapsibleSection deferMount title="Fundamentals" summary={`Market cap ${formatUsdShort(geCanonical.fundamentals.marketCap)}`}><CompanyOverview symbol={sym}/><OwnershipFlowPanel symbol={sym}/></CollapsibleSection>}
+        <ChipRow items={[{id:'evidence',label:`${geDataQuality==='GOOD'?'Evidence and data checks':'Some data checks failed'} · ${geEvidenceItems.length} checks`,warning:geDataQuality!=='GOOD',detail:<EvidenceStack title="Evidence" items={geEvidenceItems.map(item=>({...item,value:friendlyStatus(item.value),detail:item.detail?friendlyStatus(item.detail):undefined}))}/>}]} />
         </>}
       </>)}
       {!isAuthBlocked && <CollapsibleSection deferMount title={quoteType==='crypto'?'More detail':'Deep analysis'} summary={ge?`${ge.layer1.scoreBreakdown?.length??0} recorded components`:`${sym} research detail`}>
@@ -911,9 +911,9 @@ export default function GoldenEggPage() {
                 </div>
               </div>
 
-              <EvidenceStack title="Symbol Evidence Stack" items={geEvidenceItems} />
+              <EvidenceStack title="Symbol Evidence Stack" items={geEvidenceItems.map(item=>({...item,value:friendlyStatus(item.value),detail:item.detail?friendlyStatus(item.detail):undefined}))} />
 
-              <MarketStatusStrip items={geMarketStatusItems} className="md:grid-cols-5" />
+              <MarketStatusStrip friendly items={geMarketStatusItems} className="md:grid-cols-5" />
 
               {/* Level of Interest / Invalidation / Key Levels row */}
               <div className="pt-3 border-t border-slate-800/50">
@@ -995,11 +995,11 @@ export default function GoldenEggPage() {
               <div className="mt-4 pt-3 border-t border-slate-800/50">
                 <div className="text-[11px] text-slate-500 mb-2 uppercase">Score Breakdown</div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {ge.layer1.scoreBreakdown.map((sb: any) => (
+                  {ge.layer1.scoreBreakdown.filter((sb: any)=>sb.available!==false&&Number.isFinite(sb.value)).map((sb: any) => (
                     <div key={sb.key} className="bg-[var(--msp-panel-2)] rounded-lg p-2">
                       <div className="text-[11px] text-slate-500">{sb.key} (w:{sb.weight})</div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-white">{sb.available === false ? (sb.imputedNeutral ? 'Missing (50)' : 'N/A') : sb.value.toFixed(1)}</span>
+                        <span className="text-sm font-bold text-white">{sb.value.toFixed(1)}</span>
                         {sb.available !== false && <ScoreBar value={Math.min(sb.value, 100)} color="#10B981" />}
                       </div>
                       {sb.points != null && <div className="text-[11px] text-slate-400">{sb.points.toFixed(2)} points · {(sb.effectiveWeight ?? sb.weight).toFixed(0)}% effective weight</div>}
@@ -1556,8 +1556,8 @@ export default function GoldenEggPage() {
       )}
       </>}
       </CollapsibleSection>}
-      {!isAuthBlocked&&<CollapsibleSection deferMount title="Backtest" summary={`${sym} · ${timeframe}`}><a className="inline-flex min-h-10 items-center underline" href={`/tools/workspace?tab=backtest&symbol=${encodeURIComponent(sym)}&type=${snapshotAsset}&timeframe=${timeframe}`}>Open Backtest with {sym}</a></CollapsibleSection>}
-      <SourceLine {...(quoteType==='crypto'?cryptoStamp??{}:{source:geCanonical?.source??quote.data?.source,asOf:geCanonical?.priceTs??quote.data?.observedAt,basis:geCanonical?.barInterval??'Last session close'})}/>
+      {!isAuthBlocked&&geCanonical?.historyBars!=null&&geCanonical.historyBars>0&&<CollapsibleSection deferMount title="Backtest" summary={`${geCanonical.historyBars} recorded ${geCanonical.barInterval??timeframe} bars`}><a className="inline-flex min-h-10 items-center underline" href={`/tools/workspace?tab=backtest&symbol=${encodeURIComponent(sym)}&type=${snapshotAsset}&timeframe=${timeframe}`}>Open Backtest with {sym}</a></CollapsibleSection>}
+      {(quoteType==='crypto'?Boolean(cryptoStamp?.source&&cryptoStamp?.asOf):Boolean((geCanonical?.source??quote.data?.source)&&(geCanonical?.priceTs??quote.data?.observedAt)))&&<SourceLine {...(quoteType==='crypto'?cryptoStamp??{}:{source:geCanonical?.source??quote.data?.source,asOf:geCanonical?.priceTs??quote.data?.observedAt,basis:geCanonical?.barInterval??'Last session close'})}/>}
       <ComplianceDisclaimer compact />
     </div>
   );

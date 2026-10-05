@@ -8,7 +8,7 @@
  FAIL  test/operatorMarketDataAccuracy.test.ts > daily bars / key levels come from the lib/marketData cache > equity key levels use cached daily bars and make no direct AV call
  FAIL  test/workerEquityBulkWiring.test.ts > worker equities wiring (source guard) > writes the same quotes_latest columns as the per-symbol upsert
  FAIL  test/intelligence/globalM2Reliability.test.ts > Persisted source-of-truth fallback > persist:false keeps deterministic behaviour (no store access)
- Test Files  7 failed | 551 passed | 2 skipped (560)
-      Tests  10 failed | 4905 passed | 13 skipped (4928)
-   Start at  21:28:05
-   Duration  41.96s (transform 22.61s, setup 0ms, collect 66.84s, tests 58.09s, environment 7.69s, prepare 43.39s)
+ Test Files  7 failed | 552 passed | 2 skipped (561)
+      Tests  10 failed | 4912 passed | 13 skipped (4935)
+   Start at  21:58:01
+   Duration  38.45s (transform 19.91s, setup 0ms, collect 59.07s, tests 56.12s, environment 7.52s, prepare 41.41s)

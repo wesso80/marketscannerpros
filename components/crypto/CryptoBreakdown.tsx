@@ -35,7 +35,7 @@ export default function CryptoBreakdown({symbol,timeframe:_,coinId,compact=false
   return <div aria-label="Crypto breakdown" className="space-y-3">
    {loading&&<p role="status">Loading daily observations…</p>}{error&&<p role="alert" className="text-sm text-amber-300">Crypto data feed failed. <button className="min-h-10 underline" onClick={()=>setRefresh(v=>v+1)}>Retry</button></p>}
    {data&&<><CryptoTop data={data} showSource={false}/>
-    {groups.filter(([,key])=>metrics(data.sections[key]).length>0||(data.sections[key].value?.notes.length??0)>0).map(([title,key])=><CollapsibleSection deferMount key={key} title={title} summary={`${metrics(data.sections[key]).length} observations`}>
+    {groups.filter(([,key])=>metrics(data.sections[key]).length>0||(data.sections[key].value?.notes.length??0)>0).map(([title,key])=><CollapsibleSection deferMount key={key} title={title} summary={`${metrics(data.sections[key]).length} recorded ${metrics(data.sections[key]).length===1?'value':'values'}`}>
      {detail(key)}{key==='derivatives'&&<a className="inline-flex min-h-10 items-center underline" href={`/tools/crypto-dashboard?symbol=${encodeURIComponent(base)}`}>Open Crypto Derivatives</a>}
     </CollapsibleSection>)}
     <ChipRow items={[{id:'evidence',label:`${Object.values(data.sections).some(s=>['Unknown','Degraded'].includes(s.status))?'Some data checks failed':'Evidence and data checks'} · ${Object.keys(data.sections).length} sections`,warning:Object.values(data.sections).some(s=>['Unknown','Degraded'].includes(s.status)),detail:<div className="space-y-3">{(['price','ruleCheck','liquidity','supply','risks','sourcesCheck'] as const).map(key=><div key={key}><h3 className="font-semibold">{COPY.titles[key]}</h3>{detail(key)}</div>)}</div>}]}/>

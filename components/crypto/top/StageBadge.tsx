@@ -1,2 +1,2 @@
-import {STAGE_TONE,type TopRule} from '@/lib/crypto/breakdown/top';
-export default function StageBadge({stage}:{stage:TopRule['stage']}){return <span data-stage-badge className="max-w-full break-words rounded-full border px-3 py-1 text-sm font-semibold" style={{color:stage==='FELL BACK'?'var(--msp-bear)':stage==='MEETS v1 RULES'?'var(--msp-bull)':'var(--msp-warn)',borderColor:'currentColor'}}>{stage}</span>;}
+import {type TopRule} from '@/lib/crypto/breakdown/top';
+export default function StageBadge({stage}:{stage:TopRule['stage']}){return <span data-stage-badge className="max-w-full break-words rounded-full border px-3 py-1 text-sm font-semibold" style={{color:stage==='FELL BACK'?'var(--msp-bear)':'var(--msp-warn)',borderColor:'currentColor'}}>{stage}</span>;}

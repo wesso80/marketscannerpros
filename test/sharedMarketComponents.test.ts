@@ -42,7 +42,7 @@ describe('shared market truth components', () => {
     expect(page).toContain("import RiskFlagPanel");
     expect(page).toContain('buildMarketDataProviderStatus');
     expect(page).toContain('<EvidenceStack title="Symbol Evidence Stack"');
-    expect(page).toContain('<MarketStatusStrip items={geMarketStatusItems}');
+    expect(page).toContain('<MarketStatusStrip friendly items={geMarketStatusItems}');
     expect(page).toContain('<RiskFlagPanel title="Research Case Invalidates If"');
     expect(page).not.toContain('geFreshness.map');
   });

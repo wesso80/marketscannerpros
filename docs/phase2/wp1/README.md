@@ -1,54 +1,44 @@
-# WP1: Symbol layout — draft, not merge-ready
+# WP1 / PR #353 revision
 
-Base main: `f33130bd969238fc3e959049df1cbd48c819ae04` (#348–#352).
-Branch: `phase2d/symbol`. Reviewed supplied spec.md, symbol.html and all four stock/crypto PNG references. No mockup numbers enter the product.
+Base main: `f33130bd969238fc3e959049df1cbd48c819ae04`. Branch: `phase2d/symbol`.
 
-## Implemented
+## Review fixes
 
-- WP1-1: shared `SymbolSummary`, `BaseChart`, `RuleChips` and `StatCards` for equities and crypto. Stock chart reads the existing `/api/bars` endpoint once per symbol; no polling or scan request. The 50-observation average is a chart overlay, never an input to a verdict. Existing crypto rule classifications remain unchanged.
-- WP1-2/3: remove the repeated hero and large input block; compact picker retains asset/timeframe controls. Stock scenario, options, fundamentals, evidence, deep analysis and backtest are closed folds/chips. Legacy tools and packet retained inside the detail fold. Heavy child tools mount only after the user opens a fold.
-- WP1-4/5: compact crypto key-level tiles, four genuine rule checks, folded details, one evidence chip row and one page-bottom SourceLine. Neutral chart with green/red/amber states. Compact header has one h1 and journal/watchlist/backtest draft links.
-- WP1-6: reuse the existing 401/403 classification and untouched #348 LockedPreview block. Unknown quote labels omitted from the compact header; failed paid feeds remain visible as amber faults. No access rules changed.
-- WP1-7 / Y8: secondary composite stays inside the legacy detail fold, with its existing wording and values. Its score is not repeated in the fold summary.
-- No-symbol URL defaults to AAPL. Existing journal handoff remains a draft link; no journal row writes added.
+1. Stock has no stage field: removed assessment-as-stage badge. No stage/base/rank is invented.
+2. Verdict sentence reports how many measured checks meet their recorded thresholds. Scores and thresholds unchanged.
+3. First four measured checks use readable names. Additional measured checks are explicitly counted in a closed “Additional checks” fold; absent checks are omitted, never fabricated to pad the count.
+4. Fundamentals summary uses actual market cap and is hidden without it. Backtest uses recorded history count and is hidden without it. Crypto summaries say “1 recorded value” / “N recorded values”.
+5. Expanded evidence/status copy uses plain wording. Unmeasured score rows are omitted instead of showing Missing (50) / N/A. Locked card now says Symbol breakdown, explicitly authorized by this review; gates and description unchanged.
+6. Source line is omitted when provider and observation timestamp are absent.
+7. MEETS v1 RULES restored to amber. Committed build log and JPGs removed as requested. Build logs stay outside the repository.
+8. Required viewport screenshots and live score comparisons remain blocked, as described below.
+9. Added full Symbol-page Pro render tests for AAPL, NVDA and BTC. Stock opens evidence and the legacy verdict fold; crypto opens all compact folds and evidence. Network calls mocked, dynamically imported legacy tool pages stubbed (not a replacement for browser testing).
 
-## Required acceptance still open — do not merge
+## Proof status
 
-1. **Visual evidence:** no 390×844 / 1280×800 before/after, no Free/Pro/signed-out after screenshots, and no verified ≤2-screen result yet. The available browser has a fixed 1363×936 viewport and no supported viewport-resize method. Local preview access was previously blocked by browser policy; no alternate route was used to bypass it. Pip needs to run the required preview matrix.
-2. **Stock stages/base box:** the existing equity packet has canonical verdict/factors/levels but no numbered stock stage or base-box interval. The chart draws supplied key levels and preserves the existing assessment. It does not derive stock stages using crypto rules or invent a base. Completing the exact mockup needs an approved existing source for those fields.
-3. **Rules/rank:** crypto has four locked v1 checks, not five. All four are preserved. Daily picks expose grade/date, not numeric rank; stock tile is honestly labelled Daily pick grade. Crypto market-cap rank retains that label. Numerical daily rank is not invented.
-4. **Expanded legacy views:** these are retained, not comprehensively redesigned. The closed view removes their raw status blocks from the DOM, but a full raw-word, colour, source-count and single-h1 audit after opening every legacy tab still needs completion. The shared outer regime pill is unchanged (WP7).
-5. **Live parity:** AAPL/NVDA/BTC fixture JSON is unchanged by rendering; scoring/rule files and `app/v2/_lib/api.ts` are untouched. A live before/after JSON comparison is still pending.
+- Production `npx next build`: exit 0 before push. `npx tsc --noEmit`: exit 0. Full suite: 4,912 passed / 10 failed / 13 skipped; failures are confined to the same seven files reproduced on main. Focused Symbol/free-tier/crypto/evidence checks: 27 passed. Added main-score replay: 3 passed. Build log is intentionally uncommitted.
+- Fixed-input score replay against exact main: AAPL 76 / ALIGNED / A; NVDA 76 / ALIGNED / A; BTC 86 / ALIGNED / A. Same fixture inputs produce identical JSON on main and this revision. Fixtures have no canonical verdict; this does **not** prove live canonical scores or live before/after visual parity.
+- Existing canonical scoring/rule code untouched; rendering fixtures also asserts payload JSON is unchanged.
+- Connected browser documentation exposes no viewport resize. Local preview access was blocked previously. No supported route to the requested 1280×800 / 390×844 after matrix is available here. Do not substitute cropped desktop screenshots or rendered fixtures for real Pro/Free/signed-out evidence.
+- Screen counts at both requested widths: **not measured** for stock or crypto, before or after. The two-screen target is not yet verified. This remains a draft, not merge-ready.
 
-## Validation
+## Every removed/replaced existing assertion
 
-- `timeout 1500 npx next build`: **exit 0**, using the brief's dummy credentials. Full [build log](build.log). Restored `next-env.d.ts` afterwards. Initial build failed because Turbopack does not accept an external node_modules symlink; a local dependency copy resolved this without package/lock/config changes.
-- `npx tsc --noEmit`: exit 0 (final confirmation recorded before publication).
-- Full suite: **4,905 passed, 10 failed, 13 skipped**, 560 files. All failures in the same seven files reproduced on clean main (main: 4,896 passed, 10 failed, 13 skipped, 559 files). The changing count is from timeouts in bulk/backtest tests. See [head](tests-head.txt) and [main](tests-main.txt).
-- Four brief-listed main failures: commanderCommandState, operatorMarketDataAccuracy, workerEquityBulkWiring, intelligence/globalM2Reliability.
-- Three additional failures verified on this exact main: backtestStrategySignals, bulkSelectionRoute, cryptoScanAliasRows. No unrelated logic/tests changed to make them green.
-- Behavioral fail-before proof using only components that exist on main: **5 failed / 1 passed** on main. Failures cover compact shared presentation, closed native folds/source count, deferred heavy children, raw quote labels and feed-error wording. [Before report](regressions-before.txt).
-- Final focused checks: **33 passed / 5 files**, including client boundary and free/signed-out gates.
-- New render coverage: shared equity/crypto parts, no payload mutation, no invented stock base, one source, folds closed, evidence disclosure, missing quote, paid-feed failure distinct from a tier gate. Existing free-tier tests continue checking real-price + locked-card versus sign-in. Added AAPL default/raw-word gate check.
-- Existing source-string tests were adjusted only where the brief deliberately replaces old hero labels/layout. New behavior is covered by render tests.
-- Protected #348 LockedPreview block verified byte-identical. No protected path, provider, polling, migration, storage, environment configuration, package, worker, scoring or disclosure changes.
+| Test | Original assertion(s) | Reason and replacement |
+|---|---|---|
+| cryptoBreakdownPage | source contains `:<SymbolOptionsContext` | Equity branch now contains EquityTop followed by folded compact SymbolOptionsContext. Both asserted; full-page Pro render added. |
+| layoutFlowAudit | “Golden Egg subview”, “Golden Egg [tab] command header” | Required visible-name change to Symbol; assertions renamed. |
+| layoutFlowAudit | “Golden Egg validation workbench”, “Validate one symbol before testing history.”, long regime/data-trust hero sentence | Removed duplicate hero to meet one-title compact layout. Pro render asserts one h1 and shared summary. |
+| layoutFlowAudit | “Next useful check:”, “Choose a symbol to build the verdict packet.” | Removed duplicate hero prompt / empty-tool wording. Default AAPL and populated Pro render now covered. |
+| layoutFlowAudit | `ariaLabel="Golden Egg command header"` | Removed PageHero. Closed native fold assertion plus one-h1 render coverage replace it. |
+| layoutFlowAudit | literal “Open Scanner”, “Open Backtest” in page file | Old hero CTAs removed. Header draft handoffs remain; Backtest uses a measured history summary and existing link. No scanner auto-run added. |
+| phase1Overview | searches `<PageHero`, `titleAs="h2"` | Header now SymbolSnapshotHeader compact. Existing assertions that composite stays below header and retains original label remain. Full-page render checks one h1. |
+| productionAuditRemediation | error ternary containing “Unavailable”; “Retry the selected symbol” | Replaced raw error wording with Symbol data feed failed and actual refetch handler. Feed-failure render test covers fault vs gate. Timeout assertions unchanged. |
+| sharedMarketComponents | Golden Egg Evidence Stack | Required Symbol name; same component remains. |
+| sharedMarketComponents | exact non-friendly MarketStatusStrip invocation | Uses friendly mode to avoid raw internal statuses. Pro expanded-page test rejects raw words. |
 
-## Screen-count record
-
-These available baseline observations are **not substitutes** for the required widths. Cookies banner was visible; no account changes were made.
-
-| Page / Pro | Before at 1363×936 | Before 390×844 | Before 1280×800 | After required widths |
-|---|---:|---|---|---|
-| AAPL | 4,826 px / 5.156 screens | Pending | Pending | Pending |
-| LINK | 7,506 px / 8.019 screens | Pending | Pending | Pending |
-
-![AAPL baseline, 1363 viewport](aapl-before-1363.jpg)
-![LINK baseline, 1363 viewport](link-before-1363.jpg)
+No assertions were removed from the free-tier tests; added locked title, absent-source and Pro expansion checks. The existing crypto stale-colour regression remains and now passes with amber. The new WP1 EquityTop tests dropped only the obsolete assessment prop; payload/stage preservation checks remain.
 
 ## Defaults and noticed, not changed
 
-- Y8: secondary composite retained unchanged inside detail. No section-4 approval assumed.
-- Y11: auth/gates, LockedPreview copy, legal/disclosure copy and API behavior unchanged.
-- Some requested mockup fields have no counterpart in current responses (listed above).
-- Closed legacy detail is a useful intermediate compact layout, not evidence that all expanded content now passes the complete WP1 standard.
-- Browser verification and the data-contract gaps keep this PR a draft. WP2 must wait for WP1 merge; no later package started.
+Y8: original composite wording/value retained in deep analysis. Missing stock stage/base/numeric rank hidden, per latest instruction. No new scoring, auth/access, worker, provider, polling, storage, migrations, limits, billing or disclosure changes. Shared outer regime pill remains WP7. Dynamically imported legacy tools still need browser verification. WP2 waits for WP1 merge.
