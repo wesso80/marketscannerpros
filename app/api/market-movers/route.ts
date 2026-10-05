@@ -4,6 +4,7 @@ import { q } from '@/lib/db';
 import { normalizeCryptoMover } from '@/lib/analysis/publicMover';
 import { fetchAvTopMovers } from '@/lib/avTopMovers';
 import { EQUITY_MOVER_MIN_VOLUME, passesServerMoverFilter } from '@/lib/analysis/moverQuality';
+import { isWarmupStatus, momentumAccelFromWarmup, type MomentumBar } from '@/lib/movers/momentumAccel';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -90,6 +91,7 @@ export async function GET(request: NextRequest) {
       in_squeeze: boolean | null;
       rs_vs_index: number | null;
       momentum_accel: number | null;
+      in_universe: boolean;
     }> = {};
 
     try {
@@ -139,49 +141,58 @@ export async function GET(request: NextRequest) {
             adx14: ind?.adx14 != null ? Number(ind.adx14) : null,
             in_squeeze: ind?.in_squeeze ?? null,
             rs_vs_index: changePct - benchmark,
-            momentum_accel: null, // populated below from warmup_json if available
+            momentum_accel: null,
+            in_universe: Boolean(ind),
           };
         }
 
-        // Try to get momentum acceleration from warmup_json (pre-computed OHLCV bars)
-        const warmupRows = await q<{ symbol: string; warmup_json: any }>(
+        // warmup_json is either an OHLCV array (legacy) or the worker's status object.
+        // Status objects are resolved from ohlcv_bars, which the worker already writes.
+        const warmupRows = await q<{ symbol: string; warmup_json: unknown }>(
           `SELECT symbol, warmup_json FROM indicators_latest
            WHERE symbol = ANY($1) AND timeframe = 'daily' AND warmup_json IS NOT NULL`,
           [uniqueTickers]
         );
+        const storedBarsNeeded: string[] = [];
         for (const row of warmupRows) {
           try {
-            const bars = typeof row.warmup_json === 'string' ? JSON.parse(row.warmup_json) : row.warmup_json;
-            if (Array.isArray(bars) && bars.length >= 35) {
-              // Compute momentum acceleration inline (lightweight version)
-              const closes = bars.map((b: any) => Number(b.close || b.c || 0));
-              const volumes = bars.map((b: any) => Number(b.volume || b.v || 0));
-              const lookback = 5;
-              const lastClose = closes[closes.length - 1];
-              const prevClose = closes[closes.length - 1 - lookback];
-              const recentVols = volumes.slice(-20);
-              const avgVol = recentVols.reduce((s: number, v: number) => s + v, 0) / recentVols.length;
-              const lastVol = volumes[volumes.length - 1] || 0;
-              const volSurge = avgVol > 0 ? lastVol / avgVol : 1;
-              const priceMove = lastClose - prevClose;
-              // Simple ATR approximation from last 14 bars
-              const highs = bars.map((b: any) => Number(b.high || b.h || 0));
-              const lows = bars.map((b: any) => Number(b.low || b.l || 0));
-              let atrSum = 0;
-              for (let i = bars.length - 14; i < bars.length; i++) {
-                const tr = Math.max(highs[i] - lows[i], Math.abs(highs[i] - closes[Math.max(0, i - 1)]), Math.abs(lows[i] - closes[Math.max(0, i - 1)]));
-                atrSum += tr;
-              }
-              const atrVal = atrSum / 14;
-              const priceAtrMove = atrVal > 0 ? priceMove / atrVal : 0;
-              const volScore = Math.min(25, Math.max(0, (volSurge - 1) * 25));
-              const priceScore = Math.min(25, Math.abs(priceAtrMove) * 12.5);
-              const accelScore = Math.round(volScore + priceScore);
-              if (enrichmentMap[row.symbol]) {
-                enrichmentMap[row.symbol].momentum_accel = accelScore;
-              }
+            const warmup = typeof row.warmup_json === 'string' ? JSON.parse(row.warmup_json) : row.warmup_json;
+            if (Array.isArray(warmup)) {
+              const score = momentumAccelFromWarmup(warmup);
+              if (enrichmentMap[row.symbol] && score != null) enrichmentMap[row.symbol].momentum_accel = score;
+            } else if (isWarmupStatus(warmup)) {
+              storedBarsNeeded.push(row.symbol);
             }
           } catch { /* skip bad warmup data */ }
+        }
+        if (storedBarsNeeded.length) {
+          const barRows = await q<{ symbol: string; high: string; low: string; close: string; volume: string; rn: string }>(
+            `SELECT symbol, high, low, close, volume, rn FROM (
+               SELECT symbol, high, low, close, volume,
+                      row_number() OVER (PARTITION BY symbol ORDER BY ts DESC) AS rn
+               FROM ohlcv_bars
+               WHERE symbol = ANY($1) AND timeframe = 'daily'
+             ) recent
+             WHERE rn <= 40`,
+            [storedBarsNeeded]
+          );
+          const bySymbol = new Map<string, Array<MomentumBar & { rn: number }>>();
+          for (const bar of barRows) {
+            const list = bySymbol.get(bar.symbol) ?? [];
+            list.push({
+              high: Number(bar.high),
+              low: Number(bar.low),
+              close: Number(bar.close),
+              volume: Number(bar.volume),
+              rn: Number(bar.rn),
+            });
+            bySymbol.set(bar.symbol, list);
+          }
+          for (const symbol of storedBarsNeeded) {
+            const bars = (bySymbol.get(symbol) ?? []).sort((a, b) => b.rn - a.rn);
+            const score = momentumAccelFromWarmup({ barCount: bars.length, coreReady: bars.length >= 35 }, bars);
+            if (enrichmentMap[symbol] && score != null) enrichmentMap[symbol].momentum_accel = score;
+          }
         }
       }
     } catch (e) {

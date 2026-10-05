@@ -1,7 +1,7 @@
 /** OV-21: the Movers "Data" chip follows the equity feed actually received instead of always saying "Live". */
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { isUsRegularSessionOpen, moversDataChipLabel } from '@/lib/alphaVantageEntitlement';
+import { isUsRegularSessionOpen, moversDataChipLabel, moversEquityBadge } from '@/lib/alphaVantageEntitlement';
 
 describe('moversDataChipLabel', () => {
   it('crypto is live; equities follow equityFeed (and the US session for the realtime feed)', () => {
@@ -10,10 +10,12 @@ describe('moversDataChipLabel', () => {
     const holiday = Date.parse('2026-11-26T16:00:00Z'); // Thanksgiving 11:00 ET
     expect(moversDataChipLabel('realtime', friOpen)).toBe('Crypto live · equities Nasdaq BX realtime');
     expect(moversDataChipLabel(undefined, friOpen)).toBe('Crypto live · equities Nasdaq BX realtime');
-    expect(moversDataChipLabel('realtime', sat)).toBe('Crypto live · equities market closed');
-    expect(moversDataChipLabel('realtime', holiday)).toBe('Crypto live · equities market closed');
+    expect(moversDataChipLabel('realtime', sat)).toBe('Crypto live · equities last session close');
+    expect(moversDataChipLabel('realtime', holiday)).toBe('Crypto live · equities last session close');
     expect(moversDataChipLabel('end_of_day', friOpen)).toBe('Crypto live · equities end of day');
-    expect(moversDataChipLabel('unavailable', friOpen)).toBe('Crypto live · equities unavailable');
+    expect(moversDataChipLabel('unavailable', friOpen)).toBe('Crypto live · equities feed down');
+    expect(moversEquityBadge('realtime', sat)).toBe('Last session close');
+    expect(moversEquityBadge('realtime', friOpen)).toBe('Live');
   });
   it('isUsRegularSessionOpen: 09:30–16:00 ET on trading days', () => {
     expect(isUsRegularSessionOpen(Date.parse('2026-09-25T13:29:00Z'))).toBe(false); // 09:29 ET
@@ -23,9 +25,9 @@ describe('moversDataChipLabel', () => {
   });
   it('the Movers page chip uses it (no hard-coded "Live")', () => {
     const src = readFileSync('app/tools/market-movers/page.tsx', 'utf8');
-    expect(src).toContain("['Data', loading ? 'Refreshing' : error ? 'Degraded' : moversDataChipLabel(data?.equityFeed)]");
+    expect(src).toContain("['Data', loading ? 'Refreshing' : error ? 'Needs a check' : moversDataChipLabel(data?.equityFeed)]");
     expect(src).not.toContain("error ? 'Degraded' : 'Live']");
     expect(src).not.toContain('badge="Live"');
-    expect(src).toContain("badge={data?.equityFeed === 'end_of_day' ? 'End of day'");
+    expect(src).toContain('badge={moversEquityBadge(data?.equityFeed)}');
   });
 });

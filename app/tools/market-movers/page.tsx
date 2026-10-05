@@ -12,7 +12,7 @@ import UpgradeGate from '@/components/UpgradeGate';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import SourceLine from '@/components/visual/SourceLine';
 import StatTile from '@/components/visual/StatTile';
-import { equityMoversBasisLabel, formatEasternAsOf, moversDataChipLabel } from '@/lib/alphaVantageEntitlement';
+import { equityMoversBasisLabel, formatEasternAsOf, moversDataChipLabel, moversEquityBadge } from '@/lib/alphaVantageEntitlement';
 import { moverResearchLink } from '@/lib/options/journey';
 
 interface Mover {
@@ -28,6 +28,8 @@ interface Mover {
   in_squeeze: boolean | null;
   rs_vs_index: number | null;
   momentum_accel: number | null;
+  /** True when indicators_latest has a daily row (worker universe). */
+  inUniverse?: boolean;
 }
 
 type AssetFilter = 'all' | 'equity' | 'crypto';
@@ -209,6 +211,7 @@ export default function MarketMoversPage() {
                 in_squeeze: g.in_squeeze ?? null,
                 rs_vs_index: g.rs_vs_index ?? null,
                 momentum_accel: g.momentum_accel ?? null,
+                inUniverse: g.in_universe === true,
               })) || [],
             topLosers:
               result.topLosers?.map((l: any) => ({
@@ -224,6 +227,7 @@ export default function MarketMoversPage() {
                 in_squeeze: l.in_squeeze ?? null,
                 rs_vs_index: l.rs_vs_index ?? null,
                 momentum_accel: l.momentum_accel ?? null,
+                inUniverse: l.in_universe === true,
               })) || [],
             mostActive:
               result.mostActive?.map((a: any) => ({
@@ -239,6 +243,7 @@ export default function MarketMoversPage() {
                 in_squeeze: a.in_squeeze ?? null,
                 rs_vs_index: a.rs_vs_index ?? null,
                 momentum_accel: a.momentum_accel ?? null,
+                inUniverse: a.in_universe === true,
               })) || [],
           }
         : result;
@@ -614,7 +619,7 @@ export default function MarketMoversPage() {
       <ToolsPageHeader
         title="Market Movers"
         subtitle="Status → Action Console → Audit Log → Capabilities"
-        badge={data?.equityFeed === 'end_of_day' ? 'End of day' : data?.equityFeed === 'unavailable' ? 'Crypto live' : 'Live'}
+        badge={moversEquityBadge(data?.equityFeed)}
         icon="MM"
       />
 
@@ -629,7 +634,7 @@ export default function MarketMoversPage() {
             ['Status', environment.deploymentMode],
             ['Top Gainer', data?.summary?.topGainerTicker || 'No reading'],
             ['Top Loser', data?.summary?.topLoserTicker || 'No reading'],
-            ['Data', loading ? 'Refreshing' : error ? 'Degraded' : moversDataChipLabel(data?.equityFeed)],
+            ['Data', loading ? 'Refreshing' : error ? 'Needs a check' : moversDataChipLabel(data?.equityFeed)],
             ['Last Refresh', data ? new Date(data.lastUpdated || data.timestamp).toLocaleTimeString() : 'No reading'],
             ['US equities', `${equityMoversBasisLabel(data?.equityFeed)}${formatEasternAsOf(data?.equityAsOf) ? `, ${formatEasternAsOf(data?.equityAsOf)}` : ''}`],
           ].map(([k, v]) => (
@@ -649,7 +654,7 @@ export default function MarketMoversPage() {
         ) : error ? (
           <div className="rounded-lg border border-red-500/50 bg-red-500/20 p-4 text-center">
             <p className="text-sm text-red-300"><span className="font-bold text-red-200">WARN</span> {error}</p>
-            <p className="mt-1 text-xs text-slate-400">Market data may be unavailable outside trading hours.</p>
+            <p className="mt-1 text-xs text-slate-400">Market data may be missing outside trading hours.</p>
           </div>
         ) : data ? (
           <>
@@ -774,8 +779,9 @@ export default function MarketMoversPage() {
                 )}
 
                 {/* Row count indicator */}
-                <div className="mb-1.5 flex items-center gap-2 text-xs text-slate-400">
+                <div className="mb-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-400">
                   <span>Showing <span className="font-semibold text-white">{shownRows.length}</span> movers</span>
+                  {shownRows.some((row) => row.asset_class === 'equity') && <span>CRCS: crypto only</span>}
                   {permissionedCount > 0 && (
                     <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">
                       {permissionedCount} aligned
@@ -821,11 +827,11 @@ export default function MarketMoversPage() {
                           <div className="text-slate-400">Asset</div><div className="text-slate-200">{mover.asset_class === 'equity' ? 'EQ Equity' : 'CR Crypto'}</div>
                           <div className="text-slate-400" title="Volume relative to the current asset cohort; not historical relative volume">Cohort volume</div><div className="text-slate-200">{(mover.relVolume || 0).toFixed(2)}x</div>
                           <div className="text-slate-400">Structure</div><div className="text-slate-300">{mover.structureBias}</div>
-                          <div className="text-slate-400">RSI</div><div className={mover.rsi14 != null ? (mover.rsi14 > 70 ? 'text-rose-300' : mover.rsi14 < 30 ? 'text-emerald-300' : 'text-slate-200') : 'text-slate-500'}>{mover.rsi14 != null ? mover.rsi14.toFixed(1) : '—'}</div>
-                          <div className="text-slate-400">EMA200 Dist</div><div className="text-slate-200">{mover.ema200_dist != null ? `${mover.ema200_dist >= 0 ? '+' : ''}${mover.ema200_dist.toFixed(1)}%` : '—'}</div>
-                          <div className="text-slate-400">RS vs Index</div><div className={mover.rsLabel === 'Strong' ? 'text-emerald-300' : mover.rsLabel === 'Weak' ? 'text-rose-300' : 'text-slate-200'}>{mover.rsLabel || '—'} {mover.rs_vs_index != null ? `(${mover.rs_vs_index >= 0 ? '+' : ''}${mover.rs_vs_index.toFixed(1)}%)` : ''}</div>
-                          <div className="text-slate-400">Momentum</div><div className={mover.accelLabel === 'High' ? 'text-amber-300' : mover.accelLabel === 'Rising' ? 'text-emerald-300' : 'text-slate-200'}>{mover.accelLabel || '—'}</div>
-                          <div className="text-slate-400">CRCS</div><div className="text-amber-300">{mover.crcsUser !== undefined && Number.isFinite(mover.crcsUser) ? mover.crcsUser.toFixed(1) : 'No reading'}</div>
+                          {mover.inUniverse === true && mover.rsi14 != null && (<><div className="text-slate-400">RSI</div><div className={mover.rsi14 > 70 ? 'text-rose-300' : mover.rsi14 < 30 ? 'text-emerald-300' : 'text-slate-200'}>{mover.rsi14.toFixed(1)}</div></>)}
+                          {mover.inUniverse === true && mover.ema200_dist != null && (<><div className="text-slate-400">EMA200 Dist</div><div className="text-slate-200">{`${mover.ema200_dist >= 0 ? '+' : ''}${mover.ema200_dist.toFixed(1)}%`}</div></>)}
+                          {mover.rsLabel && (<><div className="text-slate-400">RS vs Index</div><div className={mover.rsLabel === 'Strong' ? 'text-emerald-300' : mover.rsLabel === 'Weak' ? 'text-rose-300' : 'text-slate-200'}>{mover.rsLabel} {mover.rs_vs_index != null ? `(${mover.rs_vs_index >= 0 ? '+' : ''}${mover.rs_vs_index.toFixed(1)}%)` : ''}</div></>)}
+                          {mover.inUniverse === true && mover.accelLabel && (<><div className="text-slate-400">Momentum</div><div className={mover.accelLabel === 'High' ? 'text-amber-300' : mover.accelLabel === 'Rising' ? 'text-emerald-300' : 'text-slate-200'}>{mover.accelLabel}</div></>)}
+                          {mover.asset_class === 'crypto' && mover.crcsUser !== undefined && Number.isFinite(mover.crcsUser) && (<><div className="text-slate-400">CRCS</div><div className="text-amber-300">{mover.crcsUser.toFixed(1)}</div></>)}
                           <div className="text-slate-400">Confluence</div><div className="text-slate-200">{mover.confluenceScore}</div>
                         </div>
                         <div className="mt-2">
@@ -870,7 +876,7 @@ export default function MarketMoversPage() {
                           <td className="px-2.5 py-2 font-semibold text-white">
                             <div className="flex items-center gap-1">
                               <Link href={symbolHref(mover.ticker,mover.asset_class)}>{mover.ticker}</Link>
-                              <span className={`text-[11px] ${mover.asset_class === 'equity' ? 'text-blue-400' : 'text-amber-400'}`}>
+                              <span className={`text-[11px] ${mover.asset_class === 'equity' ? 'text-slate-400' : 'text-amber-400'}`}>
                                 {mover.asset_class === 'equity' ? 'EQ' : '₿'}
                               </span>
                             </div>
@@ -883,20 +889,19 @@ export default function MarketMoversPage() {
                           <td className="px-2.5 py-2 text-slate-300">{mover.structureBias}</td>
                           {/* RSI */}
                           <td className={`px-2.5 py-2 text-right ${
-                            mover.rsi14 == null ? 'text-slate-500'
-                            : mover.rsi14 > 70 ? 'text-rose-300'
-                            : mover.rsi14 < 30 ? 'text-emerald-300'
+                            mover.inUniverse === true && mover.rsi14 != null && mover.rsi14 > 70 ? 'text-rose-300'
+                            : mover.inUniverse === true && mover.rsi14 != null && mover.rsi14 < 30 ? 'text-emerald-300'
                             : 'text-slate-200'
                           }`}>
-                            {mover.rsi14 != null ? mover.rsi14.toFixed(1) : '—'}
+                            {mover.inUniverse === true && mover.rsi14 != null ? mover.rsi14.toFixed(1) : ''}
                           </td>
-                          {/* EMA200 Distance */}
+                          {/* EMA200 distance. Hidden when null, including inside the worker universe. */}
                           <td className={`px-2.5 py-2 text-right ${
                             mover.ema200_dist == null ? 'text-slate-500'
                             : mover.ema200_dist > 0 ? 'text-emerald-300'
                             : 'text-rose-300'
                           }`}>
-                            {mover.ema200_dist != null ? `${mover.ema200_dist >= 0 ? '+' : ''}${mover.ema200_dist.toFixed(1)}%` : '—'}
+                            {mover.inUniverse === true && mover.ema200_dist != null ? `${mover.ema200_dist >= 0 ? '+' : ''}${mover.ema200_dist.toFixed(1)}%` : ''}
                           </td>
                           {/* RS vs Index */}
                           <td className="px-2.5 py-2 text-center">
@@ -907,20 +912,20 @@ export default function MarketMoversPage() {
                                 : mover.rsLabel === 'Below' ? 'border-slate-600 bg-slate-800 text-slate-400'
                                 : 'border-rose-500/50 bg-rose-500/10 text-rose-300'
                               }`}>{mover.rsLabel}</span>
-                            ) : <span className="text-slate-500">—</span>}
+                            ) : null}
                           </td>
                           {/* Momentum Accel */}
                           <td className="px-2.5 py-2 text-center">
-                            {mover.accelLabel ? (
+                            {mover.inUniverse === true && mover.accelLabel ? (
                               <span className={`inline-block rounded-full border px-1.5 py-0.5 text-[11px] ${
                                 mover.accelLabel === 'High' ? 'border-amber-500/50 bg-amber-500/10 text-amber-300'
                                 : mover.accelLabel === 'Rising' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
                                 : mover.accelLabel === 'Moderate' ? 'border-slate-600 bg-slate-800 text-slate-300'
                                 : 'border-slate-700 bg-slate-900 text-slate-500'
                               }`}>{mover.accelLabel}</span>
-                            ) : <span className="text-slate-500">—</span>}
+                            ) : null}
                           </td>
-                          <td className="px-2.5 py-2 text-right text-amber-300">{mover.crcsUser !== undefined && Number.isFinite(mover.crcsUser) ? mover.crcsUser.toFixed(1) : '—'}</td>
+                          <td className="px-2.5 py-2 text-right text-amber-300">{mover.asset_class === 'crypto' && mover.crcsUser !== undefined && Number.isFinite(mover.crcsUser) ? mover.crcsUser.toFixed(1) : ''}</td>
                           <td className="px-2.5 py-2 text-right text-slate-200">{mover.confluenceScore}</td>
                           <td className="px-2.5 py-2 text-center">
                             <span
