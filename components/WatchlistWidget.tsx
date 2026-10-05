@@ -8,7 +8,7 @@ import { FREE_COPY } from '@/components/free/copy';
 import PriceStamp from '@/components/market/PriceStamp';
 import {watchlistStamp} from '@/lib/market/trackStamp';
 import {symbolHref,optionsHref} from '@/lib/market/links';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUserTier, canExportCSV } from '@/lib/useUserTier';
@@ -78,6 +78,9 @@ export default function WatchlistWidget() {
   const [quotes, setQuotes] = useState<Record<string, QuoteData>>({});
   const [loading, setLoading] = useState(true);
   const [itemsLoading, setItemsLoading] = useState(false);
+  const [itemsError, setItemsError] = useState<string | null>(null);
+  // Every load owns its item and quote responses; late responses cannot cross lists.
+  const itemLoadGeneration = useRef(0);
   const [error, setError] = useState<string | null>(null);
   // Informational messages (the save worked), shown in neutral styling rather than as an error.
   const [notice, setNotice] = useState<string | null>(null);
@@ -146,30 +149,38 @@ export default function WatchlistWidget() {
 
   // Fetch items for selected watchlist
   const fetchItems = useCallback(async (watchlistId: string) => {
+    const generation = ++itemLoadGeneration.current;
     setItemsLoading(true);
+    setItemsError(null);
+    setItems([]);
+    setQuotes({});
     try {
       const res = await fetch(`/api/watchlists/items?watchlistId=${watchlistId}`);
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
+      if (generation !== itemLoadGeneration.current) return;
       setItems(data.items || []);
       
       // Fetch quotes for every item, by its saved asset type
       setQuotes({});
       if (data.items?.length > 0) {
-        fetchQuotes(data.items);
+        void fetchQuotes(data.items, generation);
       }
     } catch (err) {
-      console.error('Error fetching items:', err);
+      if (generation === itemLoadGeneration.current) {
+        setItemsError('Symbols could not be loaded for this watchlist.');
+      }
     } finally {
-      setItemsLoading(false);
+      if (generation === itemLoadGeneration.current) setItemsLoading(false);
     }
   }, []);
 
   // Fetch quotes for items: uses each item's asset type, batches lists over 20, and falls
   // back to the cached price (marked "cached"). Results merge into existing quotes.
-  const fetchQuotes = async (forItems: WatchlistItem[]) => {
+  const fetchQuotes = async (forItems: WatchlistItem[], generation = itemLoadGeneration.current) => {
     try {
       await fetchWatchlistQuotes(forItems, undefined, (partial) => {
+        if (generation !== itemLoadGeneration.current) return;
         setQuotes((prev) => ({ ...prev, ...partial }));
       });
     } catch (err) {
@@ -185,6 +196,7 @@ export default function WatchlistWidget() {
     if (selectedWatchlist) {
       fetchItems(selectedWatchlist.id);
     }
+    return () => { itemLoadGeneration.current += 1; };
   }, [selectedWatchlist, fetchItems]);
 
   // Create watchlist
@@ -617,6 +629,11 @@ export default function WatchlistWidget() {
                 {[1, 2, 3, 4, 5, 6].map((row) => (
                   <div key={row} className="h-44 animate-pulse rounded-xl bg-slate-700/40" />
                 ))}
+              </div>
+            ) : itemsError ? (
+              <div role="alert" className="rounded-xl border border-amber-500/30 p-4 text-sm text-amber-200">
+                <p>{itemsError}</p>
+                <button type="button" className="mt-2 min-h-10 rounded-lg border border-slate-700 px-3" onClick={() => void fetchItems(selectedWatchlist.id)}>Retry loading symbols</button>
               </div>
             ) : items.length === 0 ? (
               <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 py-10 text-center text-slate-400">
