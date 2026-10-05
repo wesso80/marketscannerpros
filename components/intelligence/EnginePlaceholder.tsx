@@ -42,7 +42,7 @@ export default function EnginePlaceholder({
           In development
         </span>
         <p style={{ margin: '12px 0 0', fontSize: '0.84rem', color: 'var(--msp-text-muted)', maxWidth: 640 }}>
-          This engine dashboard is scheduled in the analytics build-out. The Master Command Centre already
+          This engine dashboard is scheduled in the analytics build-out. The Intelligence Overview already
           consumes a mock version of this engine&apos;s output. The native spreadsheet view will land here once the
           engine is ported and parity-tested.
         </p>

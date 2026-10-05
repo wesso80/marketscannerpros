@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Pricing — MarketScannerPros',
+  title: 'Pricing',
   description:
     'Two simple plans: Free to explore, and Pro ($24.99/month or $249/year) for the full platform — scanners, intelligence, research, backtesting and portfolio tools. 7-day money-back guarantee.',
   alternates: { canonical: 'https://marketscannerpros.app/pricing' },

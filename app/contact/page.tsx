@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Contact — MarketScanner Pros",
+  title: "Contact",
   alternates: { canonical: "/contact" },
 };
 

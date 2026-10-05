@@ -1,5 +1,7 @@
 'use client';
 
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+
 import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -17,6 +19,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab = (searchParams.get('tab') || '').toLowerCase();
+  useDocumentTitle(tab === 'macro' ? 'Macro' : 'My Pages');
   const { tier, isLoading: tierLoading, isAdmin } = useUserTier();
   const isPro = isAdmin || tier === 'pro' || tier === 'pro_trader';
 

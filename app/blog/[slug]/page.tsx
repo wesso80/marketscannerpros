@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
 
   return {
-    title: `${post.title} | MarketScanner Pros`,
+    title: post.title,
     description: post.excerpt,
   };
 }

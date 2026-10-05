@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Guide',
+  title: { default: 'Guide', template: '%s | MarketScanner Pros' },
   description: 'Educational guides for using MarketScanner Pros and interpreting market research workflows.',
   alternates: { canonical: '/guide' },
   openGraph: {

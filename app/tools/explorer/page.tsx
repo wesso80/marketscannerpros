@@ -1,5 +1,7 @@
 'use client';
 
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+
 /* ---------------------------------------------------------------------------
    SURFACE 5: EXPLORER — Cross-Market Intelligence
    Real APIs: /api/sectors/heatmap + /api/crypto/market-overview +
@@ -99,6 +101,7 @@ export default function ExplorerPage() {
   const requestedInitialTab = EXPLORER_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()] || 'Overview';
   const [showSectors, setShowSectors] = useState(false);
   const [tab, setTab] = useState<ExplorerTab>(requestedInitialTab);
+  useDocumentTitle(tab === 'Movers' ? 'Market Movers' : tab === 'Crypto Command' ? 'Crypto Overview' : tab === 'Crypto Intel' ? 'Crypto News' : tab === 'Overview' ? 'Explorer' : tab);
 
   useEffect(() => {
     const requestedTab = EXPLORER_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()];

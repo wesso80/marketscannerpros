@@ -779,7 +779,7 @@ export default function DeepAnalysisPage({
   if (!canAccessDeepAnalysis(tier)) {
     return (
       <div className={`${embeddedInGoldenEgg ? '' : 'min-h-screen'} bg-[var(--msp-bg)]`}>
-        {!embeddedInGoldenEgg && <ToolsPageHeader badge="PRO" title="Golden Egg Deep Analysis" subtitle="AI-assisted educational research with structured multi-factor context" icon="GE" />}
+        {!embeddedInGoldenEgg && <ToolsPageHeader badge="PRO" title="Symbol Deep Analysis" subtitle="AI-assisted educational research with structured multi-factor context" icon="GE" />}
         <main className={`max-w-none ${embeddedInGoldenEgg ? 'px-0 py-0' : 'px-4 py-8'}`}>
           <UpgradeGate requiredTier="pro" feature="Deep Analysis" />
         </main>
@@ -816,7 +816,7 @@ export default function DeepAnalysisPage({
 
   return (
     <div className={`${embeddedInGoldenEgg ? '' : 'min-h-screen'} bg-[var(--msp-bg)]`}>
-      {!embeddedInGoldenEgg && <ToolsPageHeader badge="PRO" title="Golden Egg Deep Analysis" subtitle="AI-assisted educational research with structured multi-factor context" icon="GE" />}
+      {!embeddedInGoldenEgg && <ToolsPageHeader badge="PRO" title="Symbol Deep Analysis" subtitle="AI-assisted educational research with structured multi-factor context" icon="GE" />}
       
       <main className={`max-w-none ${embeddedInGoldenEgg ? 'px-0 py-0' : 'px-4 py-8'}`}>
         {!embeddedInGoldenEgg && (
@@ -862,7 +862,7 @@ export default function DeepAnalysisPage({
         {!result && !embeddedInGoldenEgg && <div className="mb-8 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-sm font-black text-amber-300">GE</div>
           <h1 className="mb-2 text-[clamp(1.5rem,6vw,2.5rem)] font-bold text-[var(--msp-text)]">
-            The Golden Egg
+            Symbol
           </h1>
           <p className="text-[clamp(0.9rem,3vw,1.1rem)] text-[var(--msp-text-muted)]">
             Multi-factor research context for one symbol
@@ -941,7 +941,7 @@ export default function DeepAnalysisPage({
               const noSetup = ge ? noSetupDisplay(ge.canonicalVerdict) : null;
               const noQualifyingSetup = noSetup?.kind === 'no_setup';
               const cards: Array<[string, string, string]> = ge ? [
-                ['Golden Egg verdict', noQualifyingSetup ? 'No qualifying setup' : `${ge.verdict.assessment === 'ALIGNED' ? 'Scenario Aligned' : ge.verdict.assessment === 'NOT_ALIGNED' ? 'Not Aligned' : 'Watch'} · ${ge.verdict.direction}`, noQualifyingSetup ? 'var(--msp-text-muted)' : geColor],
+                ['Symbol verdict', noQualifyingSetup ? 'No qualifying setup' : `${ge.verdict.assessment === 'ALIGNED' ? 'Scenario Aligned' : ge.verdict.assessment === 'NOT_ALIGNED' ? 'Not Aligned' : 'Watch'} · ${ge.verdict.direction}`, noQualifyingSetup ? 'var(--msp-text-muted)' : geColor],
                 ...(ge.canonicalVerdict
                   ? [
                       noSetup
@@ -978,7 +978,7 @@ export default function DeepAnalysisPage({
                   )}
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/60 pb-3">
                     <div>
-                      <div className="text-[11px] font-medium text-[var(--msp-text-muted)]">{ge ? `Deep Analyst · interprets the Golden Egg canonical packet (${ge.timeframe}, ${ge.barInterval ?? 'n/a'} bars)` : 'Research packet'}</div>
+                      <div className="text-[11px] font-medium text-[var(--msp-text-muted)]">{ge ? `Deep Analyst · interprets the Symbol canonical packet (${ge.timeframe}, ${ge.barInterval ?? 'n/a'} bars)` : 'Research packet'}</div>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-sm font-bold text-white">
                         <span>{result.symbol} · {result.assetType.toUpperCase()}</span>
                         <span className="font-mono text-slate-300">${formatNumber(result.price.price, result.assetType === 'crypto' ? 4 : 2)}</span>
@@ -1002,7 +1002,7 @@ export default function DeepAnalysisPage({
                   </div>
                   {ge && (
                     <div className="mt-2 text-[11px] text-slate-500">
-                      Golden Egg verdict is canonical. Deep Analyst does not compute a competing bias; it interprets the same numbers. {ge.cached ? 'Packet served from the shared 3-minute cache.' : ''}
+                      Symbol verdict is canonical. Deep Analyst does not compute a competing bias; it interprets the same numbers. {ge.cached ? 'Packet served from the shared 3-minute cache.' : ''}
                     </div>
                   )}
                 </div>
@@ -1343,7 +1343,7 @@ export default function DeepAnalysisPage({
                 padding: "1.5rem"
               }}>
                 <h3 style={{ color: "#F59E0B", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  {result.goldenEgg ? 'Golden Egg evidence (canonical)' : 'Signal Breakdown'}
+                  {result.goldenEgg ? 'Symbol evidence (canonical)' : 'Signal Breakdown'}
                 </h3>
 
                 {result.goldenEgg && (() => {
@@ -1375,7 +1375,7 @@ export default function DeepAnalysisPage({
                   );
                 })()}
                 
-                {/* Confidence Meter (legacy engine — standalone use without a Golden Egg packet only) */}
+                {/* Confidence Meter (legacy engine — standalone use without a Symbol packet only) */}
                 {!result.goldenEgg && (() => {
                   const weighted = calculateWeightedSignal(result.indicators, result.optionsData, result.news, result.cryptoData);
                   return (

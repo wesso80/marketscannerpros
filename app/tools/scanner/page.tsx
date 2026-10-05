@@ -823,7 +823,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
         {/* Execution Plan */}
         <div className="md:col-span-5 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 md:p-4">
           <div className="mb-1 text-[0.72rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Preliminary Research Levels</div>
-          <div className="mb-3 text-[0.68rem] leading-4 text-slate-500">Fast ATR-based estimate from scan-time price ({formatLevel(detail.price)}) on {barIntervalLabel} bars (ATR {formatLevel(detail.atr)}). Golden Egg recomputes <em>validated scenario levels</em> from a live quote and price structure — expect them to differ.</div>
+          <div className="mb-3 text-[0.68rem] leading-4 text-slate-500">Fast ATR-based estimate from scan-time price ({formatLevel(detail.price)}) on {barIntervalLabel} bars (ATR {formatLevel(detail.atr)}). Symbol recomputes <em>validated scenario levels</em> from a live quote and price structure — expect them to differ.</div>
           <div className="grid gap-3">
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
               <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Level of Interest (preliminary)</div>

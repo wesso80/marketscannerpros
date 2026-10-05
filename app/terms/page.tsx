@@ -2,7 +2,7 @@ import { PLAN_PRICES } from "@/lib/planPrices";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — MarketScanner Pros",
+  title: "Terms of Service",
   description: "Terms of Service for MarketScanner Pros.",
   alternates: { canonical: "/terms" },
   robots: { index: false, follow: true }

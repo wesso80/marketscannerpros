@@ -1,5 +1,7 @@
 'use client';
 
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+
 /* ---------------------------------------------------------------------------
    SURFACE 7: TERMINAL — Charts + Close Calendar + Options Chain + Flow
    Real APIs: /api/confluence-scan (POST), /api/flow, TradingView embed
@@ -263,7 +265,7 @@ function formatCalDate(iso: string, asset: 'crypto' | 'equity'): string {
 }
 
 function fmtMins(m: number | null): string {
-  if (m === null) return '—';
+  if (m === null) return 'Not collected';
   if (m <= 0) return 'NOW';
   if (m < 60) return `${Math.round(m)}m`;
   if (m < 1440) { const h = Math.floor(m/60); const r = Math.round(m%60); return r > 0 ? `${h}h ${r}m` : `${h}h`; }
@@ -303,6 +305,7 @@ export default function TerminalPage() {
   const requestedInitialTab = TERMINAL_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()]
     || (requestedType === 'crypto' ? 'Crypto' : 'Close Calendar');
   const [tab, setTab] = useState<TerminalTab>(requestedInitialTab);
+  useDocumentTitle(tab);
   const entrySymbol = optionsEntrySymbol((searchParams.get('tab') || '').toLowerCase(),requestedSymbol,requestedType || '',selectedSymbol || '');
   const [symInput, setSymInput] = useState(entrySymbol);
   const [cryptoTerminalState, setCryptoTerminalState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
@@ -508,7 +511,7 @@ export default function TerminalPage() {
             <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
               <div>
                 <div className="text-sm font-semibold text-slate-100">
-                  {isPriorDay ? 'Close Calendar — Prior Day Closes' : 'Close Calendar — Forward Schedule'}
+                  {isPriorDay ? 'Close Calendar · Prior Day Closes' : 'Close Calendar · Forward Schedule'}
                 </div>
                 <div className="text-xs text-slate-400">
                   {isPriorDay
@@ -576,7 +579,7 @@ export default function TerminalPage() {
                         <div className="mt-0.5 flex flex-wrap gap-1">
                           {cluster.tfs.map(tf => (<span key={tf} className="rounded bg-slate-800/60 px-1.5 py-0.5 text-[11px] font-semibold text-slate-200">{tf}</span>))}
                         </div>
-                        <div className="mt-1 text-[11px] text-slate-400">Wt {Math.round(cluster.weight)} — Score {cluster.clusterScore}</div>
+                        <div className="mt-1 text-[11px] text-slate-400">Wt {Math.round(cluster.weight)} · Score {cluster.clusterScore}</div>
                       </div>
                     ))}
                   </div>
@@ -764,7 +767,7 @@ function AnchorDayTable({ rows, asset }: { rows: ForwardCloseScheduleRow[]; asse
                 <tbody>{catRows.map(row => (
                   <tr key={row.tf} className={`border-b border-slate-800/50 ${catBg(cat)}`}>
                     <td className={`py-1.5 pr-3 font-semibold ${catColor(cat)}`}>{row.tf}</td>
-                    <td className="py-1.5 pr-3 font-mono text-slate-300">{row.firstCloseAtISO ? formatCalDate(row.firstCloseAtISO, asset) : '—'}</td>
+                    <td className="py-1.5 pr-3 font-mono text-slate-300">{row.firstCloseAtISO ? formatCalDate(row.firstCloseAtISO, asset) : 'Not collected'}</td>
                     <td className="py-1.5 pr-3 font-mono text-slate-400">{fmtMins(row.minsToFirstClose)}</td>
                     <td className="py-1.5 text-slate-500">{row.weight}</td>
                   </tr>
@@ -796,10 +799,10 @@ function FullScheduleTable({ rows, asset }: { rows: ForwardCloseScheduleRow[]; a
           <tr key={row.tf} className={`border-b border-slate-800/50 ${row.closesOnAnchorDay ? catBg(row.category) : ''}`}>
             <td className={`py-1.5 pr-3 font-semibold ${catColor(row.category)}`}>{row.tf}</td>
             <td className="py-1.5 pr-3"><span className={`inline-block rounded px-1.5 py-0.5 text-[11px] font-medium uppercase ${catBg(row.category)} ${catColor(row.category)}`}>{row.category}</span></td>
-            <td className="py-1.5 pr-3 font-mono text-slate-300">{row.firstCloseAtISO ? formatCalDate(row.firstCloseAtISO, asset) : '—'}</td>
+            <td className="py-1.5 pr-3 font-mono text-slate-300">{row.firstCloseAtISO ? formatCalDate(row.firstCloseAtISO, asset) : 'Not collected'}</td>
             <td className="py-1.5 pr-3 font-mono text-slate-400">{fmtMins(row.minsToFirstClose)}</td>
             <td className="py-1.5 pr-3 text-center font-semibold text-slate-200">{row.closesInHorizon}</td>
-            <td className="py-1.5 pr-3 text-center">{row.closesOnAnchorDay ? <span className="inline-block rounded bg-emerald-500/20 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-400">YES</span> : <span className="text-slate-600">—</span>}</td>
+            <td className="py-1.5 pr-3 text-center">{row.closesOnAnchorDay ? <span className="inline-block rounded bg-emerald-500/20 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-400">YES</span> : <span className="text-slate-600">No</span>}</td>
             <td className="py-1.5 text-slate-500">{row.weight}</td>
           </tr>
         ))}</tbody>
