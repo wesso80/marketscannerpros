@@ -1,0 +1,780 @@
+{
+  "mocked": true,
+  "results": [
+    {
+      "tier": "pro",
+      "tab": "Overview",
+      "observedAt": "2026-10-05T11:05:59.530Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1023,
+      "scrollWidth": 1280,
+      "screens": 1.27875,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\n\n$3,000\n\nValue simulated\n\nNot measured\n\nToday\n\n+$280\n\nOpen P&L\n\n66.7%\n\nLargest position\n\nA daily change needs a matching prior-session valuation. Open P&L uses recorded cost.\n\nAllocation · 2 positions\nAAPL\n66.7%\nNEAR\n33.3%\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "hits": []
+    },
+    {
+      "tier": "pro",
+      "tab": "Positions",
+      "observedAt": "2026-10-05T11:06:00.216Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1046,
+      "scrollWidth": 1280,
+      "screens": 1.3075,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nTOTAL EXPOSURE\n29.2%\nUNREALIZED P&L\n+$280\n+2.72 risk units\nOPEN R (POSITIONS WITH A STOP)\nNot measured\n0 of 2 positions have a stop\nPrices refresh every 2 min\nRefresh\nRefresh Prices\nSymbol\tSide\tQty\tValue\tSize %\tCost\tCurrent\tStop\tRecorded exit\tR Multiple\tP&L %\tRisk Remaining\tInval Dist %\tActions\nAAPL\tPurchased\t8\t$2,000\t66.7%\t240.00\t$250.00\tNot set\tNot set\tNot measured\t+4.17%\tNot recorded\tNot recorded\t\nRECORD FULL CLOSE\nRECORD PARTIAL CLOSE\nEDIT STOP\nDELETE\n\nNEAR\tPurchased\t200\t$1,000\t33.3%\t4.00\t$5.00\tNot set\tNot set\tNot measured\t+25.00%\tNot recorded\tNot recorded\t\nRECORD FULL CLOSE\nRECORD PARTIAL CLOSE\nEDIT STOP\nDELETE\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "hits": []
+    },
+    {
+      "tier": "pro",
+      "tab": "Ledger",
+      "observedAt": "2026-10-05T11:06:00.897Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1076,
+      "scrollWidth": 1280,
+      "screens": 1.345,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nWIN %\n0.0%\nAVG R\nNot measured\n0 of 0 trades with a stop\nBEST R\nNot measured\nWORST R\nNot measured\nAVG RISK UNITS\n— risk units\nP&L / account risk per trade\nEXPECTANCY\n$0\nR = P&L ÷ risk to a recorded stop (only trades with a stop). Risk units = P&L ÷ account risk per trade ($102.8 = account equity × 1%).\nCLOSED TRADES EQUITY CURVE\n$0\n$-1\n$-1\nOct 5\nOpen\tExit\tRealized\tR Multiple\tRisk Units\tHolding Time\tSetup Tag\tOutcome\tLink\t\nNo closed trades.\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "hits": []
+    },
+    {
+      "tier": "pro",
+      "tab": "Risk",
+      "observedAt": "2026-10-05T11:06:01.765Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1138,
+      "scrollWidth": 1280,
+      "screens": 1.4225,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nExposure and cash controls2 open positions\nPerformance evidence1 recorded snapshots\nRISK FRAMEWORK SELECTOR\nFIXED FRACTIONAL\nKELLY\nVOLATILITY ADJUSTED\nPORTFOLIO RISK SETTINGS\nMax risk / trade\nMax correlated exposure\nMax sector allocation\nMax drawdown threshold\nLIVE RISK HEATMAP\nSymbol\tConcentration\tDollar Risk\tWarning\nAAPL\t66.7%\tStop not recorded\tConcentration warning\nNEAR\t33.3%\tStop not recorded\tConcentration warning\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 1,
+      "hits": []
+    },
+    {
+      "tier": "pro",
+      "tab": "Allocation",
+      "observedAt": "2026-10-05T11:06:03.297Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1019,
+      "scrollWidth": 1280,
+      "screens": 1.27375,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nTRADE INPUT PANEL\nPurchased exposure\nSold exposure\nALLOCATION PREVIEW\nPosition Size\n0.00\nRisk %\n1.00%\nR Multiple\n0.00R\nPortfolio Impact\n0.00%\nNew Exposure %\n29.18%\nSIMULATE PORTFOLIO AFTER ENTRY\nProjected gross exposure 29.18% • Risk budget used $102.8\nMODEL ALLOCATION\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "hits": []
+    },
+    {
+      "tier": "pro",
+      "tab": "Overview",
+      "observedAt": "2026-10-05T11:06:05.364Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1328,
+      "scrollWidth": 390,
+      "screens": 1.5734597156398105,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\n\n$3,000\n\nValue simulated\n\nNot measured\n\nToday\n\n+$280\n\nOpen P&L\n\n66.7%\n\nLargest position\n\nA daily change needs a matching prior-session valuation. Open P&L uses recorded cost.\n\nAllocation · 2 positions\nAAPL\n66.7%\nNEAR\n33.3%\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "hits": []
+    },
+    {
+      "tier": "pro",
+      "tab": "Positions",
+      "observedAt": "2026-10-05T11:06:05.863Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1370,
+      "scrollWidth": 390,
+      "screens": 1.6232227488151658,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nTOTAL EXPOSURE\n29.2%\nUNREALIZED P&L\n+$280\n+2.72 risk units\nOPEN R (POSITIONS WITH A STOP)\nNot measured\n0 of 2 positions have a stop\nPrices refresh every 2 min\nRefresh\nRefresh Prices\nSymbol\tSide\tQty\tValue\tSize %\tCost\tCurrent\tStop\tRecorded exit\tR Multiple\tP&L %\tRisk Remaining\tInval Dist %\tActions\nAAPL\tPurchased\t8\t$2,000\t66.7%\t240.00\t$250.00\tNot set\tNot set\tNot measured\t+4.17%\tNot recorded\tNot recorded\t\nRECORD FULL CLOSE\nRECORD PARTIAL CLOSE\nEDIT STOP\nDELETE\n\nNEAR\tPurchased\t200\t$1,000\t33.3%\t4.00\t$5.00\tNot set\tNot set\tNot measured\t+25.00%\tNot recorded\tNot recorded\t\nRECORD FULL CLOSE\nRECORD PARTIAL CLOSE\nEDIT STOP\nDELETE\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "hits": []
+    },
+    {
+      "tier": "pro",
+      "tab": "Ledger",
+      "observedAt": "2026-10-05T11:06:06.179Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1617,
+      "scrollWidth": 390,
+      "screens": 1.9158767772511849,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nWIN %\n0.0%\nAVG R\nNot measured\n0 of 0 trades with a stop\nBEST R\nNot measured\nWORST R\nNot measured\nAVG RISK UNITS\n— risk units\nP&L / account risk per trade\nEXPECTANCY\n$0\nR = P&L ÷ risk to a recorded stop (only trades with a stop). Risk units = P&L ÷ account risk per trade ($102.8 = account equity × 1%).\nCLOSED TRADES EQUITY CURVE\n$0\n$-1\n$-1\nOct 5\nOpen\tExit\tRealized\tR Multiple\tRisk Units\tHolding Time\tSetup Tag\tOutcome\tLink\t\nNo closed trades.\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "hits": []
+    },
+    {
+      "tier": "pro",
+      "tab": "Risk",
+      "observedAt": "2026-10-05T11:06:06.630Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1657,
+      "scrollWidth": 390,
+      "screens": 1.9632701421800949,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nExposure and cash controls2 open positions\nPerformance evidence1 recorded snapshots\nRISK FRAMEWORK SELECTOR\nFIXED FRACTIONAL\nKELLY\nVOLATILITY ADJUSTED\nPORTFOLIO RISK SETTINGS\nMax risk / trade\nMax correlated exposure\nMax sector allocation\nMax drawdown threshold\nLIVE RISK HEATMAP\nSymbol\tConcentration\tDollar Risk\tWarning\nAAPL\t66.7%\tStop not recorded\tConcentration warning\nNEAR\t33.3%\tStop not recorded\tConcentration warning\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 1,
+      "hits": []
+    },
+    {
+      "tier": "pro",
+      "tab": "Allocation",
+      "observedAt": "2026-10-05T11:06:07.480Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1509,
+      "scrollWidth": 390,
+      "screens": 1.787914691943128,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nTRADE INPUT PANEL\nPurchased exposure\nSold exposure\nALLOCATION PREVIEW\nPosition Size\n0.00\nRisk %\n1.00%\nR Multiple\n0.00R\nPortfolio Impact\n0.00%\nNew Exposure %\n29.18%\nSIMULATE PORTFOLIO AFTER ENTRY\nProjected gross exposure 29.18% • Risk budget used $102.8\nMODEL ALLOCATION\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "hits": []
+    },
+    {
+      "tier": "free",
+      "tab": "Overview",
+      "observedAt": "2026-10-05T11:06:09.479Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1023,
+      "scrollWidth": 1280,
+      "screens": 1.27875,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\n\n$3,000\n\nValue simulated\n\nNot measured\n\nToday\n\n+$280\n\nOpen P&L\n\n66.7%\n\nLargest position\n\nA daily change needs a matching prior-session valuation. Open P&L uses recorded cost.\n\nAllocation · 2 positions\nAAPL\n66.7%\nNEAR\n33.3%\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "hits": []
+    },
+    {
+      "tier": "free",
+      "tab": "Positions",
+      "observedAt": "2026-10-05T11:06:10.096Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1046,
+      "scrollWidth": 1280,
+      "screens": 1.3075,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nTOTAL EXPOSURE\n29.2%\nUNREALIZED P&L\n+$280\n+2.72 risk units\nOPEN R (POSITIONS WITH A STOP)\nNot measured\n0 of 2 positions have a stop\nPrices refresh every 2 min\nRefresh\nRefresh Prices\nSymbol\tSide\tQty\tValue\tSize %\tCost\tCurrent\tStop\tRecorded exit\tR Multiple\tP&L %\tRisk Remaining\tInval Dist %\tActions\nAAPL\tPurchased\t8\t$2,000\t66.7%\t240.00\t$250.00\tNot set\tNot set\tNot measured\t+4.17%\tNot recorded\tNot recorded\t\nRECORD FULL CLOSE\nRECORD PARTIAL CLOSE\nEDIT STOP\nDELETE\n\nNEAR\tPurchased\t200\t$1,000\t33.3%\t4.00\t$5.00\tNot set\tNot set\tNot measured\t+25.00%\tNot recorded\tNot recorded\t\nRECORD FULL CLOSE\nRECORD PARTIAL CLOSE\nEDIT STOP\nDELETE\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "hits": []
+    },
+    {
+      "tier": "free",
+      "tab": "Ledger",
+      "observedAt": "2026-10-05T11:06:10.697Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1076,
+      "scrollWidth": 1280,
+      "screens": 1.345,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nWIN %\n0.0%\nAVG R\nNot measured\n0 of 0 trades with a stop\nBEST R\nNot measured\nWORST R\nNot measured\nAVG RISK UNITS\n— risk units\nP&L / account risk per trade\nEXPECTANCY\n$0\nR = P&L ÷ risk to a recorded stop (only trades with a stop). Risk units = P&L ÷ account risk per trade ($102.8 = account equity × 1%).\nCLOSED TRADES EQUITY CURVE\n$0\n$-1\n$-1\nOct 5\nOpen\tExit\tRealized\tR Multiple\tRisk Units\tHolding Time\tSetup Tag\tOutcome\tLink\t\nNo closed trades.\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "hits": []
+    },
+    {
+      "tier": "free",
+      "tab": "Risk",
+      "observedAt": "2026-10-05T11:06:11.483Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1138,
+      "scrollWidth": 1280,
+      "screens": 1.4225,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nExposure and cash controls2 open positions\nPerformance evidence1 recorded snapshots\nRISK FRAMEWORK SELECTOR\nFIXED FRACTIONAL\nKELLY\nVOLATILITY ADJUSTED\nPORTFOLIO RISK SETTINGS\nMax risk / trade\nMax correlated exposure\nMax sector allocation\nMax drawdown threshold\nLIVE RISK HEATMAP\nSymbol\tConcentration\tDollar Risk\tWarning\nAAPL\t66.7%\tStop not recorded\tConcentration warning\nNEAR\t33.3%\tStop not recorded\tConcentration warning\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "hits": []
+    },
+    {
+      "tier": "free",
+      "tab": "Allocation",
+      "observedAt": "2026-10-05T11:06:12.897Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1019,
+      "scrollWidth": 1280,
+      "screens": 1.27375,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nTRADE INPUT PANEL\nPurchased exposure\nSold exposure\nALLOCATION PREVIEW\nPosition Size\n0.00\nRisk %\n1.00%\nR Multiple\n0.00R\nPortfolio Impact\n0.00%\nNew Exposure %\n29.18%\nSIMULATE PORTFOLIO AFTER ENTRY\nProjected gross exposure 29.18% • Risk budget used $102.8\nMODEL ALLOCATION\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "hits": []
+    },
+    {
+      "tier": "free",
+      "tab": "Overview",
+      "observedAt": "2026-10-05T11:06:14.812Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1328,
+      "scrollWidth": 390,
+      "screens": 1.5734597156398105,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\n\n$3,000\n\nValue simulated\n\nNot measured\n\nToday\n\n+$280\n\nOpen P&L\n\n66.7%\n\nLargest position\n\nA daily change needs a matching prior-session valuation. Open P&L uses recorded cost.\n\nAllocation · 2 positions\nAAPL\n66.7%\nNEAR\n33.3%\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "hits": []
+    },
+    {
+      "tier": "free",
+      "tab": "Positions",
+      "observedAt": "2026-10-05T11:06:15.263Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1370,
+      "scrollWidth": 390,
+      "screens": 1.6232227488151658,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nTOTAL EXPOSURE\n29.2%\nUNREALIZED P&L\n+$280\n+2.72 risk units\nOPEN R (POSITIONS WITH A STOP)\nNot measured\n0 of 2 positions have a stop\nPrices refresh every 2 min\nRefresh\nRefresh Prices\nSymbol\tSide\tQty\tValue\tSize %\tCost\tCurrent\tStop\tRecorded exit\tR Multiple\tP&L %\tRisk Remaining\tInval Dist %\tActions\nAAPL\tPurchased\t8\t$2,000\t66.7%\t240.00\t$250.00\tNot set\tNot set\tNot measured\t+4.17%\tNot recorded\tNot recorded\t\nRECORD FULL CLOSE\nRECORD PARTIAL CLOSE\nEDIT STOP\nDELETE\n\nNEAR\tPurchased\t200\t$1,000\t33.3%\t4.00\t$5.00\tNot set\tNot set\tNot measured\t+25.00%\tNot recorded\tNot recorded\t\nRECORD FULL CLOSE\nRECORD PARTIAL CLOSE\nEDIT STOP\nDELETE\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "hits": []
+    },
+    {
+      "tier": "free",
+      "tab": "Ledger",
+      "observedAt": "2026-10-05T11:06:15.608Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1617,
+      "scrollWidth": 390,
+      "screens": 1.9158767772511849,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nWIN %\n0.0%\nAVG R\nNot measured\n0 of 0 trades with a stop\nBEST R\nNot measured\nWORST R\nNot measured\nAVG RISK UNITS\n— risk units\nP&L / account risk per trade\nEXPECTANCY\n$0\nR = P&L ÷ risk to a recorded stop (only trades with a stop). Risk units = P&L ÷ account risk per trade ($102.8 = account equity × 1%).\nCLOSED TRADES EQUITY CURVE\n$0\n$-1\n$-1\nOct 5\nOpen\tExit\tRealized\tR Multiple\tRisk Units\tHolding Time\tSetup Tag\tOutcome\tLink\t\nNo closed trades.\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "hits": []
+    },
+    {
+      "tier": "free",
+      "tab": "Risk",
+      "observedAt": "2026-10-05T11:06:16.129Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1657,
+      "scrollWidth": 390,
+      "screens": 1.9632701421800949,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nExposure and cash controls2 open positions\nPerformance evidence1 recorded snapshots\nRISK FRAMEWORK SELECTOR\nFIXED FRACTIONAL\nKELLY\nVOLATILITY ADJUSTED\nPORTFOLIO RISK SETTINGS\nMax risk / trade\nMax correlated exposure\nMax sector allocation\nMax drawdown threshold\nLIVE RISK HEATMAP\nSymbol\tConcentration\tDollar Risk\tWarning\nAAPL\t66.7%\tStop not recorded\tConcentration warning\nNEAR\t33.3%\tStop not recorded\tConcentration warning\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "hits": []
+    },
+    {
+      "tier": "free",
+      "tab": "Allocation",
+      "observedAt": "2026-10-05T11:06:17.196Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1509,
+      "scrollWidth": 390,
+      "screens": 1.787914691943128,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nTrack\nWatchlists\nJournal\nPortfolio\nLearning\nBacktest\nAlerts\nSettings\nPortfolio\nAdd Position\n\n2 open simulation positions\n\nOverview\nPositions\nLedger\nRisk\nAllocation\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nTRADE INPUT PANEL\nPurchased exposure\nSold exposure\nALLOCATION PREVIEW\nPosition Size\n0.00\nRisk %\n1.00%\nR Multiple\n0.00R\nPortfolio Impact\n0.00%\nNew Exposure %\n29.18%\nSIMULATE PORTFOLIO AFTER ENTRY\nProjected gross exposure 29.18% • Risk budget used $102.8\nMODEL ALLOCATION\nRecord actions2 open · 0 closed\n\nSource · Saved simulation records · Mark basis and observation times not collected · User-entered records; descriptive analytics\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "hits": []
+    }
+  ],
+  "requests": [
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/portfolio",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/operator/state",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/operator/state",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/portfolio/analyze",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/portfolio",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/portfolio",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/operator/state",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/operator/state",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/portfolio/analyze",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/portfolio",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/portfolio",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/operator/state",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/operator/state",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/portfolio",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/portfolio",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/operator/state",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/operator/state",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/portfolio",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    }
+  ],
+  "errors": []
+}

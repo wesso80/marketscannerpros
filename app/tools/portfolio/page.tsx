@@ -1931,7 +1931,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             className="w-[min(92vw,520px)] rounded-xl border border-slate-700 bg-[#0b1220] p-5 shadow-[var(--msp-shadow)]"
           >
             <div className="mb-3 flex items-center justify-between">
-              <div id="level-editor-title" className="font-bold text-slate-200">Stop &amp; target for {levelEditorPosition.symbol} ({levelEditorPosition.side})</div>
+              <div id="level-editor-title" className="font-bold text-slate-200">Recorded levels for {levelEditorPosition.symbol} ({levelEditorPosition.side})</div>
               <button type="button" onClick={() => setLevelEditor(null)} className="cursor-pointer border-none bg-transparent text-xs font-semibold uppercase text-slate-400">Close</button>
             </div>
             <div className="mb-3 text-[12px] text-slate-400">
@@ -2617,7 +2617,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       <th scope="col" className="px-2 py-2 text-right">Cost</th>
                       <th scope="col" className="px-2 py-2 text-right">Current</th>
                       <th scope="col" className="px-2 py-2 text-right">Stop</th>
-                      <th scope="col" className="px-2 py-2 text-right">Target</th>
+                      <th scope="col" className="px-2 py-2 text-right">Recorded exit</th>
                       <th scope="col" className="px-2 py-2 text-right">R Multiple</th>
                       <th scope="col" className="px-2 py-2 text-right">P&L %</th>
                       <th scope="col" className="px-2 py-2 text-right">Risk Remaining</th>
@@ -2648,7 +2648,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                           <td className="px-2 py-2 text-right">{formatPriceRaw(position.entryPrice)}</td>
                           <td className="px-2 py-2 text-right"><span title="Recorded mark; price basis and observation time not collected">{formatPrice(position.currentPrice)}</span></td>
                           <td className="px-2 py-2 text-right tabular-nums" title={stop != null && levelsFromJournal ? 'From the linked Journal entry' : undefined}>{stop != null ? formatPriceRaw(stop) : <span className="text-slate-500" title="No stop set">Not set</span>}</td>
-                          <td className="px-2 py-2 text-right tabular-nums" title={target != null && levelsFromJournal ? 'From the linked Journal entry' : undefined}>{target != null ? formatPriceRaw(target) : <span className="text-slate-500" title="No target set">Not set</span>}</td>
+                          <td className="px-2 py-2 text-right tabular-nums" title={target != null && levelsFromJournal ? 'From the linked Journal entry' : undefined}>{target != null ? formatPriceRaw(target) : <span className="text-slate-500" title="No exit level recorded">Not set</span>}</td>
                           {rMultipleOpen == null
                             ? <td className="px-2 py-2 text-right text-slate-500" title={noRiskTitle}>Not measured</td>
                             : <td className={`px-2 py-2 text-right ${rMultipleOpen >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{rMultipleOpen >= 0 ? '+' : ''}{rMultipleOpen.toFixed(2)}R</td>}
@@ -2785,7 +2785,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       const r = measure?.r ?? null;
                       const riskUnits = measure?.riskUnits ?? null;
                       const holdDays = Math.max(0, Math.round((new Date(trade.closeDate).getTime() - new Date(trade.entryDate).getTime()) / 86_400_000));
-                      const outcomeType = trade.realizedPL > 0 ? 'Target' : trade.realizedPL < 0 ? 'Stop' : 'Manual';
+                      const outcomeType = trade.realizedPL > 0 ? 'Gain' : trade.realizedPL < 0 ? 'Loss' : 'Flat';
                       return (
                         <tr key={trade.id} className="border-b border-slate-800/60 text-slate-300">
                           <td className="px-2 py-2">{trade.symbol} @ {trade.entryPrice.toFixed(2)}</td>
