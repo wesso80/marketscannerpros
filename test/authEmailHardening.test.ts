@@ -13,6 +13,10 @@ vi.mock('resend', () => ({
   },
 }));
 
+vi.mock('@/lib/alerts/emailControls', () => ({
+  recordWebhookSuppression: async () => undefined,
+}));
+
 import { resetMagicLinkEmailCooldown } from '@/lib/magicLinkCooldown';
 import {
   buildSignInEmail,
