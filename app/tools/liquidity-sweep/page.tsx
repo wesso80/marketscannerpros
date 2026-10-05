@@ -2,10 +2,12 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import ToolPageLayout from '@/components/tools/ToolPageLayout';
-import ToolIdentityHeader from '@/components/tools/ToolIdentityHeader';
+import Link from 'next/link';
+import LockedPreview from '@/components/free/LockedPreview';
+import { levelName, sweepPrice, sweepSession } from '@/components/liquidity-sweep/presentation';
 import { useUserTier, canAccessScanner, canAccessUnlimitedScanning } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
-import { PageHero } from '@/components/ui';
+
 
 /* ── Types matching API response ── */
 
@@ -44,29 +46,6 @@ interface ScanResponse {
   duration: string;
 }
 
-/* ── Helpers ── */
-
-function fmtPrice(n: number): string {
-  if (n < 1) return `$${n.toFixed(6)}`;
-  if (n < 100) return `$${n.toFixed(2)}`;
-  return `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
-}
-
-function observationBadge(type: SweepResult['setupType']): { label: string; bg: string; color: string } {
-  switch (type) {
-    case 'active_sweep': return { label: 'ACTIVE SWEEP', bg: 'rgba(239,68,68,0.12)', color: 'var(--msp-bear)' };
-    case 'at_level': return { label: 'AT LEVEL', bg: 'rgba(245,158,11,0.12)', color: 'var(--msp-warn)' };
-    case 'near_level': return { label: 'NEAR LEVEL', bg: 'rgba(249,115,22,0.12)', color: '#f97316' };
-    default: return { label: 'NO OBSERVATION', bg: 'rgba(100,116,139,0.1)', color: 'var(--msp-text-muted)' };
-  }
-}
-
-function dirColor(dir: string): string {
-  if (dir === 'bullish') return 'var(--msp-bull)';
-  if (dir === 'bearish') return 'var(--msp-bear)';
-  return 'var(--msp-text-muted)';
-}
-
 /* ── Page ── */
 
 const SWEEP_AUTO_KEY = 'msp.liquiditySweep.autoScan';
@@ -78,9 +57,12 @@ export default function LiquiditySweepPage() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ScanResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const [filter, setFilter] = useState<'all' | 'sweep' | 'near'>('all');
 
   const runScan = useCallback(async () => {
+    if (isLoading || !canAccessUnlimitedScanning(tier)) return;
+    setShowAll(false);
     setLoading(true);
     setError(null);
     setData(null);
@@ -100,7 +82,7 @@ export default function LiquiditySweepPage() {
     } finally {
       setLoading(false);
     }
-  }, [scanType]);
+  }, [scanType, isLoading, tier]);
 
   useEffect(() => {
     if (isLoading || !canAccessUnlimitedScanning(tier)) return;
@@ -139,271 +121,68 @@ export default function LiquiditySweepPage() {
     return true;
   }) ?? [];
 
-  const lastUpdated = data ? new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }) : 'Example';
+  if (isLoading) return <p role="status" className="p-4 text-sm text-slate-400">Loading access…</p>;
+  if (!canAccessUnlimitedScanning(tier)) return <LockedPreview tool="Liquidity Sweep" />;
 
+  const visible = showAll ? filtered : filtered.slice(0, 6);
+  const verdict = loading ? 'Scanning completed candles…' : error ? 'Sweep feed failed' : data
+    ? `${data.sweepCount} sweep observations across ${data.scanned} symbols` : 'No scan has run in this view';
   return (
     <ToolPageLayout
-      identity={
-        <PageHero
-          ariaLabel="Liquidity Sweep command header"
-          eyebrow="Liquidity sweep scanner"
-          badges={[
-            { label: `${scanType.toUpperCase()} mode` },
-            { label: `Filter ${filter}` },
-          ]}
-          title="Detect stop hunts before sizing risk."
-          subtitle="Detect liquidity sweeps at PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, and ROUND levels — confirm stop-hunt patterns before placing or invalidating a trade."
-          actions={[
-            { label: loading ? 'Scanning…' : 'Run scan', variant: 'primary', onClick: () => runScan(), disabled: loading },
-            { label: 'Open Golden Egg', variant: 'secondary', href: '/tools/golden-egg' },
-            { label: 'Open Terminal', variant: 'ghost', href: '/tools/terminal' },
-          ]}
-          metrics={[
-            { label: 'Mode', value: scanType === 'crypto' ? 'Crypto' : 'Equity', tone: scanType === 'crypto' ? 'warn' : 'info', detail: 'Sweep detection' },
-            { label: 'Sweeps', value: data ? String(data.sweepCount) : 'Example', tone: 'bull', detail: 'Latest completed candle observations' },
-            { label: 'Filter', value: filter === 'sweep' ? 'Sweeps only' : filter === 'near' ? 'Near level' : 'All', tone: 'info', detail: 'Result filter applied' },
-            { label: 'Updated', value: lastUpdated, tone: 'info', detail: 'Local time' },
-          ]}
-        />
-      }
-      primary={
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Controls */}
-          <div className="msp-elite-panel" style={{ padding: '16px 20px' }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-              {/* Asset type */}
-              <div style={{ display: 'flex', gap: '6px' }}>
-                {(['equity', 'crypto'] as const).map(t => (
-                  <button key={t} type="button" onClick={() => setScanType(t)}
-                    style={{
-                      padding: '6px 16px', fontSize: '12px', fontWeight: 700,
-                      borderRadius: '8px', cursor: 'pointer', textTransform: 'uppercase',
-                      background: scanType === t ? 'var(--msp-accent-tint)' : 'var(--msp-panel-2)',
-                      color: scanType === t ? 'var(--msp-accent)' : 'var(--msp-text-muted)',
-                      border: `1px solid ${scanType === t ? 'var(--msp-accent)' : 'var(--msp-border)'}`,
-                    }}
-                  >
-                    {t === 'equity' ? 'Equity' : 'Crypto'}
-                  </button>
-                ))}
+      identity={<header className="space-y-3">
+        <h1 className="text-2xl font-semibold">Liquidity Sweep</h1>
+        <p data-sweep-verdict role="status" className={`text-base ${error ? 'text-amber-300' : 'text-slate-200'}`}>{verdict}</p>
+        <p className="text-sm text-slate-400">Completed-candle observations around recorded price levels.</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={runScan} disabled={loading} className="min-h-10 rounded-lg border border-emerald-400/40 px-4 text-sm text-emerald-200 disabled:opacity-50">{loading ? 'Scanning…' : 'Run scan'}</button>
+          <Link href="/tools/golden-egg" className="inline-flex min-h-10 items-center px-2 text-sm text-slate-300 underline">Open Symbol</Link>
+          <Link href="/tools/terminal" className="inline-flex min-h-10 items-center px-2 text-sm text-slate-300 underline">Open Terminal</Link>
+        </div>
+      </header>}
+      primary={<div className="min-w-0 space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {(['equity', 'crypto'] as const).map(t => <button key={t} type="button" disabled={loading} aria-pressed={scanType === t}
+            onClick={() => { if (t === scanType) return; setScanType(t); setData(null); setError(null); setShowAll(false); }}
+            className={`min-h-10 rounded-lg border px-3 text-sm ${scanType === t ? 'border-slate-400 text-white' : 'border-slate-700 text-slate-400'}`}>
+            {t === 'equity' ? 'Equity' : 'Crypto'}
+          </button>)}
+          <select aria-label="Observation filter" value={filter} onChange={e => { setFilter(e.target.value as typeof filter); setShowAll(false); }} className="min-h-10 max-w-full rounded-lg border border-slate-700 bg-slate-950 px-2 text-sm">
+            <option value="all">All observations</option><option value="sweep">Sweeps only</option><option value="near">Sweeps and nearby levels</option>
+          </select>
+          {data && <span className="text-xs text-slate-400">{data.scanned} scanned · {filtered.length} matching</span>}
+        </div>
+        {error && <p className="rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-200">The scan did not complete. Run again to retry.</p>}
+        {data && <p data-sweep-source className="text-xs text-slate-400">{sweepSession(data.results.map(r => r.candleDate))} · Source: {data.type === 'crypto' ? 'CoinGecko' : 'Alpha Vantage'} completed daily candles</p>}
+        {!loading && !data && !error && <p className="rounded-lg border border-amber-400/30 p-3 text-sm text-amber-200">No recorded result in this view. Use Run scan to request observations.</p>}
+        {data && filtered.length > 0 && <>
+          <p data-sweep-legend className="text-xs text-slate-400"><span className="text-slate-200">● Active sweep</span> means a recorded candle crossed a level. It is a price-pattern observation.</p>
+          <div className="grid min-w-0 grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+            {visible.map(r => <article data-sweep-card key={r.symbol} className="min-w-0 rounded-lg border border-slate-700 bg-slate-900/40 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="font-semibold">{r.symbol}{r.sweepDetected && <span className="ml-2 text-xs text-slate-400" aria-label="Sweep observed">●</span>}</h2>
+                <span className="text-sm">{sweepPrice(r.price)} <span className="text-xs text-slate-400">{Number.isFinite(r.change24h) ? `${r.change24h >= 0 ? '+' : ''}${r.change24h.toFixed(1)}%` : ''}</span></span>
               </div>
-
-              {/* Filter */}
-              <select value={filter} onChange={e => setFilter(e.target.value as any)}
-                style={{
-                  padding: '6px 12px', fontSize: '12px', fontWeight: 600,
-                  borderRadius: '8px', background: 'var(--msp-panel-2)',
-                  color: 'var(--msp-text)', border: '1px solid var(--msp-border)',
-                }}
-              >
-                <option value="all">All Results</option>
-                <option value="sweep">Sweeps Only</option>
-                <option value="near">Observations (Sweep + Near Level)</option>
-              </select>
-
-              {/* Scan button */}
-              <button type="button" onClick={runScan} disabled={loading}
-                style={{
-                  padding: '8px 24px', fontSize: '13px', fontWeight: 800,
-                  borderRadius: '10px', cursor: loading ? 'wait' : 'pointer',
-                  background: loading ? 'var(--msp-panel-2)' : 'var(--msp-accent)',
-                  color: loading ? 'var(--msp-text-muted)' : '#fff',
-                  border: 'none', letterSpacing: '0.04em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                {loading ? 'Scanning...' : 'Scan for Sweeps'}
-              </button>
-
-              {data && (
-                <span style={{ fontSize: '11px', color: 'var(--msp-text-faint)', marginLeft: 'auto' }}>
-                  {data.scanned} scanned • {data.sweepCount} sweeps • {data.nearLevelCount} near level • {data.duration}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Error */}
-          {error && (
-            <div style={{
-              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)',
-              borderRadius: '12px', padding: '14px 18px', fontSize: '13px', color: 'var(--msp-bear)',
-            }}>
-              {error}
-            </div>
-          )}
-
-          {!loading && !data && !error && (
-            <div data-liquidity-example style={{ background: 'var(--msp-panel)', borderRadius: '12px', padding: '32px', color: 'var(--msp-text-muted)' }}>
-              <div style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--msp-warn)' }}>Example</div>
-              <div style={{ marginTop: '8px', fontSize: '14px' }}>This labelled sample stays visible until a completed sweep result is shown.</div>
-            </div>
-          )}
-
-          {/* Loading */}
-          {loading && (
-            <div style={{
-              background: 'var(--msp-panel)', borderRadius: '12px', padding: '48px',
-              textAlign: 'center', color: 'var(--msp-text-muted)',
-            }}>
-              <div style={{ margin: '0 auto 12px', width: '40px', height: '40px', borderRadius: '8px', border: '1px solid var(--msp-border)', display: 'grid', placeItems: 'center', fontSize: '12px', fontWeight: 800 }}>LS</div>
-              <div style={{ fontSize: '14px', fontWeight: 600 }}>Scanning {scanType === 'equity' ? '40 equities' : '29 crypto'} for liquidity sweeps...</div>
-              <div style={{ fontSize: '12px', color: 'var(--msp-text-faint)', marginTop: '6px' }}>
-                Computing PDH/PDL, WEEK, EQH/EQL, ROUND levels and running pattern detection
-              </div>
-            </div>
-          )}
-
-          {/* Results */}
-          {!loading && data && filtered.length === 0 && (
-            <div style={{
-              background: 'var(--msp-panel)', borderRadius: '12px', padding: '32px',
-              textAlign: 'center', color: 'var(--msp-text-muted)',
-            }}>
-              No {filter === 'sweep' ? 'active sweeps' : 'observations'} detected. Try broadening the filter.
-            </div>
-          )}
-
-          {!loading && data && filtered.length > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '14px' }}>
-              {filtered.map((r) => {
-                const badge = observationBadge(r.setupType);
-                return (
-                  <div key={r.symbol} style={{
-                    background: 'var(--msp-panel)',
-                    border: `1px solid ${r.sweepDetected ? (r.direction === 'bullish' ? 'rgba(16,185,129,0.45)' : 'rgba(239,68,68,0.45)') : 'var(--msp-border)'}`,
-                    borderRadius: '14px',
-                    padding: '16px 18px',
-                    boxShadow: r.sweepDetected ? (r.direction === 'bullish' ? '0 0 12px rgba(16,185,129,0.12)' : '0 0 12px rgba(239,68,68,0.12)') : 'none',
-                  }}>
-                    {/* Header row */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                      <div>
-                        <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--msp-text)' }}>{r.symbol}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--msp-text-muted)', marginTop: '2px' }}>
-                          {fmtPrice(r.price)}
-                          <span style={{ color: r.change24h >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)', marginLeft: '8px' }}>
-                            {r.change24h >= 0 ? '+' : ''}{r.change24h.toFixed(2)}% · completed {r.candleDate ?? 'date unavailable'}
-                          </span>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                        <span style={{
-                          padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 700,
-                          background: badge.bg, color: badge.color, letterSpacing: '0.04em',
-                        }}>
-                          {badge.label}
-                        </span>
-                        {r.confidence > 0 && (
-                          <span style={{
-                            fontSize: '18px', fontWeight: 800,
-                            color: r.confidence >= 65 ? 'var(--msp-bull)' : r.confidence >= 45 ? 'var(--msp-warn)' : 'var(--msp-text-muted)',
-                          }}>
-                            {r.confidence}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Direction */}
-                    {r.direction !== 'neutral' && (
-                      <div style={{
-                        display: 'inline-block', padding: '3px 10px', borderRadius: '6px',
-                        fontSize: '11px', fontWeight: 700, marginBottom: '10px',
-                        background: r.direction === 'bullish' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-                        color: dirColor(r.direction),
-                        textTransform: 'uppercase',
-                      }}>
-                        {r.direction === 'bullish' ? 'Bullish' : 'Bearish'} context
-                      </div>
-                    )}
-
-                    {/* Sweep reason */}
-                    {r.sweepPattern && (
-                      <div style={{
-                        fontSize: '12px', color: 'var(--msp-text)', lineHeight: '1.5',
-                        padding: '8px 10px', borderRadius: '8px', marginBottom: '10px',
-                        background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)',
-                      }}>
-                        {r.sweepPattern.reason}
-                      </div>
-                    )}
-
-                    {/* Nearest level */}
-                    {r.nearestLevel && (
-                      <div style={{
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        padding: '6px 10px', borderRadius: '6px', background: 'var(--msp-panel-2)',
-                        fontSize: '11px', marginBottom: '8px',
-                      }}>
-                        <span style={{ color: 'var(--msp-text-faint)' }}>
-                          Nearest: <span style={{ fontWeight: 700, color: 'var(--msp-text)' }}>{r.nearestLevel.label}</span> @ {fmtPrice(r.nearestLevel.level)}
-                        </span>
-                        <span style={{
-                          fontWeight: 700,
-                          color: r.proximityPct < 0.5 ? 'var(--msp-bear)' : r.proximityPct < 1 ? 'var(--msp-warn)' : 'var(--msp-text-muted)',
-                        }}>
-                          {r.proximityPct.toFixed(2)}% away
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Level strip */}
-                    <div style={{
-                      display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px',
-                    }}>
-                      {r.levels.slice(0, 8).map((lev, i) => (
-                        <span key={i} style={{
-                          padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: 600,
-                          background: 'var(--msp-panel-2)', color: 'var(--msp-text-faint)',
-                          border: '1px solid var(--msp-border)',
-                        }} title={`${lev.label}: ${fmtPrice(lev.level)}`}>
-                          {lev.label}
-                        </span>
-                      ))}
-                    </div>
-
-                    {/* Footer */}
-                    <div style={{
-                      display: 'flex', gap: '12px', marginTop: '10px', paddingTop: '8px',
-                      borderTop: '1px solid var(--msp-border)',
-                      fontSize: '10px', color: 'var(--msp-text-faint)',
-                    }}>
-                      <span>ATR: {r.atrPct.toFixed(1)}%</span>
-                      <span>Levels: {r.levelCount}</span>
-                    </div>
+              {r.nearestLevel && <p className="mt-1 text-xs text-slate-300">{levelName(r.nearestLevel.label)} · {sweepPrice(r.nearestLevel.level)}{Number.isFinite(r.proximityPct) ? ` · ${r.proximityPct.toFixed(1)}% away` : ''}</p>}
+              <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                <span>{r.sweepDetected ? r.direction === 'bullish' ? 'Swept below' : r.direction === 'bearish' ? 'Swept above' : 'Level crossed' : r.nearestLevel ? r.nearestLevel.level > r.price ? 'Level above' : r.nearestLevel.level < r.price ? 'Level below' : 'At level' : 'No nearby level'}</span>
+                <details><summary className="cursor-pointer py-1">Level details</summary>
+                  <div className="space-y-1 py-2">{r.levels.map((lev, i) => <p key={i}>{levelName(lev.label)} · {sweepPrice(lev.level)}</p>)}
+                    {Number.isFinite(r.atrPct) && <p>Measured range: {r.atrPct.toFixed(1)}%</p>}
+                    {Number.isFinite(r.confidence) && <p>Pattern score: {r.confidence}</p>}
+                    <p>{r.levelCount} recorded levels</p>
                   </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Empty state */}
-          {!loading && !data && !error && (
-            <div style={{
-              background: 'var(--msp-panel)', borderRadius: '12px', padding: '48px',
-              textAlign: 'center', color: 'var(--msp-text-muted)',
-            }}>
-              <div style={{ margin: '0 auto 12px', width: '44px', height: '44px', borderRadius: '8px', border: '1px solid var(--msp-border)', display: 'grid', placeItems: 'center', fontSize: '12px', fontWeight: 800 }}>LS</div>
-              <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--msp-text)' }}>
-                Scan for Liquidity Sweeps
+                </details>
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--msp-text-faint)', marginTop: '6px', maxWidth: '480px', margin: '6px auto 0' }}>
-                Detect stop hunts and liquidity grabs at key institutional levels — PDH/PDL, weekly high/low, equal highs/lows, and psychological round numbers.
-              </div>
-            </div>
-          )}
-        </div>
-      }
-      footer={
-        <div style={{
-          fontSize: '11px', color: 'var(--msp-text-faint)', textAlign: 'center',
-          padding: '12px 0',
-        }}>
-          Liquidity sweep detection is for educational purposes only. Sweeps are technical price-pattern observations and do not predict future direction or provide buy/sell signals. Not financial advice.
-          Sweep observations describe possible stop-hunt behavior but do not guarantee reversal.
-        </div>
-      }
+            </article>)}
+          </div>
+          {filtered.length > 6 && <button className="min-h-10 rounded-lg border border-slate-700 px-4 text-sm" onClick={() => setShowAll(v => !v)}>{showAll ? 'Show top 6' : `Show all (${filtered.length})`}</button>}
+        </>}
+        {!loading && data && filtered.length === 0 && <p className="rounded-lg border border-slate-700 p-3 text-sm text-slate-400">No observations match this filter.</p>}
+      </div>}
+      footer={<div style={{fontSize:'11px',color:'var(--msp-text-faint)',textAlign:'center',padding:'12px 0'}}>
+        Liquidity sweep detection is for educational purposes only. Sweeps are technical price-pattern observations and do not predict future direction or provide buy/sell signals. Not financial advice.
+        Sweep observations describe possible stop-hunt behavior but do not guarantee reversal.
+      </div>}
     />
   );
 }
