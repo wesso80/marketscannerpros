@@ -9,6 +9,7 @@ const nav = vi.hoisted(() => ({ tab: 'portfolio', replace: vi.fn(), isLoggedIn: 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: nav.replace }),
   useSearchParams: () => new URLSearchParams(`tab=${nav.tab}`),
+  usePathname: () => '/tools/workspace',
 }));
 vi.mock('@/lib/useUserTier', () => ({
   useUserTier: () => ({ tier: nav.isLoggedIn ? 'pro' : 'anonymous', isLoggedIn: nav.isLoggedIn, isLoading: nav.isLoading, isAdmin: false, email: nav.isLoggedIn ? 'pro@example.com' : null }),
