@@ -3,6 +3,11 @@
 import PaidPreviewGate from '@/components/free/PaidPreviewGate';
 
 import Link from 'next/link';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import SourceLine from '@/components/visual/SourceLine';
+import { MarketMetrics, MarketSparkline } from '@/components/explorer/MarketsSummary';
+import { marketText } from '@/lib/marketsPresentation';
+
 import { useState, useEffect, useCallback, useRef, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import FreeLoading from '@/components/free/Loading';
@@ -127,7 +132,7 @@ const POPULAR_COINS = [
 ];
 
 function formatNumber(num: number | undefined, decimals = 2): string {
-  if (num === undefined || num === null || isNaN(num)) return 'N/A';
+  if (num === undefined || num === null || isNaN(num)) return 'Not collected';
   if (num >= 1e12) return `$${(num / 1e12).toFixed(decimals)}T`;
   if (num >= 1e9) return `$${(num / 1e9).toFixed(decimals)}B`;
   if (num >= 1e6) return `$${(num / 1e6).toFixed(decimals)}M`;
@@ -136,7 +141,7 @@ function formatNumber(num: number | undefined, decimals = 2): string {
 }
 
 function formatPrice(price: number | undefined): string {
-  if (price === undefined || price === null || isNaN(price)) return 'N/A';
+  if (price === undefined || price === null || isNaN(price)) return 'Not collected';
   if (price < 0.00001) return `$${price.toFixed(10)}`;
   if (price < 0.01) return `$${price.toFixed(6)}`;
   if (price < 1) return `$${price.toFixed(4)}`;
@@ -145,7 +150,7 @@ function formatPrice(price: number | undefined): string {
 }
 
 function PercentBadge({ value }: { value: number | undefined }) {
-  if (value === undefined || value === null || isNaN(value)) return <span className="text-slate-500">N/A</span>;
+  if (value === undefined || value === null || isNaN(value)) return <span className="text-slate-500">Not collected</span>;
   const isPositive = value >= 0;
   return (
     <span className={`rounded px-2 py-0.5 text-xs font-semibold ${isPositive ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
@@ -287,7 +292,7 @@ function computeDecisionState(coinData: CoinData | null, btc7d: number | null) {
   };
 }
 
-function CryptoDetailPageContent() {
+function CryptoDetailPageContent({ embedded = false }: { embedded?: boolean }) {
   const { tier, isLoading: tierLoading } = useUserTier();
   const searchParams = useSearchParams();
   const [marketGate, setMarketGate] = useState<CryptoDecisionGate | null>(null);
@@ -480,9 +485,9 @@ function CryptoDetailPageContent() {
     : 'Not aligned per governance profile or global gate';
 
   return (
-    <div className="min-h-screen bg-[var(--msp-bg)] text-white">
+    <div className={`${embedded ? '' : 'min-h-screen'} bg-[var(--msp-bg)] text-white`}>
       <div className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
-        <PageHero
+        {!embedded && <PageHero
           ariaLabel="Crypto Explorer command header"
           eyebrow="Crypto asset explorer"
           badges={[
@@ -494,13 +499,14 @@ function CryptoDetailPageContent() {
           actions={[
             { label: 'Open Markets', variant: 'primary', href: '/tools/markets' },
             { label: 'Open Scanner', variant: 'secondary', href: '/tools/scanner?asset=crypto' },
-            { label: 'Open Golden Egg', variant: 'ghost', href: '/tools/golden-egg' },
+            { label: 'Open Symbol', variant: 'ghost', href: '/tools/golden-egg' },
           ]}
-        />
+        />}
 
+        <p data-layout-verdict className="text-sm font-semibold">{loading ? 'Loading coin observations…' : error ? 'Coin observations could not be collected.' : coinData ? `${coinData.coin.symbol.toUpperCase()}: ${permissionLabel}` : 'Choose a coin to review its recorded evidence.'}</p>
         <ComplianceDisclaimer compact />
 
-        <CryptoMorningDecisionCard onDecision={setMarketGate} />
+        <CryptoMorningDecisionCard onDecision={setMarketGate} compact={embedded} />
 
         <section className="rounded-lg border border-slate-700 bg-slate-900 p-2" ref={searchRef}>
           <div className="relative">
@@ -576,27 +582,37 @@ function CryptoDetailPageContent() {
 
         {coinData && !loading && (
           <>
+
+            <MarketMetrics items={[
+              {label:'Price',value:formatPrice(coinData.market.price_usd)},
+              {label:'24h change',value:coinData.price_changes['24h'] == null ? null : `${coinData.price_changes['24h'].toFixed(1)}%`},
+              {label:'Market cap',value:formatNumber(coinData.market.market_cap)},
+              {label:'Structure score',value:decision.alignmentScore},
+            ]}/>
+            <MarketSparkline values={coinData.ohlc?.map(point=>point[4]) || coinData.sparkline || []} title={`${coinData.coin.symbol.toUpperCase()} recorded closing prices`}/>
+            <CollapsibleSection title="Asset evidence" summary={`${coinData.coin.name} · ${coinData.tickers.length} venues`}>
+
             <section className="z-20 flex flex-wrap items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/95 p-1 backdrop-blur md:sticky md:top-2 md:gap-1.5 md:p-1.5">
               {[
-                ['Asset', `${coinData.coin.symbol.toUpperCase()} • #${coinData.market.rank || 'N/A'}`],
+                ['Asset', `${coinData.coin.symbol.toUpperCase()} • #${coinData.market.rank || 'Not collected'}`],
                 ['Price', formatPrice(coinData.market.price_usd)],
-                ['24h', typeof coinData.price_changes['24h'] === 'number' && Number.isFinite(coinData.price_changes['24h']) ? `${coinData.price_changes['24h'] >= 0 ? '+' : ''}${coinData.price_changes['24h'].toFixed(2)}%` : 'N/A'],
+                ['24h', typeof coinData.price_changes['24h'] === 'number' && Number.isFinite(coinData.price_changes['24h']) ? `${coinData.price_changes['24h'] >= 0 ? '+' : ''}${coinData.price_changes['24h'].toFixed(2)}%` : 'Not collected'],
                 ['Bias', decision.structureBias],
                 ['Structure score', `${decision.alignmentScore}/100`],
                 // Scopes are named (OV-19): the coin's own 24h range vs the market-wide regime in the gate breakdown,
                 // and the crypto risk state comes from the same gate as the breakdown, so the two never disagree.
                 [`${coinData.coin.symbol.toUpperCase()} 24h range`, decision.volatilityState],
                 ['Liquidity', decision.liquidityState],
-                ['Crypto risk state', marketGate ? (marketGate.riskState ?? 'Unavailable') : 'Loading'],
-                ['Global regime (cross-asset)', upeGlobal?.regime || 'Unavailable'],
-                ['Micro', upeMicroState || 'neutral'],
+                ['Crypto risk state', marketGate ? (marketGate.riskState ?? 'Not collected') : 'Loading'],
+                ['Global regime (cross-asset)', upeGlobal?.regime || 'Not collected'],
+                ['Micro', upeMicroState || 'Not collected'],
                 ['Risk', decision.riskTag],
-                ['Permission', permissionLabel],
-                ['CRCS', upeSignal && Number.isFinite(upeSignal.crcsUser) ? upeSignal.crcsUser.toFixed(1) : '—'],
-                ['ΔHr', upeSignal && Number.isFinite(upeSignal.microAdjustment) ? `${upeSignal.microAdjustment >= 0 ? '+' : ''}${upeSignal.microAdjustment.toFixed(2)}` : '—'],
+                ['Alignment', permissionLabel],
+                ['CRCS', upeSignal && Number.isFinite(upeSignal.crcsUser) ? upeSignal.crcsUser.toFixed(1) : 'Not collected'],
+                ['ΔHr', upeSignal && Number.isFinite(upeSignal.microAdjustment) ? `${upeSignal.microAdjustment >= 0 ? '+' : ''}${upeSignal.microAdjustment.toFixed(2)}` : 'Not collected'],
               ].map(([k, v]) => (
-                <div key={k} className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[11px] leading-tight text-slate-300 md:px-2 md:text-[11px]">
-                  <span className="font-semibold text-slate-100">{k}</span> · {v}
+                <div key={marketText(k)} className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[11px] leading-tight text-slate-300 md:px-2 md:text-[11px]">
+                  <span className="font-semibold text-slate-100">{marketText(k)}</span> · {marketText(v)}
                 </div>
               ))}
             </section>
@@ -606,7 +622,7 @@ function CryptoDetailPageContent() {
                 <div className="mb-1 flex flex-wrap items-start justify-between gap-1.5 md:items-center">
                   <div>
                     <p className="text-[11px] font-medium text-slate-400">Zone 2 · Action</p>
-                    <h2 className="text-xs font-bold">Price + Permission Console</h2>
+                    <h2 className="text-xs font-bold">Price and alignment</h2>
                   </div>
                   <button
                     type="button"
@@ -666,8 +682,8 @@ function CryptoDetailPageContent() {
                     </div>
                     <p className="mt-1 text-xs text-slate-300">
                       {permissionLabel === 'Aligned' && 'Structure and liquidity conditions support analysis workflow.'}
-                      {permissionLabel === 'Conditional' && 'Mixed conditions. Require tighter confirmation stack.'}
-                      {permissionLabel === 'Not aligned' && 'Condition stack does not meet criteria. Monitor, do not force setup.'}
+                      {permissionLabel === 'Conditional' && 'Mixed conditions; confirmation is incomplete.'}
+                      {permissionLabel === 'Not aligned' && 'Conditions do not meet the assessment criteria.'}
                     </p>
                   </div>
 
@@ -675,7 +691,7 @@ function CryptoDetailPageContent() {
                     assetType="crypto"
                     symbol={coinData.coin.symbol}
                     blocked={isBlocked}
-                    blockReason={blockReason}
+                    blockReason={marketText(blockReason)}
                   />
                 </div>
               </div>
@@ -689,14 +705,14 @@ function CryptoDetailPageContent() {
                 <div className="grid gap-2">
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                     <p className="text-[11px] uppercase text-slate-500">Structure Bias</p>
-                    <p className="text-sm font-bold text-slate-100">{decision.structureBias}</p>
-                    <p className="text-[11px] text-slate-400">Weekly {coinData.price_changes['7d']?.toFixed(2) ?? 'N/A'}% • Monthly {coinData.price_changes['30d']?.toFixed(2) ?? 'N/A'}%</p>
+                    <p className="text-sm font-bold text-slate-100">{marketText(decision.structureBias)}</p>
+                    <p className="text-[11px] text-slate-400">Weekly {coinData.price_changes['7d']?.toFixed(2) ?? 'Not collected'}% • Monthly {coinData.price_changes['30d']?.toFixed(2) ?? 'Not collected'}%</p>
                   </div>
 
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                     <p className="text-[11px] uppercase text-slate-500">Relative Strength vs BTC (7D)</p>
                     <p className={`text-sm font-bold ${decision.relativeStrengthVsBtc === null ? 'text-slate-400' : decision.relativeStrengthVsBtc >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-                      {decision.relativeStrengthVsBtc === null ? 'N/A' : `${decision.relativeStrengthVsBtc >= 0 ? '+' : ''}${decision.relativeStrengthVsBtc.toFixed(2)}%`}
+                      {decision.relativeStrengthVsBtc === null ? 'Not collected' : `${decision.relativeStrengthVsBtc >= 0 ? '+' : ''}${decision.relativeStrengthVsBtc.toFixed(2)}%`}
                     </p>
                   </div>
 
@@ -710,8 +726,8 @@ function CryptoDetailPageContent() {
                   {coinData.derivatives && (
                     <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                       <p className="text-[11px] uppercase text-slate-500">Derivatives Overlay</p>
-                      <p className="text-[11px] text-slate-300">Funding: {coinData.derivatives.funding_rate !== undefined ? `${coinData.derivatives.funding_rate.toFixed(4)}% / interval` : 'N/A'}</p>
-                      <p className="text-[11px] text-slate-300">Sentiment: {coinData.derivatives.funding_sentiment?.toUpperCase() || 'N/A'}</p>
+                      <p className="text-[11px] text-slate-300">Funding: {coinData.derivatives.funding_rate !== undefined ? `${coinData.derivatives.funding_rate.toFixed(4)}% / interval` : 'Not collected'}</p>
+                      <p className="text-[11px] text-slate-300">Sentiment: {marketText(coinData.derivatives.funding_sentiment)}</p>
                       <p className="text-[11px] text-slate-300">Open Interest: {formatNumber(coinData.derivatives.open_interest)}</p>
                     </div>
                   )}
@@ -720,7 +736,7 @@ function CryptoDetailPageContent() {
             </section>
 
             {/* Open by default; the user can still collapse it. Native <details> keeps the content mounted either way. */}
-            <details open className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
+            <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
               <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
                 <span>Zone 3 • Informational</span>
                 <span className="text-[11px] text-slate-500 group-open:hidden">Expand</span>
@@ -748,18 +764,18 @@ function CryptoDetailPageContent() {
 
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                     <p className="mb-1 text-[11px] uppercase text-slate-500">ATH / ATL</p>
-                    <div className="text-xs text-slate-300">ATH: {formatPrice(coinData.market.ath.usd)} ({coinData.market.ath.change_percentage?.toFixed(2) ?? 'N/A'}%)</div>
-                    <div className="text-xs text-slate-300">ATL: {formatPrice(coinData.market.atl.usd)} ({coinData.market.atl.change_percentage?.toFixed(2) ?? 'N/A'}%)</div>
+                    <div className="text-xs text-slate-300">ATH: {formatPrice(coinData.market.ath.usd)} ({coinData.market.ath.change_percentage?.toFixed(2) ?? 'Not collected'}%)</div>
+                    <div className="text-xs text-slate-300">ATL: {formatPrice(coinData.market.atl.usd)} ({coinData.market.atl.change_percentage?.toFixed(2) ?? 'Not collected'}%)</div>
                     <div className="mt-1 text-xs text-slate-400">FDV: {formatNumber(coinData.market.fully_diluted_valuation)}</div>
-                    <div className="text-xs text-slate-400">Circulating: {coinData.market.circulating_supply ? `${(coinData.market.circulating_supply / 1e6).toFixed(2)}M` : 'N/A'}</div>
+                    <div className="text-xs text-slate-400">Circulating: {coinData.market.circulating_supply ? `${(coinData.market.circulating_supply / 1e6).toFixed(2)}M` : 'Not collected'}</div>
                   </div>
                 </div>
 
                 {(coinData.sentiment.votes_up_percentage !== undefined || coinData.sentiment.watchlist_users) && (
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                     <p className="mb-1 text-[11px] uppercase text-slate-500">Sentiment</p>
-                    <p className="text-xs text-slate-300">Bullish votes: {coinData.sentiment.votes_up_percentage?.toFixed(1) ?? 'N/A'}%</p>
-                    <p className="text-xs text-slate-300">Watchlist users: {coinData.sentiment.watchlist_users?.toLocaleString() ?? 'N/A'}</p>
+                    <p className="text-xs text-slate-300">Positive sentiment votes: {coinData.sentiment.votes_up_percentage?.toFixed(1) ?? 'Not collected'}%</p>
+                    <p className="text-xs text-slate-300">Watchlist users: {coinData.sentiment.watchlist_users?.toLocaleString() ?? 'Not collected'}</p>
                   </div>
                 )}
 
@@ -767,10 +783,10 @@ function CryptoDetailPageContent() {
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                     <p className="mb-1 text-[11px] uppercase text-slate-500">Developer Activity</p>
                     <div className="grid grid-cols-2 gap-1 text-xs text-slate-300">
-                      <span>Stars: {coinData.developer.github_stars?.toLocaleString() || 'N/A'}</span>
-                      <span>Forks: {coinData.developer.github_forks?.toLocaleString() || 'N/A'}</span>
-                      <span>Contributors: {coinData.developer.contributors?.toLocaleString() || 'N/A'}</span>
-                      <span>Commits 4w: {coinData.developer.commits_4_weeks?.toLocaleString() || 'N/A'}</span>
+                      <span>Stars: {coinData.developer.github_stars?.toLocaleString() || 'Not collected'}</span>
+                      <span>Forks: {coinData.developer.github_forks?.toLocaleString() || 'Not collected'}</span>
+                      <span>Contributors: {coinData.developer.contributors?.toLocaleString() || 'Not collected'}</span>
+                      <span>Commits 4w: {coinData.developer.commits_4_weeks?.toLocaleString() || 'Not collected'}</span>
                     </div>
                   </div>
                 )}
@@ -798,20 +814,13 @@ function CryptoDetailPageContent() {
               </div>
             </details>
 
-            <div className="text-center text-[11px] text-slate-500">
-              Last updated: {coinData.last_updated ? new Date(coinData.last_updated).toLocaleString() : 'N/A'}
-            </div>
             <CoinGeckoCredit className="text-center" />
+            </CollapsibleSection>
           </>
         )}
 
-        {!selectedCoin && !loading && (
-          <div className="rounded-lg border border-slate-700 bg-slate-900 p-10 text-center">
-            <div className="mx-auto mb-2 h-14 w-14 overflow-hidden rounded-lg"><img src="/assets/platform-tools/crypto-explorer.png" alt="Crypto Explorer" className="h-full w-full object-contain p-1" /></div>
-            <h3 className="text-lg font-semibold text-slate-200">Ready to evaluate a crypto setup?</h3>
-            <p className="mt-1 text-sm text-slate-500">Search or choose a popular coin to generate decision context.</p>
-          </div>
-        )}
+        <SourceLine source="CoinGecko" asOf={coinData?.last_updated} basis={coinData ? 'Coin snapshot timestamp · recorded closing prices' : 'No coin selected'} />
+
       </div>
     </div>
   );
@@ -825,12 +834,12 @@ function PageLoadingSkeleton() {
   );
 }
 
-export default function CryptoDetailPage() { return <PaidPreviewGate tool="Crypto Explorer"><CryptoDetailPagePaid /></PaidPreviewGate>; }
+export default function CryptoDetailPage({ embedded = false }: { embedded?: boolean }) { return <PaidPreviewGate tool="Crypto Explorer"><CryptoDetailPagePaid embedded={embedded} /></PaidPreviewGate>; }
 
-function CryptoDetailPagePaid() {
+function CryptoDetailPagePaid({ embedded = false }: { embedded?: boolean }) {
   return (
     <Suspense fallback={<PageLoadingSkeleton />}>
-      <CryptoDetailPageContent />
+      <CryptoDetailPageContent embedded={embedded} />
     </Suspense>
   );
 }

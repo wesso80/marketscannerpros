@@ -1,6 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import SourceLine from '@/components/visual/SourceLine';
+import { MarketMetrics, MarketSparkline } from '@/components/explorer/MarketsSummary';
+import { marketText } from '@/lib/marketsPresentation';
+
 import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useUserTier } from '@/lib/useUserTier';
@@ -164,7 +169,7 @@ const POPULAR_STOCKS = [
 ];
 
 function formatNumber(num: number | undefined, decimals: number = 2): string {
-  if (num === undefined || num === null || isNaN(num)) return 'N/A';
+  if (num === undefined || num === null || isNaN(num)) return 'Not collected';
   if (Math.abs(num) >= 1e12) return `$${(num / 1e12).toFixed(decimals)}T`;
   if (Math.abs(num) >= 1e9) return `$${(num / 1e9).toFixed(decimals)}B`;
   if (Math.abs(num) >= 1e6) return `$${(num / 1e6).toFixed(decimals)}M`;
@@ -173,18 +178,18 @@ function formatNumber(num: number | undefined, decimals: number = 2): string {
 }
 
 function formatPrice(price: number | undefined): string {
-  if (price === undefined || price === null || isNaN(price)) return 'N/A';
+  if (price === undefined || price === null || isNaN(price)) return 'Not collected';
   return `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatPercent(pct: number | undefined): string {
-  if (pct === undefined || pct === null || isNaN(pct)) return 'N/A';
+  if (pct === undefined || pct === null || isNaN(pct)) return 'Not collected';
   const sign = pct >= 0 ? '+' : '';
   return `${sign}${pct.toFixed(2)}%`;
 }
 
 function formatVolume(vol: number | undefined): string {
-  if (vol === undefined || vol === null || isNaN(vol)) return 'N/A';
+  if (vol === undefined || vol === null || isNaN(vol)) return 'Not collected';
   if (vol >= 1e9) return `${(vol / 1e9).toFixed(2)}B`;
   if (vol >= 1e6) return `${(vol / 1e6).toFixed(2)}M`;
   if (vol >= 1e3) return `${(vol / 1e3).toFixed(2)}K`;
@@ -192,7 +197,7 @@ function formatVolume(vol: number | undefined): string {
 }
 
 function PercentBadge({ value }: { value: number | undefined }) {
-  if (value === undefined || value === null || isNaN(value)) return <span className="text-gray-500">N/A</span>;
+  if (value === undefined || value === null || isNaN(value)) return <span className="text-gray-500">Not collected</span>;
   const isPositive = value >= 0;
   return (
     <span className={`rounded border px-1.5 py-0.5 text-[11px] font-semibold ${isPositive ? 'border-green-500/30 bg-green-500/20 text-green-300' : 'border-red-500/30 bg-red-500/20 text-red-300'}`}>
@@ -203,14 +208,14 @@ function PercentBadge({ value }: { value: number | undefined }) {
 
 function MiniChart({ data }: { data: Array<{ close: number }> }) {
   if (!data || data.length < 2) return null;
-  
+
   const prices = data.map(d => d.close);
   const min = Math.min(...prices);
   const max = Math.max(...prices);
   const range = max - min || 1;
   const isUp = prices[prices.length - 1] >= prices[0];
   const color = isUp ? 'var(--msp-bull)' : 'var(--msp-bear)';
-  
+
   const width = 200;
   const height = 60;
   const points = prices.map((p, i) => {
@@ -239,10 +244,10 @@ function SentimentBadge({ sentiment }: { sentiment: string }) {
     'Somewhat-Bearish': 'bg-red-500/10 text-red-300',
     'Bearish': 'bg-red-500/20 text-red-400',
   };
-  
+
   return (
     <span className={`rounded border border-slate-700 px-1.5 py-0.5 text-[11px] font-semibold ${colors[sentiment] || colors['Neutral']}`}>
-      {sentiment}
+      {marketText(sentiment)}
     </span>
   );
 }
@@ -322,13 +327,13 @@ function getAggregateSentiment(news: EquityData['news']): { score: number; label
 function AnalystRatingsBar({ analysts }: { analysts: EquityData['analysts'] }) {
   const total = analysts.totalRatings || 1;
   const segments = [
-    { label: 'Strong Buy', count: analysts.strongBuy, color: 'var(--msp-bull)' },
-    { label: 'Buy', count: analysts.buy, color: 'var(--msp-bull)' },
+    { label: 'Strong positive', count: analysts.strongBuy, color: 'var(--msp-bull)' },
+    { label: 'Positive', count: analysts.buy, color: 'var(--msp-bull)' },
     { label: 'Hold', count: analysts.hold, color: 'var(--msp-warn)' },
-    { label: 'Sell', count: analysts.sell, color: '#f97316' },
-    { label: 'Strong Sell', count: analysts.strongSell, color: 'var(--msp-bear)' },
+    { label: 'Negative', count: analysts.sell, color: 'var(--msp-bear)' },
+    { label: 'Strong negative', count: analysts.strongSell, color: 'var(--msp-bear)' },
   ];
-  
+
   return (
     <div className="space-y-2">
       <div className="flex h-3 overflow-hidden rounded-full bg-slate-700">
@@ -341,15 +346,15 @@ function AnalystRatingsBar({ analysts }: { analysts: EquityData['analysts'] }) {
         ))}
       </div>
       <div className="flex justify-between text-[11px] text-gray-400">
-        <span>Strong Buy ({analysts.strongBuy})</span>
+        <span>Strong positive ({analysts.strongBuy})</span>
         <span>Hold ({analysts.hold})</span>
-        <span>Strong Sell ({analysts.strongSell})</span>
+        <span>Strong negative ({analysts.strongSell})</span>
       </div>
     </div>
   );
 }
 
-function EquityExplorerContent() {
+function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
   const searchParams = useSearchParams();
   const candidateSymbol = searchParams.get('symbol')?.trim().toUpperCase() || '';
   const loadedCandidate = useRef('');
@@ -367,7 +372,7 @@ function EquityExplorerContent() {
 
   const fetchEquityData = useCallback(async (sym: string, isRefresh = false) => {
     if (!sym) return;
-    
+
     // Cancel any pending request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -466,8 +471,8 @@ function EquityExplorerContent() {
   if (!tierLoading && tier !== 'pro_trader' && tier !== 'pro') {
     return (
       <div className="min-h-screen bg-slate-950 px-3 py-6 sm:p-8">
-        <UpgradeGate 
-          requiredTier="pro" 
+        <UpgradeGate
+          requiredTier="pro"
           feature="Equity Explorer"
         />
       </div>
@@ -475,18 +480,19 @@ function EquityExplorerContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--msp-bg)] text-white">
+    <div className={`${embedded ? '' : 'min-h-screen'} bg-[var(--msp-bg)] text-white`}>
       <div className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
-        <header className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+        {!embedded && <header className="rounded-lg border border-slate-700 bg-slate-900 p-2">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 flex-shrink-0 rounded-lg overflow-hidden"><img src="/assets/platform-tools/equity-explorer.png" alt="" className="h-full w-full object-contain p-0.5" /></div>
             <div>
-              <h1 className="text-lg font-bold text-teal-300">Equity Explorer</h1>
+              <h1 className="text-lg font-bold text-slate-300">Equity Explorer</h1>
               <p className="text-xs text-slate-400">Decision-grade equity view: valuation, trend, risk, and catalyst context.</p>
             </div>
           </div>
-        </header>
+        </header>}
 
+        <p data-layout-verdict className="font-semibold text-sm">{loading ? 'Loading stock observations…' : error ? 'Stock observations could not be collected.' : data ? `${data.company.symbol}: ${upeSignal ? (upeSignal.eligibilityUser === 'eligible' ? 'Aligned' : upeSignal.eligibilityUser === 'conditional' ? 'Conditional' : 'Not aligned') : 'Assessment has not been collected.'}` : 'Choose a stock to review its recorded evidence.'}</p>
         <ComplianceDisclaimer compact />
 
         <section className="rounded-lg border border-slate-700 bg-slate-900 p-2">
@@ -561,6 +567,14 @@ function EquityExplorerContent() {
 
         {/* Data Display */}
         {data && !loading && (
+          <>
+
+          <MarketMetrics items={[
+            {label:'Price',value:formatPrice(data.quote.price)}, {label:'Daily change',value:formatPercent(data.quote.changePercent)},
+            {label:'Market cap',value:formatNumber(data.valuation.marketCap)}, {label:'Volume',value:formatVolume(data.quote.volume)},
+          ]}/>
+          <MarketSparkline values={data.chart.map(point=>point.close)} title={`${data.company.symbol} recorded closing prices`}/>
+          <CollapsibleSection title="Company evidence" summary={`${data.company.symbol} · ${data.company.sector}`}>
           <div className="space-y-2">
             <section className="rounded-lg border border-slate-700 bg-slate-900 p-2">
               <div className="grid gap-2 lg:grid-cols-[1fr_420px]">
@@ -571,14 +585,8 @@ function EquityExplorerContent() {
                   </div>
                   <div className="mb-2 flex flex-wrap gap-1">
                     <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300">Status: <span className={`${upeSignal?.eligibilityUser === 'eligible' ? 'text-emerald-300' : upeSignal?.eligibilityUser === 'conditional' ? 'text-amber-300' : 'text-rose-300'} font-semibold`}>{upeSignal ? (upeSignal.eligibilityUser === 'eligible' ? 'Aligned' : upeSignal.eligibilityUser === 'conditional' ? 'Conditional' : 'Not aligned') : 'Pending'}</span></span>
-                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300">Risk Context: <span className="font-semibold text-slate-100">{upeGlobal?.capitalMode === 'normal' ? 'Standard review' : upeGlobal?.capitalMode === 'defensive' ? 'Observation' : 'Reduced conviction'}</span></span>
-                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300">Vol Regime: <span className="font-semibold text-slate-100">{upeGlobal?.volatilityState || 'unknown'}</span></span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                    <div className="rounded border border-slate-700 bg-slate-900/70 p-2"><p className="text-[11px] text-slate-500">Large Cap</p><p className="text-xs font-semibold text-emerald-300">Aligned</p></div>
-                    <div className="rounded border border-slate-700 bg-slate-900/70 p-2"><p className="text-[11px] text-slate-500">Mid Cap</p><p className="text-xs font-semibold text-amber-300">Conditional</p></div>
-                    <div className="rounded border border-slate-700 bg-slate-900/70 p-2"><p className="text-[11px] text-slate-500">High Beta</p><p className="text-xs font-semibold text-amber-300">Conditional</p></div>
-                    <div className="rounded border border-slate-700 bg-slate-900/70 p-2"><p className="text-[11px] text-slate-500">Earnings Risk</p><p className="text-xs font-semibold text-slate-200">Review</p></div>
+                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300">Risk Context: <span className="font-semibold text-slate-100">{!upeGlobal?.capitalMode ? 'Not collected' : upeGlobal.capitalMode === 'normal' ? 'Standard review' : upeGlobal?.capitalMode === 'defensive' ? 'Observation' : 'Reduced conviction'}</span></span>
+                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300">Vol Regime: <span className="font-semibold text-slate-100">{upeGlobal?.volatilityState || 'Not collected'}</span></span>
                   </div>
                   <p className="mt-2 rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-[11px] text-slate-400">{upeSignal?.eligibilityUser === 'blocked' ? 'Conditions not aligned — observation mode only.' : upeSignal?.eligibilityUser === 'conditional' ? 'Mixed conditions — require trend + volume confirmation.' : 'Conditions are broadly aligned.'}</p>
                 </div>
@@ -589,10 +597,10 @@ function EquityExplorerContent() {
                     <span className="text-[11px] text-slate-500">Inputs</span>
                   </div>
                   <div className="grid gap-1.5 text-xs">
-                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Global Regime</span><p className="font-semibold text-slate-100">{upeGlobal?.regime || 'neutral'}</p></div>
-                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Equities Micro Regime</span><p className="font-semibold text-slate-100">{upeMicroState || 'neutral'}</p></div>
-                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Liquidity</span><p className="font-semibold text-slate-100">{upeGlobal?.liquidityState || 'stable'}</p></div>
-                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Adaptive Confluence</span><p className="font-semibold text-slate-100">{upeGlobal?.adaptiveConfidence !== null && upeGlobal?.adaptiveConfidence !== undefined ? `${Math.round(upeGlobal.adaptiveConfidence)}%` : 'N/A'}</p></div>
+                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Global Regime</span><p className="font-semibold text-slate-100">{marketText(upeGlobal?.regime || 'Not collected')}</p></div>
+                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Equities Micro Regime</span><p className="font-semibold text-slate-100">{marketText(upeMicroState || 'Not collected')}</p></div>
+                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Liquidity</span><p className="font-semibold text-slate-100">{marketText(upeGlobal?.liquidityState || 'Not collected')}</p></div>
+                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Adaptive Confluence</span><p className="font-semibold text-slate-100">{upeGlobal?.adaptiveConfidence !== null && upeGlobal?.adaptiveConfidence !== undefined ? `${Math.round(upeGlobal.adaptiveConfidence)}%` : 'Not collected'}</p></div>
                   </div>
                 </div>
               </div>
@@ -610,10 +618,10 @@ function EquityExplorerContent() {
                 ['Momentum', getQuickSignals(data).momentum.label],
                 ['Volatility', getQuickSignals(data).volatility.label],
                 ['Volume', formatVolume(data.quote.volume)],
-                ['P/E', (data.valuation.pe ?? 0) > 0 ? data.valuation.pe?.toFixed(2) : 'N/A'],
+                ['P/E', (data.valuation.pe ?? 0) > 0 ? data.valuation.pe?.toFixed(2) : 'Not collected'],
               ].map(([k, v]) => (
-                <div key={k} className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[11px] leading-tight text-slate-300 md:px-2 md:text-[11px]">
-                  <span className="font-semibold text-slate-100">{k}</span> · {v}
+                <div key={marketText(k)} className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[11px] leading-tight text-slate-300 md:px-2 md:text-[11px]">
+                  <span className="font-semibold text-slate-100">{marketText(k)}</span> · {marketText(v)}
                 </div>
               ))}
             </section>
@@ -623,7 +631,7 @@ function EquityExplorerContent() {
                 <div className="mb-1 flex items-center justify-between">
                   <div>
                     <p className="text-[11px] font-medium text-[var(--msp-text-muted)]">Zone 2 · Action</p>
-                    <h2 className="text-xs font-bold">Price + Permission Console</h2>
+                    <h2 className="text-xs font-bold">Price and alignment</h2>
                   </div>
                   <button
                     type="button"
@@ -661,14 +669,14 @@ function EquityExplorerContent() {
                   </p>
                 </div>
                 </div>
-              
+
               {/* Mini Chart */}
               {data.chart.length > 0 && (
                 <div className="mt-2 flex justify-center rounded-md border border-slate-700 bg-slate-950/60 py-1">
                   <MiniChart data={data.chart} />
                 </div>
               )}
-              
+
               {/* Quick Signal Summary */}
               {(() => {
                 const signals = getQuickSignals(data);
@@ -684,23 +692,23 @@ function EquityExplorerContent() {
                     <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
                       <span className="text-[11px] uppercase text-slate-500">Trend</span>
                       <span className={`text-xs font-semibold ${signals.trend.color}`}>
-                        {signals.trend.icon} {signals.trend.label}
+                        {signals.trend.icon} {marketText(signals.trend.label)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
                       <span className="text-[11px] uppercase text-slate-500">Momentum</span>
                       <span className={`text-xs font-semibold ${signals.momentum.color}`}>
-                        {signals.momentum.icon} {signals.momentum.label}
+                        {signals.momentum.icon} {marketText(signals.momentum.label)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
                       <span className="text-[11px] uppercase text-slate-500">Volatility</span>
-                      <span className={`text-xs font-semibold ${signals.volatility.color}`}>
-                        {signals.volatility.icon} {signals.volatility.label}
+                      <span className={`text-xs font-semibold ${signals.volatility.label === 'Low' ? 'text-slate-300' : signals.volatility.color}`}>
+                        {signals.volatility.icon} {marketText(signals.volatility.label)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
-                      <span className="text-[11px] uppercase text-slate-500">Permission</span>
+                      <span className="text-[11px] uppercase text-slate-500">Alignment</span>
                       <span
                         className={`text-xs font-semibold ${
                           eligibilityLabel === 'Aligned'
@@ -723,7 +731,7 @@ function EquityExplorerContent() {
                             type="button"
                             disabled
                             className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-[11px] text-slate-500"
-                            title={upeSignal.overlayReasons?.length ? upeSignal.overlayReasons.join(' • ') : 'Not aligned per governance profile or global gate'}
+                            title={marketText(upeSignal.overlayReasons?.length ? upeSignal.overlayReasons.join(' • ') : 'Not aligned per governance profile or global gate')}
                           >
                             Not aligned
                           </button>
@@ -756,15 +764,15 @@ function EquityExplorerContent() {
                 <div className="grid gap-2">
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                     <p className="text-[11px] uppercase text-slate-500">Structure Bias</p>
-                    <p className="text-xs text-slate-200">Weekly: <span className="font-semibold">{data.technicals.priceVs200MA >= 0 ? 'Bullish' : 'Bearish'}</span> • Daily: <span className="font-semibold">{data.technicals.priceVs50MA >= 0 ? 'Bullish' : 'Bearish'}</span></p>
+                    <p className="text-xs text-slate-200">Weekly: <span className="font-semibold">{data.technicals.priceVs200MA >= 0 ? 'Positive' : 'Negative'}</span> • Daily: <span className="font-semibold">{data.technicals.priceVs50MA >= 0 ? 'Positive' : 'Negative'}</span></p>
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                     <p className="text-[11px] uppercase text-slate-500">Relative Strength</p>
-                    <p className="text-xs text-slate-200">SPY-relative return: Unavailable • matched benchmark observations required</p>
+                    <p className="text-xs text-slate-200">SPY-relative return: Not collected • matched benchmark observations required</p>
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                     <p className="text-[11px] uppercase text-slate-500">Volatility + Liquidity</p>
-                    <p className="text-xs text-slate-200">ATR state: <span className="font-semibold">{upeGlobal?.volatilityState || 'normal'}</span> • RVOL: <span className="font-semibold">Unavailable — comparable volume history required</span></p>
+                    <p className="text-xs text-slate-200">ATR state: <span className="font-semibold">{marketText(upeGlobal?.volatilityState || 'Not collected')}</span> • RVOL: <span className="font-semibold">Not collected — comparable volume history required</span></p>
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                     <p className="text-[11px] uppercase text-slate-500">Event Risk</p>
@@ -778,7 +786,7 @@ function EquityExplorerContent() {
             </section>
 
             {/* Open by default; the user can still collapse it. Native <details> keeps the content mounted either way. */}
-            <details open className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
+            <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
               <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
                 <span>Zone 3 • Informational</span>
                 <span className="text-[11px] text-slate-500 group-open:hidden">Expand</span>
@@ -795,7 +803,7 @@ function EquityExplorerContent() {
               </div>
               <div className="rounded-md border border-slate-700 bg-slate-900 p-2">
                 <p className="text-[11px] uppercase text-slate-500">P/E Ratio</p>
-                <p className="text-sm font-bold">{(data.valuation.pe ?? 0) > 0 ? data.valuation.pe?.toFixed(2) : 'N/A'}</p>
+                <p className="text-sm font-bold">{(data.valuation.pe ?? 0) > 0 ? data.valuation.pe?.toFixed(2) : 'Not collected'}</p>
               </div>
               <div className="rounded-md border border-slate-700 bg-slate-900 p-2">
                 <p className="text-[11px] uppercase text-slate-500">Volume</p>
@@ -803,7 +811,7 @@ function EquityExplorerContent() {
               </div>
               <div className="rounded-md border border-slate-700 bg-slate-900 p-2">
                 <p className="text-[11px] uppercase text-slate-500">Dividend Yield</p>
-                <p className="text-sm font-bold">{data.dividend.dividendYield > 0 ? `${(data.dividend.dividendYield * 100).toFixed(2)}%` : 'N/A'}</p>
+                <p className="text-sm font-bold">{data.dividend.dividendYield > 0 ? `${(data.dividend.dividendYield * 100).toFixed(2)}%` : 'Not collected'}</p>
               </div>
             </div>
 
@@ -817,27 +825,27 @@ function EquityExplorerContent() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-400">P/E (TTM)</p>
-                    <p className="font-semibold">{(data.valuation.pe ?? 0) > 0 ? data.valuation.pe?.toFixed(2) : 'N/A'}</p>
+                    <p className="font-semibold">{(data.valuation.pe ?? 0) > 0 ? data.valuation.pe?.toFixed(2) : 'Not collected'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Forward P/E</p>
-                    <p className="font-semibold">{data.valuation.forwardPE > 0 ? data.valuation.forwardPE.toFixed(2) : 'N/A'}</p>
+                    <p className="font-semibold">{data.valuation.forwardPE > 0 ? data.valuation.forwardPE.toFixed(2) : 'Not collected'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">PEG Ratio</p>
-                    <p className="font-semibold">{data.valuation.peg > 0 ? data.valuation.peg.toFixed(2) : 'N/A'}</p>
+                    <p className="font-semibold">{data.valuation.peg > 0 ? data.valuation.peg.toFixed(2) : 'Not collected'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Price/Sales</p>
-                    <p className="font-semibold">{data.valuation.priceToSales > 0 ? data.valuation.priceToSales.toFixed(2) : 'N/A'}</p>
+                    <p className="font-semibold">{data.valuation.priceToSales > 0 ? data.valuation.priceToSales.toFixed(2) : 'Not collected'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Price/Book</p>
-                    <p className="font-semibold">{data.valuation.priceToBook > 0 ? data.valuation.priceToBook.toFixed(2) : 'N/A'}</p>
+                    <p className="font-semibold">{data.valuation.priceToBook > 0 ? data.valuation.priceToBook.toFixed(2) : 'Not collected'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">EV/EBITDA</p>
-                    <p className="font-semibold">{data.valuation.evToEBITDA > 0 ? data.valuation.evToEBITDA.toFixed(2) : 'N/A'}</p>
+                    <p className="font-semibold">{data.valuation.evToEBITDA > 0 ? data.valuation.evToEBITDA.toFixed(2) : 'Not collected'}</p>
                   </div>
                 </div>
               </div>
@@ -847,13 +855,13 @@ function EquityExplorerContent() {
                 <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-slate-400">
                   Fundamentals
                 </h3>
-                
+
                 {/* Growth Metrics Highlight */}
                 {(data.fundamentals.quarterlyRevenueGrowth || data.fundamentals.quarterlyEarningsGrowth) && (
                   <div className="mb-3 grid grid-cols-2 gap-3 rounded-md border border-slate-700/70 bg-slate-950/60 p-2">
                     {data.fundamentals.quarterlyRevenueGrowth !== undefined && (
                       <div className="text-center">
-                        <p className="text-xs text-teal-300 uppercase mb-1">Revenue YoY</p>
+                        <p className="text-xs text-slate-300 uppercase mb-1">Revenue YoY</p>
                         <p className={`text-lg font-bold ${data.fundamentals.quarterlyRevenueGrowth >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                           {data.fundamentals.quarterlyRevenueGrowth >= 0 ? '▲' : '▼'} {Math.abs(data.fundamentals.quarterlyRevenueGrowth * 100).toFixed(1)}%
                         </p>
@@ -861,7 +869,7 @@ function EquityExplorerContent() {
                     )}
                     {data.fundamentals.quarterlyEarningsGrowth !== undefined && (
                       <div className="text-center">
-                        <p className="text-xs text-teal-300 uppercase mb-1">EPS YoY</p>
+                        <p className="text-xs text-slate-300 uppercase mb-1">EPS YoY</p>
                         <p className={`text-lg font-bold ${data.fundamentals.quarterlyEarningsGrowth >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                           {data.fundamentals.quarterlyEarningsGrowth >= 0 ? '▲' : '▼'} {Math.abs(data.fundamentals.quarterlyEarningsGrowth * 100).toFixed(1)}%
                         </p>
@@ -869,11 +877,11 @@ function EquityExplorerContent() {
                     )}
                   </div>
                 )}
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-400">EPS (TTM)</p>
-                    <p className="font-semibold">${Number.isFinite(data.fundamentals.eps) ? data.fundamentals.eps.toFixed(2) : 'N/A'}</p>
+                    <p className="font-semibold">${Number.isFinite(data.fundamentals.eps) ? data.fundamentals.eps.toFixed(2) : 'Not collected'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Revenue</p>
@@ -917,11 +925,11 @@ function EquityExplorerContent() {
                       aria-label="52-week price position"
                       className="relative h-2 bg-slate-700 rounded-full"
                     >
-                      <div 
+                      <div
                         className="absolute h-full bg-emerald-500 rounded-full"
                         style={{ width: `${Math.min(Math.max(data.technicals.week52Position, 0), 100)}%` }}
                       />
-                      <div 
+                      <div
                         className="absolute w-3 h-3 bg-white rounded-full -top-0.5 transform -translate-x-1/2"
                         style={{ left: `${Math.min(Math.max(data.technicals.week52Position, 0), 100)}%` }}
                       />
@@ -940,7 +948,7 @@ function EquityExplorerContent() {
                     </div>
                     <div>
                       <p className="text-sm text-gray-400">Beta</p>
-                      <p className="font-semibold">{Number.isFinite(data.technicals.beta) ? data.technicals.beta.toFixed(2) : 'N/A'}</p>
+                      <p className="font-semibold">{Number.isFinite(data.technicals.beta) ? data.technicals.beta.toFixed(2) : 'Not collected'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-400">Day Range</p>
@@ -960,14 +968,14 @@ function EquityExplorerContent() {
                     <AnalystRatingsBar analysts={data.analysts} />
                     <p className="text-[11px] text-slate-600">Source: external analyst consensus. MSP does not endorse or recommend any rating.</p>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Analyst Price Target</span>
+                      <span className="text-gray-400">Analyst consensus price</span>
                       <span className="text-xl font-bold text-emerald-400">
                         {formatPrice(data.analysts.targetPrice)}
                       </span>
                     </div>
                     {data.quote.price > 0 && data.analysts.targetPrice > 0 && (
                       <p className="text-sm text-gray-400">
-                        {data.analysts.targetPrice > data.quote.price 
+                        {data.analysts.targetPrice > data.quote.price
                           ? `+${((data.analysts.targetPrice - data.quote.price) / data.quote.price * 100).toFixed(1)}% upside`
                           : `${((data.analysts.targetPrice - data.quote.price) / data.quote.price * 100).toFixed(1)}% downside`
                         }
@@ -1002,8 +1010,8 @@ function EquityExplorerContent() {
                         <tr key={i} className="border-b border-slate-700/50">
                           <td className="py-2">{e.fiscalDate}</td>
                           <td className="text-right text-gray-400">{e.reportedDate}</td>
-                          <td className="text-right">${Number.isFinite(e.estimatedEPS) ? e.estimatedEPS.toFixed(2) : 'N/A'}</td>
-                          <td className="text-right">${Number.isFinite(e.reportedEPS) ? e.reportedEPS.toFixed(2) : 'N/A'}</td>
+                          <td className="text-right">${Number.isFinite(e.estimatedEPS) ? e.estimatedEPS.toFixed(2) : 'Not collected'}</td>
+                          <td className="text-right">${Number.isFinite(e.reportedEPS) ? e.reportedEPS.toFixed(2) : 'Not collected'}</td>
                           <td className="text-right">
                             <span className={(e.surprisePercent ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}>
                               {(e.surprisePercent ?? 0) >= 0 ? '+' : ''}{Number.isFinite(e.surprisePercent) ? e.surprisePercent.toFixed(1) : '0.0'}%
@@ -1032,7 +1040,7 @@ function EquityExplorerContent() {
                       <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
                         <span className="text-[11px] text-slate-400" title={`Average ${data.company.symbol} sentiment across ${data.news.length} ${data.company.symbol}-specific article${data.news.length === 1 ? '' : 's'}`}>{data.company.symbol} News Sentiment:</span>
                         <span className={`font-bold ${sentiment.color}`}>
-                          {sentiment.score}% {sentiment.label}
+                          {sentiment.score}% {marketText(sentiment.label)}
                         </span>
                         <div
                           role="progressbar"
@@ -1042,9 +1050,9 @@ function EquityExplorerContent() {
                           aria-label={`News sentiment score: ${sentiment.score}%`}
                           className="w-16 h-2 bg-slate-600 rounded-full overflow-hidden"
                         >
-                          <div 
+                          <div
                             className={`h-full rounded-full ${
-                              sentiment.score > 60 ? 'bg-green-500' : 
+                              sentiment.score > 60 ? 'bg-green-500' :
                               sentiment.score < 40 ? 'bg-red-500' : 'bg-yellow-500'
                             }`}
                             style={{ width: `${sentiment.score}%` }}
@@ -1117,21 +1125,17 @@ function EquityExplorerContent() {
               </div>
             </details>
           </div>
+          </CollapsibleSection>
+          </>
         )}
 
-        {/* Empty State */}
-        {!data && !loading && !error && (
-          <div className="rounded-lg border border-slate-700 bg-slate-900 p-10 text-center">
-            <div className="mx-auto mb-3 h-14 w-14 rounded-lg overflow-hidden"><img src="/assets/platform-tools/equity-explorer.png" alt="" className="h-full w-full object-contain p-1" /></div>
-            <h3 className="text-lg font-semibold text-slate-200">Ready to evaluate an equity setup?</h3>
-            <p className="mt-1 text-sm text-slate-500">Search or choose a popular symbol to generate decision context.</p>
-          </div>
-        )}
+        <SourceLine source="Alpha Vantage" tradingDay={data?.quote.latestTradingDay} basis={data ? 'Quote trading day · financial reporting periods in details' : 'No stock selected'} />
+
       </div>
     </div>
   );
 }
 
-export default function EquityExplorerPage() {
-  return <Suspense fallback={<div className="p-4 text-slate-400">Loading equity context…</div>}><EquityExplorerContent /></Suspense>;
+export default function EquityExplorerPage({ embedded = false }: { embedded?: boolean }) {
+  return <Suspense fallback={<div className="p-4 text-slate-400">Loading equity context…</div>}><EquityExplorerContent embedded={embedded} /></Suspense>;
 }

@@ -96,8 +96,8 @@ describe('OV-19 crypto deep-dive labels name their scope and share one risk sour
     expect(card).not.toContain('>Volatility Regime<');
   });
   it('strip risk state comes from the same gate as the breakdown; the UPE regime is labelled cross-asset', () => {
-    expect(page).toContain("['Crypto risk state', marketGate ? (marketGate.riskState ?? 'Unavailable') : 'Loading']");
-    expect(page).toContain("['Global regime (cross-asset)', upeGlobal?.regime || 'Unavailable']");
+    expect(page).toContain("['Crypto risk state', marketGate ? (marketGate.riskState ?? 'Not collected') : 'Loading']");
+    expect(page).toContain("['Global regime (cross-asset)', upeGlobal?.regime || 'Not collected']");
     // The old chip fell back to a coin-structure tag (bullish price votes -> "Risk-On") presented as the regime.
     expect(page).not.toContain("upeGlobal?.regime || decision.regimeTag");
     expect(card).toContain('>Crypto Risk State<');

@@ -37,14 +37,14 @@ vi.mock('@/lib/avRateGovernor', () => ({
 
 import {
   clearSharedOptionsChainCache, defaultChainProviders, describeChainSource, fetchSharedOptionsChain,
-  hasTwoSidedQuote, twoSidedQuoteCoverage, type AvChainFunction,
+  hasTwoSidedQuote, liveValidationChainProviders, twoSidedQuoteCoverage, type AvChainFunction,
 } from '../lib/options/chainCache';
 import { avFetch } from '../lib/avRateGovernor';
 import { GET as chainGET } from '../app/api/options-chain/route';
 import { GET as flowGET } from '../app/api/options-flow/route';
 
 const fetchPayload = (fn: string, url: string) => (avFetch as any)(url, fn);
-const load = (symbol = 'IBM', providers?: AvChainFunction[]) => fetchSharedOptionsChain(symbol, { apiKey: 'test-key', fetchPayload, providers });
+const load = (symbol = 'IBM', providers?: AvChainFunction[], acceptFairValueMarks?: boolean) => fetchSharedOptionsChain(symbol, { apiKey: 'test-key', fetchPayload, providers, acceptFairValueMarks });
 
 beforeEach(() => {
   m.av = {}; m.calls = [];
@@ -69,6 +69,28 @@ describe('two-sided quote detection on AV string fields', () => {
 describe('shared chain source selection', () => {
   it('default order is REALTIME_OPTIONS → HISTORICAL_OPTIONS (FMV is not a quote source)', () => {
     expect(defaultChainProviders()).toEqual(['REALTIME_OPTIONS', 'HISTORICAL_OPTIONS']);
+  });
+
+  it('live validation prefers entitled REALTIME_OPTIONS_FMV and leaves the production order alone', () => {
+    expect(liveValidationChainProviders()).toEqual(['REALTIME_OPTIONS_FMV', 'HISTORICAL_OPTIONS']);
+    expect(defaultChainProviders()).toEqual(['REALTIME_OPTIONS', 'HISTORICAL_OPTIONS']);
+  });
+
+  it('acceptFairValueMarks keeps an FMV chain and its reported open interest', async () => {
+    const fmv = fmvMarksIbm();
+    m.av = { REALTIME_OPTIONS_FMV: fmv, HISTORICAL_OPTIONS: historicalOptionsIbm() };
+    const chain = await load('IBM', ['REALTIME_OPTIONS_FMV', 'HISTORICAL_OPTIONS'], true);
+    expect(m.calls).toEqual(['REALTIME_OPTIONS_FMV']);
+    expect(chain).toMatchObject({ provider: 'REALTIME_OPTIONS_FMV', quoteBasis: 'marks_only', asOfDate: '2026-09-25', quoteCoverage: 0 });
+    expect(chain!.rows[0].open_interest).toBe(fmv.data[0].open_interest);
+    expect(chain!.warnings.some((w) => w.startsWith('REALTIME_OPTIONS_FMV:accepted_fair_value_marks_'))).toBe(true);
+    const stripped = { ...fmv, data: fmv.data.map((r) => { const next = { ...r }; delete (next as { open_interest?: string }).open_interest; return next; }) };
+    clearSharedOptionsChainCache();
+    m.calls = [];
+    m.av = { REALTIME_OPTIONS_FMV: stripped, HISTORICAL_OPTIONS: historicalOptionsIbm() };
+    const missing = await load('IBM', ['REALTIME_OPTIONS_FMV', 'HISTORICAL_OPTIONS'], true);
+    expect(m.calls).toEqual(['REALTIME_OPTIONS_FMV']);
+    expect(missing!.rows[0].open_interest).toBeUndefined();
   });
 
   it('a quoted REALTIME_OPTIONS chain is used with ONE Alpha Vantage call', async () => {
@@ -99,6 +121,13 @@ describe('shared chain source selection', () => {
     m.av = { REALTIME_OPTIONS: realtimePreMarketIbm(), HISTORICAL_OPTIONS: thinHistory };
     const chain = await load();
     expect(chain).toMatchObject({ provider: 'REALTIME_OPTIONS', quoteBasis: 'marks_only', asOfDate: '2026-09-25' });
+  });
+
+  it('a not-entitled FMV sample still falls through when fair-value marks are accepted', async () => {
+    m.av = { REALTIME_OPTIONS_FMV: realtimeNotEntitledSample(), HISTORICAL_OPTIONS: historicalOptionsIbm() };
+    const chain = await load('IBM', ['REALTIME_OPTIONS_FMV', 'HISTORICAL_OPTIONS'], true);
+    expect(m.calls).toEqual(['REALTIME_OPTIONS_FMV', 'HISTORICAL_OPTIONS']);
+    expect(chain).toMatchObject({ provider: 'HISTORICAL_OPTIONS', quoteBasis: 'previous_session' });
   });
 
   it('marks-only chain is still returned (labelled) when HISTORICAL_OPTIONS is unavailable', async () => {

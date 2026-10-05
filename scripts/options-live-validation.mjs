@@ -15,7 +15,9 @@ Offline:
 ALPHA_VANTAGE_API_KEY must already be set for --live. Never put it in arguments.
 --expiry is optional: otherwise the existing next-listed-expiry helper selects it.
 Exchange evidence and a real missing-history symbol are required for full live acceptance.
-Omitting either still captures evidence but reports FAIL. No provider request on help,
+Omitting either still captures evidence but reports FAIL. The chain GET is REALTIME_OPTIONS_FMV
+(entitled fair-value marks). HISTORICAL_OPTIONS is the fallback when FMV is unavailable and cannot
+pass LIVE_QUOTE_BASIS. Plain REALTIME_OPTIONS is not requested. No provider request on help,
 argument errors, imports, normal tests, builds, or fixture runs. No scheduler is installed.
 Exit: 0 checks pass (fixture is NOT live acceptance); 1 acceptance/check failure; 2 setup failure.
 Scheduled window: 2026-10-06 00:30–02:00 Australia/Sydney (2026-10-05 13:30–15:00 UTC).`;

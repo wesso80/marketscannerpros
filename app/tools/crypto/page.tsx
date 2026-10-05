@@ -2,6 +2,10 @@
 
 import PaidPreviewGate from '@/components/free/PaidPreviewGate';
 
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import SourceLine from '@/components/visual/SourceLine';
+import { MarketMetrics, MarketSparkline } from '@/components/explorer/MarketsSummary';
+import { marketText } from '@/lib/marketsPresentation';
 import { cryptoReviewFeedNotes, cryptoReviewMissing, cryptoSpotContext, fetchCryptoReviewData } from '@/lib/cryptoReviewData';
 import CryptoFeedStatusNotes from '@/components/CryptoFeedStatusNotes';
 
@@ -132,17 +136,17 @@ function reviewLabel(verdict: ReviewVerdict): string {
   return 'Not aligned';
 }
 
-export default function CryptoCommandCenter() { return <PaidPreviewGate tool="Crypto"><CryptoCommandCenterPaid /></PaidPreviewGate>; }
+export default function CryptoCommandCenter({ embedded = false }: { embedded?: boolean }) { return <PaidPreviewGate tool="Crypto"><CryptoCommandCenterPaid embedded={embedded} /></PaidPreviewGate>; }
 
-function CryptoCommandCenterPaid() {
+function CryptoCommandCenterPaid({ embedded = false }: { embedded?: boolean }) {
   return (
     <Suspense fallback={<PageLoadingSkeleton />}>
-      <CryptoCommandCenterContent />
+      <CryptoCommandCenterContent embedded={embedded} />
     </Suspense>
   );
 }
 
-function CryptoCommandCenterContent() {
+function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }) {
   const { tier, isAdmin, isLoading: tierLoading } = useUserTier();
   const searchParams = useSearchParams();
   const [activeSection, setActiveSection] = useState<Section>('overview');
@@ -457,6 +461,34 @@ function CryptoCommandCenterContent() {
         return null;
     }
   }
+
+  if (embedded) return <div className="space-y-3 min-w-0">
+    <p data-layout-verdict className="font-semibold text-sm">{!marketData ? 'Loading crypto market observations…' : !morningDecision.dataComplete ? 'Crypto assessment is incomplete while required feeds are not collected.' : `Crypto market: ${reviewLabel(morningDecision.verdict)}`}</p>
+    <MarketMetrics items={[
+      {label:'Market cap',value:marketData?.market?.totalMarketCapFormatted},
+      {label:'24h change',value:typeof marketData?.market?.marketCapChange24h === 'number' ? `${marketData.market.marketCapChange24h.toFixed(1)}%` : null},
+      {label:'Breadth',value:morningDecision.breadthScore == null ? null : `${morningDecision.breadthScore}%`},
+      {label:'BTC dominance',value:marketData?.market?.dominance?.some((d: {symbol:string})=>d.symbol==='BTC') ? `${getDominanceValue(marketData.market.dominance,'BTC').toFixed(1)}%` : null},
+    ]}/>
+    {marketData?.market && <MarketSparkline values={(marketData.market.sparkline || []).map((p: {value:number})=>p.value)} title="Total crypto market cap"/>}
+    {!morningDecision.dataComplete && <p className="rounded border border-amber-400/30 p-2 text-xs text-amber-300">{marketText(morningDecision.hardBlocks.join(' · '))}</p>}
+    <button type="button" onClick={() => void fetchOverview()} className="min-h-10 text-sm underline">Refresh evidence</button>
+    <CollapsibleSection title="Market evidence" summary={marketText(morningDecision.breadthLabel)}>
+      <MarketMetrics items={[
+        {label:'Risk state',value:morningDecision.riskState},{label:'Leadership',value:morningDecision.leadership},
+        {label:'Liquidity',value:morningDecision.liquidity},{label:'Volatility',value:morningDecision.volatility},
+      ]}/>
+      <p className="my-3 text-xs">{marketText(morningDecision.explanation)}</p>
+      <label className="text-sm">Explore <select className="ml-2 rounded border border-slate-700 bg-slate-900 p-2" value={activeSection} onChange={e=>setActiveSection(e.target.value as Section)}>{sectionItems.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+      <div className="mt-3"><Suspense fallback={<WidgetSkeleton/>}>{renderPrimaryWidget()}</Suspense></div>
+    </CollapsibleSection>
+    <CollapsibleSection title="Snapshot notes" summary={`${logs.data.length} feed notes`}>
+      <p className="text-xs text-slate-400">Notes describe the current snapshot; they are not a history of triggered events.</p>
+      {logs.data.map((entry,i)=><p className="my-2 text-xs" key={i}>{marketText(entry.e)}: {marketText(entry.d)}</p>)}
+    </CollapsibleSection>
+    <SourceLine source="CoinGecko market snapshot · OKX funding" asOf={marketData?.marketMeta?.lastUpdated} basis="Market snapshot timestamp · funding and open-interest coverage reported separately"/>
+    <CoinGeckoCredit className="text-center"/>
+  </div>;
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)] text-slate-100">

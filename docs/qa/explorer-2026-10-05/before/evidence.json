@@ -1,0 +1,2692 @@
+{
+  "mocked": true,
+  "fixtureBasis": "Deterministic intercepted Explorer API fixtures; not live acceptance",
+  "results": [
+    {
+      "tab": "overview",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:58:09.700Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1840,
+      "scrollWidth": 1280,
+      "screens": 2.3,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nOverview\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nEQUITIES\nSector Heatmap\nXLK\nTechnology\n-1.72%\nXLF\nFinancials\n-1.29%\nXLE\nEnergy\n-0.86%\nXLB\nMaterials\n-0.43%\nXLU\nUtilities\n0.00%\nXLI\nIndustrials\n+0.43%\nXLRE\nReal Estate\n+0.86%\nXLV\nHealthcare\n+1.29%\nXLP\nConsumer staples\n+1.72%\nXLY\nConsumer discretionary\n+2.15%\nXLC\nCommunications\n+2.58%\nTop Equity Gainers\nAAPL\n$100\n+5.00%\nMSFT\n$101\n+4.90%\nMU\n$102\n+4.80%\nNVDA\n$103\n+4.70%\nAMD\n$104\n+4.60%\nMETA\n$105\n+4.50%\nAMZN\n$106\n+4.40%\nGOOG\n$107\n+4.30%\nCOST\n$108\n+4.20%\nPLTR\n$109\n+4.10%\nTop Equity Losers\nAAPL\n$100\n-5.00%\nMSFT\n$101\n-4.90%\nMU\n$102\n-4.80%\nNVDA\n$103\n-4.70%\nAMD\n$104\n-4.60%\nMETA\n$105\n-4.50%\nAMZN\n$106\n-4.40%\nGOOG\n$107\n-4.30%\nCOST\n$108\n-4.20%\nPLTR\n$109\n-4.10%\nCRYPTO\nSector Performance\nLayer 1\n$50B\n-3.5%\nDeFi\n$51B\n-2.5%\nMeme\n$52B\n-1.5%\nAI\n$53B\n-0.5%\nGaming\n$54B\n+0.5%\nExchange\n$55B\n+1.5%\nInfrastructure\n$56B\n+2.5%\nPayments\n$57B\n+3.5%\nCrypto Market\nTOTAL MARKET CAP\n$2.50T\n+1.23%\n24H VOLUME\n$75.00B\nBTC DOMINANCE\n57.2%\nETH DOMINANCE\n13.4%\nTop Crypto Gainers\nBTC-USD\n$15\n+4.00%\nETH-USD\n$16\n+3.90%\nSOL-USD\n$17\n+3.80%\nNEAR-USD\n$18\n+3.70%\nLINK-USD\n$19\n+3.60%\nXRP-USD\n$20\n+3.50%\nADA-USD\n$21\n+3.40%\nDOGE-USD\n$22\n+3.30%\nAVAX-USD\n$23\n+3.20%\nDOT-USD\n$24\n+3.10%\nTop Crypto Losers\nBTC-USD\n$15\n-4.00%\nETH-USD\n$16\n-3.90%\nSOL-USD\n$17\n-3.80%\nNEAR-USD\n$18\n-3.70%\nLINK-USD\n$19\n-3.60%\nXRP-USD\n$20\n-3.50%\nADA-USD\n$21\n-3.40%\nDOGE-USD\n$22\n-3.30%\nAVAX-USD\n$23\n-3.20%\nDOT-USD\n$24\n-3.10%\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": [
+        {
+          "top": 441.78125,
+          "bottom": 651.78125
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nOverview\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nEQUITIES\nSector Heatmap\nXLK\nTechnology\n-1.72%\nXLF\nFinancials\n-1.29%\nXLE\nEnergy\n-0.86%\nXLB\nMaterials\n-0.43%\nXLU\nUtilities\n0.00%\nXLI\nIndustrials\n+0.43%\nXLRE\nReal Estate\n+0.86%\nXLV\nHealthcare\n+1.29%\nXLP\nConsumer staples\n+1.72%\nXLY\nConsumer discretionary\n+2.15%\nXLC\nCommunications\n+2.58%\nTop Equity Gainers\nAAPL\n$100\n+5.00%\nMSFT\n$101\n+4.90%\nMU\n$102\n+4.80%\nNVDA\n$103\n+4.70%\nAMD\n$104\n+4.60%\nMETA\n$105\n+4.50%\nAMZN\n$106\n+4.40%\nGOOG\n$107\n+4.30%\nCOST\n$108\n+4.20%\nPLTR\n$109\n+4.10%\nTop Equity Losers\nAAPL\n$100\n-5.00%\nMSFT\n$101\n-4.90%\nMU\n$102\n-4.80%\nNVDA\n$103\n-4.70%\nAMD\n$104\n-4.60%\nMETA\n$105\n-4.50%\nAMZN\n$106\n-4.40%\nGOOG\n$107\n-4.30%\nCOST\n$108\n-4.20%\nPLTR\n$109\n-4.10%\nCRYPTO\nSector Performance\nLayer 1\n$50B\n-3.5%\nDeFi\n$51B\n-2.5%\nMeme\n$52B\n-1.5%\nAI\n$53B\n-0.5%\nGaming\n$54B\n+0.5%\nExchange\n$55B\n+1.5%\nInfrastructure\n$56B\n+2.5%\nPayments\n$57B\n+3.5%\nCrypto Market\nTOTAL MARKET CAP\n$2.50T\n+1.23%\n24H VOLUME\n$75.00B\nBTC DOMINANCE\n57.2%\nETH DOMINANCE\n13.4%\nTop Crypto Gainers\nBTC-USD\n$15\n+4.00%\nETH-USD\n$16\n+3.90%\nSOL-USD\n$17\n+3.80%\nNEAR-USD\n$18\n+3.70%\nLINK-USD\n$19\n+3.60%\nXRP-USD\n$20\n+3.50%\nADA-USD\n$21\n+3.40%\nDOGE-USD\n$22\n+3.30%\nAVAX-USD\n$23\n+3.20%\nDOT-USD\n$24\n+3.10%\nTop Crypto Losers\nBTC-USD\n$15\n-4.00%\nETH-USD\n$16\n-3.90%\nSOL-USD\n$17\n-3.80%\nNEAR-USD\n$18\n-3.70%\nLINK-USD\n$19\n-3.60%\nXRP-USD\n$20\n-3.50%\nADA-USD\n$21\n-3.40%\nDOGE-USD\n$22\n-3.30%\nAVAX-USD\n$23\n-3.20%\nDOT-USD\n$24\n-3.10%\n✕\nMSP AI",
+      "hits": [],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Markets command header 6/11 green Top: Communications $2.50T BTC 57.2% · ETH 13.4% AAPL +5.00% (equity) Overview Pick one lens, then drop into Scanner or Symbol Open XLK in Symbol Open XLF in Symbol Open XLE in Symbol Open XLB in Symbol Open XLU in Symbol Open XLI in Symbol Open XLRE in Symbol Open XLV in Symbol Open XLP in Symbol Open XLY in Symbol Open XLC in Symbol Open AAPL in Symbol Open MSFT in Symbol Open MU in Symbol Open NVDA in Symbol Open AMD in Symbol Open META in Symbol Open AMZN in Symbol Open GOOG in Symbol Open COST in Symbol Open PLTR in Symbol Open AAPL in Symbol Open MSFT in Symbol Open MU in Symbol Open NVDA in Symbol Open AMD in Symbol Open META in Symbol Open AMZN in Symbol Open GOOG in Symbol Open COST in Symbol Open PLTR in Symbol Open BTC-USD in Symbol Open ETH-USD in Symbol Open SOL-USD in Symbol Open NEAR-USD in Symbol Open LINK-USD in Symbol Open XRP-USD in Symbol Open ADA-USD in Symbol Open DOGE-USD in Symbol Open AVAX-USD in Symbol Open DOT-USD in Symbol Open BTC-USD in Symbol Open ETH-USD in Symbol Open SOL-USD in Symbol Open NEAR-USD in Symbol Open LINK-USD in Symbol Open XRP-USD in Symbol Open ADA-USD in Symbol Open DOGE-USD in Symbol Open AVAX-USD in Symbol Open DOT-USD in Symbol Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 0
+    },
+    {
+      "tab": "overview",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:58:11.578Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 4020,
+      "scrollWidth": 390,
+      "screens": 4.76303317535545,
+      "text": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nOverview\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nEQUITIES\nSector Heatmap\nXLK\nTechnology\n-1.72%\nXLF\nFinancials\n-1.29%\nXLE\nEnergy\n-0.86%\nXLB\nMaterials\n-0.43%\nXLU\nUtilities\n0.00%\nXLI\nIndustrials\n+0.43%\nXLRE\nReal Estate\n+0.86%\nXLV\nHealthcare\n+1.29%\nXLP\nConsumer staples\n+1.72%\nXLY\nConsumer discretionary\n+2.15%\nXLC\nCommunications\n+2.58%\nTop Equity Gainers\nAAPL\n$100\n+5.00%\nMSFT\n$101\n+4.90%\nMU\n$102\n+4.80%\nNVDA\n$103\n+4.70%\nAMD\n$104\n+4.60%\nMETA\n$105\n+4.50%\nAMZN\n$106\n+4.40%\nGOOG\n$107\n+4.30%\nCOST\n$108\n+4.20%\nPLTR\n$109\n+4.10%\nTop Equity Losers\nAAPL\n$100\n-5.00%\nMSFT\n$101\n-4.90%\nMU\n$102\n-4.80%\nNVDA\n$103\n-4.70%\nAMD\n$104\n-4.60%\nMETA\n$105\n-4.50%\nAMZN\n$106\n-4.40%\nGOOG\n$107\n-4.30%\nCOST\n$108\n-4.20%\nPLTR\n$109\n-4.10%\nCRYPTO\nSector Performance\nLayer 1\n$50B\n-3.5%\nDeFi\n$51B\n-2.5%\nMeme\n$52B\n-1.5%\nAI\n$53B\n-0.5%\nGaming\n$54B\n+0.5%\nExchange\n$55B\n+1.5%\nInfrastructure\n$56B\n+2.5%\nPayments\n$57B\n+3.5%\nCrypto Market\nTOTAL MARKET CAP\n$2.50T\n+1.23%\n24H VOLUME\n$75.00B\nBTC DOMINANCE\n57.2%\nETH DOMINANCE\n13.4%\nTop Crypto Gainers\nBTC-USD\n$15\n+4.00%\nETH-USD\n$16\n+3.90%\nSOL-USD\n$17\n+3.80%\nNEAR-USD\n$18\n+3.70%\nLINK-USD\n$19\n+3.60%\nXRP-USD\n$20\n+3.50%\nADA-USD\n$21\n+3.40%\nDOGE-USD\n$22\n+3.30%\nAVAX-USD\n$23\n+3.20%\nDOT-USD\n$24\n+3.10%\nTop Crypto Losers\nBTC-USD\n$15\n-4.00%\nETH-USD\n$16\n-3.90%\nSOL-USD\n$17\n-3.80%\nNEAR-USD\n$18\n-3.70%\nLINK-USD\n$19\n-3.60%\nXRP-USD\n$20\n-3.50%\nADA-USD\n$21\n-3.40%\nDOGE-USD\n$22\n-3.30%\nAVAX-USD\n$23\n-3.20%\nDOT-USD\n$24\n-3.10%\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": [
+        {
+          "top": 971.4375,
+          "bottom": 1481.4375
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nOverview\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nEQUITIES\nSector Heatmap\nXLK\nTechnology\n-1.72%\nXLF\nFinancials\n-1.29%\nXLE\nEnergy\n-0.86%\nXLB\nMaterials\n-0.43%\nXLU\nUtilities\n0.00%\nXLI\nIndustrials\n+0.43%\nXLRE\nReal Estate\n+0.86%\nXLV\nHealthcare\n+1.29%\nXLP\nConsumer staples\n+1.72%\nXLY\nConsumer discretionary\n+2.15%\nXLC\nCommunications\n+2.58%\nTop Equity Gainers\nAAPL\n$100\n+5.00%\nMSFT\n$101\n+4.90%\nMU\n$102\n+4.80%\nNVDA\n$103\n+4.70%\nAMD\n$104\n+4.60%\nMETA\n$105\n+4.50%\nAMZN\n$106\n+4.40%\nGOOG\n$107\n+4.30%\nCOST\n$108\n+4.20%\nPLTR\n$109\n+4.10%\nTop Equity Losers\nAAPL\n$100\n-5.00%\nMSFT\n$101\n-4.90%\nMU\n$102\n-4.80%\nNVDA\n$103\n-4.70%\nAMD\n$104\n-4.60%\nMETA\n$105\n-4.50%\nAMZN\n$106\n-4.40%\nGOOG\n$107\n-4.30%\nCOST\n$108\n-4.20%\nPLTR\n$109\n-4.10%\nCRYPTO\nSector Performance\nLayer 1\n$50B\n-3.5%\nDeFi\n$51B\n-2.5%\nMeme\n$52B\n-1.5%\nAI\n$53B\n-0.5%\nGaming\n$54B\n+0.5%\nExchange\n$55B\n+1.5%\nInfrastructure\n$56B\n+2.5%\nPayments\n$57B\n+3.5%\nCrypto Market\nTOTAL MARKET CAP\n$2.50T\n+1.23%\n24H VOLUME\n$75.00B\nBTC DOMINANCE\n57.2%\nETH DOMINANCE\n13.4%\nTop Crypto Gainers\nBTC-USD\n$15\n+4.00%\nETH-USD\n$16\n+3.90%\nSOL-USD\n$17\n+3.80%\nNEAR-USD\n$18\n+3.70%\nLINK-USD\n$19\n+3.60%\nXRP-USD\n$20\n+3.50%\nADA-USD\n$21\n+3.40%\nDOGE-USD\n$22\n+3.30%\nAVAX-USD\n$23\n+3.20%\nDOT-USD\n$24\n+3.10%\nTop Crypto Losers\nBTC-USD\n$15\n-4.00%\nETH-USD\n$16\n-3.90%\nSOL-USD\n$17\n-3.80%\nNEAR-USD\n$18\n-3.70%\nLINK-USD\n$19\n-3.60%\nXRP-USD\n$20\n-3.50%\nADA-USD\n$21\n-3.40%\nDOGE-USD\n$22\n-3.30%\nAVAX-USD\n$23\n-3.20%\nDOT-USD\n$24\n-3.10%\n✕\nMSP AI",
+      "hits": [],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Markets command header 6/11 green Top: Communications $2.50T BTC 57.2% · ETH 13.4% AAPL +5.00% (equity) Overview Pick one lens, then drop into Scanner or Symbol Open XLK in Symbol Open XLF in Symbol Open XLE in Symbol Open XLB in Symbol Open XLU in Symbol Open XLI in Symbol Open XLRE in Symbol Open XLV in Symbol Open XLP in Symbol Open XLY in Symbol Open XLC in Symbol Open AAPL in Symbol Open MSFT in Symbol Open MU in Symbol Open NVDA in Symbol Open AMD in Symbol Open META in Symbol Open AMZN in Symbol Open GOOG in Symbol Open COST in Symbol Open PLTR in Symbol Open AAPL in Symbol Open MSFT in Symbol Open MU in Symbol Open NVDA in Symbol Open AMD in Symbol Open META in Symbol Open AMZN in Symbol Open GOOG in Symbol Open COST in Symbol Open PLTR in Symbol Open BTC-USD in Symbol Open ETH-USD in Symbol Open SOL-USD in Symbol Open NEAR-USD in Symbol Open LINK-USD in Symbol Open XRP-USD in Symbol Open ADA-USD in Symbol Open DOGE-USD in Symbol Open AVAX-USD in Symbol Open DOT-USD in Symbol Open BTC-USD in Symbol Open ETH-USD in Symbol Open SOL-USD in Symbol Open NEAR-USD in Symbol Open LINK-USD in Symbol Open XRP-USD in Symbol Open ADA-USD in Symbol Open DOGE-USD in Symbol Open AVAX-USD in Symbol Open DOT-USD in Symbol Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 0
+    },
+    {
+      "tab": "heatmap",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:58:13.310Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1108,
+      "scrollWidth": 1280,
+      "screens": 1.385,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nSectors\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nSECTOR\tETF\tCHANGE %\tWEEKLY\tMONTHLY\tYTD\tWEIGHT\nTechnology\tXLK\t-1.72%\t+1.23%\t+4.56%\t—\t9.1%\nFinancials\tXLF\t-1.29%\t+1.23%\t+4.56%\t—\t9.1%\nEnergy\tXLE\t-0.86%\t+1.23%\t+4.56%\t—\t9.1%\nMaterials\tXLB\t-0.43%\t+1.23%\t+4.56%\t—\t9.1%\nUtilities\tXLU\t0.00%\t+1.23%\t+4.56%\t—\t9.1%\nIndustrials\tXLI\t+0.43%\t+1.23%\t+4.56%\t—\t9.1%\nReal Estate\tXLRE\t+0.86%\t+1.23%\t+4.56%\t—\t9.1%\nHealthcare\tXLV\t+1.29%\t+1.23%\t+4.56%\t—\t9.1%\nConsumer staples\tXLP\t+1.72%\t+1.23%\t+4.56%\t—\t9.1%\nConsumer discretionary\tXLY\t+2.15%\t+1.23%\t+4.56%\t—\t9.1%\nCommunications\tXLC\t+2.58%\t+1.23%\t+4.56%\t—\t9.1%\nInside the sector ETFs\n\nTop holdings and sector weights from Alpha Vantage ETF_PROFILE, to see which companies drive each sector tile. For research only.\n\nXLK\nXLF\nXLE\nXLB\nXLU\nXLI\nXLRE\nXLV\nXLP\nXLY\nXLC\nXLK (Technology): Not available right now\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": [],
+      "closedHits": [
+        "ETF_PROFILE"
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nSectors\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nSECTOR\tETF\tCHANGE %\tWEEKLY\tMONTHLY\tYTD\tWEIGHT\nTechnology\tXLK\t-1.72%\t+1.23%\t+4.56%\t—\t9.1%\nFinancials\tXLF\t-1.29%\t+1.23%\t+4.56%\t—\t9.1%\nEnergy\tXLE\t-0.86%\t+1.23%\t+4.56%\t—\t9.1%\nMaterials\tXLB\t-0.43%\t+1.23%\t+4.56%\t—\t9.1%\nUtilities\tXLU\t0.00%\t+1.23%\t+4.56%\t—\t9.1%\nIndustrials\tXLI\t+0.43%\t+1.23%\t+4.56%\t—\t9.1%\nReal Estate\tXLRE\t+0.86%\t+1.23%\t+4.56%\t—\t9.1%\nHealthcare\tXLV\t+1.29%\t+1.23%\t+4.56%\t—\t9.1%\nConsumer staples\tXLP\t+1.72%\t+1.23%\t+4.56%\t—\t9.1%\nConsumer discretionary\tXLY\t+2.15%\t+1.23%\t+4.56%\t—\t9.1%\nCommunications\tXLC\t+2.58%\t+1.23%\t+4.56%\t—\t9.1%\nInside the sector ETFs\n\nTop holdings and sector weights from Alpha Vantage ETF_PROFILE, to see which companies drive each sector tile. For research only.\n\nXLK\nXLF\nXLE\nXLB\nXLU\nXLI\nXLRE\nXLV\nXLP\nXLY\nXLC\nXLK (Technology): Not available right now\n✕\nMSP AI",
+      "hits": [
+        "ETF_PROFILE"
+      ],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Markets command header 6/11 green Top: Communications $2.50T BTC 57.2% · ETH 13.4% AAPL +5.00% (equity) Sectors Pick one lens, then drop into Scanner or Symbol Sector ETF holdings Choose a sector ETF Technology Financials Energy Materials Utilities Industrials Real Estate Healthcare Consumer staples Consumer discretionary Communications Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 0
+    },
+    {
+      "tab": "heatmap",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:58:15.253Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1758,
+      "scrollWidth": 390,
+      "screens": 2.0829383886255926,
+      "text": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nSectors\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nSECTOR\tETF\tCHANGE %\tWEEKLY\tMONTHLY\tYTD\tWEIGHT\nTechnology\tXLK\t-1.72%\t+1.23%\t+4.56%\t—\t9.1%\nFinancials\tXLF\t-1.29%\t+1.23%\t+4.56%\t—\t9.1%\nEnergy\tXLE\t-0.86%\t+1.23%\t+4.56%\t—\t9.1%\nMaterials\tXLB\t-0.43%\t+1.23%\t+4.56%\t—\t9.1%\nUtilities\tXLU\t0.00%\t+1.23%\t+4.56%\t—\t9.1%\nIndustrials\tXLI\t+0.43%\t+1.23%\t+4.56%\t—\t9.1%\nReal Estate\tXLRE\t+0.86%\t+1.23%\t+4.56%\t—\t9.1%\nHealthcare\tXLV\t+1.29%\t+1.23%\t+4.56%\t—\t9.1%\nConsumer staples\tXLP\t+1.72%\t+1.23%\t+4.56%\t—\t9.1%\nConsumer discretionary\tXLY\t+2.15%\t+1.23%\t+4.56%\t—\t9.1%\nCommunications\tXLC\t+2.58%\t+1.23%\t+4.56%\t—\t9.1%\nInside the sector ETFs\n\nTop holdings and sector weights from Alpha Vantage ETF_PROFILE, to see which companies drive each sector tile. For research only.\n\nXLK\nXLF\nXLE\nXLB\nXLU\nXLI\nXLRE\nXLV\nXLP\nXLY\nXLC\nXLK (Technology): Not available right now\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": [],
+      "closedHits": [
+        "ETF_PROFILE"
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nSectors\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nSECTOR\tETF\tCHANGE %\tWEEKLY\tMONTHLY\tYTD\tWEIGHT\nTechnology\tXLK\t-1.72%\t+1.23%\t+4.56%\t—\t9.1%\nFinancials\tXLF\t-1.29%\t+1.23%\t+4.56%\t—\t9.1%\nEnergy\tXLE\t-0.86%\t+1.23%\t+4.56%\t—\t9.1%\nMaterials\tXLB\t-0.43%\t+1.23%\t+4.56%\t—\t9.1%\nUtilities\tXLU\t0.00%\t+1.23%\t+4.56%\t—\t9.1%\nIndustrials\tXLI\t+0.43%\t+1.23%\t+4.56%\t—\t9.1%\nReal Estate\tXLRE\t+0.86%\t+1.23%\t+4.56%\t—\t9.1%\nHealthcare\tXLV\t+1.29%\t+1.23%\t+4.56%\t—\t9.1%\nConsumer staples\tXLP\t+1.72%\t+1.23%\t+4.56%\t—\t9.1%\nConsumer discretionary\tXLY\t+2.15%\t+1.23%\t+4.56%\t—\t9.1%\nCommunications\tXLC\t+2.58%\t+1.23%\t+4.56%\t—\t9.1%\nInside the sector ETFs\n\nTop holdings and sector weights from Alpha Vantage ETF_PROFILE, to see which companies drive each sector tile. For research only.\n\nXLK\nXLF\nXLE\nXLB\nXLU\nXLI\nXLRE\nXLV\nXLP\nXLY\nXLC\nXLK (Technology): Not available right now\n✕\nMSP AI",
+      "hits": [
+        "ETF_PROFILE"
+      ],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Markets command header 6/11 green Top: Communications $2.50T BTC 57.2% · ETH 13.4% AAPL +5.00% (equity) Sectors Pick one lens, then drop into Scanner or Symbol Sector ETF holdings Choose a sector ETF Technology Financials Energy Materials Utilities Industrials Real Estate Healthcare Consumer staples Consumer discretionary Communications Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 0
+    },
+    {
+      "tab": "cross",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:58:16.979Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1046,
+      "scrollWidth": 1280,
+      "screens": 1.3075,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCross-Market\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nCross-Market Influence Map\nMARKET REGIME SIGNALSdata as of Oct 5, 2026\nMarket data\nRISK-ON\nTailwind\nMarket data\nRISK-ON\nTailwind\nKNOWN RELATIONSHIPS\nDXY↑\nCRYPTO & EQUITIES ↓\nOil↑\nINFLATION EXPECTATIONS ↑\nBond Yields↑\nGROWTH STOCKS ↓\nBTC.D↑\nALTCOINS ↓\nVIXspike\nRISK-OFF, EQUITIES ↓\nGold↑\nSAFE HAVEN DEMAND\n\nStatic heuristics — not live readings. Educational context only.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": [],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCross-Market\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nCross-Market Influence Map\nMARKET REGIME SIGNALSdata as of Oct 5, 2026\nMarket data\nRISK-ON\nTailwind\nMarket data\nRISK-ON\nTailwind\nKNOWN RELATIONSHIPS\nDXY↑\nCRYPTO & EQUITIES ↓\nOil↑\nINFLATION EXPECTATIONS ↑\nBond Yields↑\nGROWTH STOCKS ↓\nBTC.D↑\nALTCOINS ↓\nVIXspike\nRISK-OFF, EQUITIES ↓\nGold↑\nSAFE HAVEN DEMAND\n\nStatic heuristics — not live readings. Educational context only.\n\n✕\nMSP AI",
+      "hits": [],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Markets command header 6/11 green Top: Communications $2.50T BTC 57.2% · ETH 13.4% AAPL +5.00% (equity) Cross-Market Pick one lens, then drop into Scanner or Symbol Equities share of the regime decision Volatility share of the regime decision Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 0
+    },
+    {
+      "tab": "cross",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:58:18.242Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1651,
+      "scrollWidth": 390,
+      "screens": 1.9561611374407584,
+      "text": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCross-Market\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nCross-Market Influence Map\nMARKET REGIME SIGNALSdata as of Oct 5, 2026\nMarket data\nRISK-ON\nTailwind\nMarket data\nRISK-ON\nTailwind\nKNOWN RELATIONSHIPS\nDXY↑\nCRYPTO & EQUITIES ↓\nOil↑\nINFLATION EXPECTATIONS ↑\nBond Yields↑\nGROWTH STOCKS ↓\nBTC.D↑\nALTCOINS ↓\nVIXspike\nRISK-OFF, EQUITIES ↓\nGold↑\nSAFE HAVEN DEMAND\n\nStatic heuristics — not live readings. Educational context only.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": [],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCross-Market\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nCross-Market Influence Map\nMARKET REGIME SIGNALSdata as of Oct 5, 2026\nMarket data\nRISK-ON\nTailwind\nMarket data\nRISK-ON\nTailwind\nKNOWN RELATIONSHIPS\nDXY↑\nCRYPTO & EQUITIES ↓\nOil↑\nINFLATION EXPECTATIONS ↑\nBond Yields↑\nGROWTH STOCKS ↓\nBTC.D↑\nALTCOINS ↓\nVIXspike\nRISK-OFF, EQUITIES ↓\nGold↑\nSAFE HAVEN DEMAND\n\nStatic heuristics — not live readings. Educational context only.\n\n✕\nMSP AI",
+      "hits": [],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Markets command header 6/11 green Top: Communications $2.50T BTC 57.2% · ETH 13.4% AAPL +5.00% (equity) Cross-Market Pick one lens, then drop into Scanner or Symbol Equities share of the regime decision Volatility share of the regime decision Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 0
+    },
+    {
+      "tab": "equity",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:58:19.862Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1277,
+      "scrollWidth": 1280,
+      "screens": 1.59625,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nEquity Deep-Dive\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nEquity Explorer\n\nDecision-grade equity view: valuation, trend, risk, and catalyst context.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nFind Stock Setup\nAAPL\nMSFT\nGOOGL\nAMZN\nNVDA\nTSLA\nMETA\nJPM\nReady to evaluate an equity setup?\n\nSearch or choose a popular symbol to generate decision context.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": [],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nEquity Deep-Dive\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nEquity Explorer\n\nDecision-grade equity view: valuation, trend, risk, and catalyst context.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nFind Stock Setup\nAAPL\nMSFT\nGOOGL\nAMZN\nNVDA\nTSLA\nMETA\nJPM\nReady to evaluate an equity setup?\n\nSearch or choose a popular symbol to generate decision context.\n\n✕\nMSP AI",
+      "hits": [],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Markets command header 6/11 green Top: Communications $2.50T BTC 57.2% · ETH 13.4% AAPL +5.00% (equity) Equity Deep-Dive Pick one lens, then drop into Scanner or Symbol Stock symbol Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 0
+    },
+    {
+      "tab": "equity",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:58:21.637Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1851,
+      "scrollWidth": 390,
+      "screens": 2.193127962085308,
+      "text": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nEquity Deep-Dive\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nEquity Explorer\n\nDecision-grade equity view: valuation, trend, risk, and catalyst context.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nFind Stock Setup\nAAPL\nMSFT\nGOOGL\nAMZN\nNVDA\nTSLA\nMETA\nJPM\nReady to evaluate an equity setup?\n\nSearch or choose a popular symbol to generate decision context.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": [],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nEquity Deep-Dive\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nEquity Explorer\n\nDecision-grade equity view: valuation, trend, risk, and catalyst context.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nFind Stock Setup\nAAPL\nMSFT\nGOOGL\nAMZN\nNVDA\nTSLA\nMETA\nJPM\nReady to evaluate an equity setup?\n\nSearch or choose a popular symbol to generate decision context.\n\n✕\nMSP AI",
+      "hits": [],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Markets command header 6/11 green Top: Communications $2.50T BTC 57.2% · ETH 13.4% AAPL +5.00% (equity) Equity Deep-Dive Pick one lens, then drop into Scanner or Symbol Stock symbol Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 0
+    },
+    {
+      "tab": "equity",
+      "tier": "pro",
+      "dataCase": "selected",
+      "observedAt": "2026-10-05T13:58:23.480Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 2196,
+      "scrollWidth": 1280,
+      "screens": 2.745,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nEquity Deep-Dive\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nEquity Explorer\n\nDecision-grade equity view: valuation, trend, risk, and catalyst context.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nFind Stock Setup\nRefresh\nAAPL\nMSFT\nGOOGL\nAMZN\nNVDA\nTSLA\nMETA\nJPM\n\nZone 1 · Equity analysis gate\n\nUS session anchor\nStatus: Conditional\nRisk Context: Standard review\nVol Regime: normal\n\nLarge Cap\n\nAligned\n\nMid Cap\n\nConditional\n\nHigh Beta\n\nConditional\n\nEarnings Risk\n\nReview\n\nMixed conditions — require trend + volume confirmation.\n\nEnvironment breakdown\n\nInputs\nGlobal Regime\n\nrisk_on\n\nEquities Micro Regime\n\nneutral\n\nLiquidity\n\nnormal\n\nAdaptive Confluence\n\n69%\n\nAsset · AAPL • NASDAQ\nPrice · $250.12\n24h · +0.44%\nPermission · Conditional\nCRCS · 62.5\nΔHr · +1.23\nTrend · Bullish\nMomentum · Weak\nVolatility · Normal\nVolume · 45.68M\nP/E · 25.23\n\nZone 2 · Action\n\nPrice + Permission Console\nRefresh\nAAPL\nNASDAQ\n\nApple Inc.\n\nTechnology • Consumer electronics\n\n$250.12\n\n+1.10\n▲ 0.44%\n\nLast updated: 2026-10-02\n\nTREND\nUP Bullish\nMOMENTUM\nWK Weak\nVOLATILITY\nNORM Normal\nPERMISSION\nConditional\nACTION\nOpen Scanner\nAdd to Watchlist\nCreate Alert\nOpen Symbol\nOpen Journal Draft\n\nZONE 2 • CONTEXT\n\nTrend / RS / Volatility Context\n\nSTRUCTURE BIAS\n\nWeekly: Bullish • Daily: Bullish\n\nRELATIVE STRENGTH\n\nSPY-relative return: Unavailable • matched benchmark observations required\n\nVOLATILITY + LIQUIDITY\n\nATR state: normal • RVOL: Unavailable — comparable volume history required\n\nEVENT RISK\n\nEarnings: Upcoming schedule check • News: No ticker-specific news\n\nConditional — trend + volume confirmation indicated.\nZone 3 • Informational\nCollapse\n\ntrailing\n\nMARKET CAP (PROVIDER SNAPSHOT)\n\n$1.09B\n\nP/E RATIO\n\n25.23\n\nVOLUME\n\n45.68M\n\nDIVIDEND YIELD\n\n0.40%\n\nVALUATION METRICS\n\nP/E (TTM)\n\n25.23\n\nForward P/E\n\n24.00\n\nPEG Ratio\n\n1.20\n\nPrice/Sales\n\n5.00\n\nPrice/Book\n\n8.00\n\nEV/EBITDA\n\n14.00\n\nFUNDAMENTALS\n\nREVENUE YOY\n\n▲ 12.0%\n\nEPS YOY\n\n▲ 10.0%\n\nEPS (TTM)\n\n$6.23\n\nRevenue\n\n$1.00B\n\nProfit Margin\n\n+22.00%\n\nOperating Margin\n\n+25.00%\n\nROE\n\n+40.00%\n\nROA\n\n+14.00%\n\nTECHNICAL LEVELS\n52-Week Range\n$180.00 - $270.00\n\n50-Day MA\n\n$240.00\n\n▲ 4.20%\n\n200-Day MA\n\n$220.00\n\n▲ 13.70%\n\nBeta\n\n1.24\n\nDay Range\n\n$248.00 - $251.00\n\nTHIRD-PARTY ANALYST CONSENSUS\nStrong Buy (5)\nHold (3)\nStrong Sell (1)\n\nSource: external analyst consensus. MSP does not endorse or recommend any rating.\n\nAnalyst Price Target\n$260.00\n\n+4.0% upside\n\nABOUT APPLE INC.\n\nFixture company description.\n\nCountry\n\nUS\n\nFiscal Year End\n\nSeptember\n\nShares Outstanding\n\n1.00B\n\nLatest Quarter\n\n2026-06-30\n\nData powered by Alpha Vantage • Updated every 5 minutes during market hours\n\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": [],
+      "closedHits": [
+        "risk_on",
+        "Permission",
+        "Bullish",
+        "PERMISSION",
+        "Unavailable",
+        "Buy",
+        "Sell",
+        "Target"
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nEquity Deep-Dive\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nEquity Explorer\n\nDecision-grade equity view: valuation, trend, risk, and catalyst context.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nFind Stock Setup\nRefresh\nAAPL\nMSFT\nGOOGL\nAMZN\nNVDA\nTSLA\nMETA\nJPM\n\nZone 1 · Equity analysis gate\n\nUS session anchor\nStatus: Conditional\nRisk Context: Standard review\nVol Regime: normal\n\nLarge Cap\n\nAligned\n\nMid Cap\n\nConditional\n\nHigh Beta\n\nConditional\n\nEarnings Risk\n\nReview\n\nMixed conditions — require trend + volume confirmation.\n\nEnvironment breakdown\n\nInputs\nGlobal Regime\n\nrisk_on\n\nEquities Micro Regime\n\nneutral\n\nLiquidity\n\nnormal\n\nAdaptive Confluence\n\n69%\n\nAsset · AAPL • NASDAQ\nPrice · $250.12\n24h · +0.44%\nPermission · Conditional\nCRCS · 62.5\nΔHr · +1.23\nTrend · Bullish\nMomentum · Weak\nVolatility · Normal\nVolume · 45.68M\nP/E · 25.23\n\nZone 2 · Action\n\nPrice + Permission Console\nRefresh\nAAPL\nNASDAQ\n\nApple Inc.\n\nTechnology • Consumer electronics\n\n$250.12\n\n+1.10\n▲ 0.44%\n\nLast updated: 2026-10-02\n\nTREND\nUP Bullish\nMOMENTUM\nWK Weak\nVOLATILITY\nNORM Normal\nPERMISSION\nConditional\nACTION\nOpen Scanner\nAdd to Watchlist\nCreate Alert\nOpen Symbol\nOpen Journal Draft\n\nZONE 2 • CONTEXT\n\nTrend / RS / Volatility Context\n\nSTRUCTURE BIAS\n\nWeekly: Bullish • Daily: Bullish\n\nRELATIVE STRENGTH\n\nSPY-relative return: Unavailable • matched benchmark observations required\n\nVOLATILITY + LIQUIDITY\n\nATR state: normal • RVOL: Unavailable — comparable volume history required\n\nEVENT RISK\n\nEarnings: Upcoming schedule check • News: No ticker-specific news\n\nConditional — trend + volume confirmation indicated.\nZone 3 • Informational\nCollapse\n\ntrailing\n\nMARKET CAP (PROVIDER SNAPSHOT)\n\n$1.09B\n\nP/E RATIO\n\n25.23\n\nVOLUME\n\n45.68M\n\nDIVIDEND YIELD\n\n0.40%\n\nVALUATION METRICS\n\nP/E (TTM)\n\n25.23\n\nForward P/E\n\n24.00\n\nPEG Ratio\n\n1.20\n\nPrice/Sales\n\n5.00\n\nPrice/Book\n\n8.00\n\nEV/EBITDA\n\n14.00\n\nFUNDAMENTALS\n\nREVENUE YOY\n\n▲ 12.0%\n\nEPS YOY\n\n▲ 10.0%\n\nEPS (TTM)\n\n$6.23\n\nRevenue\n\n$1.00B\n\nProfit Margin\n\n+22.00%\n\nOperating Margin\n\n+25.00%\n\nROE\n\n+40.00%\n\nROA\n\n+14.00%\n\nTECHNICAL LEVELS\n52-Week Range\n$180.00 - $270.00\n\n50-Day MA\n\n$240.00\n\n▲ 4.20%\n\n200-Day MA\n\n$220.00\n\n▲ 13.70%\n\nBeta\n\n1.24\n\nDay Range\n\n$248.00 - $251.00\n\nTHIRD-PARTY ANALYST CONSENSUS\nStrong Buy (5)\nHold (3)\nStrong Sell (1)\n\nSource: external analyst consensus. MSP does not endorse or recommend any rating.\n\nAnalyst Price Target\n$260.00\n\n+4.0% upside\n\nABOUT APPLE INC.\n\nFixture company description.\n\nCountry\n\nUS\n\nFiscal Year End\n\nSeptember\n\nShares Outstanding\n\n1.00B\n\nLatest Quarter\n\n2026-06-30\n\nData powered by Alpha Vantage • Updated every 5 minutes during market hours\n\n✕\nMSP AI",
+      "hits": [
+        "risk_on",
+        "Permission",
+        "Bullish",
+        "PERMISSION",
+        "Unavailable",
+        "Buy",
+        "Sell",
+        "Target"
+      ],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Markets command header 6/11 green Top: Communications $2.50T BTC 57.2% · ETH 13.4% AAPL +5.00% (equity) Equity Deep-Dive Pick one lens, then drop into Scanner or Symbol Stock symbol Refresh data 52-week price position Strong Buy: 5 Buy: 4 Hold: 3 Sell: 2 Strong Sell: 1 Minimize MSP AI",
+      "attributeHits": [
+        "Buy",
+        "Sell"
+      ],
+      "expandedSourceCount": 0
+    },
+    {
+      "tab": "equity",
+      "tier": "pro",
+      "dataCase": "selected",
+      "observedAt": "2026-10-05T13:58:24.925Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 4438,
+      "scrollWidth": 390,
+      "screens": 5.258293838862559,
+      "text": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nEquity Deep-Dive\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nEquity Explorer\n\nDecision-grade equity view: valuation, trend, risk, and catalyst context.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nFind Stock Setup\nRefresh\nAAPL\nMSFT\nGOOGL\nAMZN\nNVDA\nTSLA\nMETA\nJPM\n\nZone 1 · Equity analysis gate\n\nUS session anchor\nStatus: Conditional\nRisk Context: Standard review\nVol Regime: normal\n\nLarge Cap\n\nAligned\n\nMid Cap\n\nConditional\n\nHigh Beta\n\nConditional\n\nEarnings Risk\n\nReview\n\nMixed conditions — require trend + volume confirmation.\n\nEnvironment breakdown\n\nInputs\nGlobal Regime\n\nrisk_on\n\nEquities Micro Regime\n\nneutral\n\nLiquidity\n\nnormal\n\nAdaptive Confluence\n\n69%\n\nAsset · AAPL • NASDAQ\nPrice · $250.12\n24h · +0.44%\nPermission · Conditional\nCRCS · 62.5\nΔHr · +1.23\nTrend · Bullish\nMomentum · Weak\nVolatility · Normal\nVolume · 45.68M\nP/E · 25.23\n\nZone 2 · Action\n\nPrice + Permission Console\nRefresh\nAAPL\nNASDAQ\n\nApple Inc.\n\nTechnology • Consumer electronics\n\n$250.12\n\n+1.10\n▲ 0.44%\n\nLast updated: 2026-10-02\n\nTREND\nUP Bullish\nMOMENTUM\nWK Weak\nVOLATILITY\nNORM Normal\nPERMISSION\nConditional\nACTION\nOpen Scanner\nAdd to Watchlist\nCreate Alert\nOpen Symbol\nOpen Journal Draft\n\nZONE 2 • CONTEXT\n\nTrend / RS / Volatility Context\n\nSTRUCTURE BIAS\n\nWeekly: Bullish • Daily: Bullish\n\nRELATIVE STRENGTH\n\nSPY-relative return: Unavailable • matched benchmark observations required\n\nVOLATILITY + LIQUIDITY\n\nATR state: normal • RVOL: Unavailable — comparable volume history required\n\nEVENT RISK\n\nEarnings: Upcoming schedule check • News: No ticker-specific news\n\nConditional — trend + volume confirmation indicated.\nZone 3 • Informational\nCollapse\n\ntrailing\n\nMARKET CAP (PROVIDER SNAPSHOT)\n\n$1.09B\n\nP/E RATIO\n\n25.23\n\nVOLUME\n\n45.68M\n\nDIVIDEND YIELD\n\n0.40%\n\nVALUATION METRICS\n\nP/E (TTM)\n\n25.23\n\nForward P/E\n\n24.00\n\nPEG Ratio\n\n1.20\n\nPrice/Sales\n\n5.00\n\nPrice/Book\n\n8.00\n\nEV/EBITDA\n\n14.00\n\nFUNDAMENTALS\n\nREVENUE YOY\n\n▲ 12.0%\n\nEPS YOY\n\n▲ 10.0%\n\nEPS (TTM)\n\n$6.23\n\nRevenue\n\n$1.00B\n\nProfit Margin\n\n+22.00%\n\nOperating Margin\n\n+25.00%\n\nROE\n\n+40.00%\n\nROA\n\n+14.00%\n\nTECHNICAL LEVELS\n52-Week Range\n$180.00 - $270.00\n\n50-Day MA\n\n$240.00\n\n▲ 4.20%\n\n200-Day MA\n\n$220.00\n\n▲ 13.70%\n\nBeta\n\n1.24\n\nDay Range\n\n$248.00 - $251.00\n\nTHIRD-PARTY ANALYST CONSENSUS\nStrong Buy (5)\nHold (3)\nStrong Sell (1)\n\nSource: external analyst consensus. MSP does not endorse or recommend any rating.\n\nAnalyst Price Target\n$260.00\n\n+4.0% upside\n\nABOUT APPLE INC.\n\nFixture company description.\n\nCountry\n\nUS\n\nFiscal Year End\n\nSeptember\n\nShares Outstanding\n\n1.00B\n\nLatest Quarter\n\n2026-06-30\n\nData powered by Alpha Vantage • Updated every 5 minutes during market hours\n\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": [],
+      "closedHits": [
+        "risk_on",
+        "Permission",
+        "Bullish",
+        "PERMISSION",
+        "Unavailable",
+        "Buy",
+        "Sell",
+        "Target"
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nEquity Deep-Dive\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nEquity Explorer\n\nDecision-grade equity view: valuation, trend, risk, and catalyst context.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nFind Stock Setup\nRefresh\nAAPL\nMSFT\nGOOGL\nAMZN\nNVDA\nTSLA\nMETA\nJPM\n\nZone 1 · Equity analysis gate\n\nUS session anchor\nStatus: Conditional\nRisk Context: Standard review\nVol Regime: normal\n\nLarge Cap\n\nAligned\n\nMid Cap\n\nConditional\n\nHigh Beta\n\nConditional\n\nEarnings Risk\n\nReview\n\nMixed conditions — require trend + volume confirmation.\n\nEnvironment breakdown\n\nInputs\nGlobal Regime\n\nrisk_on\n\nEquities Micro Regime\n\nneutral\n\nLiquidity\n\nnormal\n\nAdaptive Confluence\n\n69%\n\nAsset · AAPL • NASDAQ\nPrice · $250.12\n24h · +0.44%\nPermission · Conditional\nCRCS · 62.5\nΔHr · +1.23\nTrend · Bullish\nMomentum · Weak\nVolatility · Normal\nVolume · 45.68M\nP/E · 25.23\n\nZone 2 · Action\n\nPrice + Permission Console\nRefresh\nAAPL\nNASDAQ\n\nApple Inc.\n\nTechnology • Consumer electronics\n\n$250.12\n\n+1.10\n▲ 0.44%\n\nLast updated: 2026-10-02\n\nTREND\nUP Bullish\nMOMENTUM\nWK Weak\nVOLATILITY\nNORM Normal\nPERMISSION\nConditional\nACTION\nOpen Scanner\nAdd to Watchlist\nCreate Alert\nOpen Symbol\nOpen Journal Draft\n\nZONE 2 • CONTEXT\n\nTrend / RS / Volatility Context\n\nSTRUCTURE BIAS\n\nWeekly: Bullish • Daily: Bullish\n\nRELATIVE STRENGTH\n\nSPY-relative return: Unavailable • matched benchmark observations required\n\nVOLATILITY + LIQUIDITY\n\nATR state: normal • RVOL: Unavailable — comparable volume history required\n\nEVENT RISK\n\nEarnings: Upcoming schedule check • News: No ticker-specific news\n\nConditional — trend + volume confirmation indicated.\nZone 3 • Informational\nCollapse\n\ntrailing\n\nMARKET CAP (PROVIDER SNAPSHOT)\n\n$1.09B\n\nP/E RATIO\n\n25.23\n\nVOLUME\n\n45.68M\n\nDIVIDEND YIELD\n\n0.40%\n\nVALUATION METRICS\n\nP/E (TTM)\n\n25.23\n\nForward P/E\n\n24.00\n\nPEG Ratio\n\n1.20\n\nPrice/Sales\n\n5.00\n\nPrice/Book\n\n8.00\n\nEV/EBITDA\n\n14.00\n\nFUNDAMENTALS\n\nREVENUE YOY\n\n▲ 12.0%\n\nEPS YOY\n\n▲ 10.0%\n\nEPS (TTM)\n\n$6.23\n\nRevenue\n\n$1.00B\n\nProfit Margin\n\n+22.00%\n\nOperating Margin\n\n+25.00%\n\nROE\n\n+40.00%\n\nROA\n\n+14.00%\n\nTECHNICAL LEVELS\n52-Week Range\n$180.00 - $270.00\n\n50-Day MA\n\n$240.00\n\n▲ 4.20%\n\n200-Day MA\n\n$220.00\n\n▲ 13.70%\n\nBeta\n\n1.24\n\nDay Range\n\n$248.00 - $251.00\n\nTHIRD-PARTY ANALYST CONSENSUS\nStrong Buy (5)\nHold (3)\nStrong Sell (1)\n\nSource: external analyst consensus. MSP does not endorse or recommend any rating.\n\nAnalyst Price Target\n$260.00\n\n+4.0% upside\n\nABOUT APPLE INC.\n\nFixture company description.\n\nCountry\n\nUS\n\nFiscal Year End\n\nSeptember\n\nShares Outstanding\n\n1.00B\n\nLatest Quarter\n\n2026-06-30\n\nData powered by Alpha Vantage • Updated every 5 minutes during market hours\n\n✕\nMSP AI",
+      "hits": [
+        "risk_on",
+        "Permission",
+        "Bullish",
+        "PERMISSION",
+        "Unavailable",
+        "Buy",
+        "Sell",
+        "Target"
+      ],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Markets command header 6/11 green Top: Communications $2.50T BTC 57.2% · ETH 13.4% AAPL +5.00% (equity) Equity Deep-Dive Pick one lens, then drop into Scanner or Symbol Stock symbol Refresh data 52-week price position Strong Buy: 5 Buy: 4 Hold: 3 Sell: 2 Strong Sell: 1 Minimize MSP AI",
+      "attributeHits": [
+        "Buy",
+        "Sell"
+      ],
+      "expandedSourceCount": 0
+    },
+    {
+      "tab": "crypto",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:58:26.792Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1449,
+      "scrollWidth": 1280,
+      "screens": 1.81125,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCrypto Deep-Dive\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nCrypto asset explorer\nPermission Not aligned\nBias Neutral\nCrypto Asset Explorer\n\nDecision-grade asset view: status, permission, context, then details.\n\nOpen Markets\nOpen Scanner\nOpen Golden Egg\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n\nCRYPTO REVIEW GATE\n\nFeed time unavailable\nRefresh evidence\nMarket: Fresh\nTrending: Fresh\nFunding: Unknown\nOI: Unknown\n🟡\nREVIEW: CONDITIONAL\nConfluence Score: Unavailable\nRisk Context: Data unavailable — refresh to reassess\nLong Evidence: Limited\nShort Evidence: Limited\n\nENVIRONMENT BREAKDOWN (5 INPUTS)\n\nCrypto Risk State\n\nUnavailable\n\nLeadership\n\nUnavailable\n\nLiquidity\n\nUnavailable\n\nMarket Vol Regime\n\nExpansion\n\nBreadth\n\nUnavailable (Unavailable)\n\nHard Blocks: Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable\nBreadth (CoinGecko trending coins and prices): unavailable. Feed last updated 12:00 AM.\nFunding (OKX funding rates): unavailable. No response from the feed.\nComparable open-interest change (CoinGecko derivatives, top 3 venues): unavailable. No response from the feed.\nBTC\nETH\nSOL\nXRP\nDOGE\nADA\nAVAX\nLINK\nReady to evaluate a crypto setup?\n\nSearch or choose a popular coin to generate decision context.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": [],
+      "closedHits": [
+        "Permission",
+        "permission",
+        "Golden Egg",
+        "unavailable",
+        "Unknown",
+        "Unavailable"
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCrypto Deep-Dive\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nCrypto asset explorer\nPermission Not aligned\nBias Neutral\nCrypto Asset Explorer\n\nDecision-grade asset view: status, permission, context, then details.\n\nOpen Markets\nOpen Scanner\nOpen Golden Egg\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n\nCRYPTO REVIEW GATE\n\nFeed time unavailable\nRefresh evidence\nMarket: Fresh\nTrending: Fresh\nFunding: Unknown\nOI: Unknown\n🟡\nREVIEW: CONDITIONAL\nConfluence Score: Unavailable\nRisk Context: Data unavailable — refresh to reassess\nLong Evidence: Limited\nShort Evidence: Limited\n\nENVIRONMENT BREAKDOWN (5 INPUTS)\n\nCrypto Risk State\n\nUnavailable\n\nLeadership\n\nUnavailable\n\nLiquidity\n\nUnavailable\n\nMarket Vol Regime\n\nExpansion\n\nBreadth\n\nUnavailable (Unavailable)\n\nHard Blocks: Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable\nBreadth (CoinGecko trending coins and prices): unavailable. Feed last updated 12:00 AM.\nFunding (OKX funding rates): unavailable. No response from the feed.\nComparable open-interest change (CoinGecko derivatives, top 3 venues): unavailable. No response from the feed.\nBTC\nETH\nSOL\nXRP\nDOGE\nADA\nAVAX\nLINK\nReady to evaluate a crypto setup?\n\nSearch or choose a popular coin to generate decision context.\n\n✕\nMSP AI",
+      "hits": [
+        "Permission",
+        "permission",
+        "Golden Egg",
+        "unavailable",
+        "Unknown",
+        "Unavailable"
+      ],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Markets command header 6/11 green Top: Communications $2.50T BTC 57.2% · ETH 13.4% AAPL +5.00% (equity) Crypto Deep-Dive Pick one lens, then drop into Scanner or Symbol Crypto Explorer command header Market-wide: 24h move in total crypto market cap (not a single coin's range) Feed status Search cryptocurrency Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 0
+    },
+    {
+      "tab": "crypto",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:58:28.593Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 2565,
+      "scrollWidth": 390,
+      "screens": 3.0390995260663507,
+      "text": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCrypto Deep-Dive\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nCrypto asset explorer\nPermission Not aligned\nBias Neutral\nCrypto Asset Explorer\n\nDecision-grade asset view: status, permission, context, then details.\n\nOpen Markets\nOpen Scanner\nOpen Golden Egg\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n\nCRYPTO REVIEW GATE\n\nFeed time unavailable\nRefresh evidence\nMarket: Fresh\nTrending: Fresh\nFunding: Unknown\nOI: Unknown\n🟡\nREVIEW: CONDITIONAL\nConfluence Score: Unavailable\nRisk Context: Data unavailable — refresh to reassess\nLong Evidence: Limited\nShort Evidence: Limited\n\nENVIRONMENT BREAKDOWN (5 INPUTS)\n\nCrypto Risk State\n\nUnavailable\n\nLeadership\n\nUnavailable\n\nLiquidity\n\nUnavailable\n\nMarket Vol Regime\n\nExpansion\n\nBreadth\n\nUnavailable (Unavailable)\n\nHard Blocks: Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable\nBreadth (CoinGecko trending coins and prices): unavailable. Feed last updated 12:00 AM.\nFunding (OKX funding rates): unavailable. No response from the feed.\nComparable open-interest change (CoinGecko derivatives, top 3 venues): unavailable. No response from the feed.\nBTC\nETH\nSOL\nXRP\nDOGE\nADA\nAVAX\nLINK\nReady to evaluate a crypto setup?\n\nSearch or choose a popular coin to generate decision context.\n\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": [],
+      "closedHits": [
+        "Permission",
+        "permission",
+        "Golden Egg",
+        "unavailable",
+        "Unknown",
+        "Unavailable"
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCrypto Deep-Dive\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nCrypto asset explorer\nPermission Not aligned\nBias Neutral\nCrypto Asset Explorer\n\nDecision-grade asset view: status, permission, context, then details.\n\nOpen Markets\nOpen Scanner\nOpen Golden Egg\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n\nCRYPTO REVIEW GATE\n\nFeed time unavailable\nRefresh evidence\nMarket: Fresh\nTrending: Fresh\nFunding: Unknown\nOI: Unknown\n🟡\nREVIEW: CONDITIONAL\nConfluence Score: Unavailable\nRisk Context: Data unavailable — refresh to reassess\nLong Evidence: Limited\nShort Evidence: Limited\n\nENVIRONMENT BREAKDOWN (5 INPUTS)\n\nCrypto Risk State\n\nUnavailable\n\nLeadership\n\nUnavailable\n\nLiquidity\n\nUnavailable\n\nMarket Vol Regime\n\nExpansion\n\nBreadth\n\nUnavailable (Unavailable)\n\nHard Blocks: Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable\nBreadth (CoinGecko trending coins and prices): unavailable. Feed last updated 12:00 AM.\nFunding (OKX funding rates): unavailable. No response from the feed.\nComparable open-interest change (CoinGecko derivatives, top 3 venues): unavailable. No response from the feed.\nBTC\nETH\nSOL\nXRP\nDOGE\nADA\nAVAX\nLINK\nReady to evaluate a crypto setup?\n\nSearch or choose a popular coin to generate decision context.\n\n✕\nMSP AI",
+      "hits": [
+        "Permission",
+        "permission",
+        "Golden Egg",
+        "unavailable",
+        "Unknown",
+        "Unavailable"
+      ],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Markets command header 6/11 green Top: Communications $2.50T BTC 57.2% · ETH 13.4% AAPL +5.00% (equity) Crypto Deep-Dive Pick one lens, then drop into Scanner or Symbol Crypto Explorer command header Market-wide: 24h move in total crypto market cap (not a single coin's range) Feed status Search cryptocurrency Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 0
+    },
+    {
+      "tab": "crypto",
+      "tier": "pro",
+      "dataCase": "selected",
+      "observedAt": "2026-10-05T13:58:30.416Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 2352,
+      "scrollWidth": 1280,
+      "screens": 2.94,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCrypto Deep-Dive\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nCrypto asset explorer\nPermission Not aligned\nBias Bullish\nCrypto Asset Explorer\n\nDecision-grade asset view: status, permission, context, then details.\n\nOpen Markets\nOpen Scanner\nOpen Golden Egg\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n\nCRYPTO REVIEW GATE\n\nFeed time unavailable\nRefresh evidence\nMarket: Fresh\nTrending: Fresh\nFunding: Unknown\nOI: Unknown\n🟡\nREVIEW: CONDITIONAL\nConfluence Score: Unavailable\nRisk Context: Data unavailable — refresh to reassess\nLong Evidence: Limited\nShort Evidence: Limited\n\nENVIRONMENT BREAKDOWN (5 INPUTS)\n\nCrypto Risk State\n\nUnavailable\n\nLeadership\n\nUnavailable\n\nLiquidity\n\nUnavailable\n\nMarket Vol Regime\n\nExpansion\n\nBreadth\n\nUnavailable (Unavailable)\n\nHard Blocks: Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable\nBreadth (CoinGecko trending coins and prices): unavailable. Feed last updated 12:00 AM.\nFunding (OKX funding rates): unavailable. No response from the feed.\nComparable open-interest change (CoinGecko derivatives, top 3 venues): unavailable. No response from the feed.\nBTC\nETH\nSOL\nXRP\nDOGE\nADA\nAVAX\nLINK\nAsset · BTC • #1\nPrice · $110,000.00\n24h · +1.80%\nBias · Bullish\nStructure score · 75/100\nBTC 24h range · Normal\nLiquidity · Thin\nCrypto risk state · Unavailable\nGlobal regime (cross-asset) · risk_on\nMicro · neutral\nRisk · Elevated\nPermission · Not aligned\nCRCS · 62.5\nΔHr · +1.23\n\nZone 2 · Action\n\nPrice + Permission Console\nRefresh\nBitcoin (BTC)\n+1.80%\nCandles\nSparkline\n$110500\n$107625\n$104750\n$101875\n$99000\n\nINDICATOR STATUS\n\nNot aligned\n\nStructure score 75/100\n\nCondition stack does not meet criteria. Monitor, do not force setup.\n\nAdd to Watchlist\nCreate Alert\nOpen Symbol\nOpen Journal Draft\n\nZone 2 · Context\n\nTrend / RS / Liquidity Context\n\nSTRUCTURE BIAS\n\nBullish\n\nWeekly 4.50% • Monthly 8.20%\n\nRELATIVE STRENGTH VS BTC (7D)\n\n+0.00%\n\nVOLATILITY + LIQUIDITY\n\nVolatility (BTC 24h range): Normal\n\nLiquidity: Thin\n\n24h Vol $30.00B • MCap $2.20T\n\nZone 3 • Informational\nCollapse\n\nPERFORMANCE\n\n24h\n+1.80%\n7d\n+4.50%\n14d\nN/A\n30d\n+8.20%\n60d\nN/A\n1y\nN/A\n\nATH / ATL\n\nATH: $125,000.00 (-12.00%)\nATL: $67.00 (1000.00%)\nFDV: $2.31T\nCirculating: 20.00M\n\nSENTIMENT\n\nBullish votes: 65.0%\n\nWatchlist users: 10,000\n\nABOUT\n\nRecorded asset description.\n\nLast updated: 10/6/2026, 12:00:00 AM\n\nData provided by CoinGecko\n\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": [],
+      "closedHits": [
+        "Permission",
+        "Bullish",
+        "permission",
+        "Golden Egg",
+        "unavailable",
+        "Unknown",
+        "Unavailable",
+        "risk_on",
+        "N/A"
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCrypto Deep-Dive\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nCrypto asset explorer\nPermission Not aligned\nBias Bullish\nCrypto Asset Explorer\n\nDecision-grade asset view: status, permission, context, then details.\n\nOpen Markets\nOpen Scanner\nOpen Golden Egg\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n\nCRYPTO REVIEW GATE\n\nFeed time unavailable\nRefresh evidence\nMarket: Fresh\nTrending: Fresh\nFunding: Unknown\nOI: Unknown\n🟡\nREVIEW: CONDITIONAL\nConfluence Score: Unavailable\nRisk Context: Data unavailable — refresh to reassess\nLong Evidence: Limited\nShort Evidence: Limited\n\nENVIRONMENT BREAKDOWN (5 INPUTS)\n\nCrypto Risk State\n\nUnavailable\n\nLeadership\n\nUnavailable\n\nLiquidity\n\nUnavailable\n\nMarket Vol Regime\n\nExpansion\n\nBreadth\n\nUnavailable (Unavailable)\n\nHard Blocks: Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable\nBreadth (CoinGecko trending coins and prices): unavailable. Feed last updated 12:00 AM.\nFunding (OKX funding rates): unavailable. No response from the feed.\nComparable open-interest change (CoinGecko derivatives, top 3 venues): unavailable. No response from the feed.\nBTC\nETH\nSOL\nXRP\nDOGE\nADA\nAVAX\nLINK\nAsset · BTC • #1\nPrice · $110,000.00\n24h · +1.80%\nBias · Bullish\nStructure score · 75/100\nBTC 24h range · Normal\nLiquidity · Thin\nCrypto risk state · Unavailable\nGlobal regime (cross-asset) · risk_on\nMicro · neutral\nRisk · Elevated\nPermission · Not aligned\nCRCS · 62.5\nΔHr · +1.23\n\nZone 2 · Action\n\nPrice + Permission Console\nRefresh\nBitcoin (BTC)\n+1.80%\nCandles\nSparkline\n$110500\n$107625\n$104750\n$101875\n$99000\n\nINDICATOR STATUS\n\nNot aligned\n\nStructure score 75/100\n\nCondition stack does not meet criteria. Monitor, do not force setup.\n\nAdd to Watchlist\nCreate Alert\nOpen Symbol\nOpen Journal Draft\n\nZone 2 · Context\n\nTrend / RS / Liquidity Context\n\nSTRUCTURE BIAS\n\nBullish\n\nWeekly 4.50% • Monthly 8.20%\n\nRELATIVE STRENGTH VS BTC (7D)\n\n+0.00%\n\nVOLATILITY + LIQUIDITY\n\nVolatility (BTC 24h range): Normal\n\nLiquidity: Thin\n\n24h Vol $30.00B • MCap $2.20T\n\nZone 3 • Informational\nCollapse\n\nPERFORMANCE\n\n24h\n+1.80%\n7d\n+4.50%\n14d\nN/A\n30d\n+8.20%\n60d\nN/A\n1y\nN/A\n\nATH / ATL\n\nATH: $125,000.00 (-12.00%)\nATL: $67.00 (1000.00%)\nFDV: $2.31T\nCirculating: 20.00M\n\nSENTIMENT\n\nBullish votes: 65.0%\n\nWatchlist users: 10,000\n\nABOUT\n\nRecorded asset description.\n\nLast updated: 10/6/2026, 12:00:00 AM\n\nData provided by CoinGecko\n\n✕\nMSP AI",
+      "hits": [
+        "Permission",
+        "Bullish",
+        "permission",
+        "Golden Egg",
+        "unavailable",
+        "Unknown",
+        "Unavailable",
+        "risk_on",
+        "N/A"
+      ],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Markets command header 6/11 green Top: Communications $2.50T BTC 57.2% · ETH 13.4% AAPL +5.00% (equity) Crypto Deep-Dive Pick one lens, then drop into Scanner or Symbol Crypto Explorer command header Market-wide: 24h move in total crypto market cap (not a single coin's range) Feed status Search cryptocurrency Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable Minimize MSP AI",
+      "attributeHits": [
+        "unavailable"
+      ],
+      "expandedSourceCount": 0
+    },
+    {
+      "tab": "crypto",
+      "tier": "pro",
+      "dataCase": "selected",
+      "observedAt": "2026-10-05T13:58:32.507Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 3861,
+      "scrollWidth": 390,
+      "screens": 4.5746445497630335,
+      "text": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCrypto Deep-Dive\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nCrypto asset explorer\nPermission Not aligned\nBias Bullish\nCrypto Asset Explorer\n\nDecision-grade asset view: status, permission, context, then details.\n\nOpen Markets\nOpen Scanner\nOpen Golden Egg\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n\nCRYPTO REVIEW GATE\n\nFeed time unavailable\nRefresh evidence\nMarket: Fresh\nTrending: Fresh\nFunding: Unknown\nOI: Unknown\n🟡\nREVIEW: CONDITIONAL\nConfluence Score: Unavailable\nRisk Context: Data unavailable — refresh to reassess\nLong Evidence: Limited\nShort Evidence: Limited\n\nENVIRONMENT BREAKDOWN (5 INPUTS)\n\nCrypto Risk State\n\nUnavailable\n\nLeadership\n\nUnavailable\n\nLiquidity\n\nUnavailable\n\nMarket Vol Regime\n\nExpansion\n\nBreadth\n\nUnavailable (Unavailable)\n\nHard Blocks: Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable\nBreadth (CoinGecko trending coins and prices): unavailable. Feed last updated 12:00 AM.\nFunding (OKX funding rates): unavailable. No response from the feed.\nComparable open-interest change (CoinGecko derivatives, top 3 venues): unavailable. No response from the feed.\nBTC\nETH\nSOL\nXRP\nDOGE\nADA\nAVAX\nLINK\nAsset · BTC • #1\nPrice · $110,000.00\n24h · +1.80%\nBias · Bullish\nStructure score · 75/100\nBTC 24h range · Normal\nLiquidity · Thin\nCrypto risk state · Unavailable\nGlobal regime (cross-asset) · risk_on\nMicro · neutral\nRisk · Elevated\nPermission · Not aligned\nCRCS · 62.5\nΔHr · +1.23\n\nZone 2 · Action\n\nPrice + Permission Console\nRefresh\nBitcoin (BTC)\n+1.80%\nCandles\nSparkline\n$110500\n$107625\n$104750\n$101875\n$99000\n\nINDICATOR STATUS\n\nNot aligned\n\nStructure score 75/100\n\nCondition stack does not meet criteria. Monitor, do not force setup.\n\nAdd to Watchlist\nCreate Alert\nOpen Symbol\nOpen Journal Draft\n\nZone 2 · Context\n\nTrend / RS / Liquidity Context\n\nSTRUCTURE BIAS\n\nBullish\n\nWeekly 4.50% • Monthly 8.20%\n\nRELATIVE STRENGTH VS BTC (7D)\n\n+0.00%\n\nVOLATILITY + LIQUIDITY\n\nVolatility (BTC 24h range): Normal\n\nLiquidity: Thin\n\n24h Vol $30.00B • MCap $2.20T\n\nZone 3 • Informational\nCollapse\n\nPERFORMANCE\n\n24h\n+1.80%\n7d\n+4.50%\n14d\nN/A\n30d\n+8.20%\n60d\nN/A\n1y\nN/A\n\nATH / ATL\n\nATH: $125,000.00 (-12.00%)\nATL: $67.00 (1000.00%)\nFDV: $2.31T\nCirculating: 20.00M\n\nSENTIMENT\n\nBullish votes: 65.0%\n\nWatchlist users: 10,000\n\nABOUT\n\nRecorded asset description.\n\nLast updated: 10/6/2026, 12:00:00 AM\n\nData provided by CoinGecko\n\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": [],
+      "closedHits": [
+        "Permission",
+        "Bullish",
+        "permission",
+        "Golden Egg",
+        "unavailable",
+        "Unknown",
+        "Unavailable",
+        "risk_on",
+        "N/A"
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCrypto Deep-Dive\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nCrypto asset explorer\nPermission Not aligned\nBias Bullish\nCrypto Asset Explorer\n\nDecision-grade asset view: status, permission, context, then details.\n\nOpen Markets\nOpen Scanner\nOpen Golden Egg\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n\nCRYPTO REVIEW GATE\n\nFeed time unavailable\nRefresh evidence\nMarket: Fresh\nTrending: Fresh\nFunding: Unknown\nOI: Unknown\n🟡\nREVIEW: CONDITIONAL\nConfluence Score: Unavailable\nRisk Context: Data unavailable — refresh to reassess\nLong Evidence: Limited\nShort Evidence: Limited\n\nENVIRONMENT BREAKDOWN (5 INPUTS)\n\nCrypto Risk State\n\nUnavailable\n\nLeadership\n\nUnavailable\n\nLiquidity\n\nUnavailable\n\nMarket Vol Regime\n\nExpansion\n\nBreadth\n\nUnavailable (Unavailable)\n\nHard Blocks: Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable\nBreadth (CoinGecko trending coins and prices): unavailable. Feed last updated 12:00 AM.\nFunding (OKX funding rates): unavailable. No response from the feed.\nComparable open-interest change (CoinGecko derivatives, top 3 venues): unavailable. No response from the feed.\nBTC\nETH\nSOL\nXRP\nDOGE\nADA\nAVAX\nLINK\nAsset · BTC • #1\nPrice · $110,000.00\n24h · +1.80%\nBias · Bullish\nStructure score · 75/100\nBTC 24h range · Normal\nLiquidity · Thin\nCrypto risk state · Unavailable\nGlobal regime (cross-asset) · risk_on\nMicro · neutral\nRisk · Elevated\nPermission · Not aligned\nCRCS · 62.5\nΔHr · +1.23\n\nZone 2 · Action\n\nPrice + Permission Console\nRefresh\nBitcoin (BTC)\n+1.80%\nCandles\nSparkline\n$110500\n$107625\n$104750\n$101875\n$99000\n\nINDICATOR STATUS\n\nNot aligned\n\nStructure score 75/100\n\nCondition stack does not meet criteria. Monitor, do not force setup.\n\nAdd to Watchlist\nCreate Alert\nOpen Symbol\nOpen Journal Draft\n\nZone 2 · Context\n\nTrend / RS / Liquidity Context\n\nSTRUCTURE BIAS\n\nBullish\n\nWeekly 4.50% • Monthly 8.20%\n\nRELATIVE STRENGTH VS BTC (7D)\n\n+0.00%\n\nVOLATILITY + LIQUIDITY\n\nVolatility (BTC 24h range): Normal\n\nLiquidity: Thin\n\n24h Vol $30.00B • MCap $2.20T\n\nZone 3 • Informational\nCollapse\n\nPERFORMANCE\n\n24h\n+1.80%\n7d\n+4.50%\n14d\nN/A\n30d\n+8.20%\n60d\nN/A\n1y\nN/A\n\nATH / ATL\n\nATH: $125,000.00 (-12.00%)\nATL: $67.00 (1000.00%)\nFDV: $2.31T\nCirculating: 20.00M\n\nSENTIMENT\n\nBullish votes: 65.0%\n\nWatchlist users: 10,000\n\nABOUT\n\nRecorded asset description.\n\nLast updated: 10/6/2026, 12:00:00 AM\n\nData provided by CoinGecko\n\n✕\nMSP AI",
+      "hits": [
+        "Permission",
+        "Bullish",
+        "permission",
+        "Golden Egg",
+        "unavailable",
+        "Unknown",
+        "Unavailable",
+        "risk_on",
+        "N/A"
+      ],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Markets command header 6/11 green Top: Communications $2.50T BTC 57.2% · ETH 13.4% AAPL +5.00% (equity) Crypto Deep-Dive Pick one lens, then drop into Scanner or Symbol Crypto Explorer command header Market-wide: 24h move in total crypto market cap (not a single coin's range) Feed status Search cryptocurrency Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable Minimize MSP AI",
+      "attributeHits": [
+        "unavailable"
+      ],
+      "expandedSourceCount": 0
+    },
+    {
+      "tab": "crypto-command",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:58:34.878Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 2067,
+      "scrollWidth": 1280,
+      "screens": 2.58375,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCrypto Command\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nCrypto command\nVerdict Mixed\nRisk Unavailable\nVol Expansion\nData incomplete\nCrypto Command Center.\n\nPermission, leadership, liquidity, volatility, and breadth across crypto. Drop into Scanner or Derivatives once the gate is clear.\n\nRefresh evidence\nOpen Scanner\nOpen Crypto Derivatives\nOpen Macro Lens\nVerdict\nMixed\nConfluence Unavailable\nBreadth\nUnavailable\nScore Unavailable\nDominance\n57.2% BTC\n$2.50T\nNext check\nOverview\nAwaiting first refresh\nRegime · Unavailable\nRisk · Unavailable\nDominance · 57.2% BTC\nMkt Cap · $2.50T\n24h · +1.23%\nData · CoinGecko Live\nLast Refresh · —\n\nCRYPTO ANALYSIS GATE\n\nREVIEW: Mixed\nAdaptive Confluence: Unavailable\nRisk Context: Data unavailable — refresh to reassess\nLong Evidence: Limited\nShort Evidence: Limited\n\nBreadth unavailable; Funding unavailable; Comparable open-interest change unavailable. Shown from spot market data only: volatility.\n\nENVIRONMENT BREAKDOWN (5 INPUTS)\n\nRisk State\n\nUnavailable\n\nLeadership\n\nUnavailable\n\nLiquidity\n\nUnavailable\n\nVolatility Regime\n\nExpansion\n\nBreadth\n\nUnavailable (Unavailable)\n\nHard Blocks: Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable\nBreadth (CoinGecko trending coins and prices): unavailable. Feed last updated 12:00 AM.\nFunding (OKX funding rates): unavailable. No response from the feed.\nComparable open-interest change (CoinGecko derivatives, top 3 venues): unavailable. No response from the feed.\n\nZONE 2 • ACTION\n\nCrypto Command Console\nOpen Scanner\nOVR Overview\nMarket cap, dominance & global metrics\nALSO IN MARKETS\nSRC Coin Search\nFind any cryptocurrency\nMAP Market Heatmap\nVisual market performance\nALSO IN MARKETS\nTRD Trending\nHot coins & searches\nMOV Top Movers\nBiggest gainers & losers\nALSO IN MARKETS\nSEC Sectors\nCategory performance\nALSO IN MARKETS\nDFI DeFi\nDecentralized finance stats\nDEX DEX Pools\nHot trading pairs\nNEW New Pools\nJust created liquidity\nLST New Coins\nNewly listed tokens\nOVR\nOverview\n• Market cap, dominance & global metrics\n📈 Market Overview\nFresh\nCoinGecko • 12:00 AM\n↗ 1.23%\nTotal Crypto Market Cap\n$2.50T\n30 Day Chart\n24h Volume\n$75.00B\nMarket Dominance\nBTC57.2%\nETH13.4%\n\nZONE 2 • CONTEXT\n\nContext / Rotation / Routing\n\nMARKET SNAPSHOT\n\nCap: $2.50T\n\n24h: 1.23%\n\nReview: Data unavailable — refresh to reassess\n\nTRENDING LEADERSHIP\n\nDerivatives\nFull Heatmap\nExplorer\nCreate Alert\n\nTOP MOVERS BY CHANGE — RESEARCH CONTEXT\n\nZone 3 • Audit / Log\nCollapse\nTriggered Alerts\nRegime Flips\nScanner Hits\nNo-Trade Reasons\nData Gaps\n00:58\nBTC market update\n\nTop trending coin: BTC. Monitor for momentum shifts.\n\nZone 4 • Capabilities / Plan / Help\nExpand\n\nData provided by CoinGecko\n\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": [],
+      "closedHits": [
+        "Unavailable",
+        "Command Center",
+        "Permission",
+        "unavailable",
+        "Monitor for"
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCrypto Command\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nCrypto command\nVerdict Mixed\nRisk Unavailable\nVol Expansion\nData incomplete\nCrypto Command Center.\n\nPermission, leadership, liquidity, volatility, and breadth across crypto. Drop into Scanner or Derivatives once the gate is clear.\n\nRefresh evidence\nOpen Scanner\nOpen Crypto Derivatives\nOpen Macro Lens\nVerdict\nMixed\nConfluence Unavailable\nBreadth\nUnavailable\nScore Unavailable\nDominance\n57.2% BTC\n$2.50T\nNext check\nOverview\nAwaiting first refresh\nRegime · Unavailable\nRisk · Unavailable\nDominance · 57.2% BTC\nMkt Cap · $2.50T\n24h · +1.23%\nData · CoinGecko Live\nLast Refresh · —\n\nCRYPTO ANALYSIS GATE\n\nREVIEW: Mixed\nAdaptive Confluence: Unavailable\nRisk Context: Data unavailable — refresh to reassess\nLong Evidence: Limited\nShort Evidence: Limited\n\nBreadth unavailable; Funding unavailable; Comparable open-interest change unavailable. Shown from spot market data only: volatility.\n\nENVIRONMENT BREAKDOWN (5 INPUTS)\n\nRisk State\n\nUnavailable\n\nLeadership\n\nUnavailable\n\nLiquidity\n\nUnavailable\n\nVolatility Regime\n\nExpansion\n\nBreadth\n\nUnavailable (Unavailable)\n\nHard Blocks: Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable\nBreadth (CoinGecko trending coins and prices): unavailable. Feed last updated 12:00 AM.\nFunding (OKX funding rates): unavailable. No response from the feed.\nComparable open-interest change (CoinGecko derivatives, top 3 venues): unavailable. No response from the feed.\n\nZONE 2 • ACTION\n\nCrypto Command Console\nOpen Scanner\nOVR Overview\nMarket cap, dominance & global metrics\nALSO IN MARKETS\nSRC Coin Search\nFind any cryptocurrency\nMAP Market Heatmap\nVisual market performance\nALSO IN MARKETS\nTRD Trending\nHot coins & searches\nMOV Top Movers\nBiggest gainers & losers\nALSO IN MARKETS\nSEC Sectors\nCategory performance\nALSO IN MARKETS\nDFI DeFi\nDecentralized finance stats\nDEX DEX Pools\nHot trading pairs\nNEW New Pools\nJust created liquidity\nLST New Coins\nNewly listed tokens\nOVR\nOverview\n• Market cap, dominance & global metrics\n📈 Market Overview\nFresh\nCoinGecko • 12:00 AM\n↗ 1.23%\nTotal Crypto Market Cap\n$2.50T\n30 Day Chart\n24h Volume\n$75.00B\nMarket Dominance\nBTC57.2%\nETH13.4%\n\nZONE 2 • CONTEXT\n\nContext / Rotation / Routing\n\nMARKET SNAPSHOT\n\nCap: $2.50T\n\n24h: 1.23%\n\nReview: Data unavailable — refresh to reassess\n\nTRENDING LEADERSHIP\n\nDerivatives\nFull Heatmap\nExplorer\nCreate Alert\n\nTOP MOVERS BY CHANGE — RESEARCH CONTEXT\n\nZone 3 • Audit / Log\nCollapse\nTriggered Alerts\nRegime Flips\nScanner Hits\nNo-Trade Reasons\nData Gaps\n00:58\nBTC market update\n\nTop trending coin: BTC. Monitor for momentum shifts.\n\nZone 4 • Capabilities / Plan / Help\nCollapse\n\nCAPABILITIES\n\nLive CoinGecko intelligence, heatmaps, movers, categories, DeFi, DEX, listings, and search are available.\n\nPLAN LIMITS\n\nCrypto Command Center remains tier-gated and follows your active subscription entitlement policy.\n\nHELP\n\nUse Zone 1 for state, Zone 2 for execution context, Zone 3 for receipts, and Zone 4 only when needed.\n\nData provided by CoinGecko\n\n✕\nMSP AI",
+      "hits": [
+        "Unavailable",
+        "Command Center",
+        "Permission",
+        "unavailable",
+        "Monitor for"
+      ],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Markets command header 6/11 green Top: Communications $2.50T BTC 57.2% · ETH 13.4% AAPL +5.00% (equity) Crypto Command Pick one lens, then drop into Scanner or Symbol Crypto Command Center command header Mixed Confluence Unavailable Unavailable Score Unavailable 57.2% BTC $2.50T Overview Awaiting first refresh Feed status Minimize MSP AI",
+      "attributeHits": [
+        "Command Center",
+        "Unavailable"
+      ],
+      "expandedSourceCount": 0
+    },
+    {
+      "tab": "crypto-command",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:58:36.968Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 3912,
+      "scrollWidth": 390,
+      "screens": 4.6350710900473935,
+      "text": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCrypto Command\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nCrypto command\nVerdict Mixed\nRisk Unavailable\nVol Expansion\nData incomplete\nCrypto Command Center.\n\nPermission, leadership, liquidity, volatility, and breadth across crypto. Drop into Scanner or Derivatives once the gate is clear.\n\nRefresh evidence\nOpen Scanner\nOpen Crypto Derivatives\nOpen Macro Lens\nVerdict\nMixed\nConfluence Unavailable\nBreadth\nUnavailable\nScore Unavailable\nDominance\n57.2% BTC\n$2.50T\nNext check\nOverview\nAwaiting first refresh\nRegime · Unavailable\nRisk · Unavailable\nDominance · 57.2% BTC\nMkt Cap · $2.50T\n24h · +1.23%\nData · CoinGecko Live\nLast Refresh · —\n\nCRYPTO ANALYSIS GATE\n\nREVIEW: Mixed\nAdaptive Confluence: Unavailable\nRisk Context: Data unavailable — refresh to reassess\nLong Evidence: Limited\nShort Evidence: Limited\n\nBreadth unavailable; Funding unavailable; Comparable open-interest change unavailable. Shown from spot market data only: volatility.\n\nENVIRONMENT BREAKDOWN (5 INPUTS)\n\nRisk State\n\nUnavailable\n\nLeadership\n\nUnavailable\n\nLiquidity\n\nUnavailable\n\nVolatility Regime\n\nExpansion\n\nBreadth\n\nUnavailable (Unavailable)\n\nHard Blocks: Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable\nBreadth (CoinGecko trending coins and prices): unavailable. Feed last updated 12:00 AM.\nFunding (OKX funding rates): unavailable. No response from the feed.\nComparable open-interest change (CoinGecko derivatives, top 3 venues): unavailable. No response from the feed.\n\nZONE 2 • ACTION\n\nCrypto Command Console\nOpen Scanner\nOVR Overview\nMarket cap, dominance & global metrics\nALSO IN MARKETS\nSRC Coin Search\nFind any cryptocurrency\nMAP Market Heatmap\nVisual market performance\nALSO IN MARKETS\nTRD Trending\nHot coins & searches\nMOV Top Movers\nBiggest gainers & losers\nALSO IN MARKETS\nSEC Sectors\nCategory performance\nALSO IN MARKETS\nDFI DeFi\nDecentralized finance stats\nDEX DEX Pools\nHot trading pairs\nNEW New Pools\nJust created liquidity\nLST New Coins\nNewly listed tokens\nOVR\nOverview\n• Market cap, dominance & global metrics\n📈 Market Overview\nFresh\nCoinGecko • 12:00 AM\n↗ 1.23%\nTotal Crypto Market Cap\n$2.50T\n30 Day Chart\n24h Volume\n$75.00B\nMarket Dominance\nBTC57.2%\nETH13.4%\n\nZONE 2 • CONTEXT\n\nContext / Rotation / Routing\n\nMARKET SNAPSHOT\n\nCap: $2.50T\n\n24h: 1.23%\n\nReview: Data unavailable — refresh to reassess\n\nTRENDING LEADERSHIP\n\nDerivatives\nFull Heatmap\nExplorer\nCreate Alert\n\nTOP MOVERS BY CHANGE — RESEARCH CONTEXT\n\nZone 3 • Audit / Log\nCollapse\nTriggered Alerts\nRegime Flips\nScanner Hits\nNo-Trade Reasons\nData Gaps\n00:58\nBTC market update\n\nTop trending coin: BTC. Monitor for momentum shifts.\n\nZone 4 • Capabilities / Plan / Help\nExpand\n\nData provided by CoinGecko\n\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": [],
+      "closedHits": [
+        "Unavailable",
+        "Command Center",
+        "Permission",
+        "unavailable",
+        "Monitor for"
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCrypto Command\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nCrypto command\nVerdict Mixed\nRisk Unavailable\nVol Expansion\nData incomplete\nCrypto Command Center.\n\nPermission, leadership, liquidity, volatility, and breadth across crypto. Drop into Scanner or Derivatives once the gate is clear.\n\nRefresh evidence\nOpen Scanner\nOpen Crypto Derivatives\nOpen Macro Lens\nVerdict\nMixed\nConfluence Unavailable\nBreadth\nUnavailable\nScore Unavailable\nDominance\n57.2% BTC\n$2.50T\nNext check\nOverview\nAwaiting first refresh\nRegime · Unavailable\nRisk · Unavailable\nDominance · 57.2% BTC\nMkt Cap · $2.50T\n24h · +1.23%\nData · CoinGecko Live\nLast Refresh · —\n\nCRYPTO ANALYSIS GATE\n\nREVIEW: Mixed\nAdaptive Confluence: Unavailable\nRisk Context: Data unavailable — refresh to reassess\nLong Evidence: Limited\nShort Evidence: Limited\n\nBreadth unavailable; Funding unavailable; Comparable open-interest change unavailable. Shown from spot market data only: volatility.\n\nENVIRONMENT BREAKDOWN (5 INPUTS)\n\nRisk State\n\nUnavailable\n\nLeadership\n\nUnavailable\n\nLiquidity\n\nUnavailable\n\nVolatility Regime\n\nExpansion\n\nBreadth\n\nUnavailable (Unavailable)\n\nHard Blocks: Breadth unavailable • Funding unavailable • Comparable open-interest change unavailable\nBreadth (CoinGecko trending coins and prices): unavailable. Feed last updated 12:00 AM.\nFunding (OKX funding rates): unavailable. No response from the feed.\nComparable open-interest change (CoinGecko derivatives, top 3 venues): unavailable. No response from the feed.\n\nZONE 2 • ACTION\n\nCrypto Command Console\nOpen Scanner\nOVR Overview\nMarket cap, dominance & global metrics\nALSO IN MARKETS\nSRC Coin Search\nFind any cryptocurrency\nMAP Market Heatmap\nVisual market performance\nALSO IN MARKETS\nTRD Trending\nHot coins & searches\nMOV Top Movers\nBiggest gainers & losers\nALSO IN MARKETS\nSEC Sectors\nCategory performance\nALSO IN MARKETS\nDFI DeFi\nDecentralized finance stats\nDEX DEX Pools\nHot trading pairs\nNEW New Pools\nJust created liquidity\nLST New Coins\nNewly listed tokens\nOVR\nOverview\n• Market cap, dominance & global metrics\n📈 Market Overview\nFresh\nCoinGecko • 12:00 AM\n↗ 1.23%\nTotal Crypto Market Cap\n$2.50T\n30 Day Chart\n24h Volume\n$75.00B\nMarket Dominance\nBTC57.2%\nETH13.4%\n\nZONE 2 • CONTEXT\n\nContext / Rotation / Routing\n\nMARKET SNAPSHOT\n\nCap: $2.50T\n\n24h: 1.23%\n\nReview: Data unavailable — refresh to reassess\n\nTRENDING LEADERSHIP\n\nDerivatives\nFull Heatmap\nExplorer\nCreate Alert\n\nTOP MOVERS BY CHANGE — RESEARCH CONTEXT\n\nZone 3 • Audit / Log\nCollapse\nTriggered Alerts\nRegime Flips\nScanner Hits\nNo-Trade Reasons\nData Gaps\n00:58\nBTC market update\n\nTop trending coin: BTC. Monitor for momentum shifts.\n\nZone 4 • Capabilities / Plan / Help\nCollapse\n\nCAPABILITIES\n\nLive CoinGecko intelligence, heatmaps, movers, categories, DeFi, DEX, listings, and search are available.\n\nPLAN LIMITS\n\nCrypto Command Center remains tier-gated and follows your active subscription entitlement policy.\n\nHELP\n\nUse Zone 1 for state, Zone 2 for execution context, Zone 3 for receipts, and Zone 4 only when needed.\n\nData provided by CoinGecko\n\n✕\nMSP AI",
+      "hits": [
+        "Unavailable",
+        "Command Center",
+        "Permission",
+        "unavailable",
+        "Monitor for"
+      ],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Markets command header 6/11 green Top: Communications $2.50T BTC 57.2% · ETH 13.4% AAPL +5.00% (equity) Crypto Command Pick one lens, then drop into Scanner or Symbol Crypto Command Center command header Mixed Confluence Unavailable Unavailable Score Unavailable 57.2% BTC $2.50T Overview Awaiting first refresh Feed status Minimize MSP AI",
+      "attributeHits": [
+        "Command Center",
+        "Unavailable"
+      ],
+      "expandedSourceCount": 0
+    },
+    {
+      "tab": "crypto-intel",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:58:39.293Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 2055,
+      "scrollWidth": 1280,
+      "screens": 2.56875,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCrypto Intel\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\n📰\nCrypto Intel\n\nLive news, guides, and institutional treasury holdings for crypto markets.\n\nZONE 2 • NEWS & GUIDES\n\n📰\nCrypto News & Guides\nAll\nNews\nGuides\n\nRecorded crypto market headline 1\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 2\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 3\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 4\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 5\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 6\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 7\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 8\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 9\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 10\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 11\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 12\n\nFixture publication\n· 58m ago\n\nData provided by CoinGecko · News\n\nZone 3 • Institutional Treasury Holdings\nCollapse\n\nTREASURY\n\nInstitutional Holdings\n\nPublic companies & governments holding crypto\n\nBTC\nETH\n\nTOTAL HOLDINGS\n\n12,345\n\nBTC\n\nTOTAL VALUE\n\n$1.23B\n\nUSD\n\nENTITIES\n\n6\n\nCompanies\n\nSUPPLY HELD\n\n1.20%\n\nOf Total Supply\n\nSort:\nValue\nHoldings\nValue vs cost $\nValue vs cost %\nEntity\tHoldings\tValue\tValue vs cost\t% Supply\n\nUS\n\nRecorded treasury 1\n\nR0\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 2\n\nR1\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 3\n\nR2\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 4\n\nR3\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 5\n\nR4\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 6\n\nR5\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\nPrevious\nPage 1 of 1 · 6 entities\nNext\n\nObservation date unavailable. Reported holdings and valuations may lag the market. Value vs cost compares provider totals; it excludes realised gains and sales proceeds.\n\nData provided by CoinGecko · Public Treasury\n\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": [],
+      "closedHits": [
+        "Unavailable",
+        "unavailable"
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCrypto Intel\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\n📰\nCrypto Intel\n\nLive news, guides, and institutional treasury holdings for crypto markets.\n\nZONE 2 • NEWS & GUIDES\n\n📰\nCrypto News & Guides\nAll\nNews\nGuides\n\nRecorded crypto market headline 1\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 2\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 3\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 4\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 5\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 6\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 7\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 8\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 9\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 10\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 11\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 12\n\nFixture publication\n· 58m ago\n\nData provided by CoinGecko · News\n\nZone 3 • Institutional Treasury Holdings\nCollapse\n\nTREASURY\n\nInstitutional Holdings\n\nPublic companies & governments holding crypto\n\nBTC\nETH\n\nTOTAL HOLDINGS\n\n12,345\n\nBTC\n\nTOTAL VALUE\n\n$1.23B\n\nUSD\n\nENTITIES\n\n6\n\nCompanies\n\nSUPPLY HELD\n\n1.20%\n\nOf Total Supply\n\nSort:\nValue\nHoldings\nValue vs cost $\nValue vs cost %\nEntity\tHoldings\tValue\tValue vs cost\t% Supply\n\nUS\n\nRecorded treasury 1\n\nR0\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 2\n\nR1\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 3\n\nR2\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 4\n\nR3\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 5\n\nR4\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 6\n\nR5\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\nPrevious\nPage 1 of 1 · 6 entities\nNext\n\nObservation date unavailable. Reported holdings and valuations may lag the market. Value vs cost compares provider totals; it excludes realised gains and sales proceeds.\n\nData provided by CoinGecko · Public Treasury\n\n✕\nMSP AI",
+      "hits": [
+        "Unavailable",
+        "unavailable"
+      ],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Markets command header 6/11 green Top: Communications $2.50T BTC 57.2% · ETH 13.4% AAPL +5.00% (equity) Crypto Intel Pick one lens, then drop into Scanner or Symbol Treasury pages Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 0
+    },
+    {
+      "tab": "crypto-intel",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:58:41.485Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 2860,
+      "scrollWidth": 390,
+      "screens": 3.3886255924170614,
+      "text": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCrypto Intel\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\n📰\nCrypto Intel\n\nLive news, guides, and institutional treasury holdings for crypto markets.\n\nZONE 2 • NEWS & GUIDES\n\n📰\nCrypto News & Guides\nAll\nNews\nGuides\n\nRecorded crypto market headline 1\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 2\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 3\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 4\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 5\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 6\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 7\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 8\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 9\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 10\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 11\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 12\n\nFixture publication\n· 58m ago\n\nData provided by CoinGecko · News\n\nZone 3 • Institutional Treasury Holdings\nCollapse\n\nTREASURY\n\nInstitutional Holdings\n\nPublic companies & governments holding crypto\n\nBTC\nETH\n\nTOTAL HOLDINGS\n\n12,345\n\nBTC\n\nTOTAL VALUE\n\n$1.23B\n\nUSD\n\nENTITIES\n\n6\n\nCompanies\n\nSUPPLY HELD\n\n1.20%\n\nOf Total Supply\n\nSort:\nValue\nHoldings\nValue vs cost $\nValue vs cost %\nEntity\tHoldings\tValue\tValue vs cost\t% Supply\n\nUS\n\nRecorded treasury 1\n\nR0\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 2\n\nR1\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 3\n\nR2\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 4\n\nR3\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 5\n\nR4\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 6\n\nR5\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\nPrevious\nPage 1 of 1 · 6 entities\nNext\n\nObservation date unavailable. Reported holdings and valuations may lag the market. Value vs cost compares provider totals; it excludes realised gains and sales proceeds.\n\nData provided by CoinGecko · Public Treasury\n\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": [],
+      "closedHits": [
+        "Unavailable",
+        "unavailable"
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime Risk-On\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Symbol\nOpen Macro Lens\nSectors leading\n6/11 green\nTop: Communications\nCrypto cap\n$2.50T\nBTC 57.2% · ETH 13.4%\nTop gainer\nAAPL\n+5.00% (equity)\nNext check\nCrypto Intel\nPick one lens, then drop into Scanner or Symbol\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\n📰\nCrypto Intel\n\nLive news, guides, and institutional treasury holdings for crypto markets.\n\nZONE 2 • NEWS & GUIDES\n\n📰\nCrypto News & Guides\nAll\nNews\nGuides\n\nRecorded crypto market headline 1\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 2\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 3\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 4\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 5\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 6\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 7\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 8\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 9\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 10\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 11\n\nFixture publication\n· 58m ago\n\nRecorded crypto market headline 12\n\nFixture publication\n· 58m ago\n\nData provided by CoinGecko · News\n\nZone 3 • Institutional Treasury Holdings\nCollapse\n\nTREASURY\n\nInstitutional Holdings\n\nPublic companies & governments holding crypto\n\nBTC\nETH\n\nTOTAL HOLDINGS\n\n12,345\n\nBTC\n\nTOTAL VALUE\n\n$1.23B\n\nUSD\n\nENTITIES\n\n6\n\nCompanies\n\nSUPPLY HELD\n\n1.20%\n\nOf Total Supply\n\nSort:\nValue\nHoldings\nValue vs cost $\nValue vs cost %\nEntity\tHoldings\tValue\tValue vs cost\t% Supply\n\nUS\n\nRecorded treasury 1\n\nR0\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 2\n\nR1\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 3\n\nR2\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 4\n\nR3\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 5\n\nR4\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\n\nUS\n\nRecorded treasury 6\n\nR5\n\n\t1,000\t$100.0M\t\n\nUnavailable\n\nCost basis not supplied\n\n\t0.005%\nPrevious\nPage 1 of 1 · 6 entities\nNext\n\nObservation date unavailable. Reported holdings and valuations may lag the market. Value vs cost compares provider totals; it excludes realised gains and sales proceeds.\n\nData provided by CoinGecko · Public Treasury\n\n✕\nMSP AI",
+      "hits": [
+        "Unavailable",
+        "unavailable"
+      ],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Markets command header 6/11 green Top: Communications $2.50T BTC 57.2% · ETH 13.4% AAPL +5.00% (equity) Crypto Intel Pick one lens, then drop into Scanner or Symbol Treasury pages Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 0
+    }
+  ],
+  "requests": [
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/heatmap",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/categories",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-movers",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/heatmap",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/categories",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-movers",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/heatmap",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/categories",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-movers",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/etf-profile",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/heatmap",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/categories",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-movers",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/etf-profile",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/heatmap",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/categories",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-movers",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/heatmap",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/categories",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-movers",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/heatmap",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/categories",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-movers",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/heatmap",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/categories",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-movers",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/heatmap",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/categories",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-movers",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/equity/detail",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/upe/crcs/symbol",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/upe/snapshot/global",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/heatmap",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/categories",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-movers",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/equity/detail",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/upe/crcs/symbol",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/upe/snapshot/global",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/heatmap",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/categories",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-movers",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/trending",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/funding-rates",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/open-interest",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/heatmap",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/categories",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-movers",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/trending",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/funding-rates",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/open-interest",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/heatmap",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/categories",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-movers",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/trending",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/funding-rates",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/open-interest",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/detail",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/upe/crcs/symbol",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/upe/snapshot/global",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/heatmap",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/categories",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-movers",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/trending",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/funding-rates",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/open-interest",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/detail",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/upe/crcs/symbol",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/upe/snapshot/global",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/heatmap",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/categories",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-movers",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/trending",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/funding-rates",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/open-interest",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/heatmap",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/categories",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-movers",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/trending",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/funding-rates",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/open-interest",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/heatmap",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/categories",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-movers",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/news-sentiment",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/cg-news",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/public-treasury",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/sectors/heatmap",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/market-overview",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/categories",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-movers",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/news-sentiment",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/cg-news",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/crypto/public-treasury",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    }
+  ],
+  "errors": [],
+  "redirects": []
+}

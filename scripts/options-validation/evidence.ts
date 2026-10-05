@@ -7,6 +7,17 @@ export function observedInteger(value:unknown):number|null {
  if(value==null||value===''||typeof value==='boolean')return null;
  const n=Number(value);return Number.isInteger(n)&&n>=0?n:null;
 }
+/**
+ * Live quote acceptance. A quoted chain (`quoteBasis: realtime`) dated the New York market day passes.
+ * REALTIME_OPTIONS_FMV also passes when the same date is present and the chain is marks-only: fair-value
+ * marks often have no two-sided bid/ask, and that is still the entitled live chain. HISTORICAL_OPTIONS
+ * (`previous_session`) never passes. Missing open interest is not filled in here.
+ */
+export function liveQuoteBasisAccepted(chain:{provider?:string|null;quoteBasis?:string|null;asOfDate?:string|null}|null|undefined,marketDate:string):boolean {
+ if(!chain||chain.asOfDate!==marketDate)return false;
+ if(chain.quoteBasis==='realtime')return chain.provider==='REALTIME_OPTIONS_FMV'||chain.provider==='REALTIME_OPTIONS';
+ return chain.provider==='REALTIME_OPTIONS_FMV'&&chain.quoteBasis==='marks_only';
+}
 export function compareOi(rows:any[],expiry:string|null,reference:any,providerDate:string|null,now:string):Check[] {
  const checks:Check[]=[];
  for(const [strike,type] of [[330,'call'],[325,'put']] as const){
