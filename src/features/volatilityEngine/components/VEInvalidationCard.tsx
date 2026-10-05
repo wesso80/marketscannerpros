@@ -1,17 +1,18 @@
 'use client';
+import { volatilityText } from '../displayText';
 
 import type { DVEInvalidation } from '@/src/features/volatilityEngine/types';
 
 export default function VEInvalidationCard({ inv }: { inv: DVEInvalidation }) {
   const hasLevels = [inv.priceInvalidation, inv.phaseInvalidation, inv.smoothedPhaseInvalidation].some(v => v != null && Number.isFinite(v));
   const statusColor = !hasLevels ? 'var(--msp-text-muted)' : inv.invalidated ? 'var(--msp-bear)' : 'var(--msp-bull)';
-  const statusText = !hasLevels ? 'UNAVAILABLE' : inv.invalidated ? 'INVALIDATED' : 'VALID';
+  const statusText = !hasLevels ? 'Not collected' : inv.invalidated ? 'Invalidated' : 'Valid';
 
   return (
     <div className={`rounded-xl border p-5 ${inv.invalidated ? 'border-red-500/30 bg-red-500/5' : 'border-white/10 bg-white/5'}`}>
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-amber-400">
+          <h3 className="text-xs font-semibold tracking-widest text-amber-400">
             Invalidation Levels
           </h3>
         </div>
@@ -41,14 +42,14 @@ export default function VEInvalidationCard({ inv }: { inv: DVEInvalidation }) {
         )}
         <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2">
           <span className="text-white/50">Mode</span>
-          <span className="font-bold uppercase text-white/80">{inv.invalidationMode}</span>
+          <span className="font-bold text-white/80">{inv.invalidationMode}</span>
         </div>
       </div>
 
       {inv.ruleSet.length > 0 && (
         <div className="mt-3 space-y-0.5 border-t border-white/10 pt-2">
           {inv.ruleSet.map((r, i) => (
-            <p key={i} className="text-[11px] text-white/40">• {r}</p>
+            <p key={i} className="text-[11px] text-white/40">• {volatilityText(r)}</p>
           ))}
         </div>
       )}

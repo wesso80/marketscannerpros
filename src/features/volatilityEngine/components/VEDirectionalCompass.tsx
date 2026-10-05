@@ -1,4 +1,5 @@
 'use client';
+import { volatilityText } from '../displayText';
 
 import type { DirectionalPressure } from '@/src/features/volatilityEngine/types';
 
@@ -53,7 +54,7 @@ export default function VEDirectionalCompass({ dir, missingInputs = [] }: { dir:
     <div className="rounded-xl border border-white/10 bg-white/5 p-5">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-amber-400">
+          <h3 className="text-xs font-semibold tracking-widest text-amber-400">
             Directional Bias
           </h3>
         </div>
@@ -63,9 +64,9 @@ export default function VEDirectionalCompass({ dir, missingInputs = [] }: { dir:
       {/* ── Compass Pressure Bar ── */}
       <div className="mb-5 rounded-lg border border-white/10 bg-white/[0.03] p-4">
         <div className="mb-2 flex items-center justify-between text-[11px] text-white/50">
-          <span className="text-red-400 font-semibold">← Bearish</span>
+          <span className="text-red-400 font-semibold">← Downward</span>
           <span className="text-slate-400">Neutral</span>
-          <span className="text-emerald-400 font-semibold">Bullish →</span>
+          <span className="text-emerald-400 font-semibold">Upward →</span>
         </div>
         {/* Track */}
         <div className="relative h-3 rounded-full bg-slate-800/80">
@@ -88,8 +89,8 @@ export default function VEDirectionalCompass({ dir, missingInputs = [] }: { dir:
             {dir.score > 0 ? '+' : ''}{dir.score.toFixed(0)}
           </span>
           <div className="text-left">
-            <span className="text-sm font-bold uppercase" style={{ color }}>
-              {dir.bias}
+            <span className="text-sm font-bold" style={{ color }}>
+              {volatilityText(dir.bias)}
             </span>
             <div className="text-[11px] text-white/40">
               Confluence: {confLabel}
@@ -111,7 +112,7 @@ export default function VEDirectionalCompass({ dir, missingInputs = [] }: { dir:
               <div className="flex items-center justify-between text-[11px]">
                 <span className={isNA ? 'text-white/25' : 'text-white/60'}>{LABELS[key] || key}</span>
                 {isNA ? (
-                  <span className="text-[11px] text-white/20">N/A</span>
+                  <span className="text-[11px] text-white/20">Not collected</span>
                 ) : (
                   <span className="font-semibold" style={{ color: barColor }}>
                     {value > 0 ? '+' : ''}{value.toFixed(0)}/{max}
@@ -134,7 +135,7 @@ export default function VEDirectionalCompass({ dir, missingInputs = [] }: { dir:
       {dir.componentDetails.length > 0 && (
         <div className="mt-3 space-y-0.5 border-t border-white/10 pt-2">
           {dir.componentDetails.slice(0, 3).map((d, i) => (
-            <p key={i} className="text-[11px] text-white/40">{d}</p>
+            <p key={i} className="text-[11px] text-white/40">{volatilityText(d)}</p>
           ))}
         </div>
       )}

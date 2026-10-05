@@ -1,4 +1,5 @@
 'use client';
+import { volatilityText } from '../displayText';
 
 import type { BreakoutReadiness } from '@/src/features/volatilityEngine/types';
 
@@ -9,8 +10,8 @@ function scoreColor(score: number): string {
 }
 
 const BARS: { key: keyof BreakoutReadiness['components']; label: string; max: number; color: string }[] = [
-  { key: 'volCompression', label: 'Vol Compression', max: 40, color: 'var(--msp-info)' },
-  { key: 'timeAlignment', label: 'Time Alignment', max: 30, color: '#8B5CF6' },
+  { key: 'volCompression', label: 'Vol Compression', max: 40, color: 'var(--msp-text-muted)' },
+  { key: 'timeAlignment', label: 'Time Alignment', max: 30, color: '#94A3B8' },
   { key: 'gammaWall', label: 'Gamma Wall', max: 20, color: 'var(--msp-warn)' },
   { key: 'adxRising', label: 'ADX Rising', max: 10, color: 'var(--msp-bull)' },
 ];
@@ -35,7 +36,7 @@ export default function VEBreakoutPanel({ breakout, missingInputs = [] }: { brea
     <div className="rounded-xl border border-white/10 bg-white/5 p-5">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-amber-400">
+          <h3 className="text-xs font-semibold tracking-widest text-amber-400">
             Breakout Readiness
           </h3>
         </div>
@@ -45,8 +46,8 @@ export default function VEBreakoutPanel({ breakout, missingInputs = [] }: { brea
             <span className="text-[11px] text-white/30">/100</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="rounded-full px-2 py-0.5 text-[11px] font-bold uppercase" style={{ background: color + '22', color }}>
-              {breakout.label}
+            <span className="rounded-full px-2 py-0.5 text-[11px] font-bold" style={{ background: color + '22', color }}>
+              {volatilityText(breakout.label)}
             </span>
             <span className="mt-0.5 text-[11px] text-white/40">Heuristic score · not a probability</span>
           </div>
@@ -63,7 +64,7 @@ export default function VEBreakoutPanel({ breakout, missingInputs = [] }: { brea
               <div className="flex items-center justify-between text-[11px]">
                 <span className={isNA ? 'text-white/25' : 'text-white/60'}>{label}</span>
                 {isNA ? (
-                  <span className="text-[11px] text-white/20">N/A</span>
+                  <span className="text-[11px] text-white/20">Not collected</span>
                 ) : (
                   <span className="font-semibold text-white/80">{value.toFixed(0)}/{max}</span>
                 )}
@@ -81,7 +82,7 @@ export default function VEBreakoutPanel({ breakout, missingInputs = [] }: { brea
       {breakout.componentDetails.length > 0 && (
         <div className="mt-3 space-y-0.5 border-t border-white/10 pt-2">
           {breakout.componentDetails.slice(0, 3).map((d, i) => (
-            <p key={i} className="text-[11px] text-white/40">{d}</p>
+            <p key={i} className="text-[11px] text-white/40">{volatilityText(d)}</p>
           ))}
         </div>
       )}

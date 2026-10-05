@@ -3,9 +3,9 @@
 import type { PhasePersistence, ZoneDurationStats } from '@/src/features/volatilityEngine/types';
 
 function ageLabel(pct: number): { text: string; color: string } {
-  if (pct >= 80) return { text: 'STRETCHED', color: 'var(--msp-bear)' };
-  if (pct >= 50) return { text: 'MATURE', color: 'var(--msp-warn)' };
-  return { text: 'YOUNG', color: 'var(--msp-bull)' };
+  if (pct >= 80) return { text: 'Stretched', color: 'var(--msp-bear)' };
+  if (pct >= 50) return { text: 'Mature', color: 'var(--msp-warn)' };
+  return { text: 'Young', color: 'var(--msp-bull)' };
 }
 
 function PhaseBlock({ label, active, prob, exitProb, stats }: {
@@ -19,11 +19,11 @@ function PhaseBlock({ label, active, prob, exitProb, stats }: {
   return (
     <div className={`rounded-lg border p-4 ${active ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/10 bg-white/5'}`}>
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-[0.72rem] font-bold uppercase text-white/80">
+        <span className="text-[0.72rem] font-bold text-white/80">
           {label} {active ? '(Active)' : '(Inactive)'}
         </span>
         {active && (
-          <span className="rounded-full px-2 py-0.5 text-[0.65rem] font-bold uppercase" style={{ background: age.color + '22', color: age.color }}>
+          <span className="rounded-full px-2 py-0.5 text-[0.65rem] font-bold" style={{ background: age.color + '22', color: age.color }}>
             {age.text}
           </span>
         )}
@@ -46,12 +46,12 @@ function PhaseBlock({ label, active, prob, exitProb, stats }: {
               <span className="font-semibold text-white/80">{prob.toFixed(0)}%</span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
-              <div className="h-full rounded-full bg-blue-500 transition-all" style={{ width: `${prob}%` }} />
+              <div className="h-full rounded-full bg-slate-500 transition-all" style={{ width: `${prob}%` }} />
             </div>
           </div>
           <div className="space-y-0.5">
             <div className="flex items-center justify-between text-[0.7rem]">
-              <span className="text-white/50">Exit Probability</span>
+              <span className="text-white/50">Exit weight</span>
               <span className="font-semibold text-white/80">{exitProb.toFixed(0)}%</span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
@@ -69,7 +69,7 @@ export default function VEPhasePanel({ phase }: { phase: PhasePersistence }) {
     <div className="rounded-xl border border-white/10 bg-white/5 p-5">
       <div className="mb-4 flex items-center gap-2">
         <span className="rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.62rem] font-bold text-amber-300">PH</span>
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-amber-400">
+        <h3 className="text-xs font-semibold tracking-widest text-amber-400">
           Phase Persistence
         </h3>
       </div>
