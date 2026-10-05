@@ -88,7 +88,7 @@ describe('pages use it and Deep Analysis receives the block reasons', () => {
     expect(src('app/api/deep-analysis/route.ts')).toMatch(/blockReasons: ge\.canonicalVerdict\.blockReasons/);
   });
   it('Golden Egg renders the no-setup headline instead of the score for NONE', () => {
-    const page = src('app/tools/golden-egg/page.tsx');
+    const page = src('app/tools/golden-egg/GoldenEggClient.tsx');
     expect(page).toMatch(/const geNoSetup = noSetupDisplay\(geEngine\)/);
     expect(page).toMatch(/geNoSetup\.headline/);
   });

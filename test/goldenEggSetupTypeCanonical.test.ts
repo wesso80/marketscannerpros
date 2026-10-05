@@ -22,7 +22,7 @@ describe('setupTypeDisplay', () => {
 });
 
 describe('Golden Egg page wiring', () => {
-  const page = readFileSync('app/tools/golden-egg/page.tsx', 'utf8');
+  const page = readFileSync('app/tools/golden-egg/GoldenEggClient.tsx', 'utf8');
   it('Setup Type and the reason line use the canonical setup', () => {
     expect(page).toContain('{setupTypeDisplay(geEngine, ge.layer2.setup.setupType)}');
     expect(page).toContain("setupType: setupTypeDisplay(geEngine, ge?.layer2?.setup?.setupType, { withDirection: false }).toLowerCase()");

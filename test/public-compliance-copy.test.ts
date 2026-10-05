@@ -14,7 +14,7 @@ const PUBLIC_SURFACES = [
   'app/api/execute-trade/route.ts',
   'app/api/trade-proposal/route.ts',
   'app/api/workflow/events/route.ts',
-  'app/tools/golden-egg/page.tsx',
+  'app/tools/golden-egg/GoldenEggClient.tsx',
   'app/tools/scanner/page.tsx',
   'app/tools/market-movers/page.tsx',
   'app/tools/portfolio/layout.tsx',

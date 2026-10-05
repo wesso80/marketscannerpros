@@ -35,7 +35,7 @@ describe('shared market truth components', () => {
   });
 
   it('uses the shared truth, evidence, and risk components on the Golden Egg page', () => {
-    const page = read('app/tools/golden-egg/page.tsx');
+    const page = read('app/tools/golden-egg/GoldenEggClient.tsx');
 
     expect(page).toContain("import EvidenceStack from '@/components/market/EvidenceStack'");
     expect(page).toContain("import MarketStatusStrip from '@/components/market/MarketStatusStrip'");

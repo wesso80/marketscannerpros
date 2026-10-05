@@ -157,7 +157,7 @@ describe('regime consumers (OV-1)', () => {
     const explorer = readFileSync('app/tools/explorer/page.tsx', 'utf8');
     expect(explorer).toContain('Regime unavailable');
     expect(explorer).not.toContain('Live Market Regime Signals');
-    const egg = readFileSync('app/tools/golden-egg/page.tsx', 'utf8');
+    const egg = readFileSync('app/tools/golden-egg/GoldenEggClient.tsx', 'utf8');
     for (const src of [explorer, egg]) {
       expect(src).toContain('operatorContext');
       expect(src).toContain('Context only');
