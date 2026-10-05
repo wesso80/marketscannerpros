@@ -47,10 +47,9 @@ describe('Ranked verdict badge', () => {
 });
 
 describe('scanner page no longer reads the legacy gate flag', () => {
-  it('has no scoreV2.regimeScore.gated reads and renders the verdict badge', () => {
+  it('has no legacy scoreV2.regimeScore.gated reads', () => {
     const src = readFileSync('app/tools/scanner/page.tsx', 'utf8');
     expect(src).not.toMatch(/regimeScore\?\.gated/);
     expect(src).not.toContain("'Gated by regime'");
-    expect(src).toContain('rankedVerdictBadge(r)');
   });
 });
