@@ -862,7 +862,7 @@ export default function DeepAnalysisPage({
         {!result && !embeddedInGoldenEgg && <div className="mb-8 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-sm font-black text-amber-300">GE</div>
           <h1 className="mb-2 text-[clamp(1.5rem,6vw,2.5rem)] font-bold text-[var(--msp-text)]">
-            The Symbol
+            Symbol
           </h1>
           <p className="text-[clamp(0.9rem,3vw,1.1rem)] text-[var(--msp-text-muted)]">
             Multi-factor research context for one symbol

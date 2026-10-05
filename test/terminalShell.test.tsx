@@ -3,7 +3,7 @@ import React from 'react';
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 import {cleanup,render,screen} from '@testing-library/react';
 const state=vi.hoisted(()=>({tab:'capital',symbol:'MU',type:'equity'}));
-vi.mock('next/navigation',()=>({useSearchParams:()=>new URLSearchParams(state),useRouter:()=>({replace:vi.fn(),push:vi.fn()})}));
+vi.mock('next/navigation',()=>({useSearchParams:()=>new URLSearchParams(state),useRouter:()=>({replace:vi.fn(),push:vi.fn()}),usePathname:()=>'/tools/terminal'}));
 vi.mock('next/dynamic',()=>({default:()=>()=>null}));
 vi.mock('@/app/v2/_lib/V2Context',()=>({useV2:()=>({selectedSymbol:state.symbol,selectSymbol:vi.fn()})}));
 vi.mock('@/lib/useUserTier',()=>({useUserTier:()=>({tier:'pro',isLoading:false}),canAccessTimeScanner:()=>true}));

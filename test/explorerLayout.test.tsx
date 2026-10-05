@@ -4,7 +4,7 @@ import {beforeEach,afterEach,it,expect,vi} from 'vitest';
 import {render,cleanup,screen,within,fireEvent,waitFor} from '@testing-library/react';
 import {marketText} from '@/lib/marketsPresentation';
 const state=vi.hoisted(()=>({tab:'overview',sectorData:Array.from({length:11},(_,i)=>({symbol:'X'+i,name:'Sector '+i,changePercent:i-5,weight:9})),push:vi.fn()}));
-vi.mock('next/navigation',()=>({useSearchParams:()=>new URLSearchParams({tab:state.tab}),useRouter:()=>({push:state.push})}));
+vi.mock('next/navigation',()=>({useSearchParams:()=>new URLSearchParams({tab:state.tab}),useRouter:()=>({push:state.push}),usePathname:()=>'/tools/explorer'}));
 vi.mock('next/dynamic',()=>({default:()=>()=>null}));
 vi.mock('@/lib/useUserTier',()=>({useUserTier:()=>({tier:'pro',isLoading:false})}));
 vi.mock('@/app/v2/_lib/V2Context',()=>({useV2:()=>({navigateTo:vi.fn(),selectSymbol:vi.fn()})}));
