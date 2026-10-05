@@ -1,0 +1,34 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+ RUN  v3.2.4 /workspace/scratch/0535040d28c6/mobile-volatility
+
+ ✓ test/volatilityPhaseCard.test.ts (4 tests) 7ms
+ ✓ test/dveStochSlopes.test.ts (7 tests) 25ms
+stdout | test/dveFreshness.test.ts > DVE freshness comes from the data age, not the cache (RS-8) > a cache hit within the TTL keeps the fresh status and the original computation time
+[DVE] FRESH1 — closes: 300, vol: 1000000, avgVol: 1000000, options: NO, gamma: N/A
+
+stderr | test/dveFreshness.test.ts > DVE freshness comes from the data age, not the cache (RS-8) > a cache hit within the TTL keeps the fresh status and the original computation time
+[DVE] FRESH1 — options data unavailable (no usable REALTIME_OPTIONS/HISTORICAL_OPTIONS chain)
+
+stdout | test/dveFreshness.test.ts > DVE freshness comes from the data age, not the cache (RS-8) > old bars are stale even on a fresh calculation
+[DVE] OLD1 — closes: 300, vol: 1000000, avgVol: 1000000, options: NO, gamma: N/A
+
+stderr | test/dveFreshness.test.ts > DVE freshness comes from the data age, not the cache (RS-8) > old bars are stale even on a fresh calculation
+[DVE] OLD1 — options data unavailable (no usable REALTIME_OPTIONS/HISTORICAL_OPTIONS chain)
+
+stdout | test/dveFreshness.test.ts > DVE freshness comes from the data age, not the cache (RS-8) > crypto (24/7) judges the last completed daily bar by the clock; a missing bar time is unknown, never fresh
+[DVE] BTCUSD — closes: 300, vol: 1000000, avgVol: 1000000, options: NO, gamma: N/A
+
+stderr | test/dveFreshness.test.ts > DVE freshness comes from the data age, not the cache (RS-8) > crypto (24/7) judges the last completed daily bar by the clock; a missing bar time is unknown, never fresh
+[DVE] NOBARTIME — options data unavailable (no usable REALTIME_OPTIONS/HISTORICAL_OPTIONS chain)
+
+stdout | test/dveFreshness.test.ts > DVE freshness comes from the data age, not the cache (RS-8) > crypto (24/7) judges the last completed daily bar by the clock; a missing bar time is unknown, never fresh
+[DVE] NOBARTIME — closes: 300, vol: 1000000, avgVol: 1000000, options: NO, gamma: N/A
+
+ ✓ test/dveFreshness.test.ts (4 tests) 29ms
+ ✓ test/volatilityCompact.test.tsx (3 tests) 151ms
+
+ Test Files  4 passed (4)
+      Tests  18 passed (18)
+   Start at  13:12:03
+   Duration  1.34s (transform 531ms, setup 0ms, collect 928ms, tests 212ms, environment 371ms, prepare 292ms)

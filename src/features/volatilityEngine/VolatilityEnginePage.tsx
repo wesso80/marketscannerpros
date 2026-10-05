@@ -13,10 +13,11 @@ import VEBreakoutPanel from '@/src/features/volatilityEngine/components/VEBreako
 import VETrapAlert from '@/src/features/volatilityEngine/components/VETrapAlert';
 import VERegimeTimeline from '@/src/features/volatilityEngine/components/VERegimeTimeline';
 import VEVolatilityPhaseCard from '@/src/features/volatilityEngine/components/VEVolatilityPhaseCard';
-import DataFreshnessBadge from '@/components/market/DataFreshnessBadge';
-import EvidenceStack from '@/components/market/EvidenceStack';
-import MarketStatusStrip from '@/components/market/MarketStatusStrip';
-import RiskFlagPanel, { type RiskFlag } from '@/components/market/RiskFlagPanel';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import StatCard from '@/components/visual/StatCard';
+import SourceLine from '@/components/visual/SourceLine';
+import { volatilityText } from './displayText';
+import { type RiskFlag } from '@/components/market/RiskFlagPanel';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
 
 const QUICK_SYMBOLS = ['BTC', 'ETH', 'AAPL', 'TSLA', 'NVDA', 'SPX', 'GOLD'];
@@ -179,21 +180,12 @@ export default function VolatilityEnginePage() {
   })) : [];
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[var(--msp-bg)] text-slate-100">
-      {/* Header */}
-      <header className="border-b border-white/10 bg-white/[0.02] px-4 py-4">
-        <div className="mx-auto flex max-w-[1280px] items-center gap-3">
-          <span className="rounded border border-amber-400/30 bg-amber-400/10 px-2 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-amber-300">DVE</span>
-          <div>
-            <h1 className="text-sm font-bold tracking-wide text-white">Phase Intelligence Console</h1>
-            <p className="text-[0.62rem] text-white/40">Directional Volatility Engine — 5-Layer Analysis</p>
-          </div>
-        </div>
-      </header>
+    <div data-volatility-page className="min-w-0 bg-[var(--msp-bg)] text-slate-100 [&_button]:min-h-10 [&_summary]:min-h-10">
+      <header className="border-b border-white/10 px-4 py-3"><div className="mx-auto max-w-[1280px]"><h1 className="text-xl font-bold">Volatility</h1><p data-volatility-verdict className="mt-1 text-sm">{loading ? 'Collecting volatility evidence…' : error ? 'Volatility reading not collected' : reading ? `${reading.symbol} · ${volatilityText(reading.label)}` : 'Choose a symbol to collect a reading'}</p></div></header>
 
       <main className="mx-auto w-full max-w-[1280px] px-4 pb-24">
         {/* Search */}
-        <div className="mx-auto mt-8 max-w-lg">
+        <div className="mx-auto mt-3 max-w-lg">
           <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-1.5">
             <input
               type="text"
@@ -201,7 +193,8 @@ export default function VolatilityEnginePage() {
               onChange={(e) => setSymbol(e.target.value.toUpperCase())}
               onKeyDown={handleKeyDown}
               placeholder="Enter symbol (e.g. BTC, AAPL, TSLA)"
-              className="flex-1 bg-transparent px-3 py-2.5 text-sm text-white placeholder-white/40 outline-none"
+              aria-label="Volatility symbol"
+              className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm text-white placeholder-white/40 outline-none"
               disabled={loading}
             />
             <button
@@ -239,77 +232,59 @@ export default function VolatilityEnginePage() {
         {loading && (
           <div className="mt-16 flex flex-col items-center gap-4">
             <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-amber-400" />
-            <p className="text-sm text-white/50">Computing 5-layer volatility analysis…</p>
+            <p className="text-sm text-white/50">Collecting volatility evidence…</p>
           </div>
         )}
 
         {!reading && !loading && !error && (
           <div className="mt-20 text-center">
-            <p className="text-sm text-white/40">Enter a symbol above to generate a phase intelligence analysis</p>
+            <p className="text-sm text-white/40">Enter a symbol above to collect volatility evidence</p>
           </div>
         )}
 
         {/* Results */}
         {reading && (
-          <div className="mt-8 space-y-8">
-            {/* Meta bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-              <div className="flex items-center gap-3">
-                <span className="text-lg font-bold text-white">{reading.symbol}</span>
-                <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[0.62rem] font-bold text-white/50">
-                  {reading.label}
-                </span>
-                {cached && (
-                  <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-[0.55rem] font-bold text-blue-400">CACHED</span>
-                )}
-              </div>
-              <DataFreshnessBadge status={dveProviderStatus} label={`Data ${reading.dataQuality.score.toFixed(0)}%`} />
+          <div className="mt-4 space-y-3">
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+              <StatCard label="BBWP percentile" value={reading.volatility.bbwp.toFixed(1)} />
+              <StatCard label="Pressure score" value={reading.direction.score.toFixed(0)} />
+              <StatCard label="Breakout score" value={`${reading.breakout.score.toFixed(0)}/100`} />
+              <StatCard label="Data coverage" value={`${reading.dataQuality.score.toFixed(0)}%`} />
             </div>
-
-            <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
-              <EvidenceStack title="DVE Evidence Stack" items={dveEvidenceItems} />
-              <RiskFlagPanel title="DVE Risk Flags" flags={dveRiskFlags} emptyText="No active DVE trap, exhaustion, invalidation, or data-quality flags." />
-            </div>
-
-            <MarketStatusStrip items={dveMarketStatusItems} className="md:grid-cols-3" />
-
-            {/* Trap Alert (conditional) */}
-            <VETrapAlert trap={reading.trap} />
-
-            <VEVolatilityPhaseCard
-              volatility={reading.volatility}
-              phase={reading.phasePersistence}
-              breakout={reading.breakout}
-              trap={reading.trap}
-              exhaustion={reading.exhaustion}
-              invalidation={reading.invalidation}
-              flags={reading.flags}
-              dataQuality={reading.dataQuality}
-            />
+            {(reading.dataQuality.missing.length > 0 || reading.dataQuality.warnings.length > 0 || freshness.dataFreshness !== 'fresh') && <p className="text-xs text-amber-300">{freshness.dataFreshness === 'stale' ? 'Price bars are stale. ' : freshness.dataFreshness === 'delayed' ? 'Price bars are delayed. ' : freshness.dataFreshness === 'unknown' ? 'Price bar date not collected. ' : ''}{reading.dataQuality.missing.length > 0 ? `${reading.dataQuality.missing.length} inputs not collected. ` : ''}{reading.dataQuality.warnings.map(volatilityText).join(' ')}</p>}
+            <div data-volatility-chart><VEHeatmapGauge vol={reading.volatility} /></div>
+            <CollapsibleSection title="Evidence and limits" summary={`${reading.dataQuality.score.toFixed(0)}% coverage · ${dveRiskFlags.length} flags`}>
+              <div className="space-y-3 text-sm">{dveEvidenceItems.map(item=><p key={item.label}><strong>{volatilityText(item.label)}:</strong> {volatilityText(item.value)} · {volatilityText(item.detail)}</p>)}
+              {dveRiskFlags.length ? <ul className="list-disc pl-4">{dveRiskFlags.map((flag,i)=><li key={i}>{volatilityText(flag.label)}</li>)}</ul> : <p>No trap, exhaustion or data-quality flags recorded.</p>}
+              {dveMarketStatusItems.map(item=><p key={item.label}>{volatilityText(item.label)} · {item.coverageScore == null ? 'Coverage not collected' : `${Math.round(item.coverageScore)}% coverage`}</p>)}</div>
+            </CollapsibleSection>
+            <CollapsibleSection title="Phase detail" summary={`${volatilityText(reading.volatility.regime)} · ${reading.exhaustion.level.toFixed(0)}/100 exhaustion`}>
+              <VETrapAlert trap={reading.trap} />
+              <VEVolatilityPhaseCard volatility={reading.volatility} phase={reading.phasePersistence} breakout={reading.breakout} trap={reading.trap} exhaustion={reading.exhaustion} invalidation={reading.invalidation} flags={reading.flags} dataQuality={reading.dataQuality} />
+            </CollapsibleSection>
 
             {/* LAYER 1: Volatility State */}
-            <section>
+            <CollapsibleSection title="Breakout evidence" summary={`${reading.breakout.score.toFixed(0)}/100 · ${volatilityText(reading.breakout.label)}`}>
               <SectionTitle code="VOL" title="Layer 1 — Volatility State" />
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <VEHeatmapGauge vol={reading.volatility} />
                 <VEBreakoutPanel breakout={reading.breakout} missingInputs={reading.dataQuality.missing} />
               </div>
-            </section>
+            </CollapsibleSection>
 
             {/* LAYER 2: Directional Bias */}
-            <section>
+            <CollapsibleSection title="Directional pressure" summary={`${volatilityText(reading.direction.bias)} · ${reading.direction.confidence.toFixed(0)}% confluence`}>
               <SectionTitle code="DIR" title="Layer 2 — Directional Bias" />
               <VEDirectionalCompass dir={reading.direction} missingInputs={reading.dataQuality.missing} />
-            </section>
+            </CollapsibleSection>
 
             {/* LAYER 3: Phase Persistence */}
-            <section>
+            <CollapsibleSection title="Phase persistence" summary={`${reading.phasePersistence.contraction.active ? 'Contraction' : reading.phasePersistence.expansion.active ? 'Expansion' : 'No active phase'}`}>
               <SectionTitle code="PH" title="Layer 3 — Phase Persistence" />
               <VEPhasePanel phase={reading.phasePersistence} />
-            </section>
+            </CollapsibleSection>
 
             {/* LAYER 4: Signal + Invalidation */}
-            <section>
+            <CollapsibleSection title="Signal and invalidation" summary={reading.signal.type === 'none' ? 'No active signal' : `${volatilityText(reading.signal.state)} · ${reading.signal.strength.toFixed(0)}/100`}>
               <SectionTitle code="SIG" title="Layer 4 — Signal &amp; Invalidation" />
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <VESignalCard
@@ -320,10 +295,10 @@ export default function VolatilityEnginePage() {
               />
                 <VEInvalidationCard inv={reading.invalidation} />
               </div>
-            </section>
+            </CollapsibleSection>
 
             {/* LAYER 5: Outcome Projection */}
-            <section>
+            <CollapsibleSection title="Projection" summary={reading.projection.signalType === 'none' ? 'Volatility range · no active signal' : `${reading.projection.projectionQualityScore == null ? 'Quality not collected' : `${Math.round(reading.projection.projectionQualityScore)}/100 quality`}`}>
               <SectionTitle code="PROJ" title="Layer 5 — Outcome Projection" />
               <VEProjectionCard
                 proj={reading.projection}
@@ -331,10 +306,10 @@ export default function VolatilityEnginePage() {
                 phase={reading.phasePersistence}
                 currentPrice={currentPrice}
               />
-            </section>
+            </CollapsibleSection>
 
             {/* Supporting: Regime Outlook */}
-            <section>
+            <CollapsibleSection title="Regime context" summary={`${volatilityText(reading.transition.from)} → ${volatilityText(reading.transition.to)}`}>
               <SectionTitle code="SUP" title="Supporting Analysis" />
               <VERegimeTimeline
                 transition={reading.transition}
@@ -344,9 +319,11 @@ export default function VolatilityEnginePage() {
                 volatility={reading.volatility}
                 phase={reading.phasePersistence}
               />
-            </section>
+            </CollapsibleSection>
+            <SourceLine source="Volatility calculation" asOf={freshness.dataAsOf?.includes('T') ? freshness.dataAsOf : undefined} tradingDay={freshness.dataAsOf ? `Price bar session ${freshness.dataAsOf}` : 'Price bar date not collected'} basis={cached ? 'Cached reading; freshness based on price bars' : 'Calculated from price bars'} />
           </div>
         )}
+        <p className="mt-4 text-xs text-slate-400">General information only, not financial advice.</p>
       </main>
     </div>
   );

@@ -1,15 +1,7 @@
 'use client';
+import { volatilityText } from '../displayText';
 
 import type { DVESignal, VolatilityState, DirectionalPressure, ExhaustionRisk } from '@/src/features/volatilityEngine/types';
-
-function stateCode(state: string): string {
-  switch (state) {
-    case 'fired': return 'DETECTED';
-    case 'armed': return 'ARM';
-    case 'invalidated': return 'INV';
-    default: return 'IDLE';
-  }
-}
 
 function typeLabel(type: string): string {
   return type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -97,18 +89,17 @@ export default function VESignalCard({ signal, volatility, direction, exhaustion
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.62rem] font-bold text-amber-300">SIG</span>
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-amber-400">
+          <h3 className="text-xs font-semibold tracking-widest text-amber-400">
             Signal Status
           </h3>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[0.6rem] font-bold uppercase text-white/50">{stateCode(signal.state)}</span>
-          <span className="text-[0.65rem] font-bold uppercase text-white/60">{signal.state}</span>
+          <span className="text-[0.65rem] font-bold text-white/60">{volatilityText(signal.state)}</span>
         </div>
       </div>
 
       {signal.type === 'none' && !conditionGroups ? (
-        <p className="text-[0.75rem] text-white/40">No active signal. Waiting for trigger conditions.</p>
+        <p className="text-[0.75rem] text-white/40">No active signal. Trigger conditions are not met.</p>
       ) : signal.type === 'none' && conditionGroups ? (
         <div className="space-y-3">
           <p className="text-[0.7rem] text-white/50 mb-2">Conditions needed to trigger a signal:</p>
@@ -128,7 +119,7 @@ export default function VESignalCard({ signal, volatility, direction, exhaustion
                   {g.conditions.map((c, i) => (
                     <div key={i} className="flex items-start gap-1.5 text-[0.63rem]">
                       <span className={c.met ? 'text-emerald-400' : 'text-white/20'}>{c.met ? '✓' : '○'}</span>
-                      <span className={c.met ? 'text-white/60' : 'text-white/30'}>{c.label}</span>
+                      <span className={c.met ? 'text-white/60' : 'text-white/30'}>{volatilityText(c.label)}</span>
                     </div>
                   ))}
                 </div>
@@ -165,7 +156,7 @@ export default function VESignalCard({ signal, volatility, direction, exhaustion
           {signal.triggerReason.length > 0 && (
             <div className="space-y-0.5 border-t border-white/10 pt-2">
               {signal.triggerReason.map((r, i) => (
-                <p key={i} className="text-[0.7rem] text-white/40">• {r}</p>
+                <p key={i} className="text-[0.7rem] text-white/40">• {volatilityText(r)}</p>
               ))}
             </div>
           )}

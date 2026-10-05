@@ -1,0 +1,84 @@
+{
+  "base": "44e455eae6b84b2e35abac08a46ca270e38b994e",
+  "unchangedCoreFiles": [
+    "app/api/dve/route.ts",
+    "app/tools/volatility-engine/layout.tsx",
+    "app/tools/volatility-engine/page.tsx",
+    "lib/directionalVolatilityEngine.ts",
+    "lib/directionalVolatilityEngine.types.ts",
+    "lib/scanner/indicatorMath.ts",
+    "src/features/volatilityEngine/types.ts"
+  ],
+  "reports": [
+    {
+      "file": "src/features/volatilityEngine/VolatilityEnginePage.tsx",
+      "unchangedBlocks": [
+        "analyze",
+        "handleKeyDown",
+        "dveProviderStatus",
+        "dveMarketStatusItems",
+        "dveEvidenceItems",
+        "dveRiskFlags"
+      ]
+    },
+    {
+      "file": "src/features/volatilityEngine/components/VERegimeTimeline.tsx",
+      "unchangedBlocks": [
+        "REGIME_POS",
+        "REGIMES_ORDER",
+        "computeRegimeForecast",
+        "forecast",
+        "currentRegime",
+        "currentPos"
+      ]
+    },
+    {
+      "file": "src/features/volatilityEngine/components/VEProjectionCard.tsx",
+      "unchangedBlocks": [
+        "hasVolData",
+        "atr",
+        "bbwp",
+        "expectedPct",
+        "upTarget",
+        "downTarget",
+        "upExtended",
+        "downExtended",
+        "activePhase",
+        "exitProb",
+        "isUp",
+        "qualityScore",
+        "dispersionPct"
+      ]
+    },
+    {
+      "file": "src/features/volatilityEngine/components/VESignalCard.tsx",
+      "unchangedBlocks": [
+        "getIdleConditions",
+        "isActive",
+        "conditionGroups"
+      ]
+    },
+    {
+      "file": "src/features/volatilityEngine/components/VEDirectionalCompass.tsx",
+      "unchangedBlocks": [
+        "COMPONENT_MAX",
+        "MISSING_MAP",
+        "MAX_DIR_SCORE",
+        "naKeys",
+        "needlePct",
+        "isNA",
+        "max",
+        "absVal",
+        "pct"
+      ]
+    },
+    {
+      "file": "src/features/volatilityEngine/components/VEVolatilityPhaseCard.tsx",
+      "unchangedBlocks": [
+        "activePhase",
+        "ageLabel",
+        "riskLevel"
+      ]
+    }
+  ]
+}
