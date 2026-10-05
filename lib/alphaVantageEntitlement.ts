@@ -18,20 +18,27 @@ export function avEquityEntitlementParam(): string {
 }
 
 /**
- * Basis label for the equity movers list: the realtime feed ("Market closed" outside the regular session, since the
- * list is then the last session's), or the end-of-day fallback (OV-14). Pair it with the as-of time.
+ * Basis label for the equity movers list: the realtime feed is the last session's close outside the regular
+ * session, or the end-of-day fallback (OV-14). Pair it with the as-of time.
  */
 export function equityMoversBasisLabel(feed: string | null | undefined, nowMs: number = Date.now()): string {
   if (feed === 'end_of_day') return 'End of day';
-  if (feed === 'unavailable') return 'Unavailable';
-  return isUsRegularSessionOpen(nowMs) ? 'Nasdaq BX realtime' : 'Market closed';
+  if (feed === 'unavailable') return 'Equities feed down';
+  return isUsRegularSessionOpen(nowMs) ? 'Nasdaq BX realtime' : 'Last session close';
+}
+
+/** Header badge for the equity list. A closed session is the last close, even when the provider feed is realtime. */
+export function moversEquityBadge(feed: string | null | undefined, nowMs: number = Date.now()): string {
+  if (feed === 'end_of_day') return 'End of day';
+  if (feed === 'unavailable') return 'Equities feed down';
+  return isUsRegularSessionOpen(nowMs) ? 'Live' : 'Last session close';
 }
 
 /** Movers "Data" chip: crypto is live (CoinGecko); equities follow the Alpha Vantage feed actually received (OV-21). */
 export function moversDataChipLabel(feed: string | null | undefined, nowMs: number = Date.now()): string {
   const equities = feed === 'end_of_day' ? 'equities end of day'
-    : feed === 'unavailable' ? 'equities unavailable'
-    : isUsRegularSessionOpen(nowMs) ? 'equities Nasdaq BX realtime' : 'equities market closed';
+    : feed === 'unavailable' ? 'equities feed down'
+    : isUsRegularSessionOpen(nowMs) ? 'equities Nasdaq BX realtime' : 'equities last session close';
   return `Crypto live · ${equities}`;
 }
 

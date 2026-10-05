@@ -4,7 +4,8 @@ import { persistDerivativeSnapshots } from '@/lib/crypto/derivativesSnapshots';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { q } from '@/lib/db';
-import { sendAlertEmail } from '@/lib/email';
+import { deliverUserAlertEmail } from '@/lib/alerts/emailControls';
+import { buildTriggeredAlertContent } from '@/lib/email';
 import { sendPushToUser } from '@/lib/pushServer';
 import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
 import { fetchMPE } from '@/lib/goldenEggFetchers';
@@ -649,7 +650,7 @@ async function triggerSmartAlert(alert: SmartAlert, result: CheckResult) {
   // Send email notification
   if (userEmail && result.message) {
     try {
-      await sendAlertEmail({
+      const content = buildTriggeredAlertContent({
         to: userEmail,
         alertName: alert.name || 'Smart Alert',
         symbol: alert.symbol || 'MARKET',
@@ -657,6 +658,13 @@ async function triggerSmartAlert(alert: SmartAlert, result: CheckResult) {
         value: result.value,
         threshold: result.threshold,
         alertType: 'smart',
+      });
+      await deliverUserAlertEmail({
+        workspaceId: alert.workspace_id,
+        to: userEmail,
+        subject: content.subject,
+        html: content.html,
+        line: `${alert.symbol || 'MARKET'}: ${result.message}`,
       });
     } catch (emailErr) {
       console.error('Failed to send smart alert email:', emailErr);

@@ -43,6 +43,7 @@ export const SCHEDULE:ScheduledJob[]=[
  {name:'catalyst-overnight-bulk',schedule:'0 22 * * *',kind:'http',path:'/api/catalyst/study/compute?limit=50',timeoutMs:270_000,retries:1,retryDelayMs:10_000},
  {name:'catalyst-news-ingest',schedule:'12,42 * * * *',kind:'http',path:'/api/catalyst/ingest',timeoutMs:180_000,retries:3,retryDelayMs:15_000},
  // Emails
+ {name:'daily-alert-digest',schedule:'0 21 * * *',kind:'http',path:'/api/jobs/email-alert-digest',timeoutMs:180_000,retries:3,retryDelayMs:15_000},
  {name:'daily-operator-morning-brief',schedule:'15 20 * * *',kind:'http',path:'/api/jobs/email-morning-brief',timeoutMs:180_000,retries:3,retryDelayMs:15_000,body:{scanLimit:80,market:'EQUITIES'}},
  {name:'daily-best-opportunities-email',schedule:'0 12 * * *',kind:'http',path:'/api/jobs/email-best-opportunities',timeoutMs:290_000,retries:3,retryDelayMs:15_000},
  {name:'daily-operator-review-email',schedule:'30 7 * * 1-5',kind:'http',path:'/api/jobs/email-daily-review',timeoutMs:180_000,retries:3,retryDelayMs:15_000},

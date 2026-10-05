@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
-import { sendAlertEmail } from '@/lib/email';
+import { deliverUserAlertEmail } from '@/lib/alerts/emailControls';
+import { buildTriggeredAlertContent } from '@/lib/email';
 import { avTakeToken } from '@/lib/avRateGovernor';
 
 /**
@@ -102,7 +103,7 @@ export async function GET(_req: NextRequest) {
     if (triggered) {
       step('⏳ Sending alert email via Resend…');
       try {
-        emailResult = await sendAlertEmail({
+        const content = buildTriggeredAlertContent({
           to: email,
           alertName: 'E2E Test Alert',
           symbol: 'AAPL',
@@ -111,7 +112,22 @@ export async function GET(_req: NextRequest) {
           threshold: 99999,
           alertType: 'price',
         });
-        step(`✅ Email sent! Resend ID: ${emailResult}`);
+        const delivered = await deliverUserAlertEmail({
+          workspaceId: session.workspaceId,
+          to: email,
+          subject: content.subject,
+          html: content.html,
+          line: `AAPL: test alert at $${price!.toFixed(2)}`,
+        });
+        if (delivered.action === 'sent') {
+          emailResult = delivered.providerId;
+          step(`✅ Email sent! Resend ID: ${emailResult}`);
+        } else if (delivered.action === 'queued') {
+          emailResult = 'queued';
+          step('✅ Saved for the daily alert summary.');
+        } else {
+          step(`❌ Email not sent (${delivered.reason}).`);
+        }
       } catch (err: any) {
         step(`❌ Email send FAILED: ${err.message}`);
       }

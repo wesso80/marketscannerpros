@@ -13,7 +13,7 @@ const CRYPTO_SECTORS: Record<string, string> = {
   BTC: 'Store of Value', ETH: 'Layer 1', BNB: 'Layer 1',
   SOL: 'Layer 1', XRP: 'Payments', ADA: 'Layer 1',
   DOGE: 'Meme', AVAX: 'Layer 1', DOT: 'Layer 1',
-  MATIC: 'Layer 2', LINK: 'Oracle / DeFi', LTC: 'Payments',
+  MATIC: 'Layer 2', POL: 'Layer 2', LINK: 'Oracle / DeFi', LTC: 'Payments',
   SHIB: 'Meme', UNI: 'DeFi', ATOM: 'Layer 1', XLM: 'Payments',
 };
 
@@ -28,7 +28,7 @@ const CRYPTO_CONFIG: Record<string, { weight: number; color: string }> = {
   'dogecoin': { weight: 2, color: '#C2A633' },
   'avalanche-2': { weight: 1.5, color: '#E84142' },
   'polkadot': { weight: 1.2, color: '#E6007A' },
-  'matic-network': { weight: 1, color: '#8247E5' },
+  'polygon-ecosystem-token': { weight: 1, color: '#97A1B2' },
   'chainlink': { weight: 1, color: '#2A5ADA' },
   'litecoin': { weight: 0.8, color: '#345D9D' },
   'shiba-inu': { weight: 0.7, color: '#FFA409' },

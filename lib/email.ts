@@ -1,4 +1,7 @@
 import { Resend } from "resend";
+import { resolveAlertsFromEmail } from "@/lib/alerts/emailPolicy";
+
+export { DEFAULT_ALERTS_FROM_EMAIL, resolveAlertsFromEmail } from "@/lib/alerts/emailPolicy";
 
 let resendClient: Resend | null = null;
 let resendClientKey: string | null = null;
@@ -26,6 +29,7 @@ interface SendEmailParams {
   text?: string;
   from?: string;
   replyTo?: string;
+  headers?: Record<string, string>;
 }
 
 /** Dedicated sign-in sender. The domain is already verified with Resend, so this mailbox does not need its own DNS. */
@@ -83,14 +87,8 @@ interface SendAlertEmailParams {
   alertType?: 'price' | 'smart';
 }
 
-export async function sendAlertEmail(params: SendEmailParams | SendAlertEmailParams) {
-  // Handle legacy interface
-  if ('html' in params) {
-    return sendEmail(params);
-  }
-
-  // New alert-specific interface
-  const { to, alertName, symbol, message, value, threshold, alertType = 'price' } = params;
+export function buildTriggeredAlertContent(params: SendAlertEmailParams): { subject: string; html: string } {
+  const { alertName, symbol, message, value, threshold, alertType = 'price' } = params;
   
   const isSmartAlert = alertType === 'smart';
   const alertCode = isSmartAlert ? 'AI' : 'PX';
@@ -150,7 +148,16 @@ export async function sendAlertEmail(params: SendEmailParams | SendAlertEmailPar
 </html>
   `.trim();
 
-  return sendEmail({ to, subject, html });
+  return { subject, html };
+}
+
+export async function sendAlertEmail(params: SendEmailParams | SendAlertEmailParams) {
+  if ('html' in params) {
+    return sendAlertsMailboxEmail(params);
+  }
+
+  const built = buildTriggeredAlertContent(params);
+  return sendAlertsMailboxEmail({ to: params.to, subject: built.subject, html: built.html });
 }
 
 // Two access levels only (Free / Pro). Legacy `pro_trader` subscribers get the same Pro email.
@@ -272,7 +279,20 @@ export async function sendNewSignupNotification(email: string, tier: string) {
   }
 }
 
-async function sendEmail({ to, subject, html, text, from, replyTo }: SendEmailParams) {
+export async function sendAlertsMailboxEmail(params: SendEmailParams): Promise<string | null> {
+  try {
+    return await sendEmail({ ...params, from: resolveAlertsFromEmail() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (/suppress/i.test(message) && params.to) {
+      const { noteProviderSuppression } = await import("@/lib/alerts/emailControls");
+      await noteProviderSuppression(params.to, message).catch(() => {});
+    }
+    throw error;
+  }
+}
+
+async function sendEmail({ to, subject, html, text, from, replyTo, headers }: SendEmailParams) {
   const client = getResendClient();
   if (!client) {
     throw new Error('RESEND_API_KEY not set');
@@ -288,9 +308,11 @@ async function sendEmail({ to, subject, html, text, from, replyTo }: SendEmailPa
       html: string;
       text?: string;
       replyTo?: string;
+      headers?: Record<string, string>;
     } = { from: fromEmail, to, subject, html };
     if (text) payload.text = text;
     if (replyTo) payload.replyTo = replyTo;
+    if (headers && Object.keys(headers).length > 0) payload.headers = headers;
 
     const { data, error } = await client.emails.send(payload);
     
