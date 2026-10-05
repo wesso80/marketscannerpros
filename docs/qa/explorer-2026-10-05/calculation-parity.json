@@ -1,0 +1,47 @@
+{
+  "base": "3e43d9a2303bb23fb6f3463e7bac5a6f5701fdc2",
+  "results": [
+    {
+      "path": "app/tools/equity-explorer/page.tsx",
+      "name": "getQuickSignals",
+      "identical": true,
+      "sha256": "da61f4813434db23b25a52a4d8f01b00a2667395d3ccc537cbbe4a6f0d493def"
+    },
+    {
+      "path": "app/tools/equity-explorer/page.tsx",
+      "name": "getAggregateSentiment",
+      "identical": true,
+      "sha256": "df5a580297c0f086d59ab42f091037cb822cab4dd6040931d3d91f57288e4998"
+    },
+    {
+      "path": "app/tools/crypto-explorer/page.tsx",
+      "name": "computeDecisionState",
+      "identical": true,
+      "sha256": "cbe51e8993b4d51a00b210ac315db394953d858829586e1439246b954780dca4"
+    },
+    {
+      "path": "app/tools/crypto-explorer/page.tsx",
+      "name": "decision",
+      "identical": true,
+      "sha256": "4fae73e7d29c1c4a12220ac46863096d79e90ec05239d42fdd100f84697ff3f5"
+    },
+    {
+      "path": "app/tools/crypto/page.tsx",
+      "name": "morningDecision",
+      "identical": true,
+      "sha256": "4cc6df3f6e6fc7fe35e179c67f5ba6ab088aa63c8c6745b6603c718bc4771db7"
+    },
+    {
+      "path": "app/tools/crypto/page.tsx",
+      "name": "rankedOpportunities",
+      "identical": true,
+      "sha256": "6347c14a63b6e3f22bb2e4eb240bdcee11611a3edc1fa15d577cce536ef14a8f"
+    },
+    {
+      "path": "components/CryptoMorningDecisionCard.tsx",
+      "name": "decision",
+      "identical": true,
+      "sha256": "b73ded8619000a4eeb3793f782565defc5620c94c64daf4d3b4ccaac09f6b58c"
+    }
+  ]
+}

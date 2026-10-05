@@ -38,7 +38,7 @@ const COINS = [
 ];
 
 function formatPct(val: number | null): string {
-  if (val == null || !Number.isFinite(val)) return 'Unavailable';
+  if (val == null || !Number.isFinite(val)) return 'Not collected';
   return `${val >= 0 ? '+' : ''}${val.toFixed(2)}%`;
 }
 
@@ -218,7 +218,7 @@ export default function PublicTreasuryWidget() {
                           </>
                         ) : (
                           <>
-                            <p className="font-semibold text-slate-500">Unavailable</p>
+                            <p className="font-semibold text-slate-500">Not collected</p>
                             <p className="text-[10px] text-slate-600">{co.unavailableReason || 'Cost basis not supplied'}</p>
                           </>
                         )}
@@ -236,7 +236,7 @@ export default function PublicTreasuryWidget() {
             <span aria-live="polite">Page {page} of {pageCount} · {sorted.length} entities</span>
             <button disabled={page >= pageCount} onClick={() => setPage(value => value + 1)} className="rounded border border-slate-700 px-3 py-1 disabled:opacity-40">Next</button>
           </nav>
-          <p className="mt-3 text-[11px] text-slate-400">Observation date unavailable. Reported holdings and valuations may lag the market. Value vs cost compares provider totals; it excludes realised gains and sales proceeds.</p>
+          <p className="mt-3 text-[11px] text-slate-400">Observation date not supplied. Reported holdings and valuations may lag the market. Value vs cost compares provider totals; it excludes realised gains and sales proceeds.</p>
           <CoinGeckoCredit className="mt-2 text-right" detail="Public Treasury" />
         </>
       )}

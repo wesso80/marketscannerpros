@@ -16,7 +16,10 @@ import { CROSS_MARKET, REGIME_COLORS } from '@/app/v2/_lib/constants';
 import type { RegimePriority } from '@/app/v2/_lib/types';
 import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
 import SectorEtfHoldings from '@/components/markets/SectorEtfHoldings';
-import { PageHero } from '@/components/ui';
+import TabBar from '@/components/visual/TabBar';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import SourceLine from '@/components/visual/SourceLine';
+import { marketText } from '@/lib/marketsPresentation';
 import { FREE_COPY } from '@/components/free/copy';
 import FreeLoading from '@/components/free/Loading';
 import { useUserTier } from '@/lib/useUserTier';
@@ -78,7 +81,7 @@ function MarketsMetric({ label, value, tone = 'var(--msp-text)', detail }: { lab
 
 /** Signed percent, or "n/a" when the provider sent no value (never a made-up 0.00%). */
 function fmtSignedPct(v: number | null | undefined) {
-  return v == null || !Number.isFinite(v) ? 'n/a' : `${v > 0 ? '+' : ''}${v.toFixed(2)}%`;
+  return v == null || !Number.isFinite(v) ? 'Not collected' : `${v > 0 ? '+' : ''}${v.toFixed(2)}%`;
 }
 
 function pctColor(v: number | null | undefined) {
@@ -94,6 +97,7 @@ export default function ExplorerPage() {
   const searchParams = useSearchParams();
   const router=useRouter();
   const requestedInitialTab = EXPLORER_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()] || 'Overview';
+  const [showSectors, setShowSectors] = useState(false);
   const [tab, setTab] = useState<ExplorerTab>(requestedInitialTab);
 
   useEffect(() => {
@@ -133,48 +137,14 @@ export default function ExplorerPage() {
 
   if (tierLoading) return <FreeLoading />;
 
-  const hero = (
-      <PageHero
-        ariaLabel="Markets command header"
-        eyebrow="Cross-market map"
-        badges={[
-          { label: `${TABS.length} lenses` },
-          { label: `Tier ${tier === 'pro' || tier === 'pro_trader' ? 'Pro' : 'Free'}` },
-          ...(regime.data?.regime ? [{ label: `Regime ${humanizeEnum(regime.data.regime)}` }] : regime.loading ? [] : [{ label: 'Regime unavailable' }]),
-        ]}
-        title="Markets."
-        subtitle="Scan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens."
-        actions={[
-          { label: 'Open Scanner', variant: 'primary', href: '/tools/scanner' },
-          { label: 'Open Symbol', variant: 'secondary', href: '/tools/golden-egg' },
-          { label: 'Open Macro Lens', variant: 'ghost', href: '/tools/dashboard?tab=macro' },
-        ]}
-        metrics={[
-          { label: 'Sectors leading', value: sectorData.length ? `${sectorData.filter((s: SectorData) => (s.changePercent ?? 0) > 0).length}/${sectorData.length} green` : '—', tone: 'bull', detail: sectorData.length ? `Top: ${[...sectorData].sort((a: SectorData, b: SectorData) => (b.changePercent ?? 0) - (a.changePercent ?? 0))[0]?.name}` : 'Sector data loading' },
-          { label: 'Crypto cap', value: cryptoData?.totalMarketCapFormatted || '—', tone: 'info', detail: cryptoData ? `BTC ${cryptoData.btcDominance.toFixed(1)}% · ETH ${cryptoData.ethDominance.toFixed(1)}%` : 'Crypto market loading' },
-          { label: 'Top gainer', value: allGainers[0] ? proDisplaySymbol(allGainers[0].ticker, allGainers[0].asset_class) : '—', tone: 'warn', detail: allGainers[0] ? `+${allGainers[0].change_percentage} (${allGainers[0].asset_class})` : 'Movers loading' },
-          { label: 'Next check', value: tab, tone: 'warn', detail: 'Pick one lens, then drop into Scanner or Symbol' },
-        ]}
-      />
-  );
-
+  const simpleTab = ['Overview', 'Sectors', 'Cross-Market'].includes(tab);
+  const sectorChangeCount = sectorData.filter(s => s.changePercent != null && s.changePercent > 0).length;
+  const tabLabel = (label: string) => ({ 'Equity Deep-Dive': 'Equity', 'Crypto Deep-Dive': 'Crypto assets', 'Crypto Command': 'Crypto overview', 'Crypto Intel': 'Crypto news', 'Cross-Market': 'Cross-market' }[label] || label);
   return (
-    <div className="space-y-3">
-      {tab !== 'Movers' && tab !== 'Commodities' && hero}
-
-      {tab === 'Commodities' ? <div className="flex flex-wrap items-center justify-between gap-2"><h1 className="text-xl font-semibold">Markets</h1><label className="text-xs text-slate-400">View <select aria-label="Market view" className="ml-2 rounded border border-slate-700 bg-slate-900 p-2 text-white" value={tab} onChange={e => setTab(e.target.value as ExplorerTab)}>{TABS.map(t => <option key={t} value={t}>{t.replace('Deep-Dive', 'research').replace('Crypto Command', 'Crypto overview').replace('Crypto Intel', 'Crypto news')}</option>)}</select></label></div> : <>
-      {/* Tabs */}
-      <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
-        <div className="flex items-center gap-1 overflow-x-auto">
-          {TABS.map(t => (
-            <button key={t} type="button" aria-pressed={tab === t} onClick={() => setTab(t)} className={`shrink-0 rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors ${tab === t ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300' : 'border-slate-800 bg-slate-950/35 text-slate-400 hover:border-slate-600 hover:text-slate-200'}`}>
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      </>}
+    <div className="min-w-0 space-y-3">
+      {tab !== 'Movers' && <h1 className="text-xl font-semibold">Markets</h1>}
+      <TabBar label="Market views" items={TABS.map(t => ({ id: t, label: tabLabel(t) }))} activeId={tab} onChange={value => setTab(value as ExplorerTab)} />
+      {simpleTab && <p data-layout-verdict className="font-semibold text-sm">{tab === 'Cross-Market' ? regime.data?.regime ? `Market context: ${marketText(regime.data.regime)}` : 'Market context has not been collected.' : sectorData.length ? `${sectorChangeCount} of ${sectorData.length} sectors show a positive recorded change.` : sectors.loading ? 'Loading sector observations…' : 'Sector observations have not been collected.'}</p>}
       {(tier === 'free' || tier === 'anonymous') && (
         <div className="text-xs text-center text-slate-400 bg-slate-800/50 border border-slate-700/30 rounded-lg px-3 py-2">
           <a href="/pricing" className="inline-flex min-h-10 items-center underline">{FREE_COPY.upgrade}</a>
@@ -192,8 +162,8 @@ export default function ExplorerPage() {
           {sectorData.length > 0 && (
             <Card>
               <h3 className="text-sm font-semibold text-white mb-3">Sector Heatmap</h3>
-              <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-6 gap-1.5">
-                {sectorData.map((s: SectorData) => {
+              <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-1.5">
+                {(showSectors ? sectorData : sectorData.slice(0, 6)).map((s: SectorData) => {
                   // No change from the provider: grey tile reading "n/a", not a flat 0.00% (OV-7).
                   const pct = s.changePercent ?? s.daily ?? null;
                   return (
@@ -216,10 +186,12 @@ export default function ExplorerPage() {
                   );
                 })}
               </div>
+              {sectorData.length > 6 && <button type="button" className="min-h-10 text-sm underline" onClick={() => setShowSectors(value => !value)}>{showSectors ? 'Show top 6' : `Show all ${sectorData.length}`}</button>}
             </Card>
           )}
           {sectors.loading && <Card><Skel h="h-40" /></Card>}
 
+          <CollapsibleSection title="Equity movers" summary={`${eqGainers.length} gainers · ${eqLosers.length} decliners`}>
           {/* Equity Top Movers */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
@@ -232,7 +204,7 @@ export default function ExplorerPage() {
                     <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker, m.asset_class)} aria-label={`Open ${m.ticker} in Symbol`}>
                       <span className="font-semibold text-white w-16">{m.ticker}</span>
                       <span className="text-slate-300 font-mono">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                      <span className="text-emerald-400 font-mono w-20 text-right">+{m.change_percentage}</span>
+                      <span className="text-emerald-400 font-mono w-20 text-right">{fmtSignedPct(parseFloat(m.change_percentage))}</span>
                     </button>
                   ))}
                 </div>
@@ -248,7 +220,7 @@ export default function ExplorerPage() {
                     <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker, m.asset_class)} aria-label={`Open ${m.ticker} in Symbol`}>
                       <span className="font-semibold text-white w-16">{m.ticker}</span>
                       <span className="text-slate-300 font-mono">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                      <span className="text-red-400 font-mono w-20 text-right">{m.change_percentage}</span>
+                      <span className="text-red-400 font-mono w-20 text-right">{fmtSignedPct(parseFloat(m.change_percentage))}</span>
                     </button>
                   ))}
                 </div>
@@ -256,6 +228,8 @@ export default function ExplorerPage() {
             </Card>
           </div>
 
+          </CollapsibleSection>
+          <CollapsibleSection title="Crypto market" summary={cryptoData?.totalMarketCapFormatted || 'Not collected'}>
           {/* --- Crypto Section --------------- */}
           <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold mt-2">Crypto</div>
 
@@ -265,19 +239,19 @@ export default function ExplorerPage() {
               <h3 className="text-sm font-semibold text-white mb-3">Sector Performance</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-2">
                 {cryptoSectors.map((cat: CryptoCategory) => {
-                  const pct = cat.change24h ?? 0;
+                  const pct = cat.change24h ?? null;
                   return (
                     <div
                       key={cat.id}
                       className="rounded-lg p-3"
                       style={{
-                        backgroundColor: pct > 0 ? `rgba(16, 185, 129, ${Math.min(Math.abs(pct) / 8, 0.35)})` : pct < 0 ? `rgba(239, 68, 68, ${Math.min(Math.abs(pct) / 8, 0.35)})` : 'rgba(148, 163, 184, 0.1)',
+                        backgroundColor: pct == null ? 'rgba(148, 163, 184, 0.1)' : pct > 0 ? `rgba(16, 185, 129, ${Math.min(Math.abs(pct) / 8, 0.35)})` : pct < 0 ? `rgba(239, 68, 68, ${Math.min(Math.abs(pct) / 8, 0.35)})` : 'rgba(148, 163, 184, 0.1)',
                       }}
                     >
                       <div className="text-xs font-semibold text-white truncate">{cat.name}</div>
                       <div className="flex items-baseline justify-between mt-1">
                         <span className="text-[11px] text-slate-400">${cat.marketCap >= 1e12 ? (cat.marketCap / 1e12).toFixed(2) + 'T' : cat.marketCap >= 1e9 ? (cat.marketCap / 1e9).toFixed(0) + 'B' : (cat.marketCap / 1e6).toFixed(0) + 'M'}</span>
-                        <span className={`text-xs font-bold ${pctColor(pct)}`}>{pct > 0 ? '+' : ''}{pct.toFixed(1)}%</span>
+                        <span className={`text-xs font-bold ${pctColor(pct)}`}>{fmtSignedPct(pct)}</span>
                       </div>
                     </div>
                   );
@@ -326,7 +300,7 @@ export default function ExplorerPage() {
                     <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker, m.asset_class)} aria-label={`Open ${proDisplaySymbol(m.ticker, m.asset_class)} in Symbol`}>
                       <span className="font-semibold text-white w-20 truncate">{proDisplaySymbol(m.ticker, m.asset_class)}</span>
                       <span className="text-slate-300 font-mono">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
-                      <span className="text-emerald-400 font-mono w-20 text-right">+{m.change_percentage}</span>
+                      <span className="text-emerald-400 font-mono w-20 text-right">{fmtSignedPct(parseFloat(m.change_percentage))}</span>
                     </button>
                   ))}
                 </div>
@@ -342,19 +316,26 @@ export default function ExplorerPage() {
                     <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker, m.asset_class)} aria-label={`Open ${proDisplaySymbol(m.ticker, m.asset_class)} in Symbol`}>
                       <span className="font-semibold text-white w-20 truncate">{proDisplaySymbol(m.ticker, m.asset_class)}</span>
                       <span className="text-slate-300 font-mono">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
-                      <span className="text-red-400 font-mono w-20 text-right">{m.change_percentage}</span>
+                      <span className="text-red-400 font-mono w-20 text-right">{fmtSignedPct(parseFloat(m.change_percentage))}</span>
                     </button>
                   ))}
                 </div>
               )}
             </Card>
           </div>
+          </CollapsibleSection>
         </div>
       )}
 
       {/* -- SECTORS -------------------------------------------------- */}
       {tab === 'Sectors' && (
         <>
+        {sectorData.length > 0 && <div data-market-chart className="rounded-lg border border-[var(--msp-border)] p-3 space-y-1.5" aria-label="Recorded sector changes">
+          {sectorData.map(sector => <div key={sector.symbol} className="grid grid-cols-[40px_1fr_80px] items-center gap-2 text-xs">
+            <span>{sector.symbol}</span><span className="h-2 bg-white/5" aria-hidden="true"><span className={`block h-2 ${sector.changePercent != null && sector.changePercent < 0 ? 'bg-red-400/60' : 'bg-emerald-400/60'}`} style={{ width: `${sector.changePercent == null ? 0 : Math.min(100, Math.abs(sector.changePercent) / Math.max(1, ...sectorData.map(s => Math.abs(s.changePercent ?? 0))) * 100)}%` }} /></span><span className="text-right tabular-nums">{fmtSignedPct(sector.changePercent)}</span>
+          </div>)}
+        </div>}
+        <CollapsibleSection title="Sector details" summary={`${sectorData.length} ETFs`}>
         <Card>
           {sectors.loading ? <div className="space-y-3">{[1,2,3,4].map(i => <Skel key={i} h="h-8" />)}</div> : sectorData.length === 0 ? (
             <div className="text-xs text-slate-500 py-8 text-center">No sector data available</div>
@@ -378,9 +359,9 @@ export default function ExplorerPage() {
                       <td className="py-2.5 px-2 text-white">{s.name}</td>
                       <td className="py-2.5 px-2 text-emerald-400">{s.symbol}</td>
                       <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.changePercent)}`}>{fmtSignedPct(s.changePercent)}</td>
-                      <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.weekly || 0)}`}>{s.weekly != null ? `${s.weekly > 0 ? '+' : ''}${s.weekly.toFixed(2)}%` : '—'}</td>
-                      <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.monthly || 0)}`}>{s.monthly != null ? `${s.monthly > 0 ? '+' : ''}${s.monthly.toFixed(2)}%` : '—'}</td>
-                      <td className={`py-2.5 px-2 text-right font-mono text-slate-400`}>{(s as any).ytd != null ? `${(s as any).ytd > 0 ? '+' : ''}${(s as any).ytd.toFixed(2)}%` : '—'}</td>
+                      <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.weekly || 0)}`}>{s.weekly != null ? `${s.weekly > 0 ? '+' : ''}${s.weekly.toFixed(2)}%` : 'Not collected'}</td>
+                      <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.monthly || 0)}`}>{s.monthly != null ? `${s.monthly > 0 ? '+' : ''}${s.monthly.toFixed(2)}%` : 'Not collected'}</td>
+                      <td className={`py-2.5 px-2 text-right font-mono text-slate-400`}>{(s as any).ytd != null ? `${(s as any).ytd > 0 ? '+' : ''}${(s as any).ytd.toFixed(2)}%` : 'Not collected'}</td>
                       <td className="py-2.5 px-2 text-right text-slate-400">{s.weight.toFixed(1)}%</td>
                     </tr>
                   ))}
@@ -390,6 +371,7 @@ export default function ExplorerPage() {
           )}
         </Card>
         {sectorData.length > 0 && <SectorEtfHoldings etfs={sectorData.map((s: SectorData) => ({ symbol: s.symbol, name: s.name }))} />}
+        </CollapsibleSection>
         </>
       )}
 
@@ -437,7 +419,7 @@ export default function ExplorerPage() {
           {!regime.data && !regime.loading && (
             <div className="mb-4 rounded-lg bg-[var(--msp-panel-2)] p-3 text-[12px] text-slate-400">
               <div className="text-[11px] text-slate-500 uppercase mb-1">Market Regime Signals</div>
-              Regime unavailable — no stored market data (VIX, SPY trend).
+              Market context not collected · no stored VIX or SPY trend observation.
             </div>
           )}
           {regime.data?.signals && regime.data.signals.length > 0 && (() => {
@@ -446,7 +428,7 @@ export default function ExplorerPage() {
             <div className="mb-4">
               <div className="text-[11px] text-slate-500 uppercase mb-2">
                 Market Regime Signals
-                {regime.data.asOf ? <span className="ml-2 normal-case text-slate-600">data as of {new Date(regime.data.asOf).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })}</span> : null}
+
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                 {regime.data.signals.map((sig: any, i: number) => {
@@ -461,7 +443,7 @@ export default function ExplorerPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-semibold text-white">{sig.kind === 'market' ? 'Market data' : humanizeEnum(sig.source)}</span>
                         <div className="flex items-center gap-1">
-                          <Badge label={humanizeEnum(sig.regime)} color={REGIME_COLORS[r as RegimePriority] || 'var(--msp-text-muted)'} small />
+                          <Badge label={marketText(sig.regime)} color={REGIME_COLORS[r as RegimePriority] || 'var(--msp-text-muted)'} small />
                           {sig.stale && <span role="status" className="text-[11px] text-yellow-500 border border-yellow-500/30 px-1 rounded">stale</span>}
                         </div>
                       </div>
@@ -505,6 +487,7 @@ export default function ExplorerPage() {
             </div>
           )}
 
+          <CollapsibleSection title="Known relationships" summary={`${CROSS_MARKET.length} educational references`}>
           {/* Static known relationships */}
           <div className="text-[11px] text-slate-500 uppercase mb-2">Known Relationships</div>
           <div className="space-y-3">
@@ -521,51 +504,36 @@ export default function ExplorerPage() {
             ))}
           </div>
           <p className="mt-2 text-[10px] text-slate-600">Static heuristics — not live readings. Educational context only.</p>
+          </CollapsibleSection>
         </Card>
       )}
 
-      {/* Errors */}
-      {(sectors.error || cryptoOverview.error || movers.error || commodities.error) && (
-        <div className="text-[11px] text-red-400/60 border border-red-900/30 rounded-lg p-3 space-y-1">
-          {sectors.error && <div>Sectors: {sectors.error}</div>}
-          {cryptoOverview.error && <div>Crypto: {cryptoOverview.error}</div>}
-          {movers.error && <div>Movers: {movers.error}</div>}
-          {commodities.error && <div>Commodities: {commodities.error}</div>}
-        </div>
-      )}
+      {simpleTab && <SourceLine source={tab === 'Cross-Market' ? 'Stored market observations' : 'Alpha Vantage sectors · CoinGecko crypto'} asOf={tab === 'Cross-Market' ? regime.data?.asOf : sectors.data?.asOf} tradingDay={sectors.data?.asOfTradingDay} basis={tab === 'Cross-Market' ? 'Stored context timestamp · static relationships labelled separately' : 'Sector quote timestamp · other feeds are independent snapshots'} />}
+      {/* Keep failed feeds explicit, without exposing backend error codes. */}
+      {(sectors.error || cryptoOverview.error || movers.error || commodities.error) && <p className="rounded border border-amber-400/30 p-2 text-xs text-amber-300">Feeds not collected: {[sectors.error && 'Sectors', cryptoOverview.error && 'Crypto market', movers.error && 'Movers', commodities.error && 'Commodities'].filter(Boolean).join(', ')}</p>}
 
       {/* ─── Deep-dive Tabs (v1 components) ─── */}
       {tab === 'Equity Deep-Dive' && (
         <UpgradeGate requiredTier="pro" currentTier={tier} feature="Equity Deep-Dive Explorer">
-          <EquityExplorer />
+          <EquityExplorer embedded />
         </UpgradeGate>
       )}
       {tab === 'Crypto Deep-Dive' && (
         <UpgradeGate requiredTier="pro" currentTier={tier} feature="Crypto Deep-Dive Explorer">
-          <CryptoExplorer />
+          <CryptoExplorer embedded />
         </UpgradeGate>
       )}
       {tab === 'Crypto Command' && (
-        <CryptoCommand />
+        <CryptoCommand embedded />
       )}
       {tab === 'Crypto Intel' && (
         <div className="space-y-2">
-          <header className="rounded-lg border border-slate-700 bg-slate-900 p-2">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-800 text-base" aria-hidden="true">📰</div>
-              <div>
-                <h1 className="text-lg font-bold text-emerald-300">Crypto Intel</h1>
-                <p className="text-xs text-slate-400">Live news, guides, and institutional treasury holdings for crypto markets.</p>
-              </div>
-            </div>
-          </header>
-
           <section className="rounded-lg border border-slate-700 bg-slate-900 p-2">
             <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • News &amp; Guides</p>
-            <CryptoNewsWidget title="Crypto News &amp; Guides" />
+            <CryptoNewsWidget title="Crypto News &amp; Guides" compact />
           </section>
 
-          <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2" open>
+          <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
             <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
               <span>Zone 3 • Institutional Treasury Holdings</span>
               <span className="text-[11px] text-slate-500 group-open:hidden">Expand</span>
@@ -580,7 +548,7 @@ export default function ExplorerPage() {
       {tab === 'Movers' && (
         <MarketMoversV1 />
       )}
-      {tab === 'Movers' && hero}
+
 
       </div>
     </div>

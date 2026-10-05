@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import SourceLine from '@/components/visual/SourceLine';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import CoinGeckoCredit from '@/components/CoinGeckoCredit';
 
 interface NewsArticle {
@@ -15,6 +17,7 @@ interface NewsArticle {
 }
 
 interface Props {
+  compact?: boolean;
   coinId?: string;
   title?: string;
 }
@@ -36,7 +39,8 @@ function timeAgo(iso: string): string {
   return `${days}d ago`;
 }
 
-export default function CryptoNewsWidget({ coinId, title = 'Crypto News' }: Props) {
+export default function CryptoNewsWidget({ coinId, title = 'Crypto News', compact = false }: Props) {
+  const [showAll, setShowAll] = useState(false);
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -115,7 +119,7 @@ export default function CryptoNewsWidget({ coinId, title = 'Crypto News' }: Prop
         </div>
       </div>
 
-      {!coinId && <TickerSentimentSummary items={coinSentiment} className="mb-3" />}
+      {!coinId && (compact ? <CollapsibleSection title="Sentiment evidence" summary={`${coinSentiment?.length ?? 0} ticker summaries`}><TickerSentimentSummary items={coinSentiment} className="mb-3" plain /></CollapsibleSection> : <TickerSentimentSummary items={coinSentiment} className="mb-3" />)}
 
       {filter === 'guides' && !coinId && (
         <label className="mb-3 flex items-center gap-2 text-xs text-slate-300">
@@ -152,9 +156,10 @@ export default function CryptoNewsWidget({ coinId, title = 'Crypto News' }: Prop
         <div className="py-6 text-center text-[13px] text-slate-500">No articles found</div>
       )}
 
+      {compact && !loading && <p data-layout-verdict className="my-2 text-sm font-semibold">{error ? 'News could not be collected.' : `${articles.length} published articles collected.`}</p>}
       {!loading && !error && articles.length > 0 && (
         <div className="divide-y divide-slate-800">
-          {articles.map((article, i) => (
+          {(compact && !showAll ? articles.slice(0, 5) : articles).map((article, i) => (
             <a
               key={`${article.url}-${i}`}
               href={article.url}
@@ -181,7 +186,7 @@ export default function CryptoNewsWidget({ coinId, title = 'Crypto News' }: Prop
                   )}
                   <span className="text-[10px] text-slate-600">· {timeAgo(article.posted_at)}</span>
                   {article.type === 'guide' && (
-                    <span className="rounded border border-indigo-400/30 bg-indigo-500/15 px-1.5 py-px text-[9px] font-bold text-indigo-300">
+                    <span className="rounded border border-slate-400/30 bg-slate-500/15 px-1.5 py-px text-[9px] font-bold text-slate-300">
                       GUIDE
                     </span>
                   )}
@@ -192,6 +197,8 @@ export default function CryptoNewsWidget({ coinId, title = 'Crypto News' }: Prop
         </div>
       )}
 
+      {compact && articles.length > 5 && <button type="button" className="min-h-10 text-sm underline" onClick={() => setShowAll(value => !value)}>{showAll ? 'Show first 5' : `Show all ${articles.length}`}</button>}
+      {compact && <SourceLine source="CoinGecko news · publisher attribution on each article" asOf={articles[0]?.posted_at} basis="Newest listed publication time" />}
       <CoinGeckoCredit className="mt-3 text-right" detail="News" />
     </div>
   );

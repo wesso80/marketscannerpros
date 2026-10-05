@@ -38,7 +38,7 @@ export default function SectorEtfHoldings({ etfs }: { etfs: Array<{ symbol: stri
   return (
     <section className="mt-4 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-card)] p-4" aria-label="Sector ETF holdings">
       <h3 className="text-sm font-semibold text-white mb-1">Inside the sector ETFs</h3>
-      <p className="text-[11px] text-slate-500 mb-3">Top holdings and sector weights from Alpha Vantage ETF_PROFILE, to see which companies drive each sector tile. For research only.</p>
+      <p className="text-[11px] text-slate-500 mb-3">Top holdings and sector weights from Alpha Vantage ETF profiles, to see which companies drive each sector tile. For research only.</p>
       <div className="flex flex-wrap gap-1.5 mb-3" role="tablist" aria-label="Choose a sector ETF">
         {etfs.map((e) => (
           <button
@@ -64,7 +64,7 @@ export default function SectorEtfHoldings({ etfs }: { etfs: Array<{ symbol: stri
               <ul className="space-y-1 text-xs">
                 {prof.topHoldings.map((h) => (
                   <li key={h.symbol || h.name} className="flex items-center gap-2">
-                    <span className="w-12 font-semibold text-white">{h.symbol || '—'}</span>
+                    <span className="w-12 font-semibold text-white">{h.symbol || 'Not listed'}</span>
                     <span className="flex-1 truncate text-slate-400" title={h.name}>{h.name}</span>
                     <span className="w-24 h-1.5 rounded bg-slate-800 overflow-hidden" aria-hidden><span className="block h-full bg-emerald-500/70" style={{ width: `${Math.min(100, (h.weightPct / (prof.topHoldings[0]?.weightPct || 1)) * 100)}%` }} /></span>
                     <span className="w-14 text-right font-mono text-slate-300">{h.weightPct.toFixed(2)}%</span>
@@ -80,7 +80,7 @@ export default function SectorEtfHoldings({ etfs }: { etfs: Array<{ symbol: stri
                 {prof.sectors.slice(0, 8).map((s) => (
                   <li key={s.sector} className="flex items-center gap-2">
                     <span className="flex-1 truncate text-slate-300">{s.sector}</span>
-                    <span className="w-24 h-1.5 rounded bg-slate-800 overflow-hidden" aria-hidden><span className="block h-full bg-sky-500/70" style={{ width: `${Math.min(100, s.weightPct)}%` }} /></span>
+                    <span className="w-24 h-1.5 rounded bg-slate-800 overflow-hidden" aria-hidden><span className="block h-full bg-slate-400/70" style={{ width: `${Math.min(100, s.weightPct)}%` }} /></span>
                     <span className="w-12 text-right font-mono text-slate-300">{s.weightPct.toFixed(1)}%</span>
                   </li>
                 ))}
