@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useUserTier } from '@/lib/useUserTier';
 import { radarCardModel } from '@/lib/overview/radarCard';
 import StampLine from '@/components/visual/StampLine';
+import { marketText } from '@/lib/marketsPresentation';
 import { COPY } from '@/components/visual/copy';
 
 const c = COPY.radarCard;
@@ -42,14 +43,14 @@ export default function RadarReportCard() {
     </> : state.kind === 'report' ? <>
       <div><p className="text-2xl font-bold">{state.model.dateLabel}</p><p className="text-xs text-[var(--msp-text-muted)]">{c.session}</p></div>
       <div className="flex flex-wrap items-center gap-3">
-        <span className="rounded border px-2 py-1 text-xs font-bold" style={{ color: state.model.color, borderColor: state.model.color }}>{state.model.status}</span>
-        {state.model.health && <span className="text-xs">{state.model.health}</span>}
+        <span className="rounded border px-2 py-1 text-xs font-bold" style={{ color: state.model.color, borderColor: state.model.color }}>{state.model.status === 'COMPLETE' ? 'Complete' : marketText(state.model.status)}</span>
+        {state.model.health && <span className="text-xs">{marketText(state.model.health)}</span>}
         {state.model.older && <span className="text-xs text-[var(--msp-warn)]">{c.older}</span>}
       </div>
       {state.model.count !== null && <p className="text-xl font-semibold">{state.model.count} <span className="text-sm font-normal">{c.candidates}</span></p>}
-      {state.model.chips.length > 0 && <ul data-radar-chips className="flex flex-wrap gap-2">{state.model.chips.map((chip, index) => <li key={`${chip.symbol}-${index}`} className="min-h-10 rounded-full border border-[var(--msp-border)] px-3 text-xs leading-10">{chip.symbol}{chip.label ? ` · ${chip.label}` : ''}</li>)}</ul>}
+      {state.model.chips.length > 0 && <ul data-radar-chips className="flex flex-wrap gap-2">{state.model.chips.map((chip, index) => <li key={`${chip.symbol}-${index}`} className="min-h-10 rounded-full border border-[var(--msp-border)] px-3 text-xs leading-10">{chip.symbol}{chip.label ? ` · ${marketText(chip.label)}` : ''}</li>)}</ul>}
       <StampLine source={c.source} asOf={state.model.generatedAt} basis={c.session} />
       <Link className="inline-flex text-sm text-[var(--msp-accent)]" href="/tools/msp-radar">{c.open}</Link>
-    </> : state.kind === 'empty' ? <p>{c.empty}</p> : state.kind === 'error' ? <div role="status"><p>{c.unavailable}</p><p className="text-xs text-[var(--msp-warn)]">{state.error}</p></div> : null}
+    </> : state.kind === 'empty' ? <p>{c.empty}</p> : state.kind === 'error' ? <div role="status"><p>{marketText(c.unavailable)}</p><p className="text-xs text-[var(--msp-warn)]">{state.error}</p></div> : null}
   </section>;
 }

@@ -1,0 +1,35 @@
+{
+  "base": "b12d135a64b629061960875df028ddc989ba5072",
+  "results": [
+    {
+      "path": "app/tools/macro/page.tsx",
+      "name": "safeNumber",
+      "identical": true,
+      "sha256": "878561d7a4a6d73ed555d8541004bfbb3838232424287aa53095d9cca6130123"
+    },
+    {
+      "path": "app/tools/macro/page.tsx",
+      "name": "trendDirection",
+      "identical": true,
+      "sha256": "9e75f0cd6bf777a354bb3386d9cae15b15be5af361063ef1818cce8e22cb14cf"
+    },
+    {
+      "path": "app/tools/macro/page.tsx",
+      "name": "computeMacroGate",
+      "identical": true,
+      "sha256": "7a0de94d369a90dda6d3578695e0c6f289e02a6223d8fc815176d3431e083664"
+    },
+    {
+      "path": "app/tools/macro/page.tsx",
+      "name": "gate",
+      "identical": true,
+      "sha256": "8fa8a922c801f7ae71ee541ff7843d11d4a81923d60fe34898c454153e9431cd"
+    },
+    {
+      "path": "app/tools/macro/page.tsx",
+      "name": "fetchData",
+      "identical": true,
+      "sha256": "2af8eb6321ce4754be735509c9c917cab1c498575eb0a110d31de38d0b4b1dfb"
+    }
+  ]
+}

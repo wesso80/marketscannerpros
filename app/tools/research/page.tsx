@@ -1,5 +1,11 @@
 'use client';
 
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import SourceLine from '@/components/visual/SourceLine';
+import TabBar from '@/components/visual/TabBar';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import { marketText } from '@/lib/marketsPresentation';
+import { formatMarketTime } from '@/lib/market/priceStamp';
 import PaidPreviewGate from '@/components/free/PaidPreviewGate';
 
 /* ---------------------------------------------------------------------------
@@ -18,6 +24,7 @@ import FreeLoading from '@/components/free/Loading';
 import { useUserTier } from '@/lib/useUserTier';
 import { deleteSavedResearchCase, listSavedResearchCases, updateSavedResearchCaseOutcome, type SavedResearchCaseOutcome, type SavedResearchCaseSummary } from '@/lib/clientResearchCases';
 import { quickAddToWatchlist } from '@/lib/clientWatchlistQuickAdd';
+import { upcomingConfirmedEvents } from '@/lib/calendarPresentation';
 import { formatEventTime } from '@/lib/eventTimeDisplay';
 
 /* ─── Dynamic imports: v1 rich components ─── */
@@ -72,9 +79,9 @@ function firstString(values: unknown): string | null {
 }
 
 function formatSavedDate(value: string | null | undefined): string {
-  if (!value) return 'Unknown date';
+  if (!value) return 'Date not supplied';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Unknown date';
+  if (Number.isNaN(date.getTime())) return 'Date not supplied';
   return date.toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
@@ -122,7 +129,11 @@ function ResearchPagePaid() {
   const searchParams = useSearchParams();
   const initialTab = TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()] || 'News';
   const [tab, setTab] = useState<ResearchTab>(initialTab);
-  const [calFilter, setCalFilter] = useState<string>('all');
+  const [calFilter, setCalFilter] = useState<string>('high');
+  const [showNews, setShowNews] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [viewerZone, setViewerZone] = useState('UTC');
+  useEffect(() => { setViewerZone(Intl.DateTimeFormat().resolvedOptions().timeZone); }, []);
   const [savedCases, setSavedCases] = useState<SavedResearchCaseSummary[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
   const [savedError, setSavedError] = useState<string | null>(null);
@@ -151,6 +162,16 @@ function ResearchPagePaid() {
     if (calFilter === 'all') return all;
     return all.filter(e => e.impact === calFilter);
   }, [calendar.data, calFilter]);
+
+  const upcomingEvents = upcomingConfirmedEvents(events);
+  const visibleEvents = showCalendar ? events : upcomingEvents.slice(0, 5);
+  const publicationTime = (raw?: string) => raw?.replace(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})$/, '$1-$2-$3T$4:$5:$6Z');
+  const displayValue = (value: unknown) => {
+    if (value == null || value === '--' || value === '—') return 'Not collected';
+    if (typeof value === 'number') return marketText(value);
+    const text = marketText(value);
+    return text.replace(/-?\d+\.\d{3,}%?/g, n => `${Number.parseFloat(n).toLocaleString('en-US', { maximumFractionDigits: 2 })}${n.endsWith('%') ? '%' : ''}`);
+  };
 
   const thisWeek = earnings.data?.thisWeek || [];
   const nextWeek = earnings.data?.nextWeek || [];
@@ -261,56 +282,9 @@ function ResearchPagePaid() {
 
   return (
     <div className="space-y-3">
-      <section
-        className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
-        aria-label="Research command header"
-      >
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
-          <div>
-            <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
-              <span className="text-emerald-300">Evidence layer</span>
-              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">{RESEARCH_TAB_META[tab].eyebrow}</span>
-              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">Tier {tier === 'pro' || tier === 'pro_trader' ? 'Pro' : 'Free'}</span>
-            </div>
-            <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Research</h1>
-            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">News, events, catalysts, earnings, and saved evidence for validating the morning research queue.</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" onClick={() => setTab('News')} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15">Open News</button>
-              <button type="button" onClick={() => setTab('Economic Calendar')} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15">Open Calendar</button>
-              <a href={candidateSymbol ? candidateHref : "/tools/golden-egg"} className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Golden Egg</a>
-            </div>
-          </div>
-          <div className="grid self-start gap-1.5 sm:grid-cols-2">
-            <ResearchMetric label="Active Lens" value={tab} tone="#10B981" detail={RESEARCH_TAB_META[tab].eyebrow} />
-            <ResearchMetric label="News Items" value={String(articles.length)} tone="#A5B4FC" detail="Filtered articles in view" />
-            <ResearchMetric label="Saved Cases" value={String(savedCases.length)} tone="#F59E0B" detail="Tracked research packets" />
-            <ResearchMetric label="Tier" value={tier === 'pro' || tier === 'pro_trader' ? 'Pro' : 'Free'} tone={tier === 'pro' || tier === 'pro_trader' ? 'var(--msp-bull)' : 'var(--msp-flat)'} detail="Subscription level" />
-          </div>
-        </div>
-      </section>
-
-      <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Research lens</div>
-            <div className="text-[0.72rem] text-slate-500">Switch between catalyst feeds, macro calendar, earnings, saved cases, and deeper intelligence views.</div>
-          </div>
-        </div>
-        {/* Wraps instead of scrolling sideways: on a phone the later tabs were off-screen with no scroll cue. */}
-        <div className="flex flex-wrap items-center gap-1 pb-0.5">
-          {TABS.map(t => (
-            <button
-              key={t}
-              type="button"
-              aria-pressed={tab === t}
-              onClick={() => setTab(t)}
-              className={`shrink-0 rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors ${tab === t ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300' : 'border-slate-800 bg-slate-950/35 text-slate-400 hover:border-slate-600 hover:text-slate-200'}`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
+      <h1 className="text-2xl font-semibold">Research</h1>
+      <TabBar label="Research views" activeId={tab} items={TABS.map(t => ({id:t,label:t}))} onChange={id => setTab(id as ResearchTab)} />
+      {(tab === 'News' || tab === 'Economic Calendar') && <p data-research-verdict className="text-lg font-semibold">{tab === 'News' ? news.loading ? 'Loading published news…' : news.error ? 'News could not be loaded' : `${articles.length} published articles collected` : calendar.loading ? 'Loading calendar…' : calendar.error ? 'Calendar could not be loaded' : `${upcomingEvents.length} upcoming ${calFilter === 'all' ? '' : calFilter + '-impact '}events with confirmed times`}</p>}
 
       {(tier === 'free' || tier === 'anonymous') && (
         <LockedPreview tool="Market Research Intelligence" />
@@ -321,11 +295,11 @@ function ResearchPagePaid() {
       {tab === 'News' && (
         <Card>
           <p className="mb-3 text-sm font-semibold text-emerald-300">{candidateSymbol ? `${candidateSymbol} · symbol-relevant news` : 'Market news'} · source publication times shown below</p>
-          {news.loading ? <SkeletonRows n={8} /> : news.error ? <p className="py-4 text-xs text-amber-300">News feed unavailable: {news.error}</p> : articles.length === 0 ? (
+          {news.loading ? <SkeletonRows n={8} /> : news.error ? <p className="py-4 text-xs text-amber-300">News could not be loaded.</p> : articles.length === 0 ? (
             <div className="text-xs text-slate-500 py-8 text-center">No news available</div>
           ) : (
             <div className="space-y-3">
-              {articles.map((n: NewsArticle, i: number) => (
+              {(showNews ? articles : articles.slice(0, 5)).map((n: NewsArticle, i: number) => (
                 <div key={i} className="py-2 border-b border-slate-800/30 last:border-0">
                   <div className="flex items-start gap-2">
 
@@ -333,14 +307,14 @@ function ResearchPagePaid() {
                       <a href={n.url} target="_blank" rel="noopener noreferrer" className="text-sm text-white hover:text-emerald-400 transition-colors leading-snug">
                         {n.title}
                       </a>
-                      <div className="text-[10px] text-slate-500 mt-1 line-clamp-2">{n.summary}</div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] text-slate-600">{n.source} · {n.timePublished ? n.timePublished.replace(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})$/, "$1-$2-$3 $4:$5:$6 UTC") : "Publication time unavailable"}</span>
+                      <CollapsibleSection title="Article context" summary={marketText(n.sentiment.label)}><p className="text-xs text-slate-400">{n.summary}</p></CollapsibleSection>
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        <span data-news-source className="rounded-full border border-white/10 px-2 py-1 text-[10px] text-slate-400">{marketText(n.source)} · {formatMarketTime(publicationTime(n.timePublished), viewerZone) || 'Publication time not supplied'}</span>
                         <span className={`text-[10px] ${n.sentiment.score > 0 ? 'text-emerald-400' : n.sentiment.score < 0 ? 'text-red-400' : 'text-slate-500'}`}>
-                          {n.sentiment.label}
+                          {marketText(n.sentiment.label)}
                         </span>
                         {n.tickerSentiments?.slice(0, 4).map(ts => (
-                          <button key={ts.ticker} type="button" className="text-[10px] text-emerald-400 cursor-pointer hover:underline focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(ts.ticker)} aria-label={`Open ${ts.ticker} in Golden Egg`}>
+                          <button key={ts.ticker} type="button" className="text-[10px] text-emerald-400 cursor-pointer hover:underline focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(ts.ticker)} aria-label={`Open ${ts.ticker} in Symbol`}>
                             {ts.ticker}
                           </button>
                         ))}
@@ -351,63 +325,36 @@ function ResearchPagePaid() {
               ))}
             </div>
           )}
-          {news.error && <div className="text-[10px] text-red-400/60 mt-2">Error: {news.error}</div>}
+          {articles.length > 5 && <button type="button" className="min-h-10 underline" onClick={() => setShowNews(!showNews)}>{showNews ? 'Show fewer' : `More · ${articles.length} articles`}</button>}
+          <SourceLine source="Alpha Vantage news · publications attributed above" asOf={publicationTime(articles[0]?.timePublished)} basis="Latest listed publication · independent article times" />
         </Card>
       )}
 
       {/* -- ECONOMIC CALENDAR ---------------------------------------- */}
       {tab === 'Economic Calendar' && (
         <Card>
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
             {['all', 'high', 'medium', 'low'].map(f => (
-              <button key={f} type="button" aria-pressed={calFilter === f} onClick={() => setCalFilter(f)} className={`px-2 py-1 text-[10px] rounded ${calFilter === f ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500 hover:text-slate-300'}`}>
+              <button key={f} type="button" aria-pressed={calFilter === f} onClick={() => { setCalFilter(f); setShowCalendar(false); }} className={`min-h-10 px-2 py-1 text-[10px] rounded ${calFilter === f ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500 hover:text-slate-300'}`}>
                 {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)} Impact
                 {f === 'all' ? ` (${(calendar.data?.events || []).length})` : ` (${(calendar.data?.events || []).filter(e => e.impact === f).length})`}
               </button>
             ))}
           </div>
 
-          {calendar.loading ? <SkeletonRows n={8} /> : events.length === 0 ? (
-            <div className="text-xs text-slate-500 py-8 text-center">No events found</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-[var(--msp-border)]">
-                    <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Date</th>
-                    <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500" title="Shown in your time zone; hover a row for ET and UTC">Time (your zone)</th>
-                    <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Impact</th>
-                    <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Event</th>
-                    <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Forecast</th>
-                    <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Previous</th>
-                    <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Actual</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {events.map((e: EconomicEvent, i: number) => {
-                    const shown = formatEventTime(e);
-                    return (
-                    <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20">
-                      <td className="py-2 px-2 text-slate-300" title={shown.title}>{shown.date}</td>
-                      <td className="py-2 px-2 text-slate-400" title={shown.title}>{shown.time || '—'}</td>
-                      <td className="py-2 px-2"><ImpactDot impact={e.impact as 'high' | 'medium' | 'low'} />{e.impact}</td>
-                      <td className="py-2 px-2 text-white font-medium">{e.event}</td>
-                      <td className="py-2 px-2 text-slate-400">{e.display?.consensus && e.display.consensus !== '--' ? e.display.consensus : e.forecast || '—'}</td>
-                      <td className="py-2 px-2 text-slate-400">{e.display?.previous && e.display.previous !== '--' ? e.display.previous : e.previous ?? '—'}</td>
-                      <td className="py-2 px-2 text-white font-semibold">{e.display?.actual && e.display.actual !== '--' ? e.display.actual : e.actual ?? '—'}</td>
-                    </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {calendar.data?.nextMajorEvent && (
-            <div className="mt-3 pt-2 border-t border-slate-800/40 text-xs text-slate-500">
-              Next major event: <span className="text-white">{calendar.data.nextMajorEvent.event}</span> in {calendar.data.daysUntilMajor} day(s)
-            </div>
-          )}
-          {calendar.error && <div className="text-[10px] text-red-400/60 mt-2">Error: {calendar.error}</div>}
+          {calendar.loading ? <SkeletonRows n={5} /> : calendar.error ? <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-amber-200">Calendar could not be loaded.</p> : visibleEvents.length === 0 ? <p className="py-4 text-sm text-slate-400">No upcoming confirmed events in this filter. Show all to inspect undated or earlier entries.</p> : <ul className="divide-y divide-white/10">
+            {visibleEvents.map((e: EconomicEvent, i: number) => {
+              const shown = formatEventTime(e);
+              return <li data-calendar-event key={`${e.event}-${i}`} className="py-3">
+                <div className="flex flex-wrap justify-between gap-2"><p className="text-sm font-semibold">{marketText(e.event)}</p><span className="text-xs text-amber-200">{marketText(e.impact)} impact</span></div>
+                <p className="text-xs text-slate-400" title={shown.title.replace(/T(?=\d{2}:)/g, ' ').replace(/Z(?= UTC)/g, '')}>Time (your zone): {shown.date} · {shown.time || 'Time not supplied'}</p>
+                <CollapsibleSection title="Release values" summary={displayValue(e.display?.actual || e.actual)}><dl className="grid grid-cols-3 gap-2 text-xs">{[['Forecast',e.display?.consensus || e.forecast],['Previous',e.display?.previous || e.previous],['Actual',e.display?.actual || e.actual]].map(([label,value]) => <div key={String(label)}><dt className="text-slate-500">{label}</dt><dd>{displayValue(value)}</dd></div>)}</dl></CollapsibleSection>
+              </li>;
+            })}
+          </ul>}
+          {events.length > 0 && <button type="button" className="min-h-10 underline" onClick={() => setShowCalendar(!showCalendar)}>{showCalendar ? 'Next five' : `Show all ${events.length}`}</button>}
+          <SourceLine source="Economic calendar" tradingDay={calendar.data?.dateRange ? `${calendar.data.dateRange.from} to ${calendar.data.dateRange.to}` : undefined} basis="Scheduled releases · observation timestamp not supplied" />
+
         </Card>
       )}
 
@@ -439,7 +386,7 @@ function ResearchPagePaid() {
                         </thead>
                         <tbody>
                           {group.items.map((e: EarningsEntry, i: number) => (
-                            <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(e.symbol)} onKeyDown={(event) => onSymbolRowKey(event, e.symbol)} tabIndex={0} aria-label={`Open ${e.symbol} earnings in Golden Egg`}>
+                            <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(e.symbol)} onKeyDown={(event) => onSymbolRowKey(event, e.symbol)} tabIndex={0} aria-label={`Open ${e.symbol} earnings in Symbol`}>
                               <td className="py-1.5 px-2 text-emerald-400 font-semibold">{e.symbol}</td>
                               <td className="py-1.5 px-2 text-white">{e.name}</td>
                               <td className="py-1.5 px-2 text-slate-400">{e.reportDate}</td>
@@ -488,7 +435,7 @@ function ResearchPagePaid() {
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <div className="text-xs font-semibold text-white">Saved Research Cases</div>
-              <div className="text-[10px] text-slate-500">Educational scenario records saved from Scanner and Golden Egg.</div>
+              <div className="text-[10px] text-slate-500">Educational scenario records saved from Scanner and Symbol.</div>
             </div>
             <button
               type="button"
@@ -503,7 +450,7 @@ function ResearchPagePaid() {
           {savedError && <div className="mb-3 rounded border border-red-500/30 bg-red-950/30 px-3 py-2 text-xs text-red-300">{savedError}</div>}
 
           {savedLoading && savedCases.length === 0 ? <SkeletonRows n={6} /> : savedCases.length === 0 ? (
-            <div className="py-8 text-center text-xs text-slate-500">No saved research cases yet. Save a case from Scanner or Golden Egg to build a research archive.</div>
+            <div className="py-8 text-center text-xs text-slate-500">No saved research cases yet. Save a case from Scanner or Symbol to build a research archive.</div>
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
               {savedCases.map((item) => (
@@ -513,7 +460,7 @@ function ResearchPagePaid() {
                       <button
                         type="button"
                         onClick={() => openGoldenEgg(item.symbol)}
-                        aria-label={`Open ${item.symbol} saved research case in Golden Egg`}
+                        aria-label={`Open ${item.symbol} saved research case in Symbol`}
                         className="truncate text-left text-sm font-bold text-white hover:text-emerald-400"
                       >
                         {item.title || `${item.symbol} Research Case`}
@@ -595,6 +542,7 @@ function ResearchPagePaid() {
       )}
 
       </div>}
+      <ComplianceDisclaimer compact />
     </div>
   );
 }

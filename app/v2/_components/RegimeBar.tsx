@@ -12,13 +12,15 @@ import { useRegime } from '../_lib/api';
 import type { RegimePriority } from '../_lib/types';
 import { humanizeEnum } from '@/lib/presentation/labels';
 
-export default function RegimeBar() {
+export default function RegimeBar({ hideIfMissing = false }: { hideIfMissing?: boolean } = {}) {
   const { data: regime, loading } = useRegime();
 
   // No regime means "unavailable" — never a default such as neutral.
   const regimeLabel = regime?.regime ?? null;
   const signals = regime?.signals || [];
   const nonStaleSignals = signals.filter(s => !s.stale && s.counted !== false);
+
+  if (hideIfMissing && (!regimeLabel || /unknown|unavailable/i.test(regimeLabel))) return null;
 
   return (
     <div className="flex items-center gap-3 px-4 py-2 bg-[var(--msp-panel-2)] border-b border-[var(--msp-border)] overflow-x-auto">

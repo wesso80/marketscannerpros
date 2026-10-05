@@ -4,6 +4,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { FREE_COPY } from '@/components/free/copy';
 import { useUserTier } from '@/lib/useUserTier';
 import { isPaidTier } from '@/lib/tiers';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import SourceLine from '@/components/visual/SourceLine';
+import StatTile from '@/components/visual/StatTile';
+import { marketText } from '@/lib/marketsPresentation';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 
 type Stat = {
@@ -61,6 +65,8 @@ export default function SignalAccuracyPage() {
   const [error, setError] = useState<string | null>(null);
   const [lookback, setLookback] = useState<'30' | '90' | 'all'>('90');
   const [minSamples, setMinSamples] = useState(10);
+  const [showStats, setShowStats] = useState(false);
+  const [showRecent, setShowRecent] = useState(false);
 
   useEffect(() => {
     if (tierLoading || !isLoggedIn) return;
@@ -102,10 +108,18 @@ export default function SignalAccuracyPage() {
     });
   }, [stats]);
 
+  const labeledCount = overall?.labeled ?? data?.summary?.total_labeled_all ?? 0;
+  const measuredStats = stats.filter(s => s.labeled_signals > 0);
+  const shownStats = showStats ? measuredStats : measuredStats.slice(0, 5);
+  const visibleGrouped = grouped.map(([name, rows]) => [name, rows.filter(row => shownStats.includes(row))] as const).filter(([, rows]) => rows.length);
+  const shownRecent = showRecent ? recentSignals : recentSignals.slice(0, 5);
+  const verdict = loading ? 'Loading observations…' : error ? 'Observations could not be loaded' : labeledCount === 0 ? 'Outcomes pending' : `${labeledCount.toLocaleString()} labelled outcomes collected`;
+  const observationLabel = (value: string | null | undefined) => value === 'unknown' || value === 'pending' || !value ? 'Outcome pending' : marketText(value);
+
   // Gate: Pro (legacy pro_trader and admins included)
   if (!tierLoading && isLoggedIn && !isPaidTier(tier)) {
     return (
-      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-6">
+      <div className="bg-[#0F172A] flex items-center justify-center p-6">
         <div className="bg-slate-800/60 rounded-lg p-8 max-w-md text-center border border-slate-700">
           <div className="mx-auto mb-3 h-10 w-10 rounded-full border border-slate-600 bg-slate-900" aria-hidden="true" />
           <h2 className="text-xl font-bold text-white mb-2">Pro Feature</h2>
@@ -118,7 +132,7 @@ export default function SignalAccuracyPage() {
 
   if (!tierLoading && !isLoggedIn) {
     return (
-      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-6">
+      <div className="bg-[#0F172A] flex items-center justify-center p-6">
         <div className="bg-slate-800/60 rounded-lg p-8 max-w-md text-center border border-slate-700">
           <div className="mx-auto mb-3 h-10 w-10 rounded-full border border-slate-600 bg-slate-900" aria-hidden="true" />
           <h2 className="text-xl font-bold text-white mb-2">Login Required</h2>
@@ -130,52 +144,22 @@ export default function SignalAccuracyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0F172A] text-white p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      <section
-        className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
-        aria-label="Signal Accuracy command header"
-      >
-        <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em]">
-          <span className="rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2.5 py-0.5 text-emerald-200">SIGNAL ACCURACY</span>
-          <span className="rounded-full border border-amber-400/35 bg-amber-500/10 px-2.5 py-0.5 text-amber-200">EDUCATIONAL REVIEW</span>
-          <span className="rounded-full border border-sky-400/35 bg-sky-500/10 px-2.5 py-0.5 text-sky-200">HISTORICAL ONLY</span>
-        </div>
-        <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">Historical Research Accuracy</h1>
-            <p className="mt-1 text-sm text-slate-400">Review how educational AI research observations behaved after scanner horizons elapsed.</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <a href="/tools/golden-egg" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-xs font-bold text-amber-200 hover:bg-amber-400/20">Open Golden Egg</a>
-            <a href="/tools/scanner" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-xs font-bold text-emerald-200 hover:bg-emerald-400/20">Open Scanner</a>
-            <a href="/tools/research" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-xs font-bold text-sky-200 hover:bg-sky-400/20">Open Research</a>
-          </div>
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {[
-            { label: 'Lookback', value: lookback === 'all' ? 'All' : `${lookback}d`, tone: 'text-emerald-300' },
-            { label: 'Min Samples', value: String(minSamples), tone: 'text-sky-300' },
-            { label: 'Status', value: loading ? 'Loading' : error ? 'Error' : 'Ready', tone: loading ? 'text-amber-300' : error ? 'text-rose-300' : 'text-emerald-300' },
-            { label: 'Mode', value: 'Educational', tone: 'text-amber-300' },
-          ].map((m) => (
-            <div key={m.label} className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
-              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-white/55">{m.label}</div>
-              <div className={`mt-1 text-sm font-bold ${m.tone}`}>{m.value}</div>
-            </div>
-          ))}
-        </div>
-      </section>
+    <div className="bg-[#0F172A] text-white p-3 max-w-7xl mx-auto space-y-3">
+      <h1 className="text-2xl font-semibold">Signal Accuracy</h1>
+      <p data-research-verdict className={`text-lg font-semibold ${error || !labeledCount ? 'text-amber-200' : 'text-white'}`}>{verdict}</p>
+      <SourceLine source="Stored scanner outcomes" asOf={data?.metadata?.timestamp} basis="Historical labelled observations" />
+      <CollapsibleSection title="Review filters" summary={`${lookback === 'all' ? 'All history' : lookback + ' days'} · minimum ${minSamples} samples`}>
       {/* Header controls */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div className="sr-only">
           <h2>Historical Research Accuracy controls</h2>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1.5">
             <label className="text-[11px] text-slate-500 uppercase">Lookback</label>
             {(['30', '90', 'all'] as const).map(v => (
-              <button key={v} onClick={() => setLookback(v)}
-                className={`px-2 py-1 rounded text-[11px] font-bold transition-colors ${lookback === v ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500 hover:text-slate-300'}`}>
+              <button key={v} onClick={() => { setLookback(v); setShowRecent(false); setShowStats(false); }}
+                className={`min-h-10 px-2 py-1 rounded text-[11px] font-bold transition-colors ${lookback === v ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500 hover:text-slate-300'}`}>
                 {v === 'all' ? 'All' : `${v}d`}
               </button>
             ))}
@@ -183,8 +167,8 @@ export default function SignalAccuracyPage() {
           <div className="flex items-center gap-1.5">
             <label className="text-[11px] text-slate-500 uppercase">Min Samples</label>
             {[5, 10, 30].map(v => (
-              <button key={v} onClick={() => setMinSamples(v)}
-                className={`px-2 py-1 rounded text-[11px] font-bold transition-colors ${minSamples === v ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500 hover:text-slate-300'}`}>
+              <button key={v} onClick={() => { setMinSamples(v); setShowStats(false); }}
+                className={`min-h-10 px-2 py-1 rounded text-[11px] font-bold transition-colors ${minSamples === v ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500 hover:text-slate-300'}`}>
                 {v}
               </button>
             ))}
@@ -192,25 +176,22 @@ export default function SignalAccuracyPage() {
         </div>
       </div>
 
+      </CollapsibleSection>
+
       {loading ? (
         <div className="space-y-4">
           {[1, 2, 3].map(i => <div key={i} className="h-32 bg-slate-800/40 rounded-xl animate-pulse" />)}
         </div>
       ) : error ? (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center text-red-400">{error}</div>
+        <button type="button" className="min-h-10 underline" onClick={fetchData}>Try again</button>
       ) : (
         <>
-          <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-100">
-            This page reviews historical scanner observations for educational pattern analysis only. It does not validate future performance, does not provide trading signals, and does not recommend buying, selling, holding, shorting, or trading any asset.
-          </div>
-          <ComplianceDisclaimer compact />
-
           {/* Overall Summary Cards */}
           {overall && (
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <SummaryCard label="Total Observations" value={overall.total.toLocaleString()} />
-              <SummaryCard label="Labeled" value={overall.labeled.toLocaleString()} sub={`${overall.total > 0 ? ((overall.labeled / overall.total) * 100).toFixed(0) : 0}% resolved`} />
-              <SummaryCard label="Past threshold" value={overall.win_rate != null ? `${overall.win_rate.toFixed(1)}%` : '—'}
+              <SummaryCard label="Labeled" value={overall.labeled.toLocaleString()} sub={overall.total > 0 ? `${((overall.labeled / overall.total) * 100).toFixed(0)}% resolved` : undefined} />
+              <SummaryCard label="Past threshold" value={overall.win_rate != null ? `${overall.win_rate.toFixed(1)}%` : 'Not collected'}
                 color={overall.win_rate != null && overall.win_rate >= 55 ? 'text-emerald-400' : overall.win_rate != null && overall.win_rate < 45 ? 'text-red-400' : 'text-amber-400'}
                 sub={`Lookback ${lookback === 'all' ? 'all' : `${lookback}d`}. Not a closed trade.`} />
               <SummaryCard label="Correct" value={overall.correct.toLocaleString()} color="text-emerald-400" />
@@ -218,6 +199,14 @@ export default function SignalAccuracyPage() {
             </div>
           )}
 
+          {overall && overall.labeled > 0 && <figure data-research-chart className="rounded-lg border border-white/10 p-3"><figcaption className="mb-2 text-sm">Recorded outcome counts</figcaption>{[['Correct',overall.correct],['Wrong',overall.wrong],['Neutral',overall.neutral]].map(([label,count]) => <div key={label} className="grid grid-cols-[5rem_1fr_3rem] items-center gap-2 py-1 text-xs"><span>{label}</span><span className="h-2 bg-white/5"><span className="block h-2 bg-slate-400" style={{width: `${Number(count) / overall.labeled * 100}%`}} /></span><span>{Number(count).toLocaleString()}</span></div>)}</figure>}
+          <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-100">
+            This page reviews historical scanner observations for educational pattern analysis only. It does not validate future performance, does not provide trading signals, and does not recommend buying, selling, holding, shorting, or trading any asset.
+          </div>
+          <ComplianceDisclaimer compact />
+
+          <CollapsibleSection title="Outcome evidence" summary={`${measuredStats.length} measured groups · ${recentSignals.length} recent observations`}>
+          <div className="space-y-4">
           {/* Outcome Thresholds Reference */}
           {thresholds.length > 0 && (
             <div className="bg-slate-800/30 rounded-xl border border-slate-700/50 p-4">
@@ -236,17 +225,18 @@ export default function SignalAccuracyPage() {
           )}
 
           {/* Stats by Scanner Type */}
-          {grouped.length > 0 ? (
+          {visibleGrouped.length > 0 ? (
             <div className="space-y-4">
-              {grouped.map(([scannerType, scannerStats]) => (
+              {visibleGrouped.map(([scannerType, scannerStats]) => (
                 <div key={scannerType} className="bg-slate-800/40 rounded-xl border border-slate-700/50 overflow-hidden">
                   <div className="px-4 py-3 border-b border-slate-700/50 flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-white">{scannerType}</h3>
+                    <h3 className="text-sm font-bold text-white">{marketText(scannerType)}</h3>
                     <span className="text-[11px] text-slate-500">
                       {scannerStats.reduce((s, r) => s + r.labeled_signals, 0).toLocaleString()} labeled observations
                     </span>
                   </div>
-                  <div className="overflow-x-auto">
+                  <div className="divide-y divide-white/10 p-3 sm:hidden">{scannerStats.map((row,i) => <div data-accuracy-card key={i} className="py-2 text-xs"><p className="font-semibold">{marketText(row.direction)} context · {row.horizon_label || row.horizon_minutes + 'm'}</p><p>{row.labeled_signals} labelled observations · {row.win_rate != null ? `${Number(row.win_rate).toFixed(1)}% past threshold` : 'Threshold share not collected'}</p><p className="text-slate-400">{marketText(row.data_quality)}</p></div>)}</div>
+                  <div className="hidden overflow-x-auto sm:block">
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="text-[11px] text-slate-500 uppercase tracking-wider border-b border-slate-700/30">
@@ -271,21 +261,21 @@ export default function SignalAccuracyPage() {
                                 <span className={`inline-flex items-center gap-1 font-medium ${
                                   s.direction === 'bullish' ? 'text-emerald-400' : s.direction === 'bearish' ? 'text-red-400' : 'text-amber-400'
                                 }`}>
-                                  {s.direction === 'bullish' ? 'Bullish' : s.direction === 'bearish' ? 'Bearish' : 'Neutral'}
+                                  {s.direction === 'bullish' ? 'Positive context' : s.direction === 'bearish' ? 'Negative context' : 'Neutral'}
                                 </span>
                               </td>
                               <td className="px-3 py-2 text-slate-300">{s.horizon_label || `${s.horizon_minutes}m`}</td>
                               <td className="px-3 py-2 text-right text-slate-300">{s.labeled_signals}</td>
                               <td className={`px-3 py-2 text-right font-medium ${
                                 wr != null && wr >= 55 ? 'text-emerald-400' : wr != null && wr < 45 ? 'text-red-400' : 'text-amber-400'
-                              }`}>{wr != null ? `${wr.toFixed(1)}%` : '—'}</td>
-                              <td className="px-3 py-2 text-right text-emerald-400">{s.avg_win ? `+${parseFloat(s.avg_win).toFixed(2)}%` : '—'}</td>
-                              <td className="px-3 py-2 text-right text-red-400">{s.avg_loss ? `${parseFloat(s.avg_loss).toFixed(2)}%` : '—'}</td>
-                              <td className="px-3 py-2 text-right text-slate-300">{s.risk_reward ?? '—'}</td>
+                              }`}>{wr != null ? `${wr.toFixed(1)}%` : 'Not collected'}</td>
+                              <td className="px-3 py-2 text-right text-emerald-400">{s.avg_win ? `+${parseFloat(s.avg_win).toFixed(2)}%` : 'Not collected'}</td>
+                              <td className="px-3 py-2 text-right text-red-400">{s.avg_loss ? `${parseFloat(s.avg_loss).toFixed(2)}%` : 'Not collected'}</td>
+                              <td className="px-3 py-2 text-right text-slate-300">{s.risk_reward != null && Number.isFinite(Number(s.risk_reward)) ? marketText(Number(s.risk_reward)) : 'Not collected'}</td>
                               <td className={`px-3 py-2 text-right font-medium ${
                                 exp != null && exp > 0 ? 'text-emerald-400' : exp != null && exp < 0 ? 'text-red-400' : 'text-slate-400'
-                              }`}>{exp != null ? `${exp > 0 ? '+' : ''}${exp.toFixed(2)}%` : '—'}</td>
-                              <td className="px-3 py-2 text-right text-slate-500">{s.data_quality}</td>
+                              }`}>{exp != null ? `${exp > 0 ? '+' : ''}${exp.toFixed(2)}%` : 'Not collected'}</td>
+                              <td className="px-3 py-2 text-right text-slate-500">{marketText(s.data_quality)}</td>
                             </tr>
                           );
                         })}
@@ -302,13 +292,16 @@ export default function SignalAccuracyPage() {
             </div>
           )}
 
+          {measuredStats.length > 5 && <button type="button" className="min-h-10 underline" onClick={() => setShowStats(!showStats)}>{showStats ? 'Show fewer groups' : `Show all ${measuredStats.length} groups`}</button>}
+
           {/* Recent Observations */}
           {recentSignals.length > 0 && (
             <div className="bg-slate-800/40 rounded-xl border border-slate-700/50 overflow-hidden">
               <div className="px-4 py-3 border-b border-slate-700/50">
                 <h3 className="text-sm font-bold text-white">Recent Observations</h3>
               </div>
-              <div className="overflow-x-auto">
+              <div className="divide-y divide-white/10 p-3 sm:hidden">{shownRecent.map((row,i) => <div data-recent-card key={i} className="py-2 text-xs"><p className="font-semibold">{row.symbol} · {marketText(row.score)}</p><p>{marketText(row.direction)} context · {observationLabel(row.outcome)}</p>{row.pct_move != null && <p>{row.pct_move.toFixed(2)}% recorded move</p>}<p className="text-slate-400">{new Date(row.created_at).toLocaleDateString()}</p></div>)}</div>
+              <div className="hidden overflow-x-auto sm:block">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="text-[11px] text-slate-500 uppercase tracking-wider border-b border-slate-700/30">
@@ -322,18 +315,18 @@ export default function SignalAccuracyPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {recentSignals.map((s, i) => (
+                    {shownRecent.map((s, i) => (
                       <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20">
                         <td className="px-4 py-2 font-medium text-white">{s.symbol}</td>
                         <td className="px-3 py-2">
                           <span className={s.direction === 'bullish' ? 'text-emerald-400' : s.direction === 'bearish' ? 'text-red-400' : 'text-amber-400'}>
-                            {s.direction === 'bullish' ? 'Bullish' : s.direction === 'bearish' ? 'Bearish' : 'Neutral'}
+                            {s.direction === 'bullish' ? 'Positive context' : s.direction === 'bearish' ? 'Negative context' : 'Neutral'}
                           </span>
                         </td>
-                        <td className="px-3 py-2 text-slate-400">{s.scanner_type}</td>
-                        <td className="px-3 py-2 text-right text-slate-300">{s.score}</td>
+                        <td className="px-3 py-2 text-slate-400">{marketText(s.scanner_type)}</td>
+                        <td className="px-3 py-2 text-right text-slate-300">{marketText(s.score)}</td>
                         <td className={`px-3 py-2 text-right font-medium ${s.pct_move != null && s.pct_move >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {s.pct_move != null ? `${s.pct_move >= 0 ? '+' : ''}${s.pct_move.toFixed(2)}%` : '—'}
+                          {s.pct_move != null ? `${s.pct_move >= 0 ? '+' : ''}${s.pct_move.toFixed(2)}%` : 'Not collected'}
                         </td>
                         <td className="px-3 py-2 text-center">
                           <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold ${
@@ -341,7 +334,7 @@ export default function SignalAccuracyPage() {
                             s.outcome === 'wrong' ? 'bg-red-500/20 text-red-400' :
                             s.outcome === 'neutral' ? 'bg-amber-500/20 text-amber-400' :
                             'bg-slate-700 text-slate-400'
-                          }`}>{s.outcome || 'pending'}</span>
+                          }`}>{observationLabel(s.outcome)}</span>
                         </td>
                         <td className="px-3 py-2 text-right text-slate-500">{new Date(s.created_at).toLocaleDateString()}</td>
                       </tr>
@@ -351,6 +344,10 @@ export default function SignalAccuracyPage() {
               </div>
             </div>
           )}
+
+          {recentSignals.length > 5 && <button type="button" className="min-h-10 underline" onClick={() => setShowRecent(!showRecent)}>{showRecent ? 'Show fewer observations' : `Show all ${recentSignals.length} observations`}</button>}
+          </div>
+          </CollapsibleSection>
 
           {/* Metadata */}
           {data?.metadata && (
@@ -363,11 +360,6 @@ export default function SignalAccuracyPage() {
 }
 
 function SummaryCard({ label, value, sub, color = 'text-white' }: { label: string; value: string; sub?: string; color?: string }) {
-  return (
-    <div className="bg-slate-800/40 rounded-xl border border-slate-700/50 p-3">
-      <div className="text-[11px] text-slate-500 uppercase tracking-wider">{label}</div>
-      <div className={`text-lg font-bold mt-0.5 ${color}`}>{value}</div>
-      {sub && <div className="text-[11px] text-slate-500 mt-0.5">{sub}</div>}
-    </div>
-  );
+  if (value === 'Not collected') return null;
+  return <div><StatTile label={label} value={value} />{sub && <p className="mt-1 text-xs text-slate-400">{sub}</p>}</div>;
 }

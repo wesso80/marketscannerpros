@@ -1,0 +1,2564 @@
+{
+  "mocked": true,
+  "results": [
+    {
+      "tier": "pro",
+      "type": "equity",
+      "state": "unrun",
+      "usage": 0,
+      "observedAt": "2026-10-05T16:23:35.284Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 924,
+      "screens": 1.155,
+      "scrollWidth": 1280,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\nRun a scan to collect research candidates.\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n0\n\nMatches\n\n0\n\nAligned\n\n0\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nData detailsEquity data incomplete, Crypto data incomplete\nQueue filtersTimeframe, evidence and sort.\n\nEXAMPLE\n\nNo live queue is loaded. This sample shows the card shape only. Run a scan when you want live rows.\n\n90-day line not supplied with this example\n\nPATTERN STILL FORMING\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "Run a scan to collect research candidates.",
+          "bottom": 159.5
+        }
+      ],
+      "visibleRows": [],
+      "buttons": [
+        {
+          "text": "Quick scan",
+          "height": 40
+        },
+        {
+          "text": "Pro scanner",
+          "height": 40
+        },
+        {
+          "text": "Run Educational Scan",
+          "height": 40
+        },
+        {
+          "text": "Breakout",
+          "height": 40
+        },
+        {
+          "text": "Mean Reversion",
+          "height": 40
+        },
+        {
+          "text": "Squeeze Play",
+          "height": 40
+        },
+        {
+          "text": "Relative Strength",
+          "height": 40
+        },
+        {
+          "text": "High Alignment",
+          "height": 40
+        }
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\nRun a scan to collect research candidates.\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n0\n\nMatches\n\n0\n\nAligned\n\n0\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nData detailsEquity data incomplete, Crypto data incomplete\n\n2 issues\n\nEquity data incomplete\n\nCrypto data incomplete\n\nQueue filtersTimeframe, evidence and sort.\nTimeframe\n15m\n1H\nDaily\nWeekly\nEvidence\nAll (0)\nupside (0)\ndownside (0)\nHigh Score ≥70 (0)\nDVE Signals (0)\nSqueeze (0)\nRegime Match (0)\nSort\nScore\nSymbol\nPrice\nDescending\n\nEXAMPLE\n\nNo live queue is loaded. This sample shows the card shape only. Run a scan when you want live rows.\n\n90-day line not supplied with this example\n\nPATTERN STILL FORMING\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "expandedWidth": 1280
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 1280,
+      "state": "request-check",
+      "usageAfterView": {
+        "used": 0,
+        "limit": 5
+      },
+      "presetScanRequests": 0
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "state": "pro-run",
+      "usage": 1,
+      "observedAt": "2026-10-05T16:23:36.001Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1245,
+      "screens": 1.55625,
+      "scrollWidth": 1280,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\n12 research candidates\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n12\n\nMatches\n\n4\n\nAligned\n\n4\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nData detailsNo feed errors reported\nAdvanced filtersUniverse, structure, bias and sort. Closed until you open them.\n\nRun Educational Scan after changing filters or sort. Filters apply to all evaluated candidates before the 50-result limit. Deep scan loads full candle history for every symbol; candidates missing a required input are counted as not supplied.\n\nExcluded: 8\nAAPL\n249.35\nFour-factor agreement\nScore 80\nMU\n250.35\nMixed evidence\nScore 79\nNVDA\n251.35\nFour-factor agreement\nScore 78\nMSFT\n252.35\nMixed evidence\nScore 77\nAMZN\n253.35\nFour-factor agreement\nScore 76\nShow all 12\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "12 research candidates",
+          "bottom": 159.5
+        }
+      ],
+      "visibleRows": [
+        5
+      ],
+      "buttons": [
+        {
+          "text": "Quick scan",
+          "height": 40
+        },
+        {
+          "text": "Pro scanner",
+          "height": 40
+        },
+        {
+          "text": "Run Educational Scan",
+          "height": 40
+        },
+        {
+          "text": "Momentum",
+          "height": 40
+        },
+        {
+          "text": "Breakout",
+          "height": 40
+        },
+        {
+          "text": "Mean Reversion",
+          "height": 40
+        },
+        {
+          "text": "Squeeze Play",
+          "height": 40
+        },
+        {
+          "text": "Relative Strength",
+          "height": 40
+        },
+        {
+          "text": "High Alignment",
+          "height": 40
+        },
+        {
+          "text": "observe",
+          "height": 40
+        },
+        {
+          "text": "review",
+          "height": 40
+        },
+        {
+          "text": "AAPL249.35Four-factor agreementScore 80",
+          "height": 70
+        },
+        {
+          "text": "MU250.35Mixed evidenceScore 79",
+          "height": 70
+        },
+        {
+          "text": "NVDA251.35Four-factor agreementScore 78",
+          "height": 70
+        },
+        {
+          "text": "MSFT252.35Mixed evidenceScore 77",
+          "height": 70
+        },
+        {
+          "text": "AMZN253.35Four-factor agreementScore 76",
+          "height": 70
+        },
+        {
+          "text": "Show all 12",
+          "height": 40
+        }
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\n12 research candidates\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n12\n\nMatches\n\n4\n\nAligned\n\n4\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nData detailsNo feed errors reported\n\nReady\n\nAdvanced filtersUniverse, structure, bias and sort. Closed until you open them.\nUNIVERSE\nASSET CLASS\nStocks · selected above\nSECTOR FILTER\nAll\nSTRUCTURE\nTIMEFRAME\n1d\n1h\n30m\n15m\nFACTOR AGREEMENT\n2/4+\n3/4+\n4/4\nMIN EVIDENCE SCORE\nAny\n30\n40\n50\n60\n70\n80\nVOL STATE\nAll\nLow\nModerate\nHigh\nSQUEEZE\nAll\nIn Squeeze\nMODE\nDEEP\nOBSERVE\nREVIEW\nBIAS:\nAll\nUpside evidence\nDownside evidence\nQUALITY:\nAll\nHigh\nMedium\nSORT:\nRank\nConfluence\nVolatility\nTrend\n\nRun Educational Scan after changing filters or sort. Filters apply to all evaluated candidates before the 50-result limit. Deep scan loads full candle history for every symbol; candidates missing a required input are counted as not supplied.\n\nExcluded: 8\nAAPL\n249.35\nFour-factor agreement\nScore 80\nMU\n250.35\nMixed evidence\nScore 79\nNVDA\n251.35\nFour-factor agreement\nScore 78\nMSFT\n252.35\nMixed evidence\nScore 77\nAMZN\n253.35\nFour-factor agreement\nScore 76\nShow all 12\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "expandedWidth": 1280
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 1280,
+      "state": "show-all",
+      "visibleRows": 12
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "state": "ranked-run",
+      "usage": 2,
+      "observedAt": "2026-10-05T16:23:36.733Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1066,
+      "screens": 1.3325,
+      "scrollWidth": 1280,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\n12 research candidates\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n12\n\nMatches\n\n0\n\nAligned\n\n0\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nData detailsCrypto data incomplete\nQueue filtersTimeframe, evidence and sort.\nSymbol\tPrice\tScore\tEvidence\tReview\nAAPL\t249.35\t54\tTrend and volume observations\tReview\nMU\t250.35\t54\tTrend and volume observations\tReview\nAMZN\t253.35\t53\tTrend and volume observations\tReview\nMETA\t254.35\t53\tTrend and volume observations\tReview\nMSFT\t252.35\t53\tTrend and volume observations\tReview\nShow all 12\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "12 research candidates",
+          "bottom": 159.5
+        }
+      ],
+      "visibleRows": [],
+      "buttons": [
+        {
+          "text": "Quick scan",
+          "height": 40
+        },
+        {
+          "text": "Pro scanner",
+          "height": 40
+        },
+        {
+          "text": "Run Educational Scan",
+          "height": 40
+        },
+        {
+          "text": "Momentum",
+          "height": 40
+        },
+        {
+          "text": "Breakout",
+          "height": 40
+        },
+        {
+          "text": "Mean Reversion",
+          "height": 40
+        },
+        {
+          "text": "Squeeze Play",
+          "height": 40
+        },
+        {
+          "text": "Relative Strength",
+          "height": 40
+        },
+        {
+          "text": "High Alignment",
+          "height": 40
+        },
+        {
+          "text": "Descending",
+          "height": 40
+        },
+        {
+          "text": "Review",
+          "height": 40
+        },
+        {
+          "text": "Review",
+          "height": 40
+        },
+        {
+          "text": "Review",
+          "height": 40
+        },
+        {
+          "text": "Review",
+          "height": 40
+        },
+        {
+          "text": "Review",
+          "height": 40
+        },
+        {
+          "text": "Show all 12",
+          "height": 40
+        }
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\n12 research candidates\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n12\n\nMatches\n\n0\n\nAligned\n\n0\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nData detailsCrypto data incomplete\n\n1 issue\n\nCrypto data incomplete\n\nQueue filtersTimeframe, evidence and sort.\nTimeframe\n15m\n1H\nDaily\nWeekly\nEvidence\nAll (12)\nupside (6)\ndownside (6)\nHigh Score ≥70 (0)\nDVE Signals (0)\nSqueeze (0)\nRegime Match (12)\nSort\nScore\nSymbol\nPrice\nDescending\nSymbol\tPrice\tScore\tEvidence\tReview\nAAPL\t249.35\t54\tTrend and volume observations\tReview\nMU\t250.35\t54\tTrend and volume observations\tReview\nAMZN\t253.35\t53\tTrend and volume observations\tReview\nMETA\t254.35\t53\tTrend and volume observations\tReview\nMSFT\t252.35\t53\tTrend and volume observations\tReview\nShow all 12\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "expandedWidth": 1280
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "state": "unrun",
+      "usage": 0,
+      "observedAt": "2026-10-05T16:23:38.450Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1061,
+      "screens": 1.2571090047393365,
+      "scrollWidth": 390,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\nRun a scan to collect research candidates.\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n0\n\nMatches\n\n0\n\nAligned\n\n0\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nData detailsEquity data incomplete, Crypto data incomplete\nQueue filtersTimeframe, evidence and sort.\n\nEXAMPLE\n\nNo live queue is loaded. This sample shows the card shape only. Run a scan when you want live rows.\n\n90-day line not supplied with this example\n\nPATTERN STILL FORMING\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "Run a scan to collect research candidates.",
+          "bottom": 159.5
+        }
+      ],
+      "visibleRows": [],
+      "buttons": [
+        {
+          "text": "Quick scan",
+          "height": 40
+        },
+        {
+          "text": "Pro scanner",
+          "height": 40
+        },
+        {
+          "text": "Run Educational Scan",
+          "height": 40
+        },
+        {
+          "text": "Breakout",
+          "height": 40
+        },
+        {
+          "text": "Mean Reversion",
+          "height": 58
+        },
+        {
+          "text": "Squeeze Play",
+          "height": 58
+        },
+        {
+          "text": "Relative Strength",
+          "height": 58
+        },
+        {
+          "text": "High Alignment",
+          "height": 58
+        }
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\nRun a scan to collect research candidates.\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n0\n\nMatches\n\n0\n\nAligned\n\n0\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nData detailsEquity data incomplete, Crypto data incomplete\n\n2 issues\n\nEquity data incomplete\n\nCrypto data incomplete\n\nQueue filtersTimeframe, evidence and sort.\nTimeframe\n15m\n1H\nDaily\nWeekly\nEvidence\nAll (0)\nupside (0)\ndownside (0)\nHigh Score ≥70 (0)\nDVE Signals (0)\nSqueeze (0)\nRegime Match (0)\nSort\nScore\nSymbol\nPrice\nDescending\n\nEXAMPLE\n\nNo live queue is loaded. This sample shows the card shape only. Run a scan when you want live rows.\n\n90-day line not supplied with this example\n\nPATTERN STILL FORMING\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "expandedWidth": 390
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 390,
+      "state": "request-check",
+      "usageAfterView": {
+        "used": 0,
+        "limit": 5
+      },
+      "presetScanRequests": 0
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "state": "pro-run",
+      "usage": 1,
+      "observedAt": "2026-10-05T16:23:39.133Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1390,
+      "screens": 1.646919431279621,
+      "scrollWidth": 390,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\n12 research candidates\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n12\n\nMatches\n\n4\n\nAligned\n\n4\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nData detailsNo feed errors reported\nAdvanced filtersUniverse, structure, bias and sort. Closed until you open them.\n\nRun Educational Scan after changing filters or sort. Filters apply to all evaluated candidates before the 50-result limit. Deep scan loads full candle history for every symbol; candidates missing a required input are counted as not supplied.\n\nExcluded: 8\nAAPL\n249.35\nFour-factor agreement\nScore 80\nMU\n250.35\nMixed evidence\nScore 79\nNVDA\n251.35\nFour-factor agreement\nScore 78\nMSFT\n252.35\nMixed evidence\nScore 77\nAMZN\n253.35\nFour-factor agreement\nScore 76\nShow all 12\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "12 research candidates",
+          "bottom": 159.5
+        }
+      ],
+      "visibleRows": [
+        5
+      ],
+      "buttons": [
+        {
+          "text": "Quick scan",
+          "height": 40
+        },
+        {
+          "text": "Pro scanner",
+          "height": 40
+        },
+        {
+          "text": "Run Educational Scan",
+          "height": 40
+        },
+        {
+          "text": "Momentum",
+          "height": 40
+        },
+        {
+          "text": "Breakout",
+          "height": 40
+        },
+        {
+          "text": "Mean Reversion",
+          "height": 58
+        },
+        {
+          "text": "Squeeze Play",
+          "height": 58
+        },
+        {
+          "text": "Relative Strength",
+          "height": 58
+        },
+        {
+          "text": "High Alignment",
+          "height": 58
+        },
+        {
+          "text": "observe",
+          "height": 40
+        },
+        {
+          "text": "review",
+          "height": 40
+        },
+        {
+          "text": "AAPL249.35Four-factor agreementScore 80",
+          "height": 70
+        },
+        {
+          "text": "MU250.35Mixed evidenceScore 79",
+          "height": 70
+        },
+        {
+          "text": "NVDA251.35Four-factor agreementScore 78",
+          "height": 70
+        },
+        {
+          "text": "MSFT252.35Mixed evidenceScore 77",
+          "height": 70
+        },
+        {
+          "text": "AMZN253.35Four-factor agreementScore 76",
+          "height": 70
+        },
+        {
+          "text": "Show all 12",
+          "height": 40
+        }
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\n12 research candidates\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n12\n\nMatches\n\n4\n\nAligned\n\n4\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nData detailsNo feed errors reported\n\nReady\n\nAdvanced filtersUniverse, structure, bias and sort. Closed until you open them.\nUNIVERSE\nASSET CLASS\nStocks · selected above\nSECTOR FILTER\nAll\nSTRUCTURE\nTIMEFRAME\n1d\n1h\n30m\n15m\nFACTOR AGREEMENT\n2/4+\n3/4+\n4/4\nMIN EVIDENCE SCORE\nAny\n30\n40\n50\n60\n70\n80\nVOL STATE\nAll\nLow\nModerate\nHigh\nSQUEEZE\nAll\nIn Squeeze\nMODE\nDEEP\nOBSERVE\nREVIEW\nBIAS:\nAll\nUpside evidence\nDownside evidence\nQUALITY:\nAll\nHigh\nMedium\nSORT:\nRank\nConfluence\nVolatility\nTrend\n\nRun Educational Scan after changing filters or sort. Filters apply to all evaluated candidates before the 50-result limit. Deep scan loads full candle history for every symbol; candidates missing a required input are counted as not supplied.\n\nExcluded: 8\nAAPL\n249.35\nFour-factor agreement\nScore 80\nMU\n250.35\nMixed evidence\nScore 79\nNVDA\n251.35\nFour-factor agreement\nScore 78\nMSFT\n252.35\nMixed evidence\nScore 77\nAMZN\n253.35\nFour-factor agreement\nScore 76\nShow all 12\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "expandedWidth": 390
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 390,
+      "state": "show-all",
+      "visibleRows": 12
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "state": "ranked-run",
+      "usage": 2,
+      "observedAt": "2026-10-05T16:23:39.784Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1298,
+      "screens": 1.537914691943128,
+      "scrollWidth": 390,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\n12 research candidates\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n12\n\nMatches\n\n0\n\nAligned\n\n0\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nData detailsCrypto data incomplete\nQueue filtersTimeframe, evidence and sort.\nAAPL\n249.35\nTrend and volume observations\nScore 54\nMU\n250.35\nTrend and volume observations\nScore 54\nAMZN\n253.35\nTrend and volume observations\nScore 53\nMETA\n254.35\nTrend and volume observations\nScore 53\nMSFT\n252.35\nTrend and volume observations\nScore 53\nShow all 12\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "12 research candidates",
+          "bottom": 159.5
+        }
+      ],
+      "visibleRows": [
+        5
+      ],
+      "buttons": [
+        {
+          "text": "Quick scan",
+          "height": 40
+        },
+        {
+          "text": "Pro scanner",
+          "height": 40
+        },
+        {
+          "text": "Run Educational Scan",
+          "height": 40
+        },
+        {
+          "text": "Momentum",
+          "height": 40
+        },
+        {
+          "text": "Breakout",
+          "height": 40
+        },
+        {
+          "text": "Mean Reversion",
+          "height": 58
+        },
+        {
+          "text": "Squeeze Play",
+          "height": 58
+        },
+        {
+          "text": "Relative Strength",
+          "height": 58
+        },
+        {
+          "text": "High Alignment",
+          "height": 58
+        },
+        {
+          "text": "Descending",
+          "height": 40
+        },
+        {
+          "text": "AAPL249.35Trend and volume observationsScore 54",
+          "height": 70
+        },
+        {
+          "text": "MU250.35Trend and volume observationsScore 54",
+          "height": 70
+        },
+        {
+          "text": "AMZN253.35Trend and volume observationsScore 53",
+          "height": 70
+        },
+        {
+          "text": "META254.35Trend and volume observationsScore 53",
+          "height": 70
+        },
+        {
+          "text": "MSFT252.35Trend and volume observationsScore 53",
+          "height": 70
+        },
+        {
+          "text": "Show all 12",
+          "height": 40
+        }
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\n12 research candidates\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n12\n\nMatches\n\n0\n\nAligned\n\n0\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nData detailsCrypto data incomplete\n\n1 issue\n\nCrypto data incomplete\n\nQueue filtersTimeframe, evidence and sort.\nTimeframe\n15m\n1H\nDaily\nWeekly\nEvidence\nAll (12)\nupside (6)\ndownside (6)\nHigh Score ≥70 (0)\nDVE Signals (0)\nSqueeze (0)\nRegime Match (12)\nSort\nScore\nSymbol\nPrice\nDescending\nAAPL\n249.35\nTrend and volume observations\nScore 54\nMU\n250.35\nTrend and volume observations\nScore 54\nAMZN\n253.35\nTrend and volume observations\nScore 53\nMETA\n254.35\nTrend and volume observations\nScore 53\nMSFT\n252.35\nTrend and volume observations\nScore 53\nShow all 12\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "expandedWidth": 390
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "state": "unrun",
+      "usage": 0,
+      "observedAt": "2026-10-05T16:23:41.634Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 924,
+      "screens": 1.155,
+      "scrollWidth": 1280,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\nRun a scan to collect research candidates.\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n0\n\nMatches\n\n0\n\nAligned\n\n0\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nData detailsEquity data incomplete, Crypto data incomplete\nQueue filtersTimeframe, evidence and sort.\n\nEXAMPLE\n\nNo live queue is loaded. This sample shows the card shape only. Run a scan when you want live rows.\n\n90-day line not supplied with this example\n\nPATTERN STILL FORMING\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "Run a scan to collect research candidates.",
+          "bottom": 159.5
+        }
+      ],
+      "visibleRows": [],
+      "buttons": [
+        {
+          "text": "Quick scan",
+          "height": 40
+        },
+        {
+          "text": "Pro scanner",
+          "height": 40
+        },
+        {
+          "text": "Run Educational Scan",
+          "height": 40
+        },
+        {
+          "text": "Breakout",
+          "height": 40
+        },
+        {
+          "text": "Mean Reversion",
+          "height": 40
+        },
+        {
+          "text": "Squeeze Play",
+          "height": 40
+        },
+        {
+          "text": "Relative Strength",
+          "height": 40
+        },
+        {
+          "text": "High Alignment",
+          "height": 40
+        }
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\nRun a scan to collect research candidates.\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n0\n\nMatches\n\n0\n\nAligned\n\n0\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nData detailsEquity data incomplete, Crypto data incomplete\n\n2 issues\n\nEquity data incomplete\n\nCrypto data incomplete\n\nQueue filtersTimeframe, evidence and sort.\nTimeframe\n15m\n1H\nDaily\nWeekly\nEvidence\nAll (0)\nupside (0)\ndownside (0)\nHigh Score ≥70 (0)\nDVE Signals (0)\nSqueeze (0)\nRegime Match (0)\nSort\nScore\nSymbol\nPrice\nDescending\n\nEXAMPLE\n\nNo live queue is loaded. This sample shows the card shape only. Run a scan when you want live rows.\n\n90-day line not supplied with this example\n\nPATTERN STILL FORMING\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "expandedWidth": 1280
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 1280,
+      "state": "request-check",
+      "usageAfterView": {
+        "used": 0,
+        "limit": 5
+      },
+      "presetScanRequests": 0
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "state": "pro-run",
+      "usage": 1,
+      "observedAt": "2026-10-05T16:23:42.335Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1245,
+      "screens": 1.55625,
+      "scrollWidth": 1280,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\n12 research candidates\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n12\n\nMatches\n\n4\n\nAligned\n\n4\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nData detailsNo feed errors reported\nAdvanced filtersUniverse, structure, bias and sort. Closed until you open them.\n\nRun Educational Scan after changing filters or sort. Filters apply to all evaluated candidates before the 50-result limit. Deep scan loads full candle history for every symbol; candidates missing a required input are counted as not supplied.\n\nExcluded: 8\nBTC-USD\n249.35\nFour-factor agreement\nScore 80\nNEAR-USD\n250.35\nMixed evidence\nScore 79\nETH-USD\n251.35\nFour-factor agreement\nScore 78\nSOL-USD\n252.35\nMixed evidence\nScore 77\nLINK-USD\n253.35\nFour-factor agreement\nScore 76\nShow all 12\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "12 research candidates",
+          "bottom": 159.5
+        }
+      ],
+      "visibleRows": [
+        5
+      ],
+      "buttons": [
+        {
+          "text": "Quick scan",
+          "height": 40
+        },
+        {
+          "text": "Pro scanner",
+          "height": 40
+        },
+        {
+          "text": "Run Educational Scan",
+          "height": 40
+        },
+        {
+          "text": "Momentum",
+          "height": 40
+        },
+        {
+          "text": "Breakout",
+          "height": 40
+        },
+        {
+          "text": "Mean Reversion",
+          "height": 40
+        },
+        {
+          "text": "Squeeze Play",
+          "height": 40
+        },
+        {
+          "text": "Relative Strength",
+          "height": 40
+        },
+        {
+          "text": "High Alignment",
+          "height": 40
+        },
+        {
+          "text": "observe",
+          "height": 40
+        },
+        {
+          "text": "review",
+          "height": 40
+        },
+        {
+          "text": "BTC-USD249.35Four-factor agreementScore 80",
+          "height": 70
+        },
+        {
+          "text": "NEAR-USD250.35Mixed evidenceScore 79",
+          "height": 70
+        },
+        {
+          "text": "ETH-USD251.35Four-factor agreementScore 78",
+          "height": 70
+        },
+        {
+          "text": "SOL-USD252.35Mixed evidenceScore 77",
+          "height": 70
+        },
+        {
+          "text": "LINK-USD253.35Four-factor agreementScore 76",
+          "height": 70
+        },
+        {
+          "text": "Show all 12",
+          "height": 40
+        }
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\n12 research candidates\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n12\n\nMatches\n\n4\n\nAligned\n\n4\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nData detailsNo feed errors reported\n\nReady\n\nAdvanced filtersUniverse, structure, bias and sort. Closed until you open them.\nUNIVERSE\nASSET CLASS\nCrypto · selected above\nSECTOR FILTER\nAll\nSTRUCTURE\nTIMEFRAME\n1d\n1h\n30m\n15m\nFACTOR AGREEMENT\n2/4+\n3/4+\n4/4\nMIN EVIDENCE SCORE\nAny\n30\n40\n50\n60\n70\n80\nVOL STATE\nAll\nLow\nModerate\nHigh\nSQUEEZE\nAll\nIn Squeeze\nMODE\nDEEP\nOBSERVE\nREVIEW\nBIAS:\nAll\nUpside evidence\nDownside evidence\nQUALITY:\nAll\nHigh\nMedium\nSORT:\nRank\nConfluence\nVolatility\nTrend\n\nRun Educational Scan after changing filters or sort. Filters apply to all evaluated candidates before the 50-result limit. Deep scan loads full candle history for every symbol; candidates missing a required input are counted as not supplied.\n\nExcluded: 8\nBTC-USD\n249.35\nFour-factor agreement\nScore 80\nNEAR-USD\n250.35\nMixed evidence\nScore 79\nETH-USD\n251.35\nFour-factor agreement\nScore 78\nSOL-USD\n252.35\nMixed evidence\nScore 77\nLINK-USD\n253.35\nFour-factor agreement\nScore 76\nShow all 12\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "expandedWidth": 1280
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 1280,
+      "state": "show-all",
+      "visibleRows": 12
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "state": "ranked-run",
+      "usage": 2,
+      "observedAt": "2026-10-05T16:23:43.100Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1066,
+      "screens": 1.3325,
+      "scrollWidth": 1280,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\n12 research candidates\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n12\n\nMatches\n\n0\n\nAligned\n\n0\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nData detailsEquity data incomplete\nQueue filtersTimeframe, evidence and sort.\nSymbol\tPrice\tScore\tEvidence\tReview\nBTC\t249.35\t54\tTrend and volume observations\tReview\nNEAR\t250.35\t54\tTrend and volume observations\tReview\nAVAX\t254.35\t53\tTrend and volume observations\tReview\nETH\t251.35\t53\tTrend and volume observations\tReview\nLINK\t253.35\t53\tTrend and volume observations\tReview\nShow all 12\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "12 research candidates",
+          "bottom": 159.5
+        }
+      ],
+      "visibleRows": [],
+      "buttons": [
+        {
+          "text": "Quick scan",
+          "height": 40
+        },
+        {
+          "text": "Pro scanner",
+          "height": 40
+        },
+        {
+          "text": "Run Educational Scan",
+          "height": 40
+        },
+        {
+          "text": "Momentum",
+          "height": 40
+        },
+        {
+          "text": "Breakout",
+          "height": 40
+        },
+        {
+          "text": "Mean Reversion",
+          "height": 40
+        },
+        {
+          "text": "Squeeze Play",
+          "height": 40
+        },
+        {
+          "text": "Relative Strength",
+          "height": 40
+        },
+        {
+          "text": "High Alignment",
+          "height": 40
+        },
+        {
+          "text": "Descending",
+          "height": 40
+        },
+        {
+          "text": "Review",
+          "height": 40
+        },
+        {
+          "text": "Review",
+          "height": 40
+        },
+        {
+          "text": "Review",
+          "height": 40
+        },
+        {
+          "text": "Review",
+          "height": 40
+        },
+        {
+          "text": "Review",
+          "height": 40
+        },
+        {
+          "text": "Show all 12",
+          "height": 40
+        }
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\n12 research candidates\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n12\n\nMatches\n\n0\n\nAligned\n\n0\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nData detailsEquity data incomplete\n\n1 issue\n\nEquity data incomplete\n\nQueue filtersTimeframe, evidence and sort.\nTimeframe\n15m\n1H\nDaily\nWeekly\nEvidence\nAll (12)\nupside (6)\ndownside (6)\nHigh Score ≥70 (0)\nDVE Signals (0)\nSqueeze (0)\nRegime Match (12)\nSort\nScore\nSymbol\nPrice\nDescending\nSymbol\tPrice\tScore\tEvidence\tReview\nBTC\t249.35\t54\tTrend and volume observations\tReview\nNEAR\t250.35\t54\tTrend and volume observations\tReview\nAVAX\t254.35\t53\tTrend and volume observations\tReview\nETH\t251.35\t53\tTrend and volume observations\tReview\nLINK\t253.35\t53\tTrend and volume observations\tReview\nShow all 12\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "expandedWidth": 1280
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "state": "unrun",
+      "usage": 0,
+      "observedAt": "2026-10-05T16:23:44.867Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1061,
+      "screens": 1.2571090047393365,
+      "scrollWidth": 390,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\nRun a scan to collect research candidates.\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n0\n\nMatches\n\n0\n\nAligned\n\n0\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nData detailsEquity data incomplete, Crypto data incomplete\nQueue filtersTimeframe, evidence and sort.\n\nEXAMPLE\n\nNo live queue is loaded. This sample shows the card shape only. Run a scan when you want live rows.\n\n90-day line not supplied with this example\n\nPATTERN STILL FORMING\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "Run a scan to collect research candidates.",
+          "bottom": 159.5
+        }
+      ],
+      "visibleRows": [],
+      "buttons": [
+        {
+          "text": "Quick scan",
+          "height": 40
+        },
+        {
+          "text": "Pro scanner",
+          "height": 40
+        },
+        {
+          "text": "Run Educational Scan",
+          "height": 40
+        },
+        {
+          "text": "Breakout",
+          "height": 40
+        },
+        {
+          "text": "Mean Reversion",
+          "height": 58
+        },
+        {
+          "text": "Squeeze Play",
+          "height": 58
+        },
+        {
+          "text": "Relative Strength",
+          "height": 58
+        },
+        {
+          "text": "High Alignment",
+          "height": 58
+        }
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\nRun a scan to collect research candidates.\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n0\n\nMatches\n\n0\n\nAligned\n\n0\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nData detailsEquity data incomplete, Crypto data incomplete\n\n2 issues\n\nEquity data incomplete\n\nCrypto data incomplete\n\nQueue filtersTimeframe, evidence and sort.\nTimeframe\n15m\n1H\nDaily\nWeekly\nEvidence\nAll (0)\nupside (0)\ndownside (0)\nHigh Score ≥70 (0)\nDVE Signals (0)\nSqueeze (0)\nRegime Match (0)\nSort\nScore\nSymbol\nPrice\nDescending\n\nEXAMPLE\n\nNo live queue is loaded. This sample shows the card shape only. Run a scan when you want live rows.\n\n90-day line not supplied with this example\n\nPATTERN STILL FORMING\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "expandedWidth": 390
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 390,
+      "state": "request-check",
+      "usageAfterView": {
+        "used": 0,
+        "limit": 5
+      },
+      "presetScanRequests": 0
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "state": "pro-run",
+      "usage": 1,
+      "observedAt": "2026-10-05T16:23:45.533Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1390,
+      "screens": 1.646919431279621,
+      "scrollWidth": 390,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\n12 research candidates\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n12\n\nMatches\n\n4\n\nAligned\n\n4\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nData detailsNo feed errors reported\nAdvanced filtersUniverse, structure, bias and sort. Closed until you open them.\n\nRun Educational Scan after changing filters or sort. Filters apply to all evaluated candidates before the 50-result limit. Deep scan loads full candle history for every symbol; candidates missing a required input are counted as not supplied.\n\nExcluded: 8\nBTC-USD\n249.35\nFour-factor agreement\nScore 80\nNEAR-USD\n250.35\nMixed evidence\nScore 79\nETH-USD\n251.35\nFour-factor agreement\nScore 78\nSOL-USD\n252.35\nMixed evidence\nScore 77\nLINK-USD\n253.35\nFour-factor agreement\nScore 76\nShow all 12\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "12 research candidates",
+          "bottom": 159.5
+        }
+      ],
+      "visibleRows": [
+        5
+      ],
+      "buttons": [
+        {
+          "text": "Quick scan",
+          "height": 40
+        },
+        {
+          "text": "Pro scanner",
+          "height": 40
+        },
+        {
+          "text": "Run Educational Scan",
+          "height": 40
+        },
+        {
+          "text": "Momentum",
+          "height": 40
+        },
+        {
+          "text": "Breakout",
+          "height": 40
+        },
+        {
+          "text": "Mean Reversion",
+          "height": 58
+        },
+        {
+          "text": "Squeeze Play",
+          "height": 58
+        },
+        {
+          "text": "Relative Strength",
+          "height": 58
+        },
+        {
+          "text": "High Alignment",
+          "height": 58
+        },
+        {
+          "text": "observe",
+          "height": 40
+        },
+        {
+          "text": "review",
+          "height": 40
+        },
+        {
+          "text": "BTC-USD249.35Four-factor agreementScore 80",
+          "height": 70
+        },
+        {
+          "text": "NEAR-USD250.35Mixed evidenceScore 79",
+          "height": 70
+        },
+        {
+          "text": "ETH-USD251.35Four-factor agreementScore 78",
+          "height": 70
+        },
+        {
+          "text": "SOL-USD252.35Mixed evidenceScore 77",
+          "height": 70
+        },
+        {
+          "text": "LINK-USD253.35Four-factor agreementScore 76",
+          "height": 70
+        },
+        {
+          "text": "Show all 12",
+          "height": 40
+        }
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\n12 research candidates\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n12\n\nMatches\n\n4\n\nAligned\n\n4\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nData detailsNo feed errors reported\n\nReady\n\nAdvanced filtersUniverse, structure, bias and sort. Closed until you open them.\nUNIVERSE\nASSET CLASS\nCrypto · selected above\nSECTOR FILTER\nAll\nSTRUCTURE\nTIMEFRAME\n1d\n1h\n30m\n15m\nFACTOR AGREEMENT\n2/4+\n3/4+\n4/4\nMIN EVIDENCE SCORE\nAny\n30\n40\n50\n60\n70\n80\nVOL STATE\nAll\nLow\nModerate\nHigh\nSQUEEZE\nAll\nIn Squeeze\nMODE\nDEEP\nOBSERVE\nREVIEW\nBIAS:\nAll\nUpside evidence\nDownside evidence\nQUALITY:\nAll\nHigh\nMedium\nSORT:\nRank\nConfluence\nVolatility\nTrend\n\nRun Educational Scan after changing filters or sort. Filters apply to all evaluated candidates before the 50-result limit. Deep scan loads full candle history for every symbol; candidates missing a required input are counted as not supplied.\n\nExcluded: 8\nBTC-USD\n249.35\nFour-factor agreement\nScore 80\nNEAR-USD\n250.35\nMixed evidence\nScore 79\nETH-USD\n251.35\nFour-factor agreement\nScore 78\nSOL-USD\n252.35\nMixed evidence\nScore 77\nLINK-USD\n253.35\nFour-factor agreement\nScore 76\nShow all 12\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "expandedWidth": 390
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 390,
+      "state": "show-all",
+      "visibleRows": 12
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "state": "ranked-run",
+      "usage": 2,
+      "observedAt": "2026-10-05T16:23:46.218Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1298,
+      "screens": 1.537914691943128,
+      "scrollWidth": 390,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\n12 research candidates\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n12\n\nMatches\n\n0\n\nAligned\n\n0\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nData detailsEquity data incomplete\nQueue filtersTimeframe, evidence and sort.\nBTC\n249.35\nTrend and volume observations\nScore 54\nNEAR\n250.35\nTrend and volume observations\nScore 54\nAVAX\n254.35\nTrend and volume observations\nScore 53\nETH\n251.35\nTrend and volume observations\nScore 53\nLINK\n253.35\nTrend and volume observations\nScore 53\nShow all 12\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "12 research candidates",
+          "bottom": 159.5
+        }
+      ],
+      "visibleRows": [
+        5
+      ],
+      "buttons": [
+        {
+          "text": "Quick scan",
+          "height": 40
+        },
+        {
+          "text": "Pro scanner",
+          "height": 40
+        },
+        {
+          "text": "Run Educational Scan",
+          "height": 40
+        },
+        {
+          "text": "Momentum",
+          "height": 40
+        },
+        {
+          "text": "Breakout",
+          "height": 40
+        },
+        {
+          "text": "Mean Reversion",
+          "height": 58
+        },
+        {
+          "text": "Squeeze Play",
+          "height": 58
+        },
+        {
+          "text": "Relative Strength",
+          "height": 58
+        },
+        {
+          "text": "High Alignment",
+          "height": 58
+        },
+        {
+          "text": "Descending",
+          "height": 40
+        },
+        {
+          "text": "BTC249.35Trend and volume observationsScore 54",
+          "height": 70
+        },
+        {
+          "text": "NEAR250.35Trend and volume observationsScore 54",
+          "height": 70
+        },
+        {
+          "text": "AVAX254.35Trend and volume observationsScore 53",
+          "height": 70
+        },
+        {
+          "text": "ETH251.35Trend and volume observationsScore 53",
+          "height": 70
+        },
+        {
+          "text": "LINK253.35Trend and volume observationsScore 53",
+          "height": 70
+        },
+        {
+          "text": "Show all 12",
+          "height": 40
+        }
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nScanner\n\n12 research candidates\n\nOpen Symbol\nOpen Terminal\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nQuick scan\nPro scanner\nMarket\nStocks\nCrypto\nRun Educational Scan\n\n12\n\nMatches\n\n0\n\nAligned\n\n0\n\nMixed evidence\n\nScan presetsSelect conditions, then run manually.\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nData detailsEquity data incomplete\n\n1 issue\n\nEquity data incomplete\n\nQueue filtersTimeframe, evidence and sort.\nTimeframe\n15m\n1H\nDaily\nWeekly\nEvidence\nAll (12)\nupside (6)\ndownside (6)\nHigh Score ≥70 (0)\nDVE Signals (0)\nSqueeze (0)\nRegime Match (12)\nSort\nScore\nSymbol\nPrice\nDescending\nBTC\n249.35\nTrend and volume observations\nScore 54\nNEAR\n250.35\nTrend and volume observations\nScore 54\nAVAX\n254.35\nTrend and volume observations\nScore 53\nETH\n251.35\nTrend and volume observations\nScore 53\nLINK\n253.35\nTrend and volume observations\nScore 53\nShow all 12\n\nSource · Scanner queue · Not available right now · Last completed bar",
+      "expandedWidth": 390
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "state": "unrun",
+      "usage": 0,
+      "observedAt": "2026-10-05T16:23:47.850Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "screens": 1,
+      "scrollWidth": 1280,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nQuick scan\nPro scanner\nScanner\nExplore one symbol\n\n5 of 5 scans left today · resets Time not supplied\n\nScan AAPL\nSPY\nBTC\nNVDA\n\nResearch and education only. Not a trade instruction.\n\nLatest saved list\n\nNo stored picks collected.\n\nSource · Daily picks database · Not available right now · Stored scan observations · radar has a separate session date\n\nSee all\n\nResearch and education only. Not a trade instruction.",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [],
+      "visibleRows": [],
+      "buttons": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nQuick scan\nPro scanner\nScanner\nExplore one symbol\n\n5 of 5 scans left today · resets Time not supplied\n\nScan AAPL\nSPY\nBTC\nNVDA\n\nResearch and education only. Not a trade instruction.\n\nLatest saved list\n\nNo stored picks collected.\n\nSource · Daily picks database · Not available right now · Stored scan observations · radar has a separate session date\n\nSee all\n\nResearch and education only. Not a trade instruction.",
+      "expandedWidth": 1280
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "state": "locked",
+      "usage": 0,
+      "observedAt": "2026-10-05T16:23:48.367Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "screens": 1,
+      "scrollWidth": 1280,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nQuick scan\nPro scanner\nPro scanner\n\nExample\n\nAAPL · example research\n\n74\n\nPrice history · volume · market context\n\nIllustrative layout · no live market values\n\nPresets and manual filters for a research scan across the universe. The controls are part of Pro.\n\nUnlock with Pro\n\n7-day money-back guarantee",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "visibleRows": [],
+      "buttons": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nQuick scan\nPro scanner\nPro scanner\n\nExample\n\nAAPL · example research\n\n74\n\nPrice history · volume · market context\n\nIllustrative layout · no live market values\n\nPresets and manual filters for a research scan across the universe. The controls are part of Pro.\n\nUnlock with Pro\n\n7-day money-back guarantee",
+      "expandedWidth": 1280
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "state": "unrun",
+      "usage": 0,
+      "observedAt": "2026-10-05T16:23:49.983Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 978,
+      "screens": 1.1587677725118484,
+      "scrollWidth": 390,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nQuick scan\nPro scanner\nScanner\nExplore one symbol\n\n5 of 5 scans left today · resets Time not supplied\n\nScan AAPL\nSPY\nBTC\nNVDA\n\nResearch and education only. Not a trade instruction.\n\nLatest saved list\n\nNo stored picks collected.\n\nSource · Daily picks database · Not available right now · Stored scan observations · radar has a separate session date\n\nSee all\n\nResearch and education only. Not a trade instruction.",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [],
+      "visibleRows": [],
+      "buttons": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nQuick scan\nPro scanner\nScanner\nExplore one symbol\n\n5 of 5 scans left today · resets Time not supplied\n\nScan AAPL\nSPY\nBTC\nNVDA\n\nResearch and education only. Not a trade instruction.\n\nLatest saved list\n\nNo stored picks collected.\n\nSource · Daily picks database · Not available right now · Stored scan observations · radar has a separate session date\n\nSee all\n\nResearch and education only. Not a trade instruction.",
+      "expandedWidth": 390
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "state": "locked",
+      "usage": 0,
+      "observedAt": "2026-10-05T16:23:50.549Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 846,
+      "screens": 1.0023696682464456,
+      "scrollWidth": 390,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nQuick scan\nPro scanner\nPro scanner\n\nExample\n\nAAPL · example research\n\n74\n\nPrice history · volume · market context\n\nIllustrative layout · no live market values\n\nPresets and manual filters for a research scan across the universe. The controls are part of Pro.\n\nUnlock with Pro\n\n7-day money-back guarantee",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "visibleRows": [],
+      "buttons": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nQuick scan\nPro scanner\nPro scanner\n\nExample\n\nAAPL · example research\n\n74\n\nPrice history · volume · market context\n\nIllustrative layout · no live market values\n\nPresets and manual filters for a research scan across the universe. The controls are part of Pro.\n\nUnlock with Pro\n\n7-day money-back guarantee",
+      "expandedWidth": 390
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "state": "unrun",
+      "usage": 0,
+      "observedAt": "2026-10-05T16:23:52.216Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 887,
+      "screens": 1.10875,
+      "scrollWidth": 1280,
+      "text": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nQuick scan\nPro scanner\nScanner\nExplore one symbol\n\n5 of 5 scans left today · resets Time not supplied\n\nScan AAPL\nSPY\nBTC\nNVDA\n\nResearch and education only. Not a trade instruction.\n\nLatest saved list\n\nNo stored picks collected.\n\nSource · Daily picks database · Not available right now · Stored scan observations · radar has a separate session date\n\nSee all\n\nResearch and education only. Not a trade instruction.",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [],
+      "visibleRows": [],
+      "buttons": [],
+      "expandedText": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nQuick scan\nPro scanner\nScanner\nExplore one symbol\n\n5 of 5 scans left today · resets Time not supplied\n\nScan AAPL\nSPY\nBTC\nNVDA\n\nResearch and education only. Not a trade instruction.\n\nLatest saved list\n\nNo stored picks collected.\n\nSource · Daily picks database · Not available right now · Stored scan observations · radar has a separate session date\n\nSee all\n\nResearch and education only. Not a trade instruction.",
+      "expandedWidth": 1280
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "state": "locked",
+      "usage": 0,
+      "observedAt": "2026-10-05T16:23:52.833Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 871,
+      "screens": 1.08875,
+      "scrollWidth": 1280,
+      "text": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nQuick scan\nPro scanner\nPro scanner\n\nExample\n\nAAPL · example research\n\n74\n\nPrice history · volume · market context\n\nIllustrative layout · no live market values\n\nPresets and manual filters for a research scan across the universe. The controls are part of Pro.\n\nUnlock with Pro\n\n7-day money-back guarantee",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "visibleRows": [],
+      "buttons": [],
+      "expandedText": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nQuick scan\nPro scanner\nPro scanner\n\nExample\n\nAAPL · example research\n\n74\n\nPrice history · volume · market context\n\nIllustrative layout · no live market values\n\nPresets and manual filters for a research scan across the universe. The controls are part of Pro.\n\nUnlock with Pro\n\n7-day money-back guarantee",
+      "expandedWidth": 1280
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "state": "unrun",
+      "usage": 0,
+      "observedAt": "2026-10-05T16:23:54.470Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1187,
+      "screens": 1.4063981042654028,
+      "scrollWidth": 390,
+      "text": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nQuick scan\nPro scanner\nScanner\nExplore one symbol\n\n5 of 5 scans left today · resets Time not supplied\n\nScan AAPL\nSPY\nBTC\nNVDA\n\nResearch and education only. Not a trade instruction.\n\nLatest saved list\n\nNo stored picks collected.\n\nSource · Daily picks database · Not available right now · Stored scan observations · radar has a separate session date\n\nSee all\n\nResearch and education only. Not a trade instruction.",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [],
+      "visibleRows": [],
+      "buttons": [],
+      "expandedText": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nQuick scan\nPro scanner\nScanner\nExplore one symbol\n\n5 of 5 scans left today · resets Time not supplied\n\nScan AAPL\nSPY\nBTC\nNVDA\n\nResearch and education only. Not a trade instruction.\n\nLatest saved list\n\nNo stored picks collected.\n\nSource · Daily picks database · Not available right now · Stored scan observations · radar has a separate session date\n\nSee all\n\nResearch and education only. Not a trade instruction.",
+      "expandedWidth": 390
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "state": "locked",
+      "usage": 0,
+      "observedAt": "2026-10-05T16:23:55.067Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1055,
+      "screens": 1.25,
+      "scrollWidth": 390,
+      "text": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nQuick scan\nPro scanner\nPro scanner\n\nExample\n\nAAPL · example research\n\n74\n\nPrice history · volume · market context\n\nIllustrative layout · no live market values\n\nPresets and manual filters for a research scan across the universe. The controls are part of Pro.\n\nUnlock with Pro\n\n7-day money-back guarantee",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "visibleRows": [],
+      "buttons": [],
+      "expandedText": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nMomentum\nBreakout\nMean Reversion\nSqueeze Play\nRelative Strength\nHigh Alignment\nQuick scan\nPro scanner\nPro scanner\n\nExample\n\nAAPL · example research\n\n74\n\nPrice history · volume · market context\n\nIllustrative layout · no live market values\n\nPresets and manual filters for a research scan across the universe. The controls are part of Pro.\n\nUnlock with Pro\n\n7-day money-back guarantee",
+      "expandedWidth": 390
+    }
+  ],
+  "requests": [
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:34.071Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:34.073Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:34.074Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "body": {
+        "sessionId": "op_1791217414070_zmg732d2",
+        "page": "tools",
+        "route": "/tools/scanner",
+        "symbols": [],
+        "timeframes": [],
+        "attention": {
+          "dwellMs": 0,
+          "scrollDepth": 0
+        },
+        "viewState": {
+          "query": "type=equity"
+        }
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:34.076Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "body": {
+        "session_id": "ses_1791217414072_092738dt",
+        "current_path": "/tools/scanner"
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:34.077Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:34.077Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:34.085Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:34.086Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:34.087Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:34.088Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:34.133Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/scanner/usage",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:34.758Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/scanner/bulk",
+      "method": "POST",
+      "body": {
+        "type": "equity",
+        "timeframe": "1d",
+        "universeSize": 500,
+        "filters": {
+          "direction": "all",
+          "quality": "all",
+          "minConfidence": 65,
+          "minAlignment": 3,
+          "volatility": "all",
+          "squeeze": false,
+          "requireRelativeStrength": false,
+          "minAdx": 25,
+          "rsiBand": [
+            30,
+            70
+          ],
+          "preset": "momentum"
+        },
+        "sort": "rank",
+        "mode": "hybrid"
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:35.559Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/scanner/run",
+      "method": "POST",
+      "body": {
+        "timeframe": "daily",
+        "type": "equity"
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:36.306Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:37.256Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:37.256Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:37.257Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "body": {
+        "sessionId": "op_1791217417256_wjtvoyyg",
+        "page": "tools",
+        "route": "/tools/scanner",
+        "symbols": [],
+        "timeframes": [],
+        "attention": {
+          "dwellMs": 0,
+          "scrollDepth": 0
+        },
+        "viewState": {
+          "query": "type=equity"
+        }
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:37.261Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "body": {
+        "session_id": "ses_1791217417259_miaa0ym5",
+        "current_path": "/tools/scanner"
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:37.262Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:37.264Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:37.278Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:37.279Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:37.282Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:37.282Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:37.318Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/scanner/usage",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:37.911Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/scanner/bulk",
+      "method": "POST",
+      "body": {
+        "type": "equity",
+        "timeframe": "1d",
+        "universeSize": 500,
+        "filters": {
+          "direction": "all",
+          "quality": "all",
+          "minConfidence": 65,
+          "minAlignment": 3,
+          "volatility": "all",
+          "squeeze": false,
+          "requireRelativeStrength": false,
+          "minAdx": 25,
+          "rsiBand": [
+            30,
+            70
+          ],
+          "preset": "momentum"
+        },
+        "sort": "rank",
+        "mode": "hybrid"
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:38.693Z"
+    },
+    {
+      "tier": "pro",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/scanner/run",
+      "method": "POST",
+      "body": {
+        "timeframe": "daily",
+        "type": "equity"
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:39.356Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:40.378Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:40.379Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:40.380Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "body": {
+        "sessionId": "op_1791217420379_mq7p2kyo",
+        "page": "tools",
+        "route": "/tools/scanner",
+        "symbols": [],
+        "timeframes": [],
+        "attention": {
+          "dwellMs": 0,
+          "scrollDepth": 0
+        },
+        "viewState": {
+          "query": "type=crypto"
+        }
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:40.385Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "body": {
+        "session_id": "ses_1791217420382_xj1vkv9w",
+        "current_path": "/tools/scanner"
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:40.385Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:40.386Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:40.451Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:40.451Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:40.454Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:40.462Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:40.462Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 1280,
+      "path": "/api/scanner/usage",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:41.061Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 1280,
+      "path": "/api/scanner/bulk",
+      "method": "POST",
+      "body": {
+        "type": "crypto",
+        "timeframe": "1d",
+        "universeSize": 500,
+        "filters": {
+          "direction": "all",
+          "quality": "all",
+          "minConfidence": 65,
+          "minAlignment": 3,
+          "volatility": "all",
+          "squeeze": false,
+          "requireRelativeStrength": false,
+          "minAdx": 25,
+          "rsiBand": [
+            30,
+            70
+          ],
+          "preset": "momentum"
+        },
+        "sort": "rank",
+        "mode": "deep"
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:41.894Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 1280,
+      "path": "/api/scanner/run",
+      "method": "POST",
+      "body": {
+        "timeframe": "daily",
+        "type": "crypto"
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:42.661Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:43.766Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:43.766Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:43.767Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "body": {
+        "sessionId": "op_1791217423768_8e7v40au",
+        "page": "tools",
+        "route": "/tools/scanner",
+        "symbols": [],
+        "timeframes": [],
+        "attention": {
+          "dwellMs": 0,
+          "scrollDepth": 0
+        },
+        "viewState": {
+          "query": "type=crypto"
+        }
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:43.774Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "body": {
+        "session_id": "ses_1791217423771_r6u96ps9",
+        "current_path": "/tools/scanner"
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:43.775Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:43.775Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:43.814Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:43.815Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:43.816Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:43.817Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:43.817Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 390,
+      "path": "/api/scanner/usage",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:44.425Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 390,
+      "path": "/api/scanner/bulk",
+      "method": "POST",
+      "body": {
+        "type": "crypto",
+        "timeframe": "1d",
+        "universeSize": 500,
+        "filters": {
+          "direction": "all",
+          "quality": "all",
+          "minConfidence": 65,
+          "minAlignment": 3,
+          "volatility": "all",
+          "squeeze": false,
+          "requireRelativeStrength": false,
+          "minAdx": 25,
+          "rsiBand": [
+            30,
+            70
+          ],
+          "preset": "momentum"
+        },
+        "sort": "rank",
+        "mode": "deep"
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:45.095Z"
+    },
+    {
+      "tier": "pro",
+      "type": "crypto",
+      "width": 390,
+      "path": "/api/scanner/run",
+      "method": "POST",
+      "body": {
+        "timeframe": "daily",
+        "type": "crypto"
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:45.778Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:46.748Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:46.748Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:46.749Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "body": {
+        "sessionId": "op_1791217426749_i10m5yu1",
+        "page": "tools",
+        "route": "/tools/scanner",
+        "symbols": [],
+        "timeframes": [],
+        "attention": {
+          "dwellMs": 0,
+          "scrollDepth": 0
+        },
+        "viewState": {
+          "query": "type=equity"
+        }
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:46.754Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "body": {
+        "session_id": "ses_1791217426752_zwrmsqoi",
+        "current_path": "/tools/scanner"
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:46.756Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:46.757Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:46.792Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:46.794Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/scanner/usage",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:46.796Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/scanner/daily-picks",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:46.797Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:46.797Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:46.798Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:46.799Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/scanner/usage",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:47.389Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:48.867Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:48.867Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:48.869Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "body": {
+        "sessionId": "op_1791217428867_7tsxx5ni",
+        "page": "tools",
+        "route": "/tools/scanner",
+        "symbols": [],
+        "timeframes": [],
+        "attention": {
+          "dwellMs": 0,
+          "scrollDepth": 0
+        },
+        "viewState": {
+          "query": "type=equity"
+        }
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:48.872Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "body": {
+        "session_id": "ses_1791217428869_q5lbhygd",
+        "current_path": "/tools/scanner"
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:48.874Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:48.874Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:48.914Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:48.915Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/scanner/usage",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:48.917Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/scanner/daily-picks",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:48.918Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:48.918Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:48.920Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:48.922Z"
+    },
+    {
+      "tier": "free",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/scanner/usage",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:49.514Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:51.102Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:51.106Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:51.106Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:51.121Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "body": {
+        "sessionId": "op_1791217431117_dajnsg56",
+        "page": "tools",
+        "route": "/tools/scanner",
+        "symbols": [],
+        "timeframes": [],
+        "attention": {
+          "dwellMs": 0,
+          "scrollDepth": 0
+        },
+        "viewState": {
+          "query": "type=equity"
+        }
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:51.137Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "body": {
+        "session_id": "ses_1791217431125_vidz4ofn",
+        "current_path": "/tools/scanner"
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:51.140Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:51.141Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:51.143Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/scanner/usage",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:51.144Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/scanner/daily-picks",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:51.145Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:51.148Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:51.148Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:51.150Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 1280,
+      "path": "/api/scanner/usage",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:51.764Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:53.378Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:53.379Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:53.380Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "body": {
+        "sessionId": "op_1791217433378_j6rtwb8i",
+        "page": "tools",
+        "route": "/tools/scanner",
+        "symbols": [],
+        "timeframes": [],
+        "attention": {
+          "dwellMs": 0,
+          "scrollDepth": 0
+        },
+        "viewState": {
+          "query": "type=equity"
+        }
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:53.393Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "body": {
+        "session_id": "ses_1791217433389_x0bdccnt",
+        "current_path": "/tools/scanner"
+      },
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:53.395Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:53.395Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:53.395Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:53.408Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/scanner/usage",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:53.408Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/scanner/daily-picks",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:53.409Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:53.409Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:53.410Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:53.411Z"
+    },
+    {
+      "tier": "anonymous",
+      "type": "equity",
+      "width": 390,
+      "path": "/api/scanner/usage",
+      "method": "GET",
+      "body": {},
+      "mocked": true,
+      "observedAt": "2026-10-05T16:23:54.029Z"
+    }
+  ],
+  "errors": []
+}

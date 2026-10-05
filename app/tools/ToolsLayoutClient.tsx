@@ -85,7 +85,7 @@ export default function ToolsLayoutClient({
       <AIPageProvider>
         <WorkflowNavigation />
         <ErrorBoundary fallback={null}>
-          {pathname !== '/tools' && <RegimeBar />}
+          {pathname !== '/tools' && <RegimeBar hideIfMissing={pathname === '/tools/start' || pathname === '/tools/dashboard'} />}
         </ErrorBoundary>
 
         <ErrorBoundary>

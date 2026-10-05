@@ -40,6 +40,12 @@ it('legacy redirect still targets a case-insensitively resolved Alerts tab',()=>
  expect(readFileSync('app/tools/workspace/page.tsx','utf8')).toContain("searchParams.get('tab')?.toLowerCase()");
 });
 
+it('shows a readable status while alert records are still loading',()=>{
+ vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})));
+ render(<AlertsContent embeddedInWorkspace/>);
+ expect(screen.getByText('Loading alerts…')).toBeTruthy();
+});
+
 it('a failed load shows a fault instead of a zero active verdict or numeric placeholders',async()=>{
  state.failed=true;
  const {container}=render(<AlertsContent embeddedInWorkspace/>);

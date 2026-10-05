@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
+import { researchLabel, researchReason } from '@/components/terminal/researchPresentation';
 import type { MarketPressureReading, PressureComponent } from '@/lib/marketPressureEngine';
 
 interface Props {
@@ -29,11 +30,15 @@ const PRESSURE_NAMES: Record<string, { icon: string; label: string }> = {
   options:    { icon: '⚙️', label: 'Options' },
 };
 
+function pressureText(value: string) {
+  return researchReason(value).replace(/\bMPE\b/g, 'Market pressure').replace(/\b(HIGH PRESSURE|LOW PRESSURE|NO PRESSURE|BUILDING)\b/g, label => researchLabel(label)).replace(/\bbullish\b/gi, 'upside').replace(/\bbearish\b/gi, 'downside').replace(/\bLONG\b/g, 'Upside').replace(/\bSHORT\b/g, 'Downside').replace(/\bNEUTRAL\b/g, 'Mixed');
+}
+
 function PressureBar({ name, pressure }: { name: string; pressure: PressureComponent }) {
   const meta = PRESSURE_NAMES[name] || { icon: '•', label: name };
   const pct = Math.min(100, Math.max(0, pressure.score));
   const barColor = pct >= 75 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : pct >= 25 ? 'bg-slate-500' : 'bg-slate-700';
-  const dirLabel = pressure.direction !== 'neutral' ? ` (${pressure.direction})` : '';
+  const dirLabel = pressure.direction !== 'neutral' ? ` (${pressure.direction === 'bullish' ? 'upside' : 'downside'})` : '';
 
   return (
     <div className="space-y-1">
@@ -47,7 +52,7 @@ function PressureBar({ name, pressure }: { name: string; pressure: PressureCompo
       {pressure.components.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {pressure.components.map((c, i) => (
-            <span key={i} className="rounded bg-slate-800/60 px-1.5 py-0.5 text-[9px] text-slate-500">{c}</span>
+            <span key={i} className="rounded bg-slate-800/60 px-1.5 py-0.5 text-[9px] text-slate-500">{pressureText(c)}</span>
           ))}
         </div>
       )}
@@ -118,11 +123,11 @@ export default function MarketPressureWidget({ symbol, scanMode = 'intraday_1h',
         {/* Label + direction */}
         <div className="space-y-1">
           <div className={`text-sm font-bold ${lbl.text}`}>
-            {reading.label.replace(/_/g, ' ')}
+            {researchLabel(reading.label)}
           </div>
           <div className="flex items-center gap-2 text-xs">
             <span className={`font-semibold ${DIR_COLORS[reading.direction] || 'text-slate-400'}`}>
-              {reading.direction === 'LONG' ? '↑ LONG' : reading.direction === 'SHORT' ? '↓ SHORT' : '↔ NEUTRAL'}
+              {reading.direction === 'LONG' ? '↑ Upside evidence' : reading.direction === 'SHORT' ? '↓ Downside evidence' : '↔ Mixed evidence'}
             </span>
             <span className="text-slate-600">·</span>
             <span className="text-slate-400">
@@ -130,7 +135,7 @@ export default function MarketPressureWidget({ symbol, scanMode = 'intraday_1h',
             </span>
           </div>
           {reading.regime && reading.regime !== 'UNKNOWN' && (
-            <div className="text-[10px] text-slate-500">Regime: {reading.regime.replace(/_/g, ' ')}</div>
+            <div className="text-[10px] text-slate-500">Regime: {researchLabel(reading.regime)}</div>
           )}
         </div>
 
@@ -157,7 +162,7 @@ export default function MarketPressureWidget({ symbol, scanMode = 'intraday_1h',
       {/* ── Summary line ── */}
       {reading.summary && (
         <div className="rounded-lg border border-slate-800 bg-slate-950/25 px-3 py-2 text-[11px] text-slate-400">
-          {reading.summary}
+          {pressureText(reading.summary)}
         </div>
       )}
     </div>

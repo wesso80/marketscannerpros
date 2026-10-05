@@ -68,7 +68,7 @@ describe('page and Pro table wiring', () => {
     expect(page).toContain("case 'Bullish': items = items.filter(r => rankedClaimedDirection(r) === 'bullish')");
     expect(page).toContain("Bearish: allResults.filter(r => rankedClaimedDirection(r) === 'bearish').length");
     expect(page).toContain('const noSetup = noSetupRankedReason(r);');
-    expect(page).toContain('title={gradeBasis(r.canonical)}');
+    expect(page).toContain('!isNoSetupRow(row)&&Math.round(computeMspScore(row,activeRegime))');
   });
   it('Pro table labels both numbers: "MSP 58/100" and "Setup 10 · sets grade"', () => {
     expect(table).toContain('>MSP</span>{r.confidence}');
