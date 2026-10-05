@@ -177,7 +177,7 @@ function assessAuthorization(opts: {
   riskLevel: string | null;
 }): { auth: AnalystAuthorization; reason: string | null } {
   if (!opts.isLoggedIn) return { auth: 'BLOCKED', reason: 'Not authenticated — sign in to access analyst.' };
-  if (opts.tier === 'free' || opts.tier === 'anonymous') return { auth: 'BLOCKED', reason: 'ARCA AI requires Pro or higher tier.' };
+  if (opts.tier === 'free' || opts.tier === 'anonymous') return { auth: 'BLOCKED', reason: 'MSP AI requires Pro or higher tier.' };
   // The per-user /api/regime posture is context, not a gate: it is built from workspace state (and defaults to YES
   // when nothing is stored), so it must not authorise or block the analyst. It is surfaced as a note only.
   if (opts.permission === 'NO' || opts.permission === 'CONDITIONAL') {

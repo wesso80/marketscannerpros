@@ -30,7 +30,7 @@ export default function AboutPage() {
                 RSI, MACD, Bollinger Bands, and volume analysis.
               </li>
               <li>
-                <strong>ARCA AI Analyst</strong> — an AI chatbot that answers
+                <strong>MSP AI</strong> — an AI chatbot that answers
                 market questions, analyses tickers, and provides educational
                 context powered by large language models.
               </li>

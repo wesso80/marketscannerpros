@@ -1128,7 +1128,7 @@ Always mention which derivatives signals support or contradict your analysis.
     return new Response(
       JSON.stringify({
         ok: false,
-        error: err?.message || "Unknown error calling ARCA AI",
+        error: err?.message || "Unknown error calling MSP AI",
         ...(isDev || true ? { debug: errorDetails } : {}) // Always show debug for now
       }),
       { status: 500, headers: { "Content-Type": "application/json" } }

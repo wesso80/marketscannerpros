@@ -260,7 +260,7 @@ describe('layout and flow audit regressions', () => {
     expect(partnerDemo).toContain('href: "/tools/workspace?tab=backtest"');
     expect(partnerDemo).toContain('href: "/tools/terminal?tab=options-confluence"');
     expect(partnerDemo).toContain('href: "/tools/explorer?tab=crypto-command"');
-    expect(email).toContain("['ARCA AI Panel', '/tools/scanner']");
+    expect(email).toContain("['MSP AI', '/tools/scanner']");
     expect(email).toContain("['Portfolio', '/tools/workspace?tab=portfolio']");
     expect(email).toContain("['Journal', '/tools/workspace?tab=journal']");
     expect(email).toContain('https://app.marketscannerpros.app/tools/workspace?tab=alerts');

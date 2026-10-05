@@ -172,8 +172,8 @@ export const TOOL_GUIDES: ToolGuide[] = [
   },
   {
     route: '/tools/scanner',
-    badge: 'ARCA AI',
-    title: 'ARCA AI Panel',
+    badge: 'MSP AI',
+    title: 'MSP AI',
     summary: 'Use the floating AI research panel beside live Scanner context.',
     steps: [
       'Ask a focused market or scenario question.',
@@ -353,8 +353,8 @@ export const TOOL_GUIDES: ToolGuide[] = [
     route: '/tools',
     badge: 'AI Tools',
     title: 'AI Tools',
-    summary: 'Use the current workflow and ARCA panel instead of the retired AI tools collection.',
-    steps: ['Start from the workflow map.', 'Open the live research tool that matches the question.', 'Use ARCA for context, then validate against evidence.'],
+    summary: 'Use the current workflow and MSP AI instead of the retired AI tools collection.',
+    steps: ['Start from the workflow map.', 'Open the live research tool that matches the question.', 'Use MSP AI for context, then validate against evidence.'],
     tips: ['Specific prompts produce better output.', 'Always validate outputs against source data.'],
   },
   {
