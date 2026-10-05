@@ -1,0 +1,316 @@
+{
+  "mocked": true,
+  "titles": [],
+  "tabTitles": [],
+  "results": [
+    {
+      "name": "terminal-chain-loaded",
+      "url": "/tools/terminal?tab=options&symbol=MU&expiry=2026-11-20",
+      "tier": "pro",
+      "observedAt": "2026-10-05T15:28:01.063Z",
+      "title": "Options Terminal | MarketScanner Pros",
+      "pathname": "/tools/terminal",
+      "search": "?tab=options&symbol=MU&expiry=2026-11-20",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 2041,
+      "scrollWidth": 1280,
+      "screens": 2.55125,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n2. Chain quality\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nOptions Terminal · Change view\nTICKER\nOptions Terminal\nUNDERLYING\nMU $100.00 · last close · Fri 2 Oct (New York) · +0.40% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n90.84 to 109.16\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n90\n95\n100\n105\n110\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$9.16\nATM STRADDLE MID\n$2.55\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$100.00\nΔ 0.50\nATM PUT\n$100.00\nΔ -0.50\n25Δ CALL\n$90.00\nΔ 0.50\n25Δ PUT\n$90.00\nΔ -0.50\nTOP OI CALL\n$90.00\nOI 80\nTOP OI PUT\n$90.00\nOI 80\nOpen chain5 strikes · swipe sideways on a narrow screen\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n2. Chain quality\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nFUTURES\n/ES\n/NQ\n/YM\n/RTY\n/CL\n/GC\n/SI\n/M2K\n/MES\n/MNQ\n/MCL\n/MGC\nCRYPTO\nBTCUSD\nETHUSD\nSOLUSD\nXRPUSD\nBNBUSD\nEQUITY\nAAPL\nMSFT\nNVDA\nGOOGL\nAMZN\nOptions Terminal · Change view\nMECHANICS WORKBENCH\nTiming first, then positioning, flow, and final confluence before Backtest.\nEQUITY PATH\n1. TIMING MAP\nClose Calendar\n2. CHAIN QUALITY\nOptions Terminal\n3. OPTIONS SETUP\nOptions Confluence\n4. FLOW ESTIMATE\nOptions Flow\n5. CAPITAL PRESSURE\nCapital Pressure\n6. GRAVITY MAP\nTime Gravity\n7. FINAL TIMING CHECK\nTime Confluence\nTICKER\nOptions Terminal\nUNDERLYING\nMU $100.00 · last close · Fri 2 Oct (New York) · +0.40% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n90.84 to 109.16\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n90\n95\n100\n105\n110\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$9.16\nATM STRADDLE MID\n$2.55\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$100.00\nΔ 0.50\nATM PUT\n$100.00\nΔ -0.50\n25Δ CALL\n$90.00\nΔ 0.50\n25Δ PUT\n$90.00\nΔ -0.50\nTOP OI CALL\n$90.00\nOI 80\nTOP OI PUT\n$90.00\nOI 80\nOpen chain5 strikes · swipe sideways on a narrow screen\nOptions Chain\n±20%\n5 strikes\nBoth\nCalls\nPuts\nRANGE %\nMIN OI\nMIN VOL\nMAX SPREAD %\n\nSwipe sideways to read calls, the centre strike, and puts.\n\nBID\tASK\tVOL\tOI\tIV\tDELTA\tSTRIKE\tDELTA\tIV\tOI\tVOL\tBID\tASK\n1.20\t1.35\t40\t80\t25.0%\t0.50\t\n90.00\n-10.00 (-10.0%)\n\t-0.50\t25.0%\t80\t40\t1.20\t1.35\n1.20\t1.35\t40\t80\t25.0%\t0.50\t\n95.00\n-5.00 (-5.0%)\n\t-0.50\t25.0%\t80\t40\t1.20\t1.35\n1.20\t1.35\t40\t80\t25.0%\t0.50\t\n100.00 ATM\n+0.00 (+0.0%)\n\t-0.50\t25.0%\t80\t40\t1.20\t1.35\n1.20\t1.35\t40\t80\t25.0%\t0.50\t\n105.00\n+5.00 (+5.0%)\n\t-0.50\t25.0%\t80\t40\t1.20\t1.35\n1.20\t1.35\t40\t80\t25.0%\t0.50\t\n110.00\n+10.00 (+10.0%)\n\t-0.50\t25.0%\t80\t40\t1.20\t1.35\nClick Bid/Ask on a strike to load the Contract Inspector.\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\nOpen Interest Map\nOI as of 2026-10-02\n\nSpot $100.00 · window ±3 moves; shaded 1-sigma band $90.84–$109.16\n\n90\n95\nSpot $100.00\n100\n105\n110\nCalls\nPuts\nStrategy Scenarios (Educational)\nnot advice\nCompare structures\nHistorical IV rank is unavailable. Compare premium, liquidity and defined risk without assuming volatility is cheap or expensive.\nThese are educational frameworks only. Not personal advice. Validate structure, event risk, and liquidity independently before relying on any scenario.\n\nResearch sections use MU · 2026-11-20. Run each analysis explicitly after opening.\n\nSetup ideas\n\nLoading setup research…\n\nFlow estimate\n\nLoading flow research…\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask"
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "url": "/tools/terminal?tab=options&symbol=MU&expiry=2026-11-20",
+      "tier": "pro",
+      "observedAt": "2026-10-05T15:28:03.021Z",
+      "title": "Options Terminal | MarketScanner Pros",
+      "pathname": "/tools/terminal",
+      "search": "?tab=options&symbol=MU&expiry=2026-11-20",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 3082,
+      "scrollWidth": 390,
+      "screens": 3.6516587677725116,
+      "text": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n2. Chain quality\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nOptions Terminal · Change view\nTICKER\nOptions Terminal\nUNDERLYING\nMU $100.00 · last close · Fri 2 Oct (New York) · +0.40% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n90.84 to 109.16\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n90\n95\n100\n105\n110\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$9.16\nATM STRADDLE MID\n$2.55\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$100.00\nΔ 0.50\nATM PUT\n$100.00\nΔ -0.50\n25Δ CALL\n$90.00\nΔ 0.50\n25Δ PUT\n$90.00\nΔ -0.50\nTOP OI CALL\n$90.00\nOI 80\nTOP OI PUT\n$90.00\nOI 80\nOpen chain5 strikes · swipe sideways on a narrow screen\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n2. Chain quality\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nFUTURES\n/ES\n/NQ\n/YM\n/RTY\n/CL\n/GC\n/SI\n/M2K\n/MES\n/MNQ\n/MCL\n/MGC\nCRYPTO\nBTCUSD\nETHUSD\nSOLUSD\nXRPUSD\nBNBUSD\nEQUITY\nAAPL\nMSFT\nNVDA\nGOOGL\nAMZN\nOptions Terminal · Change view\nMECHANICS WORKBENCH\nTiming first, then positioning, flow, and final confluence before Backtest.\nEQUITY PATH\n1. TIMING MAP\nClose Calendar\n2. CHAIN QUALITY\nOptions Terminal\n3. OPTIONS SETUP\nOptions Confluence\n4. FLOW ESTIMATE\nOptions Flow\n5. CAPITAL PRESSURE\nCapital Pressure\n6. GRAVITY MAP\nTime Gravity\n7. FINAL TIMING CHECK\nTime Confluence\nTICKER\nOptions Terminal\nUNDERLYING\nMU $100.00 · last close · Fri 2 Oct (New York) · +0.40% vs prior close · Options chain\nChain · select a contract no quote · quotes: last session · Fri 2 Oct close · Options chain\nPrevious session close · as of 2026-10-02\nEXPIRY\nDefault expiry\n20 Nov 2026\nRetail\nInstitutional\n\nExpected move\n\n90.84 to 109.16\n\nPut / call open interest\n\nCalls 50% · Puts 50%\n\nOpen-interest walls\n\n90\n95\n100\n105\n110\nChain evidence · Show\nIV & Expected Move\n2026-11-20\nATM IV (2% BAND)\n25.0%\n1-SIGMA MOVE TO EXPIRY\n±$9.16\nATM STRADDLE MID\n$2.55\nEM %\n±9.2%\nDesk Read\nIV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: 2026-10-02.\nChain Navigator\n1 expirations\n46 DTE\n2026-11-20\nQuick Filters\nATM Focus\n25Δ Focus\nHigh OI\nHigh Volume\nTight Spreads\nNotable Strikes (Auto)\nATM CALL\n$100.00\nΔ 0.50\nATM PUT\n$100.00\nΔ -0.50\n25Δ CALL\n$90.00\nΔ 0.50\n25Δ PUT\n$90.00\nΔ -0.50\nTOP OI CALL\n$90.00\nOI 80\nTOP OI PUT\n$90.00\nOI 80\nOpen chain5 strikes · swipe sideways on a narrow screen\nOptions Chain\n±20%\n5 strikes\nCalls\nPuts\nRANGE %\nMIN OI\nMIN VOL\nMAX SPREAD %\n\nSwipe sideways to read calls, the centre strike, and puts.\n\nBID\tASK\tVOL\tOI\tIV\tDELTA\tSTRIKE\tDELTA\tIV\tOI\tVOL\tBID\tASK\n1.20\t1.35\t40\t80\t25.0%\t0.50\t\n90.00\n-10.00 (-10.0%)\n\t-0.50\t25.0%\t80\t40\t1.20\t1.35\n1.20\t1.35\t40\t80\t25.0%\t0.50\t\n95.00\n-5.00 (-5.0%)\n\t-0.50\t25.0%\t80\t40\t1.20\t1.35\n1.20\t1.35\t40\t80\t25.0%\t0.50\t\n100.00 ATM\n+0.00 (+0.0%)\n\t-0.50\t25.0%\t80\t40\t1.20\t1.35\n1.20\t1.35\t40\t80\t25.0%\t0.50\t\n105.00\n+5.00 (+5.0%)\n\t-0.50\t25.0%\t80\t40\t1.20\t1.35\n1.20\t1.35\t40\t80\t25.0%\t0.50\t\n110.00\n+10.00 (+10.0%)\n\t-0.50\t25.0%\t80\t40\t1.20\t1.35\nClick Bid/Ask on a strike to load the Contract Inspector.\nContract Inspector\nclick a strike\nSelect a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.\nMore detailOpen interest map and educational scenarios\nOpen Interest Map\nOI as of 2026-10-02\n\nSpot $100.00 · window ±3 moves; shaded 1-sigma band $90.84–$109.16\n\n90\n95\nSpot $100.00\n100\n105\n110\nCalls\nPuts\nStrategy Scenarios (Educational)\nnot advice\nCompare structures\nHistorical IV rank is unavailable. Compare premium, liquidity and defined risk without assuming volatility is cheap or expensive.\nThese are educational frameworks only. Not personal advice. Validate structure, event risk, and liquidity independently before relying on any scenario.\n\nResearch sections use MU · 2026-11-20. Run each analysis explicitly after opening.\n\nSetup ideas\n\nLoading setup research…\n\nFlow estimate\n\nLoading flow research…\n\nSource · Previous session close · 10:00 AEST Fri 2 Oct · Bid and ask"
+    }
+  ],
+  "requests": [
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 1280,
+      "path": "/api/scanner/top-cached",
+      "method": "GET",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 1280,
+      "path": "/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 1280,
+      "path": "/api/flow",
+      "method": "GET",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 1280,
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 390,
+      "path": "/api/scanner/top-cached",
+      "method": "GET",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 390,
+      "path": "/api/confluence-scan",
+      "method": "POST",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 390,
+      "path": "/api/flow",
+      "method": "GET",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true
+    },
+    {
+      "name": "terminal-chain-loaded",
+      "tier": "pro",
+      "width": 390,
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "mocked": true
+    }
+  ],
+  "errors": []
+}

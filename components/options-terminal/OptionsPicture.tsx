@@ -17,7 +17,8 @@ export default function OptionsPicture({
   const top = walls
     .filter((row) => row.callOI + row.putOI > 0)
     .sort((a, b) => b.callOI + b.putOI - (a.callOI + a.putOI))
-    .slice(0, 8);
+    .slice(0, 8)
+    .sort((a, b) => a.strike - b.strike);
   const max = Math.max(...top.map((row) => row.callOI + row.putOI), 1);
   if (!move && oi <= 0 && !top.length) return null;
   return (
@@ -44,6 +45,7 @@ export default function OptionsPicture({
       {top.length > 0 && (
         <div data-oi-walls className="rounded-lg border border-[var(--msp-border)] p-3">
           <p className="text-xs text-[var(--msp-text-muted)]">Open-interest walls</p>
+          <p className="mt-1 text-[10px] text-[var(--msp-text-muted)]">Green: calls · Red: puts (larger open interest)</p>
           <ul className="mt-2 space-y-1">
             {top.map((row) => (
               <li key={row.strike} className="grid grid-cols-[4.5rem_1fr] items-center gap-2 text-xs">

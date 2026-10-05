@@ -29,7 +29,7 @@ export async function generateMetadata(): Promise<Metadata> {
   // The card's text is built server-side from the same snapshot; the date only makes the URL change daily.
   const og = scanOgImageUrl('DAILY', data?.scan_date ?? null);
   return {
-    title,
+    title: 'Daily Picks',
     description,
     alternates: {
       canonical: url,

@@ -1,0 +1,1845 @@
+{
+  "mocked": true,
+  "offSession": true,
+  "results": [
+    {
+      "name": "radar-loaded",
+      "width": 1280,
+      "tier": "pro",
+      "state": "loaded",
+      "admin": false,
+      "url": "/tools/msp-radar",
+      "observedAt": "2026-10-05T16:54:19.793Z",
+      "height": 800,
+      "scrollHeight": 1406,
+      "scrollWidth": 1280,
+      "screens": 1.7575,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nBuilt once per US session from the persisted overnight scan · educational research only, not financial advice.\n\nToday / latest\n‹ Previous\nNext ›\n7-day\n30-day\nFri, Oct 2, 2026\nRun COMPLETE\nHealth NORMAL\ngenerated 2026-10-02 21:00Z · report v1\n\nMixed breadth; eight research candidates\n\nMixed\n\nBreadth\n\nTechnology\n\nLeadership\n\nRange\n\nCrypto\n\nModerate\n\nVolatility\n\nSession change\nAAPL\n+1.0%\nNVDA\n-1.2%\nMU\n+1.4%\nAMD\n-1.6%\nMSFT\n+1.8%\nGOOGL\n-2.0%\nMETA\n+2.2%\nNEAR\n-2.4%\nAAPL\nEarly\n\nVolume and price structure align in the recorded session.\n\nNVDA\nEarly\n\nVolume and price structure align in the recorded session.\n\nMU\nEarly\n\nVolume and price structure align in the recorded session.\n\nAMD\nMid\n\nVolume and price structure align in the recorded session.\n\nMSFT\nMid\n\nVolume and price structure align in the recorded session.\n\nGOOGL\nMid\n\nVolume and price structure align in the recorded session.\n\nMETA\nMid\n\nVolume and price structure align in the recorded session.\n\nNEAR\nMid\n\nVolume and price structure align in the recorded session.\n\nLegend: Early, Mid, Extended. Shown once for every candidate card.\n\nLifecycle changes\nAAPL (equity): Discovered → Developing : Recorded structure improved.\nNVDA (equity): Discovered → Developing : Recorded structure improved.\nMU (equity): Discovered → Developing : Recorded structure improved.\nAMD (equity): Discovered → Developing : Recorded structure improved.\nMore detailThemes, moves, noise, and the full tables\nData quality and archiveCoverage, feeds, and earlier reports\n\nEducational research only — not financial advice. MSP Radar surfaces what changed and what deserves research; it does not issue trade instructions.\n\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "visibleCandidates": 8,
+      "buttons": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nBuilt once per US session from the persisted overnight scan · educational research only, not financial advice.\n\nToday / latest\n‹ Previous\nNext ›\n7-day\n30-day\nFri, Oct 2, 2026\nRun COMPLETE\nHealth NORMAL\ngenerated 2026-10-02 21:00Z · report v1\n\nMixed breadth; eight research candidates\n\nMixed\n\nBreadth\n\nTechnology\n\nLeadership\n\nRange\n\nCrypto\n\nModerate\n\nVolatility\n\nSession change\nAAPL\n+1.0%\nNVDA\n-1.2%\nMU\n+1.4%\nAMD\n-1.6%\nMSFT\n+1.8%\nGOOGL\n-2.0%\nMETA\n+2.2%\nNEAR\n-2.4%\nAAPL\nEarly\n\nVolume and price structure align in the recorded session.\n\nNVDA\nEarly\n\nVolume and price structure align in the recorded session.\n\nMU\nEarly\n\nVolume and price structure align in the recorded session.\n\nAMD\nMid\n\nVolume and price structure align in the recorded session.\n\nMSFT\nMid\n\nVolume and price structure align in the recorded session.\n\nGOOGL\nMid\n\nVolume and price structure align in the recorded session.\n\nMETA\nMid\n\nVolume and price structure align in the recorded session.\n\nNEAR\nMid\n\nVolume and price structure align in the recorded session.\n\nLegend: Early, Mid, Extended. Shown once for every candidate card.\n\nLifecycle changes\nAAPL (equity): Discovered → Developing : Recorded structure improved.\nNVDA (equity): Discovered → Developing : Recorded structure improved.\nMU (equity): Discovered → Developing : Recorded structure improved.\nAMD (equity): Discovered → Developing : Recorded structure improved.\nMore detailThemes, moves, noise, and the full tables\nMarket in 30 Seconds\nRegime, leadership, breadth, crypto, macro\nCollapse\nBreadth\nMixed\nLeadership\nTechnology\nCrypto\nRange\nVolatility\nModerate\nLook At First Today\nWhere research time is best spent — not trade instructions\nNo priority items surfaced.\nTop Research Candidates\nRanked by setup quality, not by move size. Largest mover ≠ best candidate.\n#\tSYMBOL\tSETUP\tSCORE\tEXTENSION\t1D / 5D\tWHY SURFACED · CAVEAT\n1\tAAPL\nAAPL · Developing\n\tTrend Reclaim\t89.1234\tEARLY\t+1.0% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n2\tNVDA\nNVDA · Developing\n\tTrend Reclaim\t88.1234\tEARLY\t-1.2% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n3\tMU\nMU · Developing\n\tTrend Reclaim\t87.1234\tEARLY\t+1.4% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n4\tAMD\nAMD · Developing\n\tTrend Reclaim\t86.1234\tMID\t-1.6% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n5\tMSFT\nMSFT · Developing\n\tTrend Reclaim\t85.1234\tMID\t+1.8% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n6\tGOOGL\nGOOGL · Developing\n\tTrend Reclaim\t84.1234\tMID\t-2.0% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n7\tMETA\nMETA · Developing\n\tTrend Reclaim\t83.1234\tMID\t+2.2% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n8\tNEAR\nNEAR · Developing\n\tTrend Reclaim\t82.1234\tMID\t-2.4% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\nWhat May Move Next\nPre-move setups — require confirmation; may never trigger\nNo pre-move setups this session.\nLifecycle Changes (4)\nPersisted watchlist transitions recorded this session\nCollapse\nDeveloping 4\nAAPL (equity): Discovered → Developing : Recorded structure improved.\nNVDA (equity): Discovered → Developing : Recorded structure improved.\nMU (equity): Discovered → Developing : Recorded structure improved.\nAMD (equity): Discovered → Developing : Recorded structure improved.\nThemes & Rotation (0)\nGenuine group moves vs single-name noise\nCollapse\nLeading: Technology\nImproving: none\nDeteriorating: none\nCrypto: Range\nWhat Moved\nSession context — magnitude, not quality\nExpand\nRejected Noise (0)\nBig moves that did not qualify — and why\nExpand\nProbably Noise (0)\nIgnore unless something changes\nExpand\nData quality and archiveCoverage, feeds, and earlier reports\nData quality\nDetails\nUniverse coverage 99.1666%\n1,200 assets scanned\n100 deep dives\ndata errors 0\nArchive (last 7 reports)\nSESSION\tHEADLINE\tRUN\tHEALTH\nNo persisted reports yet.\n\nEducational research only — not financial advice. MSP Radar surfaces what changed and what deserves research; it does not issue trade instructions.\n\n✕\nMSP AI",
+      "expandedWidth": 1280,
+      "lifecycleLists": 0,
+      "expandedSourceCount": 0
+    },
+    {
+      "name": "radar-partial",
+      "width": 1280,
+      "tier": "pro",
+      "state": "partial",
+      "admin": true,
+      "url": "/tools/msp-radar",
+      "observedAt": "2026-10-05T16:54:21.776Z",
+      "height": 800,
+      "scrollHeight": 1481,
+      "scrollWidth": 1280,
+      "screens": 1.85125,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nBuilt once per US session from the persisted overnight scan · educational research only, not financial advice.\n\nToday / latest\n‹ Previous\nNext ›\n7-day\n30-day\nFri, Oct 2, 2026\nRun COMPLETE\nHealth DEGRADED\nEmail SENT\nrun fixture-run · generated 2026-10-02 21:00Z · report v1\n\nMixed breadth; eight research candidates\n\nDATA HEALTH WARNING: Some quotes were not collected. · Stage 2 coverage 82.45% · shortlist may be incomplete: YES\nquotes: Coverage checked\n\nMixed\n\nBreadth\n\nTechnology\n\nLeadership\n\nRange\n\nCrypto\n\nModerate\n\nVolatility\n\nSession change\nAAPL\n+1.0%\nNVDA\n-1.2%\nMU\n+1.4%\nAMD\n-1.6%\nMSFT\n+1.8%\nGOOGL\n-2.0%\nMETA\n+2.2%\nNEAR\n-2.4%\nAAPL\nEarly\n\nVolume and price structure align in the recorded session.\n\nNVDA\nEarly\n\nVolume and price structure align in the recorded session.\n\nMU\nEarly\n\nVolume and price structure align in the recorded session.\n\nAMD\nMid\n\nVolume and price structure align in the recorded session.\n\nMSFT\nMid\n\nVolume and price structure align in the recorded session.\n\nGOOGL\nMid\n\nVolume and price structure align in the recorded session.\n\nMETA\nMid\n\nVolume and price structure align in the recorded session.\n\nNEAR\nMid\n\nVolume and price structure align in the recorded session.\n\nLegend: Early, Mid, Extended. Shown once for every candidate card.\n\nLifecycle changes\nAAPL (equity): Discovered → Developing : Recorded structure improved.\nNVDA (equity): Discovered → Developing : Recorded structure improved.\nMU (equity): Discovered → Developing : Recorded structure improved.\nAMD (equity): Discovered → Developing : Recorded structure improved.\nMore detailThemes, moves, noise, and the full tables\nData quality and archiveCoverage, feeds, and earlier reports\n\nEducational research only — not financial advice. MSP Radar surfaces what changed and what deserves research; it does not issue trade instructions.\n\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "visibleCandidates": 8,
+      "buttons": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nBuilt once per US session from the persisted overnight scan · educational research only, not financial advice.\n\nToday / latest\n‹ Previous\nNext ›\n7-day\n30-day\nFri, Oct 2, 2026\nRun COMPLETE\nHealth DEGRADED\nEmail SENT\nrun fixture-run · generated 2026-10-02 21:00Z · report v1\n\nMixed breadth; eight research candidates\n\nDATA HEALTH WARNING: Some quotes were not collected. · Stage 2 coverage 82.45% · shortlist may be incomplete: YES\nquotes: Coverage checked\n\nMixed\n\nBreadth\n\nTechnology\n\nLeadership\n\nRange\n\nCrypto\n\nModerate\n\nVolatility\n\nSession change\nAAPL\n+1.0%\nNVDA\n-1.2%\nMU\n+1.4%\nAMD\n-1.6%\nMSFT\n+1.8%\nGOOGL\n-2.0%\nMETA\n+2.2%\nNEAR\n-2.4%\nAAPL\nEarly\n\nVolume and price structure align in the recorded session.\n\nNVDA\nEarly\n\nVolume and price structure align in the recorded session.\n\nMU\nEarly\n\nVolume and price structure align in the recorded session.\n\nAMD\nMid\n\nVolume and price structure align in the recorded session.\n\nMSFT\nMid\n\nVolume and price structure align in the recorded session.\n\nGOOGL\nMid\n\nVolume and price structure align in the recorded session.\n\nMETA\nMid\n\nVolume and price structure align in the recorded session.\n\nNEAR\nMid\n\nVolume and price structure align in the recorded session.\n\nLegend: Early, Mid, Extended. Shown once for every candidate card.\n\nLifecycle changes\nAAPL (equity): Discovered → Developing : Recorded structure improved.\nNVDA (equity): Discovered → Developing : Recorded structure improved.\nMU (equity): Discovered → Developing : Recorded structure improved.\nAMD (equity): Discovered → Developing : Recorded structure improved.\nMore detailThemes, moves, noise, and the full tables\nMarket in 30 Seconds\nRegime, leadership, breadth, crypto, macro\nCollapse\nBreadth\nMixed\nLeadership\nTechnology\nCrypto\nRange\nVolatility\nModerate\nLook At First Today\nWhere research time is best spent — not trade instructions\nNo priority items surfaced.\nTop Research Candidates\nRanked by setup quality, not by move size. Largest mover ≠ best candidate.\n#\tSYMBOL\tSETUP\tSCORE\tEXTENSION\t1D / 5D\tWHY SURFACED · CAVEAT\n1\tAAPL\nAAPL · Developing\n\tTrend Reclaim\t89.1234\tEARLY\t+1.0% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n2\tNVDA\nNVDA · Developing\n\tTrend Reclaim\t88.1234\tEARLY\t-1.2% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n3\tMU\nMU · Developing\n\tTrend Reclaim\t87.1234\tEARLY\t+1.4% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n4\tAMD\nAMD · Developing\n\tTrend Reclaim\t86.1234\tMID\t-1.6% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n5\tMSFT\nMSFT · Developing\n\tTrend Reclaim\t85.1234\tMID\t+1.8% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n6\tGOOGL\nGOOGL · Developing\n\tTrend Reclaim\t84.1234\tMID\t-2.0% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n7\tMETA\nMETA · Developing\n\tTrend Reclaim\t83.1234\tMID\t+2.2% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n8\tNEAR\nNEAR · Developing\n\tTrend Reclaim\t82.1234\tMID\t-2.4% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\nWhat May Move Next\nPre-move setups — require confirmation; may never trigger\nNo pre-move setups this session.\nLifecycle Changes (4)\nPersisted watchlist transitions recorded this session\nCollapse\nDeveloping 4\nAAPL (equity): Discovered → Developing : Recorded structure improved.\nNVDA (equity): Discovered → Developing : Recorded structure improved.\nMU (equity): Discovered → Developing : Recorded structure improved.\nAMD (equity): Discovered → Developing : Recorded structure improved.\nThemes & Rotation (0)\nGenuine group moves vs single-name noise\nCollapse\nLeading: Technology\nImproving: none\nDeteriorating: none\nCrypto: Range\nWhat Moved\nSession context — magnitude, not quality\nExpand\nRejected Noise (0)\nBig moves that did not qualify — and why\nExpand\nProbably Noise (0)\nIgnore unless something changes\nExpand\nData quality and archiveCoverage, feeds, and earlier reports\nData quality\nDetails\nUniverse coverage 99.1666%\n1,200 assets scanned\n100 deep dives\ndata errors 0\nAV 100 · CG 2 · 1.1 min · 300 MB\nArchive (last 7 reports)\nSESSION\tHEADLINE\tRUN\tHEALTH\tEMAIL\nNo persisted reports yet.\n\nEducational research only — not financial advice. MSP Radar surfaces what changed and what deserves research; it does not issue trade instructions.\n\n✕\nMSP AI",
+      "expandedWidth": 1280,
+      "lifecycleLists": 0,
+      "expandedSourceCount": 0
+    },
+    {
+      "name": "radar-empty",
+      "width": 1280,
+      "tier": "pro",
+      "state": "empty",
+      "admin": false,
+      "url": "/tools/msp-radar",
+      "observedAt": "2026-10-05T16:54:24.043Z",
+      "height": 800,
+      "scrollHeight": 898,
+      "scrollWidth": 1280,
+      "screens": 1.1225,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nBuilt once per US session from the persisted overnight scan · educational research only, not financial advice.\n\nToday / latest\n‹ Previous\nNext ›\n7-day\n30-day\nFri, Oct 2, 2026\nRun COMPLETE\nHealth NORMAL\ngenerated 2026-10-02 21:00Z · report v1\n\nMixed breadth; eight research candidates\n\nMixed\n\nBreadth\n\nTechnology\n\nLeadership\n\nRange\n\nCrypto\n\nModerate\n\nVolatility\n\nNo session change recorded.\n\nNo qualified candidates this session.\n\nLegend: Early, Mid, Extended. Shown once for every candidate card.\n\nLifecycle changes\nAAPL (equity): Discovered → Developing : Recorded structure improved.\nNVDA (equity): Discovered → Developing : Recorded structure improved.\nMU (equity): Discovered → Developing : Recorded structure improved.\nAMD (equity): Discovered → Developing : Recorded structure improved.\nMore detailThemes, moves, noise, and the full tables\nData quality and archiveCoverage, feeds, and earlier reports\n\nEducational research only — not financial advice. MSP Radar surfaces what changed and what deserves research; it does not issue trade instructions.\n\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "visibleCandidates": 0,
+      "buttons": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nBuilt once per US session from the persisted overnight scan · educational research only, not financial advice.\n\nToday / latest\n‹ Previous\nNext ›\n7-day\n30-day\nFri, Oct 2, 2026\nRun COMPLETE\nHealth NORMAL\ngenerated 2026-10-02 21:00Z · report v1\n\nMixed breadth; eight research candidates\n\nMixed\n\nBreadth\n\nTechnology\n\nLeadership\n\nRange\n\nCrypto\n\nModerate\n\nVolatility\n\nNo session change recorded.\n\nNo qualified candidates this session.\n\nLegend: Early, Mid, Extended. Shown once for every candidate card.\n\nLifecycle changes\nAAPL (equity): Discovered → Developing : Recorded structure improved.\nNVDA (equity): Discovered → Developing : Recorded structure improved.\nMU (equity): Discovered → Developing : Recorded structure improved.\nAMD (equity): Discovered → Developing : Recorded structure improved.\nMore detailThemes, moves, noise, and the full tables\nMarket in 30 Seconds\nRegime, leadership, breadth, crypto, macro\nCollapse\nBreadth\nMixed\nLeadership\nTechnology\nCrypto\nRange\nVolatility\nModerate\nLook At First Today\nWhere research time is best spent — not trade instructions\nNo priority items surfaced.\nTop Research Candidates\nRanked by setup quality, not by move size. Largest mover ≠ best candidate.\nNo qualified candidates this session.\nWhat May Move Next\nPre-move setups — require confirmation; may never trigger\nNo pre-move setups this session.\nLifecycle Changes (4)\nPersisted watchlist transitions recorded this session\nCollapse\nDeveloping 4\nAAPL (equity): Discovered → Developing : Recorded structure improved.\nNVDA (equity): Discovered → Developing : Recorded structure improved.\nMU (equity): Discovered → Developing : Recorded structure improved.\nAMD (equity): Discovered → Developing : Recorded structure improved.\nThemes & Rotation (0)\nGenuine group moves vs single-name noise\nCollapse\nLeading: Technology\nImproving: none\nDeteriorating: none\nCrypto: Range\nWhat Moved\nSession context — magnitude, not quality\nExpand\nRejected Noise (0)\nBig moves that did not qualify — and why\nExpand\nProbably Noise (0)\nIgnore unless something changes\nExpand\nData quality and archiveCoverage, feeds, and earlier reports\nData quality\nDetails\nUniverse coverage 99.1666%\n1,200 assets scanned\n100 deep dives\ndata errors 0\nArchive (last 7 reports)\nSESSION\tHEADLINE\tRUN\tHEALTH\nNo persisted reports yet.\n\nEducational research only — not financial advice. MSP Radar surfaces what changed and what deserves research; it does not issue trade instructions.\n\n✕\nMSP AI",
+      "expandedWidth": 1280,
+      "lifecycleLists": 0,
+      "expandedSourceCount": 0
+    },
+    {
+      "name": "radar-failed",
+      "width": 1280,
+      "tier": "pro",
+      "state": "failed",
+      "admin": false,
+      "url": "/tools/msp-radar",
+      "observedAt": "2026-10-05T16:54:26.209Z",
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nBuilt once per US session from the persisted overnight scan · educational research only, not financial advice.\n\nToday / latest\n‹ Previous\nNext ›\n7-day\n30-day\nFri, Oct 2, 2026\nRun FAILED\nHealth NORMAL\ngenerated 2026-10-02 21:00Z · report v1\n\nMixed breadth; eight research candidates\n\nData quality and archiveCoverage, feeds, and earlier reports\n\nEducational research only — not financial advice. MSP Radar surfaces what changed and what deserves research; it does not issue trade instructions.\n\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "visibleCandidates": 0,
+      "buttons": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nBuilt once per US session from the persisted overnight scan · educational research only, not financial advice.\n\nToday / latest\n‹ Previous\nNext ›\n7-day\n30-day\nFri, Oct 2, 2026\nRun FAILED\nHealth NORMAL\ngenerated 2026-10-02 21:00Z · report v1\n\nMixed breadth; eight research candidates\n\nData quality and archiveCoverage, feeds, and earlier reports\nData quality\nDetails\nUniverse coverage 99.1666%\n1,200 assets scanned\n100 deep dives\ndata errors 0\nArchive (last 7 reports)\nSESSION\tHEADLINE\tRUN\tHEALTH\nNo persisted reports yet.\n\nEducational research only — not financial advice. MSP Radar surfaces what changed and what deserves research; it does not issue trade instructions.\n\n✕\nMSP AI",
+      "expandedWidth": 1280,
+      "lifecycleLists": 0,
+      "expandedSourceCount": 0
+    },
+    {
+      "name": "radar-free",
+      "width": 1280,
+      "tier": "free",
+      "state": "free",
+      "admin": false,
+      "url": "/tools/msp-radar",
+      "observedAt": "2026-10-05T16:54:28.211Z",
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nNot available right now\n\nUnlock today’s full report\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "visibleCandidates": 0,
+      "buttons": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nNot available right now\n\nUnlock today’s full report\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "expandedWidth": 1280,
+      "lifecycleLists": 0,
+      "expandedSourceCount": 0
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 1280,
+      "tier": "anonymous",
+      "state": "anonymous",
+      "admin": false,
+      "url": "/tools/msp-radar",
+      "observedAt": "2026-10-05T16:54:30.895Z",
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nNot available right now\n\nUnlock today’s full report\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "visibleCandidates": 0,
+      "buttons": [],
+      "expandedText": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nNot available right now\n\nUnlock today’s full report\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "expandedWidth": 1280,
+      "lifecycleLists": 0,
+      "expandedSourceCount": 0
+    },
+    {
+      "name": "radar-loaded",
+      "width": 390,
+      "tier": "pro",
+      "state": "loaded",
+      "admin": false,
+      "url": "/tools/msp-radar",
+      "observedAt": "2026-10-05T16:54:33.343Z",
+      "height": 844,
+      "scrollHeight": 2487,
+      "scrollWidth": 390,
+      "screens": 2.9466824644549763,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nBuilt once per US session from the persisted overnight scan · educational research only, not financial advice.\n\nToday / latest\n‹ Previous\nNext ›\n7-day\n30-day\nFri, Oct 2, 2026\nRun COMPLETE\nHealth NORMAL\ngenerated 2026-10-02 21:00Z · report v1\n\nMixed breadth; eight research candidates\n\nMixed\n\nBreadth\n\nTechnology\n\nLeadership\n\nRange\n\nCrypto\n\nModerate\n\nVolatility\n\nSession change\nAAPL\n+1.0%\nNVDA\n-1.2%\nMU\n+1.4%\nAMD\n-1.6%\nMSFT\n+1.8%\nGOOGL\n-2.0%\nMETA\n+2.2%\nNEAR\n-2.4%\nAAPL\nEarly\n\nVolume and price structure align in the recorded session.\n\nNVDA\nEarly\n\nVolume and price structure align in the recorded session.\n\nMU\nEarly\n\nVolume and price structure align in the recorded session.\n\nAMD\nMid\n\nVolume and price structure align in the recorded session.\n\nMSFT\nMid\n\nVolume and price structure align in the recorded session.\n\nGOOGL\nMid\n\nVolume and price structure align in the recorded session.\n\nMETA\nMid\n\nVolume and price structure align in the recorded session.\n\nNEAR\nMid\n\nVolume and price structure align in the recorded session.\n\nLegend: Early, Mid, Extended. Shown once for every candidate card.\n\nLifecycle changes\nAAPL (equity): Discovered → Developing : Recorded structure improved.\nNVDA (equity): Discovered → Developing : Recorded structure improved.\nMU (equity): Discovered → Developing : Recorded structure improved.\nAMD (equity): Discovered → Developing : Recorded structure improved.\nMore detailThemes, moves, noise, and the full tables\nData quality and archiveCoverage, feeds, and earlier reports\n\nEducational research only — not financial advice. MSP Radar surfaces what changed and what deserves research; it does not issue trade instructions.\n\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "visibleCandidates": 8,
+      "buttons": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nBuilt once per US session from the persisted overnight scan · educational research only, not financial advice.\n\nToday / latest\n‹ Previous\nNext ›\n7-day\n30-day\nFri, Oct 2, 2026\nRun COMPLETE\nHealth NORMAL\ngenerated 2026-10-02 21:00Z · report v1\n\nMixed breadth; eight research candidates\n\nMixed\n\nBreadth\n\nTechnology\n\nLeadership\n\nRange\n\nCrypto\n\nModerate\n\nVolatility\n\nSession change\nAAPL\n+1.0%\nNVDA\n-1.2%\nMU\n+1.4%\nAMD\n-1.6%\nMSFT\n+1.8%\nGOOGL\n-2.0%\nMETA\n+2.2%\nNEAR\n-2.4%\nAAPL\nEarly\n\nVolume and price structure align in the recorded session.\n\nNVDA\nEarly\n\nVolume and price structure align in the recorded session.\n\nMU\nEarly\n\nVolume and price structure align in the recorded session.\n\nAMD\nMid\n\nVolume and price structure align in the recorded session.\n\nMSFT\nMid\n\nVolume and price structure align in the recorded session.\n\nGOOGL\nMid\n\nVolume and price structure align in the recorded session.\n\nMETA\nMid\n\nVolume and price structure align in the recorded session.\n\nNEAR\nMid\n\nVolume and price structure align in the recorded session.\n\nLegend: Early, Mid, Extended. Shown once for every candidate card.\n\nLifecycle changes\nAAPL (equity): Discovered → Developing : Recorded structure improved.\nNVDA (equity): Discovered → Developing : Recorded structure improved.\nMU (equity): Discovered → Developing : Recorded structure improved.\nAMD (equity): Discovered → Developing : Recorded structure improved.\nMore detailThemes, moves, noise, and the full tables\nMarket in 30 Seconds\nRegime, leadership, breadth, crypto, macro\nCollapse\nBreadth\nMixed\nLeadership\nTechnology\nCrypto\nRange\nVolatility\nModerate\nLook At First Today\nWhere research time is best spent — not trade instructions\nNo priority items surfaced.\nTop Research Candidates\nRanked by setup quality, not by move size. Largest mover ≠ best candidate.\n#\tSYMBOL\tSETUP\tSCORE\tEXTENSION\t1D / 5D\tWHY SURFACED · CAVEAT\n1\tAAPL\nAAPL · Developing\n\tTrend Reclaim\t89.1234\tEARLY\t+1.0% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n2\tNVDA\nNVDA · Developing\n\tTrend Reclaim\t88.1234\tEARLY\t-1.2% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n3\tMU\nMU · Developing\n\tTrend Reclaim\t87.1234\tEARLY\t+1.4% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n4\tAMD\nAMD · Developing\n\tTrend Reclaim\t86.1234\tMID\t-1.6% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n5\tMSFT\nMSFT · Developing\n\tTrend Reclaim\t85.1234\tMID\t+1.8% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n6\tGOOGL\nGOOGL · Developing\n\tTrend Reclaim\t84.1234\tMID\t-2.0% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n7\tMETA\nMETA · Developing\n\tTrend Reclaim\t83.1234\tMID\t+2.2% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n8\tNEAR\nNEAR · Developing\n\tTrend Reclaim\t82.1234\tMID\t-2.4% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\nWhat May Move Next\nPre-move setups — require confirmation; may never trigger\nNo pre-move setups this session.\nLifecycle Changes (4)\nPersisted watchlist transitions recorded this session\nCollapse\nDeveloping 4\nAAPL (equity): Discovered → Developing : Recorded structure improved.\nNVDA (equity): Discovered → Developing : Recorded structure improved.\nMU (equity): Discovered → Developing : Recorded structure improved.\nAMD (equity): Discovered → Developing : Recorded structure improved.\nThemes & Rotation (0)\nGenuine group moves vs single-name noise\nCollapse\nLeading: Technology\nImproving: none\nDeteriorating: none\nCrypto: Range\nWhat Moved\nSession context — magnitude, not quality\nExpand\nRejected Noise (0)\nBig moves that did not qualify — and why\nExpand\nProbably Noise (0)\nIgnore unless something changes\nExpand\nData quality and archiveCoverage, feeds, and earlier reports\nData quality\nDetails\nUniverse coverage 99.1666%\n1,200 assets scanned\n100 deep dives\ndata errors 0\nArchive (last 7 reports)\nSESSION\tHEADLINE\tRUN\tHEALTH\nNo persisted reports yet.\n\nEducational research only — not financial advice. MSP Radar surfaces what changed and what deserves research; it does not issue trade instructions.\n\n✕\nMSP AI",
+      "expandedWidth": 390,
+      "lifecycleLists": 0,
+      "expandedSourceCount": 0
+    },
+    {
+      "name": "radar-partial",
+      "width": 390,
+      "tier": "pro",
+      "state": "partial",
+      "admin": true,
+      "url": "/tools/msp-radar",
+      "observedAt": "2026-10-05T16:54:36.442Z",
+      "height": 844,
+      "scrollHeight": 2638,
+      "scrollWidth": 390,
+      "screens": 3.125592417061611,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nBuilt once per US session from the persisted overnight scan · educational research only, not financial advice.\n\nToday / latest\n‹ Previous\nNext ›\n7-day\n30-day\nFri, Oct 2, 2026\nRun COMPLETE\nHealth DEGRADED\nEmail SENT\nrun fixture-run · generated 2026-10-02 21:00Z · report v1\n\nMixed breadth; eight research candidates\n\nDATA HEALTH WARNING: Some quotes were not collected. · Stage 2 coverage 82.45% · shortlist may be incomplete: YES\nquotes: Coverage checked\n\nMixed\n\nBreadth\n\nTechnology\n\nLeadership\n\nRange\n\nCrypto\n\nModerate\n\nVolatility\n\nSession change\nAAPL\n+1.0%\nNVDA\n-1.2%\nMU\n+1.4%\nAMD\n-1.6%\nMSFT\n+1.8%\nGOOGL\n-2.0%\nMETA\n+2.2%\nNEAR\n-2.4%\nAAPL\nEarly\n\nVolume and price structure align in the recorded session.\n\nNVDA\nEarly\n\nVolume and price structure align in the recorded session.\n\nMU\nEarly\n\nVolume and price structure align in the recorded session.\n\nAMD\nMid\n\nVolume and price structure align in the recorded session.\n\nMSFT\nMid\n\nVolume and price structure align in the recorded session.\n\nGOOGL\nMid\n\nVolume and price structure align in the recorded session.\n\nMETA\nMid\n\nVolume and price structure align in the recorded session.\n\nNEAR\nMid\n\nVolume and price structure align in the recorded session.\n\nLegend: Early, Mid, Extended. Shown once for every candidate card.\n\nLifecycle changes\nAAPL (equity): Discovered → Developing : Recorded structure improved.\nNVDA (equity): Discovered → Developing : Recorded structure improved.\nMU (equity): Discovered → Developing : Recorded structure improved.\nAMD (equity): Discovered → Developing : Recorded structure improved.\nMore detailThemes, moves, noise, and the full tables\nData quality and archiveCoverage, feeds, and earlier reports\n\nEducational research only — not financial advice. MSP Radar surfaces what changed and what deserves research; it does not issue trade instructions.\n\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "visibleCandidates": 8,
+      "buttons": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nBuilt once per US session from the persisted overnight scan · educational research only, not financial advice.\n\nToday / latest\n‹ Previous\nNext ›\n7-day\n30-day\nFri, Oct 2, 2026\nRun COMPLETE\nHealth DEGRADED\nEmail SENT\nrun fixture-run · generated 2026-10-02 21:00Z · report v1\n\nMixed breadth; eight research candidates\n\nDATA HEALTH WARNING: Some quotes were not collected. · Stage 2 coverage 82.45% · shortlist may be incomplete: YES\nquotes: Coverage checked\n\nMixed\n\nBreadth\n\nTechnology\n\nLeadership\n\nRange\n\nCrypto\n\nModerate\n\nVolatility\n\nSession change\nAAPL\n+1.0%\nNVDA\n-1.2%\nMU\n+1.4%\nAMD\n-1.6%\nMSFT\n+1.8%\nGOOGL\n-2.0%\nMETA\n+2.2%\nNEAR\n-2.4%\nAAPL\nEarly\n\nVolume and price structure align in the recorded session.\n\nNVDA\nEarly\n\nVolume and price structure align in the recorded session.\n\nMU\nEarly\n\nVolume and price structure align in the recorded session.\n\nAMD\nMid\n\nVolume and price structure align in the recorded session.\n\nMSFT\nMid\n\nVolume and price structure align in the recorded session.\n\nGOOGL\nMid\n\nVolume and price structure align in the recorded session.\n\nMETA\nMid\n\nVolume and price structure align in the recorded session.\n\nNEAR\nMid\n\nVolume and price structure align in the recorded session.\n\nLegend: Early, Mid, Extended. Shown once for every candidate card.\n\nLifecycle changes\nAAPL (equity): Discovered → Developing : Recorded structure improved.\nNVDA (equity): Discovered → Developing : Recorded structure improved.\nMU (equity): Discovered → Developing : Recorded structure improved.\nAMD (equity): Discovered → Developing : Recorded structure improved.\nMore detailThemes, moves, noise, and the full tables\nMarket in 30 Seconds\nRegime, leadership, breadth, crypto, macro\nCollapse\nBreadth\nMixed\nLeadership\nTechnology\nCrypto\nRange\nVolatility\nModerate\nLook At First Today\nWhere research time is best spent — not trade instructions\nNo priority items surfaced.\nTop Research Candidates\nRanked by setup quality, not by move size. Largest mover ≠ best candidate.\n#\tSYMBOL\tSETUP\tSCORE\tEXTENSION\t1D / 5D\tWHY SURFACED · CAVEAT\n1\tAAPL\nAAPL · Developing\n\tTrend Reclaim\t89.1234\tEARLY\t+1.0% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n2\tNVDA\nNVDA · Developing\n\tTrend Reclaim\t88.1234\tEARLY\t-1.2% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n3\tMU\nMU · Developing\n\tTrend Reclaim\t87.1234\tEARLY\t+1.4% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n4\tAMD\nAMD · Developing\n\tTrend Reclaim\t86.1234\tMID\t-1.6% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n5\tMSFT\nMSFT · Developing\n\tTrend Reclaim\t85.1234\tMID\t+1.8% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n6\tGOOGL\nGOOGL · Developing\n\tTrend Reclaim\t84.1234\tMID\t-2.0% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n7\tMETA\nMETA · Developing\n\tTrend Reclaim\t83.1234\tMID\t+2.2% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\n8\tNEAR\nNEAR · Developing\n\tTrend Reclaim\t82.1234\tMID\t-2.4% / +3.1%\nMeasured\n\tVolume and price structure align in the recorded session.\nWhat May Move Next\nPre-move setups — require confirmation; may never trigger\nNo pre-move setups this session.\nLifecycle Changes (4)\nPersisted watchlist transitions recorded this session\nCollapse\nDeveloping 4\nAAPL (equity): Discovered → Developing : Recorded structure improved.\nNVDA (equity): Discovered → Developing : Recorded structure improved.\nMU (equity): Discovered → Developing : Recorded structure improved.\nAMD (equity): Discovered → Developing : Recorded structure improved.\nThemes & Rotation (0)\nGenuine group moves vs single-name noise\nCollapse\nLeading: Technology\nImproving: none\nDeteriorating: none\nCrypto: Range\nWhat Moved\nSession context — magnitude, not quality\nExpand\nRejected Noise (0)\nBig moves that did not qualify — and why\nExpand\nProbably Noise (0)\nIgnore unless something changes\nExpand\nData quality and archiveCoverage, feeds, and earlier reports\nData quality\nDetails\nUniverse coverage 99.1666%\n1,200 assets scanned\n100 deep dives\ndata errors 0\nAV 100 · CG 2 · 1.1 min · 300 MB\nArchive (last 7 reports)\nSESSION\tHEADLINE\tRUN\tHEALTH\tEMAIL\nNo persisted reports yet.\n\nEducational research only — not financial advice. MSP Radar surfaces what changed and what deserves research; it does not issue trade instructions.\n\n✕\nMSP AI",
+      "expandedWidth": 390,
+      "lifecycleLists": 0,
+      "expandedSourceCount": 0
+    },
+    {
+      "name": "radar-empty",
+      "width": 390,
+      "tier": "pro",
+      "state": "empty",
+      "admin": false,
+      "url": "/tools/msp-radar",
+      "observedAt": "2026-10-05T16:54:38.610Z",
+      "height": 844,
+      "scrollHeight": 1451,
+      "scrollWidth": 390,
+      "screens": 1.7191943127962086,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nBuilt once per US session from the persisted overnight scan · educational research only, not financial advice.\n\nToday / latest\n‹ Previous\nNext ›\n7-day\n30-day\nFri, Oct 2, 2026\nRun COMPLETE\nHealth NORMAL\ngenerated 2026-10-02 21:00Z · report v1\n\nMixed breadth; eight research candidates\n\nMixed\n\nBreadth\n\nTechnology\n\nLeadership\n\nRange\n\nCrypto\n\nModerate\n\nVolatility\n\nNo session change recorded.\n\nNo qualified candidates this session.\n\nLegend: Early, Mid, Extended. Shown once for every candidate card.\n\nLifecycle changes\nAAPL (equity): Discovered → Developing : Recorded structure improved.\nNVDA (equity): Discovered → Developing : Recorded structure improved.\nMU (equity): Discovered → Developing : Recorded structure improved.\nAMD (equity): Discovered → Developing : Recorded structure improved.\nMore detailThemes, moves, noise, and the full tables\nData quality and archiveCoverage, feeds, and earlier reports\n\nEducational research only — not financial advice. MSP Radar surfaces what changed and what deserves research; it does not issue trade instructions.\n\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "visibleCandidates": 0,
+      "buttons": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nBuilt once per US session from the persisted overnight scan · educational research only, not financial advice.\n\nToday / latest\n‹ Previous\nNext ›\n7-day\n30-day\nFri, Oct 2, 2026\nRun COMPLETE\nHealth NORMAL\ngenerated 2026-10-02 21:00Z · report v1\n\nMixed breadth; eight research candidates\n\nMixed\n\nBreadth\n\nTechnology\n\nLeadership\n\nRange\n\nCrypto\n\nModerate\n\nVolatility\n\nNo session change recorded.\n\nNo qualified candidates this session.\n\nLegend: Early, Mid, Extended. Shown once for every candidate card.\n\nLifecycle changes\nAAPL (equity): Discovered → Developing : Recorded structure improved.\nNVDA (equity): Discovered → Developing : Recorded structure improved.\nMU (equity): Discovered → Developing : Recorded structure improved.\nAMD (equity): Discovered → Developing : Recorded structure improved.\nMore detailThemes, moves, noise, and the full tables\nMarket in 30 Seconds\nRegime, leadership, breadth, crypto, macro\nCollapse\nBreadth\nMixed\nLeadership\nTechnology\nCrypto\nRange\nVolatility\nModerate\nLook At First Today\nWhere research time is best spent — not trade instructions\nNo priority items surfaced.\nTop Research Candidates\nRanked by setup quality, not by move size. Largest mover ≠ best candidate.\nNo qualified candidates this session.\nWhat May Move Next\nPre-move setups — require confirmation; may never trigger\nNo pre-move setups this session.\nLifecycle Changes (4)\nPersisted watchlist transitions recorded this session\nCollapse\nDeveloping 4\nAAPL (equity): Discovered → Developing : Recorded structure improved.\nNVDA (equity): Discovered → Developing : Recorded structure improved.\nMU (equity): Discovered → Developing : Recorded structure improved.\nAMD (equity): Discovered → Developing : Recorded structure improved.\nThemes & Rotation (0)\nGenuine group moves vs single-name noise\nCollapse\nLeading: Technology\nImproving: none\nDeteriorating: none\nCrypto: Range\nWhat Moved\nSession context — magnitude, not quality\nExpand\nRejected Noise (0)\nBig moves that did not qualify — and why\nExpand\nProbably Noise (0)\nIgnore unless something changes\nExpand\nData quality and archiveCoverage, feeds, and earlier reports\nData quality\nDetails\nUniverse coverage 99.1666%\n1,200 assets scanned\n100 deep dives\ndata errors 0\nArchive (last 7 reports)\nSESSION\tHEADLINE\tRUN\tHEALTH\nNo persisted reports yet.\n\nEducational research only — not financial advice. MSP Radar surfaces what changed and what deserves research; it does not issue trade instructions.\n\n✕\nMSP AI",
+      "expandedWidth": 390,
+      "lifecycleLists": 0,
+      "expandedSourceCount": 0
+    },
+    {
+      "name": "radar-failed",
+      "width": 390,
+      "tier": "pro",
+      "state": "failed",
+      "admin": false,
+      "url": "/tools/msp-radar",
+      "observedAt": "2026-10-05T16:54:41.142Z",
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nBuilt once per US session from the persisted overnight scan · educational research only, not financial advice.\n\nToday / latest\n‹ Previous\nNext ›\n7-day\n30-day\nFri, Oct 2, 2026\nRun FAILED\nHealth NORMAL\ngenerated 2026-10-02 21:00Z · report v1\n\nMixed breadth; eight research candidates\n\nData quality and archiveCoverage, feeds, and earlier reports\n\nEducational research only — not financial advice. MSP Radar surfaces what changed and what deserves research; it does not issue trade instructions.\n\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "visibleCandidates": 0,
+      "buttons": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nBuilt once per US session from the persisted overnight scan · educational research only, not financial advice.\n\nToday / latest\n‹ Previous\nNext ›\n7-day\n30-day\nFri, Oct 2, 2026\nRun FAILED\nHealth NORMAL\ngenerated 2026-10-02 21:00Z · report v1\n\nMixed breadth; eight research candidates\n\nData quality and archiveCoverage, feeds, and earlier reports\nData quality\nDetails\nUniverse coverage 99.1666%\n1,200 assets scanned\n100 deep dives\ndata errors 0\nArchive (last 7 reports)\nSESSION\tHEADLINE\tRUN\tHEALTH\nNo persisted reports yet.\n\nEducational research only — not financial advice. MSP Radar surfaces what changed and what deserves research; it does not issue trade instructions.\n\n✕\nMSP AI",
+      "expandedWidth": 390,
+      "lifecycleLists": 0,
+      "expandedSourceCount": 0
+    },
+    {
+      "name": "radar-free",
+      "width": 390,
+      "tier": "free",
+      "state": "free",
+      "admin": false,
+      "url": "/tools/msp-radar",
+      "observedAt": "2026-10-05T16:54:43.192Z",
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nNot available right now\n\nUnlock today’s full report\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "visibleCandidates": 0,
+      "buttons": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nNot available right now\n\nUnlock today’s full report\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "expandedWidth": 390,
+      "lifecycleLists": 0,
+      "expandedSourceCount": 0
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 390,
+      "tier": "anonymous",
+      "state": "anonymous",
+      "admin": false,
+      "url": "/tools/msp-radar",
+      "observedAt": "2026-10-05T16:54:45.125Z",
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nNot available right now\n\nUnlock today’s full report\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "visibleCandidates": 0,
+      "buttons": [],
+      "expandedText": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nDaily Radar\n\nNot available right now\n\nUnlock today’s full report\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "expandedWidth": 390,
+      "lifecycleLists": 0,
+      "expandedSourceCount": 0
+    }
+  ],
+  "requests": [
+    {
+      "name": "radar-loaded",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:18.683Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:18.686Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:18.686Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:18.700Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:18.702Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:18.703Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:18.704Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:18.721Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 1280,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:18.722Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 1280,
+      "path": "/api/msp-radar/daily",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:18.724Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 1280,
+      "path": "/api/msp-radar/archive",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:18.725Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:18.726Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:18.728Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:18.728Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:18.775Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:20.654Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:20.655Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:20.655Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:20.667Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:20.690Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 1280,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:20.698Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 1280,
+      "path": "/api/msp-radar/daily",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:20.698Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 1280,
+      "path": "/api/msp-radar/archive",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:20.699Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:20.700Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:20.700Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:20.700Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:20.721Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:20.722Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:20.722Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:20.742Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:22.572Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:22.573Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:22.574Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:22.577Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:22.578Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:22.581Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:22.613Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:22.615Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 1280,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:22.616Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 1280,
+      "path": "/api/msp-radar/daily",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:22.621Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 1280,
+      "path": "/api/msp-radar/archive",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:22.621Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:22.622Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:22.622Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:22.624Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:22.654Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:24.852Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:24.852Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:24.853Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:24.856Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:24.857Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:24.858Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:24.892Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:24.893Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 1280,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:24.893Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 1280,
+      "path": "/api/msp-radar/daily",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:24.894Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 1280,
+      "path": "/api/msp-radar/archive",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:24.895Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:24.900Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:24.901Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:24.901Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:24.919Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:26.858Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:26.859Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:26.859Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:26.876Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:26.893Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 1280,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:26.893Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 1280,
+      "path": "/api/msp-radar/preview",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:26.893Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:26.894Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:26.895Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:26.895Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:26.908Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:26.908Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:26.909Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:29.225Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:29.227Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:29.227Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:29.268Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:29.270Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:29.271Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:29.271Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:29.271Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 1280,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:29.272Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 1280,
+      "path": "/api/msp-radar/preview",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:29.273Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:29.274Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:29.274Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:29.274Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:31.635Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:31.637Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:31.637Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:31.658Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:31.665Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:31.674Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:31.676Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:31.690Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 390,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:31.698Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:31.714Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:31.718Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:31.718Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 390,
+      "path": "/api/msp-radar/daily",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:31.737Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 390,
+      "path": "/api/msp-radar/archive",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:31.738Z"
+    },
+    {
+      "name": "radar-loaded",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:31.787Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:35.108Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:35.110Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:35.111Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:35.131Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:35.132Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:35.133Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:35.135Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:35.150Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 390,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:35.151Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 390,
+      "path": "/api/msp-radar/daily",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:35.152Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 390,
+      "path": "/api/msp-radar/archive",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:35.154Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:35.155Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:35.156Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:35.157Z"
+    },
+    {
+      "name": "radar-partial",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:35.207Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:37.441Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:37.450Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:37.453Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:37.481Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:37.482Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:37.483Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:37.490Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 390,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:37.495Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:37.500Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:37.501Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:37.503Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:37.537Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 390,
+      "path": "/api/msp-radar/daily",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:37.542Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 390,
+      "path": "/api/msp-radar/archive",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:37.543Z"
+    },
+    {
+      "name": "radar-empty",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:37.582Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:39.816Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:39.817Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:39.818Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:39.822Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:39.823Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:39.824Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:39.859Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:39.860Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 390,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:39.860Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 390,
+      "path": "/api/msp-radar/daily",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:39.862Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 390,
+      "path": "/api/msp-radar/archive",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:39.863Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:39.863Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:39.868Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:39.868Z"
+    },
+    {
+      "name": "radar-failed",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:39.897Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:41.909Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:41.909Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:41.910Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:41.928Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:41.943Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 390,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:41.944Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 390,
+      "path": "/api/msp-radar/preview",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:41.945Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:41.946Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:41.947Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:41.947Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:41.964Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:41.965Z"
+    },
+    {
+      "name": "radar-free",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:41.965Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:43.842Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:43.843Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:43.843Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:43.858Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:43.884Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 390,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:43.885Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 390,
+      "path": "/api/msp-radar/preview",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:43.898Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:43.898Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:43.899Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:43.899Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:43.902Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:43.903Z"
+    },
+    {
+      "name": "radar-anonymous",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T16:54:43.903Z"
+    }
+  ],
+  "errors": []
+}

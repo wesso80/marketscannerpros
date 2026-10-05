@@ -14,7 +14,8 @@ import StatusPill from "@/components/admin/shared/StatusPill";
 import { humanizeEnum, humanizeText } from "@/lib/presentation/labels";
 import { classifyCaveat } from "@/lib/jarvis/report/types";
 import CollapsibleSection from "@/components/visual/CollapsibleSection";
-import StatTile from "@/components/visual/StatTile";
+import SourceLine from "@/components/visual/SourceLine";
+import StatCard from "@/components/visual/StatCard";
 import type { CandidateRow, DailyReport, EmailStatus, HealthStatus, LifecycleTransition, MoverLine, NextMoveRow, ThemeRow } from "@/lib/jarvis/report/types";
 
 /** Next research step for a Radar symbol: Golden Egg validation, with asset class carried so quotes/derivatives resolve correctly. */
@@ -24,7 +25,7 @@ function researchHref(symbol: string, assetClass: string, from: string): string 
 }
 const symLink: React.CSSProperties = { color: "#E5E7EB", textDecoration: "none", borderBottom: "1px dotted rgba(16,185,129,0.6)" };
 function SymbolLink({ symbol, assetClass, from }: { symbol: string; assetClass: string; from: string }) {
-  return <Link href={researchHref(symbol, assetClass, from)} style={symLink} title={`Validate ${symbol} in Golden Egg`}>{symbol}</Link>;
+  return <Link href={researchHref(symbol, assetClass, from)} style={symLink} title={`Validate ${symbol} in Symbol`}>{symbol}</Link>;
 }
 
 type Ops = { runId: string | null; emailStatus: EmailStatus; emailSentAt: string | null };
@@ -37,8 +38,9 @@ const pct = (n: number | null | undefined) => (n === null || n === undefined || 
 const lvl = (v: number | null) => (v === null || !Number.isFinite(v) ? "No reading" : v >= 1 ? v.toFixed(2) : v.toPrecision(4));
 const healthTone = (h: HealthStatus) => (h === "NORMAL" ? "green" : h === "DEGRADED" ? "yellow" : "red");
 const emailTone = (e: EmailStatus) => (e === "SENT" ? "green" : e === "FAILED" ? "red" : e === "SUPPRESSED_HEALTH" || e === "NO_RECIPIENT" ? "yellow" : "neutral");
-const extTone = (x: string) => (x === "EARLY" ? "green" : x === "MID" ? "blue" : x === "EXTENDED" ? "yellow" : "neutral");
-const btn: React.CSSProperties = { padding: "0.35rem 0.75rem", borderRadius: 6, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.05)", color: "#E5E7EB", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" };
+const reportLabel = (status: string) => status === "NORMAL" || status === "COMPLETE" ? "Report collected" : status === "DEGRADED" ? "Partial coverage" : status === "FAILED" ? "Report not collected" : humanizeEnum(status, "Not collected");
+const extTone = (x: string) => (x === "EARLY" ? "green" : x === "MID" ? "neutral" : x === "EXTENDED" ? "yellow" : "neutral");
+const btn: React.CSSProperties = { minHeight: 40, padding: "0.35rem 0.75rem", borderRadius: 6, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.05)", color: "#E5E7EB", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" };
 const muted: React.CSSProperties = { color: "#94A3B8", fontSize: "0.75rem" };
 const th: React.CSSProperties = { textAlign: "left", padding: "0.35rem 0.5rem", color: "#94A3B8", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: 0.5, borderBottom: "1px solid rgba(255,255,255,0.1)" };
 const td: React.CSSProperties = { padding: "0.4rem 0.5rem", fontSize: "0.8rem", verticalAlign: "top", borderBottom: "1px solid rgba(255,255,255,0.05)" };
@@ -82,18 +84,17 @@ export default function MspRadarReport({ onAccessDenied }: { onAccessDenied?: (s
   const ops = data?.ops;
 
   return (
-    <div style={{ padding: "1rem 1.25rem", color: "#E5E7EB", maxWidth: 1200, margin: "0 auto" }}>
+    <div data-radar-page className="min-w-0 [&_button]:min-h-10 [&_summary]:min-h-10" style={{ padding: "1rem 1.25rem", color: "#E5E7EB", maxWidth: 1200, margin: "0 auto" }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1rem" }}>
         <div>
           <h1 style={{ fontSize: "1.25rem", fontWeight: 800, margin: "0.15rem 0 0", letterSpacing: 0.3 }}>Daily Radar</h1>
           <p style={{ ...muted, margin: "0.25rem 0 0" }}>Built once per US session from the persisted overnight scan · educational research only, not financial advice.</p>
         </div>
         <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-          <button style={btn} onClick={() => load(null)}>Today / latest</button>
+          <button style={btn} onClick={() => load(null)}>Latest</button>
           <button style={{ ...btn, opacity: data?.nav.previous ? 1 : 0.4 }} disabled={!data?.nav.previous} onClick={() => load(data?.nav.previous)}>‹ Previous</button>
           <button style={{ ...btn, opacity: data?.nav.next ? 1 : 0.4 }} disabled={!data?.nav.next} onClick={() => load(data?.nav.next)}>Next ›</button>
-          <button style={{ ...btn, background: archiveDays === 7 ? "#10B981" : btn.background, color: archiveDays === 7 ? "#0F172A" : btn.color }} onClick={() => setArchiveDays(7)}>7-day</button>
-          <button style={{ ...btn, background: archiveDays === 30 ? "#10B981" : btn.background, color: archiveDays === 30 ? "#0F172A" : btn.color }} onClick={() => setArchiveDays(30)}>30-day</button>
+
         </div>
       </div>
 
@@ -102,44 +103,26 @@ export default function MspRadarReport({ onAccessDenied }: { onAccessDenied?: (s
 
       {data && r && (
         <>
-          <AdminCard className="mb-4">
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
-              <span style={{ fontSize: "1rem", fontWeight: 700 }}>{fmtDate(data.sessionDate)}</span>
-              <StatusPill label={`Run ${data.status}`} tone={healthTone(data.healthStatus)} />
-              <StatusPill label={`Health ${data.healthStatus}`} tone={healthTone(data.healthStatus)} />
-              {ops && <StatusPill label={`Email ${ops.emailStatus}`} tone={emailTone(ops.emailStatus)} />}
-              <span style={muted}>{ops ? `run ${ops.runId ?? "—"} · ` : ""}generated {data.generatedAt.slice(0, 16).replace("T", " ")}Z · report v{data.reportVersion}</span>
-            </div>
-            <p style={{ margin: "0.6rem 0 0", fontSize: "0.95rem", fontWeight: 600 }}>{humanizeText(r.headline)}</p>
-            {r.health.status !== "NORMAL" && (
-              <div style={{ marginTop: "0.6rem", padding: "0.6rem 0.8rem", borderRadius: 8, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.35)", color: "#FCD34D", fontSize: "0.8rem" }}>
-                <b>DATA HEALTH WARNING:</b> {r.health.summary} · Stage 2 coverage {r.health.stage2CoveragePct ?? "not available right now"}% · shortlist may be incomplete: {r.health.shortlistMayBeIncomplete ? "YES" : "no"}
-                <ul style={{ margin: "0.4rem 0 0", paddingLeft: "1.1rem" }}>{r.health.checks.filter((c) => !c.ok).map((c) => <li key={c.name}>{c.name}: {c.detail}</li>)}</ul>
-              </div>
-            )}
-          </AdminCard>
+          <section className="mb-3 space-y-2">
+            <div className="flex flex-wrap items-center gap-2 text-xs"><span>{fmtDate(data.sessionDate)}</span><StatusPill label={failed ? 'Report not collected' : reportLabel(data.healthStatus)} tone={healthTone(data.healthStatus)} /></div>
+            <p className="font-semibold" data-radar-verdict>{failed ? 'This session report could not be collected.' : humanizeText(r.headline)}</p>
+            {r.health.status !== 'NORMAL' && <p className="text-xs text-amber-300">{humanizeText(r.health.summary)}{r.health.shortlistMayBeIncomplete ? ' Candidate coverage is incomplete.' : ''}</p>}
+          </section>
 
           {!failed && (
             <>
-              <section data-radar-visual className="mb-4 space-y-4">
+              <section data-radar-visual className="mb-3 space-y-3">
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                   {r.marketIn30Seconds.filter((line) => line.value && !/n\/a|unknown|unavailable/i.test(line.value)).slice(0, 4).map((line) => (
-                    <StatTile key={line.label} label={line.label} value={line.value} />
+                    <StatCard key={line.label} label={line.label} value={line.value} />
                   ))}
                 </div>
                 <UpDownChart rows={r.candidates} />
                 <CandidateCards rows={r.candidates} />
                 <p className="text-xs text-[var(--msp-text-muted)]">Legend: Early, Mid, Extended. Shown once for every candidate card.</p>
-                <div>
-                  <h2 className="text-sm font-semibold">Lifecycle changes</h2>
-                  <LifecycleList rows={r.lifecycle.transitions.slice(0, 5)} />
-                  {r.lifecycle.transitions.length > 5 && (
-                    <details className="mt-2">
-                      <summary className="min-h-10 cursor-pointer text-sm">Show {r.lifecycle.transitions.length - 5} more</summary>
-                      <LifecycleList rows={r.lifecycle.transitions.slice(5)} />
-                    </details>
-                  )}
-                </div>
+                <CollapsibleSection title="Lifecycle changes" summary={`${r.lifecycle.transitions.length} recorded transitions`}>
+                  <LifecycleList rows={r.lifecycle.transitions} />
+                </CollapsibleSection>
               </section>
               <CollapsibleSection title="More detail" summary="Themes, moves, noise, and the full tables">
               <Section title="Market in 30 Seconds" subtitle="Regime, leadership, breadth, crypto, macro">
@@ -150,7 +133,7 @@ export default function MspRadarReport({ onAccessDenied }: { onAccessDenied?: (s
 
               <Section title="Look At First Today" subtitle="Where research time is best spent — not trade instructions" primary>
                 <ol style={{ margin: 0, paddingLeft: "1.2rem", fontSize: "0.85rem", lineHeight: 1.5 }}>
-                  {r.lookAtFirst.map((a, i) => <li key={i} style={{ marginBottom: "0.3rem" }}><StatusPill label={a.kind} tone={a.kind === "risk" ? "red" : a.kind === "trigger" ? "blue" : a.kind === "crypto" ? "purple" : "green"} /> <b style={{ marginLeft: 6 }}>{humanizeText(a.title)}</b> — <span style={{ color: "#CBD5E1" }}>{humanizeText(a.why)}</span></li>)}
+                  {r.lookAtFirst.map((a, i) => <li key={i} style={{ marginBottom: "0.3rem" }}><StatusPill label={a.kind} tone={a.kind === "risk" ? "red" : a.kind === "trigger" ? "neutral" : a.kind === "crypto" ? "neutral" : "green"} /> <b style={{ marginLeft: 6 }}>{humanizeText(a.title)}</b> — <span style={{ color: "#CBD5E1" }}>{humanizeText(a.why)}</span></li>)}
                   {!r.lookAtFirst.length && <li style={muted}>No priority items surfaced.</li>}
                 </ol>
               </Section>
@@ -161,13 +144,6 @@ export default function MspRadarReport({ onAccessDenied }: { onAccessDenied?: (s
 
               <Section title="What May Move Next" subtitle="Pre-move setups — require confirmation; may never trigger" primary>
                 <NextTable rows={r.whatMayMoveNext} />
-              </Section>
-
-              <Section title="Lifecycle Changes" subtitle="Persisted watchlist transitions recorded this session" count={r.lifecycle.transitions.length}>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.6rem" }}>
-                  {Object.entries(r.lifecycle.counts).filter(([, v]) => v > 0).map(([k, v]) => <StatusPill key={k} label={`${humanizeEnum(k)} ${v}`} tone={k === "CONFIRMED_MOVE" ? "green" : k === "NEAR_TRIGGER" ? "blue" : k === "FAILED" || k === "DETERIORATING" ? "red" : k === "EXPIRED" ? "neutral" : "purple"} />)}
-                </div>
-                <LifecycleList rows={r.lifecycle.transitions} />
               </Section>
 
               <Section title="Themes & Rotation" subtitle="Genuine group moves vs single-name noise" count={r.themes.equity.groups.length + r.themes.crypto.groups.length}>
@@ -215,7 +191,7 @@ export default function MspRadarReport({ onAccessDenied }: { onAccessDenied?: (s
           <CollapsibleSection title="Data quality and archive" summary="Coverage, feeds, and earlier reports">
           <AdminCard title="Data quality" actions={<button style={btn} onClick={() => setShowHealth((s) => !s)}>{showHealth ? "Collapse" : "Details"}</button>} className="mb-4">
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-              <StatusPill label={r.dataHealth.coveragePct == null ? "Universe coverage not available right now" : `Universe coverage ${r.dataHealth.coveragePct}%`} tone={(r.dataHealth.coveragePct ?? 0) >= 95 ? "green" : "yellow"} />
+              <StatusPill label={r.dataHealth.coveragePct == null ? "Universe coverage not available right now" : `Universe coverage ${r.dataHealth.coveragePct.toFixed(1)}%`} tone={(r.dataHealth.coveragePct ?? 0) >= 95 ? "green" : "yellow"} />
               <StatusPill label={`${r.dataHealth.universe.toLocaleString()} assets scanned`} />
               <StatusPill label={`${r.dataHealth.deepDives} deep dives`} />
               <StatusPill label={`data errors ${r.dataHealth.providerErrors}`} tone={r.dataHealth.providerErrors ? "yellow" : "green"} />
@@ -227,7 +203,7 @@ export default function MspRadarReport({ onAccessDenied }: { onAccessDenied?: (s
                 {r.dataHealth.sectorCacheCoverage && <div>Sector coverage: {r.dataHealth.sectorCacheCoverage}</div>}
                 <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "0.5rem" }}>
                   <thead><tr><th style={th}>Data feed</th><th style={th}>Status</th><th style={th}>Detail</th></tr></thead>
-                  <tbody>{r.dataHealth.providers.map((p) => <tr key={p.name}><td style={td}>{p.name}</td><td style={td}><StatusPill label={p.status} tone={/^ok$/i.test(p.status) ? "green" : /degraded|partial/i.test(p.status) ? "yellow" : /failed|missing/i.test(p.status) ? "red" : "neutral"} /></td><td style={{ ...td, color: "#CBD5E1" }}>{p.detail}</td></tr>)}</tbody>
+                  <tbody>{r.dataHealth.providers.map((p) => <tr key={p.name}><td style={td}>{p.name}</td><td style={td}><StatusPill label={reportLabel(p.status)} tone={/^ok$/i.test(p.status) ? "green" : /degraded|partial/i.test(p.status) ? "yellow" : /failed|missing/i.test(p.status) ? "red" : "neutral"} /></td><td style={{ ...td, color: "#CBD5E1" }}>{p.detail}</td></tr>)}</tbody>
                 </table>
                 {r.dataHealth.gaps.length > 0 && <ul style={{ margin: "0.5rem 0 0", paddingLeft: "1.1rem", color: "#FCD34D" }}>{r.dataHealth.gaps.map((g, i) => <li key={i}>{g}</li>)}</ul>}
                 <div style={{ marginTop: "0.5rem" }}><b>Health checks</b><ul style={{ margin: "0.2rem 0 0", paddingLeft: "1.1rem" }}>{r.health.checks.map((c) => <li key={c.name} style={{ color: c.ok ? "#CBD5E1" : "#FCA5A5" }}>{c.ok ? "✓" : "✗"} {c.name}: {c.detail}</li>)}</ul></div>
@@ -236,15 +212,19 @@ export default function MspRadarReport({ onAccessDenied }: { onAccessDenied?: (s
           </AdminCard>
 
           <AdminCard title={`Archive (last ${archiveDays} reports)`}>
+<div className="mb-3 flex gap-2">          <button style={{ ...btn, background: archiveDays === 7 ? "#10B981" : btn.background, color: archiveDays === 7 ? "#0F172A" : btn.color }} onClick={() => setArchiveDays(7)}>7-day</button>
+          <button style={{ ...btn, background: archiveDays === 30 ? "#10B981" : btn.background, color: archiveDays === 30 ? "#0F172A" : btn.color }} onClick={() => setArchiveDays(30)}>30-day</button></div>
+<div className="overflow-x-auto">
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr><th style={th}>Session</th><th style={th}>Headline</th><th style={th}>Run</th><th style={th}>Health</th>{ops && <th style={th}>Email</th>}</tr></thead>
               <tbody>{archive.map((a) => <tr key={a.sessionDate} style={{ cursor: "pointer", background: a.sessionDate === data.sessionDate ? "rgba(16,185,129,0.08)" : undefined }} onClick={() => load(a.sessionDate)}>
-                <td style={{ ...td, fontWeight: 700, whiteSpace: "nowrap" }}>{a.sessionDate}</td><td style={{ ...td, color: "#CBD5E1" }}>{humanizeText(a.headline)}</td><td style={td}><StatusPill label={a.status} tone={healthTone(a.healthStatus)} /></td><td style={td}><StatusPill label={a.healthStatus} tone={healthTone(a.healthStatus)} /></td>{ops && <td style={td}>{a.emailStatus ? <StatusPill label={a.emailStatus} tone={emailTone(a.emailStatus)} /> : "No reading"}</td>}</tr>)}</tbody>
+                <td style={{ ...td, fontWeight: 700, whiteSpace: "nowrap" }}>{a.sessionDate}</td><td style={{ ...td, color: "#CBD5E1" }}>{humanizeText(a.headline)}</td><td style={td}><StatusPill label={reportLabel(a.status)} tone={healthTone(a.healthStatus)} /></td><td style={td}><StatusPill label={reportLabel(a.healthStatus)} tone={healthTone(a.healthStatus)} /></td>{ops && <td style={td}>{a.emailStatus ? <StatusPill label={humanizeEnum(a.emailStatus)} tone={emailTone(a.emailStatus)} /> : "No reading"}</td>}</tr>)}</tbody>
             </table>
-            {!archive.length && <div style={muted}>No persisted reports yet.</div>}
+            </div>{!archive.length && <div style={muted}>No persisted reports yet.</div>}
           </AdminCard>
           </CollapsibleSection>
 
+          <div className="mt-3"><SourceLine source="Persisted Radar report" asOf={data.generatedAt} basis={`US session ${data.sessionDate}`} /></div>
           <p style={{ ...muted, marginTop: "1rem", textAlign: "center" }}>{r.disclaimer}</p>
         </>
       )}
@@ -273,15 +253,17 @@ function UpDownChart({ rows }: { rows: CandidateRow[] }) {
 }
 
 function CandidateCards({ rows }: { rows: CandidateRow[] }) {
+  const [showAll, setShowAll] = useState(false);
   if (!rows.length) return <p className="text-xs text-[var(--msp-text-muted)]">No qualified candidates this session.</p>;
   return (
-    <ul data-radar-candidates className="grid gap-3 md:grid-cols-2">
-      {rows.map((row) => {
+    <>
+    <ul data-radar-candidates className="grid gap-2 md:grid-cols-2">
+      {(showAll ? rows : rows.slice(0, 5)).map((row, index) => {
         const reason = humanizeText(row.whySurfaced || "");
         const short = reason.length > 140 ? `${reason.slice(0, 140)}…` : reason;
         const stage = row.extension === "EARLY" ? "Early" : row.extension === "MID" ? "Mid" : row.extension === "EXTENDED" ? "Extended" : humanizeEnum(row.extension);
         return (
-          <li key={row.symbol} className="rounded-lg border border-white/10 p-3">
+          <li key={row.symbol} className={`rounded-lg border border-white/10 p-3 ${!showAll && index >= 3 ? "hidden md:block" : ""}`}>
             <div className="flex items-center justify-between gap-2">
               <SymbolLink symbol={row.symbol} assetClass={row.assetClass} from="candidates" />
               <StatusPill label={stage} tone={row.extension === "EARLY" ? "green" : row.extension === "EXTENDED" ? "yellow" : "neutral"} />
@@ -292,6 +274,8 @@ function CandidateCards({ rows }: { rows: CandidateRow[] }) {
         );
       })}
     </ul>
+    {rows.length > 3 && <button type="button" className={`mt-2 min-h-10 text-sm underline ${rows.length <= 5 ? "md:hidden" : ""}`} aria-expanded={showAll} onClick={()=>setShowAll(!showAll)}>{showAll ? "Show fewer candidates" : `Show all ${rows.length} candidates`}</button>}
+    </>
   );
 }
 
@@ -328,8 +312,8 @@ function CandidatesTable({ rows }: { rows: CandidateRow[] }) {
             <td style={td}>{c.rank}</td>
             <td style={{ ...td, fontWeight: 700 }}><SymbolLink symbol={c.symbol} assetClass={c.assetClass} from="candidates" /><div style={{ ...muted, fontWeight: 400 }}>{c.name ?? c.assetClass}{c.lifecycle ? ` · ${humanizeEnum(c.lifecycle)}` : ""}</div></td>
             <td style={td}>{humanizeEnum(c.setupType)}</td>
-            <td style={{ ...td, color: "#10B981", fontWeight: 700 }}>{c.score}</td>
-            <td style={td}><StatusPill label={c.extension} tone={extTone(c.extension)} /></td>
+            <td style={{ ...td, color: "#10B981", fontWeight: 700 }}>{Math.round(c.score)}</td>
+            <td style={td}><StatusPill label={humanizeEnum(c.extension, "Not collected")} tone={extTone(c.extension)} /></td>
             <td style={td}>{pct(c.ret1)} / {pct(c.ret5)}<div style={muted}>{c.velocity}</div></td>
             <td style={{ ...td, color: "#CBD5E1" }}>{humanizeText(c.whySurfaced)}{cv && (cv.kind === "observed" ? <div style={{ color: "#FCD34D" }}>Caveat: {humanizeText(cv.text)}</div> : <div style={muted}>Would reduce interest: {humanizeText(cv.text)}</div>)}{c.catalyst && <div style={muted}>Catalyst: {c.catalyst}</div>}</td>
           </tr>);
@@ -348,7 +332,7 @@ function NextTable({ rows }: { rows: NextMoveRow[] }) {
           <tr key={n.symbol}>
             <td style={{ ...td, fontWeight: 700 }}><SymbolLink symbol={n.symbol} assetClass={n.assetClass} from="what-may-move-next" /><div style={{ ...muted, fontWeight: 400 }}>{n.assetClass}{n.lifecycle ? ` · ${humanizeEnum(n.lifecycle)}` : ""}</div>{n.lifecycle === "CONFIRMED_MOVE" && <div style={{ marginTop: 3 }}><StatusPill label="Already confirmed — not pre-move" tone="yellow" /></div>}</td>
             <td style={td}>{humanizeEnum(n.stage)}</td>
-            <td style={{ ...td, color: "#10B981", fontWeight: 700 }}>{n.score}</td>
+            <td style={{ ...td, color: "#10B981", fontWeight: 700 }}>{Math.round(n.score)}</td>
             <td style={td}>{lvl(n.triggerLevel)}{n.distanceToTriggerPct !== null && <div style={muted}>{n.distanceToTriggerPct > 0 ? `${n.distanceToTriggerPct.toFixed(1)}% below` : `${Math.abs(n.distanceToTriggerPct).toFixed(1)}% above`}</div>}</td>
             <td style={{ ...td, color: "#CBD5E1" }}>{humanizeText(n.reasons.join("; "))}</td>
             <td style={{ ...td, color: "#CBD5E1" }}><div><span style={{ color: "#6EE7B7" }}>✓</span> {n.confirmation}</div><div><span style={{ color: "#FCA5A5" }}>✗</span> {n.invalidation}</div></td>
@@ -360,7 +344,7 @@ function NextTable({ rows }: { rows: NextMoveRow[] }) {
 function LifecycleList({ rows }: { rows: LifecycleTransition[] }) {
   if (!rows.length) return <div style={muted}>No lifecycle transitions recorded for this session.</div>;
   return (
-    <ul style={{ margin: 0, paddingLeft: "1.1rem", fontSize: "0.85rem", lineHeight: 1.55 }}>
+    <ul data-radar-lifecycle style={{ margin: 0, paddingLeft: "1.1rem", fontSize: "0.85rem", lineHeight: 1.55 }}>
       {rows.map((t, i) => <li key={`${t.symbol}-${i}`}><b><SymbolLink symbol={t.symbol} assetClass={t.assetClass} from="lifecycle" /></b> <span style={muted}>({t.assetClass})</span>: {humanizeEnum(t.from ?? "NEW")} → <b style={{ color: t.to === "CONFIRMED_MOVE" ? "#6EE7B7" : t.to === "FAILED" || t.to === "DETERIORATING" ? "#FCA5A5" : "#E5E7EB" }}>{humanizeEnum(t.to)}</b> <span style={{ color: "#CBD5E1" }}>: {humanizeText(t.note)}</span></li>)}
     </ul>);
 }

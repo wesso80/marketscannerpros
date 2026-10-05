@@ -1,0 +1,19 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+ RUN  v3.2.4 /workspace/scratch/0535040d28c6/mobile-options
+
+ ✓ test/optionsExpiryContinuity.test.ts (1 test) 27ms
+ ✓ test/optionsJournalHandoff.test.ts (3 tests) 10ms
+ ✓ test/optionsUnavailableExpiry.test.ts (1 test) 22ms
+ ✓ test/optionsTerminalVolatility.test.ts (1 test) 18ms
+ ✓ test/optionsAtmStrike.test.ts (2 tests) 28ms
+ ✓ test/optionsContractCosts.test.ts (2 tests) 5ms
+ ✓ test/optionsSpotObservation.test.ts (1 test) 2ms
+ ✓ test/optionsMobileChain.test.tsx (3 tests) 157ms
+ ✓ test/optionsTerminalContractSelect.test.tsx (1 test) 202ms
+
+ Test Files  9 passed (9)
+      Tests  15 passed (15)
+   Start at  12:41:02
+   Duration  1.66s (transform 726ms, setup 0ms, collect 1.59s, tests 472ms, environment 875ms, prepare 759ms)
+

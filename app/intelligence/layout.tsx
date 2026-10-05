@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import IntelligenceNav from '@/components/intelligence/IntelligenceNav';
 
 export const metadata: Metadata = {
-  title: 'Intelligence — Cross-Asset Market Command Centre',
+  title: { default: 'Intelligence', template: '%s | MarketScanner Pros' },
   description:
     'Cross-asset liquidity, structure, capital-flow and execution intelligence. A professional research terminal that fuses macro liquidity, market fragility, cross-asset lead/lag, institutional pressure and auction structure into one command view.',
   robots: { index: true, follow: true },

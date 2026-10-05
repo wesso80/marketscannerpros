@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Cookie Policy — MarketScanner Pros",
+  title: "Cookie Policy",
   description: "How MarketScanner Pros uses cookies and similar tracking technologies.",
   alternates: { canonical: "/cookie-policy" },
   robots: { index: false, follow: true }

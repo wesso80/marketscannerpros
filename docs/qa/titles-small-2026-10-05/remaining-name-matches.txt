@@ -1,0 +1,95 @@
+components/golden-egg/OwnershipFlowPanel.tsx:3: * MV-5: insider transactions, congressional trades and institutional holdings in Golden Egg → Fundamentals (equities).
+components/home/HomePreviewStrip.tsx:9: * Golden Egg, and Dashboard surfaces, built from sample data so
+components/home/HomePreviewStrip.tsx:88:        <span className="text-xs font-semibold uppercase tracking-wider text-amber-300">Golden Egg</span>
+components/home/HomePreviewStrip.tsx:124:        <span className="text-xs font-semibold uppercase tracking-wider text-cyan-300">Command Center</span>
+app/tools/golden-egg/layout.tsx:9:    title: "Golden Egg | MarketScanner Pros",
+app/tools/golden-egg/layout.tsx:19:        alt: "MarketScanner Pros — Golden Egg",
+app/tools/golden-egg/layout.tsx:25:    title: "Golden Egg | MarketScanner Pros",
+components/home/CommandHub.tsx:15:  { goal: 'Analyse one symbol deeply', href: '/tools/golden-egg', tool: 'Golden Egg', detail: 'Multi-factor scenario packet with data-quality context.' },
+components/home/CommandHub.tsx:24:  { step: '02', href: '/tools/golden-egg', title: 'Golden Egg', detail: 'Validate one symbol with evidence, data quality, reference zones, and invalidation context.' },
+components/intelligence/EdgeInsightCards.tsx:5: * Designed for the Command Center dashboard (pro / pro_trader only).
+components/Pricing.tsx:102:              <li className={featureItem}>• Golden Egg Deep Analysis</li>
+app/tools/golden-egg/page.tsx:89:    <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2" aria-label="Golden Egg validation views">
+app/tools/golden-egg/page.tsx:156:        aria-label={`Golden Egg ${tab} command header`}
+app/tools/golden-egg/page.tsx:161:              <span className="text-amber-300">Golden Egg subview</span>
+app/tools/golden-egg/page.tsx:308:  if (missing.length === 0) return `${label} Golden Egg inputs.`;
+app/tools/golden-egg/page.tsx:313:  if (args.dataQuality !== 'GOOD') return 'Refresh Golden Egg inputs before relying on reference levels.';
+app/tools/golden-egg/page.tsx:344:  if ((args.assessment || '').toUpperCase() !== 'ALIGNED') return 'Research caution: Golden Egg assessment is not scenario aligned.';
+app/tools/golden-egg/page.tsx:565:  /* ─── Register Golden Egg data for Arca AI context ─── */
+app/tools/golden-egg/page.tsx:587:    if (goldenEgg.error) return `Golden Egg: ${sym} unavailable — ${goldenEgg.error}`;
+app/tools/golden-egg/page.tsx:588:    if (!ge) return `Golden Egg: Loading ${sym}...`;
+app/tools/golden-egg/page.tsx:601:        title: `${sym} Golden Egg research case`,
+app/tools/golden-egg/page.tsx:608:          title: `${sym} Golden Egg research case`,
+app/tools/golden-egg/page.tsx:609:          thesis: ge.layer2?.setup?.thesis || `${sym} Golden Egg educational research case.`,
+app/tools/golden-egg/page.tsx:615:              `Golden Egg assessment is ${geAssessment ?? 'unknown'}.`,
+app/tools/golden-egg/page.tsx:657:        ariaLabel="Golden Egg command header"
+app/tools/golden-egg/page.tsx:658:        eyebrow="Golden Egg validation workbench"
+app/tools/golden-egg/page.tsx:680:        aria-label="Golden Egg symbol input"
+app/tools/golden-egg/page.tsx:753:        <LockedPreview tool="Golden Egg" description={FREE_COPY.goldenEgg} />
+app/tools/golden-egg/page.tsx:759:            <h2 className="text-xl font-bold text-white">Unlock Golden Egg indicator analysis</h2>
+app/tools/golden-egg/page.tsx:761:              Golden Egg is a Pro workflow for reviewing one symbol across regime, indicators, volatility, and educational scenario context.
+app/tools/golden-egg/page.tsx:795:            // Company fundamentals do not exist for crypto; reuse the derivatives/quote evidence Golden Egg already fetched.
+app/tools/golden-egg/page.tsx:893:        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Golden Egg Deep Analysis">
+app/tools/golden-egg/page.tsx:897:              <strong>Local demo Golden Egg payload:</strong> live data is unavailable in this local environment, so this verdict packet is sample data for workflow testing only. Do not treat it as live market output.
+app/tools/golden-egg/page.tsx:914:                    <span title="Directional research bias from the Golden Egg evidence stack"><Badge label={ge.layer1.direction} color={dirColor(ge.layer1.direction)} /></span>
+app/tools/golden-egg/page.tsx:915:                    {geNoQualifyingSetup ? null : <span title={geEngine ? 'Canonical grade (A/B/C; F = blocked) from the canonical setup engine' : 'Grade summarizes setup quality across the Golden Egg model'}><Badge label={`Grade ${ge.layer1.grade}`} color={gradeColor(ge.layer1.grade)} small /></span>}
+app/tools/golden-egg/page.tsx:992:              <EvidenceStack title="Golden Egg Evidence Stack" items={geEvidenceItems} />
+app/tools/golden-egg/page.tsx:1548:                  <div className="text-[11px] text-slate-600">DVE endpoint unavailable — showing Golden Egg volatility data</div>
+components/admin/AdminDailyResearchBrief.tsx:68:      <h3 className="mb-2 text-sm font-bold text-white">Command Centre Daily Research Brief</h3>
+app/tools/intraday-charts/page.tsx:826:  // Sync symbol from prop (Golden Egg), V2Context, or fallback
+app/tools/deep-analysis/page.tsx:713:  // Sync symbol from prop (Golden Egg), V2Context, or URL — auto-fetch
+app/tools/deep-analysis/page.tsx:2223:                  <strong style={{ color: "#94A3B8" }}>Disclaimer:</strong> The Golden Egg analysis is for educational and informational purposes only and does not constitute investment advice, financial advice, trading advice, or any other type of advice. 
+components/analysis/ScenarioAnalysisPanel.tsx:6: * Presents Golden Egg's setup as EDUCATIONAL scenario analysis: why interesting,
+components/admin/home/CommandHome.tsx:613:  // Both markets: the route's single-market default used to be CRYPTO, so Command Center read an empty
+components/analysis/ConfluencePanel.tsx:13: * Purely presentational and reusable across surfaces (Golden Egg now, Scanner
+app/tools/scanner/page.tsx:261:// Ranking helpers live in lib/scanner/rankedQueue so Scanner and Command Center share ONE research queue.
+app/admin/overview/page.tsx:331:          Private Research Command Centre
+app/tools/crypto/page.tsx:433:    return <UpgradeGate requiredTier="pro" feature="Crypto Command Center" preview={<LockedPreview tool="Crypto Command Center" />} />;
+app/tools/crypto/page.tsx:781:              Crypto Command Center remains tier-gated and follows your active subscription entitlement policy.
+components/msp-radar/MspRadarReport.tsx:20:/** Next research step for a Radar symbol: Golden Egg validation, with asset class carried so quotes/derivatives resolve correctly. */
+app/tools/explorer/page.tsx:114:  // Movers pass their asset class so Golden Egg (?type=crypto|equity) opens the coin, not a same-ticker stock.
+components/admin/layout/AdminSidebar.tsx:12:      { href: "/admin", label: "Command Centre", icon: "▣" },
+components/desk/DeskFolds.tsx:7:   SURFACE 1: DASHBOARD — Command Center
+app/v2/_lib/constants.ts:72:  { id: 'golden-egg', label: 'Golden Egg', icon: 'GE', shortLabel: 'GE', href: '/tools/golden-egg' },
+app/admin/growth-commander/page.tsx:131:          Growth Command Centre
+app/v2/_lib/api.ts:209:// --- Golden Egg ---
+app/v2/_lib/api.ts:645:// --- Golden Egg ---
+app/v2/_lib/api.ts:650:  // Golden Egg fans out to several market-data providers. Bound the client wait
+app/v2/_lib/api.ts:658:      throw new Error('Golden Egg timed out after 20 seconds while waiting for market-data providers. Retry the analysis; if it repeats, treat the data as unavailable.');
+app/partners/demo/page.tsx:14:    title: "Golden Egg Analysis",
+app/partners/demo/page.tsx:514:              { href: "/tools/golden-egg", label: "Golden Egg" },
+app/pricing/page.tsx:157:            "Golden Egg symbol validation workflow",
+app/pricing/page.tsx:173:            "Crypto Command Centre + derivatives tools",
+app/pricing/page.tsx:200:      a: "Pro unlocks the full platform: unlimited scanning, Golden Egg, the live Intelligence modules (Global M2, Liquidity Transmission and Market Fragility), research and workspace premium features, portfolio/journal advanced analytics, backtesting, options and derivatives tools, alerts, exports and priority support. Lead/Lag, NQ Pressure, Auction and Master are roadmap modules and are not live today.",
+app/tools/crypto-heatmap/page.tsx:6:// Redirect to the Crypto Command Center heatmap view
+app/tools/crypto-heatmap/page.tsx:18:        <p className="text-slate-400">Redirecting to Crypto Command Center...</p>
+app/admin/layout.tsx:72:        { href: "/admin", label: "Command Center", code: "CC" },
+app/tools/workspace/AccountSection.tsx:255:    if (isPaid) return ['Unlimited scanning + Golden Egg', 'Production Intelligence (Global M2, Liquidity Transmission, Fragility)', 'Backtesting, options and derivatives tools', 'Unlimited portfolio and trade journal', 'Alerts, exports, priority support'];
+app/tools/company-overview/page.tsx:75:  // Sync symbol from prop (Golden Egg), V2Context, or URL
+app/api/golden-egg/route.ts:2: * Golden Egg Live Data API
+app/api/golden-egg/route.ts:59:    console.error('[Golden Egg API] Error:', error);
+app/api/deep-analysis/route.ts:2: * Golden Egg Deep Analyst
+app/api/deep-analysis/route.ts:6: * Consumes the canonical Golden Egg packet (lib/goldenEgg/engine) — it does NOT refetch price, indicators or options.
+app/api/deep-analysis/route.ts:8: * INTERPRET the packet in a fixed research format. The Golden Egg verdict stays canonical; there is no second
+app/api/deep-analysis/route.ts:122:    primaryBlocker: c.verdict.primaryBlocker ?? 'None flagged by the Golden Egg engine.',
+app/api/deep-analysis/route.ts:185:const ANALYST_SYSTEM = `You are the Golden Egg Deep Analyst for MarketScanner Pros. You INTERPRET a canonical research packet; you never replace its facts.
+app/api/deep-analysis/route.ts:189:- The Golden Egg verdict, direction, blocker and levels are canonical. You may add nuance, but if you disagree you must say exactly which packet fact drives the disagreement.
+app/api/deep-analysis/route.ts:277:    if (!session?.workspaceId) return NextResponse.json({ success: false, error: 'Please log in to use Golden Egg Deep Analysis' }, { status: 401 });
+app/api/deep-analysis/route.ts:278:    if (!hasPaidSessionAccess(session)) return NextResponse.json({ success: false, error: 'Pro subscription required for Golden Egg Deep Analysis' }, { status: 403 });
+app/api/deep-analysis/route.ts:294:      const msg = e instanceof Error ? e.message : 'Golden Egg unavailable';
+app/api/deep-analysis/route.ts:295:      if (isLocalDeepAnalysisDemoAllowed()) return NextResponse.json({ success: false, localDemo: true, error: `Golden Egg packet unavailable locally: ${msg}` });
+app/api/deep-analysis/route.ts:296:      return NextResponse.json({ success: false, error: `Unable to build the Golden Egg packet for ${symbol}: ${msg}` });
+app/api/deep-analysis/route.ts:299:    if (!c) return NextResponse.json({ success: false, error: 'Golden Egg packet has no canonical block (demo payload) — Deep Analyst requires live data.' , localDemo: geMeta.localDemo });
+app/api/deep-analysis/route.ts:367:        grounding: 'Every technical number comes from the Golden Egg canonical packet; news is ticker-filtered (relevance ≥ 0.3 and names the company/ticker, or relevance ≥ 0.9); fundamentals are the shared Alpha Vantage OVERVIEW snapshot.',
+app/api/deep-analysis/route.ts:390:      // Subordinate to Golden Egg: mirrors the canonical verdict, never a competing engine.
+app/api/intelligence/master/route.ts:17:        'Master Command Centre public composite is paused while Lead/Lag, Pressure and Auction engines are being converted to native. Global M2, Fragility and Liquidity remain independently live.',
+app/api/intelligence/status/route.ts:24:  { key: 'master',     label: 'Master Command Centre',  href: '/intelligence/master',    status: 'UNDER_CONSTRUCTION',  available: false },
+app/api/jobs/scan-daily/route.ts:202:    // scanner, scan-universe and Golden Egg use — instead of seven separate Alpha Vantage indicator endpoints
+app/api/jobs/opportunity-scan/route.ts:333:    // Golden Egg Discord posting is intentionally omitted here — Golden Egg is
+app/api/jobs/opportunity-scan/route.ts:335:    // when users interact with the Golden Egg page instead.
+app/api/jobs/opportunity-scan/route.ts:337:    // Run top scanner picks through Golden Egg scoring — post TRADE verdicts
+app/api/jobs/opportunity-scan/route.ts:361:        push(`Golden Egg ${ge.permission}: ${pick.symbol} — ${ge.verdict}`);
+app/api/company-overview/route.ts:38:    // Shared, cached OVERVIEW snapshot — the same object Golden Egg and Deep Analyst read.
+app/api/analytics/online/route.ts:81:  if (path.startsWith('/tools/golden-egg') || path.startsWith('/v2/golden-egg')) return 'Golden Egg';
+app/api/scanner/run/route.ts:1046:    // Indicator math lives in lib/scanner/indicatorMath (shared with Golden Egg); these aliases keep the closure API unchanged.
+app/api/ownership/route.ts:12: * summarised server-side from Alpha Vantage. Same access rule as /api/company-overview (Golden Egg Fundamentals).

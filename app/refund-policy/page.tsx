@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Refund Policy — MarketScanner Pros",
+  title: "Refund Policy",
   description: "Refund and cancellation policy for MarketScanner Pros subscriptions.",
   alternates: { canonical: "/refund-policy" },
   robots: { index: false, follow: true }

@@ -1,5 +1,7 @@
 'use client';
 
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+
 /* ---------------------------------------------------------------------------
    SURFACE 6: WORKSPACE — Watchlists, Journal, Portfolio, Settings
    Real APIs: /api/watchlists, /api/journal, links to v1 portfolio & settings
@@ -44,6 +46,7 @@ function WorkspaceContent() {
   const urlTabParam = searchParams.get('tab')?.toLowerCase() ?? null;
   const initialTab = TABS.find(t => t.toLowerCase() === urlTabParam) || 'Watchlists';
   const [tab, setTab] = useState<typeof TABS[number]>(initialTab);
+  useDocumentTitle(tab);
 
   // Only re-sync from URL when the URL param itself changes (e.g. external nav).
   // Do NOT depend on `tab` here — that would force user clicks back to the URL value.
