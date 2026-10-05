@@ -1,8 +1,10 @@
 # Commodities UI review — 5 October 2026
 
+Date-check follow-up: the excluded chip says “date check failed”, covering both expired observations and missing/invalid dates. The mocked rendered regression includes an unreadable date; API eligibility rules are unchanged.
+
 UI-only Job D, with Job E's Markets copy changes. Base: `batch/oct-wp` at `03946b7e54a3aae344e05c0f179907fe0ca9e098`.
 
-The old deep view repeated evidence labels on every card and displayed excluded older observations at full size. The new view has one verdict, compact included rows, one evidence legend, and closed folds for older observations and market context. The Markets view selector is compact only on the Commodities tab. Routes and existing free/Pro access remain unchanged.
+The old deep view repeated evidence labels on every card and displayed excluded observations at full size. The new view has one verdict, compact included rows, one evidence legend, and closed folds for excluded observations and market context. The Markets view selector is compact only on the Commodities tab. Routes and existing free/Pro access remain unchanged.
 
 All screenshots are **mocked UI evidence**, not live-provider verification. Ten fixture rows include nine eligible rows and one excluded older Sugar observation. Browser requests to every API are mocked and external requests blocked. Screenshots do not establish provider accuracy. Before uses the existing built `symbol-w1-baseline` snapshot: its commodity page blob `616bce7b487c8cca9582732ab61cf49459a55610` exactly matches the batch base; its shared Explorer wrapper predates the batch's minor Symbol navigation wiring. After uses this draft. Raw browser observations, dimensions, request interception and text are in each evidence JSON.
 

@@ -10,7 +10,7 @@ import CommoditiesPage from '@/app/tools/commodities/page';
 const rows = [
  {symbol:'GOLD',name:'Gold',category:'Metals',price:249.3506,change:1,changePercent:1.1234,unit:'USD/oz',date:'2026-10-02',history:[],source:'SPOT',freshnessStatus:'DELAYED',dataAgeDays:3,eligibleForGate:true},
  {symbol:'WTI',name:'USO (WTI Crude Oil proxy)',category:'Energy',price:77,change:-1,changePercent:-1.1234,unit:'USD/share',date:'2026-10-02',history:[],source:'ETF_PROXY',sourceSymbol:'USO',freshnessStatus:'DELAYED',dataAgeDays:3,eligibleForGate:true},
- {symbol:'SUGAR',name:'Sugar',category:'Agriculture',price:20,change:1,changePercent:1,unit:'cents/lb',date:'2026-01-01',history:[],source:'LEGACY_MONTHLY',freshnessStatus:'STALE',dataAgeDays:277,eligibleForGate:false},
+ {symbol:'SUGAR',name:'Sugar',category:'Agriculture',price:20,change:1,changePercent:1,unit:'cents/lb',date:'unreadable-date',history:[],source:'LEGACY_MONTHLY',freshnessStatus:'STALE',dataAgeDays:277,eligibleForGate:false},
 ];
 const fixture = {success:true,commodities:rows,byCategory:{Energy:[rows[1]],Metals:[rows[0]],Agriculture:[rows[2]]},summary:{totalCommodities:3,gainers:1,losers:1,avgChange:0,topGainer:rows[0],topLoser:rows[1]},dataHealth:{gateReady:true,eligibleCount:2,totalCount:3,staleSymbols:['SUGAR']},sourceAsOf:'2026-10-02',lastUpdate:'2026-10-05T00:00:00Z'};
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
@@ -24,7 +24,7 @@ it('folds excluded rows, keeps prices readable, and has one verdict, source and 
  expect(container.querySelectorAll('[data-commodity-legend]')).toHaveLength(1);
  expect(container.querySelectorAll('[data-commodity-source]')).toHaveLength(1);
  const excluded=container.querySelector('[data-excluded-commodities]')!;
- expect(excluded.hasAttribute('open')).toBe(false);expect(excluded.textContent).toContain('Sugar');
+ expect(excluded.hasAttribute('open')).toBe(false);expect(excluded.textContent).toContain('Sugar');expect(excluded.textContent).toContain('date check failed');expect(excluded.textContent).toContain('unreadable-date');expect(excluded.textContent).not.toContain('older data');
  expect(screen.getByText('$249.35')).toBeTruthy();expect(screen.getAllByText('+1.12%').length).toBeGreaterThan(0);
  expect(container.textContent).not.toMatch(/RISK_ON|RISK_OFF|Trade Permission|Coming soon|Golden Egg/);
  fireEvent.change(screen.getByRole('combobox',{name:'Commodity category'}),{target:{value:'Agriculture'}});

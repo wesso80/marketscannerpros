@@ -606,7 +606,7 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
         </div>
         {!eligible.length && <p className="text-sm text-amber-200">No included observations in this category.</p>}
         {excluded.length > 0 && <details data-excluded-commodities className="rounded-lg border border-amber-400/25 px-3 py-2 text-xs text-amber-100">
-          <summary className="cursor-pointer">{excluded.length} excluded {excluded.length === 1 ? 'observation' : 'observations'} · older data</summary>
+          <summary className="cursor-pointer">{excluded.length} excluded {excluded.length === 1 ? 'observation' : 'observations'} · date check failed</summary>
           <p className="mt-2">These rows are excluded from the assessment by the data feed.</p>
           <ul className="mt-2 space-y-1">{excluded.map(item => <li key={item.symbol}>{item.name} · {item.asOfLabel || item.date} · {formatPrice(item.price, item.unit)}</li>)}</ul>
         </details>}

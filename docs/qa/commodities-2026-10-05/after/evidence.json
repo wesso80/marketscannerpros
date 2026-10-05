@@ -9,7 +9,7 @@
         "height": 800
       },
       "closed": {
-        "observedAt": "2026-10-05T08:14:04.796Z",
+        "observedAt": "2026-10-05T08:26:45.625Z",
         "innerWidth": 1280,
         "innerHeight": 800,
         "scrollHeight": 925,
@@ -23,10 +23,10 @@
           }
         ],
         "sourceCount": 1,
-        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nMarkets\nView \nOverview\nSectors\nCommodities\nCross-Market\nEquity research\nCrypto research\nCrypto overview\nCrypto news\nMovers\nCommodities overview\n\nMixed commodity evidence\n\nMetals leads · 44% advancing · mixed conditions\n\nCategory \nAll commodities\nEnergy\nMetals\nAgriculture\nRefresh\n\nEvidence legend: Long = rising-price conditions; Short = falling-price conditions. Clear or limited describes observed alignment, not a recommendation.\n\nUSO (WTI Crude Oil proxy)\n$45.12\nEnergy\n-0.79%\nObservation details\nBNO (Brent Crude Oil proxy)\n$55.12\nEnergy\n+1.23%\nObservation details\nUNG (Natural Gas proxy)\n$65.12\nEnergy\n-0.79%\nObservation details\nGold\n$75.12\nMetals\n+1.23%\nObservation details\nSilver\n$85.12\nMetals\n-0.79%\nObservation details\nCopper\n$95.12\nMetals\n+1.23%\nObservation details\nWheat\n$105.12\nAgriculture\n-0.79%\nObservation details\nAluminum\n$115.12\nMetals\n+1.23%\nObservation details\nCoffee\n$125.12\nAgriculture\n-0.79%\nObservation details\n1 excluded observation · older data\nMarket context\n\nSource: Alpha Vantage · Latest included observation: 2026-10-02 · Retrieved 05/10/2026, 11:00:00 am · Individual dates and proxy units in observation details.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI"
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nMarkets\nView \nOverview\nSectors\nCommodities\nCross-Market\nEquity research\nCrypto research\nCrypto overview\nCrypto news\nMovers\nCommodities overview\n\nMixed commodity evidence\n\nMetals leads · 44% advancing · mixed conditions\n\nCategory \nAll commodities\nEnergy\nMetals\nAgriculture\nRefresh\n\nEvidence legend: Long = rising-price conditions; Short = falling-price conditions. Clear or limited describes observed alignment, not a recommendation.\n\nUSO (WTI Crude Oil proxy)\n$45.12\nEnergy\n-0.79%\nObservation details\nBNO (Brent Crude Oil proxy)\n$55.12\nEnergy\n+1.23%\nObservation details\nUNG (Natural Gas proxy)\n$65.12\nEnergy\n-0.79%\nObservation details\nGold\n$75.12\nMetals\n+1.23%\nObservation details\nSilver\n$85.12\nMetals\n-0.79%\nObservation details\nCopper\n$95.12\nMetals\n+1.23%\nObservation details\nWheat\n$105.12\nAgriculture\n-0.79%\nObservation details\nAluminum\n$115.12\nMetals\n+1.23%\nObservation details\nCoffee\n$125.12\nAgriculture\n-0.79%\nObservation details\n1 excluded observation · date check failed\nMarket context\n\nSource: Alpha Vantage · Latest included observation: 2026-10-02 · Retrieved 05/10/2026, 11:00:00 am · Individual dates and proxy units in observation details.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI"
       },
       "allOpen": {
-        "observedAt": "2026-10-05T08:14:05.589Z",
+        "observedAt": "2026-10-05T08:26:46.730Z",
         "innerWidth": 1280,
         "innerHeight": 800,
         "scrollHeight": 1397,
@@ -42,7 +42,7 @@
           "Observation details",
           "Observation details",
           "Observation details",
-          "1 excluded observation · older data",
+          "1 excluded observation · date check failed",
           "Market context"
         ],
         "verdicts": [
@@ -52,7 +52,7 @@
           }
         ],
         "sourceCount": 1,
-        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nMarkets\nView \nOverview\nSectors\nCommodities\nCross-Market\nEquity research\nCrypto research\nCrypto overview\nCrypto news\nMovers\nCommodities overview\n\nMixed commodity evidence\n\nMetals leads · 44% advancing · mixed conditions\n\nCategory \nAll commodities\nEnergy\nMetals\nAgriculture\nRefresh\n\nEvidence legend: Long = rising-price conditions; Short = falling-price conditions. Clear or limited describes observed alignment, not a recommendation.\n\nUSO (WTI Crude Oil proxy)\n$45.12\nEnergy\n-0.79%\nObservation details\n\nUSD per fund share\n\nLong: Clear · Short: Limited\n\nDELAYED · proxy USO\nSource date: 2026-10-02 · age 3d\nBNO (Brent Crude Oil proxy)\n$55.12\nEnergy\n+1.23%\nObservation details\n\nUSD per fund share\n\nLong: Clear · Short: Limited\n\nDELAYED · proxy BNO\nSource date: 2026-10-02 · age 3d\nUNG (Natural Gas proxy)\n$65.12\nEnergy\n-0.79%\nObservation details\n\nUSD per fund share\n\nLong: Clear · Short: Limited\n\nDELAYED · proxy UNG\nSource date: 2026-10-02 · age 3d\nGold\n$75.12\nMetals\n+1.23%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nSilver\n$85.12\nMetals\n-0.79%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nCopper\n$95.12\nMetals\n+1.23%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nWheat\n$105.12\nAgriculture\n-0.79%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nAluminum\n$115.12\nMetals\n+1.23%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nCoffee\n$125.12\nAgriculture\n-0.79%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\n1 excluded observation · older data\n\nThese rows are excluded from the assessment by the data feed.\n\nSugar · 2026-01-01 · $135.12\nMarket context\nAssessment score\n47/100\nUS dollar proxy\nflat · neutral\nReal rates\nflat · neutral\nGrowth proxy\nflat · neutral\nMarket context\nneutral\nPrice range\ncompression\nEnergy vs metals\n-0.84%\nMetals vs agriculture\n+1.52%\nCopper vs gold\n+0.00%\n\nSource: Alpha Vantage · Latest included observation: 2026-10-02 · Retrieved 05/10/2026, 11:00:00 am · Individual dates and proxy units in observation details.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI"
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nMarkets\nView \nOverview\nSectors\nCommodities\nCross-Market\nEquity research\nCrypto research\nCrypto overview\nCrypto news\nMovers\nCommodities overview\n\nMixed commodity evidence\n\nMetals leads · 44% advancing · mixed conditions\n\nCategory \nAll commodities\nEnergy\nMetals\nAgriculture\nRefresh\n\nEvidence legend: Long = rising-price conditions; Short = falling-price conditions. Clear or limited describes observed alignment, not a recommendation.\n\nUSO (WTI Crude Oil proxy)\n$45.12\nEnergy\n-0.79%\nObservation details\n\nUSD per fund share\n\nLong: Clear · Short: Limited\n\nDELAYED · proxy USO\nSource date: 2026-10-02 · age 3d\nBNO (Brent Crude Oil proxy)\n$55.12\nEnergy\n+1.23%\nObservation details\n\nUSD per fund share\n\nLong: Clear · Short: Limited\n\nDELAYED · proxy BNO\nSource date: 2026-10-02 · age 3d\nUNG (Natural Gas proxy)\n$65.12\nEnergy\n-0.79%\nObservation details\n\nUSD per fund share\n\nLong: Clear · Short: Limited\n\nDELAYED · proxy UNG\nSource date: 2026-10-02 · age 3d\nGold\n$75.12\nMetals\n+1.23%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nSilver\n$85.12\nMetals\n-0.79%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nCopper\n$95.12\nMetals\n+1.23%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nWheat\n$105.12\nAgriculture\n-0.79%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nAluminum\n$115.12\nMetals\n+1.23%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nCoffee\n$125.12\nAgriculture\n-0.79%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\n1 excluded observation · date check failed\n\nThese rows are excluded from the assessment by the data feed.\n\nSugar · 2026-01-01 · $135.12\nMarket context\nAssessment score\n47/100\nUS dollar proxy\nflat · neutral\nReal rates\nflat · neutral\nGrowth proxy\nflat · neutral\nMarket context\nneutral\nPrice range\ncompression\nEnergy vs metals\n-0.84%\nMetals vs agriculture\n+1.52%\nCopper vs gold\n+0.00%\n\nSource: Alpha Vantage · Latest included observation: 2026-10-02 · Retrieved 05/10/2026, 11:00:00 am · Individual dates and proxy units in observation details.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI"
       }
     },
     {
@@ -62,7 +62,7 @@
         "height": 844
       },
       "closed": {
-        "observedAt": "2026-10-05T08:14:06.620Z",
+        "observedAt": "2026-10-05T08:26:47.804Z",
         "innerWidth": 390,
         "innerHeight": 844,
         "scrollHeight": 1747,
@@ -76,10 +76,10 @@
           }
         ],
         "sourceCount": 1,
-        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nMarkets\nView \nOverview\nSectors\nCommodities\nCross-Market\nEquity research\nCrypto research\nCrypto overview\nCrypto news\nMovers\nCommodities overview\n\nMixed commodity evidence\n\nMetals leads · 44% advancing · mixed conditions\n\nCategory \nAll commodities\nEnergy\nMetals\nAgriculture\nRefresh\n\nEvidence legend: Long = rising-price conditions; Short = falling-price conditions. Clear or limited describes observed alignment, not a recommendation.\n\nUSO (WTI Crude Oil proxy)\n$45.12\nEnergy\n-0.79%\nObservation details\nBNO (Brent Crude Oil proxy)\n$55.12\nEnergy\n+1.23%\nObservation details\nUNG (Natural Gas proxy)\n$65.12\nEnergy\n-0.79%\nObservation details\nGold\n$75.12\nMetals\n+1.23%\nObservation details\nSilver\n$85.12\nMetals\n-0.79%\nObservation details\nCopper\n$95.12\nMetals\n+1.23%\nObservation details\nWheat\n$105.12\nAgriculture\n-0.79%\nObservation details\nAluminum\n$115.12\nMetals\n+1.23%\nObservation details\nCoffee\n$125.12\nAgriculture\n-0.79%\nObservation details\n1 excluded observation · older data\nMarket context\n\nSource: Alpha Vantage · Latest included observation: 2026-10-02 · Retrieved 05/10/2026, 11:00:00 am · Individual dates and proxy units in observation details.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI"
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nMarkets\nView \nOverview\nSectors\nCommodities\nCross-Market\nEquity research\nCrypto research\nCrypto overview\nCrypto news\nMovers\nCommodities overview\n\nMixed commodity evidence\n\nMetals leads · 44% advancing · mixed conditions\n\nCategory \nAll commodities\nEnergy\nMetals\nAgriculture\nRefresh\n\nEvidence legend: Long = rising-price conditions; Short = falling-price conditions. Clear or limited describes observed alignment, not a recommendation.\n\nUSO (WTI Crude Oil proxy)\n$45.12\nEnergy\n-0.79%\nObservation details\nBNO (Brent Crude Oil proxy)\n$55.12\nEnergy\n+1.23%\nObservation details\nUNG (Natural Gas proxy)\n$65.12\nEnergy\n-0.79%\nObservation details\nGold\n$75.12\nMetals\n+1.23%\nObservation details\nSilver\n$85.12\nMetals\n-0.79%\nObservation details\nCopper\n$95.12\nMetals\n+1.23%\nObservation details\nWheat\n$105.12\nAgriculture\n-0.79%\nObservation details\nAluminum\n$115.12\nMetals\n+1.23%\nObservation details\nCoffee\n$125.12\nAgriculture\n-0.79%\nObservation details\n1 excluded observation · date check failed\nMarket context\n\nSource: Alpha Vantage · Latest included observation: 2026-10-02 · Retrieved 05/10/2026, 11:00:00 am · Individual dates and proxy units in observation details.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI"
       },
       "allOpen": {
-        "observedAt": "2026-10-05T08:14:07.768Z",
+        "observedAt": "2026-10-05T08:26:48.760Z",
         "innerWidth": 390,
         "innerHeight": 844,
         "scrollHeight": 2643,
@@ -95,7 +95,7 @@
           "Observation details",
           "Observation details",
           "Observation details",
-          "1 excluded observation · older data",
+          "1 excluded observation · date check failed",
           "Market context"
         ],
         "verdicts": [
@@ -105,7 +105,7 @@
           }
         ],
         "sourceCount": 1,
-        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nMarkets\nView \nOverview\nSectors\nCommodities\nCross-Market\nEquity research\nCrypto research\nCrypto overview\nCrypto news\nMovers\nCommodities overview\n\nMixed commodity evidence\n\nMetals leads · 44% advancing · mixed conditions\n\nCategory \nAll commodities\nEnergy\nMetals\nAgriculture\nRefresh\n\nEvidence legend: Long = rising-price conditions; Short = falling-price conditions. Clear or limited describes observed alignment, not a recommendation.\n\nUSO (WTI Crude Oil proxy)\n$45.12\nEnergy\n-0.79%\nObservation details\n\nUSD per fund share\n\nLong: Clear · Short: Limited\n\nDELAYED · proxy USO\nSource date: 2026-10-02 · age 3d\nBNO (Brent Crude Oil proxy)\n$55.12\nEnergy\n+1.23%\nObservation details\n\nUSD per fund share\n\nLong: Clear · Short: Limited\n\nDELAYED · proxy BNO\nSource date: 2026-10-02 · age 3d\nUNG (Natural Gas proxy)\n$65.12\nEnergy\n-0.79%\nObservation details\n\nUSD per fund share\n\nLong: Clear · Short: Limited\n\nDELAYED · proxy UNG\nSource date: 2026-10-02 · age 3d\nGold\n$75.12\nMetals\n+1.23%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nSilver\n$85.12\nMetals\n-0.79%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nCopper\n$95.12\nMetals\n+1.23%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nWheat\n$105.12\nAgriculture\n-0.79%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nAluminum\n$115.12\nMetals\n+1.23%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nCoffee\n$125.12\nAgriculture\n-0.79%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\n1 excluded observation · older data\n\nThese rows are excluded from the assessment by the data feed.\n\nSugar · 2026-01-01 · $135.12\nMarket context\nAssessment score\n47/100\nUS dollar proxy\nflat · neutral\nReal rates\nflat · neutral\nGrowth proxy\nflat · neutral\nMarket context\nneutral\nPrice range\ncompression\nEnergy vs metals\n-0.84%\nMetals vs agriculture\n+1.52%\nCopper vs gold\n+0.00%\n\nSource: Alpha Vantage · Latest included observation: 2026-10-02 · Retrieved 05/10/2026, 11:00:00 am · Individual dates and proxy units in observation details.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI"
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nMarkets\nView \nOverview\nSectors\nCommodities\nCross-Market\nEquity research\nCrypto research\nCrypto overview\nCrypto news\nMovers\nCommodities overview\n\nMixed commodity evidence\n\nMetals leads · 44% advancing · mixed conditions\n\nCategory \nAll commodities\nEnergy\nMetals\nAgriculture\nRefresh\n\nEvidence legend: Long = rising-price conditions; Short = falling-price conditions. Clear or limited describes observed alignment, not a recommendation.\n\nUSO (WTI Crude Oil proxy)\n$45.12\nEnergy\n-0.79%\nObservation details\n\nUSD per fund share\n\nLong: Clear · Short: Limited\n\nDELAYED · proxy USO\nSource date: 2026-10-02 · age 3d\nBNO (Brent Crude Oil proxy)\n$55.12\nEnergy\n+1.23%\nObservation details\n\nUSD per fund share\n\nLong: Clear · Short: Limited\n\nDELAYED · proxy BNO\nSource date: 2026-10-02 · age 3d\nUNG (Natural Gas proxy)\n$65.12\nEnergy\n-0.79%\nObservation details\n\nUSD per fund share\n\nLong: Clear · Short: Limited\n\nDELAYED · proxy UNG\nSource date: 2026-10-02 · age 3d\nGold\n$75.12\nMetals\n+1.23%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nSilver\n$85.12\nMetals\n-0.79%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nCopper\n$95.12\nMetals\n+1.23%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nWheat\n$105.12\nAgriculture\n-0.79%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nAluminum\n$115.12\nMetals\n+1.23%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\nCoffee\n$125.12\nAgriculture\n-0.79%\nObservation details\n\nUSD per unit\n\nLong: Clear · Short: Limited\n\nDELAYED\nSource date: 2026-10-02 · age 3d\n1 excluded observation · date check failed\n\nThese rows are excluded from the assessment by the data feed.\n\nSugar · 2026-01-01 · $135.12\nMarket context\nAssessment score\n47/100\nUS dollar proxy\nflat · neutral\nReal rates\nflat · neutral\nGrowth proxy\nflat · neutral\nMarket context\nneutral\nPrice range\ncompression\nEnergy vs metals\n-0.84%\nMetals vs agriculture\n+1.52%\nCopper vs gold\n+0.00%\n\nSource: Alpha Vantage · Latest included observation: 2026-10-02 · Retrieved 05/10/2026, 11:00:00 am · Individual dates and proxy units in observation details.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI"
       }
     }
   ],
@@ -141,16 +141,16 @@
       "status": 200
     },
     {
-      "url": "http://127.0.0.1:3122/api/auth/session",
-      "method": "GET",
-      "action": "mocked",
-      "status": 503
-    },
-    {
       "url": "http://127.0.0.1:3122/api/health/data",
       "method": "GET",
       "action": "mocked",
       "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/auth/session",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
     },
     {
       "url": "http://127.0.0.1:3122/api/regime",
@@ -255,16 +255,16 @@
       "status": 200
     },
     {
-      "url": "http://127.0.0.1:3122/api/auth/session",
-      "method": "GET",
-      "action": "mocked",
-      "status": 503
-    },
-    {
       "url": "http://127.0.0.1:3122/api/health/data",
       "method": "GET",
       "action": "mocked",
       "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3122/api/auth/session",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
     },
     {
       "url": "http://127.0.0.1:3122/api/regime",
