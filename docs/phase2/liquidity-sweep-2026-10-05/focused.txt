@@ -1,12 +1,12 @@
 
  RUN  v3.2.4 /workspace/scratch/0535040d28c6/liquidity-sweep
 
- ✓ test/layoutFlowAudit.test.ts (22 tests) 60ms
- ✓ test/liquiditySweepCompact.test.tsx (6 tests) 294ms
- ✓ test/phase2cReviewFixes.test.tsx (6 tests) 338ms
+ ✓ test/layoutFlowAudit.test.ts (22 tests) 59ms
+ ✓ test/liquiditySweepCompact.test.tsx (9 tests) 339ms
+ ✓ test/phase2cReviewFixes.test.tsx (6 tests) 275ms
 
  Test Files  3 passed (3)
-      Tests  34 passed (34)
-   Start at  04:12:28
-   Duration  2.55s (transform 971ms, setup 0ms, collect 1.61s, tests 692ms, environment 845ms, prepare 297ms)
+      Tests  37 passed (37)
+   Start at  04:24:21
+   Duration  2.13s (transform 963ms, setup 0ms, collect 1.59s, tests 673ms, environment 723ms, prepare 181ms)
 

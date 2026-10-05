@@ -125,7 +125,7 @@ export default function LiquiditySweepPage() {
   if (!canAccessUnlimitedScanning(tier)) return <LockedPreview tool="Liquidity Sweep" />;
 
   const visible = showAll ? filtered : filtered.slice(0, 6);
-  const verdict = loading ? 'Scanning completed candles…' : error ? 'Sweep feed failed' : data
+  const verdict = loading ? 'Scanning completed candles…' : error ? 'Scan request failed' : data
     ? `${data.sweepCount} sweep observations across ${data.scanned} symbols` : 'No scan has run in this view';
   return (
     <ToolPageLayout
@@ -151,7 +151,7 @@ export default function LiquiditySweepPage() {
           </select>
           {data && <span className="text-xs text-slate-400">{data.scanned} scanned · {filtered.length} matching</span>}
         </div>
-        {error && <p className="rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-200">The scan did not complete. Run again to retry.</p>}
+        {error && <p className="rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-200">{error}. {error.includes('(429)') ? 'Wait before trying again.' : /\((401|403)\)/.test(error) ? 'Check your sign-in and access.' : 'Run again to retry.'}</p>}
         {data && <p data-sweep-source className="text-xs text-slate-400">{sweepSession(data.results.map(r => r.candleDate))} · Source: {data.type === 'crypto' ? 'CoinGecko' : 'Alpha Vantage'} completed daily candles</p>}
         {!loading && !data && !error && <p className="rounded-lg border border-amber-400/30 p-3 text-sm text-amber-200">No recorded result in this view. Use Run scan to request observations.</p>}
         {data && filtered.length > 0 && <>

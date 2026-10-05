@@ -42,7 +42,7 @@ Viewport sizes are exactly 1280×800 and 390×844; Essential Only dismissed; det
 
 - Production `next build` with dummy STRIPE_SECRET_KEY, OPENAI_API_KEY, STRIPE_WEBHOOK_SECRET, DATABASE_URL and APP_SIGNING_SECRET: exit 0. An initial rerun without dummy env failed collecting an unrelated admin route; corrected dummy-env build passed.
 - `tsc --noEmit`: exit 0.
-- Focused rendered/regression tests: 34/34 pass across liquiditySweepCompact, phase2cReviewFixes and layoutFlowAudit. Old source assertions for the removed duplicate hero/example block were updated only for Sweep. [Output](focused.txt).
+- Focused rendered/regression tests: 37/37 pass across liquiditySweepCompact, phase2cReviewFixes and layoutFlowAudit. Old source assertions for the removed duplicate hero/example block were updated only for Sweep. [Output](focused.txt).
 - Same new rendered test against byte-identical old Sweep page: 5 fail/1 pass; expected missing compact rows, fake examples and access presentation. [Before output](baseline-red.txt).
 - Full Vitest with CRYPTO_SUMMARY_KEY and OPENAI_API_KEY unset completed before a separate Commodities run's automatic-review warning: 4952 pass, 11 fail, 13 skip across 572 files. Failing files: backtestStrategySignals (4 date-sensitive cases), bulkSelectionRoute (2 timeouts), cryptoScanAliasRows (1 timeout), commanderCommandState, operatorMarketDataAccuracy, workerEquityBulkWiring, intelligence/globalM2Reliability. These match the existing baseline failure families; no unrelated production/test fixes attempted. The suite is not green.
 - Further full-suite runs are blocked: automatic review cited an external FRED provider request in the parallel Commodities verification. No rerun or bypass is attempted. These full-suite results must not be presented as guaranteed network-isolated evidence.
@@ -51,3 +51,7 @@ Viewport sizes are exactly 1280×800 and 390×844; Essential Only dismissed; det
 `capture.cjs` records the synthetic response and capture procedure. It needs Playwright plus a local Chromium executable and a pre-built checkout (`SWEEP_WORKTREE`, `SWEEP_SCREEN_DIR`); paths in this audit script identify the validation environment. It is not product polling or production automation.
 
 Live authenticated provider validation remains pending; these screenshots prove rendering only. Brad/Pip review requested before batch merge.
+
+## Follow-up review correction
+
+HTTP failure status remains visible: 401/403 explain access, 429 asks the viewer to wait, and other failures allow retry. Three mocked status cases pass; no automatic retries added. Build and TypeScript passed again after this correction. Success-state screenshot markup is unchanged. No further full-suite run.

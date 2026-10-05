@@ -33,3 +33,12 @@ it('keeps truthful mixed-session context and formats levels and prices',()=>{
  expect(levelName('PREV_WEEK_HIGH')).toBe('Prior week high');expect(levelName('NEW_LEVEL_CODE')).toBe('new level code');expect(sweepPrice(.466356)).toBe('$0.4664');
 });
 it('does not fetch on Show all, collapse or filter actions',async()=>{render(<Page/>);await screen.findByRole('button',{name:'Show all (36)'});fireEvent.click(screen.getByRole('button',{name:'Show all (36)'}));fireEvent.click(screen.getByRole('button',{name:'Show top 6'}));fireEvent.change(screen.getByLabelText('Observation filter'),{target:{value:'near'}});expect(fetch).toHaveBeenCalledTimes(1);});
+
+it.each([401,429,503])('preserves HTTP %s failure evidence without suggesting every failure is a feed fault',async status=>{
+ vi.stubGlobal('fetch',vi.fn(async()=>({ok:false,status})));render(<Page/>);
+ await screen.findByText('Scan request failed');expect(screen.getByText(new RegExp(`Scan failed \\(${status}\\)`))).toBeTruthy();
+ expect(screen.queryByRole('button',{name:/Show all/})).toBeNull();
+ if(status===429)expect(screen.getByText(/Wait before trying again/)).toBeTruthy();
+ if(status===401)expect(screen.getByText(/Check your sign-in and access/)).toBeTruthy();
+ expect(fetch).toHaveBeenCalledTimes(1);
+});
