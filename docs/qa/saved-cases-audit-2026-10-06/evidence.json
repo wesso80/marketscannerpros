@@ -1,0 +1,445 @@
+{
+  "mocked": true,
+  "fixtureBasis": "Deterministic intercepted /api/research-case fixtures. External origins aborted. Not live-provider acceptance.",
+  "route": "/tools/research?tab=saved",
+  "tip": "audit/saved-cases-compact",
+  "viewports": [
+    "1280x800",
+    "390x844"
+  ],
+  "hardMaxScreens390": 2.3,
+  "targetScreens390": 2,
+  "maxScreens390Closed": 1.9182464454976302,
+  "maxScreens1280Closed": 1.6925,
+  "results": [
+    {
+      "id": "populated-closed",
+      "dataCase": "populated",
+      "action": "closed",
+      "route": "/tools/research?tab=saved",
+      "pngFull": "shots/populated-closed-1280-full.png",
+      "pngFold": "shots/populated-closed-1280-fold.png",
+      "observedAt": "2026-10-05T18:26:23.320Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1354,
+      "screens": 1.6925,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved research cases · Not available right now · Stored snapshots · up to 50 records loaded · individual saved/generated dates in case details; not current market observations"
+      ],
+      "verdicts": [
+        {
+          "text": "8 saved research cases loaded",
+          "top": 271,
+          "bottom": 299,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "rowCount": 5,
+      "showAll": [
+        "Show all 8"
+      ],
+      "longTitleVisible": true,
+      "rawCodes": false,
+      "scrollY": 0
+    },
+    {
+      "id": "populated-closed",
+      "dataCase": "populated",
+      "action": "closed",
+      "route": "/tools/research?tab=saved",
+      "pngFull": "shots/populated-closed-390-full.png",
+      "pngFold": "shots/populated-closed-390-fold.png",
+      "observedAt": "2026-10-05T18:26:23.823Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1619,
+      "screens": 1.9182464454976302,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved research cases · Not available right now · Stored snapshots · up to 50 records loaded · individual saved/generated dates in case details; not current market observations"
+      ],
+      "verdicts": [
+        {
+          "text": "8 saved research cases loaded",
+          "top": 390.5,
+          "bottom": 446.5,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "rowCount": 5,
+      "showAll": [
+        "Show all 8"
+      ],
+      "longTitleVisible": true,
+      "rawCodes": false,
+      "scrollY": 0
+    },
+    {
+      "id": "populated-show-all",
+      "dataCase": "populated",
+      "action": "show-all",
+      "route": "/tools/research?tab=saved",
+      "pngFull": "shots/populated-show-all-1280-full.png",
+      "pngFold": "shots/populated-show-all-1280-fold.png",
+      "observedAt": "2026-10-05T18:26:24.316Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1855,
+      "screens": 2.31875,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved research cases · Not available right now · Stored snapshots · up to 50 records loaded · individual saved/generated dates in case details; not current market observations"
+      ],
+      "verdicts": [
+        {
+          "text": "8 saved research cases loaded",
+          "top": 271,
+          "bottom": 299,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "rowCount": 8,
+      "showAll": [
+        "Show five"
+      ],
+      "longTitleVisible": true,
+      "rawCodes": false,
+      "scrollY": 0
+    },
+    {
+      "id": "populated-show-all",
+      "dataCase": "populated",
+      "action": "show-all",
+      "route": "/tools/research?tab=saved",
+      "pngFull": "shots/populated-show-all-390-full.png",
+      "pngFold": "shots/populated-show-all-390-fold.png",
+      "observedAt": "2026-10-05T18:26:24.867Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 2120,
+      "screens": 2.5118483412322274,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved research cases · Not available right now · Stored snapshots · up to 50 records loaded · individual saved/generated dates in case details; not current market observations"
+      ],
+      "verdicts": [
+        {
+          "text": "8 saved research cases loaded",
+          "top": 390.5,
+          "bottom": 446.5,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "rowCount": 8,
+      "showAll": [
+        "Show five"
+      ],
+      "longTitleVisible": true,
+      "rawCodes": false,
+      "scrollY": 0
+    },
+    {
+      "id": "populated-details",
+      "dataCase": "populated",
+      "action": "details",
+      "route": "/tools/research?tab=saved",
+      "pngFull": "shots/populated-details-1280-full.png",
+      "pngFold": "shots/populated-details-1280-fold.png",
+      "observedAt": "2026-10-05T18:26:25.335Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1627,
+      "screens": 2.03375,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 1,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved research cases · Not available right now · Stored snapshots · up to 50 records loaded · individual saved/generated dates in case details; not current market observations"
+      ],
+      "verdicts": [
+        {
+          "text": "8 saved research cases loaded",
+          "top": 271,
+          "bottom": 299,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "rowCount": 5,
+      "showAll": [
+        "Show all 8"
+      ],
+      "longTitleVisible": true,
+      "rawCodes": false,
+      "scrollY": 0
+    },
+    {
+      "id": "populated-details",
+      "dataCase": "populated",
+      "action": "details",
+      "route": "/tools/research?tab=saved",
+      "pngFull": "shots/populated-details-390-full.png",
+      "pngFold": "shots/populated-details-390-fold.png",
+      "observedAt": "2026-10-05T18:26:25.879Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1994,
+      "screens": 2.362559241706161,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 1,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved research cases · Not available right now · Stored snapshots · up to 50 records loaded · individual saved/generated dates in case details; not current market observations"
+      ],
+      "verdicts": [
+        {
+          "text": "8 saved research cases loaded",
+          "top": 390.5,
+          "bottom": 446.5,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "rowCount": 5,
+      "showAll": [
+        "Show all 8"
+      ],
+      "longTitleVisible": true,
+      "rawCodes": false,
+      "scrollY": 0
+    },
+    {
+      "id": "empty",
+      "dataCase": "empty",
+      "action": "closed",
+      "route": "/tools/research?tab=saved",
+      "pngFull": "shots/empty-1280-full.png",
+      "pngFold": "shots/empty-1280-fold.png",
+      "observedAt": "2026-10-05T18:26:26.392Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "screens": 1,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved research cases · Not available right now · Stored snapshots · up to 50 records loaded · individual saved/generated dates in case details; not current market observations"
+      ],
+      "verdicts": [
+        {
+          "text": "No saved research cases yet.",
+          "top": 271,
+          "bottom": 299,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "rowCount": 0,
+      "showAll": [],
+      "longTitleVisible": false,
+      "rawCodes": false,
+      "scrollY": 0
+    },
+    {
+      "id": "empty",
+      "dataCase": "empty",
+      "action": "closed",
+      "route": "/tools/research?tab=saved",
+      "pngFull": "shots/empty-390-full.png",
+      "pngFold": "shots/empty-390-fold.png",
+      "observedAt": "2026-10-05T18:26:26.871Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "screens": 1,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved research cases · Not available right now · Stored snapshots · up to 50 records loaded · individual saved/generated dates in case details; not current market observations"
+      ],
+      "verdicts": [
+        {
+          "text": "No saved research cases yet.",
+          "top": 390.5,
+          "bottom": 446.5,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "rowCount": 0,
+      "showAll": [],
+      "longTitleVisible": false,
+      "rawCodes": false,
+      "scrollY": 0
+    },
+    {
+      "id": "error",
+      "dataCase": "error",
+      "action": "closed",
+      "route": "/tools/research?tab=saved",
+      "pngFull": "shots/error-1280-full.png",
+      "pngFold": "shots/error-1280-fold.png",
+      "observedAt": "2026-10-05T18:26:27.369Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "screens": 1,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 0,
+      "sourceText": [],
+      "verdicts": [
+        {
+          "text": "The last request did not complete.",
+          "top": 271,
+          "bottom": 299,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "rowCount": 0,
+      "showAll": [],
+      "longTitleVisible": false,
+      "rawCodes": false,
+      "scrollY": 0
+    },
+    {
+      "id": "error",
+      "dataCase": "error",
+      "action": "closed",
+      "route": "/tools/research?tab=saved",
+      "pngFull": "shots/error-390-full.png",
+      "pngFold": "shots/error-390-fold.png",
+      "observedAt": "2026-10-05T18:26:27.875Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "screens": 1,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 0,
+      "sourceText": [],
+      "verdicts": [
+        {
+          "text": "The last request did not complete.",
+          "top": 390.5,
+          "bottom": 446.5,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "rowCount": 0,
+      "showAll": [],
+      "longTitleVisible": false,
+      "rawCodes": false,
+      "scrollY": 0
+    }
+  ],
+  "errors": []
+}
