@@ -368,7 +368,7 @@ function mapScanToInput(symbol: string, scanMode: ScanModeType, scan: any): Time
 /** Adaptive price formatting: 2 decimals for > $1, up to 8 for sub-cent */
 // formatPrice imported from shared lib/formatPrice.ts
 
-export default function TimeScannerPage({ embeddedInTerminal = false, symbol: propSymbol, assetType, timeframe }: { embeddedInTerminal?: boolean; symbol?: string; assetType?: 'equity' | 'crypto'; timeframe?: string } = {}) {
+export default function TimeScannerPage({ embeddedInTerminal = false, symbol: propSymbol, assetType, timeframe, onScanResultChange }: { embeddedInTerminal?: boolean; symbol?: string; assetType?: 'equity' | 'crypto'; timeframe?: string; onScanResultChange?: (hasResult: boolean) => void } = {}) {
   const { tier, isLoading: tierLoading } = useUserTier();
   const searchParams = useSearchParams();
   const requestedSymbol = propSymbol || searchParams.get('symbol') || 'BTCUSD';
@@ -507,6 +507,10 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
     return () => requestRef.current?.abort();
   }, [symbol, scanMode, sessionMode, requestedAsset]);
 
+  useEffect(() => {
+    onScanResultChange?.(scanData !== null);
+  }, [scanData, onScanResultChange]);
+
   const isCrypto = (requestedAsset || detectAssetClass(symbol)) === 'crypto';
 
   const out = computeTimeConfluenceV2(input);
@@ -597,27 +601,28 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
                 </button>
               </div>
               <div className="mt-1.5 truncate text-xs text-slate-400">
-                {out.direction} • {SCAN_MODE_LABELS[scanMode]} • {displaySymbol}{!isCrypto ? ` • ${sessionMode === 'regular' ? 'RTH' : sessionMode === 'extended' ? 'Extended' : 'Full'}` : ''}
+                {scanData ? `${out.direction} • ` : ''} {SCAN_MODE_LABELS[scanMode]} • {displaySymbol}{!isCrypto ? ` • ${sessionMode === 'regular' ? 'RTH' : sessionMode === 'extended' ? 'Extended' : 'Full'}` : ''}
               </div>
             </div>
 
             <div className="flex justify-start lg:justify-center">
               <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/45 px-3 py-2">
                 <div className={`h-2.5 w-2.5 rounded-full ${tone.dot}`} />
-                <div className="text-sm font-semibold tracking-wide text-slate-100">{scanData ? tone.label : 'Run scan to assess'}</div>
+                <div className="text-sm font-semibold tracking-wide text-slate-100">{scanData ? tone.label : `Not run yet for ${symbol}`}</div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-2 lg:justify-end">
+            {scanData && <div className="flex items-center justify-between gap-2 lg:justify-end">
               <div className="grid grid-cols-3 gap-2">
                 <MetricPill label="Confluence" value={scanData ? `${Math.round(out.timeConfluenceScore)} / 100` : 'Unavailable'} />
                 <MetricPill label="Risk" value={scanData ? riskLabel(out.permission) : 'Unavailable'} />
                 <MetricPill label="R:R" value={rrDisplay} />
               </div>
-            </div>
+            </div>}
           </div>
         </section>
 
+        {scanData && <>
         {/* ═══ SCAN OUTPUT: Direction + Price Target ═══ */}
         {scanData && scanData.direction !== 'neutral' && (
           <section className="w-full rounded-2xl border bg-slate-900/50 p-4 lg:p-5" style={{
@@ -1083,6 +1088,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
           </div>
         </details>
 
+        </>}
         {/* ── Intel accordion sections removed — core purpose is cluster + direction output ── */}
       </main>
     </TimeScannerShell>

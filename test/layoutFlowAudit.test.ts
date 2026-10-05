@@ -370,7 +370,7 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).toContain('function TerminalTabRail');
     expect(terminalPage).toContain('const TERMINAL_TAB_PARAM_MAP');
     expect(terminalPage).toContain("'options-confluence': 'Options Confluence'");
-    expect(terminalPage).toContain("'crypto-terminal': 'Crypto'");
+    expect(terminalPage).toContain("'crypto-terminal': 'Close Calendar'");
     expect(terminalPage).toContain("'time-scanner': 'Time Confluence'");
     expect(terminalPage).toContain('useSearchParams');
     expect(terminalPage).toContain('if (requestedTab) setTab(requestedTab);');
@@ -386,7 +386,8 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Time Gravity\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>");
     expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Options Confluence\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>");
     expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Options Flow\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>");
-    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Crypto\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>");
+    expect(terminalPage).not.toContain("<TerminalSubviewFrame tab=\"Crypto\"");
+    expect(terminalPage).toContain('href="/tools/crypto-dashboard"');
     expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Time Confluence\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>");
     expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Capital Pressure\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>");
     expect(terminalPage).toContain('<TerminalSubviewMetric label="Symbol" value={symbol}');
@@ -403,7 +404,7 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).toContain("href: '/tools'");
     expect(terminalPage).toContain("<OptionsConfluence embeddedInTerminal symbol={sym} timeframe={requestedTimeframe} expiry={requestedExpiry} />");
     expect(terminalPage).toContain("<OptionsFlow embeddedInTerminal symbol={sym} expiry={requestedExpiry} />");
-    expect(terminalPage).toContain("<ConfluenceScanner key={`${asset}:${sym}:${requestedTimeframe}`} symbol={sym} assetType={asset} timeframe={requestedTimeframe} embeddedInTerminal />");
+    expect(terminalPage).toContain("<ConfluenceScanner key={`${asset}:${sym}:${requestedTimeframe}`} symbol={sym} assetType={asset} timeframe={requestedTimeframe} embeddedInTerminal onScanResultChange=");
     expect(terminalPage).not.toContain('<SectionHeader title="Terminal"');
     expect(terminalPage).not.toContain('ComplianceDisclaimer collapsible variant');
     expect(terminalPage).not.toContain("'? Refresh'");
@@ -444,7 +445,7 @@ describe('layout and flow audit regressions', () => {
     expect(optionsFlowPage).not.toContain('patternEmoji');
     expect(optionsFlowPage).not.toContain('🔍 Analyze Flow');
     expect(optionsFlowPage).not.toContain('📊</div>');
-    expect(confluenceScannerPage).toContain("<TimeScannerPage symbol={symbol} assetType={assetType} timeframe={timeframe} embeddedInTerminal={embeddedInTerminal} />");
+    expect(confluenceScannerPage).toContain("<TimeScannerPage symbol={symbol} assetType={assetType} timeframe={timeframe} embeddedInTerminal={embeddedInTerminal} onScanResultChange={onScanResultChange} />");
     expect(timeScannerPage).toContain("embeddedInTerminal ? 'px-0 py-0' : 'px-4 py-4 lg:px-6 lg:py-6'");
     expect(timeScannerPage).toContain("scalping: 'Scalp 15m'");
     expect(timeScannerPage).toContain("macro_monthly: 'Monthly'");

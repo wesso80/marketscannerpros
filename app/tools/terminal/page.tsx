@@ -19,7 +19,6 @@ import { detectMarketPath, type MarketPath } from '@/lib/terminal/marketPath';
 import { hasCommoditySessionMap } from '@/lib/terminal/futures/cashBridgeMap';
 
 const OptionsTerminalView = dynamic(() => import('@/components/options-terminal/OptionsTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div> });
-const CryptoTerminalView = dynamic(() => import('@/components/crypto-terminal/CryptoTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div> });
 const FuturesTerminalPanel = dynamic(() => import('@/components/terminal/futures/FuturesTerminalPanel'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Futures Terminal…</div> });
 const OptionsConfluence = dynamic(() => import('@/components/options-terminal/OptionsConfluenceScanner'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Confluence Engine…</div> });
 const OptionsFlow = dynamic(() => import('@/components/options-terminal/OptionsFlowView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Flow…</div> });
@@ -60,7 +59,6 @@ const TABS = [
   'Options Terminal',
   'Options Confluence',
   'Options Flow',
-  'Crypto',
   'Futures Session',
   'Cash Bridge',
   'Commodity Session Map',
@@ -80,8 +78,8 @@ const TERMINAL_TAB_PARAM_MAP: Record<string, TerminalTab> = {
   'options-confluence': 'Options Confluence',
   flow: 'Options Flow',
   'options-flow': 'Options Flow',
-  crypto: 'Crypto',
-  'crypto-terminal': 'Crypto',
+  crypto: 'Close Calendar',
+  'crypto-terminal': 'Close Calendar',
   capital: 'Capital Pressure',
   futures: 'Futures Session',
   session: 'Futures Session',
@@ -110,10 +108,6 @@ const TERMINAL_TAB_META: Record<TerminalTab, { eyebrow: string; description: str
   'Options Flow': {
     eyebrow: '4. Flow estimate',
     description: 'Review premium-flow classification, skew, and large-flow estimates.',
-  },
-  Crypto: {
-    eyebrow: '2. Derivatives map',
-    description: 'Inspect funding, open interest, liquidations, exchanges, and stablecoin context.',
   },
   'Futures Session': {
     eyebrow: '2. Futures session map',
@@ -147,7 +141,7 @@ const TERMINAL_TAB_META: Record<TerminalTab, { eyebrow: string; description: str
 
 function visibleTabsForPath(marketPath: MarketPath, commodityFutures: boolean): TerminalTab[] {
   if (marketPath === 'crypto') {
-    return ['Close Calendar', 'Crypto', 'Capital Pressure', 'Time Gravity', 'Time Confluence'];
+    return ['Close Calendar', 'Capital Pressure', 'Time Gravity', 'Time Confluence'];
   }
   if (marketPath === 'futures') {
     return [
@@ -189,6 +183,9 @@ function TerminalTabRail({
         </div>
       </div>
       <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-5">
+        {marketPath === 'crypto' && (
+          <Link href="/tools/crypto-dashboard" className="rounded-md border border-emerald-400/30 px-3 py-1.5 text-sm font-bold text-emerald-200">Crypto Derivatives ↗</Link>
+        )}
         {visibleTabs.map((terminalTab) => {
           const meta = TERMINAL_TAB_META[terminalTab];
           const isActive = activeTab === terminalTab;
@@ -218,7 +215,6 @@ const TERMINAL_SUBVIEW_FOCUS: Record<Exclude<TerminalTab, 'Close Calendar'>, str
   'Options Terminal': 'Chain Quality',
   'Options Confluence': 'Setup Alignment',
   'Options Flow': 'Flow Estimate',
-  Crypto: 'Derivatives Map',
   'Futures Session': 'Session Transitions',
   'Cash Bridge': 'Bridge Alignment',
   'Commodity Session Map': 'Commodity Session Logic',
@@ -362,11 +358,11 @@ export default function TerminalPage() {
   const requestedTimeframe = searchParams.get('timeframe') || '';
   const requestedSymbol = searchParams.get('symbol')?.trim().toUpperCase() || '';
   const requestedInitialTab = TERMINAL_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()]
-    || (requestedType === 'crypto' ? 'Crypto' : 'Close Calendar');
+    || 'Close Calendar';
   const [tab, setTab] = useState<TerminalTab>(requestedInitialTab);
   const entrySymbol = optionsEntrySymbol((searchParams.get('tab') || '').toLowerCase(),requestedSymbol,requestedType || '',selectedSymbol || '');
   const [symInput, setSymInput] = useState(entrySymbol);
-  const [cryptoTerminalState, setCryptoTerminalState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
+  const [timeResultKey, setTimeResultKey] = useState<string | null>(null);
 
   /* Symbol management */
   const sym = requestedSymbol || (['Options Terminal','Options Confluence','Options Flow'].includes(requestedInitialTab) && !requestedType ? entrySymbol : selectedSymbol || symInput || 'BTCUSD');
@@ -391,7 +387,7 @@ export default function TerminalPage() {
     }
     const urlType = searchParams.get('type')?.toLowerCase();
     const requestedTab = TERMINAL_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()]
-      || (urlType === 'crypto' ? 'Crypto' : undefined);
+      || (urlType === 'crypto' ? 'Close Calendar' : undefined);
     if (requestedTab) setTab(requestedTab);
     // Only re-sync when the URL tab param changes; including `tab` here would force
     // user clicks back to the URL value.
@@ -472,9 +468,7 @@ export default function TerminalPage() {
     ? 'Review Phantom Time / Cash Bridge'
     : tab === 'Close Calendar'
       ? 'Review close cluster timing'
-      : tab === 'Crypto'
-        ? 'Check derivatives pressure'
-        : tab === 'Capital Pressure'
+      : tab === 'Capital Pressure'
           ? 'Review capital pressure'
           : 'Validate mechanics context';
 
@@ -778,14 +772,6 @@ export default function TerminalPage() {
         </UpgradeGate>
       )}
 
-      {/* -- CRYPTO TERMINAL ------------------------------------------------ */}
-      {tab === 'Crypto' && (
-        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Crypto Terminal">
-          <TerminalSubviewFrame tab="Crypto" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
-            <a className="block rounded border border-emerald-400/30 p-4 text-emerald-300" href="/tools/crypto-dashboard">Open market-wide crypto derivatives</a>
-          </TerminalSubviewFrame>
-        </UpgradeGate>
-      )}
       {/* -- FLOW ----------------------------------------------------- */}
       {tab === 'Capital Pressure' && (() => {
         if (!isPaidTier(tier)) return <UpgradeGate requiredTier="pro" currentTier={tier} feature="Capital Flow Analysis"><div className="py-12" /></UpgradeGate>;
@@ -1153,10 +1139,10 @@ export default function TerminalPage() {
       {tab === 'Time Confluence' && (
         <UpgradeGate requiredTier="pro" currentTier={tier} feature="Time Confluence Scanner">
           <TerminalSubviewFrame tab="Time Confluence" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
-            <ConfluenceScanner key={`${asset}:${sym}:${requestedTimeframe}`} symbol={sym} assetType={asset} timeframe={requestedTimeframe} embeddedInTerminal />
-            <div className="mt-6">
+            <ConfluenceScanner key={`${asset}:${sym}:${requestedTimeframe}`} symbol={sym} assetType={asset} timeframe={requestedTimeframe} embeddedInTerminal onScanResultChange={(hasResult) => setTimeResultKey(hasResult ? `${asset}:${sym}:${requestedTimeframe}` : null)} />
+            {timeResultKey === `${asset}:${sym}:${requestedTimeframe}` && <div className="mt-6">
               <TimeConfluenceWidget showMacro showMicro showCalendar assetClass={asset} />
-            </div>
+            </div>}
           </TerminalSubviewFrame>
         </UpgradeGate>
       )}
