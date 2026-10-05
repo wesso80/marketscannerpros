@@ -1,6 +1,7 @@
 'use client';
 
 import { cryptoReviewMissing, cryptoSpotContext, fetchCryptoReviewData } from '@/lib/cryptoReviewData';
+import { marketText } from '@/lib/marketsPresentation';
 import CryptoFeedStatusNotes from '@/components/CryptoFeedStatusNotes';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -45,7 +46,7 @@ function freshnessLabel(status: FreshnessStatus): string {
 }
 
 export type CryptoDecisionGate = { dataComplete: boolean; longsAllowed: boolean; shortsAllowed: boolean; hardBlocks: string[]; riskState?: string };
-export default function CryptoMorningDecisionCard({ onDecision }: { onDecision?: (gate: CryptoDecisionGate) => void } = {}) {
+export default function CryptoMorningDecisionCard({ onDecision, compact = false }: { onDecision?: (gate: CryptoDecisionGate) => void; compact?: boolean } = {}) {
   const [marketData, setMarketData] = useState<any>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
@@ -238,6 +239,11 @@ export default function CryptoMorningDecisionCard({ onDecision }: { onDecision?:
       status: entry.status ?? 'unknown',
     }));
   }, [marketData]);
+
+  if (compact) return <div className="flex items-start gap-2 text-xs">
+    {!decision.dataComplete && <p className="flex-1 rounded border border-amber-400/30 p-2 text-amber-300">Market evidence incomplete: {marketText(decision.hardBlocks.join(' · '))}</p>}
+    <button type="button" onClick={() => void fetchGateData()} className="min-h-10 shrink-0 underline">Refresh market evidence</button>
+  </div>;
 
   return (
     <section className="rounded-lg border border-slate-700 bg-slate-900 p-2">

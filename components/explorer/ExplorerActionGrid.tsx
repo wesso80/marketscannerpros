@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { marketText } from '@/lib/marketsPresentation';
 
 type AssetType = 'equity' | 'crypto';
 
@@ -25,8 +26,8 @@ function ActionItem({
       <button
         type="button"
         disabled
-        title={blockReason}
-        className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-[10px] text-slate-500"
+        title={marketText(blockReason)}
+        className="min-h-10 cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-[10px] text-slate-500"
       >
         {label}
       </button>
@@ -36,7 +37,7 @@ function ActionItem({
   return (
     <Link
       href={href}
-      className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-center text-[10px] text-slate-300"
+      className="min-h-10 content-center rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-center text-[10px] text-slate-300"
     >
       {label}
     </Link>
