@@ -1,0 +1,6 @@
+const ts=require(process.cwd()+'/node_modules/typescript'),fs=require('node:fs'),cp=require('node:child_process'),crypto=require('node:crypto');
+const base='b12d135a64b629061960875df028ddc989ba5072',results=[];
+const jobs=[['app/tools/macro/page.tsx',['safeNumber','trendDirection','computeMacroGate','gate','fetchData']]];
+function extract(src,names){const file=ts.createSourceFile('page.tsx',src,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX),out={};function visit(n){if((ts.isFunctionDeclaration(n)||ts.isVariableDeclaration(n))&&n.name&&names.includes(n.name.getText(file)))out[n.name.getText(file)]=(ts.isFunctionDeclaration(n)?n.body:n.initializer).getText(file);ts.forEachChild(n,visit);}visit(file);return out;}
+for(const [path,names]of jobs){const before=extract(cp.execFileSync('git',['show',base+':'+path],{encoding:'utf8'}),names),after=extract(fs.readFileSync(path,'utf8'),names);for(const name of names){if(!before[name]||before[name]!==after[name])throw Error('Calculation changed: '+path+' '+name);results.push({path,name,identical:true,sha256:crypto.createHash('sha256').update(after[name]).digest('hex')});}}
+fs.writeFileSync('docs/qa/macro-2026-10-05/calculation-parity.json',JSON.stringify({base,results},null,2));console.log(results.length+' calculation bodies are byte-identical');

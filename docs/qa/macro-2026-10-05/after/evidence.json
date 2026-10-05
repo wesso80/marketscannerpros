@@ -1,0 +1,1210 @@
+{
+  "mocked": true,
+  "fixtureBasis": "Deterministic intercepted Explorer API fixtures; not live acceptance",
+  "results": [
+    {
+      "tab": "macro",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T14:15:19.261Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 996,
+      "scrollWidth": 1280,
+      "screens": 1.245,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro\nPublished macro observations\n\nMixed\n\nScore -10 · neutral\n\nRates, liquidity, growth and inflation observations.\n\n4.20%\n\nRates\n\n0.40%\n\nCurve\n\n2.7%\n\nInflation\n\n$23.9T\n\nGrowth\n\nSource · Macro database · 00:00 AEDT Tue 6 Oct · Published observations\n\nTreasury Yield Curve\nFull maturity spectrum: 3M → 2Y → 5Y → 10Y → 30Y\n3.6%\n3.9%\n4.2%\n4.4%\n4.7%\n4.10%\n3M\n3.80%\n2Y\n3.90%\n5Y\n4.20%\n10Y\n4.50%\n30Y\n2s10s Spread: 0.40% Normal\n3m10y Spread: 0.10% Normal\nFed Funds: 4.25%\nMacro evidence5 model factors · rates and cross-asset observations\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "MixedScore -10 · neutralRates, liquidity, growth and inflation observations.",
+          "top": 191.5,
+          "bottom": 301.5
+        }
+      ],
+      "charts": [
+        {
+          "top": 484.5,
+          "bottom": 734.5
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro\nPublished macro observations\n\nMixed\n\nScore -10 · neutral\n\nRates, liquidity, growth and inflation observations.\n\n4.20%\n\nRates\n\n0.40%\n\nCurve\n\n2.7%\n\nInflation\n\n$23.9T\n\nGrowth\n\nSource · Macro database · 00:00 AEDT Tue 6 Oct · Published observations\n\nTreasury Yield Curve\nFull maturity spectrum: 3M → 2Y → 5Y → 10Y → 30Y\n3.6%\n3.9%\n4.2%\n4.4%\n4.7%\n4.10%\n3M\n3.80%\n2Y\n3.90%\n5Y\n4.20%\n10Y\n4.50%\n30Y\n2s10s Spread: 0.40% Normal\n3m10y Spread: 0.10% Normal\nFed Funds: 4.25%\nMacro evidence5 model factors · rates and cross-asset observations\nUS: Regular session\nCloses 16:00 ET\nCrypto\nUS session · ET\nDecision\nRates\nYieldcurve\nCommodities\nCorrelation\nSentiment\nInflation\nGrowth\nEmployment\nImplications\nAssessment detailScore -10\nAssessment\nMixed\nRisk State\nNeutral\nLiquidity\nstable\nVolatility\nnormal\nUSD Regime (inferred from rates, not scored)\nRising\nRates Regime\ntightening\nScore\nConfidence\n-10\n35%\nLiquidity\nNeutral (25)\nVol Regime\nNeutral (20)\nRates Regime\nNegative (15)\nGrowth\nPositive (15)\nInflation\nNegative (10)\nMixed macro evidence.\nRates, inflation, growth, employmentOne line per measured series\nRates & Real Rates\n4.20%\n10Y Treasury (as of 2026-10-02) • tightening\nInflation\n2.7%\nCPI YoY • elevated\nGrowth\n$23.9T\nReal GDP • up\nEmployment\n4.3%\nUnemployment • stable\nCommoditiesTop 4, then the rest\nCommodities Monitor\nOil, metals, agriculture — growth proxy and inflation signals\nMarket data · source dates shown per row · educational context only\nEligible 1/2. Stale and excluded from live commodity context: WTI. Latest eligible source date: 2026-10-02.\nGold\nSome data is older; check its date before researching further.\n2650.22\n+1.3%\nMetals · USD/oz\nObservation 2026-10-02\nOil\nNot collected\nNot collected\nNot collected\nEnergy · Unit not supplied\nObservation not dated\nMore macro detailCorrelation, sentiment, and implications\nCross-Asset Correlation Regime\nBTC↔SPY correlation, VIX regime, USD trend, sector rotation\nHeuristic model · educational context · live inputs, dated below\nHow this differs from Risk State: Risk State is a slow macro score (rates, liquidity, growth, inflation); this panel reads the current tape (BTC and SPY moves, VIX level, USD trend, BTC↔SPY correlation), so the two can disagree.\nRegime\nRisk Off\nRisk score\n48/100\nWeighting factor\n0.75x\n\nNot collected: VIX regime · USD trend · BTC–SPY correlation (20d) · Sector rotation · Gold safe haven.\n\nNot collected\nEvidence does not support a clear assessment.\nInputs\nVIX: Not collected\nMarket Sentiment — SPY Put/Call Ratio\nAggregate options positioning as a contrarian sentiment indicator\nComputed from options OI · educational indicator only\nP/C Ratio\n1.2\nSignal\nMore put than call open interest\nTotal Call OI\n10,000\nTotal Put OI\n12,000\nImplications Matrix\nRegime → educational scenario map across asset classes\nEquities\nQuality growth context; small-cap risk reduced.\nCrypto\nBTC + majors context only.\nVol\nNormal volatility; standard scenario review.\nUSD\nUSD headwind for risk assets.\nRates\nDuration headwind.\nMacro Event Awareness\nKey recurring catalysts to monitor\nFOMC Rate Decision / Minutes\nSee Fed calendar\nHigh\nInitial Jobless Claims\nThursdays 08:30 ET\nHigh\nPCE / CPI Inflation Release\nMonthly schedule\nHigh\n\nCheck an economic calendar for exact dates and times.\n\nDeep Dive: Rates\n10Y: 4.20% • 2Y: 3.80% • Curve: 0.40% (Normal)\nDeep Dive: Inflation\nCPI: 318.1 • Inflation YoY: 2.7% • Trend: elevated\nDeep Dive: Employment\nUnemployment: 4.3% • Trend: stable\nDeep Dive: Growth\nReal GDP: $23.9T • Trend: up\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "hits": [],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Alpha Vantage Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 1
+    },
+    {
+      "tab": "macro",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T14:15:21.024Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1255,
+      "scrollWidth": 390,
+      "screens": 1.4869668246445498,
+      "text": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro\nPublished macro observations\n\nMixed\n\nScore -10 · neutral\n\nRates, liquidity, growth and inflation observations.\n\n4.20%\n\nRates\n\n0.40%\n\nCurve\n\n2.7%\n\nInflation\n\n$23.9T\n\nGrowth\n\nSource · Macro database · 00:00 AEDT Tue 6 Oct · Published observations\n\nTreasury Yield Curve\nFull maturity spectrum: 3M → 2Y → 5Y → 10Y → 30Y\n3.6%\n3.9%\n4.2%\n4.4%\n4.7%\n4.10%\n3M\n3.80%\n2Y\n3.90%\n5Y\n4.20%\n10Y\n4.50%\n30Y\n2s10s Spread: 0.40% Normal\n3m10y Spread: 0.10% Normal\nFed Funds: 4.25%\nMacro evidence5 model factors · rates and cross-asset observations\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "MixedScore -10 · neutralRates, liquidity, growth and inflation observations.",
+          "top": 224,
+          "bottom": 354
+        }
+      ],
+      "charts": [
+        {
+          "top": 655,
+          "bottom": 925
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro\nPublished macro observations\n\nMixed\n\nScore -10 · neutral\n\nRates, liquidity, growth and inflation observations.\n\n4.20%\n\nRates\n\n0.40%\n\nCurve\n\n2.7%\n\nInflation\n\n$23.9T\n\nGrowth\n\nSource · Macro database · 00:00 AEDT Tue 6 Oct · Published observations\n\nTreasury Yield Curve\nFull maturity spectrum: 3M → 2Y → 5Y → 10Y → 30Y\n3.6%\n3.9%\n4.2%\n4.4%\n4.7%\n4.10%\n3M\n3.80%\n2Y\n3.90%\n5Y\n4.20%\n10Y\n4.50%\n30Y\n2s10s Spread: 0.40% Normal\n3m10y Spread: 0.10% Normal\nFed Funds: 4.25%\nMacro evidence5 model factors · rates and cross-asset observations\nUS: Regular session\nCloses 16:00 ET\nCrypto\nUS session · ET\nDecision\nRates\nYieldcurve\nCommodities\nCorrelation\nSentiment\nInflation\nGrowth\nEmployment\nImplications\nAssessment detailScore -10\nAssessment\nMixed\nRisk State\nNeutral\nLiquidity\nstable\nVolatility\nnormal\nUSD Regime (inferred from rates, not scored)\nRising\nRates Regime\ntightening\nScore\nConfidence\n-10\n35%\nLiquidity\nNeutral (25)\nVol Regime\nNeutral (20)\nRates Regime\nNegative (15)\nGrowth\nPositive (15)\nInflation\nNegative (10)\nMixed macro evidence.\nRates, inflation, growth, employmentOne line per measured series\nRates & Real Rates\n4.20%\n10Y Treasury (as of 2026-10-02) • tightening\nInflation\n2.7%\nCPI YoY • elevated\nGrowth\n$23.9T\nReal GDP • up\nEmployment\n4.3%\nUnemployment • stable\nCommoditiesTop 4, then the rest\nCommodities Monitor\nOil, metals, agriculture — growth proxy and inflation signals\nMarket data · source dates shown per row · educational context only\nEligible 1/2. Stale and excluded from live commodity context: WTI. Latest eligible source date: 2026-10-02.\nGold\nSome data is older; check its date before researching further.\n2650.22\n+1.3%\nMetals · USD/oz\nObservation 2026-10-02\nOil\nNot collected\nNot collected\nNot collected\nEnergy · Unit not supplied\nObservation not dated\nMore macro detailCorrelation, sentiment, and implications\nCross-Asset Correlation Regime\nBTC↔SPY correlation, VIX regime, USD trend, sector rotation\nHeuristic model · educational context · live inputs, dated below\nHow this differs from Risk State: Risk State is a slow macro score (rates, liquidity, growth, inflation); this panel reads the current tape (BTC and SPY moves, VIX level, USD trend, BTC↔SPY correlation), so the two can disagree.\nRegime\nRisk Off\nRisk score\n48/100\nWeighting factor\n0.75x\n\nNot collected: VIX regime · USD trend · BTC–SPY correlation (20d) · Sector rotation · Gold safe haven.\n\nNot collected\nEvidence does not support a clear assessment.\nInputs\nVIX: Not collected\nMarket Sentiment — SPY Put/Call Ratio\nAggregate options positioning as a contrarian sentiment indicator\nComputed from options OI · educational indicator only\nP/C Ratio\n1.2\nSignal\nMore put than call open interest\nTotal Call OI\n10,000\nTotal Put OI\n12,000\nImplications Matrix\nRegime → educational scenario map across asset classes\nEquities\nQuality growth context; small-cap risk reduced.\nCrypto\nBTC + majors context only.\nVol\nNormal volatility; standard scenario review.\nUSD\nUSD headwind for risk assets.\nRates\nDuration headwind.\nMacro Event Awareness\nKey recurring catalysts to monitor\nFOMC Rate Decision / Minutes\nSee Fed calendar\nHigh\nInitial Jobless Claims\nThursdays 08:30 ET\nHigh\nPCE / CPI Inflation Release\nMonthly schedule\nHigh\n\nCheck an economic calendar for exact dates and times.\n\nDeep Dive: Rates\n10Y: 4.20% • 2Y: 3.80% • Curve: 0.40% (Normal)\nDeep Dive: Inflation\nCPI: 318.1 • Inflation YoY: 2.7% • Trend: elevated\nDeep Dive: Employment\nUnemployment: 4.3% • Trend: stable\nDeep Dive: Growth\nReal GDP: $23.9T • Trend: up\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "hits": [],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Alpha Vantage Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 1
+    },
+    {
+      "tab": "macro",
+      "tier": "pro",
+      "dataCase": "missing",
+      "observedAt": "2026-10-05T14:15:23.226Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro\nPublished macro observations\n\nMacro assessment not collected\n\nRates, liquidity, growth and inflation observations.\n\nNot collected: Required macro observations.\n\nSource · Macro database · 00:00 AEDT Tue 6 Oct · Published observations\n\nTreasury Yield Curve\nFull maturity spectrum: 3M → 2Y → 5Y → 10Y → 30Y\nYield curve not collected: at least two measured maturities are needed.\nMacro evidence5 model factors · rates and cross-asset observations\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "Macro assessment not collectedRates, liquidity, growth and inflation observations.",
+          "top": 191.5,
+          "bottom": 281.5
+        }
+      ],
+      "charts": [
+        {
+          "top": 412.5,
+          "bottom": 514.5
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro\nPublished macro observations\n\nMacro assessment not collected\n\nRates, liquidity, growth and inflation observations.\n\nNot collected: Required macro observations.\n\nSource · Macro database · 00:00 AEDT Tue 6 Oct · Published observations\n\nTreasury Yield Curve\nFull maturity spectrum: 3M → 2Y → 5Y → 10Y → 30Y\nYield curve not collected: at least two measured maturities are needed.\nMacro evidence5 model factors · rates and cross-asset observations\nUS: Regular session\nCloses 16:00 ET\nCrypto\nUS session · ET\nDecision\nRates\nYieldcurve\nCommodities\nCorrelation\nSentiment\nInflation\nGrowth\nEmployment\nImplications\nRates, inflation, growth, employmentOne line per measured series\nRates & Real Rates\nNot collected\n10Y Treasury (as of 2026-10-02) • easing\nInflation\nNot collected\nCPI YoY • elevated\nGrowth\nNot collected\nReal GDP • Not collected\nEmployment\nNot collected\nUnemployment • stable\nCommoditiesTop 4, then the rest\nCommodities Monitor\nOil, metals, agriculture — growth proxy and inflation signals\nMarket data · source dates shown per row · educational context only\nEligible 1/2. Stale and excluded from live commodity context: WTI. Latest eligible source date: 2026-10-02.\nGold\nSome data is older; check its date before researching further.\n2650.22\n+1.3%\nMetals · USD/oz\nObservation 2026-10-02\nOil\nNot collected\nNot collected\nNot collected\nEnergy · Unit not supplied\nObservation not dated\nMore macro detailCorrelation, sentiment, and implications\nCross-Asset Correlation Regime\nBTC↔SPY correlation, VIX regime, USD trend, sector rotation\nHeuristic model · educational context · live inputs, dated below\nHow this differs from Risk State: Risk State is a slow macro score (rates, liquidity, growth, inflation); this panel reads the current tape (BTC and SPY moves, VIX level, USD trend, BTC↔SPY correlation), so the two can disagree.\nCross-asset assessment not collected.\nInputs\nVIX: Not collected\nMarket Sentiment — SPY Put/Call Ratio\nAggregate options positioning as a contrarian sentiment indicator\nComputed from options OI · educational indicator only\nOptions positioning not collected: call open interest is absent.\nMacro Event Awareness\nKey recurring catalysts to monitor\nFOMC Rate Decision / Minutes\nSee Fed calendar\nHigh\nInitial Jobless Claims\nThursdays 08:30 ET\nHigh\nPCE / CPI Inflation Release\nMonthly schedule\nHigh\n\nCheck an economic calendar for exact dates and times.\n\nDeep Dive: Rates\n10Y: Not collected • 2Y: Not collected • Curve: Not collected (Not collected)\nDeep Dive: Inflation\nCPI: Not collected • Inflation YoY: Not collected • Trend: elevated\nDeep Dive: Employment\nUnemployment: Not collected • Trend: stable\nDeep Dive: Growth\nReal GDP: Not collected • Trend: Not collected\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "hits": [],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Alpha Vantage Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 1
+    },
+    {
+      "tab": "macro",
+      "tier": "pro",
+      "dataCase": "missing",
+      "observedAt": "2026-10-05T14:15:25.171Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 953,
+      "scrollWidth": 390,
+      "screens": 1.1291469194312795,
+      "text": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro\nPublished macro observations\n\nMacro assessment not collected\n\nRates, liquidity, growth and inflation observations.\n\nNot collected: Required macro observations.\n\nSource · Macro database · 00:00 AEDT Tue 6 Oct · Published observations\n\nTreasury Yield Curve\nFull maturity spectrum: 3M → 2Y → 5Y → 10Y → 30Y\nYield curve not collected: at least two measured maturities are needed.\nMacro evidence5 model factors · rates and cross-asset observations\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "Macro assessment not collectedRates, liquidity, growth and inflation observations.",
+          "top": 224,
+          "bottom": 370
+        }
+      ],
+      "charts": [
+        {
+          "top": 513,
+          "bottom": 623
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro\nPublished macro observations\n\nMacro assessment not collected\n\nRates, liquidity, growth and inflation observations.\n\nNot collected: Required macro observations.\n\nSource · Macro database · 00:00 AEDT Tue 6 Oct · Published observations\n\nTreasury Yield Curve\nFull maturity spectrum: 3M → 2Y → 5Y → 10Y → 30Y\nYield curve not collected: at least two measured maturities are needed.\nMacro evidence5 model factors · rates and cross-asset observations\nUS: Regular session\nCloses 16:00 ET\nCrypto\nUS session · ET\nDecision\nRates\nYieldcurve\nCommodities\nCorrelation\nSentiment\nInflation\nGrowth\nEmployment\nImplications\nRates, inflation, growth, employmentOne line per measured series\nRates & Real Rates\nNot collected\n10Y Treasury (as of 2026-10-02) • easing\nInflation\nNot collected\nCPI YoY • elevated\nGrowth\nNot collected\nReal GDP • Not collected\nEmployment\nNot collected\nUnemployment • stable\nCommoditiesTop 4, then the rest\nCommodities Monitor\nOil, metals, agriculture — growth proxy and inflation signals\nMarket data · source dates shown per row · educational context only\nEligible 1/2. Stale and excluded from live commodity context: WTI. Latest eligible source date: 2026-10-02.\nGold\nSome data is older; check its date before researching further.\n2650.22\n+1.3%\nMetals · USD/oz\nObservation 2026-10-02\nOil\nNot collected\nNot collected\nNot collected\nEnergy · Unit not supplied\nObservation not dated\nMore macro detailCorrelation, sentiment, and implications\nCross-Asset Correlation Regime\nBTC↔SPY correlation, VIX regime, USD trend, sector rotation\nHeuristic model · educational context · live inputs, dated below\nHow this differs from Risk State: Risk State is a slow macro score (rates, liquidity, growth, inflation); this panel reads the current tape (BTC and SPY moves, VIX level, USD trend, BTC↔SPY correlation), so the two can disagree.\nCross-asset assessment not collected.\nInputs\nVIX: Not collected\nMarket Sentiment — SPY Put/Call Ratio\nAggregate options positioning as a contrarian sentiment indicator\nComputed from options OI · educational indicator only\nOptions positioning not collected: call open interest is absent.\nMacro Event Awareness\nKey recurring catalysts to monitor\nFOMC Rate Decision / Minutes\nSee Fed calendar\nHigh\nInitial Jobless Claims\nThursdays 08:30 ET\nHigh\nPCE / CPI Inflation Release\nMonthly schedule\nHigh\n\nCheck an economic calendar for exact dates and times.\n\nDeep Dive: Rates\n10Y: Not collected • 2Y: Not collected • Curve: Not collected (Not collected)\nDeep Dive: Inflation\nCPI: Not collected • Inflation YoY: Not collected • Trend: elevated\nDeep Dive: Employment\nUnemployment: Not collected • Trend: stable\nDeep Dive: Growth\nReal GDP: Not collected • Trend: Not collected\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "hits": [],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Alpha Vantage Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 1
+    },
+    {
+      "tab": "macro",
+      "tier": "pro",
+      "dataCase": "failed",
+      "observedAt": "2026-10-05T14:15:27.054Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro\n\nMacro observations could not be loaded.\n\nTry again\n\nSource · Macro database · Not available right now · Published observations not collected\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "Macro observations could not be loaded.",
+          "top": 138.5,
+          "bottom": 196.5
+        }
+      ],
+      "charts": [],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro\n\nMacro observations could not be loaded.\n\nTry again\n\nSource · Macro database · Not available right now · Published observations not collected\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "hits": [],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 1
+    },
+    {
+      "tab": "macro",
+      "tier": "pro",
+      "dataCase": "failed",
+      "observedAt": "2026-10-05T14:15:28.867Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro\n\nMacro observations could not be loaded.\n\nTry again\n\nSource · Macro database · Not available right now · Published observations not collected\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "Macro observations could not be loaded.",
+          "top": 155,
+          "bottom": 213
+        }
+      ],
+      "charts": [],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro\n\nMacro observations could not be loaded.\n\nTry again\n\nSource · Macro database · Not available right now · Published observations not collected\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "hits": [],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 1
+    },
+    {
+      "tab": "macro",
+      "tier": "free",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T14:15:30.683Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro summary\n\nMacro observations not collected for this view.\n\nSource · Macro database · Not available right now · Published observation\n\nExplore macro research\n\nResearch and education only. Not a trade instruction.\n\nOpen the free Macro summary\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "Macro observations not collected for this view.",
+          "top": 158.5,
+          "bottom": 208.5
+        }
+      ],
+      "charts": [],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro summary\n\nMacro observations not collected for this view.\n\nSource · Macro database · Not available right now · Published observation\n\nExplore macro research\n\nResearch and education only. Not a trade instruction.\n\nOpen the free Macro summary\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "hits": [],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 1
+    },
+    {
+      "tab": "macro",
+      "tier": "free",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T14:15:32.602Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro summary\n\nMacro observations not collected for this view.\n\nSource · Macro database · Not available right now · Published observation\n\nExplore macro research\n\nResearch and education only. Not a trade instruction.\n\nOpen the free Macro summary\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "Macro observations not collected for this view.",
+          "top": 175,
+          "bottom": 249
+        }
+      ],
+      "charts": [],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro summary\n\nMacro observations not collected for this view.\n\nSource · Macro database · Not available right now · Published observation\n\nExplore macro research\n\nResearch and education only. Not a trade instruction.\n\nOpen the free Macro summary\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "hits": [],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 1
+    },
+    {
+      "tab": "macro",
+      "tier": "anonymous",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T14:15:34.638Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro summary\n\nMacro observations not collected for this view.\n\nSource · Macro database · Not available right now · Published observation\n\nExplore macro research\n\nResearch and education only. Not a trade instruction.\n\nOpen the free Macro summary\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "Macro observations not collected for this view.",
+          "top": 299.5,
+          "bottom": 349.5
+        }
+      ],
+      "charts": [],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro summary\n\nMacro observations not collected for this view.\n\nSource · Macro database · Not available right now · Published observation\n\nExplore macro research\n\nResearch and education only. Not a trade instruction.\n\nOpen the free Macro summary\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "hits": [],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 1
+    },
+    {
+      "tab": "macro",
+      "tier": "anonymous",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T14:15:36.552Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 908,
+      "scrollWidth": 390,
+      "screens": 1.0758293838862558,
+      "text": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro summary\n\nMacro observations not collected for this view.\n\nSource · Macro database · Not available right now · Published observation\n\nExplore macro research\n\nResearch and education only. Not a trade instruction.\n\nOpen the free Macro summary\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "Macro observations not collected for this view.",
+          "top": 384,
+          "bottom": 458
+        }
+      ],
+      "charts": [],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nRISK-ON\nmarket dataRisk-On\nmarket dataRisk-On\nMacro summary\n\nMacro observations not collected for this view.\n\nSource · Macro database · Not available right now · Published observation\n\nExplore macro research\n\nResearch and education only. Not a trade instruction.\n\nOpen the free Macro summary\n\nMy Pages\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n✕\nMSP AI",
+      "hits": [],
+      "attributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Minimize MSP AI",
+      "attributeHits": [],
+      "expandedSourceCount": 1
+    }
+  ],
+  "requests": [
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/correlation-regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/economic-indicators",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/correlation-regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/economic-indicators",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/correlation-regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/economic-indicators",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/correlation-regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/economic-indicators",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/market-status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/correlation-regime",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/economic-indicators",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/correlation-regime",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/economic-indicators",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/correlation-regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/correlation-regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/correlation-regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/commodities",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/correlation-regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/options-chain",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    }
+  ],
+  "errors": [],
+  "redirects": []
+}
