@@ -1,5 +1,6 @@
 'use client';
 
+import EarningsView from '@/components/research/EarningsView';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import TabBar from '@/components/visual/TabBar';
@@ -13,11 +14,11 @@ import PaidPreviewGate from '@/components/free/PaidPreviewGate';
    Real API data: /api/news-sentiment + /api/economic-calendar + /api/earnings
    --------------------------------------------------------------------------- */
 
-import { useState, useMemo, useEffect, useCallback, type KeyboardEvent } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { useV2 } from '@/app/v2/_lib/V2Context';
-import { useNews, useEconomicCalendar, useEarningsCalendar, type NewsArticle, type EconomicEvent, type EarningsEntry } from '@/app/v2/_lib/api';
+import { useNews, useEconomicCalendar, useEarningsCalendar, type NewsArticle, type EconomicEvent } from '@/app/v2/_lib/api';
 import { Card, Badge, ImpactDot, UpgradeGate } from '@/app/v2/_components/ui';
 import LockedPreview from '@/components/free/LockedPreview';
 import FreeLoading from '@/components/free/Loading';
@@ -197,13 +198,6 @@ function ResearchPagePaid() {
     }));
   }, []);
 
-  const onSymbolRowKey = useCallback((event: KeyboardEvent, symbol: string) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      openGoldenEgg(symbol);
-    }
-  }, [openGoldenEgg]);
-
   const refreshSavedCases = useCallback(async () => {
     setSavedLoading(true);
     setSavedError(null);
@@ -360,73 +354,9 @@ function ResearchPagePaid() {
 
       {/* -- EARNINGS ------------------------------------------------- */}
       {tab === 'Earnings' && (
-        <Card>
-          {earnings.loading ? <SkeletonRows n={8} /> : (
-            <div className="space-y-4">
-              {[
-                { label: 'This Week', items: thisWeek },
-                { label: 'Next Week', items: nextWeek },
-                { label: 'Major Earnings', items: majorEarnings },
-              ].map(group => (
-                <div key={group.label}>
-                  <div className="text-[10px] text-slate-500 uppercase mb-2">{group.label} ({group.items.length})</div>
-                  {group.items.length === 0 ? (
-                    <div className="text-[10px] text-slate-600 py-2">None</div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b border-[var(--msp-border)]">
-                            <th scope="col" className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Symbol</th>
-                            <th scope="col" className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Company</th>
-                            <th scope="col" className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Report Date</th>
-                            <th scope="col" className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Estimate</th>
-                            <th scope="col" className="text-right py-1.5 px-2 text-[10px] uppercase text-slate-500">Save</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {group.items.map((e: EarningsEntry, i: number) => (
-                            <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(e.symbol)} onKeyDown={(event) => onSymbolRowKey(event, e.symbol)} tabIndex={0} aria-label={`Open ${e.symbol} earnings in Symbol`}>
-                              <td className="py-1.5 px-2 text-emerald-400 font-semibold">{e.symbol}</td>
-                              <td className="py-1.5 px-2 text-white">{e.name}</td>
-                              <td className="py-1.5 px-2 text-slate-400">{e.reportDate}</td>
-                              <td className="py-1.5 px-2 text-slate-300">{e.estimate != null ? `$${e.estimate.toFixed(2)}` : '—'}</td>
-                              <td className="py-1.5 px-2 text-right">
-                                {(() => {
-                                  const st = watchlistStatus[e.symbol];
-                                  const label = st === 'adding' ? 'Adding…'
-                                    : st === 'added' ? 'Added ✓'
-                                    : st === 'exists' ? 'On list ✓'
-                                    : st === 'signin' ? 'Sign in'
-                                    : st === 'error' ? 'Retry'
-                                    : '+ Watchlist';
-                                  const done = st === 'added' || st === 'exists';
-                                  return (
-                                    <button
-                                      type="button"
-                                      onClick={(ev) => { ev.stopPropagation(); if (st !== 'adding' && !done) handleAddToWatchlist(e.symbol); }}
-                                      disabled={st === 'adding' || done}
-                                      className={`rounded border px-2 py-0.5 text-[10px] font-semibold transition ${done ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300' : 'border-white/15 bg-white/[0.04] text-slate-300 hover:border-emerald-400/40 hover:text-emerald-200'}`}
-                                      aria-label={`Add ${e.symbol} to watchlist`}
-                                      title={st === 'signin' ? 'Sign in to save to your workspace watchlist' : `Add ${e.symbol} to your workspace watchlist`}
-                                    >
-                                      {label}
-                                    </button>
-                                  );
-                                })()}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          {earnings.error && <div className="text-[10px] text-red-400/60 mt-2">Error: {earnings.error}</div>}
-        </Card>
+        <Card><EarningsView thisWeek={thisWeek} nextWeek={nextWeek} majorEarnings={majorEarnings}
+          loading={earnings.loading} error={earnings.error} watchlistStatus={watchlistStatus}
+          onOpenSymbol={openGoldenEgg} onAddToWatchlist={handleAddToWatchlist} /></Card>
       )}
 
       {/* -- SAVED CASES --------------------------------------------- */}
