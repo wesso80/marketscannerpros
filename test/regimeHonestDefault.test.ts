@@ -66,18 +66,19 @@ describe('GET /api/regime (OV-1)', () => {
     expect(body).not.toHaveProperty('sizing');
   });
 
-  it('uses market data when stored, and lists account signals as context only', async () => {
+  it('uses market data when stored, and keeps account context off the regime', async () => {
     mocks.overlay.mockResolvedValue(inputs());
-    mocks.q.mockImplementation(async (sql: string) => sql.includes('FROM context_state')
-      ? [{ risk_environment: 'risk_off', context_state: {}, updated_at: new Date(NOW - 60_000).toISOString() }]
+    mocks.q.mockImplementation(async (sql: string) => sql.includes('FROM operator_state')
+      ? [{ risk_environment: 'LOW', updated_at: new Date(NOW - 60_000).toISOString() }]
       : []);
     const { status, body } = await call();
     vi.useRealTimers();
     expect(status).toBe(200);
     expect(body).toMatchObject({ available: true, basis: 'market', regime: 'TREND_UP', riskLevel: 'low' });
     expect(body.asOf).toBe(new Date(`${day(1)}T00:00:00Z`).toISOString());
-    expect(body.signals[0]).toMatchObject({ source: 'market_data', kind: 'market', counted: true, stale: false });
-    expect(body.signals[1]).toMatchObject({ source: 'operator_context', kind: 'workspace', counted: false });
+    expect(body.signals).toEqual([expect.objectContaining({ source: 'market_data', kind: 'market', counted: true, stale: false })]);
+    expect(body.operatorContext).toMatchObject({ riskEnvironment: 'LOW' });
+    expect(body.signals.some((sig: { source?: string }) => sig.source === 'operator_context')).toBe(false);
     expect(body).not.toHaveProperty('sizing');
   });
 
@@ -103,14 +104,23 @@ describe('GET /api/regime (OV-1)', () => {
     expect(body.reason).toContain('Market data unavailable');
   });
 
-  it('falls back to account signals only when market data is unavailable', async () => {
-    mocks.q.mockImplementation(async (sql: string) => sql.includes('FROM risk_governor_snapshots')
-      ? [{ risk_mode: 'trend_down', updated_at: new Date(NOW - 60_000).toISOString() }]
+  it('stays unavailable when market data is missing, even if operator_state.risk_environment is LOW', async () => {
+    mocks.q.mockImplementation(async (sql: string) => sql.includes('FROM operator_state')
+      ? [{ risk_environment: 'LOW', updated_at: new Date(NOW - 60_000).toISOString() }]
       : []);
-    const { body } = await call();
+    const { status, body } = await call();
     vi.useRealTimers();
-    expect(body).toMatchObject({ available: true, basis: 'workspace', regime: 'TREND_DOWN' });
-    expect(body.signals).toHaveLength(1);
+    expect(status).toBe(200);
+    expect(body).toMatchObject({
+      available: false,
+      regime: null,
+      riskLevel: null,
+      permission: null,
+      signals: [],
+      operatorContext: { riskEnvironment: 'LOW' },
+    });
+    expect(body.regime).not.toBe('RANGE_NEUTRAL');
+    expect(body.reason).toContain('Market data unavailable');
   });
 
   it('flags the error path with HTTP 503 and available:false', () => {
@@ -147,6 +157,12 @@ describe('regime consumers (OV-1)', () => {
     const explorer = readFileSync('app/tools/explorer/page.tsx', 'utf8');
     expect(explorer).toContain('Regime unavailable');
     expect(explorer).not.toContain('Live Market Regime Signals');
+    const egg = readFileSync('app/tools/golden-egg/page.tsx', 'utf8');
+    for (const src of [explorer, egg]) {
+      expect(src).toContain('operatorContext');
+      expect(src).toContain('Context only');
+      expect(src).toContain('Not a market regime and not a setup signal.');
+    }
     const bar = readFileSync('app/v2/_components/RegimeBar.tsx', 'utf8');
     expect(bar).not.toContain("|| 'neutral'");
     for (const file of ['components/RegimeBanner.tsx', 'components/operator/RiskManagerMode.tsx', 'components/operator/SessionStartBriefing.tsx']) {

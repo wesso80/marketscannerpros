@@ -431,11 +431,11 @@ export default function ExplorerPage() {
         <Card>
           <h3 className="text-sm font-semibold text-white mb-3">Cross-Market Influence Map</h3>
 
-          {/* Regime signals (market data first; account signals shown for context) */}
+          {/* Market regime comes from stored market data. Account context is the separate card below. */}
           {!regime.data && !regime.loading && (
             <div className="mb-4 rounded-lg bg-[var(--msp-panel-2)] p-3 text-[12px] text-slate-400">
               <div className="text-[11px] text-slate-500 uppercase mb-1">Market Regime Signals</div>
-              Regime unavailable — no stored market data (VIX, SPY trend) or account signals to classify it.
+              Regime unavailable — no stored market data (VIX, SPY trend).
             </div>
           )}
           {regime.data?.signals && regime.data.signals.length > 0 && (() => {
@@ -485,6 +485,23 @@ export default function ExplorerPage() {
             </div>
             );
           })()}
+
+          {regime.data?.operatorContext && (
+            <div className="mb-4">
+              <div className="text-[11px] text-slate-500 uppercase mb-2">Context only</div>
+              <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-white">Account context</span>
+                  <span className="text-[11px] font-semibold text-slate-400">Context only</span>
+                </div>
+                <div className="mt-1 text-[11px] text-slate-400">
+                  Stored risk environment: {regime.data.operatorContext.riskEnvironment ?? 'not set'}
+                  {regime.data.operatorContext.stale ? ' · stale' : ''}
+                </div>
+                <div className="mt-1 text-[10px] text-slate-500">Not a market regime and not a setup signal.</div>
+              </div>
+            </div>
+          )}
 
           {/* Static known relationships */}
           <div className="text-[11px] text-slate-500 uppercase mb-2">Known Relationships</div>

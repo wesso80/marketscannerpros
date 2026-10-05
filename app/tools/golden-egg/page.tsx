@@ -202,12 +202,13 @@ function FlagshipMetric({ label, value, tone = 'var(--msp-flat)', ariaLabel }: {
 }
 
 /* ─── Phase 5: Cross-Market Alignment ─── */
-function deriveCrossMarketAlignment(signals?: Array<{ source: string; regime: string; weight: number; stale: boolean }>): { alignment: 'supportive' | 'neutral' | 'headwind'; factors: string[] } {
-  if (!signals || signals.length === 0) return { alignment: 'neutral', factors: ['No cross-market data'] };
+function deriveCrossMarketAlignment(signals?: Array<{ source: string; regime: string; weight: number; stale: boolean; counted?: boolean }>): { alignment: 'supportive' | 'neutral' | 'headwind'; factors: string[] } {
+  const deciding = (signals ?? []).filter((s) => s.counted !== false);
+  if (deciding.length === 0) return { alignment: 'neutral', factors: ['No cross-market data'] };
   const factors: string[] = [];
   let headwinds = 0;
   let tailwinds = 0;
-  for (const s of signals) {
+  for (const s of deciding) {
     if (s.stale) continue;
     const r = s.regime?.toLowerCase() || '';
     if (r === 'risk_off' || r === 'compression') { headwinds += s.weight; factors.push(`${s.source}: ${s.regime} (headwind)`); }
@@ -1133,12 +1134,29 @@ export default function GoldenEggPage() {
               </div>
             )}
 
-            {/* Dynamic signals from regime API */}
-            {!geCanonical?.crossMarket && regime.data?.signals && regime.data.signals.length > 0 && (
+            {regime.data?.operatorContext && (
+              <div className="mb-4">
+                <div className="text-[11px] text-slate-500 uppercase mb-2">Context only</div>
+                <div className="bg-[var(--msp-panel-2)] rounded-lg p-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-white">Account context</span>
+                    <span className="text-[11px] font-semibold text-slate-400">Context only</span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-slate-400">
+                    Stored risk environment: {regime.data.operatorContext.riskEnvironment ?? 'not set'}
+                    {regime.data.operatorContext.stale ? ' · stale' : ''}
+                  </div>
+                  <div className="mt-1 text-[10px] text-slate-500">Not a market regime and not a setup signal.</div>
+                </div>
+              </div>
+            )}
+
+            {/* Dynamic signals from regime API. Account context is the card above, not one of these setups. */}
+            {!geCanonical?.crossMarket && regime.data?.signals && regime.data.signals.some((sig) => sig.counted !== false) && (
               <div className="mb-4">
                 <div className="text-[11px] text-slate-500 uppercase mb-2">Live Market Setups</div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {regime.data.signals.map((sig: any, i: number) => {
+                  {regime.data.signals.filter((sig) => sig.counted !== false).map((sig: any, i: number) => {
                     const r = sig.regime?.toLowerCase() || '';
                     const isHeadwind = r === 'risk_off' || r === 'compression';
                     const isTailwind = r === 'trend' || r === 'expansion' || r === 'risk_on';

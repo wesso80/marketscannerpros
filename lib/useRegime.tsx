@@ -31,6 +31,8 @@ export interface UnifiedRegime {
   /** Stale deciding inputs, as a caution (does not change riskLevel). Missing on older responses. */
   dataQuality?: RegimeDataQuality;
   signals: RegimeSignal[];
+  /** Account context. Present only as context; it is not the regime. */
+  operatorContext?: { riskEnvironment: string | null; asOf: string | null; stale: boolean } | null;
   /** Time of the underlying data (not the response time). */
   asOf?: string | null;
   updatedAt: string;
@@ -40,7 +42,7 @@ interface RegimeContextValue {
   data: UnifiedRegime | null;
   loading: boolean;
   error: string | null;
-  /** Set when the regime is unavailable (no market data and no account signals, or an error). */
+  /** Set when the market regime is unavailable, or the request failed. Account context is not a regime. */
   unavailableReason: string | null;
   refresh: () => void;
 }

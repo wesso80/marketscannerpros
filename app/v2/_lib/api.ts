@@ -65,6 +65,8 @@ export interface RegimeResponse {
   /** Stale deciding inputs, as a caution (does not change riskLevel). Missing on older responses. */
   dataQuality?: { stale: boolean; staleSources: string[]; note: string | null };
   signals: Array<{ source: string; regime: string; weight: number; stale: boolean; kind?: 'market' | 'workspace'; counted?: boolean; asOf?: string | null; detail?: string }>;
+  /** Account context from operator_state. Not a market regime and not a setup signal. */
+  operatorContext?: { riskEnvironment: string | null; asOf: string | null; stale: boolean } | null;
   /** Time of the underlying data (not the response time). */
   asOf?: string | null;
   updatedAt: string;
