@@ -10,7 +10,7 @@ export function researchPrice(value: unknown): string {
 }
 export function researchLabel(value: unknown): string {
   if (typeof value !== 'string' || !value || /^(unknown|unavailable|n\/a|none)$/i.test(value)) return 'Not measured';
-  const labels: Record<string,string> = { ATM: 'At the money', ITM: 'In the money', OTM: 'Out of the money', EOD: 'End of day', NO_SETUP: 'No pattern found', NO_TREND: 'No clear trend', FULL_OFFENSE: 'Higher risk tolerance', LOCKDOWN: 'Risk limit reached', DEFENSIVE: 'Reduced risk tolerance', PDL: 'Prior day low', PDH: 'Prior day high', EQL: 'Equal lows', EQH: 'Equal highs', ONH: 'Overnight high', ONL: 'Overnight low', REALTIME: 'Provider current', DELAYED: 'Delayed', STALE: 'Older observation', DEGRADED: 'Limited data', LONG_GAMMA: 'Positive gamma', SHORT_GAMMA: 'Negative gamma' };
+  const labels: Record<string,string> = { ATM: 'At the money', ITM: 'In the money', OTM: 'Out of the money', EOD: 'End of day', NO_SETUP: 'No pattern found', NO_TREND: 'No clear trend', FULL_OFFENSE: 'Higher risk tolerance', LOCKDOWN: 'Risk limit reached', DEFENSIVE: 'Reduced risk tolerance', PDL: 'Prior day low', PDH: 'Prior day high', EQL: 'Equal lows', EQH: 'Equal highs', ONH: 'Overnight high', ONL: 'Overnight low', REALTIME: 'Provider current', DELAYED: 'Delayed', STALE: 'Older observation', DEGRADED: 'Limited data', ALPHA_VANTAGE: 'Alpha Vantage', COINGECKO: 'CoinGecko', LONG_GAMMA: 'Positive gamma', SHORT_GAMMA: 'Negative gamma' };
   return labels[value.toUpperCase()] || value.replace(/_/g, ' ').toLowerCase().replace(/^./, c => c.toUpperCase());
 }
 export function researchTime(value: unknown): string {
@@ -31,4 +31,10 @@ export function researchReason(value: unknown): string {
     .replace(/Trade Permission Score/gi, 'Alignment score').replace(/Trade Permission/gi, 'Analysis status').replace(/playbooks?/gi, 'scenario').replace(/\bTPS\b/g, 'Alignment score')
     .replace(/\b[A-Z]+(?:_[A-Z]+)+\b/g, code => researchLabel(code))
     .replace(/\bUNKNOWN\b/g, 'not measured');
+}
+
+export function researchDate(value: unknown): string {
+ if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return 'Not supplied';
+ const date = new Date(`${value}T12:00:00Z`);
+ return Number.isNaN(date.getTime()) ? 'Not supplied' : date.toLocaleDateString('en-AU', {timeZone:'UTC',weekday:'short',day:'numeric',month:'short'}).replace(',', '');
 }

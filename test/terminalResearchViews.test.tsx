@@ -17,7 +17,7 @@ describe('Terminal research presentation',()=>{
  it('keeps capital blocks visible, folds evidence, and preserves numeric inputs',()=>{
   const before=JSON.stringify(capital),refresh=vi.fn();
   const {container}=render(<CapitalPressureView symbol="MU" data={capital} loading={false} error={null} onRefresh={refresh}/>);
-  assertCompact(container);expect(screen.getByText('Pressure conditions are not aligned')).toBeTruthy();expect(screen.getByText('Prior day low')).toBeTruthy();expect(screen.getByText('71')).toBeTruthy();expect(screen.getByText('$249.35')).toBeTruthy();
+  assertCompact(container);expect(screen.getByText('Directional score').closest('details')).not.toBeNull();expect(container.textContent).not.toContain('Bullish');expect(screen.getByText('Pressure conditions are not aligned')).toBeTruthy();expect(screen.getByText('Prior day low')).toBeTruthy();expect(screen.getByText('71')).toBeTruthy();expect(screen.getByText('$249.35')).toBeTruthy();
   fireEvent.click(screen.getByRole('button',{name:'Refresh'}));expect(refresh).toHaveBeenCalledOnce();expect(JSON.stringify(capital)).toBe(before);
  });
  it('keeps a hard risk block above folds even if other alignment conditions pass',()=>{
@@ -40,7 +40,7 @@ describe('Terminal research presentation',()=>{
  it('shows options verdict first, uses no duplicate symbol input and keeps one source across folds',()=>{
   const before=JSON.stringify(options),scan=vi.fn();
   const {container}=render(<OptionsResearchView symbol="MU" result={options} alignment="ALLOW" blocked={false} loading={false} error={null} onScan={scan} controls={null}/>);
-  assertCompact(container);expect(screen.getByText('Options conditions are aligned')).toBeTruthy();expect(container.querySelector('input')).toBeNull();expect(screen.getByText('49.4%')).toBeTruthy();expect(screen.getByText('109,234')).toBeTruthy();fireEvent.click(screen.getByRole('button',{name:'Run again'}));expect(scan).toHaveBeenCalledOnce();expect(JSON.stringify(options)).toBe(before);
+  assertCompact(container);expect(container.textContent).toContain('Fri 9 Oct');expect(container.textContent).toContain('Alpha Vantage');expect(container.textContent).not.toContain('2026-10-09');expect(screen.getByText('Options conditions are aligned')).toBeTruthy();expect(container.querySelector('input')).toBeNull();expect(screen.getByText('49.4%')).toBeTruthy();expect(screen.getByText('109,234')).toBeTruthy();fireEvent.click(screen.getByRole('button',{name:'Run again'}));expect(scan).toHaveBeenCalledOnce();expect(JSON.stringify(options)).toBe(before);
  });
  it('withholds blocked contract, score and expected move rather than inventing a result',()=>{
   const {container}=render(<OptionsResearchView symbol="MU" result={{...options,entryTiming:{reason:'Market is closed'},dataConfidenceCaps:['Quote observation is stale']}} blocked={true} loading={false} error={null} onScan={()=>{}} controls={null}/>);
@@ -51,4 +51,9 @@ describe('Terminal research presentation',()=>{
   expect(screen.getByText('Options analysis has not run for MU')).toBeTruthy();expect(container.querySelector('dl')).toBeNull();expect(container.textContent).not.toMatch(/Ready|Results 0/);
  });
  it('formats missing and raw values only in the UI',()=>{expect(researchNumber(NaN)).toBe('Not measured');expect(researchPrice(undefined)).toBe('Not measured');expect(researchLabel('NO_SETUP')).toBe('No pattern found');expect(researchLabel('UNKNOWN')).toBe('Not measured');expect(researchPrice(.000000123456)).toBe('$0.0000001235');});
+});
+
+it('suppresses headline and zone alignment figures exceeding 57% measured coverage',()=>{
+ const {container}=render(<GravityResearchView symbol="MU" tgm={gravity} coverage={{percent:57,available:['1D'],missing:['1W']} as any} calendar={null} receivedAt={new Date()} empty={false} localDemo={false} error={null} onRefresh={()=>{}} loading={false}/>);
+ expect(screen.getAllByText('Low coverage').length).toBeGreaterThan(0);expect(container.textContent).not.toMatch(/74%|78%/);
 });

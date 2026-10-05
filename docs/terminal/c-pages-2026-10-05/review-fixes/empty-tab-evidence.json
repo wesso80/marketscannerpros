@@ -1,0 +1,412 @@
+{
+  "mocked": true,
+  "root": "/workspace/scratch/0535040d28c6/terminal-research",
+  "results": [
+    {
+      "tab": "options-flow",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "pro",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T09:49:07.575Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 978,
+      "scrollWidth": 390,
+      "screens": 1.1587677725118484,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n4. Flow estimate\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nOptions Flow · Change view\nFigures are estimates from options-chain snapshots, not trade prints. They do not name either side, institutional positioning, hedging intent, or a future price path.\nANALYZE FLOW\nOptions flow feed not collected in this fixture\nOptions flow classification uses bid/ask inference from snapshot data, not real-time trade prints. Direction classification is approximate. Not financial advice.",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        },
+        {
+          "label": "Ticker symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0,
+      "flowState": {
+        "x": 12,
+        "y": 736.75,
+        "width": 366,
+        "height": 49.5
+      }
+    },
+    {
+      "tab": "crypto",
+      "symbol": "BTCUSD",
+      "type": "crypto",
+      "tier": "pro",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T09:49:09.082Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n2. Derivatives map\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nCrypto · Change view\nNot collected for BTC\n\nFunding, open interest and long/short are not in this response. Liquidations are not collected.\n\nOpen market-wide crypto derivatives",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "BTCUSD"
+        }
+      ],
+      "openFolds": 0
+    },
+    {
+      "tab": "time-confluence",
+      "symbol": "BTCUSD",
+      "type": "crypto",
+      "tier": "pro",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T09:49:10.505Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nTime Confluence · Change view\nRun Time Confluence for BTCUSD\nRun Time Confluence",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "BTCUSD"
+        }
+      ],
+      "openFolds": 0,
+      "afterRun": {
+        "screens": 3.447867298578199,
+        "scrollWidth": 390,
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nTime Confluence · Change view\nScalp 15m\n30min\n1H\n4H\nDaily\n3-Day\nWeekly\nMonthly\nYearly\nRun\nneutral • 1H • BTCUSD\nNOT ALIGNED\nCONFLUENCE\n11 / 100\nRISK\nHIGH\nR:R\nUnavailable\n↔ NEUTRAL\nNo directional bias detected — mixed signals across timeframes\n$100.00\nMarket Pressure EngineComposite pressure from time, volatility, liquidity & options\n▾ expand\nFixture feed not collected\nClose Calendar — Forward Schedule\nWhich timeframes close on your target day? Where do closes stack?\n↻ Refresh\nANCHOR\nNow\nToday\nPrior Day\nEnd of Week\nEnd of Month\nPick Date\nHORIZON\n1d\n3d\n7d\n14d\n30d\nAnchor: Mon Oct 5 09:00 UTC\nCRYPTO DAILY UTC\nBasis: UTC\nHorizon: 1d → Tue Oct 6 09:00 UTC\nDaily+ closes in window: 0\nSchedule Basis: Fixture calendar\nCloses on Anchor Day (0)\nFull Schedule (0)\nNo daily+ timeframes close on the anchor day.\nTime Confluence EngineAlignment score, decompression & structure\n▾ expand\nTime Gravity MapMidpoint debt, decompression windows & gravity fields\n▾ expand\n⏰\nTime Confluence Engine\n🟢 Market Open\n🔴 Live\n📅 Today\n🔢 Fib\n📊 Macro\n🗓️ Calendar\nCONFLUENCE SCORE\n?\n0\nLOW\n🔔 Set Confluence Alert\nNotify when score hits strong again\nScore ≥ 6\nScore ≥ 8\nScore ≥ 10\nScore ≥ 12\nScore ≥ 15\nSet Alert\n⏳ NEXT US EQUITY WINDOW (CROSS-MARKET CONTEXT)\n10:00 AM ET\nFirst 30-min candle close\n4h 11m\n🏦 US EQUITY SESSION WINDOWS · ET\n9:30 AM - 10:00 AM\nOpening Range\n10:00 AM - 10:30 AM\nPost-Open\n11:30 AM - 12:00 PM\nEurope Close",
+        "observedAt": "2026-10-05T09:49:11.273Z"
+      }
+    }
+  ],
+  "requests": [
+    {
+      "url": "http://127.0.0.1:3120/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/scanner/top-cached?type=all&limit=5&_ts=1791193746930",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/options-flow?symbol=MU",
+      "method": "GET",
+      "status": 403,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/funding-rates",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/long-short-ratio",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/crypto/open-interest",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/scanner/top-cached?type=all&limit=5&_ts=1791193748433",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/flow?symbol=BTCUSD&marketType=crypto",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/scanner/top-cached?type=all&limit=5&_ts=1791193749875",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/flow?symbol=BTCUSD&marketType=crypto",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/market-pressure?symbol=BTCUSD&scanMode=intraday_1h&sessionMode=extended",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/time-gravity-map?symbol=BTCUSD&price=100&assetType=crypto",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3120/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    }
+  ],
+  "errors": []
+}
