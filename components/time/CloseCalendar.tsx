@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { formatMarketTime } from '@/lib/market/priceStamp';
 import { detectAssetClass } from '@/lib/detectAssetClass';
 import type {
   CloseCalendarAnchor,
@@ -26,43 +27,13 @@ type AssetClass = "crypto" | "equity";
 
 // ── Helpers ──
 
-function formatDate(iso: string, assetClass: AssetClass): string {
-  const d = new Date(iso);
-  if (assetClass === "crypto") {
-    // Crypto: display in UTC (TradingView-style)
-    const parts = new Intl.DateTimeFormat("en-US", {
-      timeZone: "UTC",
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).formatToParts(d);
-    const v = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
-    return `${v("weekday")} ${v("month")} ${v("day")} ${v("hour")}:${v("minute")} UTC`;
-  }
-  // Equity: display in NY timezone
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(d);
-  const v = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
-  const tzLabel = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
-    timeZoneName: "short",
-  }).formatToParts(d).find((p) => p.type === "timeZoneName")?.value ?? "ET";
-  return `${v("weekday")} ${v("month")} ${v("day")} ${v("hour")}:${v("minute")} ${tzLabel}`;
+function formatDate(iso: string, _assetClass: AssetClass): string {
+  return formatMarketTime(iso, Intl.DateTimeFormat().resolvedOptions().timeZone) || 'Not collected';
 }
 
 function formatMinsShort(mins: number | null): string {
-  if (mins === null) return "—";
-  if (mins <= 0) return "NOW";
+  if (mins === null) return "Not collected";
+  if (mins <= 0) return "Now";
   if (mins < 60) return `${Math.round(mins)}m`;
   if (mins < 1440) {
     const h = Math.floor(mins / 60);
@@ -453,7 +424,7 @@ function AnchorDayTable({ rows, assetClass }: { rows: ForwardCloseScheduleRow[];
                     <tr key={row.tf} className={`border-b border-slate-800/50 ${categoryBg(cat)}`}>
                       <td className={`py-1.5 pr-3 font-semibold ${categoryColor(cat)}`}>{row.tf}</td>
                       <td className="py-1.5 pr-3 font-mono text-slate-300">
-                        {row.firstCloseAtISO ? formatDate(row.firstCloseAtISO, assetClass) : "—"}
+                        {row.firstCloseAtISO ? formatDate(row.firstCloseAtISO, assetClass) : "Not collected"}
                       </td>
                       <td className="py-1.5 pr-3 font-mono text-slate-400">
                         {formatMinsShort(row.minsToFirstClose)}
@@ -502,7 +473,7 @@ function FullScheduleTable({ rows, assetClass }: { rows: ForwardCloseScheduleRow
                 </span>
               </td>
               <td className="py-1.5 pr-3 font-mono text-slate-300">
-                {row.firstCloseAtISO ? formatDate(row.firstCloseAtISO, assetClass) : "—"}
+                {row.firstCloseAtISO ? formatDate(row.firstCloseAtISO, assetClass) : "Not collected"}
               </td>
               <td className="py-1.5 pr-3 font-mono text-slate-400">
                 {formatMinsShort(row.minsToFirstClose)}
@@ -512,7 +483,7 @@ function FullScheduleTable({ rows, assetClass }: { rows: ForwardCloseScheduleRow
                 {row.closesOnAnchorDay ? (
                   <span className="inline-block rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-400">YES</span>
                 ) : (
-                  <span className="text-slate-600">—</span>
+                  <span className="text-slate-600">No</span>
                 )}
               </td>
               <td className="py-1.5 text-slate-500">{row.weight}</td>
