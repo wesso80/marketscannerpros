@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { safeNext } from '@/lib/free/safeNext';
+import { trackFunnelEvent } from '@/lib/free/funnel';
 import { FREE_COPY } from '@/components/free/copy';
 
 function VerifyMagicLinkContent() {
@@ -51,6 +52,11 @@ function VerifyMagicLinkContent() {
           setState("error");
           setMessage(loginData?.error || "Unable to activate your account.");
           return;
+        }
+
+        if (loginData?.accountCreated === true) {
+          const tier = loginData.tier === 'free' || loginData.tier === 'pro' || loginData.tier === 'pro_trader' ? loginData.tier : undefined;
+          trackFunnelEvent('sign_up', { placement: 'magic_link', ...(tier ? { tier } : {}) }, { once: true });
         }
 
         const me = await fetch('/api/me', { credentials: 'include', cache: 'no-store' }).then(response => response.ok ? response.json() : null).catch(() => null);

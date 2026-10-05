@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { trackFreeEvent } from '@/lib/free/funnel';
+import { limitOnceKey, trackFreeEvent, trackFunnelEvent } from '@/lib/free/funnel';
 import Link from 'next/link';
 import type { ScanResult } from '@/app/v2/_lib/api';
 import { FREE_DAILY_SCAN_LIMIT } from '@/lib/free/limits';
@@ -28,22 +28,23 @@ export default function DemoScan() {
     if (active.current) return;
     active.current = true; setBusy(true); setError(false); setRow(null);
     let scanned = false;
-    const before = usage;
+    let firstScan = false;
     try {
       if (!usage) await refreshUsage();
       const response = await fetch('/api/scanner/run', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: symbol === 'BTC' ? 'crypto' : 'equity', symbols: [symbol], timeframe: 'daily', minScore: 0 }) });
       const data = await response.json();
-      if (response.status === 429 && data.limitReached) { trackFreeEvent('scan_limit_hit', 'demo', usage?.resetsAt); setLimitHit(true); upgrade.show('scan'); return; }
+      if (response.status === 429 && data.limitReached) { trackFunnelEvent('limit_hit', { limit: 'scans', where: 'demo', placement: 'demo' }, { once: limitOnceKey('scans') }); setLimitHit(true); upgrade.show('scan'); return; }
       if (!response.ok) throw new Error();
       const result = data.results?.find((item: ScanResult) => item.symbol?.replace(/[-/]?(USDT|USD)$/i, '').toUpperCase() === symbol);
       if (!result || !Number.isFinite(result.score)) throw new Error();
       setRow(result);
       scanned = true;
+      firstScan = data.firstScan === true;
     } catch { setError(true); }
     finally {
       try {
-        const after = await refreshUsage();
-        if (scanned && before?.used === 0 && after.used === 1) trackFreeEvent('first_scan', 'demo', after.resetsAt);
+        await refreshUsage();
+        if (scanned && firstScan) trackFunnelEvent('first_scan', { where: 'demo', placement: 'demo' }, { once: true });
       } catch { setError(true); }
       active.current = false; setBusy(false);
     }
@@ -54,7 +55,7 @@ export default function DemoScan() {
     {upgrade.moment && <UpgradeMoment kind={upgrade.moment} dismiss={upgrade.dismiss} />}
     <h2 className="text-lg font-semibold">{FREE_COPY.demoTitle}</h2>
     <p className="text-sm" aria-live="polite">{usage ? `${remaining} ${FREE_COPY.of} ${usage.limit} ${FREE_COPY.scansLeft} · ${FREE_COPY.resets} ${localStamp(usage.resetsAt)}` : FREE_COPY.loading}</p>
-    {limitHit || remaining === 0 ? <div><p>{FREE_COPY.scanLimit(FREE_DAILY_SCAN_LIMIT)}</p><Link className="inline-flex min-h-10 items-center underline" href="/pricing" onClick={() => trackFreeEvent('upgrade_click', 'scan')}>{FREE_COPY.upgrade}</Link></div> : <div className="flex flex-wrap items-center gap-3">
+    {limitHit || remaining === 0 ? <div><p>{FREE_COPY.scanLimit(FREE_DAILY_SCAN_LIMIT)}</p><Link className="inline-flex min-h-10 items-center underline" href="/pricing" data-funnel-upgrade="handled" onClick={() => trackFreeEvent('upgrade_click', 'scan')}>{FREE_COPY.upgrade}</Link></div> : <div className="flex flex-wrap items-center gap-3">
       <button className="min-h-11 rounded-lg border border-white/20 px-5 font-semibold" disabled={busy || !usage} onClick={() => void scan('AAPL')}>{busy ? FREE_COPY.loading : FREE_COPY.scanAapl}</button>
       {['SPY','BTC','NVDA'].map(symbol => <button key={symbol} className="min-h-10 px-2 underline" disabled={busy || !usage} onClick={() => void scan(symbol)}>{symbol}</button>)}
     </div>}

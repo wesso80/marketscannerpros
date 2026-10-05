@@ -9,7 +9,7 @@ vi.mock('@/lib/db', () => ({ q: vi.fn(async (sql: string, args: unknown[]) => {
   counts.set(key, n + 1); return [{ scan_count: n + 1 }];
 }) }));
 vi.mock('@/lib/rateLimit', () => ({ getClientIP: () => '127.0.0.1' }));
-import { quotaKey, quotaDay, reserveScan, readScanQuota } from '@/lib/free/scanQuota';
+import { isFirstEverScan, quotaKey, quotaDay, reserveScan, readScanQuota } from '@/lib/free/scanQuota';
 import { FREE_DAILY_SCAN_LIMIT } from '@/lib/free/limits';
 const req = (id?: string) => new NextRequest('https://example.test/api/scanner/run', { headers: id ? { cookie: `msp_scan_visitor=${id}` } : {} });
 beforeEach(() => counts.clear());
@@ -28,6 +28,12 @@ describe('free scan allowance', () => {
   });
   it('cookie-blocked requests share a stable hashed IP, without raw IP storage', () => {
     expect(quotaKey(req())).toBe(quotaKey(req())); expect(quotaKey(req())).not.toContain('127.0.0.1');
+  });
+  it('counts only the reservation that creates the first stored scan', () => {
+    expect(isFirstEverScan(1, 0)).toBe(true);
+    expect(isFirstEverScan(1, 2)).toBe(false);
+    expect(isFirstEverScan(null, 0)).toBe(false);
+    expect(isFirstEverScan(2, 0)).toBe(false);
   });
   it('resets at midnight UTC independent of daylight saving', () => {
     expect(quotaDay(new Date('2026-10-04T13:00:00Z')).resetsAt).toBe('2026-10-05T00:00:00.000Z');

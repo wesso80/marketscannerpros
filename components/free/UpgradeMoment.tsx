@@ -16,5 +16,5 @@ export function useUpgradeMoment() {
   } };
 }
 export default function UpgradeMoment({ kind, dismiss }: { kind: Moment; dismiss: () => void }) {
-  return <section role="status" className="space-y-3 rounded-xl border border-white/15 p-4"><p>{FREE_COPY.moments[kind]}</p><div className="flex flex-wrap gap-3"><Link href="/pricing" onClick={() => trackFreeEvent('upgrade_click', kind)} className="inline-flex min-h-11 items-center rounded-lg border border-white/20 px-4">{FREE_COPY.upgrade}</Link><button className="min-h-11 px-3" onClick={dismiss}>{FREE_COPY.notNow}</button></div></section>;
+  return <section role="status" className="space-y-3 rounded-xl border border-white/15 p-4"><p>{FREE_COPY.moments[kind]}</p><div className="flex flex-wrap gap-3"><Link href="/pricing" data-funnel-upgrade="handled" onClick={() => trackFreeEvent('upgrade_click', kind)} className="inline-flex min-h-11 items-center rounded-lg border border-white/20 px-4">{FREE_COPY.upgrade}</Link><button className="min-h-11 px-3" onClick={dismiss}>{FREE_COPY.notNow}</button></div></section>;
 }
