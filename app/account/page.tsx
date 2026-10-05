@@ -206,7 +206,7 @@ export default function AccountPage() {
   const planFeatures = useMemo(() => {
     if (isPaid) {
       return [
-        "Unlimited scanning + Golden Egg",
+        "Unlimited scanning + Symbol",
         "Production Intelligence (Global M2, Liquidity Transmission, Fragility)",
         "Backtesting, options and derivatives tools",
         "Unlimited portfolio and trade journal",
@@ -390,7 +390,7 @@ export default function AccountPage() {
               <ul className="mt-4 space-y-2 text-xs text-white/70">
                 <li>• AI-Triggered Smart Alerts</li>
                 <li>• Full Derivatives Intelligence</li>
-                <li>• Golden Egg Deep Analysis</li>
+                <li>• Symbol Deep Analysis</li>
                 <li>• Higher AI daily limits</li>
               </ul>
 
