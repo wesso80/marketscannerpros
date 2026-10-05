@@ -1,0 +1,6 @@
+const fs=require('fs'),cp=require('child_process'),ts=require(process.cwd()+'/node_modules/typescript');const base='24e05acf82825bfa4b0a63a78d1f6eea563f72d6',file='components/msp-radar/MspRadarReport.tsx';
+const before=cp.execFileSync('git',['show',base+':'+file],{encoding:'utf8'}),after=fs.readFileSync(file,'utf8');
+function blocks(source){const ast=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX),out={};function visit(n){if(ts.isVariableDeclaration(n)&&['load','loadArchive','r','failed','ops'].includes(n.name.getText(ast)))out[n.name.getText(ast)]=n.getText(ast);ts.forEachChild(n,visit);}visit(ast);return out;}
+const b=blocks(before),a=blocks(after);for(const [k,v]of Object.entries(b))if(a[k]!==v)throw Error('Changed '+k);
+const paths=cp.execFileSync('git',['ls-tree','-r','--name-only',base,'lib/jarvis','lib/mspRadar','app/api/msp-radar','app/tools/msp-radar/page.tsx','components/free/RadarPreview.tsx'],{encoding:'utf8'}).trim().split('\n');for(const p of paths)if(!cp.execFileSync('git',['show',base+':'+p]).equals(fs.readFileSync(p)))throw Error('Changed '+p);
+fs.writeFileSync(__dirname+'/parity.json',JSON.stringify({base,unchangedFetchAndStateBlocks:Object.keys(b),unchangedFiles:paths},null,2));console.log(paths.length+' protected files and '+Object.keys(b).length+' request/state blocks unchanged');
