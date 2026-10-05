@@ -57,27 +57,19 @@ export const pool = {
   }
 };
 
-function errorCode(error: unknown): string {
-  return typeof error === 'object' && error !== null && 'code' in error ? String(error.code) : 'UNKNOWN';
-}
-
-/** Optional per-call log control. A suppressed code is still thrown. */
-export type QueryOptions = { suppressCodes?: readonly string[] };
-
-function logQueryFailure(text: string, started: number, error: unknown, atomic: boolean, opts?: QueryOptions): void {
-  if (opts?.suppressCodes?.includes(errorCode(error))) return;
+function logQueryFailure(text: string, started: number, error: unknown, atomic: boolean): void {
   // Never log SQL text or parameter values: queries can contain private data.
   // The fingerprint lets engineering identify the exact statement from source.
   console.error('[db] query failed', {
     fingerprint: createHash('sha256').update(text.replace(/\s+/g, ' ').trim()).digest('hex').slice(0, 12),
     operation: text.trim().match(/^[A-Za-z]+/)?.[0].toUpperCase() ?? 'UNKNOWN',
     durationMs: Date.now() - started,
-    code: errorCode(error),
+    code: typeof error === 'object' && error !== null && 'code' in error ? String(error.code) : 'UNKNOWN',
     atomic,
   });
 }
 
-export async function q<T = any>(text: string, params: any[] = [], opts?: QueryOptions): Promise<T[]> {
+export async function q<T = any>(text: string, params: any[] = []): Promise<T[]> {
   const started = Date.now();
   const scope = queryTransaction.getStore();
   if (scope) {
@@ -87,12 +79,12 @@ export async function q<T = any>(text: string, params: any[] = [], opts?: QueryO
       throw scope.failed;
     }
     try { return (await scope.client.query(text, params)).rows as T[]; }
-    catch (error) { logQueryFailure(text, started, error, true, opts); scope.failed = error; throw error; }
+    catch (error) { logQueryFailure(text, started, error, true); scope.failed = error; throw error; }
   }
   let client: PoolClient;
   try { client = await getPool().connect(); }
   catch (error) {
-    logQueryFailure(text, started, error, false, opts);
+    logQueryFailure(text, started, error, false);
     console.error('[db] connection acquisition failed', {
       total: getPool().totalCount, idle: getPool().idleCount, waiting: getPool().waitingCount,
     });
@@ -103,7 +95,7 @@ export async function q<T = any>(text: string, params: any[] = [], opts?: QueryO
     const res = await client.query(text, params);
     return res.rows as T[];
   } catch (error) {
-    logQueryFailure(text, started, error, false, opts);
+    logQueryFailure(text, started, error, false);
     throw error;
   } finally {
     client.release();

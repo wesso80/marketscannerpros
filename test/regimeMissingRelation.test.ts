@@ -17,9 +17,7 @@ describe('GET /api/regime missing relations', () => {
   it('reads operator_state and does not query a risk governor snapshot table', async () => {
     await GET(new NextRequest('http://localhost/api/regime'));
     const sql = mocks.q.mock.calls.map((call) => String(call[0]).replace(/\s+/g, ' '));
-    expect(sql.some((text) => text.includes('FROM operator_state'))).toBe(true);
+    expect(sql).toEqual([expect.stringContaining('FROM operator_state')]);
     expect(sql.some((text) => text.includes('FROM context_state'))).toBe(false);
-    expect(sql.some((text) => text.includes('risk_governor_snapshots'))).toBe(false);
-    expect(sql).toHaveLength(1);
   });
 });
