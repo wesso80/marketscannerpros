@@ -1,0 +1,529 @@
+{
+  "mocked": true,
+  "fixtureBasis": "Deterministic intercepted /api fixtures. External origins aborted. Not live-provider acceptance.",
+  "route": "/tools/research?tab=earnings",
+  "tip": "audit/research-earnings-compact",
+  "viewports": [
+    "1280x800",
+    "390x844"
+  ],
+  "hardMaxScreens390": 2.3,
+  "targetScreens390": 2,
+  "maxScreens390Closed": 1.8033175355450237,
+  "maxScreens1280Closed": 1.585,
+  "results": [
+    {
+      "id": "this-week-closed",
+      "dataCase": "populated",
+      "action": "closed",
+      "route": "/tools/research?tab=earnings",
+      "pngFull": "shots/this-week-closed-1280-full.png",
+      "pngFold": "shots/this-week-closed-1280-fold.png",
+      "observedAt": "2026-10-05T18:22:46.918Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1268,
+      "screens": 1.585,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Earnings calendar · Not available right now · Scheduled report dates · estimates may change · provider observation time not supplied"
+      ],
+      "verdicts": [
+        {
+          "text": "7 scheduled reports · this week",
+          "top": 271,
+          "bottom": 299,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "rowCount": 5,
+      "showAll": [
+        "Show all 7"
+      ],
+      "longNameVisible": false,
+      "missingEstimateVisible": false,
+      "scrollY": 0
+    },
+    {
+      "id": "this-week-closed",
+      "dataCase": "populated",
+      "action": "closed",
+      "route": "/tools/research?tab=earnings",
+      "pngFull": "shots/this-week-closed-390-full.png",
+      "pngFold": "shots/this-week-closed-390-fold.png",
+      "observedAt": "2026-10-05T18:22:47.363Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1522,
+      "screens": 1.8033175355450237,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Earnings calendar · Not available right now · Scheduled report dates · estimates may change · provider observation time not supplied"
+      ],
+      "verdicts": [
+        {
+          "text": "7 scheduled reports · this week",
+          "top": 390.5,
+          "bottom": 418.5,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "rowCount": 5,
+      "showAll": [
+        "Show all 7"
+      ],
+      "longNameVisible": false,
+      "missingEstimateVisible": false,
+      "scrollY": 0
+    },
+    {
+      "id": "next-week-empty",
+      "dataCase": "populated",
+      "action": "next-week",
+      "route": "/tools/research?tab=earnings",
+      "pngFull": "shots/next-week-empty-1280-full.png",
+      "pngFold": "shots/next-week-empty-1280-fold.png",
+      "observedAt": "2026-10-05T18:22:47.814Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "screens": 1,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Earnings calendar · Not available right now · Scheduled report dates · estimates may change · provider observation time not supplied"
+      ],
+      "verdicts": [
+        {
+          "text": "No scheduled reports collected · next week",
+          "top": 271,
+          "bottom": 299,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "rowCount": 0,
+      "showAll": [],
+      "longNameVisible": false,
+      "missingEstimateVisible": false,
+      "scrollY": 0
+    },
+    {
+      "id": "next-week-empty",
+      "dataCase": "populated",
+      "action": "next-week",
+      "route": "/tools/research?tab=earnings",
+      "pngFull": "shots/next-week-empty-390-full.png",
+      "pngFold": "shots/next-week-empty-390-fold.png",
+      "observedAt": "2026-10-05T18:22:48.279Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "screens": 1,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Earnings calendar · Not available right now · Scheduled report dates · estimates may change · provider observation time not supplied"
+      ],
+      "verdicts": [
+        {
+          "text": "No scheduled reports collected · next week",
+          "top": 390.5,
+          "bottom": 446.5,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "rowCount": 0,
+      "showAll": [],
+      "longNameVisible": false,
+      "missingEstimateVisible": false,
+      "scrollY": 0
+    },
+    {
+      "id": "major-closed",
+      "dataCase": "populated",
+      "action": "major",
+      "route": "/tools/research?tab=earnings",
+      "pngFull": "shots/major-closed-1280-full.png",
+      "pngFold": "shots/major-closed-1280-fold.png",
+      "observedAt": "2026-10-05T18:22:48.731Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 936,
+      "screens": 1.17,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Earnings calendar · Not available right now · Scheduled report dates · estimates may change · provider observation time not supplied"
+      ],
+      "verdicts": [
+        {
+          "text": "3 scheduled reports · major earnings",
+          "top": 271,
+          "bottom": 299,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "rowCount": 3,
+      "showAll": [],
+      "longNameVisible": false,
+      "missingEstimateVisible": false,
+      "scrollY": 0
+    },
+    {
+      "id": "major-closed",
+      "dataCase": "populated",
+      "action": "major",
+      "route": "/tools/research?tab=earnings",
+      "pngFull": "shots/major-closed-390-full.png",
+      "pngFold": "shots/major-closed-390-fold.png",
+      "observedAt": "2026-10-05T18:22:49.195Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1190,
+      "screens": 1.4099526066350712,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Earnings calendar · Not available right now · Scheduled report dates · estimates may change · provider observation time not supplied"
+      ],
+      "verdicts": [
+        {
+          "text": "3 scheduled reports · major earnings",
+          "top": 390.5,
+          "bottom": 418.5,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "rowCount": 3,
+      "showAll": [],
+      "longNameVisible": false,
+      "missingEstimateVisible": false,
+      "scrollY": 0
+    },
+    {
+      "id": "this-week-show-all",
+      "dataCase": "populated",
+      "action": "show-all",
+      "route": "/tools/research?tab=earnings",
+      "pngFull": "shots/this-week-show-all-1280-full.png",
+      "pngFold": "shots/this-week-show-all-1280-fold.png",
+      "observedAt": "2026-10-05T18:22:49.623Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1548,
+      "screens": 1.935,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Earnings calendar · Not available right now · Scheduled report dates · estimates may change · provider observation time not supplied"
+      ],
+      "verdicts": [
+        {
+          "text": "7 scheduled reports · this week",
+          "top": 271,
+          "bottom": 299,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "rowCount": 7,
+      "showAll": [
+        "Show five"
+      ],
+      "longNameVisible": false,
+      "missingEstimateVisible": false,
+      "scrollY": 0
+    },
+    {
+      "id": "this-week-show-all",
+      "dataCase": "populated",
+      "action": "show-all",
+      "route": "/tools/research?tab=earnings",
+      "pngFull": "shots/this-week-show-all-390-full.png",
+      "pngFold": "shots/this-week-show-all-390-fold.png",
+      "observedAt": "2026-10-05T18:22:50.111Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1802,
+      "screens": 2.1350710900473935,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Earnings calendar · Not available right now · Scheduled report dates · estimates may change · provider observation time not supplied"
+      ],
+      "verdicts": [
+        {
+          "text": "7 scheduled reports · this week",
+          "top": 390.5,
+          "bottom": 418.5,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "rowCount": 7,
+      "showAll": [
+        "Show five"
+      ],
+      "longNameVisible": false,
+      "missingEstimateVisible": false,
+      "scrollY": 0
+    },
+    {
+      "id": "this-week-details",
+      "dataCase": "populated",
+      "action": "details",
+      "route": "/tools/research?tab=earnings",
+      "pngFull": "shots/this-week-details-1280-full.png",
+      "pngFold": "shots/this-week-details-1280-fold.png",
+      "observedAt": "2026-10-05T18:22:50.527Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1484,
+      "screens": 1.855,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 2,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Earnings calendar · Not available right now · Scheduled report dates · estimates may change · provider observation time not supplied"
+      ],
+      "verdicts": [
+        {
+          "text": "7 scheduled reports · this week",
+          "top": 271,
+          "bottom": 299,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "rowCount": 5,
+      "showAll": [
+        "Show all 7"
+      ],
+      "longNameVisible": true,
+      "missingEstimateVisible": true,
+      "scrollY": 0
+    },
+    {
+      "id": "this-week-details",
+      "dataCase": "populated",
+      "action": "details",
+      "route": "/tools/research?tab=earnings",
+      "pngFull": "shots/this-week-details-390-full.png",
+      "pngFold": "shots/this-week-details-390-fold.png",
+      "observedAt": "2026-10-05T18:22:51.000Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1758,
+      "screens": 2.0829383886255926,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 2,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Earnings calendar · Not available right now · Scheduled report dates · estimates may change · provider observation time not supplied"
+      ],
+      "verdicts": [
+        {
+          "text": "7 scheduled reports · this week",
+          "top": 390.5,
+          "bottom": 418.5,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "rowCount": 5,
+      "showAll": [
+        "Show all 7"
+      ],
+      "longNameVisible": true,
+      "missingEstimateVisible": true,
+      "scrollY": 0
+    },
+    {
+      "id": "error",
+      "dataCase": "error",
+      "action": "closed",
+      "route": "/tools/research?tab=earnings",
+      "pngFull": "shots/error-1280-full.png",
+      "pngFold": "shots/error-1280-fold.png",
+      "observedAt": "2026-10-05T18:22:51.439Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "screens": 1,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 0,
+      "sourceText": [],
+      "verdicts": [
+        {
+          "text": "Earnings could not be loaded.",
+          "top": 271,
+          "bottom": 299,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "rowCount": 0,
+      "showAll": [],
+      "longNameVisible": false,
+      "missingEstimateVisible": false,
+      "scrollY": 0
+    },
+    {
+      "id": "error",
+      "dataCase": "error",
+      "action": "closed",
+      "route": "/tools/research?tab=earnings",
+      "pngFull": "shots/error-390-full.png",
+      "pngFold": "shots/error-390-fold.png",
+      "observedAt": "2026-10-05T18:22:51.881Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "screens": 1,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 0,
+      "sourceText": [],
+      "verdicts": [
+        {
+          "text": "Earnings could not be loaded.",
+          "top": 390.5,
+          "bottom": 418.5,
+          "aboveFold": true
+        }
+      ],
+      "oneVerdictAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "rowCount": 0,
+      "showAll": [],
+      "longNameVisible": false,
+      "missingEstimateVisible": false,
+      "scrollY": 0
+    }
+  ],
+  "errors": []
+}
