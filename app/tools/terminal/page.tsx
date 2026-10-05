@@ -41,6 +41,7 @@ import {
 } from '@/app/v2/_lib/api';
 import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
 import { PageHero } from '@/components/ui';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
 
 function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
@@ -245,6 +246,11 @@ const ANCHOR_OPTIONS: { value: CloseCalendarAnchor; label: string }[] = [
   { value: 'EOM', label: 'End of Month' },
 ];
 const HORIZON_OPTIONS = [1, 3, 7, 14, 30] as const;
+const FUTURES_ANCHOR_LABEL: Record<FuturesAnchorMode, string> = {
+  globex: 'Globex',
+  rth: 'Regular hours',
+  cash_bridge: 'Cash bridge',
+};
 
 /* --- Close Calendar helpers --------------------------------------- */
 
@@ -467,16 +473,16 @@ export default function TerminalPage() {
 
       {/* -- CLOSE CALENDAR ------------------------------------------- */}
       {tab === 'Close Calendar' && (marketPath === 'futures' ? (
-        <div className="space-y-3">
-          <Card>
-            <div className="flex flex-wrap items-end gap-3">
-              <div>
-                <label className="mb-1 block text-[11px] uppercase tracking-wider text-slate-500">Anchor</label>
-                <div className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-[11px] font-bold uppercase text-cyan-200">Today</div>
+        <div className="min-w-0 space-y-3">
+          <CollapsibleSection title="Schedule range" summary={`Today · ${horizon}d · ${FUTURES_ANCHOR_LABEL[futuresAnchorMode]}`}>
+            <div className="flex min-w-0 flex-wrap items-end gap-3">
+              <div className="min-w-0">
+                <div className="mb-1 text-[11px] uppercase tracking-wider text-slate-500">Anchor</div>
+                <div className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-[11px] font-bold text-cyan-200">Today</div>
               </div>
-              <div>
-                <label className="mb-1 block text-[11px] uppercase tracking-wider text-slate-500">Horizon</label>
-                <div className="flex gap-1">
+              <div className="min-w-0">
+                <div className="mb-1 text-[11px] uppercase tracking-wider text-slate-500">Horizon</div>
+                <div className="flex flex-wrap gap-1">
                   {HORIZON_OPTIONS.map((d) => (
                     <button key={d} type="button" aria-pressed={horizon === d} onClick={() => setHorizon(d)} className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${horizon === d ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'bg-slate-950/40 text-slate-400 border border-slate-800 hover:text-slate-200'}`}>
                       {d}d
@@ -484,18 +490,18 @@ export default function TerminalPage() {
                   ))}
                 </div>
               </div>
-              <div>
-                <label className="mb-1 block text-[11px] uppercase tracking-wider text-slate-500">Anchor Mode</label>
-                <div className="flex gap-1">
+              <div className="min-w-0">
+                <div className="mb-1 text-[11px] uppercase tracking-wider text-slate-500">Schedule basis</div>
+                <div className="flex flex-wrap gap-1">
                   {(['globex', 'rth', 'cash_bridge'] as const).map((mode) => (
-                    <button key={mode} type="button" aria-pressed={futuresAnchorMode === mode} onClick={() => setFuturesAnchorMode(mode)} className={`rounded-lg px-2.5 py-1.5 text-xs font-medium uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${futuresAnchorMode === mode ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-950/40 text-slate-400 border border-slate-800 hover:text-slate-200'}`}>
-                      {mode.replace('_', ' ')}
+                    <button key={mode} type="button" aria-pressed={futuresAnchorMode === mode} onClick={() => setFuturesAnchorMode(mode)} className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${futuresAnchorMode === mode ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-950/40 text-slate-400 border border-slate-800 hover:text-slate-200'}`}>
+                      {FUTURES_ANCHOR_LABEL[mode]}
                     </button>
                   ))}
                 </div>
               </div>
             </div>
-          </Card>
+          </CollapsibleSection>
           <FuturesTerminalPanel
             data={futuresTerminal.data}
             loading={futuresTerminal.loading}
