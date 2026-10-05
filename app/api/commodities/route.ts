@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
 import { deepAnalysisLimiter, getClientIP } from '@/lib/rateLimit';
-import { isMonthlyObservationCurrent, monthlyAsOfLabel } from '@/lib/commodityFreshness';
+import { classifyCommodityFreshness, monthlyAsOfLabel } from '@/lib/commodityFreshness';
 
 // Alpha Vantage commodity endpoints
 // https://www.alphavantage.co/documentation/#commodities
@@ -69,6 +69,8 @@ interface CommodityData {
   unit: string;
   category: string;
   date: string;
+  /** Observation instant, when the source has one. A session date alone is not enough for LIVE. */
+  observedAtMs?: number | null;
   history: { date: string; value: number }[];
   source: CommoditySource;
   sourceSymbol?: string;
@@ -88,19 +90,20 @@ function dataAgeDays(date: string): number {
 }
 
 function withFreshness(
-  data: Omit<CommodityData, 'source' | 'freshnessStatus' | 'dataAgeDays' | 'eligibleForGate' | 'cadence' | 'asOfLabel'>,
+  data: Omit<CommodityData, 'source' | 'freshnessStatus' | 'dataAgeDays' | 'eligibleForGate' | 'cadence' | 'asOfLabel' | 'observedAtMs'> & { observedAtMs?: number | null },
   source: CommoditySource,
   maxAgeDays: number,
   sourceSymbol?: string,
 ): CommodityData {
   const age = dataAgeDays(data.date);
   const monthly = source === 'LEGACY_MONTHLY';
-  const stale = monthly ? !isMonthlyObservationCurrent(data.date) : !Number.isFinite(age) || age > maxAgeDays;
-  const freshnessStatus: CommodityFreshness = stale
-    ? 'STALE'
-    : source === 'ETF_PROXY' || source === 'SPOT'
-      ? 'LIVE'
-      : 'DELAYED';
+  const freshnessStatus: CommodityFreshness = classifyCommodityFreshness({
+    source,
+    date: data.date,
+    maxAgeDays,
+    ageDays: age,
+    observedAtMs: data.observedAtMs,
+  });
   return {
     ...data,
     source,

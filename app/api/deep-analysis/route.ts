@@ -19,6 +19,7 @@ import { detectAssetClass } from '@/lib/goldenEggFetchers';
 import { computeGoldenEgg } from '@/lib/goldenEgg/engine';
 import { getEarningsHistory, getFundamentalsSummary, type EarningsHistory, type FundamentalsSummary } from '@/lib/goldenEgg/companyOverview';
 import { filterRelevantNews, summarizeNews, avTickerKey, type RelevantArticle } from '@/lib/goldenEgg/newsRelevance';
+import { formatFundingAnnualized, formatFundingRate } from '@/lib/crypto/fundingDisplay';
 import { formatUsdShort } from '@/lib/goldenEgg/semantics';
 import { noSetupDisplay, targetBasisLabel } from '@/lib/scoring/canonical/display';
 import type { GoldenEggPayload, GoldenEggCanonical } from '@/src/features/goldenEgg/types';
@@ -159,7 +160,7 @@ function buildPacketPrompt(c: GoldenEggCanonical, ge: GoldenEggPayload, news: Re
   L.push(`Time confluence: relation ${c.timing.relation}, valid ${c.timing.valid}, display only (never gates the verdict), direction ${c.timing.direction}, strength ${c.timing.signalStrength}, session ${c.timing.sessionState}. ${c.timing.reasons.join('; ')}`);
   L.push(`Cross-market (${c.crossMarket.alignment}): ${c.crossMarket.summary}`);
   for (const i of c.crossMarket.items) L.push(`  ${i.symbol} ${i.label}: ${i.trend} — ${i.detail} → ${i.relation}`);
-  if (c.derivatives) L.push(`Derivatives: funding, annualisation and crowding unavailable (funding periods not supplied). Sampled OI ${formatUsdShort(c.derivatives.openInterestUsd)}, perp volume ${formatUsdShort(c.derivatives.perpVolume24hUsd)}, ${c.derivatives.exchanges} venues. ${c.derivatives.note}`);
+  if (c.derivatives) L.push(`Derivatives: funding ${formatFundingRate(c.derivatives.displayFundingRatePercent)} (8h-equivalent), annualized ${formatFundingAnnualized(c.derivatives.displayAnnualizedPercent)}. Sampled OI ${formatUsdShort(c.derivatives.openInterestUsd)}, perp volume ${formatUsdShort(c.derivatives.perpVolume24hUsd)}, ${c.derivatives.exchanges} venues. ${c.derivatives.note}`);
   if (c.options) L.push(`Options (expiry ${c.options.expiry}, ${c.options.daysToExpiry} DTE, snapshot ${c.options.snapshotTs}): P/C OI ${c.options.putCallOi}, mean IV across all strikes ${c.options.avgIvPct ?? 'n/a'}%, expected move ±${c.options.expectedMovePct ?? 'n/a'}%, max pain ${c.options.maxPain ?? 'n/a'}, call wall ${c.options.callWall ? `${c.options.callWall.strike} (${c.options.callWall.relation} spot)` : 'n/a'}, put wall ${c.options.putWall ? `${c.options.putWall.strike} (${c.options.putWall.relation} spot)` : 'n/a'}, dealer gamma ${c.options.dealerGamma}, unusual activity ${c.options.unusualActivity}, chain quality ${c.options.quality.level}${c.options.quality.reasons.length ? ` (${c.options.quality.reasons.join('; ')})` : ''}. IV rank unavailable (no IV history).`);
   L.push(`Levels: reference ${fmtPx(c.levels.reference.price)} [${c.levels.reference.basis}] — ${c.levels.reference.label}`);
   L.push(`  invalidation ${fmtPx(c.levels.invalidation.price)} [${c.levels.invalidation.basis}, ${c.levels.invalidation.distanceAtr ?? 'n/a'} ATR] — ${c.levels.invalidation.label}`);

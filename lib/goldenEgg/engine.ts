@@ -1,3 +1,4 @@
+import { cryptoFundingHighlights } from '@/lib/crypto/fundingDisplay';
 import { describeMultiple } from '@/lib/goldenEgg/fundamentalsContext';
 import { valuationAtPrice } from '@/lib/market/valuationIntegrity';
 /**
@@ -563,8 +564,7 @@ export function buildPayload(
       enabled: true,
       verdict: 'neutral',
       highlights: [
-        { label: 'Funding rate', value: 'Unavailable — funding periods not supplied' },
-        { label: 'Annualized funding', value: 'Unavailable' },
+        ...cryptoFundingHighlights(cryptoDerivs.displayFunding),
         { label: 'Open interest (sampled venues)', value: fmtUsd(cryptoDerivs.totalOpenInterest) },
         { label: 'Perp volume 24h (sampled venues)', value: fmtUsd(cryptoDerivs.volume24h) },
         { label: 'Exchanges in sample', value: `${cryptoDerivs.exchanges}` },
@@ -686,6 +686,8 @@ export function buildPayload(
     },
     derivatives: cryptoDerivs ? {
       fundingRatePercent: cryptoDerivs.fundingRatePercent, fundingInterval: 'unavailable', annualizedPct: cryptoDerivs.annualizedFunding,
+      displayFundingRatePercent: cryptoDerivs.displayFunding?.ratePercent8h ?? null,
+      displayAnnualizedPercent: cryptoDerivs.displayFunding?.annualizedPercent ?? null,
       openInterestUsd: cryptoDerivs.totalOpenInterest, perpVolume24hUsd: cryptoDerivs.volume24h, exchanges: cryptoDerivs.exchanges,
       crowding: 'unavailable',
       note: flow.notes[0] ?? 'funding near exchange baseline',

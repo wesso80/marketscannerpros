@@ -6,6 +6,7 @@
    --------------------------------------------------------------------------- */
 
 import { CANONICAL_SETUP_TOOLTIP, INDICATOR_COMPOSITE_LABEL, INDICATOR_COMPOSITE_TOOLTIP, TIMEFRAME_PULL_LABEL, CLOSE_CALENDAR_LABEL, TIMING_TOOLTIP } from '@/lib/goldenEgg/labels';
+import { formatFundingRate } from '@/lib/crypto/fundingDisplay';
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { parseResearchTimeframe } from '@/lib/researchContext';
@@ -506,7 +507,7 @@ export default function GoldenEggPage() {
         source: ge?.meta?.assetClass === 'crypto' ? 'derivatives' : 'options',
         provider: ge?.meta?.assetClass === 'crypto' ? 'derivatives evidence' : 'options evidence',
         degraded: !ge?.layer3?.options?.enabled || geCanonical?.options?.quality.level !== 'GOOD',
-        warnings: geCanonical?.options?.quality.reasons ?? (geCanonical?.derivatives ? ['Sampled open interest is available. Funding period, comparable OI change and directional crowding are unavailable.'] : ['Options or derivatives evidence unavailable.']),
+        warnings: geCanonical?.options?.quality.reasons ?? (geCanonical?.derivatives ? [`Sampled open interest is available. Funding ${formatFundingRate(geCanonical.derivatives.displayFundingRatePercent)} (8h-equivalent). Comparable OI change is not in this sample.`] : ['Options or derivatives evidence unavailable.']),
       }),
     },
     {
