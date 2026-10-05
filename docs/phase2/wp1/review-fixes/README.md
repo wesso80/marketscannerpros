@@ -4,4 +4,6 @@ Changed the expanded-analysis tooltip to Symbol evidence, benchmark fallback to 
 
 30 focused checks pass across wp1WordBrief, wp1Symbol, wp1PageAcceptance and wp1ScoreParity, including a new mapper regression.
 
-HOLD remains: authenticated Pro, Free and signed-out live AAPL/NEAR shots at1280 and390 are not supplied by these copy edits. Existing screenshots are fixtures. No provider run performed. Base remains batch/oct-wp as set by Pip. Existing PNGs retained pending Brad's decision; none deleted or added by this follow-up.
+Copy edits did not supply authenticated Pro, Free or signed-out live AAPL/NEAR checks at 1280 and 390. No provider run performed. Base remains batch/oct-wp as set by Pip.
+
+Binary screenshots removed per Brad 6 Oct 2026; mocked measurements retained in evidence.json / tables in `docs/phase2/wp1/visual-2026-10-05/`. Live session proof after merge. Mocked Pro AAPL/NEAR gate evidence is accepted for merge; Pip does the live check after deploy.

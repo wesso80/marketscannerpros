@@ -1,6 +1,10 @@
 # Job A — Symbol visual evidence, 5 October 2026
 
-**Mocked Pro browser session; not live market/provider evidence. Do not merge until real-session review.** These are Chromium screenshots of the complete built Next application. No screenshot is a jsdom render, image mockup or cropped desktop substituted for mobile. Every API response, including authentication tier and writes, was intercepted in the browser. External browser requests were blocked. No production page was opened.
+**Mocked Pro browser session; not live market/provider evidence.** Mocked Pro AAPL/NEAR 1280/390 gate measurements are kept for merge. Pip does the live Pro/Free/signed-out AAPL+NEAR check after merge and deploy.
+
+Binary screenshots removed per Brad 6 Oct 2026; mocked measurements retained in evidence.json / tables below. Live session proof after merge.
+
+These measurements come from Chromium captures of the complete built Next application. No capture was a jsdom render, image mockup or cropped desktop substituted for mobile. Every API response, including authentication tier and writes, was intercepted in the browser. External browser requests were blocked. No production page was opened.
 
 The before application is the existing #353 starting head `9b8d93a811da008ae9cbac2be773fa1a008baea0` (not main). The after continues its published follow-up `a92c1e1bf10d525a52c0ccb9967f0e28b341e23b`; PR base remains main `f33130bd969238fc3e959049df1cbd48c819ae04`. Same deterministic fixtures are used on both sides. Data are intentionally historical/synthetic. NEAR's packet/quote/chart have a $16 latest close; AAPL chart closes at $100. No fixture is claimed as current market data.
 
@@ -17,16 +21,9 @@ Every after case has zero open `details`, exactly one summary verdict (`No setup
 
 ## Screenshots
 
-For each link, `viewport` is the exact requested viewport; `closed` is the full-page capture at that width.
+Binary screenshots removed per Brad 6 Oct 2026; mocked measurements retained in evidence.json / tables below. Live session proof after merge.
 
-| Case | Before | After |
-|---|---|---|
-| AAPL desktop | [viewport](before/aapl-1280-viewport.png) · [full page](before/aapl-1280-closed.png) | [viewport](after/aapl-1280-viewport.png) · [full page](after/aapl-1280-closed.png) |
-| AAPL phone | [viewport](before/aapl-390-viewport.png) · [full page](before/aapl-390-closed.png) | [viewport](after/aapl-390-viewport.png) · [full page](after/aapl-390-closed.png) |
-| NEAR desktop | [viewport](before/near-1280-viewport.png) · [full page](before/near-1280-closed.png) | [viewport](after/near-1280-viewport.png) · [full page](after/near-1280-closed.png) |
-| NEAR phone | [viewport](before/near-390-viewport.png) · [full page](before/near-390-closed.png) | [viewport](after/near-390-viewport.png) · [full page](after/near-390-closed.png) |
-
-NEAR Rule check expanded: [desktop](after/near-1280-rule-check-open.png), [phone](after/near-390-rule-check-open.png).
+Viewport and full-page captures (closed folds, plus NEAR Rule check expanded) were taken at 1280×800 and 390×844 for AAPL and NEAR, before and after. The PNG binaries are not in the repository. Closed-fold heights, screen counts, scroll widths, verdict positions and DOM text remain in the table above and in `before/evidence.json` and `after/evidence.json`.
 
 ## Changes prompted by browser review
 
@@ -40,7 +37,7 @@ Compact chart and rule dates now use readable session dates. Source names are de
 4. **Yes in captured states:** no example results; mocked missing ownership feed is a visible amber fault. Actual provider behavior still requires real-session review.
 5. **Partial, protected disclosure exception:** no banned/engine strings in captured closed states; expanded evidence retains the protected sentence “Research alignment, not an outcome probability.” That wording was not changed. No blanket zero-match claim.
 6. **Yes, mocked session:** readable dates and numbers; one SourceLine even all folds open. Number unit tests preserve 249.4%, $1.09B, $0.4664 and 1.49x.
-7. **Yes for mocked Pro captures; real-session pending:** required before/after AAPL/NEAR viewport shots and NEAR open Rule check included. Free/signed-out browser proof and optional LINK screenshots still pending.
+7. **Yes for mocked Pro measurements; binaries removed:** before/after AAPL/NEAR 1280/390 closed-fold measurements and NEAR open Rule check text are in `evidence.json`. PNG binaries are not in the repository. Live Pro/Free/signed-out proof is after merge and deploy.
 8. **Yes in captured page chrome:** Symbol naming, no user-visible Golden Egg or Command Center in captured after states. Shared navigation is unchanged.
 
 ## Validation
