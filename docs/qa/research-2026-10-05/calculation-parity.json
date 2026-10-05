@@ -1,0 +1,77 @@
+{
+  "base": "ed2c58db6509abc6774d97ff9c8b9e42405b0b7f",
+  "results": [
+    {
+      "path": "app/tools/research/page.tsx",
+      "name": "savedCaseSummary",
+      "identical": true,
+      "sha256": "5a3585458fca77b338cff989bdef1b0220c0863d053fb86f5e2f5342a0985843"
+    },
+    {
+      "path": "app/tools/research/page.tsx",
+      "name": "savedCaseMissingCount",
+      "identical": true,
+      "sha256": "f56214d49f2e03d2942b9a0e6ee7a2ab007e9aa4648858326b7eb313732a71e2"
+    },
+    {
+      "path": "app/tools/research/page.tsx",
+      "name": "events",
+      "identical": true,
+      "sha256": "171d7b566dc1df40a9df9b2b4e3fd104ba5d60c467c5851fe2bc46ddecae7e8b"
+    },
+    {
+      "path": "app/tools/research/page.tsx",
+      "name": "openGoldenEgg",
+      "identical": true,
+      "sha256": "93da2807a8ae9e9bc22caea9700e74ee46835a0e1b5b3c708b6e331512314d91"
+    },
+    {
+      "path": "app/tools/research/page.tsx",
+      "name": "handleAddToWatchlist",
+      "identical": true,
+      "sha256": "dc1841870e0813fd8be64a0f2ce8e836e1d4e1fe03ffa7d12d541900f37a0ecc"
+    },
+    {
+      "path": "app/tools/research/page.tsx",
+      "name": "onSymbolRowKey",
+      "identical": true,
+      "sha256": "a393389c0112c296c009901611780d3ce86a7f97946101d4db80871500bef65d"
+    },
+    {
+      "path": "app/tools/research/page.tsx",
+      "name": "refreshSavedCases",
+      "identical": true,
+      "sha256": "1d8fb9147702e63b273ce197ae384a627cc976ce87c7a8a1164092c1b1cf0148"
+    },
+    {
+      "path": "app/tools/research/page.tsx",
+      "name": "handleDeleteSavedCase",
+      "identical": true,
+      "sha256": "d9850c14c4d3f4c35109e3f8c633ce0e97347c34ec5aab83f3c8c1c7d39b5957"
+    },
+    {
+      "path": "app/tools/research/page.tsx",
+      "name": "handleOutcomeUpdate",
+      "identical": true,
+      "sha256": "6e972c9a788936b6f40761f22f5b01ee755c1c7b1b299d3d29c21d61e4856b48"
+    },
+    {
+      "path": "app/tools/research/page.tsx",
+      "name": "handleApplySuggestion",
+      "identical": true,
+      "sha256": "7dde52bda638b4dc527afbb60070fb75c948538990b899027076be4a1ff5caf8"
+    },
+    {
+      "path": "app/tools/signal-accuracy/page.tsx",
+      "name": "fetchData",
+      "identical": true,
+      "sha256": "334710a1ed4196d9c1efc76e4da52c6e6d4885c3df3dc2c69de69bb00b1ee63e"
+    },
+    {
+      "path": "app/tools/signal-accuracy/page.tsx",
+      "name": "grouped",
+      "identical": true,
+      "sha256": "80db0418e4ca9e428a409533dcb4ce8378d52c1f705177b79722a23416f8b1c6"
+    }
+  ]
+}
