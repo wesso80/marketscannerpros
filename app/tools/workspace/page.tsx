@@ -95,7 +95,7 @@ function WorkspaceContent() {
 
       {/* -- BACKTEST ------------------------------------------------- */}
       {tab === 'Backtest' && (
-        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Backtest Engine">
+        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Backtest">
           <BacktestPage embeddedInWorkspace />
         </UpgradeGate>
       )}

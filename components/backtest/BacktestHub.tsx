@@ -188,7 +188,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
       <p data-layout-verdict className="text-sm text-slate-300">{error ? 'The simulation could not be completed.' : loading ? `Historical simulation running for ${symbol}.` : result ? `${symbol}: ${n(result.totalTrades)} simulated trades, ${fmtPct(n(result.totalReturn))} historical return.` : 'No simulation has been run in this view.'}</p>
       <p className="text-xs text-slate-400">General information only, not financial advice.</p>
 
-      <UpgradeGate requiredTier="pro" currentTier={tier} feature="Strategy Backtesting Engine">
+      <UpgradeGate requiredTier="pro" currentTier={tier} feature="Strategy backtesting">
         {/* ── Mode Toggle ──────────────────────────────────────── */}
         {!embeddedInWorkspace && <div className="flex gap-1 mb-4">
           {(['strategy', 'scanner'] as const).map(m => (
