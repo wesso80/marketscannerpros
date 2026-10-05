@@ -15,6 +15,8 @@ import MarketPressureWidget from '@/components/MarketPressureWidget';
 import { detectAssetClass } from '@/lib/detectAssetClass';
 import { useUserTier, canAccessTimeScanner } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import SourceLine from '@/components/visual/SourceLine';
 import TimeConfluenceWidget from '@/components/TimeConfluenceWidget';
 
 type ScanModeType = 'scalping' | 'intraday_30m' | 'intraday_1h' | 'intraday_4h' | 'swing_1d' | 'swing_3d' | 'swing_1w' | 'macro_monthly' | 'macro_yearly';
@@ -95,20 +97,20 @@ const FALLBACK_INPUT: TimeConfluenceV2Inputs = {
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 
 function permissionTone(permission: 'ALLOW' | 'WAIT' | 'BLOCK') {
-  if (permission === 'ALLOW') return { border: 'border-emerald-500/30', dot: 'bg-emerald-400', label: 'ALIGNED' };
-  if (permission === 'WAIT') return { border: 'border-amber-500/30', dot: 'bg-amber-400', label: 'CONDITIONAL' };
-  return { border: 'border-rose-500/30', dot: 'bg-rose-400', label: 'NOT ALIGNED' };
+  if (permission === 'ALLOW') return { border: 'border-emerald-500/30', dot: 'bg-emerald-400', label: 'Evidence aligned' };
+  if (permission === 'WAIT') return { border: 'border-amber-500/30', dot: 'bg-amber-400', label: 'Evidence mixed' };
+  return { border: 'border-rose-500/30', dot: 'bg-rose-400', label: 'Evidence not aligned' };
 }
 
 function riskLabel(permission: 'ALLOW' | 'WAIT' | 'BLOCK') {
-  if (permission === 'BLOCK') return 'HIGH';
-  if (permission === 'WAIT') return 'MOD';
-  return 'LOW';
+  if (permission === 'BLOCK') return 'Elevated';
+  if (permission === 'WAIT') return 'Moderate';
+  return 'Low';
 }
 
 function MetricPill({ label, value }: { label: string; value: string }) {
   return (
-    <div className="w-[88px] rounded-xl border border-slate-800 bg-slate-950/30 px-2.5 py-1.5">
+    <div className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/30 px-2.5 py-1.5">
       <div className="text-[10px] uppercase tracking-wider text-slate-400">{label}</div>
       <div className="text-sm font-semibold text-slate-100">{value}</div>
     </div>
@@ -386,6 +388,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
   const [activeClusterLabel, setActiveClusterLabel] = useState<string | null>(null);
   const [selectedMid50TF, setSelectedMid50TF] = useState<string>('all');
   const [scanData, setScanData] = useState<{
+    observedAt: string | number | null;
     currentPrice: number;
     direction: 'bullish' | 'bearish' | 'neutral';
     confidence: number;
@@ -445,6 +448,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
       // ── Capture raw scan output for Direction + Target panel ──
       const sd = json.data;
       setScanData({
+        observedAt: typeof sd?.timestamp === 'number' || typeof sd?.timestamp === 'string' ? sd.timestamp : null,
         currentPrice: Number(sd?.currentPrice || sd?.price || 0),
         direction: String(sd?.prediction?.direction || 'neutral') as 'bullish' | 'bearish' | 'neutral',
         confidence: Number(sd?.prediction?.confidence || 0),
@@ -514,7 +518,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
   const displaySymbol = useMemo(() => input.context.symbol || symbol, [input.context.symbol, symbol]);
   const tone = permissionTone(out.permission);
   const validRR = scanData ? directionalRiskReward(scanData.direction, scanData.entry, scanData.stopLoss, scanData.takeProfit) : null;
-  const rrDisplay = validRR == null ? 'Unavailable' : validRR.toFixed(1);
+  const rrDisplay = validRR == null ? 'Not measured' : validRR.toFixed(1);
   const confluenceRows = [
     { label: 'Trend Alignment', score: out.contextScore },
     { label: 'Flow Strength', score: out.setupScore },
@@ -569,17 +573,17 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
           </div>
         )}
 
-        <section className={`w-full rounded-2xl border bg-slate-900/40 px-4 lg:px-6 ${tone.border}`}>
+        <section className="w-full rounded-2xl border border-slate-700 bg-slate-900/40 px-4 lg:px-6">
           <div className="grid min-h-[88px] grid-cols-1 items-center gap-3 py-3 lg:grid-cols-[1.3fr_0.9fr_1.2fr] lg:py-0">
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <input
+              <div className="flex flex-wrap items-center gap-2">
+                {embeddedInTerminal ? <span className="text-sm font-semibold">{symbol}</span> : <input
                   value={symbol}
                   readOnly={embeddedInTerminal}
                   onChange={(event) => setSymbol(event.target.value.toUpperCase())}
                   placeholder="SYMBOL"
                   className="w-24 rounded-lg border border-slate-800 bg-slate-950/50 px-2 py-1.5 text-sm font-semibold text-slate-100"
-                />
+                />}
                 <select
                   value={scanMode}
                   onChange={(event) => {
@@ -601,9 +605,9 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
                     className="rounded-lg border border-slate-800 bg-slate-950/50 px-2 py-1.5 text-xs text-slate-200"
                     title="Session hours — affects intraday candle close anchors"
                   >
-                    <option value="regular">RTH (9:30–16:00)</option>
-                    <option value="extended">Extended (4:00–20:00)</option>
-                    <option value="full">Full (00:00–24:00)</option>
+                    <option value="regular">RTH (9:30–16:00 ET)</option>
+                    <option value="extended">Extended (4:00–20:00 ET)</option>
+                    <option value="full">Full (00:00–24:00 ET)</option>
                   </select>
                 )}
                 <button
@@ -618,27 +622,28 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
                 </button>
               </div>
               <div className="mt-1.5 truncate text-xs text-slate-400">
-                {out.direction} • {SCAN_MODE_LABELS[scanMode]} • {displaySymbol}{!isCrypto ? ` • ${sessionMode === 'regular' ? 'RTH' : sessionMode === 'extended' ? 'Extended' : 'Full'}` : ''}
+                {out.direction === 'bullish' ? 'Upside evidence' : out.direction === 'bearish' ? 'Downside evidence' : 'Mixed evidence'} • {SCAN_MODE_LABELS[scanMode]} • {displaySymbol}{!isCrypto ? ` • ${sessionMode === 'regular' ? 'RTH' : sessionMode === 'extended' ? 'Extended' : 'Full'}` : ''}
               </div>
             </div>
 
             <div className="flex justify-start lg:justify-center">
               <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/45 px-3 py-2">
                 <div className={`h-2.5 w-2.5 rounded-full ${tone.dot}`} />
-                <div className="text-sm font-semibold tracking-wide text-slate-100">{scanData ? tone.label : 'Run scan to assess'}</div>
+                <div data-time-verdict className="text-sm font-semibold tracking-wide text-slate-100">{scanData ? (input.setup.decomposition.length ? tone.label : 'No measured timing evidence') : 'Run scan to assess'}</div>
               </div>
             </div>
 
             <div className="flex items-center justify-between gap-2 lg:justify-end">
-              <div className="grid grid-cols-3 gap-2">
+              <div className={`grid w-full gap-2 ${validRR == null ? 'grid-cols-2' : 'grid-cols-3'}`}>
                 <MetricPill label="Confluence" value={scanData ? `${Math.round(out.timeConfluenceScore)} / 100` : 'Unavailable'} />
                 <MetricPill label="Risk" value={scanData ? riskLabel(out.permission) : 'Unavailable'} />
-                <MetricPill label="R:R" value={rrDisplay} />
+                {validRR != null && <MetricPill label="R:R" value={rrDisplay} />}
               </div>
             </div>
           </div>
         </section>
 
+        <CollapsibleSection title="Timing evidence">
         {/* ═══ SCAN OUTPUT: Direction + Price Target ═══ */}
         {scanData && scanData.direction !== 'neutral' && (
           <section className="w-full rounded-2xl border bg-slate-900/50 p-4 lg:p-5" style={{
@@ -653,7 +658,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
                       ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                       : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
                   }`}>
-                    {scanData.direction === 'bullish' ? '↑ BULLISH' : '↓ BEARISH'}
+                    {scanData.direction === 'bullish' ? 'Upside evidence' : 'Downside evidence'}
                   </div>
                   <div className="text-xs text-slate-400">
                     Alignment: <span className="font-semibold text-slate-200">{Math.min(100, Math.round(scanData.confidence <= 1 ? scanData.confidence * 100 : scanData.confidence))}%</span>
@@ -680,7 +685,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
                     <div className="text-[10px] uppercase tracking-wider text-slate-500">Key Level</div>
                     <div className={`text-base font-bold ${
                       scanData.direction === 'bullish' ? 'text-emerald-400' : 'text-rose-400'
-                    }`}>{scanData.targetLevel > 0 ? formatPrice(scanData.targetLevel) : '—'}</div>
+                    }`}>{scanData.targetLevel > 0 ? formatPrice(scanData.targetLevel) : 'Not measured'}</div>
                   </div>
                 </div>
 
@@ -746,7 +751,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
                         <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                           50% Pull Levels <span className={`ml-1 ${
                             scanData.netPull === 'bullish' ? 'text-emerald-400' : scanData.netPull === 'bearish' ? 'text-rose-400' : 'text-slate-500'
-                          }`}>({scanData.netPull})</span>
+                          }`}>({scanData.netPull === 'bullish' ? 'upward pull' : scanData.netPull === 'bearish' ? 'downward pull' : 'mixed pull'})</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                           {selectedClusterTFs && (
@@ -811,11 +816,11 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
 
         {/* ═══ MARKET PRESSURE ENGINE ═══ */}
         {scanData && (
-          <details className="w-full rounded-2xl border border-slate-800 bg-slate-900/30" open>
+          <details className="w-full rounded-2xl border border-slate-800 bg-slate-900/30">
             <summary className="cursor-pointer list-none px-3 py-3 lg:px-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-sm font-semibold text-slate-100">Market Pressure Engine</span>
+                  <span className="text-sm font-semibold text-slate-100">Market pressure</span>
                   <span className="ml-2 text-xs text-slate-400">Composite pressure from time, volatility, liquidity & options</span>
                 </div>
                 <div className="text-xs text-slate-500">▾ expand</div>
@@ -1026,7 +1031,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
           <summary className="cursor-pointer list-none px-3 py-3 lg:px-5">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-sm font-semibold text-slate-100">Time Confluence Engine</span>
+                <span className="text-sm font-semibold text-slate-100">Time Confluence</span>
                 <span className="ml-2 text-xs text-slate-400">Alignment score, decompression & structure</span>
               </div>
               <div className="text-xs text-slate-500">▾ expand</div>
@@ -1036,7 +1041,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-[2fr_1fr] lg:gap-6">
             <div className="space-y-3">
               <div>
-                <div className="text-sm font-semibold text-slate-100">Confluence Engine</div>
+                <div className="text-sm font-semibold text-slate-100">Confluence evidence</div>
                 <div className="text-xs text-slate-400">Time alignment → confluence quality</div>
               </div>
 
@@ -1051,7 +1056,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
                   )}
                 </div>
                 <div className="mt-3 text-xs text-slate-500">
-                  Alignment {input.setup.window.alignmentCount}/{input.setup.window.tfCount} • Window {input.setup.window.status}
+                  Alignment {input.setup.window.alignmentCount}/{input.setup.window.tfCount} • Window {input.setup.window.status.toLowerCase().replaceAll('_', ' ')}
                 </div>
               </div>
             </div>
@@ -1064,9 +1069,9 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
 
               <div className="rounded-2xl border border-slate-700 bg-slate-950/35 p-3 shadow-sm">
                 <div className="space-y-2">
-                  <TimingField label="Close" value={input.execution.closeConfirmation} />
+                  <TimingField label="Close" value={input.execution.closeConfirmation.toLowerCase().replaceAll('_', ' ')} />
                   <TimingField label="Risk" value={input.execution.riskState} />
-                  <TimingField label="Liquidity" value={input.execution.liquidityOK ? 'OK' : 'THIN'} />
+                  <TimingField label="Liquidity" value={input.execution.liquidityOK ? 'Adequate' : 'Thin'} />
 
                   <div className="grid grid-cols-3 gap-2 pt-1">
                     <MetricPill label="Gate" value={`${Math.round(out.gateScore)}%`} />
@@ -1104,10 +1109,12 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
           </div>
         </details>
 
+        </CollapsibleSection>
         {/* ── Intel accordion sections removed — core purpose is cluster + direction output ── */}
         {embeddedInTerminal && scanData && (
-          <TimeConfluenceWidget showMacro showMicro showCalendar assetClass={isCrypto ? 'crypto' : 'equity'} symbol={displaySymbol} />
+          <CollapsibleSection title="Scheduled timing context"><TimeConfluenceWidget showMacro showMicro showCalendar assetClass={isCrypto ? 'crypto' : 'equity'} symbol={displaySymbol} /></CollapsibleSection>
         )}
+        {scanData && <SourceLine source="Confluence scan" asOf={scanData.observedAt} tradingDay="Observation time not supplied" basis="Measured scan evidence and calculated schedules" />}
       </main>
     </TimeScannerShell>
   );

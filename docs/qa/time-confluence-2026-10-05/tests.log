@@ -1,0 +1,17 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+ RUN  v3.2.4 /workspace/scratch/0535040d28c6/time-confluence-compact
+
+ ✓ test/marketPressurePresentation.test.tsx (1 test) 56ms
+ ✓ test/guideClientBoundary.test.ts (2 tests) 516ms
+   ✓ no client module reaches next/headers or lib/auth  512ms
+ ✓ test/timeConfluencePresentation.test.tsx (4 tests) 452ms
+ ✓ test/wp8bTerminalEmptyTabs.test.tsx (8 tests) 160ms
+ ✓ test/timeScannerScheduleModel.test.ts (15 tests) 2091ms
+   ✓ time scanner schedule model truth > keeps 1D and 30D equity boundaries inside the 1-30 day horizon model  301ms
+
+ Test Files  5 passed (5)
+      Tests  30 passed (30)
+   Start at  12:01:52
+   Duration  2.70s (transform 867ms, setup 0ms, collect 1.45s, tests 3.28s, environment 1.24s, prepare 366ms)
+

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { formatMarketTime } from '@/lib/market/priceStamp';
+import { nyDateTime, nyWallTimeMs } from '@/lib/time/usSession';
 import {
   getTimeConfluenceState,
   TimeConfluence,
@@ -19,17 +21,6 @@ interface TimeConfluenceWidgetProps {
   symbol?: string;
   /** Asset class — controls macro candle computation (crypto uses TradingView UTC anchors) */
   assetClass?: 'crypto' | 'equity';
-}
-
-// Simulated historical hit rate based on confluence score patterns
-function getHistoricalHitRate(score: number): { rate: number; samples: number } {
-  // Higher confluence = historically higher hit rate on directional moves
-  if (score >= 15) return { rate: 78, samples: 42 };
-  if (score >= 12) return { rate: 73, samples: 87 };
-  if (score >= 9) return { rate: 68, samples: 124 };
-  if (score >= 6) return { rate: 62, samples: 203 };
-  if (score >= 3) return { rate: 55, samples: 312 };
-  return { rate: 48, samples: 456 };
 }
 
 // Generate confidence explanation from current state
@@ -72,10 +63,19 @@ export default function TimeConfluenceWidget({
   assetClass = 'crypto',
 }: TimeConfluenceWidgetProps) {
   const [state, setState] = useState(() => getTimeConfluenceState(new Date(), assetClass));
-  const [activeTab, setActiveTab] = useState<'now' | 'today' | 'fib' | 'macro' | 'calendar'>('now');
+  const [activeTab, setActiveTab] = useState<'now' | 'today' | 'fib' | 'macro' | 'calendar'>(assetClass === 'crypto' ? 'macro' : 'now');
+  useEffect(() => { setActiveTab(assetClass === 'crypto' ? 'macro' : 'now'); }, [assetClass]);
   const [showTooltip, setShowTooltip] = useState(false);
-  const [alertSet, setAlertSet] = useState(false);
-  const [alertThreshold, setAlertThreshold] = useState(10);
+  const [zone, setZone] = useState('UTC');
+  useEffect(() => { setZone(Intl.DateTimeFormat().resolvedOptions().timeZone); }, []);
+  const clockTime = (date: Date) => formatMarketTime(date.toISOString(), zone) || 'Not collected';
+  const equityWindowTime = (time: string) => {
+    const match = /^(\d+):(\d+) (AM|PM)$/.exec(time);
+    if (!match) return `${time} ET`;
+    const hour = Number(match[1]) % 12 + (match[3] === 'PM' ? 12 : 0);
+    const day = nyDateTime(state.currentTime.getTime()).ymd;
+    return formatMarketTime(nyWallTimeMs(day, hour * 60 + Number(match[2])), zone) || 'Not collected';
+  };
 
   // Update every minute
   useEffect(() => {
@@ -119,6 +119,7 @@ export default function TimeConfluenceWidget({
   };
 
   const sessionBadge = () => {
+    if (assetClass === 'crypto') return <span className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-300">24/7 crypto</span>;
     const colors: Record<string, { bg: string; text: string }> = {
       pre: { bg: 'rgba(251,191,36,0.2)', text: 'var(--msp-warn)' },
       regular: { bg: 'rgba(16,185,129,0.2)', text: 'var(--msp-bull)' },
@@ -172,11 +173,11 @@ export default function TimeConfluenceWidget({
           </div>
         )}
         
-        {state.nextMajor && (
+        {assetClass !== 'crypto' && state.nextMajor && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span style={{ color: 'var(--msp-text-muted)', fontSize: '0.8rem' }}>Next:</span>
             <span style={{ color: '#A855F7', fontWeight: 600, fontSize: '0.9rem' }}>
-              {state.nextMajor.timeET}
+              {clockTime(state.nextMajor.time)}
             </span>
             <span style={{ color: 'var(--msp-warn)', fontSize: '0.8rem' }}>
               ({formatCountdown(state.minutesToNextMajor)})
@@ -216,7 +217,7 @@ export default function TimeConfluenceWidget({
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span aria-hidden="true" style={{ fontSize: '1.3rem' }}>⏰</span>
           <h3 style={{ margin: 0, color: 'var(--msp-text)', fontSize: '1.1rem', fontWeight: 600 }}>
-            Time Confluence Engine
+            Time Confluence
           </h3>
         </div>
         {sessionBadge()}
@@ -228,9 +229,8 @@ export default function TimeConfluenceWidget({
         borderBottom: '1px solid rgba(168,85,247,0.2)',
       }}>
         {[
-          { id: 'now', icon: '🔴', text: 'Live' },
-          { id: 'today', icon: '📅', text: 'Today' },
-          { id: 'fib', icon: '🔢', text: 'Fib' },
+          ...(assetClass === 'equity' ? [{ id: 'now', icon: '🔴', text: 'Current' }] : []),
+          ...(assetClass === 'equity' ? [{ id: 'today', icon: '📅', text: 'Today' }, { id: 'fib', icon: '🔢', text: 'Fib' }] : []),
           { id: 'macro', icon: '📊', text: 'Macro' },
           { id: 'calendar', icon: '🗓️', text: 'Calendar' },
         ].map((tab) => (
@@ -242,7 +242,7 @@ export default function TimeConfluenceWidget({
             onClick={() => setActiveTab(tab.id as typeof activeTab)}
             style={{
               flex: 1,
-              padding: '0.75rem',
+              padding: '0.75rem 0.35rem',
               background: activeTab === tab.id ? 'rgba(168,85,247,0.2)' : 'transparent',
               border: 'none',
               borderBottom: activeTab === tab.id ? '2px solid #A855F7' : '2px solid transparent',
@@ -353,127 +353,6 @@ export default function TimeConfluenceWidget({
                 {impactBadge(state.nowImpact)}
               </div>
               
-              {/* Historical Hit Rate */}
-              {state.nowConfluenceScore > 0 && (
-                <div style={{
-                  marginTop: '1rem',
-                  padding: '0.75rem',
-                  background: 'rgba(16,185,129,0.1)',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(16,185,129,0.2)',
-                }}>
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                  }}>
-                    <span aria-hidden="true" style={{ fontSize: '1.1rem' }}>📈</span>
-                    <span style={{ color: 'var(--msp-bull)', fontWeight: 600, fontSize: '1.1rem' }}>
-                      {getHistoricalHitRate(state.nowConfluenceScore).rate}%
-                    </span>
-                    <span style={{ color: 'var(--msp-flat)', fontSize: '0.8rem' }}>
-                      target hit rate
-                    </span>
-                  </div>
-                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.7rem', marginTop: '0.25rem' }}>
-                    Simulated — modelled from {getHistoricalHitRate(state.nowConfluenceScore).samples} pattern setups
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Alert Button */}
-            <div style={{
-              marginBottom: '1rem',
-              padding: '0.75rem',
-              background: alertSet ? 'rgba(16,185,129,0.15)' : 'rgba(168,85,247,0.1)',
-              borderRadius: '10px',
-              border: `1px solid ${alertSet ? 'rgba(16,185,129,0.3)' : 'rgba(168,85,247,0.2)'}`,
-            }}>
-              {!alertSet ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: 'var(--msp-text)', fontSize: '0.85rem', fontWeight: 500 }}>
-                      <span aria-hidden="true">🔔 </span>Set Confluence Alert
-                    </div>
-                    <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem' }}>
-                      Notify when score hits strong again
-                    </div>
-                  </div>
-                  <select
-                    value={alertThreshold}
-                    onChange={(e) => setAlertThreshold(Number(e.target.value))}
-                    style={{
-                      background: 'rgba(0,0,0,0.3)',
-                      border: '1px solid rgba(168,85,247,0.3)',
-                      borderRadius: '6px',
-                      color: 'var(--msp-text)',
-                      padding: '0.4rem 0.6rem',
-                      fontSize: '0.8rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <option value={6}>Score ≥ 6</option>
-                    <option value={8}>Score ≥ 8</option>
-                    <option value={10}>Score ≥ 10</option>
-                    <option value={12}>Score ≥ 12</option>
-                    <option value={15}>Score ≥ 15</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAlertSet(true);
-                      // In production, this would call push notification API
-                      if ('Notification' in window && Notification.permission !== 'granted') {
-                        Notification.requestPermission();
-                      }
-                    }}
-                    style={{
-                      background: 'var(--msp-accent)',
-                      border: 'none',
-                      borderRadius: '6px',
-                      color: 'white',
-                      padding: '0.5rem 1rem',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    Set Alert
-                  </button>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span aria-hidden="true" style={{ fontSize: '1.1rem' }}>✅</span>
-                    <div>
-                      <div style={{ color: 'var(--msp-bull)', fontSize: '0.85rem', fontWeight: 500 }}>
-                        Alert Active
-                      </div>
-                      <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem' }}>
-                        Will notify when score ≥ {alertThreshold}
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setAlertSet(false)}
-                    style={{
-                      background: 'transparent',
-                      border: '1px solid rgba(239,68,68,0.3)',
-                      borderRadius: '6px',
-                      color: 'var(--msp-bear)',
-                      padding: '0.4rem 0.8rem',
-                      fontSize: '0.75rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
             </div>
 
             {/* Candles Closing Now */}
@@ -508,7 +387,7 @@ export default function TimeConfluenceWidget({
             )}
 
             {/* Next Major Confluence */}
-            {state.nextMajor && (
+            {assetClass !== 'crypto' && state.nextMajor && (
               <div style={{
                 background: 'var(--msp-panel)',
                 borderRadius: '10px',
@@ -516,12 +395,12 @@ export default function TimeConfluenceWidget({
                 marginBottom: '1rem',
               }}>
                 <div style={{ color: '#A855F7', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
-                  <span aria-hidden="true">⏳ </span>{assetClass === 'crypto' ? 'NEXT US EQUITY WINDOW (CROSS-MARKET CONTEXT)' : 'NEXT MAJOR CONFLUENCE'}
+                  <span aria-hidden="true">⏳ </span>Next scheduled confluence
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--msp-text)' }}>
-                      {state.nextMajor.timeET}
+                      {clockTime(state.nextMajor.time)}
                     </div>
                     <div style={{ color: 'var(--msp-flat)', fontSize: '0.85rem' }}>
                       {state.nextMajor.description}
@@ -539,14 +418,14 @@ export default function TimeConfluenceWidget({
             )}
 
             {/* TWAP Windows */}
-            {showTWAP && (
+            {showTWAP && assetClass !== 'crypto' && (
               <div style={{
                 background: 'rgba(0,0,0,0.2)',
                 borderRadius: '10px',
                 padding: '1rem',
               }}>
                 <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem', marginBottom: '0.75rem' }}>
-                  <span aria-hidden="true">🏦 </span>US EQUITY SESSION WINDOWS · ET
+                  <span aria-hidden="true">🏦 </span>US equity session windows · viewer time
                 </div>
                 <div style={{ display: 'grid', gap: '0.5rem' }}>
                   {state.twapWindows.slice(0, 3).map((window, i) => (
@@ -562,7 +441,7 @@ export default function TimeConfluenceWidget({
                       }}
                     >
                       <span style={{ color: 'var(--msp-accent)', fontWeight: 500, fontSize: '0.85rem' }}>
-                        {window.start} - {window.end}
+                        {equityWindowTime(window.start)} – {equityWindowTime(window.end)}
                       </span>
                       <span style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem' }}>
                         {window.description.split(' - ')[0]}
@@ -602,7 +481,7 @@ export default function TimeConfluenceWidget({
                     }}
                   >
                     <div>
-                      <div style={{ color: 'var(--msp-text)', fontWeight: 500 }}>{conf.timeET}</div>
+                      <div style={{ color: 'var(--msp-text)', fontWeight: 500 }}>{clockTime(conf.time)}</div>
                       <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem' }}>
                         {conf.closingCandles.slice(0, 4).join(', ')}
                         {conf.closingCandles.length > 4 && ` +${conf.closingCandles.length - 4}`}
@@ -648,7 +527,7 @@ export default function TimeConfluenceWidget({
                     }}
                   >
                     <div>
-                      <div style={{ color: 'var(--msp-text)', fontWeight: 500 }}>{conf.timeET}</div>
+                      <div style={{ color: 'var(--msp-text)', fontWeight: 500 }}>{clockTime(conf.time)}</div>
                       <div style={{ color: 'var(--msp-warn)', fontSize: '0.75rem' }}>
                         {conf.closingCandles.filter(c => c.includes('Fib')).join(', ')}
                       </div>

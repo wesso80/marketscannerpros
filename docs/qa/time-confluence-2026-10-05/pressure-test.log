@@ -1,0 +1,11 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+ RUN  v3.2.4 /workspace/scratch/0535040d28c6/time-confluence-compact
+
+ ✓ test/marketPressurePresentation.test.tsx (1 test) 46ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  11:59:19
+   Duration  799ms (transform 64ms, setup 0ms, collect 127ms, tests 46ms, environment 271ms, prepare 61ms)
+
