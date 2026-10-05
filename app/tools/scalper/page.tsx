@@ -75,7 +75,11 @@ export default function ScalperPage() {
         <p
           role="status"
           data-scalper-unavailable
-          className="rounded-lg border border-[var(--msp-warn)] bg-[var(--msp-warn-tint)] px-4 py-4 text-sm text-[var(--msp-text)]"
+          className="rounded-lg border px-4 py-4 text-sm text-[var(--msp-text)]"
+          style={{
+            borderColor: 'var(--msp-warn)',
+            background: 'color-mix(in srgb, var(--msp-warn) 18%, transparent)',
+          }}
         >
           Live scalping scan not available yet. Coming soon.
         </p>
