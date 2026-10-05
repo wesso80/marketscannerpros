@@ -75,9 +75,16 @@ function menuItems(
             : undefined
         }
         onClick={onPick}
-        className="flex min-h-10 items-center rounded px-3 text-sm text-[var(--msp-text)] hover:bg-[var(--msp-panel-2)] hover:text-[var(--msp-accent)]"
+        className={
+          item.comingSoon
+            ? "flex min-h-10 items-center justify-between gap-3 rounded px-3 text-sm text-[var(--msp-text-muted)]"
+            : "flex min-h-10 items-center rounded px-3 text-sm text-[var(--msp-text)] hover:bg-[var(--msp-panel-2)] hover:text-[var(--msp-accent)]"
+        }
       >
-        {item.label}
+        <span>{item.label}</span>
+        {item.comingSoon ? (
+          <span className="text-xs text-[var(--msp-text-muted)]">Coming soon</span>
+        ) : null}
       </Link>
     );
   });
