@@ -58,12 +58,20 @@ export default function ScalperPage() {
             Short-timeframe research for crypto and equities.
           </p>
         </div>
-        <a
-          href="/tools/golden-egg"
-          className="inline-flex min-h-10 items-center rounded-lg border border-[var(--msp-border)] px-4 text-sm hover:text-[var(--msp-accent)]"
-        >
-          Open Symbol
-        </a>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href="/tools/golden-egg"
+            className="inline-flex min-h-10 items-center rounded-lg border border-[var(--msp-border)] px-4 text-sm hover:text-[var(--msp-accent)]"
+          >
+            Open Symbol
+          </a>
+          <a
+            href="/tools/terminal"
+            className="inline-flex min-h-10 items-center rounded-lg border border-[var(--msp-border)] px-4 text-sm hover:text-[var(--msp-accent)]"
+          >
+            Open Terminal
+          </a>
+        </div>
         <p
           role="status"
           data-scalper-unavailable
