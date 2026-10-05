@@ -1,0 +1,735 @@
+{
+  "mocked": true,
+  "fixtureBasis": "Deterministic intercepted /api/favorites fixtures. External origins aborted. Not live-provider acceptance.",
+  "route": "/tools/dashboard?tab=pages",
+  "tip": "audit/my-pages-compact",
+  "viewports": [
+    "1280x800",
+    "390x844"
+  ],
+  "hardMaxScreens390": 2.3,
+  "targetScreens390": 2,
+  "maxScreens390Closed": 1.518957345971564,
+  "maxScreens1280Closed": 1.03,
+  "results": [
+    {
+      "id": "populated-closed",
+      "dataCase": "populated",
+      "action": "closed",
+      "route": "/tools/dashboard?tab=pages",
+      "pngFull": "shots/populated-closed-1280-full.png",
+      "pngFold": "shots/populated-closed-1280-fold.png",
+      "observedAt": "2026-10-05T18:29:33.698Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 824,
+      "screens": 1.03,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "browserOpen": false,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved-page preferences · Not available right now · Personal shortcuts · sync observation time not supplied"
+      ],
+      "summaries": [
+        {
+          "text": "8 saved pages",
+          "top": 380,
+          "bottom": 400,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "cardCount": 5,
+      "showAll": [
+        "Show all 8"
+      ],
+      "removes": [
+        {
+          "label": "Remove Market Movers from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Time Confluence from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Crypto Derivatives from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Economic Calendar from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Liquidity Sweep from My Pages",
+          "width": 40,
+          "height": 40
+        }
+      ],
+      "removeMin40": true,
+      "disclaimerVisible": true,
+      "scrollY": 0
+    },
+    {
+      "id": "populated-closed",
+      "dataCase": "populated",
+      "action": "closed",
+      "route": "/tools/dashboard?tab=pages",
+      "pngFull": "shots/populated-closed-390-full.png",
+      "pngFold": "shots/populated-closed-390-fold.png",
+      "observedAt": "2026-10-05T18:29:34.383Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1262,
+      "screens": 1.495260663507109,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "browserOpen": false,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved-page preferences · Not available right now · Personal shortcuts · sync observation time not supplied"
+      ],
+      "summaries": [
+        {
+          "text": "8 saved pages",
+          "top": 479,
+          "bottom": 499,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "cardCount": 5,
+      "showAll": [
+        "Show all 8"
+      ],
+      "removes": [
+        {
+          "label": "Remove Market Movers from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Time Confluence from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Crypto Derivatives from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Economic Calendar from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Liquidity Sweep from My Pages",
+          "width": 40,
+          "height": 40
+        }
+      ],
+      "removeMin40": true,
+      "disclaimerVisible": true,
+      "scrollY": 0
+    },
+    {
+      "id": "populated-show-all",
+      "dataCase": "populated",
+      "action": "show-all",
+      "route": "/tools/dashboard?tab=pages",
+      "pngFull": "shots/populated-show-all-1280-full.png",
+      "pngFold": "shots/populated-show-all-1280-fold.png",
+      "observedAt": "2026-10-05T18:29:35.090Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 931,
+      "screens": 1.16375,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "browserOpen": false,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved-page preferences · Not available right now · Personal shortcuts · sync observation time not supplied"
+      ],
+      "summaries": [
+        {
+          "text": "8 saved pages",
+          "top": 380,
+          "bottom": 400,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "cardCount": 8,
+      "showAll": [
+        "Show five"
+      ],
+      "removes": [
+        {
+          "label": "Remove Market Movers from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Time Confluence from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Crypto Derivatives from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Economic Calendar from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Liquidity Sweep from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Open Interest Guide from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Signal Accuracy from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Crypto Terminal from My Pages",
+          "width": 40,
+          "height": 40
+        }
+      ],
+      "removeMin40": true,
+      "disclaimerVisible": true,
+      "scrollY": 0
+    },
+    {
+      "id": "populated-show-all",
+      "dataCase": "populated",
+      "action": "show-all",
+      "route": "/tools/dashboard?tab=pages",
+      "pngFull": "shots/populated-show-all-390-full.png",
+      "pngFold": "shots/populated-show-all-390-fold.png",
+      "observedAt": "2026-10-05T18:29:35.813Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1585,
+      "screens": 1.877962085308057,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "browserOpen": false,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved-page preferences · Not available right now · Personal shortcuts · sync observation time not supplied"
+      ],
+      "summaries": [
+        {
+          "text": "8 saved pages",
+          "top": 479,
+          "bottom": 499,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "cardCount": 8,
+      "showAll": [
+        "Show five"
+      ],
+      "removes": [
+        {
+          "label": "Remove Market Movers from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Time Confluence from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Crypto Derivatives from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Economic Calendar from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Liquidity Sweep from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Open Interest Guide from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Signal Accuracy from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Crypto Terminal from My Pages",
+          "width": 40,
+          "height": 40
+        }
+      ],
+      "removeMin40": true,
+      "disclaimerVisible": true,
+      "scrollY": 0
+    },
+    {
+      "id": "empty",
+      "dataCase": "empty",
+      "action": "closed",
+      "route": "/tools/dashboard?tab=pages",
+      "pngFull": "shots/empty-1280-full.png",
+      "pngFold": "shots/empty-1280-fold.png",
+      "observedAt": "2026-10-05T18:29:36.509Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "screens": 1,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "browserOpen": false,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved-page preferences · Not available right now · Personal shortcuts · sync observation time not supplied"
+      ],
+      "summaries": [
+        {
+          "text": "No pages saved yet.",
+          "top": 380,
+          "bottom": 400,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "cardCount": 0,
+      "showAll": [],
+      "removes": [],
+      "removeMin40": false,
+      "disclaimerVisible": true,
+      "scrollY": 0
+    },
+    {
+      "id": "empty",
+      "dataCase": "empty",
+      "action": "closed",
+      "route": "/tools/dashboard?tab=pages",
+      "pngFull": "shots/empty-390-full.png",
+      "pngFold": "shots/empty-390-fold.png",
+      "observedAt": "2026-10-05T18:29:37.638Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "screens": 1,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "browserOpen": false,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved-page preferences · Not available right now · Personal shortcuts · sync observation time not supplied"
+      ],
+      "summaries": [
+        {
+          "text": "No pages saved yet.",
+          "top": 479,
+          "bottom": 499,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "cardCount": 0,
+      "showAll": [],
+      "removes": [],
+      "removeMin40": false,
+      "disclaimerVisible": true,
+      "scrollY": 0
+    },
+    {
+      "id": "degraded",
+      "dataCase": "degraded",
+      "action": "closed",
+      "route": "/tools/dashboard?tab=pages",
+      "pngFull": "shots/degraded-1280-full.png",
+      "pngFold": "shots/degraded-1280-fold.png",
+      "observedAt": "2026-10-05T18:29:38.304Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 824,
+      "screens": 1.03,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "browserOpen": false,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Cached saved-page preferences · Not available right now · Personal shortcuts · sync observation time not supplied"
+      ],
+      "summaries": [
+        {
+          "text": "8 saved pages shown from cache; sync could not be verified.",
+          "top": 380,
+          "bottom": 400,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "cardCount": 5,
+      "showAll": [
+        "Show all 8"
+      ],
+      "removes": [
+        {
+          "label": "Remove Market Movers from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Time Confluence from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Crypto Derivatives from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Economic Calendar from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Liquidity Sweep from My Pages",
+          "width": 40,
+          "height": 40
+        }
+      ],
+      "removeMin40": true,
+      "disclaimerVisible": true,
+      "scrollY": 0
+    },
+    {
+      "id": "degraded",
+      "dataCase": "degraded",
+      "action": "closed",
+      "route": "/tools/dashboard?tab=pages",
+      "pngFull": "shots/degraded-390-full.png",
+      "pngFold": "shots/degraded-390-fold.png",
+      "observedAt": "2026-10-05T18:29:38.989Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1282,
+      "screens": 1.518957345971564,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "browserOpen": false,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Cached saved-page preferences · Not available right now · Personal shortcuts · sync observation time not supplied"
+      ],
+      "summaries": [
+        {
+          "text": "8 saved pages shown from cache; sync could not be verified.",
+          "top": 479,
+          "bottom": 519,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "cardCount": 5,
+      "showAll": [
+        "Show all 8"
+      ],
+      "removes": [
+        {
+          "label": "Remove Market Movers from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Time Confluence from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Crypto Derivatives from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Economic Calendar from My Pages",
+          "width": 40,
+          "height": 40
+        },
+        {
+          "label": "Remove Liquidity Sweep from My Pages",
+          "width": 40,
+          "height": 40
+        }
+      ],
+      "removeMin40": true,
+      "disclaimerVisible": true,
+      "scrollY": 0
+    },
+    {
+      "id": "error",
+      "dataCase": "error",
+      "action": "closed",
+      "route": "/tools/dashboard?tab=pages",
+      "pngFull": "shots/error-1280-full.png",
+      "pngFold": "shots/error-1280-fold.png",
+      "observedAt": "2026-10-05T18:29:40.094Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "screens": 1,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "browserOpen": false,
+      "sourceCount": 0,
+      "sourceText": [],
+      "summaries": [
+        {
+          "text": "Saved pages could not be loaded. Reload this page to try again.",
+          "top": 365,
+          "bottom": 385,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "cardCount": 0,
+      "showAll": [],
+      "removes": [],
+      "removeMin40": false,
+      "disclaimerVisible": true,
+      "scrollY": 0
+    },
+    {
+      "id": "error",
+      "dataCase": "error",
+      "action": "closed",
+      "route": "/tools/dashboard?tab=pages",
+      "pngFull": "shots/error-390-full.png",
+      "pngFold": "shots/error-390-fold.png",
+      "observedAt": "2026-10-05T18:29:40.741Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "screens": 1,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "browserOpen": false,
+      "sourceCount": 0,
+      "sourceText": [],
+      "summaries": [
+        {
+          "text": "Saved pages could not be loaded. Reload this page to try again.",
+          "top": 464,
+          "bottom": 504,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "cardCount": 0,
+      "showAll": [],
+      "removes": [],
+      "removeMin40": false,
+      "disclaimerVisible": true,
+      "scrollY": 0
+    },
+    {
+      "id": "signed-out",
+      "dataCase": "signed-out",
+      "action": "closed",
+      "route": "/tools/dashboard?tab=pages",
+      "pngFull": "shots/signed-out-1280-full.png",
+      "pngFold": "shots/signed-out-1280-fold.png",
+      "observedAt": "2026-10-05T18:29:41.375Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "screens": 1,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "browserOpen": false,
+      "sourceCount": 0,
+      "sourceText": [],
+      "summaries": [
+        {
+          "text": "Sign in to see the pages you save. This dashboard stays open without an account.",
+          "top": 554,
+          "bottom": 594,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "cardCount": 0,
+      "showAll": [],
+      "removes": [],
+      "removeMin40": false,
+      "disclaimerVisible": true,
+      "scrollY": 0
+    },
+    {
+      "id": "signed-out",
+      "dataCase": "signed-out",
+      "action": "closed",
+      "route": "/tools/dashboard?tab=pages",
+      "pngFull": "shots/signed-out-390-full.png",
+      "pngFold": "shots/signed-out-390-fold.png",
+      "observedAt": "2026-10-05T18:29:42.514Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 898,
+      "screens": 1.0639810426540284,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "browserOpen": false,
+      "sourceCount": 0,
+      "sourceText": [],
+      "summaries": [
+        {
+          "text": "Sign in to see the pages you save. This dashboard stays open without an account.",
+          "top": 701,
+          "bottom": 741,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "cardCount": 0,
+      "showAll": [],
+      "removes": [],
+      "removeMin40": false,
+      "disclaimerVisible": true,
+      "scrollY": 0
+    }
+  ],
+  "errors": []
+}
