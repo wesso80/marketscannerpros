@@ -17,6 +17,7 @@ export async function GET(_req: NextRequest) {
         totalOpenInterestFormatted: formatUSD(evidence.totalOpenInterest),
         change24h: change, avgChange24h: change, marketSignal,
         comparisonReason: evidence.comparisonReason, coverage: evidence.coverage,
+        baselineReadyAt: evidence.baselineReadyAt,
       },
       coins: evidence.coins.map(coin => ({
         symbol: coin.symbol, openInterest: coin.value, openInterestValue: coin.value,

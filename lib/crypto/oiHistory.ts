@@ -1,11 +1,30 @@
 import { getDerivativesTickers } from '@/lib/coingecko';
 import { getCached, setCached, getRedis } from '@/lib/redis';
-import { compareOi24h, HOUR_MS, OI_METHOD, totalOiChange, type OiObservation, stableOiObservation, type StableOiObservation } from './oiComparisons';
+import { compareOi24h, HOUR_MS, OI_METHOD, readStoredOiSnapshot, totalOiChange, type OiObservation, stableOiObservation, type StableOiObservation } from './oiComparisons';
 
 const SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'DOGE', 'ADA', 'AVAX', 'DOT', 'LINK', 'NEAR', 'LTC', 'UNI', 'ATOM', 'ARB', 'OP', 'APT', 'TON', 'SHIB', 'TRX'];
 const key = (hour: number, fixed = false) => `oi:observed-usd:${fixed ? "fixed-v1" : "v3"}:${hour}`;
 type Comparison = OiObservation & ReturnType<typeof compareOi24h>;
-let memo: { signature: string; until: number; promise: Promise<{ compared: Comparison[]; persisted: boolean }> } | null = null;
+let memo: { signature: string; until: number; promise: Promise<{ compared: Comparison[]; persisted: boolean; historyCount: number }> } | null = null;
+
+/** Oldest stored hour in the 48h TTL, so a missing 24h baseline can name when it should exist. */
+async function oldestSnapshotStartMs(hour: number, fixed: boolean, persisted: boolean): Promise<number | null> {
+  const redis = getRedis() as { mget?: (...keys: string[]) => Promise<unknown[] | null> } | null;
+  let oldestAge: number | null = null;
+  if (redis && typeof redis.mget === 'function') {
+    try {
+      const keys = Array.from({ length: 48 }, (_, age) => key(hour - age, fixed));
+      const values = await redis.mget(...keys);
+      (values ?? []).forEach((value, age) => {
+        if (readStoredOiSnapshot(value).length) oldestAge = age;
+      });
+    } catch {
+      oldestAge = null;
+    }
+  }
+  if (oldestAge == null) return persisted ? hour * HOUR_MS : null;
+  return (hour - oldestAge) * HOUR_MS;
+}
 
 async function compareAndStore(current: OiObservation[], now = Date.now()) {
   const signature = JSON.stringify(current);
@@ -13,15 +32,16 @@ async function compareAndStore(current: OiObservation[], now = Date.now()) {
   const promise = (async () => {
     const hour = Math.floor(now / HOUR_MS);
     const fixed = current.every(c => "contractObservedAt" in c);
-    const stored = await Promise.all([23, 24, 25].map(age => getCached<OiObservation[]>(key(hour - age, fixed)).catch(() => null)));
-    const history = stored.flatMap(rows => Array.isArray(rows) ? rows : []);
+    const stored = await Promise.all([23, 24, 25].map(age => getCached<unknown>(key(hour - age, fixed)).catch(() => null)));
+    const history = stored.flatMap(rows => readStoredOiSnapshot(rows));
     const compared = current.map(coin => ({ ...coin, ...compareOi24h(coin, history, now) }));
     let persisted = true;
     if (current.length) {
-      const written = await setCached(key(hour, fixed), current, 48 * 3600);
+      // Wrap so setCached's object spread keeps the array. Readers accept this shape and the legacy numeric-key shape.
+      const written = await setCached(key(hour, fixed), { coins: current }, 48 * 3600);
       persisted = written !== false;
     }
-    return { compared, persisted };
+    return { compared, persisted, historyCount: history.length };
   })();
   memo = { signature, until: now + 300_000, promise };
   return promise;
@@ -64,6 +84,7 @@ export async function getOiEvidence() {
         totalOpenInterest: held.reduce((sum, c) => sum + c.value, 0), change24h: null,
         comparisonReason: coverage, coverage, status: 'degraded' as const,
         persistence: redis && cacheUp ? 'ok' as const : 'unavailable' as const,
+        baselineReadyAt: null,
       };
     }
   }
@@ -95,6 +116,7 @@ export async function getOiEvidence() {
         coins: [], method: OI_METHOD, carriedContracts: 0, expectedContracts: 0, droppedContracts,
         basketEstablished: false, observedAt: new Date(now).toISOString(), totalOpenInterest: null, change24h: null,
         comparisonReason: coverage, coverage, status: 'degraded' as const, persistence: cacheUp ? 'ok' as const : 'unavailable' as const,
+        baselineReadyAt: null,
       };
     }
     if (!redis || !cacheUp) {
@@ -103,6 +125,7 @@ export async function getOiEvidence() {
         coins: [], method: OI_METHOD, carriedContracts: 0, expectedContracts: 0, droppedContracts,
         basketEstablished: false, observedAt: new Date(now).toISOString(), totalOpenInterest: null, change24h: null,
         comparisonReason: coverage, coverage, status: 'degraded' as const, persistence: 'unavailable' as const,
+        baselineReadyAt: null,
       };
     }
     throw new Error('No fresh open-interest observations');
@@ -124,8 +147,19 @@ export async function getOiEvidence() {
     }
   }
   if (!observations.length) throw new Error('No fresh open-interest observations');
-  const { compared: coins, persisted } = await compareAndStore(observations, now);
+  const { compared: coins, persisted, historyCount } = await compareAndStore(observations, now);
   const carriedContracts = observations.reduce((n,c)=>n+c.carriedContracts,0);
+  const change24h = totalOiChange(coins);
+  let baselineReadyAt: string | null = null;
+  if (change24h == null && historyCount === 0) {
+    const hour = Math.floor(now / HOUR_MS);
+    const fixed = observations.every(c => 'contractObservedAt' in c);
+    const oldest = await oldestSnapshotStartMs(hour, fixed, persisted);
+    if (oldest != null) {
+      const ready = oldest + 23 * HOUR_MS;
+      if (ready > now) baselineReadyAt = new Date(ready).toISOString();
+    }
+  }
   const persistence = redis && cacheUp && persisted ? 'ok' as const : 'unavailable' as const;
   const coverage = !redis || !cacheUp
     ? 'Live CoinGecko perpetual snapshot only. The fixed basket and hourly comparisons are unavailable because the cache is down. Not the whole market.'
@@ -141,10 +175,11 @@ export async function getOiEvidence() {
     basketEstablished: Boolean(pinned?.length),
     observedAt: new Date(Math.min(...coins.map(c => c.observedAt))).toISOString(),
     totalOpenInterest: coins.reduce((sum, c) => sum + c.value, 0),
-    change24h: totalOiChange(coins),
-    comparisonReason: totalOiChange(coins) == null
+    change24h,
+    comparisonReason: change24h == null
       ? 'No hourly snapshot from 23–25 hours ago covers at least 90% of the current open interest on the same venue contracts yet. Snapshots are stored hourly by the scheduled public OI job and when this feed is read.'
       : null,
+    baselineReadyAt,
     coverage, status, persistence,
   };
 }

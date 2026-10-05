@@ -111,8 +111,11 @@ it('keeps Daily Radar candidates ahead of the folded detail', () => {
 
 it('folds crypto derivatives and hides an empty feed wall', () => {
   const page = readFileSync('app/tools/crypto-dashboard/page.tsx', 'utf8');
-  expect(page).toContain('title="More detail"');
+  expect(page).toContain('title="Research scenarios"');
   expect(page).toContain('Some feeds are not available right now');
-  expect(page.indexOf('Displayed values may be incomplete or from a prior snapshot.')).toBeLessThan(page.indexOf('title="More detail"'));
-  expect(page).toContain('Object.keys(data.prices).length > 0');
+  expect(page).toContain('Displayed values may be incomplete.');
+  expect(page.indexOf('Some feeds are not available right now')).toBeLessThan(page.indexOf('title="Research scenarios"'));
+  expect(page).not.toMatch(/get\('\/api\/crypto\/liquidations'\)/);
+  expect(page).toContain('Liquidations: not collected');
+  expect(page).toContain('Object.keys(data.prices).length === 0');
 });
