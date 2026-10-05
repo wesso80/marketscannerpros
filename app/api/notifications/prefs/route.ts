@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getStoredAlertEmailMode, setAlertEmailMode } from '@/lib/alerts/emailControls';
+import type { AlertEmailMode } from '@/lib/alerts/emailPolicy';
 import { normalizeDiscordWebhookUrl } from '@/lib/notifications/discordWebhook';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
@@ -23,6 +25,21 @@ function toSafeEmail(value: unknown): string | null {
 // Only real Discord webhook URLs: the server posts to this URL (TR-26).
 function toSafeWebhook(value: unknown): string | null {
   return normalizeDiscordWebhookUrl(value);
+}
+
+function toAlertMode(value: unknown): AlertEmailMode | undefined {
+  if (value === 'digest' || value === 'each' || value === 'off') return value;
+  return undefined;
+}
+
+async function alertModeFor(workspaceId: string): Promise<AlertEmailMode> {
+  try {
+    const mode = await getStoredAlertEmailMode(workspaceId);
+    return mode === 'missing' ? 'digest' : mode;
+  } catch (error) {
+    console.error('[notifications/prefs] alert email mode unreadable:', error instanceof Error ? error.message : 'failed');
+    return 'digest';
+  }
 }
 
 export async function GET() {
@@ -65,7 +82,10 @@ export async function GET() {
       };
     }
 
-    return NextResponse.json({ success: true, prefs });
+    return NextResponse.json({
+      success: true,
+      prefs: { ...prefs, alert_email_mode: await alertModeFor(session.workspaceId) },
+    });
   } catch (error) {
     console.error('[notifications/prefs] GET error:', error);
     return NextResponse.json({ error: 'Failed to load notification preferences' }, { status: 500 });
@@ -96,6 +116,13 @@ export async function POST(req: NextRequest) {
 
     if (discordEnabled && !discordWebhookUrl) {
       return NextResponse.json({ error: 'Valid Discord webhook URL is required when Discord notifications are enabled' }, { status: 400 });
+    }
+
+    const alertEmailMode = toAlertMode(body?.alertEmailMode ?? body?.alert_email_mode);
+    let alertModeSaved: AlertEmailMode = await alertModeFor(session.workspaceId);
+    if (alertEmailMode) {
+      const saved = await setAlertEmailMode(session.workspaceId, alertEmailMode);
+      if (saved === 'ok') alertModeSaved = alertEmailMode;
     }
 
     await q(
@@ -134,6 +161,7 @@ export async function POST(req: NextRequest) {
         email_to: emailTo,
         discord_enabled: discordEnabled,
         discord_webhook_url: discordWebhookUrl,
+        alert_email_mode: alertModeSaved,
       },
     });
   } catch (error) {

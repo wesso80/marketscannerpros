@@ -22,6 +22,7 @@ interface NotificationPrefs {
   emailTo: string;
   discordEnabled: boolean;
   discordWebhookUrl: string;
+  alertEmailMode: 'digest' | 'each' | 'off';
 }
 
 type TierKey = 'free' | 'pro' | 'pro_trader' | 'anonymous';
@@ -80,6 +81,7 @@ export default function AccountSection() {
     emailTo: '',
     discordEnabled: false,
     discordWebhookUrl: '',
+    alertEmailMode: 'digest',
   });
   const [prefsLoading, setPrefsLoading] = useState(false);
   const [prefsSaving, setPrefsSaving] = useState(false);
@@ -145,6 +147,7 @@ export default function AccountSection() {
           emailTo: typeof prefs.email_to === 'string' ? prefs.email_to : '',
           discordEnabled: prefs.discord_enabled === true,
           discordWebhookUrl: typeof prefs.discord_webhook_url === 'string' ? prefs.discord_webhook_url : '',
+          alertEmailMode: prefs.alert_email_mode === 'each' || prefs.alert_email_mode === 'off' ? prefs.alert_email_mode : 'digest',
         });
       })
       .catch(() => setPrefsError('Unable to load notification settings'))
@@ -417,6 +420,18 @@ export default function AccountSection() {
                   className="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-3 py-2 text-xs text-white placeholder:text-slate-600"
                 />
               )}
+              <label htmlFor="alert-email-mode" className="block text-xs text-slate-400">Alert emails</label>
+              <select
+                id="alert-email-mode"
+                value={notificationPrefs.alertEmailMode}
+                onChange={e => setNotificationPrefs(p => ({ ...p, alertEmailMode: e.target.value as NotificationPrefs['alertEmailMode'] }))}
+                className="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-3 py-2 text-xs text-white"
+              >
+                <option value="digest">Daily summary</option>
+                <option value="each">Each alert (up to the daily cap)</option>
+                <option value="off">Off</option>
+              </select>
+              <p className="text-xs text-slate-500">Daily summary is the default. Alerts still show in the app. Off stops alert and summary emails only.</p>
               <ToggleRow label="Discord Webhook Alerts" checked={notificationPrefs.discordEnabled} onChange={v => setNotificationPrefs(p => ({ ...p, discordEnabled: v }))} />
               {notificationPrefs.discordEnabled && (
                 <input

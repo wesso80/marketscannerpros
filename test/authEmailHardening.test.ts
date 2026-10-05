@@ -13,9 +13,14 @@ vi.mock('resend', () => ({
   },
 }));
 
+vi.mock('@/lib/alerts/emailControls', () => ({
+  recordWebhookSuppression: async () => undefined,
+}));
+
 import { resetMagicLinkEmailCooldown } from '@/lib/magicLinkCooldown';
 import {
   buildSignInEmail,
+  DEFAULT_ALERTS_FROM_EMAIL,
   DEFAULT_AUTH_FROM_EMAIL,
   resolveAuthFromEmail,
   resolveAuthReplyTo,
@@ -130,7 +135,8 @@ describe('sign-in email hardening', () => {
     vi.mocked(console.log).mockClear();
     await sendAlertEmail({ to: 'person@example.test', subject: 'Price Alert: demo', html: '<p>alert</p>' });
     const alertPayload = mocks.send.mock.calls.at(-1)?.[0] as { from: string; replyTo?: string; text?: string; html: string };
-    expect(alertPayload.from).toBe('MarketScanner Pros <alerts@marketscannerpros.app>');
+    expect(alertPayload.from).toBe(DEFAULT_ALERTS_FROM_EMAIL);
+    expect(alertPayload.from).not.toContain('login@');
     expect(alertPayload.replyTo).toBeUndefined();
     expect(alertPayload.text).toBeUndefined();
     expect(alertPayload.html).toBe('<p>alert</p>');

@@ -3,7 +3,7 @@ dotenv.config({ path: '.env.local' });
 dotenv.config();
 
 import { q } from '../lib/db';
-import { sendAlertEmail } from '../lib/email';
+import { deliverUserAlertEmail } from '../lib/alerts/emailControls';
 import { ensureNotificationSchema } from '../lib/notifications/tradeEvents';
 import { alertWorkerError } from '../lib/opsAlerting';
 import { normalizeDiscordWebhookUrl, sendDiscordWebhook } from '../lib/notifications/discordWebhook';
@@ -286,11 +286,28 @@ async function deliverEmail(event: TradeEventRow, prefs: NotificationPrefs, titl
   `.trim();
 
   try {
-    const providerId = await sendAlertEmail({
+    const delivered = await deliverUserAlertEmail({
+      workspaceId: event.workspace_id,
       to: recipient,
       subject: `[Trade] ${title}`,
       html,
+      line: `${title}. ${body}`,
     });
+
+    if (delivered.action !== 'sent') {
+      await upsertDelivery({
+        workspaceId: event.workspace_id,
+        eventId: event.id,
+        channel: 'email',
+        recipient,
+        status: 'skipped',
+        error: delivered.reason === 'schema'
+          ? 'Alert email storage is not ready'
+          : `Alert email ${delivered.action}: ${delivered.reason}`,
+        dedupeKey: `delivery:${event.id}:email:${recipient}`,
+      });
+      return;
+    }
 
     await upsertDelivery({
       workspaceId: event.workspace_id,
@@ -298,7 +315,7 @@ async function deliverEmail(event: TradeEventRow, prefs: NotificationPrefs, titl
       channel: 'email',
       recipient,
       status: 'sent',
-      providerMessageId: providerId || null,
+      providerMessageId: delivered.providerId || null,
       dedupeKey: `delivery:${event.id}:email:${recipient}`,
     });
   } catch (error) {
