@@ -1,5 +1,8 @@
 'use client';
 
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import SourceLine from '@/components/visual/SourceLine';
+import { learningText } from '@/lib/learningPresentation';
 import StatisticsBasisNote from './StatisticsBasisNote';
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -9,7 +12,7 @@ import StatisticsBasisNote from './StatisticsBasisNote';
    Pro only (legacy pro_trader and admins included).
    ═══════════════════════════════════════════════════════════════════════════ */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { NO_LOSING_TRADES, NO_WINNING_TRADES, largestGainTrade, largestLossTrade, sampledMetric, sampledProfitFactor } from '@/lib/backtest/displayMetric';
 import { Card, SectionHeader, Badge, ScoreBar, TabBar, EmptyState } from '@/app/v2/_components/ui';
 import { UpgradeGate } from '@/app/v2/_components/ui';
@@ -74,6 +77,8 @@ const ALL_STRATEGIES = V2_STRATEGY_CATEGORIES.flatMap(c => c.strategies);
 
 export default function BacktestPage({ embeddedInWorkspace = false }: { embeddedInWorkspace?: boolean } = {}) {
   const { tier } = useUserTier();
+  const [observedAt, setObservedAt] = useState<string | null>(null);
+  useEffect(() => setObservedAt(new Date().toISOString()), []);
   const { selectedSymbol } = useV2();
 
   // Mode: strategy vs scanner
@@ -166,6 +171,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
     } catch (err: any) {
       setError(err?.message || 'Backtest failed');
     } finally {
+      setObservedAt(new Date().toISOString());
       setLoading(false);
     }
   };
@@ -177,8 +183,10 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
   const showTabbedResults = !embeddedInWorkspace;
 
   return (
-    <div className="space-y-6">
-      <SectionHeader title="Backtest Lab" subtitle="Strategy & scanner backtesting engine" />
+    <div className="space-y-3">
+      <h2 className="text-xl font-semibold">Backtest</h2>
+      <p data-layout-verdict className="text-sm text-slate-300">{error ? 'The simulation could not be completed.' : loading ? `Historical simulation running for ${symbol}.` : result ? `${symbol}: ${n(result.totalTrades)} simulated trades, ${fmtPct(n(result.totalReturn))} historical return.` : 'No simulation has been run in this view.'}</p>
+      <p className="text-xs text-slate-400">General information only, not financial advice.</p>
 
       <UpgradeGate requiredTier="pro" currentTier={tier} feature="Strategy Backtesting Engine">
         {/* ── Mode Toggle ──────────────────────────────────────── */}
@@ -198,6 +206,16 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
           ))}
         </div>}
 
+        {!result && !loading && !error && <figure data-backtest-sample className="rounded-lg border border-white/10 p-3">
+          <figcaption className="text-sm font-semibold">Sample chart · illustrative only, not a simulation result</figcaption>
+          <svg viewBox="0 0 320 80" className="h-24 w-full text-slate-500" role="img" aria-label="Illustrative sample curve; no account or market data">
+            <path d="M0 20H320M0 40H320M0 60H320" stroke="currentColor" opacity="0.15" />
+            <path d="M5 54L45 35L80 43L125 29L160 46L205 34L250 48L315 27" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" fill="none" />
+          </svg>
+          <p className="text-xs text-slate-400">Open simulation settings below, then select Run Backtest. No dates, prices or returns are assigned to this sample.</p>
+        </figure>}
+        {result && !loading && result.equityCurve?.length > 1 && <Card><h3 className="mb-2 text-sm">{equityLabel}</h3><EquityCurveChart data={result.equityCurve} /></Card>}
+        <CollapsibleSection title="Simulation settings" summary={`${symbol} · ${TIMEFRAMES.find(t => t.value === timeframe)?.label || timeframe}`}>
         {/* ── Configuration Panel ──────────────────────────────── */}
         <Card>
           <div className="space-y-4">
@@ -205,7 +223,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/60 pb-3">
                 <div>
                   <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Backtest method</div>
-                  <div className="mt-0.5 text-xs text-slate-400">Choose one engine, then read the full result stack below.</div>
+                  <div className="mt-0.5 text-xs text-slate-400">Choose a method and review the historical simulation.</div>
                 </div>
                 <div className="flex gap-1">
                   {(['strategy', 'scanner'] as const).map(m => (
@@ -276,7 +294,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                     onChange={e => handleEdgeGroupChange(e.target.value as EdgeGroupId)}
                     className="w-full bg-[#0A101C] border border-slate-700/40 rounded-lg text-xs px-3 py-2 text-white focus:outline-none focus:border-emerald-600/40"
                   >
-                    {STRATEGY_EDGE_GROUPS.map(g => <option key={g.id} value={g.id}>{g.label}</option>)}
+                    {STRATEGY_EDGE_GROUPS.map(g => <option key={g.id} value={g.id}>{learningText(g.label)}</option>)}
                   </select>
                 </div>
                 <div>
@@ -286,7 +304,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                     onChange={e => setStrategy(e.target.value)}
                     className="w-full bg-[#0A101C] border border-slate-700/40 rounded-lg text-xs px-3 py-2 text-white focus:outline-none focus:border-emerald-600/40"
                   >
-                    {filteredStrategies.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                    {filteredStrategies.map(s => <option key={s.id} value={s.id}>{learningText(s.label)}</option>)}
                   </select>
                 </div>
               </div>
@@ -294,8 +312,8 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
 
             {mode === 'scanner' && (
               <p className="text-xs text-slate-400 mb-3">
-                Historical technical proxy v1. Long signals require a bullish score ≥ {minScore}; shorts require ≤ {100 - minScore}.
-                This test excludes the full MSP composite’s historical permissions, relative ranks, options, funding and news.
+                Historical technical proxy v1. Upside cases require a score ≥ {minScore}; downside cases require ≤ {100 - minScore}.
+                This test excludes the full MSP composite’s historical access checks, relative ranks, options, funding and news.
               </p>
             )}
             {/* Scanner-specific controls */}
@@ -349,7 +367,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                       onChange={e => setAllowShorts(e.target.checked)}
                       className="accent-emerald-400"
                     />
-                    Allow Shorts
+                    Include downside cases
                   </label>
                 </div>
               </div>
@@ -378,10 +396,12 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
           </div>
         </Card>
 
+        </CollapsibleSection>
+
         {/* ── Error ────────────────────────────────────────────── */}
         {error && (
           <Card>
-            <div className="text-xs text-red-400 py-4 text-center">{error}</div>
+            <div className="text-xs text-amber-300 py-4 text-center">{learningText(error)}</div>
           </Card>
         )}
 
@@ -397,6 +417,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
 
         {/* ── Results ──────────────────────────────────────────── */}
         {result && !loading && (
+          <CollapsibleSection title="Simulation details" summary={`${n(result.totalTrades)} trades`}>
           <div className="space-y-4">
             {/* Result header */}
             <Card>
@@ -404,8 +425,8 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-bold text-white">{symbol}</span>
                   <Badge
-                    label={mode === 'strategy' ? (getBacktestStrategy(strategy)?.label || strategy) : `Technical proxy ≥${minScore}`}
-                    color="#6366F1"
+                    label={mode === 'strategy' ? learningText(getBacktestStrategy(strategy)?.label || strategy) : `Technical proxy ≥${minScore}`}
+                    color="#94A3B8"
                     small
                   />
                   <Badge label={TIMEFRAMES.find(t => t.value === timeframe)?.label || timeframe} color="#64748B" small />
@@ -474,7 +495,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                         color={result.validation.status === 'validated' ? 'var(--msp-bull)' : result.validation.status === 'invalidated' ? 'var(--msp-bear)' : 'var(--msp-warn)'}
                         small
                       />
-                      <span className="text-xs text-slate-400">{result.validation.reason}</span>
+                      <span className="text-xs text-slate-400">{learningText(result.validation.reason)}</span>
                     </div>
                   </Card>
                 )}
@@ -486,7 +507,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs text-slate-400">
                       <div>Applied: <span className="text-white">{result.dataCoverage.applied.startDate} → {result.dataCoverage.applied.endDate}</span></div>
                       <div>Bars: <span className="text-white">{result.dataCoverage.bars}</span></div>
-                      {result.dataCoverage.provider && <div>Provider: <span className="text-white">{result.dataCoverage.provider}</span></div>}
+                      {result.dataCoverage.provider && <div>Provider: <span className="text-white">{learningText(result.dataCoverage.provider)}</span></div>}
                     </div>
                   </Card>
                 )}
@@ -535,26 +556,21 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                     small
                   />
                 </div>
-                <p className="text-xs text-slate-400 mb-3">{result.diagnostics.summary}</p>
+                <p className="text-xs text-slate-400 mb-3">{learningText(result.diagnostics.summary)}</p>
                 {result.diagnostics.failureTags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {result.diagnostics.failureTags.map(tag => (
-                      <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400">{tag}</span>
+                      <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400">{learningText(tag)}</span>
                     ))}
                   </div>
                 )}
               </Card>
             )}
           </div>
+          </CollapsibleSection>
         )}
 
-        {/* Empty state */}
-        {!result && !loading && !error && (
-          <EmptyState
-            message={`Configure your ${mode === 'strategy' ? 'strategy' : 'scanner'} parameters above and click Run Backtest`}
-            icon="🧪"
-          />
-        )}
+        <SourceLine source={result ? learningText(result.dataCoverage?.provider || 'Historical simulation') : error || loading ? 'Simulation request' : 'Illustrative sample; no market observations'} asOf={observedAt} basis={result ? 'Response received; historical inputs' : error ? 'Failed request received' : loading ? 'Request in progress' : 'View timestamp; sample is not market data'} />
       </UpgradeGate>
     </div>
   );
@@ -649,7 +665,7 @@ function TradeTable({ trades }: { trades: BacktestTrade[] }) {
             {slice.map((t, i) => (
               <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20">
                 <td className="py-2 px-2">
-                  <Badge label={t.side} color={t.side === 'LONG' ? 'var(--msp-bull)' : 'var(--msp-bear)'} small />
+                  <Badge label={t.side === 'LONG' ? 'Upside case' : 'Downside case'} color={t.side === 'LONG' ? 'var(--msp-bull)' : 'var(--msp-bear)'} small />
                 </td>
                 <td className="py-2 px-2 text-slate-400 font-mono">{t.entryDate?.slice(0, 10)}</td>
                 <td className="py-2 px-2 text-slate-400 font-mono">{t.exitDate?.slice(0, 10)}</td>
@@ -661,7 +677,7 @@ function TradeTable({ trades }: { trades: BacktestTrade[] }) {
                 <td className={`py-2 px-2 text-right font-mono ${pctColor(t.return ?? 0)}`}>
                   ${(t.return ?? 0).toFixed(2)}
                 </td>
-                <td className="py-2 px-2 text-slate-500">{t.exitReason || '—'}</td>
+                <td className="py-2 px-2 text-slate-500">{learningText(t.exitReason)}</td>
               </tr>
             ))}
           </tbody>
