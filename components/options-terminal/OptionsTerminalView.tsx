@@ -22,6 +22,8 @@ import { atmStrike } from '@/lib/options/atmStrike';
 import PerContractCosts from './PerContractCosts';
 import OptionsResearchSections from './OptionsResearchSections';
 import OptionsPicture from './OptionsPicture';
+import MobileOptionsChain, { initialContractSelection } from './MobileOptionsChain';
+import { researchLabel, researchReason } from '@/components/terminal/researchPresentation';
 import ChipRow from '@/components/visual/ChipRow';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
@@ -36,6 +38,8 @@ import type {
   OIHeatmapRow,
   IVMetrics,
 } from '@/types/optionsTerminal';
+
+function optionsCopy(value: string) { return researchReason(value).replace(/\bunavailable\b/gi,'not collected').replace(/\bHISTORICAL_OPTIONS\b/g,'Previous session close'); }
 
 type Mode = 'retail' | 'institutional';
 type CPFilter = 'BOTH' | 'CALLS' | 'PUTS';
@@ -152,6 +156,13 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
     return selected.side === 'CALL' ? selectedRow.call : selectedRow.put;
   }, [selectedRow, selected]);
 
+  useEffect(() => {
+    if (chain.loading) return;
+    if (selected && rows.some(row => row.strike === selected.strike && (selected.side === 'CALL' ? row.call : row.put))) return;
+    const next = initialContractSelection(chain.strikeGroups, rows, chain.underlyingPrice);
+    if (next || selected) setSelected(next);
+  }, [chain.loading, chain.strikeGroups, chain.underlyingPrice, rows, selected]);
+
   /* ── Handlers ──────────────────────────────────────────────── */
   const applyFilter = useCallback((name: string) => {
     if (activeFilter === name) {
@@ -249,7 +260,7 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
   const optionsEvidenceItems = [
     {
       label: 'Chain Coverage',
-      value: chain.contracts.length > 0 ? `${chain.contracts.length} contracts` : 'Not available right now',
+      value: chain.contracts.length > 0 ? `${chain.contracts.length} contracts` : 'Not collected',
       status: evidenceStatus(chain.contracts.length > 0),
       detail: `${chain.expirations.length} expirations loaded; ${rows.length} strikes visible after filters.`,
     },
@@ -261,13 +272,13 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
     },
     {
       label: 'Liquidity',
-      value: liquidContracts.length ? `${tightSpreadPct}% tight` : 'Not available right now',
+      value: liquidContracts.length ? `${tightSpreadPct}% tight` : 'Not collected',
       status: liquidContracts.length === 0 ? 'missing' as const : tightSpreadPct >= 60 ? 'supportive' as const : 'conflicting' as const,
       detail: liquidContracts.length ? `Average spread ${avgSpreadPct.toFixed(1)}% across quoted contracts within 10% of spot.` : 'No usable bid/ask pairs; spread and liquidity quality are unavailable.',
     },
     {
       label: 'IV Context',
-      value: 'IV history unavailable',
+      value: 'IV history not collected yet',
       status: chain.ivMetrics.avgIV > 0 ? 'neutral' as const : 'missing' as const,
       detail: chain.ivMetrics.avgIV > 0 ? `ATM IV ${(chain.ivMetrics.avgIV * 100).toFixed(1)}%, expected move ${chain.ivMetrics.expectedMovePct.toFixed(1)}%.` : 'IV metrics unavailable until contracts load.',
     },
@@ -342,131 +353,80 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
      MAIN RENDER
      ══════════════════════════════════════════════════════════════ */
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      {/* ── Sticky Top Strip ──────────────────────────────── */}
-      <div className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur">
-        <div className="w-full px-4 py-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            {/* Left: Ticker */}
-            <div className="flex items-center gap-3">
-              <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2">
-                <div className="text-[11px] uppercase tracking-wide text-zinc-400">Ticker</div>
-                <input
-                  value={tickerInput}
-                  onChange={(e) => setTickerInput(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleTickerChange(tickerInput); }}
-                  className="w-28 bg-transparent text-sm font-semibold outline-none"
-                  placeholder="AAPL"
-                />
-              </div>
-              <Badge tone="info">Options Terminal</Badge>
-              {chain.loading && (
-                <div className="w-4 h-4 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
-              )}
-            </div>
-
-            {/* Center: Underlying tape */}
-            <div className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 w-full lg:w-auto">
-              <div className="space-y-0.5">
-                <div className="text-[11px] uppercase tracking-wide text-zinc-400">Underlying</div>
-                {(chain.spotObservation?.price??spot)>0?<PriceStamp symbol={ticker} assetType="equity" price={chain.spotObservation?.price??spot} changePct={chain.spotObservation?.changePercent} changeBasis="previous_session_close" latestDay={chain.spotObservation?.asOf} priceBasis={chain.spotObservation?.asOf ? 'last_close' : 'unknown'} source="Options chain"/>:<span className="text-amber-300">{ticker} · {noQuoteLabel(marketOpen)}</span>}
-              </div>
-              <PriceStamp symbol={selectedContract ? `${selectedContract.strike}${selectedContract.type === 'call' ? 'C' : 'P'} ask` : 'Chain · select a contract'} assetType="option" price={selectedContract?.ask} priceBasis={chain.quoteBasis} latestDay={chain.asOfDate} source="Options chain"/>
-              <Badge tone="neutral">
-                {chain.quoteBasis === 'realtime'
-                  ? 'Live bid and ask'
-                  : chain.quoteBasis === 'previous_session'
-                    ? `Previous session close${chain.asOfDate ? ` · as of ${chain.asOfDate}` : ''}`
-                    : chain.quoteBasis === 'marks_only'
-                      ? 'Marks only, no bid and ask'
-                      : 'Previous session close'}
-              </Badge>
-            </div>
-
-            {/* Right: Expiry + Mode */}
-            <div className="flex items-center gap-3 justify-between lg:justify-end">
-              <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2">
-                <div className="text-[11px] uppercase tracking-wide text-zinc-400">Expiry</div>
-                <select
-                  value={selectedExpiry}
-                  onChange={(e) => setSelectedExpiry(e.target.value)}
-                  className="bg-transparent text-sm font-semibold outline-none"
-                >
-                  <option value="" className="bg-zinc-900">Default expiry</option>
-                  {chain.expirations.map((exp) => (
-                    <option key={exp.date} value={exp.date} className="bg-zinc-900">
-                      {exp.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <ModeToggle mode={mode} setMode={setMode} />
-            </div>
-          </div>
+    <div className="min-w-0 bg-zinc-950 text-zinc-100 [&_button]:min-h-10 [&_select]:min-h-10" data-options-page>
+      <header className="space-y-2 border-b border-zinc-800 px-3 py-3">
+        {pathname === '/tools/terminal' ? <h2 className="text-lg font-semibold">Options chain</h2> : <h1 className="text-xl font-semibold">Options</h1>}
+        <p className="text-sm font-semibold" data-options-verdict>{chain.loading ? 'Loading chain…' : chain.error ? 'Chain not collected' : rows.length ? `${ticker} · ${rows.length} listed strikes` : 'No quoted strikes for this selection.'}</p>
+        <div className="flex flex-wrap items-end gap-2">
+          {pathname === '/tools/terminal' ? <span className="py-2 text-sm">{ticker}</span> : <label className="text-xs text-zinc-400">Symbol<input aria-label="Options symbol" value={tickerInput} onChange={e=>setTickerInput(e.target.value.toUpperCase())} onKeyDown={e=>{if(e.key==='Enter')handleTickerChange(tickerInput);}} className="ml-2 min-h-10 w-20 rounded border border-zinc-700 bg-zinc-900 px-2 text-sm"/></label>}
+          <label className="text-xs text-zinc-400">Expiry<select aria-label="Options expiry" value={selectedExpiry} onChange={e=>setSelectedExpiry(e.target.value)} className="ml-2 rounded border border-zinc-700 bg-zinc-900 px-2 text-xs"><option value="">Default expiry</option>{chain.expirations.map(exp=><option key={exp.date} value={exp.date}>{exp.label}</option>)}</select></label>
         </div>
-      </div>
+        <p className="text-xs text-zinc-300">{spot>0?`${chain.spotObservation?'Underlying':'Underlying estimate'} $${spot.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`:`${ticker} · ${noQuoteLabel(marketOpen)}`}{chain.spotObservation?.changePercent != null ? ` · ${chain.spotObservation.changePercent.toFixed(2)}% from previous close` : ''}</p>
+        <p className="text-xs text-zinc-400" data-options-status>{chain.loading?'Collecting quotes…':quoteDateLabel(chain.quoteBasis,chain.asOfDate)}</p>
+      </header>
 
       {/* ── Error banner ──────────────────────────────────── */}
       {chain.error && (
         <div className="w-full px-4 pt-4">
           <div className="rounded-2xl border border-red-600/30 bg-red-600/10 px-4 py-3 text-sm text-red-300">
-            {chain.error}
+            {optionsCopy(chain.error)}
           </div>
         </div>
       )}
 
-      <div className="w-full space-y-4 px-4 pt-4">
-        <OptionsPicture
+      <div className="w-full space-y-3 px-3 pt-3">
+        <CollapsibleSection title="Open-interest context" summary="Expected move and observed open interest"><OptionsPicture
           spot={spot}
           expectedMove={chain.ivMetrics.expectedMoveAbs}
           callOi={chain.oiHeatmap.reduce((sum, row) => sum + (row.callOI || 0), 0)}
           putOi={chain.oiHeatmap.reduce((sum, row) => sum + (row.putOI || 0), 0)}
           walls={chain.oiHeatmap.map((row) => ({ strike: row.strike, callOI: row.callOI, putOI: row.putOI }))}
         />
+        </CollapsibleSection>
         <ChipRow
           items={[{
             id: 'evidence',
             label: 'Chain evidence',
             detail: chain.loading ? <p role="status">Loading options provider…</p> : (
               <div className="space-y-3">
-                <EvidenceStack title="Options Terminal Evidence Stack" items={optionsEvidenceItems} />
-                <RiskFlagPanel title="Options Terminal Risk Flags" flags={optionsRiskFlags} emptyText="No active chain, liquidity, IV, or provider flags." />
-                <MarketStatusStrip items={optionsMarketStatusItems} className="md:grid-cols-3" />
+                <div className="space-y-2">{optionsEvidenceItems.map(item=><p key={item.label} className="text-xs"><strong>{item.label}:</strong> {optionsCopy(item.value)} · {optionsCopy(item.detail)}</p>)}</div>
+                <div className="space-y-1">{optionsRiskFlags.map((flag,i)=><p key={i} className="text-xs text-amber-200">{optionsCopy(flag.label)}</p>)}</div>
+                <div className="space-y-1">{optionsMarketStatusItems.flatMap(item=>item.status?.warnings??[]).map((warning,i)=><p key={i} className="text-xs text-zinc-400">{optionsCopy(warning)}</p>)}</div>
               </div>
             ),
           }]}
         />
-        {chain.providerIssues.length > 0 && <ul className="text-sm text-amber-300">{chain.providerIssues.map((issue,i)=><li key={i}>{issue}</li>)}</ul>}
+        {chain.providerIssues.length > 0 && <ul className="text-sm text-amber-300">{chain.providerIssues.map((issue,i)=><li key={i}>{optionsCopy(issue)}</li>)}</ul>}
       </div>
 
       {/* ── Page shell ────────────────────────────────────── */}
       <div className="w-full px-4 py-4 space-y-4">
           {/* ── IV & Expected Move ─────────────────────── */}
-          <div className="w-full">
+          <CollapsibleSection title="IV and expected move" summary="Model inputs and estimates"><div className="w-full">
             <Card title="IV & Expected Move" right={<span className="text-xs text-zinc-400">{selectedExpiry || 'nearest listed expiry'}</span>}>
               <div className="grid grid-cols-2 gap-4">
-                <MiniStat label="ATM IV (2% band)" value={chain.ivMetrics.avgIV > 0 ? `${(chain.ivMetrics.avgIV * 100).toFixed(1)}%` : 'Not available right now'} />
-                <MiniStat label="1-sigma move to expiry" value={chain.ivMetrics.expectedMoveAbs > 0 ? `±$${chain.ivMetrics.expectedMoveAbs.toFixed(2)}` : 'Not available right now'} />
-                <MiniStat label="ATM straddle mid" value={chain.ivMetrics.atmStraddleMid != null ? `$${chain.ivMetrics.atmStraddleMid.toFixed(2)}` : 'Not available right now'} />
-                <MiniStat label="EM %" value={chain.ivMetrics.expectedMovePct > 0 ? `±${chain.ivMetrics.expectedMovePct.toFixed(1)}%` : 'Not available right now'} />
+                <MiniStat label="ATM IV (2% band)" value={chain.ivMetrics.avgIV > 0 ? `${(chain.ivMetrics.avgIV * 100).toFixed(1)}%` : 'Not collected'} />
+                <MiniStat label="1-sigma move to expiry" value={chain.ivMetrics.expectedMoveAbs > 0 ? `±$${chain.ivMetrics.expectedMoveAbs.toFixed(2)}` : 'Not collected'} />
+                <MiniStat label="ATM straddle mid" value={chain.ivMetrics.atmStraddleMid != null ? `$${chain.ivMetrics.atmStraddleMid.toFixed(2)}` : 'Not collected'} />
+                <MiniStat label="EM %" value={chain.ivMetrics.expectedMovePct > 0 ? `±${chain.ivMetrics.expectedMovePct.toFixed(1)}%` : 'Not collected'} />
               </div>
 
               <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
                 <div className="text-xs text-zinc-400">Desk Read</div>
                 <div className="mt-1 text-sm font-semibold">
-                  IV history unavailable. This is a 1-sigma model estimate, not a guaranteed range. Market basis: {chain.asOfDate || 'unavailable'}.
+                  IV history not collected yet. This is a 1-sigma model estimate, not a guaranteed range. Market basis: {chain.asOfDate || 'not collected'}.
 
                 </div>
               </div>
             </Card>
           </div>
 
+          </CollapsibleSection>
         {/* === DESK GRID === */}
         <div className="grid grid-cols-12 gap-4">
           {/* ── Left: Chain Navigator ─────────────────────── */}
-          <div className="col-span-12 xl:col-span-3 space-y-6">
-            <Card title="Chain Navigator" right={<span className="text-xs text-zinc-400">{chain.expirations.length} expirations</span>}>
+          <div className="order-2 col-span-12 space-y-3">
+            <CollapsibleSection title="Chain filters" summary="Expiry shortcuts, liquidity and display"><ModeToggle mode={mode} setMode={setMode}/><Card title="Chain Navigator" right={<span className="text-xs text-zinc-400">{chain.expirations.length} expirations</span>}>
               <div className="space-y-4">
                 {/* Expiry quick picks */}
                 <div className="grid grid-cols-2 gap-3">
@@ -520,12 +480,12 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
                   )}
                 </div>
               </div>
-            </Card>
+            </Card></CollapsibleSection>
           </div>
 
           {/* ── Center: Options Chain Grid ─────────────────── */}
-          <div className="col-span-12 xl:col-span-6 space-y-6">
-            <CollapsibleSection title="Open chain" summary={`${rows.length} strikes · swipe sideways on a narrow screen`}>
+          <div className="order-1 col-span-12 min-w-0 space-y-3">
+            <section aria-label="Options chain table">
             <Card
               title="Options Chain"
               right={
@@ -536,12 +496,8 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
               }
             >
               {/* Toolbar */}
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="msp-options-side-toggle gap-2" data-testid="calls-puts-toggle">
-                  <button type="button" className="min-h-10 rounded-lg border px-3" aria-pressed={cp === 'CALLS'} onClick={() => setCp('CALLS')}>Calls</button>
-                  <button type="button" className="min-h-10 rounded-lg border px-3" aria-pressed={cp === 'PUTS'} onClick={() => setCp('PUTS')}>Puts</button>
-                </div>
-                <div className="msp-options-side-desktop">
+              <CollapsibleSection title="Table filters"><div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="hidden sm:block">
                 <Segmented value={cp} onChange={setCp} options={[
                   { label: 'Both', value: 'BOTH' },
                   { label: 'Calls', value: 'CALLS' },
@@ -558,10 +514,12 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
               </div>
 
               <p className="mt-3 text-xs text-zinc-400" data-testid="chain-scroll-hint">Swipe sideways to read calls, the centre strike, and puts.</p>
+              </CollapsibleSection>
+              <MobileOptionsChain rows={rows} selected={selected} onSelect={setSelected}/>
               {/* Chain Table */}
-              <div className="mt-4 rounded-2xl border border-zinc-800 overflow-hidden">
-                <div ref={tableContainer} className="max-h-[calc(100vh-320px)] min-h-[400px] overflow-auto">
-                  <table className="w-full border-collapse">
+              <div className="mt-3 hidden rounded border border-zinc-800 sm:block">
+                <div ref={tableContainer} className="relative max-h-64 overflow-auto">
+                  <table className="w-full border-collapse"><caption className="py-2 text-left text-xs text-zinc-400">{cp==='BOTH'?'Calls left · Puts right':cp==='CALLS'?'Calls':'Puts'}</caption>
                     <thead className="sticky top-0 z-10 bg-zinc-900">
                       <tr className="text-left">
                         {cp !== 'PUTS' && (
@@ -670,12 +628,12 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
                 Click Bid/Ask on a strike to load the Contract Inspector.
               </div>
             </Card>
-            </CollapsibleSection>
+            </section>
           </div>
 
           {/* ── Right: Contract Inspector ──────────────────── */}
-          <div className="col-span-12 xl:col-span-3 space-y-6">
-            <Card title="Contract Inspector" right={<span className="text-xs text-zinc-400">click a strike</span>}>
+          <div className="order-3 col-span-12 space-y-3">
+            <CollapsibleSection title="Contract inspector" summary={selectedContract ? `${selectedContract.strike}${selectedContract.type==='call'?'C':'P'} · ${selectedContract.expiration}` : 'No quoted ATM contract in this selection'}><Card title="Contract Inspector">
               {!selected || !selectedContract ? (
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-6 text-sm text-zinc-400 text-center">
                   Select a contract from the chain to view Greeks, IV, OI/Vol, and liquidity.
@@ -744,13 +702,13 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
                       />
                       <LiquidityLine
                         label="Vol/OI"
-                        value={selectedContract.openInterest > 0 ? (selectedContract.volume / selectedContract.openInterest).toFixed(2) : 'Not available right now'}
+                        value={selectedContract.openInterest > 0 ? (selectedContract.volume / selectedContract.openInterest).toFixed(2) : 'Not collected'}
                         tone={selectedContract.openInterest > 0 && selectedContract.volume / selectedContract.openInterest > 0.5 ? 'ok' : 'warn'}
                       />
                     </div>
                   </div>
 
-                  <p className="text-xs text-zinc-400">Journal premium: {selectedContract.ask > 0 ? `$${selectedContract.ask} per share (ask)` : 'No valid ask'}. Calls and puts default to LONG; review before saving.</p>
+                  <p className="text-xs text-zinc-400">Journal premium: {selectedContract.ask > 0 ? `$${selectedContract.ask.toFixed(2)} per share (ask)` : 'No valid ask'}. Calls and puts default to purchased positions; review before saving.</p>
                   {/* Actions */}
                   <div className="grid grid-cols-1 gap-3">
                     <button
@@ -825,7 +783,7 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
                   <div className="text-xs text-zinc-400 text-center">Educational purposes only · Not financial advice</div>
                 </div>
               )}
-            </Card>
+            </Card></CollapsibleSection>
           </div>
         </div>
 
@@ -854,7 +812,7 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
         </div>
         <OptionsResearchSections symbol={ticker} expiry={chain.contracts[0]?.expiration??selectedExpiry}/>
         </CollapsibleSection>
-        <SourceLine source={chain.quoteBasis === 'previous_session' ? 'Previous session close' : 'Options chain'} asOf={chain.asOfDate} basis="Bid and ask" />
+        <SourceLine source={chain.quoteBasis === 'previous_session' ? 'Previous session close' : 'Options chain'} tradingDay={chain.asOfDate ? `Option quote session ${chain.asOfDate}` : 'Quote date not collected'} basis={`Bid and ask · underlying session ${chain.spotObservation?.asOf || 'inferred; date not supplied'}`} />
       </div>
     </div>
   );
@@ -871,7 +829,7 @@ function Card({ title, right, children }: { title: string; right?: React.ReactNo
         <div className="text-sm font-semibold">{title}</div>
         <div>{right}</div>
       </div>
-      <div className="p-5">{children}</div>
+      <div className="p-3 sm:p-5">{children}</div>
     </div>
   );
 }
@@ -1012,7 +970,7 @@ function OIHeatmapInline({ heatmap, spot, expectedMove }: { heatmap: OIHeatmapRo
 
   return (
     <div className="space-y-1">
-      <p className="text-xs text-zinc-400">Spot ${spot.toFixed(2)} · {expectedMove > 0 ? `window ±3 moves; shaded 1-sigma band $${(spot-expectedMove).toFixed(2)}–$${(spot+expectedMove).toFixed(2)}` : '10% spot window; expected move unavailable'}</p>
+      <p className="text-xs text-zinc-400">Spot ${spot.toFixed(2)} · {expectedMove > 0 ? `window ±3 moves; shaded 1-sigma band $${(spot-expectedMove).toFixed(2)}–$${(spot+expectedMove).toFixed(2)}` : '10% spot window; expected move not collected'}</p>
       {topRows.map((row, index) => {
         const callPct = (row.callOI / maxOI) * 100;
         const putPct = (row.putOI / maxOI) * 100;
@@ -1047,7 +1005,7 @@ function OIHeatmapInline({ heatmap, spot, expectedMove }: { heatmap: OIHeatmapRo
 /* ─── Inline Strategy Scenarios ─────────────────────────────────── */
 function SuggestedPlaysInline({ ivLevel }: { ivLevel: IVMetrics['ivLevel'] }) {
   const frameworks = useMemo(() => {
-    if (ivLevel === 'unavailable') return [{title:'Compare structures',desc:'Historical IV rank is unavailable. Compare premium, liquidity and defined risk without assuming volatility is cheap or expensive.'}];
+    if (ivLevel === 'unavailable') return [{title:'Compare structures',desc:'Historical IV rank is not collected yet. Compare premium, liquidity and defined risk without assuming volatility is cheap or expensive.'}];
     if (ivLevel === 'high' || ivLevel === 'extreme') {
       return [
         { title: 'Directional + Elevated IV', desc: 'Elevated IV can make defined-risk credit structures worth reviewing, but spread width and event risk still control quality.' },
@@ -1101,6 +1059,6 @@ function twoSided(contract?: OptionsContract) {
   return !!contract && contract.bid > 0 && contract.ask >= contract.bid;
 }
 function quoteCell(contract: OptionsContract | undefined, side: 'bid' | 'ask') {
-  if (!contract) return '-';
+  if (!contract || !(contract[side] > 0)) return 'No quote';
   return fmt(side === 'bid' ? contract.bid : contract.ask);
 }

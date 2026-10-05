@@ -3,8 +3,8 @@ import {contractCosts,quoteSpreadPct} from '@/lib/options/contractCosts';
 import {quoteDateLabel} from '@/lib/options/quoteQuality';
 export default function PerContractCosts({contract,spot,quoteBasis='',asOfDate=''}:{contract:OptionsContract;spot:number;quoteBasis?:string;asOfDate?:string}) {
   const c=contractCosts(contract,spot);
-  const money=(n:number|null)=>n==null?'Unavailable':`$${n.toFixed(2)}`;
-  const pct=(n:number|null)=>n==null?'Unavailable':`${n.toFixed(2)}%`;
+  const money=(n:number|null)=>n==null?'Not collected':`$${n.toFixed(2)}`;
+  const pct=(n:number|null)=>n==null?'Not collected':`${n.toFixed(2)}%`;
   return <div className="rounded-2xl border border-zinc-800 p-4"><h3 className="text-sm font-semibold">Per contract · long option · 100 shares</h3>
     <div className="mt-3 grid grid-cols-2 gap-3">
       <MiniStat label="Cost at ask" value={money(c.askCost)}/><MiniStat label="Cost at mid" value={money(c.midCost)}/>

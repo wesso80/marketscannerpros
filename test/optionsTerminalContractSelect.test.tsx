@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import {afterEach, expect, it, vi} from 'vitest';
-import {cleanup, fireEvent, render, screen} from '@testing-library/react';
+import {cleanup, fireEvent, render, screen, within} from '@testing-library/react';
 
 const chain = vi.hoisted(() => {
   const call = {
@@ -47,8 +47,11 @@ import OptionsTerminalView from '@/components/options-terminal/OptionsTerminalVi
 afterEach(() => cleanup());
 
 it('selects a contract and re-renders without a hooks error', () => {
-  render(<OptionsTerminalView symbol="AAPL" expiry="2026-11-20" />);
-  expect(screen.getByText(/Chain · select a contract/)).toBeTruthy();
-  fireEvent.click(screen.getAllByRole('button', {name: '1.20'})[0]);
-  expect(screen.getByText(/100C ask/)).toBeTruthy();
+  const {container}=render(<OptionsTerminalView symbol="AAPL" expiry="2026-11-20" />);
+  expect(screen.getByText('100C · 2026-11-20')).toBeTruthy();
+  expect(container.querySelector('[data-source-line]')?.textContent).toContain('Option quote session 2026-10-02');
+  expect(container.querySelector('[data-source-line]')?.textContent).not.toMatch(/\d{2}:\d{2}/);
+  fireEvent.click(within(screen.getByRole('group',{name:'Contract side'})).getByRole('button',{name:'Puts'}));
+  fireEvent.click(screen.getByRole('button',{name:'Put 100 ask'}));
+  expect(screen.getByText('100P · 2026-11-20')).toBeTruthy();
 });
