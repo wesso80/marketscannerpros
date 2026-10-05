@@ -160,37 +160,44 @@ function skewLabel(signal: string): { label: string; color: string } {
 export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: propSymbol, expiry }: { embeddedInTerminal?: boolean; symbol?: string; expiry?:string } = {}) {
   const params = useSearchParams();
   const activeExpiry = expiry ?? params.get('expiry') ?? '';
-  const { tier } = useUserTier();
-  const [symbol, setSymbol] = useState(propSymbol?.toUpperCase() || 'SPY');
-
-  React.useEffect(() => {
-    if (propSymbol) setSymbol(propSymbol.toUpperCase());
-  }, [propSymbol]);
+  const { tier, isLoading: tierLoading, isLoggedIn } = useUserTier();
+  const canRun = !tierLoading && isLoggedIn && canAccessOptionsTerminal(tier);
+  const requestRef = React.useRef<AbortController | null>(null);
+  const [inputSymbol, setSymbol] = useState(propSymbol?.toUpperCase() || 'SPY');
+  const symbol = embeddedInTerminal ? (propSymbol || '').toUpperCase() : inputSymbol;
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<FlowResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const runScan = useCallback(async () => {
-    const trimmed = symbol.trim().toUpperCase();
-    if (!trimmed) return;
+    const trimmed = (embeddedInTerminal ? propSymbol || '' : symbol).trim().toUpperCase();
+    if (!canRun || !trimmed) return;
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
     setLoading(true);
     setError(null);
     setData(null);
     try {
-      const res = await fetch(`/api/options-flow?symbol=${encodeURIComponent(trimmed)}${activeExpiry ? `&expiry=${encodeURIComponent(activeExpiry)}` : ''}`);
+      const res = await fetch(`/api/options-flow?symbol=${encodeURIComponent(trimmed)}${activeExpiry ? `&expiry=${encodeURIComponent(activeExpiry)}` : ''}`, { signal: controller.signal });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || `Request failed (${res.status})`);
       }
       const json: FlowResponse = await res.json();
       if (!json.success) throw new Error('Analysis returned unsuccessful');
-      setData(json);
+      if (!controller.signal.aborted) setData(json);
     } catch (err: any) {
-      setError(err?.message || 'Analysis failed');
+      if (!controller.signal.aborted) setError(err?.message || 'Analysis failed');
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
-  }, [symbol, activeExpiry]);
+  }, [symbol, propSymbol, embeddedInTerminal, activeExpiry, canRun]);
+
+  React.useEffect(() => {
+    if (embeddedInTerminal && canRun) void runScan();
+    return () => requestRef.current?.abort();
+  }, [embeddedInTerminal, canRun, runScan]);
 
   if (!canAccessOptionsTerminal(tier)) {
     return <UpgradeGate requiredTier="pro" feature="Options Flow Intelligence" />;
@@ -208,7 +215,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
           {/* Symbol input + scan */}
           <div className="msp-elite-panel" style={{ padding: '14px 20px' }}>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <input
+              {!embeddedInTerminal && <input
                 type="text"
                 id="flow-symbol"
                 aria-label="Ticker symbol"
@@ -223,8 +230,8 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                   background: 'var(--msp-panel-2)', color: 'var(--msp-text)',
                   border: '1px solid var(--msp-border)', outline: 'none',
                 }}
-              />
-              <button type="button" onClick={runScan} disabled={loading || !symbol.trim()}
+              />}
+              {!embeddedInTerminal && <button type="button" onClick={runScan} disabled={loading || !symbol.trim()}
                 style={{
                   padding: '8px 24px', fontSize: '13px', fontWeight: 800,
                   borderRadius: '10px', cursor: loading ? 'wait' : 'pointer',
@@ -234,7 +241,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                 }}
               >
                 {loading ? 'Analyzing...' : 'Analyze Flow'}
-              </button>
+              </button>}
               {data && (
                 <span style={{ fontSize: '11px', color: 'var(--msp-text-faint)', marginLeft: 'auto' }}>
                   {data.contractCount} contracts • {data.expiration} expiry • {data.duration}
@@ -260,7 +267,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
           )}
 
           {/* Loading */}
-          {loading && (
+          {(loading || (embeddedInTerminal && !data && !error)) && (
             <div style={{ background: 'var(--msp-panel)', borderRadius: '12px', padding: '48px', textAlign: 'center', color: 'var(--msp-text-muted)' }}>
               <div style={{ margin: '0 auto 12px', width: '40px', height: '40px', borderRadius: '8px', border: '1px solid var(--msp-border)', display: 'grid', placeItems: 'center', fontSize: '12px', fontWeight: 800 }}>OF</div>
               <div style={{ fontSize: '14px', fontWeight: 600 }}>Analyzing options flow for {symbol}...</div>
@@ -519,7 +526,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
           })()}
 
           {/* Empty state */}
-          {!loading && !data && !error && (
+          {!embeddedInTerminal && !loading && !data && !error && (
             <div style={{ background: 'var(--msp-panel)', borderRadius: '12px', padding: '48px', textAlign: 'center', color: 'var(--msp-text-muted)' }}>
               <div style={{ margin: '0 auto 12px', width: '44px', height: '44px', borderRadius: '8px', border: '1px solid var(--msp-border)', display: 'grid', placeItems: 'center', fontSize: '12px', fontWeight: 800 }}>OF</div>
               <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--msp-text)' }}>Options Flow Intelligence</div>
