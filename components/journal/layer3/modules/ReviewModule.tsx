@@ -39,21 +39,21 @@ export default function ReviewModule({ data }: { data: ReviewModuleModel }) {
       <div className="rounded-xl border border-white/5 bg-slate-950/35 p-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Playbook Expectancy</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Setup outcomes</div>
             <div className="text-xs text-slate-400">Historical R expectancy with 95% confidence intervals and minimum-sample badges.</div>
           </div>
           <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs text-slate-300">Min 30 closed R trades</span>
         </div>
 
         {playbooks.length === 0 ? (
-          <div className="text-sm text-slate-400">Close and R-label trades to build playbook expectancy.</div>
+          <div className="text-sm text-slate-400">Close and R-label trades to measure setup outcomes.</div>
         ) : (
           <div className="space-y-2">
             {playbooks.map((item) => (
-              <div key={item.playbook} className="rounded-lg border border-white/5 bg-slate-900/60 p-3">
+              <div key={item.playbook.replace(/_/g, ' ').toLowerCase()} className="rounded-lg border border-white/5 bg-slate-900/60 p-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <div className="text-sm font-semibold text-slate-100">{item.playbook}</div>
+                    <div className="text-sm font-semibold text-slate-100">{item.playbook.replace(/_/g, ' ').toLowerCase()}</div>
                     <div className="mt-1 text-xs text-slate-400">{item.warning}</div>
                   </div>
                   <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${sampleBadgeClass(item.sampleStatus)}`}>

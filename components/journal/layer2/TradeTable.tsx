@@ -1,8 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import PriceStamp from '@/components/market/PriceStamp';
-import {journalMarkStamp} from '@/lib/market/trackStamp';
 import {symbolHref} from '@/lib/market/links';
 import { assetDisplayLabel } from '@/lib/market/assets';
 import { Fragment, useState } from 'react';
@@ -11,7 +9,7 @@ import { SortModel, TradeRowModel } from '@/types/journal';
 import { formatSignedPct, formatSignedUsd, markTimeLabel, optionContractLabel } from '@/lib/journal/display';
 
 function fmtQty(q: number): string {
-  return Number.isFinite(q) ? q.toLocaleString(undefined, { maximumFractionDigits: 8 }) : '—';
+  return Number.isFinite(q) ? q.toLocaleString(undefined, { maximumFractionDigits: 8 }) : 'Not recorded';
 }
 
 function targetOf(row: TradeRowModel): number | undefined {
@@ -51,7 +49,7 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
   return (
     <>
       {/* ── Mobile: finger-expandable trade cards ── */}
-      <div className="msp-mobile-cards space-y-2">
+      <div className="msp-mobile-cards space-y-1">
         {loading && <div className="px-3 py-4 text-slate-300 text-sm">Loading trades...</div>}
         {error && !loading && <div className="px-3 py-4 text-rose-300 text-sm">{error}</div>}
         {!loading && !error && rows.length === 0 && <div className="px-3 py-4 text-slate-300 text-sm">No trades found for current filters.</div>}
@@ -61,16 +59,16 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
               <div className="flex items-center gap-2 min-w-0">
                 <span className="font-semibold text-slate-100 text-sm"><Link href={symbolHref(row.symbol,row.assetClass??'equity')}>{row.symbol}</Link>{row.assetClass === 'forex' && <span className="ml-1 text-xs text-amber-300">{assetDisplayLabel(row.assetClass)}</span>}</span>
                 {optionContractLabel(row) && <span className="truncate text-[10px] text-slate-400">{optionContractLabel(row)}</span>}
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${row.side === 'long' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
-                  {row.side.toUpperCase()}
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/10 text-slate-300`}>
+                  {row.side === 'long' ? 'Purchased' : 'Sold'}
                 </span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${row.status === 'open' ? 'bg-blue-500/20 text-blue-300' : 'bg-slate-500/20 text-slate-400'}`}>
-                  {row.status.toUpperCase()}
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${row.status === 'open' ? 'bg-white/10 text-slate-300' : 'bg-slate-500/20 text-slate-400'}`}>
+                  {row.status === 'open' ? 'Open' : 'Closed'}
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className={`text-sm font-mono font-semibold ${Number(row.pnlUsd || 0) >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-                  {row.pnlUsd == null ? 'Unavailable' : formatSignedUsd(row.pnlUsd)}
+                  {row.pnlUsd == null ? 'Not measured' : formatSignedUsd(row.pnlUsd)}
                 </span>
                 <span className="text-slate-500 text-xs">▸</span>
               </div>
@@ -79,13 +77,13 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
               <div><span className="text-slate-500">Entry</span> <span className="text-slate-200 font-mono">{fmtPrice(row.entry.price)}</span></div>
               <div><span className="text-slate-500">{row.tradeType === 'Options' ? 'Contracts' : 'Qty'}</span> <span className="text-slate-200 font-mono">{fmtQty(row.qty)}</span></div>
               <div><span className="text-slate-500">Date</span> <span className="text-slate-200">{new Date(row.entry.ts).toLocaleDateString()}</span></div>
-              <div><span className="text-slate-500">Stop</span> <span className="text-slate-200 font-mono">{row.stop != null ? fmtPrice(row.stop) : '—'}</span></div>
-              <div><span className="text-slate-500">Target</span> <span className="text-slate-200 font-mono">{targetOf(row) != null ? fmtPrice(targetOf(row)!) : '—'}</span></div>
-              <div><span className="text-slate-500">Current/Exit</span> <span className="text-slate-200 font-mono" title={row.mark ? markTimeLabel(row.mark) : undefined}>{row.mark ? <PriceStamp compact {...journalMarkStamp(row)}/> : row.exit?.price != null ? fmtPrice(row.exit.price) : 'Unmarked'}</span></div>
-              {row.mark && <div className="col-span-2 text-[11px] text-slate-500">{markTimeLabel(row.mark)}</div>}
-              <div><span className="text-slate-500">P&L %</span> <span className={`font-mono ${Number(row.pnlPct || 0) >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{formatSignedPct(row.pnlPct)}</span></div>
-              <div><span className="text-slate-500">R</span> <span className="text-slate-200 font-mono">{row.rMultiple != null ? row.rMultiple.toFixed(2) : '—'}</span></div>
-              <div className="col-span-2"><span className="text-slate-500">Strategy</span> <span className="text-slate-200">{row.strategyTag || '—'}</span></div>
+              <div><span className="text-slate-500">Stop</span> <span className="text-slate-200 font-mono">{row.stop != null ? fmtPrice(row.stop) : 'Not recorded'}</span></div>
+              <div><span className="text-slate-500">Recorded exit</span> <span className="text-slate-200 font-mono">{targetOf(row) != null ? fmtPrice(targetOf(row)!) : 'Not recorded'}</span></div>
+              <div><span className="text-slate-500">Current/Exit</span> <span className="text-slate-200 font-mono" title={row.mark ? markTimeLabel(row.mark).replace(/\bEOD\b/g, 'Session close').replace(/\bREALTIME\b/g, 'Observed') : undefined}>{row.mark ? fmtPrice(row.mark.price) : row.exit?.price != null ? fmtPrice(row.exit.price) : 'Unmarked'}</span></div>
+              {row.mark && <div className="col-span-2 text-[11px] text-slate-500">{markTimeLabel(row.mark).replace(/\bEOD\b/g, 'Session close').replace(/\bREALTIME\b/g, 'Observed')}</div>}
+              <div><span className="text-slate-500">P&L %</span> <span className={`font-mono ${Number(row.pnlPct || 0) >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{row.pnlPct == null ? 'Not measured' : formatSignedPct(row.pnlPct)}</span></div>
+              <div><span className="text-slate-500">R</span> <span className="text-slate-200 font-mono">{row.rMultiple != null ? row.rMultiple.toFixed(2) : 'Not recorded'}</span></div>
+              <div className="col-span-2"><span className="text-slate-500">Strategy</span> <span className="text-slate-200">{row.strategyTag?.replace(/_/g, ' ').toLowerCase() || 'Not recorded'}</span></div>
               <div className="col-span-2 flex gap-1.5 pt-1">
                 <button type="button" onClick={() => onSelectTrade(row.id)} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">View</button>
                 {onSnapshot && <button type="button" onClick={() => onSnapshot(row.id)} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">Snapshot</button>}
@@ -98,7 +96,7 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
 
       {/* ── Desktop: full table ── */}
       <div className="msp-desktop-table overflow-x-auto rounded-2xl border border-white/5 bg-slate-900/40">
-      <table className="w-full min-w-[720px] text-sm">
+      <table className="w-full min-w-[680px] text-sm">
         <thead className="border-b border-white/5 bg-white/5 text-slate-300">
           <tr>
             <th scope="col" className="px-3 py-2 text-left">Symbol</th>
@@ -111,9 +109,6 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
                 onClick={() => onSort({ key: 'entry_ts', dir: sort.key === 'entry_ts' && sort.dir === 'desc' ? 'asc' : 'desc' })}
               />
             </th>
-            <th scope="col" className="px-3 py-2 text-left">Qty</th>
-            <th scope="col" className="px-3 py-2 text-left">Stop / Target</th>
-            <th scope="col" className="px-3 py-2 text-left">Current/Exit</th>
             <th scope="col" className="px-3 py-2 text-left">
               <SortButton
                 label="P&L"
@@ -121,31 +116,23 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
                 onClick={() => onSort({ key: 'pnl_usd', dir: sort.key === 'pnl_usd' && sort.dir === 'desc' ? 'asc' : 'desc' })}
               />
             </th>
-            <th scope="col" className="px-3 py-2 text-left">
-              <SortButton
-                label="R"
-                active={sort.key === 'r_multiple'}
-                onClick={() => onSort({ key: 'r_multiple', dir: sort.key === 'r_multiple' && sort.dir === 'desc' ? 'asc' : 'desc' })}
-              />
-            </th>
-            <th scope="col" className="px-3 py-2 text-left">Strategy</th>
             <th scope="col" className="px-3 py-2 text-left">Actions</th>
           </tr>
         </thead>
         <tbody>
           {loading && (
             <tr>
-              <td className="px-3 py-4 text-slate-300" colSpan={11}>Loading trades...</td>
+              <td className="px-3 py-4 text-slate-300" colSpan={6}>Loading trades...</td>
             </tr>
           )}
           {error && !loading && (
             <tr>
-              <td className="px-3 py-4 text-rose-300" colSpan={11}>{error}</td>
+              <td className="px-3 py-4 text-rose-300" colSpan={6}>{error}</td>
             </tr>
           )}
           {!loading && !error && rows.length === 0 && (
             <tr>
-              <td className="px-3 py-4 text-slate-300" colSpan={11}>No trades found for current filters.</td>
+              <td className="px-3 py-4 text-slate-300" colSpan={6}>No trades found for current filters.</td>
             </tr>
           )}
 
@@ -157,33 +144,17 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
                   {optionContractLabel(row) && <div className="text-[11px] font-normal text-slate-400">{optionContractLabel(row)}</div>}
                 </td>
                 <td className="px-3 py-2 text-slate-300">{row.status}</td>
-                <td className="px-3 py-2 text-slate-300">{row.side}</td>
-                <td className="px-3 py-2 text-slate-300">{fmtPrice(row.entry.price)} · {new Date(row.entry.ts).toLocaleDateString()}</td>
-                <td className="px-3 py-2 text-slate-300">{fmtQty(row.qty)}</td>
-                <td className="px-3 py-2 text-slate-300">{row.stop != null ? fmtPrice(row.stop) : '—'} / {targetOf(row) != null ? fmtPrice(targetOf(row)!) : '—'}</td>
-                <td className="px-3 py-2 text-slate-300">
-                  {row.status === 'open' && row.mark ? (
-                    <span className="flex items-center gap-1">
-                      <span className="text-[10px] text-slate-400" title={markTimeLabel(row.mark)}>{row.mark?.basis === 'EOD' ? 'EOD' : 'Est.'}</span>
-                      <PriceStamp compact {...journalMarkStamp(row)}/>
-                    </span>
-                  ) : row.exit?.price != null && row.status === 'closed' ? (
-                    fmtPrice(row.exit.price)
-                  ) : (
-                    <span className="text-slate-500">Open</span>
-                  )}
-                </td>
+                <td className="px-3 py-2 text-slate-300">{row.side === 'long' ? 'Purchased' : 'Sold'}</td>
+                <td className="px-3 py-2 text-slate-300">{fmtPrice(row.entry.price)}</td>
                 <td className={`px-3 py-2 ${Number(row.pnlUsd || 0) >= 0 ? 'text-emerald-200' : 'text-rose-200'}`}>
                   {row.status === 'open' && row.mark ? (
                     <span className="font-mono">
-                      {row.pnlUsd == null ? 'Unavailable' : `${formatSignedUsd(row.pnlUsd)} / ${formatSignedPct(row.pnlPct)}`}
+                      {row.pnlUsd == null ? 'Not measured' : `${formatSignedUsd(row.pnlUsd)} / ${row.pnlPct == null ? 'Not measured' : formatSignedPct(row.pnlPct)}`}
                     </span>
                   ) : (
-                    <>{row.pnlUsd == null ? 'Unavailable' : `${formatSignedUsd(row.pnlUsd)} / ${formatSignedPct(row.pnlPct ?? 0)}`}</>
+                    <>{row.pnlUsd == null ? 'Not measured' : `${formatSignedUsd(row.pnlUsd)} / ${formatSignedPct(row.pnlPct ?? 0)}`}</>
                   )}
                 </td>
-                <td className="px-3 py-2 text-slate-300">{row.rMultiple != null ? row.rMultiple.toFixed(2) : '—'}</td>
-                <td className="px-3 py-2 text-slate-300">{row.strategyTag || '—'}</td>
                 <td className="px-3 py-2">
                   <div className="flex gap-1">
                     <button type="button" onClick={() => onSelectTrade(row.id)} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">View</button>

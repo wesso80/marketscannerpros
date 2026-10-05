@@ -1,0 +1,143 @@
+diff --git a/app/tools/workspace/page.tsx b/app/tools/workspace/page.tsx
+index 6b774337a..6d52ca821 100644
+--- a/app/tools/workspace/page.tsx
++++ b/app/tools/workspace/page.tsx
+@@ -8,8 +8,8 @@
+ import { Suspense, useEffect, useState } from 'react';
+ import dynamic from 'next/dynamic';
+ import { useRouter, useSearchParams } from 'next/navigation';
+-import { Card, UpgradeGate } from '@/app/v2/_components/ui';
+-import { PageHero } from '@/components/ui';
++import { UpgradeGate } from '@/app/v2/_components/ui';
++import TabBar from '@/components/visual/TabBar';
+ import { useUserTier } from '@/lib/useUserTier';
+ import { RiskPermissionProvider } from '@/components/risk/RiskPermissionContext';
+ 
+@@ -24,58 +24,6 @@ const LearningTab = dynamic(() => import('./LearningTab'), { ssr: false, loading
+ const TABS = ['Watchlists', 'Journal', 'Portfolio', 'Learning', 'Backtest', 'Alerts', 'Settings'] as const;
+ type WorkspaceTab = typeof TABS[number];
+ 
+-const WORKSPACE_TAB_META: Record<WorkspaceTab, { eyebrow: string; description: string }> = {
+-  Watchlists: { eyebrow: '1. Symbol shortlist', description: 'Curate the symbols that drive your daily workflow.' },
+-  Journal: { eyebrow: '2. Trade journal', description: 'Log scenarios, outcomes, and post-trade review notes.' },
+-  Portfolio: { eyebrow: '3. Open exposure', description: 'Track open positions, P&L, and historical performance.' },
+-  Learning: { eyebrow: '4. Doctrine', description: 'Review playbooks and lessons captured from prior trades.' },
+-  Backtest: { eyebrow: '5. Historical test', description: 'Validate the scenario over past data before sizing risk.' },
+-  Alerts: { eyebrow: '6. Triggers', description: 'Manage price, indicator, and multi-condition alert rules.' },
+-  Settings: { eyebrow: '7. Account', description: 'Subscription, profile, billing, and preferences.' },
+-};
+-
+-function WorkspaceMetric({ label, value, tone = 'var(--msp-text)', detail }: { label: string; value: string; tone?: string; detail: string }) {
+-  return (
+-    <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-card)', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4, minHeight: '3.5rem' }}>
+-      <div style={{ fontSize: 'var(--msp-text-label)', fontWeight: 500, color: 'var(--msp-text-muted)' }}>{label}</div>
+-      <div style={{ fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: tone, fontVariantNumeric: 'tabular-nums', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={value}>{value}</div>
+-      <div style={{ fontSize: 11, color: 'var(--msp-text-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={detail}>{detail}</div>
+-    </div>
+-  );
+-}
+-
+-function WorkspaceTabRail({ activeTab, onSelectTab }: { activeTab: WorkspaceTab; onSelectTab: (tab: WorkspaceTab) => void }) {
+-  return (
+-    <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2" aria-label="Workspace tabs">
+-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7">
+-        {TABS.map((t) => {
+-          const meta = WORKSPACE_TAB_META[t];
+-          const isActive = activeTab === t;
+-          return (
+-            <button
+-              key={t}
+-              type="button"
+-              aria-pressed={isActive}
+-              onClick={() => onSelectTab(t)}
+-              style={{
+-                background: isActive ? 'var(--msp-accent-tint)' : 'var(--msp-card-2)',
+-                borderLeft: isActive ? '2px solid var(--msp-accent)' : '2px solid transparent',
+-                borderRadius: 'var(--msp-radius-control)',
+-                padding: '6px 12px',
+-                textAlign: 'left',
+-              }}
+-              className="transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
+-            >
+-              <div style={{ fontSize: 'var(--msp-text-label)', fontWeight: 500, color: 'var(--msp-text-muted)' }}>{meta.eyebrow}</div>
+-              <div style={{ marginTop: 2, fontSize: 'var(--msp-text-body)', fontWeight: 500, color: isActive ? 'var(--msp-accent)' : 'var(--msp-text)' }}>{t}</div>
+-            </button>
+-          );
+-        })}
+-      </div>
+-    </div>
+-  );
+-}
+-
+ export default function WorkspacePage() {
+   return (
+     <Suspense fallback={<div className="animate-pulse bg-slate-800/50 rounded-xl h-64" />}>
+@@ -112,7 +60,7 @@ function WorkspaceContent() {
+     return (
+       <div className="mx-auto max-w-lg rounded-xl border border-white/10 bg-[var(--msp-panel)] p-8 text-center">
+         <div className="mb-2 text-sm font-semibold text-amber-300">Sign in required</div>
+-        <h1 className="text-xl font-bold text-white">Your Workspace is tied to your account</h1>
++        <h1 className="text-xl font-bold text-white">Track is tied to your account</h1>
+         <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">Watchlists, journal, portfolio, alerts and saved research cases sync across devices once you are signed in.</p>
+         <div className="mt-6 flex flex-col items-center justify-center gap-2 sm:flex-row">
+           <a href={`/auth?next=${encodeURIComponent(next)}`} className="inline-flex rounded-lg bg-emerald-500/20 px-4 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/30">Sign In</a>
+@@ -122,39 +70,10 @@ function WorkspaceContent() {
+     );
+   }
+ 
+-  const activeMeta = WORKSPACE_TAB_META[tab];
+-  const tierLabel = tier === 'pro' || tier === 'pro_trader' ? 'Pro' : 'Free';
+-  const tierTone: 'bull' | 'info' | 'neutral' = tier === 'pro' || tier === 'pro_trader' ? 'bull' : 'neutral';
+-  const nextTab: WorkspaceTab = (() => {
+-    const idx = TABS.indexOf(tab);
+-    return TABS[(idx + 1) % TABS.length];
+-  })();
+-
+   return (
+     <div className="space-y-3">
+-      <PageHero
+-        ariaLabel="Workspace command header"
+-        eyebrow="Workflow memory"
+-        badges={[
+-          { label: activeMeta.eyebrow },
+-          { label: `Tier ${tierLabel}` },
+-        ]}
+-        title="Workspace"
+-        subtitle="Watchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench."
+-        actions={[
+-          { label: 'Open watchlists', variant: 'primary', onClick: () => selectWorkspaceTab('Watchlists') },
+-          { label: `Open ${nextTab}`, variant: 'secondary', onClick: () => selectWorkspaceTab(nextTab) },
+-          { label: 'All tools', variant: 'ghost', href: '/tools' },
+-        ]}
+-        metrics={[
+-          { label: 'Active tab', value: tab, tone: 'bull', detail: activeMeta.eyebrow },
+-          { label: 'Tier', value: tierLabel, tone: tierTone, detail: 'Subscription level' },
+-          { label: 'Focus', value: activeMeta.eyebrow.replace(/^\d+\.\s*/, ''), tone: 'info', detail: 'Current workbench focus' },
+-          { label: 'Next tab', value: nextTab, tone: 'info', detail: 'Continue the workspace loop' },
+-        ]}
+-      />
+-
+-      <WorkspaceTabRail activeTab={tab} onSelectTab={selectWorkspaceTab} />
++      <h1 className="text-2xl font-semibold">Track</h1>
++      <TabBar label="Track tabs" items={TABS.map(t => ({ id: t, label: t }))} activeId={tab} onChange={id => selectWorkspaceTab(id as WorkspaceTab)} />
+ 
+       {/* -- WATCHLISTS ----------------------------------------------- */}
+       {tab === 'Watchlists' && <RiskPermissionProvider><WatchlistWidget /></RiskPermissionProvider>}
+diff --git a/components/WorkflowNavigation.tsx b/components/WorkflowNavigation.tsx
+index e4015297f..36160dd0a 100644
+--- a/components/WorkflowNavigation.tsx
++++ b/components/WorkflowNavigation.tsx
+@@ -6,11 +6,11 @@ import {
+   isNavigationLinkActive,
+   workflowArea,
+ } from "@/lib/toolWorkflows";
+-/** Other groups are reachable in the Header. Track retains its existing sub-bar until P2E. */
++/** Track has its own shared TabBar; legacy standalone tools retain their links. */
+ export default function WorkflowNavigation() {
+   const pathname = usePathname();
+   const params = useSearchParams();
+-  if (workflowArea(pathname, params.get("tab") || "") !== "track") return null;
++  if (pathname === "/tools/workspace" || workflowArea(pathname, params.get("tab") || "") !== "track") return null;
+   return (
+     <nav
+       aria-label="Track tools"

@@ -1,70 +1,79 @@
-import { JournalKpisModel } from '@/types/journal';
-import { formatUsd } from '@/lib/journal/display';
-
-/** TR-12: one value per card (the old badge repeated the same number with no unit); sign colours the value. */
-function KpiCard({ label, value, suffix, tone }: { label: string; value: string; suffix?: string; tone?: number | null }) {
-  const toneClass = tone == null || tone === 0 ? 'text-slate-100' : tone > 0 ? 'text-emerald-200' : 'text-rose-200';
-  return (
-    <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-3">
-      <div className="text-xs text-slate-400">{label}</div>
-      <div className={`mt-1 text-base font-semibold ${toneClass}`}>{value}{suffix || ''}</div>
-    </div>
-  );
+import { JournalKpisModel } from "@/types/journal";
+import { formatUsd } from "@/lib/journal/display";
+import StatTile from "@/components/visual/StatTile";
+function metricMoney(value: number): string {
+  return Math.abs(value) >= 10_000
+    ? new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        notation: "compact",
+        maximumFractionDigits: 2,
+      }).format(value)
+    : formatUsd(value);
 }
-
-type JournalKpiRowProps = {
-  kpis?: JournalKpisModel;
-};
-
-export default function JournalKpiRow({ kpis }: JournalKpiRowProps) {
-  const data: JournalKpisModel =
-    kpis ||
+/** Personal records only; zero/missing metrics are omitted rather than shown as placeholders. */
+export default function JournalKpiRow({ kpis }: { kpis?: JournalKpisModel }) {
+  if (!kpis) return null;
+  const metrics = [
     {
-      equity: null,
-      realizedPnl30d: 0,
-      unrealizedPnlOpen: 0,
-      winRate30d: null,
-      profitFactor30d: null,
-      maxDrawdown90d: null,
-    };
-
+      label: "Recorded P&L",
+      raw: kpis.realizedPnlTotal,
+      value: metricMoney(kpis.realizedPnlTotal ?? 0),
+    },
+    {
+      label: "Realized P&L · 30 days",
+      raw: kpis.realizedPnl30d,
+      value: metricMoney(kpis.realizedPnl30d),
+    },
+    {
+      label: "Estimated open P&L",
+      raw: kpis.unrealizedPnlOpen,
+      value: metricMoney(kpis.unrealizedPnlOpen ?? 0),
+    },
+    {
+      label: "Win rate · 30 days",
+      raw: kpis.winRate30d,
+      value: `${((kpis.winRate30d ?? 0) * 100).toFixed(1)}%`,
+    },
+    {
+      label: "Profit factor · 30 days",
+      raw: kpis.profitFactor30d,
+      value: (kpis.profitFactor30d ?? 0).toFixed(2),
+    },
+  ].filter(
+    (metric) =>
+      typeof metric.raw === "number" &&
+      Number.isFinite(metric.raw) &&
+      metric.raw !== 0,
+  );
   return (
     <>
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-9">
-      <KpiCard label="Recorded realized P&L (all time)" value={formatUsd(data.realizedPnlTotal ?? 0)} tone={data.realizedPnlTotal ?? 0} />
-      <KpiCard label="Realized P&L (30d)" value={formatUsd(data.realizedPnl30d)} tone={data.realizedPnl30d} />
-      <KpiCard label="Estimated open P&L" value={data.unrealizedPnlOpen == null ? 'Unavailable' : formatUsd(data.unrealizedPnlOpen)} tone={data.unrealizedPnlOpen} />
-      <KpiCard label="Win Rate (30d)" value={data.winRate30d == null ? 'Unavailable' : `${(data.winRate30d * 100).toFixed(1)}%`} />
-      <KpiCard label="Profit Factor (30d)" value={data.profitFactor30d == null ? data.profitFactorLabel || 'Unavailable' : data.profitFactor30d.toFixed(2)} />
-      <KpiCard label="Closed P&L drawdown (90d)" value={data.maxDrawdown90dUsd == null ? 'Unavailable' : formatUsd(data.maxDrawdown90dUsd)} />
-      {typeof data.avgMfe30d === 'number' && (
-        <KpiCard label="Avg MFE (30d)" value={formatUsd(data.avgMfe30d)} />
-      )}
-      {typeof data.avgMae30d === 'number' && (
-        <KpiCard label="Avg MAE (30d)" value={formatUsd(data.avgMae30d)} />
-      )}
-      {typeof data.avgR30d === 'number' && (
-        <KpiCard label="Avg R (30d)" value={data.avgR30d.toFixed(2)} suffix="R" tone={data.avgR30d} />
-      )}
-    </div>
-    <p className="mt-2 text-xs text-slate-400">Summaries include all loaded journal records, including automated research records. Periods use close dates. Open P&amp;L is an estimate before fees; these figures are not account equity. {data.unpricedOpenTrades ? `${data.unpricedOpenTrades} open records have no usable quote; a complete open P&L total is unavailable.` : ''} {data.excludedClosedTrades ? `${data.excludedClosedTrades} closed records lack a valid close date or P&L and are excluded.` : ''}</p>
-    {data.behavioralFlags && data.behavioralFlags.length > 0 && (
-      <div className="mt-3 space-y-1.5">
-        {data.behavioralFlags.map((flag, i) => (
-          <div key={i} className={`flex items-start gap-2 rounded-lg p-2 text-xs ${
-            flag.severity === 'alert' ? 'bg-red-500/10 border border-red-500/30' : 'bg-amber-500/10 border border-amber-500/30'
-          }`}>
-            <span className="mt-0.5">{flag.severity === 'alert' ? '🚨' : '⚠️'}</span>
-            <div>
-              <span className={`font-semibold ${flag.severity === 'alert' ? 'text-red-300' : 'text-amber-300'}`}>
-                {flag.type.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
-              </span>
-              <span className="text-slate-400"> — {flag.message}</span>
-            </div>
-          </div>
+      <div
+        style={{
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(100%, 100px), 1fr))",
+        }}
+        className="grid gap-2 [&_[data-stat-card]]:p-2 [&_[data-stat-card]]:space-y-1 [&_[data-stat-card]>p:first-child]:!text-lg"
+      >
+        {metrics.map((metric) => (
+          <StatTile
+            key={metric.label}
+            label={metric.label}
+            value={metric.value}
+          />
         ))}
       </div>
-    )}
-  </>
+      <p className="text-xs text-slate-400">
+        Personal records only; automated and paper research are excluded.
+        Periods use close dates. Open P&amp;L is an estimate before fees, not
+        account equity.
+        {kpis.unpricedOpenTrades
+          ? ` ${kpis.unpricedOpenTrades} open records need a usable quote before a complete total can be measured.`
+          : ""}
+        {kpis.excludedClosedTrades
+          ? ` ${kpis.excludedClosedTrades} closed records lack a valid close date or P&L and are excluded.`
+          : ""}
+      </p>
+    </>
   );
 }

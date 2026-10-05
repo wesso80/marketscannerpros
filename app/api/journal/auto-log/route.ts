@@ -146,6 +146,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Symbol is required' }, { status: 400 });
     }
 
+    await ensureJournalSchema();
+
+    const safeSymbol = String(symbol).toUpperCase().slice(0, 20);
+    const safeCondition = String(conditionMet || conditionType || 'alert_trigger').slice(0, 100);
+    const tradeDateIso = triggeredAt ? new Date(triggeredAt) : new Date();
+    const tradeDate = Number.isNaN(tradeDateIso.getTime())
+      ? new Date().toISOString().slice(0, 10)
+      : tradeDateIso.toISOString().slice(0, 10);
+
+    const entryPriceRaw = Number(triggerPrice);
+    const entryPrice = Number.isFinite(entryPriceRaw) && entryPriceRaw > 0 ? entryPriceRaw : 1;
+    const side = inferSide(conditionType, conditionMet);
+
+    const safeSource = String(source || 'alert_intelligence').slice(0, 40);
+    // Best-effort duplicate check, scoped to the account and original source.
+    // A concurrent first request can still race: no schema/index changes here.
+    const existing = await q<{ id: number }>(`
+      SELECT id FROM journal_entries
+      WHERE workspace_id = $1 AND symbol = $2 AND side = $3
+        AND trade_date = $4::date
+        AND $5 = ANY(COALESCE(tags, '{}'::text[]))
+      LIMIT 1
+    `, [session.workspaceId, safeSymbol, side, tradeDate, safeSource]);
+    if (existing.length > 0) {
+      return NextResponse.json({ success: true, entryId: existing[0].id, deduplicated: true });
+    }
+
     // ── Brain layer: record source-engine event for auto-logged scenarios ──
     // Best-effort, non-blocking. This is the brain hook for time_scanner /
     // scanner / strategy auto-logs that fire from client-side tools.
@@ -192,20 +219,7 @@ export async function POST(req: NextRequest) {
       }
     })();
 
-    await ensureJournalSchema();
 
-    const safeSymbol = String(symbol).toUpperCase().slice(0, 20);
-    const safeCondition = String(conditionMet || conditionType || 'alert_trigger').slice(0, 100);
-    const tradeDateIso = triggeredAt ? new Date(triggeredAt) : new Date();
-    const tradeDate = Number.isNaN(tradeDateIso.getTime())
-      ? new Date().toISOString().slice(0, 10)
-      : tradeDateIso.toISOString().slice(0, 10);
-
-    const entryPriceRaw = Number(triggerPrice);
-    const entryPrice = Number.isFinite(entryPriceRaw) && entryPriceRaw > 0 ? entryPriceRaw : 1;
-    const side = inferSide(conditionType, conditionMet);
-
-    const safeSource = String(source || 'alert_intelligence').slice(0, 40);
     const safeOperatorMode = String(operatorMode || 'OBSERVE').toUpperCase().slice(0, 20);
     const safeBias = String(operatorBias || 'NEUTRAL').toUpperCase().slice(0, 20);
     const safeRisk = String(operatorRisk || 'MODERATE').toUpperCase().slice(0, 20);

@@ -12,6 +12,7 @@ const selectCls = 'rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text
 export default function TradeFiltersBar({ filtersMeta, filters, onChange, onReset }: TradeFiltersBarProps) {
   return (
     <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-3">
+      <label className="mb-2 flex min-h-10 items-center gap-2 text-sm"><input type="checkbox" checked={Boolean(filters.research)} onChange={event=>onChange({research:event.target.checked,page:1,pageSize:10})}/>Research records (automated, paper)</label>
       {/* Mobile: collapsible filters */}
       <details className="md:hidden">
         <summary className="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden text-sm font-semibold text-slate-300">
@@ -32,7 +33,7 @@ export default function TradeFiltersBar({ filtersMeta, filters, onChange, onRese
             <option value="">Asset Class</option><option value="crypto">Crypto</option><option value="equity">Stocks</option><option value="options">Options</option>
           </select>
           <select value={filters.side || ''} onChange={(event) => onChange({ side: (event.target.value || undefined) as TradeSide | undefined, page: 1 })} className={selectCls}>
-            <option value="">Side</option><option value="long">Long</option><option value="short">Short</option>
+            <option value="">Side</option><option value="long">Purchased</option><option value="short">Sold</option>
           </select>
           <select value={filters.symbol || ''} onChange={(event) => onChange({ symbol: event.target.value || undefined, page: 1 })} className={selectCls}>
             <option value="">Symbol</option>
@@ -40,7 +41,7 @@ export default function TradeFiltersBar({ filtersMeta, filters, onChange, onRese
           </select>
           <select value={filters.strategyTag || ''} onChange={(event) => onChange({ strategyTag: event.target.value || undefined, page: 1 })} className={selectCls}>
             <option value="">Strategy</option><option value="manual">Manual</option>
-            {(filtersMeta?.strategyTags || []).map((tag) => (<option key={tag} value={tag}>{tag}</option>))}
+            {(filtersMeta?.strategyTags || []).map((tag) => (<option key={tag} value={tag}>{tag.replace(/_/g, ' ').toLowerCase()}</option>))}
           </select>
           <button onClick={onReset} className="rounded-lg bg-white/10 px-3 py-2 text-sm text-slate-100">Reset</button>
         </div>
@@ -68,8 +69,8 @@ export default function TradeFiltersBar({ filtersMeta, filters, onChange, onRese
         </select>
         <select value={filters.side || ''} onChange={(event) => onChange({ side: (event.target.value || undefined) as TradeSide | undefined, page: 1 })} className={selectCls}>
           <option value="">Side</option>
-          <option value="long">Long</option>
-          <option value="short">Short</option>
+          <option value="long">Purchased</option>
+          <option value="short">Sold</option>
         </select>
         <select value={filters.symbol || ''} onChange={(event) => onChange({ symbol: event.target.value || undefined, page: 1 })} className={selectCls}>
           <option value="">Symbol</option>
@@ -81,7 +82,7 @@ export default function TradeFiltersBar({ filtersMeta, filters, onChange, onRese
           <option value="">Strategy</option>
           <option value="manual">Manual</option>
           {(filtersMeta?.strategyTags || []).map((tag) => (
-            <option key={tag} value={tag}>{tag}</option>
+            <option key={tag} value={tag}>{tag.replace(/_/g, ' ').toLowerCase()}</option>
           ))}
         </select>
         <button onClick={onReset} className="rounded-lg bg-white/10 px-3 py-2 text-sm text-slate-100">Reset</button>
