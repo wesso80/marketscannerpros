@@ -17,6 +17,7 @@ import { NEWS_BRIEF_LABEL } from "@/lib/news/newsBrief";
 import { PageHero } from "@/components/ui";
 import TickerSentimentSummary from "@/components/news/TickerSentimentSummary";
 import type { TickerSentimentSummary as TickerSentimentSummaryItem } from "@/lib/equityNewsRelevance";
+import NewsIntelligenceCompact from "@/components/research/NewsIntelligenceCompact";
 
 interface TickerSentiment {
   ticker: string;
@@ -816,6 +817,85 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
           </div>
         </main>
       </div>
+    );
+  }
+
+  if (embeddedInResearch) {
+    const awaitingNews = loading || (!error && articles.length === 0 && !newsInitialFetchDone.current && Boolean(tickers.trim()));
+    return (
+      <NewsIntelligenceCompact
+        loading={awaitingNews}
+        error={error}
+        articles={filteredNews.map((item) => ({
+          id: item.id,
+          title: item.raw.title,
+          url: item.raw.url,
+          summary: item.raw.summary,
+          source: item.raw.source,
+          timePublished: item.raw.timePublished,
+          sentiment: (item.raw as NewsArticle).sentiment?.label || item.sentiment,
+          impact: item.impact,
+          tags: item.tags,
+          narrative: item.narrative,
+        }))}
+        gate={{
+          topNarrative: newsGate.topNarrative,
+          riskState: newsGate.riskState,
+          volRegime: newsGate.volRegime,
+          catalystDensity: newsGate.catalystDensity,
+          narrativeStrength: newsGate.narrativeStrength,
+          sentimentPct: newsGate.sentimentPct,
+          confidencePct: newsGate.confidencePct,
+          rotationLeaders: newsGate.rotationLeaders,
+          warnings: newsGate.warnings,
+          eventRiskLabel: newsGate.eventRiskLabel,
+          eventRiskCountdown: newsGate.eventRiskCountdown,
+          briefLines: newsGate.briefAllowed,
+          weakLines: newsGate.briefAvoid,
+          permission: newsGate.permission,
+        }}
+        narratives={groupedNarratives.map((group) => ({ name: group.narrative, count: group.items.length }))}
+        brief={newsAIAnalysis}
+        tickers={tickers}
+        onTickers={setTickers}
+        query={newsQuery}
+        onQuery={setNewsQuery}
+        bucket={newsBucket}
+        onBucket={(value) => setNewsBucket(value as typeof newsBucket)}
+        sort={newsSort}
+        onSort={(value) => setNewsSort(value as typeof newsSort)}
+        hideLowQuality={hideLowQualityNews}
+        onHideLowQuality={setHideLowQualityNews}
+        groupByNarrative={groupByNarrative}
+        onGroupByNarrative={setGroupByNarrative}
+        onSearch={handleSearch}
+        earnings={{
+          loading: earningsLoading,
+          error: earningsError,
+          rows: enhancedEarningsRows.map((row) => ({
+            symbol: row.symbol,
+            name: row.name,
+            reportDate: row.reportDate,
+            session: row.session,
+            impactTier: row.impactTier,
+            estimate: row.estimate,
+          })),
+          symbol: earningsSymbol,
+          horizon: earningsHorizon,
+          scope: marketScope,
+          session: sessionFilter,
+          highImpactOnly,
+          sort: sortBy,
+          onSymbol: setEarningsSymbol,
+          onHorizon: setEarningsHorizon,
+          onScope: (value) => setMarketScope(value as typeof marketScope),
+          onSession: (value) => setSessionFilter(value as typeof sessionFilter),
+          onHighImpactOnly: setHighImpactOnly,
+          onSort: (value) => setSortBy(value as typeof sortBy),
+          onSearch: () => { void handleEarningsSearch(); },
+          insight: earningsAIAnalysis,
+        }}
+      />
     );
   }
 
