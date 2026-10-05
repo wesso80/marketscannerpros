@@ -13,7 +13,7 @@ export default function PortfolioOverview({ value, openPL, allocation, limit }: 
   return <section className="min-w-0 space-y-3" aria-label="Portfolio overview">
     <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
       <StatTile label="Value simulated" value={formatMoney(value)} />
-      <StatTile label="Today" value="Not measured" />
+      <div className="[&_[data-stat-card]]:h-full [&_[data-stat-card]>p:first-child]:text-base"><StatTile label="Today" value="Not measured" /></div>
       <StatTile label="Open P&L" value={formatSignedMoney(openPL)} />
       <StatTile label="Largest position" value={largest ? `${largest.percentage.toFixed(1)}%` : null} warning={Boolean(largest && largest.percentage > limit)} />
     </div>

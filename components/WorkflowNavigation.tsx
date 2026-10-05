@@ -6,11 +6,11 @@ import {
   isNavigationLinkActive,
   workflowArea,
 } from "@/lib/toolWorkflows";
-/** Other groups are reachable in the Header. Track retains its existing sub-bar until P2E. */
+/** Track has its own shared TabBar; legacy standalone tools retain their links. */
 export default function WorkflowNavigation() {
   const pathname = usePathname();
   const params = useSearchParams();
-  if (workflowArea(pathname, params.get("tab") || "") !== "track") return null;
+  if (pathname === "/tools/workspace" || workflowArea(pathname, params.get("tab") || "") !== "track") return null;
   return (
     <nav
       aria-label="Track tools"

@@ -10,7 +10,7 @@ vi.mock('@/components/risk/RiskPermissionContext',()=>({useRiskPermission:()=>({
 vi.mock('@/lib/operatorState',()=>({writeOperatorState:vi.fn()}));
 vi.mock('@/lib/workflow/client',()=>({createWorkflowEvent:vi.fn(),emitWorkflowEvents:vi.fn()}));
 import {PortfolioContent} from '@/app/tools/portfolio/page';
-beforeEach(()=>{vi.stubGlobal('React',React);localStorage.clear();state.positions=[];state.tier='pro';state.query=new URLSearchParams();vi.stubGlobal('fetch',vi.fn(async(url)=>({ok:true,json:async()=>String(url)==='/api/portfolio'?{positions:state.positions,closedPositions:[],performanceHistory:[],cashState:{startingCapital:10000,cashLedger:[]}}:{ok:false}})));});
+beforeEach(()=>{vi.stubGlobal('React',React);localStorage.clear();state.positions=[];state.tier='pro';state.query=new URLSearchParams();vi.stubGlobal('fetch',vi.fn(async(url)=>({ok:true,json:async()=>String(url)==='/api/portfolio'?{syncRevision:"fixture-revision",positions:state.positions,closedPositions:[],performanceHistory:[],cashState:{startingCapital:10000,cashLedger:[]}}:{ok:false}})));});
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 it('renders the actual empty page without zero-value summary tiles and opens the existing form',async()=>{
  const {container}=render(<PortfolioContent embeddedInWorkspace/>);
@@ -30,4 +30,12 @@ it('renders saved exposure, one verdict, closed folds and a chart without changi
  expect(screen.getByText('$250')).toBeTruthy();
  expect(container.textContent).not.toMatch(/N\/A|NaN|undefined/);
  expect(state.positions[0].quantity).toBe(2);
+});
+it.each(['Positions','Ledger','Risk','Allocation'])('%s keeps raw missing values out of rendered detail',async name=>{
+ state.positions=[{id:1,symbol:'AAPL',side:'LONG',quantity:2,entryPrice:100,currentPrice:125,pl:50,plPercent:25,entryDate:'2026-10-02'}];
+ const {container}=render(<PortfolioContent embeddedInWorkspace/>);
+ await screen.findByRole('img',{name:'Allocation by recorded position value'});
+ fireEvent.click(screen.getByRole('tab',{name,exact:true}));
+ expect(container.textContent).not.toMatch(/\b(?:N\/A|UNKNOWN|Unavailable|undefined|NaN|bullish|bearish)\b|[A-Z]+_[A-Z_]+/i);
+ expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);
 });

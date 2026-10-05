@@ -2,7 +2,6 @@
 
 import UpgradeMoment, { useUpgradeMoment } from '@/components/free/UpgradeMoment';
 
-import PriceStamp from '@/components/market/PriceStamp';
 import {symbolHref} from '@/lib/market/links';
 import { Suspense, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
@@ -44,7 +43,9 @@ import {
 } from '@/lib/portfolio/clientSync';
 import { mergeLocalLevels, openRiskMetrics, validLevel, validateLevels } from '@/lib/portfolio/positionLevels';
 import { chronologicalCloses, closedLinkLabel, dropServerOwnedRows, realizedByLink, splitClosedBook, type ClosedJournalLink } from '@/lib/portfolio/closedReconcile';
-import { closedTradeR, formatR as formatStopR, formatRiskUnits, RISK_UNITS_NEED_EQUITY, riskUnitBase, riskUnitDollars, summarize, toRiskUnits } from '@/lib/portfolio/rMeasures';
+import { closedTradeR, formatR as formatStopRValue, formatRiskUnits, RISK_UNITS_NEED_EQUITY, riskUnitBase, riskUnitDollars, summarize, toRiskUnits } from '@/lib/portfolio/rMeasures';
+
+const formatStopR = (value: number | null | undefined) => value == null ? 'Not measured' : formatStopRValue(value);
 
 interface Position {
   id: number;
@@ -304,7 +305,7 @@ function PositionSizerCalculator() {
                 cursor: 'pointer'
               }}
             >
-              Long Exposure
+              Purchased exposure
             </button>
             <button
               type="button"
@@ -321,7 +322,7 @@ function PositionSizerCalculator() {
                 cursor: 'pointer'
               }}
             >
-              Short Exposure
+              Sold exposure
             </button>
           </div>
         </div>
@@ -2281,7 +2282,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       {allocationData.length === 0 && <div className="text-xs text-slate-500">No active allocation</div>}
                     </div>
                     <div className="mt-2 border-t border-slate-700 pt-2 text-xs text-slate-400">
-                      Long {longExposurePct.toFixed(1)}% • Short {shortExposurePct.toFixed(1)}%
+                      Purchased {longExposurePct.toFixed(1)}% • Sold {shortExposurePct.toFixed(1)}%
                     </div>
                   </div>
                   <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3 text-xs">
@@ -2399,8 +2400,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       onChange={(e) => setNewPosition({ ...newPosition, side: e.target.value as 'LONG' | 'SHORT' })}
                       className="rounded border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 [&>option]:bg-slate-900 [&>option]:text-slate-100"
                     >
-                      <option value="LONG">Long exposure</option>
-                      <option value="SHORT">Short exposure</option>
+                      <option value="LONG">Purchased exposure</option>
+                      <option value="SHORT">Sold exposure</option>
                     </select>
                     <select
                       value={newPosition.strategy || ''}
@@ -2469,7 +2470,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Trade Input Panel</div>
                   <input value={deployDraft.symbol} onChange={(e) => setDeployDraft((prev) => ({ ...prev, symbol: e.target.value.toUpperCase() }))} placeholder="Symbol" className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
                   <div className="grid grid-cols-2 gap-2">
-                    <select value={deployDraft.side} onChange={(e) => setDeployDraft((prev) => ({ ...prev, side: e.target.value as 'LONG' | 'SHORT' }))} className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"><option value="LONG">Long exposure</option><option value="SHORT">Short exposure</option></select>
+                    <select value={deployDraft.side} onChange={(e) => setDeployDraft((prev) => ({ ...prev, side: e.target.value as 'LONG' | 'SHORT' }))} className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"><option value="LONG">Purchased exposure</option><option value="SHORT">Sold exposure</option></select>
                     <input value={deployDraft.strategyTag} onChange={(e) => setDeployDraft((prev) => ({ ...prev, strategyTag: e.target.value }))} placeholder="Strategy Tag" className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
                   </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -2479,7 +2480,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   </div>
                 </div>
                 <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3">
-                  <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Risk Preview Engine</div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Allocation preview</div>
                   <div className="mt-2 space-y-1.5 text-sm text-slate-300">
                     <div className="flex justify-between"><span>Position Size</span><span className="font-bold text-slate-100">{suggestedQuantity.toFixed(2)}</span></div>
                     <div className="flex justify-between"><span>Risk %</span><span className="font-bold text-slate-100">{riskSettings.maxRiskPerTrade.toFixed(2)}%</span></div>
@@ -2640,12 +2641,12 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       return (
                         <tr key={position.id} className="border-b border-slate-800/60 text-slate-300">
                           <td className="px-2 py-2 font-semibold text-slate-100"><Link href={symbolHref(position.symbol,position.assetClass??'equity')}>{position.symbol}</Link></td>
-                          <td className="px-2 py-2">{position.side}</td>
+                          <td className="px-2 py-2">{position.side === 'LONG' ? 'Purchased' : 'Sold'}</td>
                           <td className="px-2 py-2 text-right tabular-nums">{position.quantity.toLocaleString(undefined, { maximumFractionDigits: 4 })}</td>
                           <td className="px-2 py-2 text-right tabular-nums text-slate-100">${notional.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
                           <td className="px-2 py-2 text-right">{sizePct.toFixed(1)}%</td>
                           <td className="px-2 py-2 text-right">{formatPriceRaw(position.entryPrice)}</td>
-                          <td className="px-2 py-2 text-right"><PriceStamp compact price={position.currentPrice} assetType={position.tradeType==='Options'?'option':position.assetClass} priceBasis="unknown" source="recorded position mark"/></td>
+                          <td className="px-2 py-2 text-right"><span title="Recorded mark; price basis and observation time not collected">{formatPrice(position.currentPrice)}</span></td>
                           <td className="px-2 py-2 text-right tabular-nums" title={stop != null && levelsFromJournal ? 'From the linked Journal entry' : undefined}>{stop != null ? formatPriceRaw(stop) : <span className="text-slate-500" title="No stop set">Not set</span>}</td>
                           <td className="px-2 py-2 text-right tabular-nums" title={target != null && levelsFromJournal ? 'From the linked Journal entry' : undefined}>{target != null ? formatPriceRaw(target) : <span className="text-slate-500" title="No target set">Not set</span>}</td>
                           {rMultipleOpen == null
@@ -2847,7 +2848,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         <p className="mb-2 text-xs text-slate-400">Position limit: {positionLimitWhenReady(positions.length, getPortfolioLimit(tier), dataLoaded && !tierLoading)}</p>
         <div className="flex flex-wrap gap-2">{portfolioHeaderActions}</div>
       </CollapsibleSection>
-      <div className="mt-3"><SourceLine source="Saved simulation records" tradingDay="Observation time recorded per position" basis="User-entered records; descriptive analytics" /></div>
+      <div className="mt-3"><SourceLine source="Saved simulation records" tradingDay="Mark basis and observation times not collected" basis="User-entered records; descriptive analytics" /></div>
       <p className="mt-2 text-xs text-slate-400">General information only, not financial advice.</p>
 
     </div>
