@@ -173,7 +173,7 @@ function MoverRow({ mover, tone, onOpen, onKeyOpen }: { mover: Mover; tone: 'up'
   return (
     <button
       type="button"
-      aria-label={`Open Golden Egg for ${label}`}
+      aria-label={`Open Symbol for ${label}`}
       className="w-full rounded-md px-2 py-1.5 text-xs hover:bg-slate-800/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
       onClick={onOpen}
       onKeyDown={onKeyOpen}
@@ -307,7 +307,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
   const topQueueSymbol = scannerQueue[0]?.symbol || moverQueue[0]?.ticker || 'None';
   const hasQueue = researchQueueCount > 0;
   const nextCheckValue = hasQueue ? `Validate ${topQueueSymbol}` : loadingFeeds ? 'Loading feeds…' : 'Run Scanner first';
-  const nextCheckDetail = hasQueue ? 'Open Golden Egg from queue below' : loadingFeeds ? 'Cached scanner data syncing' : 'No cached candidates yet';
+  const nextCheckDetail = hasQueue ? 'Open Symbol from queue below' : loadingFeeds ? 'Cached scanner data syncing' : 'No cached candidates yet';
   const nextCheckTone = hasQueue ? 'var(--msp-warn)' : 'var(--msp-flat)';
   const topSymbolHref = hasQueue ? `/tools/golden-egg?symbol=${encodeURIComponent(topQueueSymbol)}` : '/tools/golden-egg';
 
@@ -317,7 +317,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
     return <Card><AuthPrompt /></Card>;
   }
 
-  // Pass the row's asset class when known: Golden Egg reads ?type=crypto|equity (as the scanner hand-off does), so a
+  // Pass the row's asset class when known: Symbol reads ?type=crypto|equity (as the scanner hand-off does), so a
   // crypto mover such as HOOD opens the coin rather than the US stock with the same ticker.
   function openGoldenEgg(symbol: string, assetType?: ResearchAsset) {
     const selection = assetType ? { assetType } : {};
@@ -342,7 +342,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
         <div className="grid grid-cols-[minmax(0,1fr)] gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2" style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>
-              <span>Research dashboard · <a href="/tools/command-center" style={{ color: 'var(--msp-accent)' }}>market overview in Command Center</a></span>
+              <span>Research dashboard · <a href="/tools/command-center" style={{ color: 'var(--msp-accent)' }}>market overview in Overview</a></span>
               {regime.data && (
                 <span className="inline-flex items-center gap-1.5" style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>
                   <span style={{ color: regime.data.regime.includes('UP') ? 'var(--msp-bull)' : regime.data.regime.includes('DOWN') || regime.data.regime.includes('STRESS') ? 'var(--msp-bear)' : regime.data.regime.includes('EXPANSION') ? 'var(--msp-warn)' : 'var(--msp-info)' }}>{regime.data.regime.replace(/_/g, ' ').toLowerCase()}</span>
@@ -397,7 +397,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
             <div>
               <SectionEyebrow>Today&apos;s research queue · Ranked queue (not yet validated)</SectionEyebrow>
               <h2 style={{ fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>Top of the Scanner&apos;s ranked queue.</h2>
-              <p className="mt-1" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', lineHeight: 1.5 }}>Click a symbol to open Golden Egg. Review context only; no trade instructions.</p>
+              <p className="mt-1" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', lineHeight: 1.5 }}>Click a symbol to open Symbol. Review context only; no trade instructions.</p>
             </div>
             <DSButton variant="ghost" size="sm" onClick={() => navigateTo('scanner')}>Open scanner</DSButton>
           </div>
@@ -418,13 +418,13 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
                   if (item.kind === 'cached') {
                     const row = item.row;
                     const moveColor = row.changePct === null ? 'var(--msp-text-muted)' : row.changePct >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)';
-                    const biasLabel = row.direction === 'bullish' ? 'Bullish bias' : row.direction === 'bearish' ? 'Bearish bias' : 'Neutral bias';
+                    const biasLabel = row.direction === 'bullish' ? 'Rising context' : row.direction === 'bearish' ? 'Falling context' : 'Neutral bias';
                     const biasTone: 'bull' | 'bear' | 'neutral' = row.direction === 'bullish' ? 'bull' : row.direction === 'bearish' ? 'bear' : 'neutral';
                     return (
                       <button
                         key={`queue-${row.symbol}`}
                         type="button"
-                        aria-label={`Validate ${row.symbol} in Golden Egg`}
+                        aria-label={`Validate ${row.symbol} in Symbol`}
                         onClick={() => openGoldenEgg(row.symbol)}
                         style={{
                           textAlign: 'left',
@@ -452,7 +452,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
                           <MagnitudeBar value={row.score} max={100} color="var(--msp-accent-dim)" height={3} />
                           <MagnitudeBar value={row.changePct ?? 0} max={10} color={moveColor} height={2} />
                         </div>
-                        <div style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Next: review in Golden Egg</div>
+                        <div style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Next: review in Symbol</div>
                       </button>
                     );
                   } else {
@@ -463,7 +463,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
                       <button
                         key={`mover-queue-${m.ticker}`}
                         type="button"
-                        aria-label={`Validate ${proDisplaySymbol(m.ticker, m.asset_class)} in Golden Egg`}
+                        aria-label={`Validate ${proDisplaySymbol(m.ticker, m.asset_class)} in Symbol`}
                         onClick={() => openGoldenEgg(m.ticker, m.asset_class)}
                         style={{
                           textAlign: 'left',
@@ -522,7 +522,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
             <SectionEyebrow>Continue workflow</SectionEyebrow>
             <div className="mt-3 grid gap-2">
               <button type="button" onClick={() => navigateTo('scanner')} style={{ background: hasQueue ? 'var(--msp-card-2)' : 'var(--msp-card)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', textAlign: 'left', fontSize: 'var(--msp-text-body-sm)', color: hasQueue ? 'var(--msp-bull)' : 'var(--msp-text-muted)', borderLeft: hasQueue ? '2px solid var(--msp-bull)' : '2px solid transparent' }}>{hasQueue ? `✓ ${researchQueueCount} scenarios queued` : '1. Find scenarios in Scanner'}</button>
-              <a href={topSymbolHref} style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', textAlign: 'left', fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', textDecoration: 'none' }}>{hasQueue ? `2. Validate ${topQueueSymbol} in Golden Egg` : '2. Validate one symbol in Golden Egg'}</a>
+              <a href={topSymbolHref} style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', textAlign: 'left', fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', textDecoration: 'none' }}>{hasQueue ? `2. Validate ${topQueueSymbol} in Symbol` : '2. Validate one symbol in Symbol'}</a>
               <a href="/tools/workspace?tab=backtest" style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', textAlign: 'left', fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', textDecoration: 'none' }}>3. Test history in Backtest</a>
               <a href="/tools/workspace?tab=journal" style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', textAlign: 'left', fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', textDecoration: 'none' }}>4. Save notes in Journal</a>
             </div>
@@ -552,13 +552,13 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
                 .sort((a, b) => Math.abs(b.adx ?? -1) - Math.abs(a.adx ?? -1))
                 .slice(0, 4)
                 .map((r: CachedSymbol) => {
-                  const phase = r.adx === null ? 'ADX unavailable' : r.adx >= 30 ? 'Trending' : r.adx >= 20 ? 'Developing' : 'Weak trend';
+                  const phase = r.adx === null ? 'ADX not collected' : r.adx >= 30 ? 'Trending' : r.adx >= 20 ? 'Developing' : 'Weak trend';
                   const phaseTone: 'bull' | 'warn' | 'info' = r.adx !== null && r.adx >= 30 ? 'bull' : r.adx !== null && r.adx >= 20 ? 'warn' : 'info';
                   return (
                     <button
                       key={`vol-${r.symbol}`}
                       type="button"
-                      aria-label={`Open Golden Egg for ${r.symbol}`}
+                      aria-label={`Open Symbol for ${r.symbol}`}
                       onClick={() => openGoldenEgg(r.symbol)}
                       style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '6px 10px', width: '100%' }}
                       className="flex items-center justify-between hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
@@ -663,7 +663,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
                 <button
                   key={q.symbol}
                   type="button"
-                  aria-label={`Open Golden Egg for ${q.symbol}`}
+                  aria-label={`Open Symbol for ${q.symbol}`}
                   onClick={() => openGoldenEgg(q.symbol)}
                   onKeyDown={(e) => onSymbolRowKey(e, q.symbol)}
                   className="flex h-[5.5rem] flex-col items-center justify-center rounded-md px-1 text-center transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
@@ -701,7 +701,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
                 <button
                   key={q.symbol}
                   type="button"
-                  aria-label={`Open Golden Egg for ${meta?.label || q.symbol}`}
+                  aria-label={`Open Symbol for ${meta?.label || q.symbol}`}
                   onClick={() => openGoldenEgg(q.symbol)}
                   onKeyDown={(e) => onSymbolRowKey(e, q.symbol)}
                   className="flex h-[5.5rem] flex-col items-center justify-center rounded-md px-1 text-center transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"

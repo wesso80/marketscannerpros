@@ -5,7 +5,7 @@ import Link from 'next/link';
 import type { radarPreview } from '@/lib/free/radarPreview';
 import { FREE_COPY } from './copy';
 import { friendlyStatus } from '@/lib/free/friendlyStatus';
-import Stamp from './Stamp';
+import { localStamp } from './Stamp';
 export default function RadarPreview() {
   const [preview, setPreview] = useState<Awaited<ReturnType<typeof radarPreview>> | undefined>(undefined);
   useEffect(() => {
@@ -18,7 +18,7 @@ export default function RadarPreview() {
     <h2 className="text-lg font-semibold">{FREE_COPY.radar}</h2>
     {preview === undefined ? <p>{FREE_COPY.loading}</p> : !preview ? <p>{FREE_COPY.unavailable}</p> : <>
       <p>{preview.status !== 'FAILED' && preview.candidateCount != null && <><strong>{preview.candidateCount}</strong> {FREE_COPY.picks} · </>}{preview.status === 'COMPLETE' ? FREE_COPY.reportReady : preview.status === 'FAILED' ? FREE_COPY.unavailable : friendlyStatus(preview.status)}</p>
-      <Stamp source={FREE_COPY.radar} at={preview.sessionDate} basis={FREE_COPY.session} />
+      <p className="text-xs text-slate-400">{FREE_COPY.session} · {localStamp(preview.sessionDate)}</p>
       {!!preview.previous?.symbols.length && <div><p className="text-xs">{FREE_COPY.fromReport(preview.previous.sessionDate)}</p><p>{preview.previous.symbols.join(' · ')}</p></div>}
     </>}
     <Link href="/pricing" onClick={() => trackFreeEvent('upgrade_click', 'radar')} className="inline-flex min-h-10 items-center underline">{FREE_COPY.unlockReport}</Link>
