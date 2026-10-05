@@ -13,7 +13,7 @@ vi.mock('@/lib/redis',()=>({getRedis:()=>null,getCached:async()=>null,setCached:
 vi.mock('@/lib/db',()=>({q:()=>{safety.databaseAttempts++;throw Error('Database access forbidden in validation harness');},query:()=>{safety.databaseAttempts++;throw Error('Database access forbidden in validation harness');}}));
 vi.mock('@/lib/signalRecorder',()=>({recordSignal:()=>{safety.recorderAttempts++;throw Error('Signal persistence forbidden');}}));
 vi.mock('@/lib/brain/engineBridge',()=>({recordEngineEvent:()=>{safety.recorderAttempts++;throw Error('Event persistence forbidden');}}));
-import {fetchSharedOptionsChain,clearSharedOptionsChainCache,defaultChainProviders} from '@/lib/options/chainCache';
+import {fetchSharedOptionsChain,clearSharedOptionsChainCache,liveValidationChainProviders} from '@/lib/options/chainCache';
 import {optionSpotObservation} from '@/lib/options/spotObservation';
 import {selectOptionsExpiry,marketDateKey} from '@/lib/options/expiry';
 import {atmStrike} from '@/lib/options/atmStrike';
@@ -21,7 +21,7 @@ import {calculateTradeLevels} from '@/lib/options-confluence-analyzer';
 import {buildPayload,isLocalGoldenEggDemoAllowed} from '@/lib/goldenEgg/engine';
 import {atr} from '@/lib/indicators';
 import {avFetch} from '@/lib/avRateGovernor';
-import {WINDOW,inAcceptanceWindow,compareOi,type Check} from './evidence';
+import {WINDOW,inAcceptanceWindow,compareOi,liveQuoteBasisAccepted,type Check} from './evidence';
 
 it('captures read-only Options acceptance evidence only on explicit invocation',async()=>{
  if(process.env.OPTIONS_ACCEPTANCE_EXPLICIT!=='1')throw Error('Use scripts/options-live-validation.mjs; no requests made.');
@@ -36,7 +36,9 @@ it('captures read-only Options acceptance evidence only on explicit invocation',
  const reference=config.exchange?JSON.parse(readFileSync(config.exchange,'utf8')):fixture?.exchange??null;
  const missingSymbol=config['missing-history-symbol']||fixture?.missingHistorySymbol||null;
  const allowedSymbols=new Set(['AAPL',...(missingSymbol?[missingSymbol]:[])]);
- const allowedFunctions=new Set(['REALTIME_OPTIONS','HISTORICAL_OPTIONS','GLOBAL_QUOTE','TIME_SERIES_DAILY']);
+ // REALTIME_OPTIONS is not allowlisted: the partnership key is not entitled to it, and a third chain
+ // GET would exceed the six-request cap once AAPL and the missing-history ticker each take a quote and a daily series.
+ const allowedFunctions=new Set(['REALTIME_OPTIONS_FMV','HISTORICAL_OPTIONS','GLOBAL_QUOTE','TIME_SERIES_DAILY']);
  const secret=process.env.ALPHA_VANTAGE_API_KEY||'';
  const redact=(value:string)=>secret?value.split(secret).join('[REDACTED]'):value;
  const nativeFetch=safety.nativeFetch;
@@ -88,7 +90,7 @@ it('captures read-only Options acceptance evidence only on explicit invocation',
  let selectedExpiry:string|null=null,spot:any=null,chain:any=null,selectedRows:any[]=[],atm:number|null=null,sufficient:any=null,controlled:any=null,natural:any=null,fatal:string|null=null;
  try{
   clearSharedOptionsChainCache();
-  chain=await fetchSharedOptionsChain<any>('AAPL',{apiKey:secret,fetchPayload:(_fn,url)=>avFetch(url,'Options acceptance chain')});
+  chain=await fetchSharedOptionsChain<any>('AAPL',{apiKey:secret,fetchPayload:(_fn,url)=>avFetch(url,'Options acceptance chain'),providers:liveValidationChainProviders(),acceptFairValueMarks:true});
   const quote=await read('AAPL','GLOBAL_QUOTE');spot=optionSpotObservation(quote);
   selectedExpiry=selectOptionsExpiry(chain?.rows?.map((r:any)=>r.expiration)||[],config.expiry,Date.now());
   selectedRows=chain?.rows?.filter((r:any)=>r.expiration===selectedExpiry)||[];
@@ -97,7 +99,7 @@ it('captures read-only Options acceptance evidence only on explicit invocation',
   checks.push({id:'SELECTED_EXPIRY',pass:Boolean(selectedExpiry&&selectedRows.length&&(!config.expiry||selectedExpiry===config.expiry)),evidence:{requestedExpiry:config.expiry??null,selectedExpiry,listedExpiries:[...new Set(chain?.rows?.map((r:any)=>r.expiration)||[])],selection:'existing selectOptionsExpiry helper; no substitute for unavailable requested expiry'}});
   checks.push({id:'UNDERLYING_SPOT_BASIS',pass:Boolean(spot?.price>0&&spot?.asOf===marketDateKey()&&spot?.basis),evidence:spot});
   checks.push({id:'CANONICAL_ATM',pass:atm!==null&&selectedRows.some(r=>Number(r.strike)===atm),evidence:{strike:atm,spot:spot?.price??null,expiry:selectedExpiry,selection:'existing atmStrike helper; lower strike wins equal-distance ties'}});
-  checks.push({id:'LIVE_QUOTE_BASIS',pass:chain?.quoteBasis==='realtime'&&chain?.asOfDate===marketDateKey(),evidence:{quoteBasis:chain?.quoteBasis??null,asOfDate:chain?.asOfDate??null,note:'Historical fallback is captured but cannot pass live-quote acceptance.'}});
+  checks.push({id:'LIVE_QUOTE_BASIS',pass:liveQuoteBasisAccepted(chain,marketDateKey()),evidence:{provider:chain?.provider??null,quoteBasis:chain?.quoteBasis??null,asOfDate:chain?.asOfDate??null,note:'REALTIME_OPTIONS_FMV dated today passes, including fair-value marks with no bid/ask. HISTORICAL_OPTIONS is captured but cannot pass. Open interest is only the provider row value.'}});
   checks.push({id:'EXCHANGE_REFERENCE_WINDOW',pass:inAcceptanceWindow(reference?.observedAt??''),evidence:{observedAt:reference?.observedAt??null,source:reference?.source??null}});
   checks.push(...compareOi(selectedRows,selectedExpiry,reference,chain?.asOfDate??null,new Date().toISOString()));
   const history=await read('AAPL','TIME_SERIES_DAILY');const bars=candles(history);
@@ -119,7 +121,7 @@ it('captures read-only Options acceptance evidence only on explicit invocation',
   checks.push({id:'SCHEDULED_SESSION_WINDOW',pass:inAcceptanceWindow(startedAt)&&inAcceptanceWindow(finishedAt),evidence:{startedAt,finishedAt,window:WINDOW,fixtureClock:fixture?.now??null}});
   checks.push({id:'READ_ONLY_BOUNDARY',pass:safety.databaseAttempts===0&&safety.recorderAttempts===0&&requests.every(r=>r.method==='GET')&&(!fixture||networkRequests===0),evidence:{...safety,networkRequests,requestCount:requests.length,productionRoutesCalled:0,redis:'disabled; writes suppressed in process',database:'mock rejects access'}});
   let revision='not collected';try{revision=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();}catch{}
-  const report={mode,liveEvidenceChecksPassed:mode==='live'&&checks.every(c=>c.pass),liveAcceptance:false,discrepancyFixedClaim:false,revision,actualStartedAt,startedAt,finishedAt,window:WINDOW,selectedExpiry,underlyingSpot:spot,atmStrike:atm,providerOrder:defaultChainProviders(),checks,requests,limitations:['Runs current checkout helpers locally, not deployed UI/auth/route acceptance.','Provider contract date is available; a separate provider OI observation time is not exposed.','Independent same-expiry exchange evidence and a natural missing-history symbol are required.','The roughly 9x provider discrepancy is not claimed fixed.'],fatal};
+  const report={mode,liveEvidenceChecksPassed:mode==='live'&&checks.every(c=>c.pass),liveAcceptance:false,discrepancyFixedClaim:false,revision,actualStartedAt,startedAt,finishedAt,window:WINDOW,selectedExpiry,underlyingSpot:spot,atmStrike:atm,providerOrder:liveValidationChainProviders(),checks,requests,limitations:['Runs current checkout helpers locally, not deployed UI/auth/route acceptance.','Provider contract date is available; a separate provider OI observation time is not exposed.','Independent same-expiry exchange evidence and a natural missing-history symbol are required.','The roughly 9x provider discrepancy is not claimed fixed.','Chain order is REALTIME_OPTIONS_FMV, then HISTORICAL_OPTIONS when FMV is missing, empty, or not entitled. Plain REALTIME_OPTIONS is not requested. Open interest is not invented.'],fatal};
   const clean=(value:unknown)=>redact(JSON.stringify(value,null,2));
   writeFileSync(join(config.out,'report.json'),clean(report));writeFileSync(join(config.out,'raw-observations.json'),clean(observations));
   writeFileSync(join(config.out,'missing-history.json'),clean({controlled,natural,sufficient}));

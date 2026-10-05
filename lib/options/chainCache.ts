@@ -16,6 +16,10 @@
  * (previous session close, bid/ask + IV). A realtime chain with too little two-sided coverage is held back and
  * the previous-session chain is used instead when it is better quoted; it is labelled quoteBasis
  * 'previous_session' with its as-of date. FMV marks are only ever used as marks (last resort).
+ *
+ * The read-only Options acceptance harness does not use that default. It calls liveValidationChainProviders()
+ * with acceptFairValueMarks, because the partnership entitles REALTIME_OPTIONS_FMV and not plain REALTIME_OPTIONS.
+ * That opt-in keeps a usable FMV chain (open interest unchanged) and does not alter this production order.
  */
 import { isAlphaVantageSampleChain, usableOptionRows } from '@/lib/options/avChain';
 import { getCached, setCached } from '@/lib/redis';
@@ -88,6 +92,18 @@ export function clearSharedOptionsChainCache(): void {
 export function defaultChainProviders(): AvChainFunction[] {
   const realtime = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 'true').toLowerCase() !== 'false';
   return realtime ? ['REALTIME_OPTIONS', 'HISTORICAL_OPTIONS'] : ['HISTORICAL_OPTIONS'];
+}
+
+/**
+ * Live acceptance harness only. Prefer the entitled fair-value chain (`REALTIME_OPTIONS_FMV`).
+ * Plain `REALTIME_OPTIONS` is omitted: this key is not entitled, and requesting it spends a GET
+ * inside the harness cap of six. When FMV is missing, empty, or the premium sample, fall back to
+ * `HISTORICAL_OPTIONS` (previous session). That fallback is recorded and cannot pass live-quote acceptance.
+ * Open interest is whatever the chosen payload already contains; this list does not synthesize it.
+ */
+export function liveValidationChainProviders(): AvChainFunction[] {
+  const realtime = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 'true').toLowerCase() !== 'false';
+  return realtime ? ['REALTIME_OPTIONS_FMV', 'HISTORICAL_OPTIONS'] : ['HISTORICAL_OPTIONS'];
 }
 
 function quoteNum(v: unknown): number {
@@ -175,6 +191,12 @@ export async function fetchSharedOptionsChain<T = Record<string, any>>(
     apiKey: string;
     fetchPayload: ChainPayloadFetcher;
     providers?: AvChainFunction[];
+    /**
+     * Harness-only. A usable REALTIME_OPTIONS_FMV chain is the live source even when bid/ask coverage
+     * is below MIN_TWO_SIDED_QUOTE_COVERAGE (fair-value marks). Production callers leave this unset,
+     * so a thin FMV chain still yields to a better-quoted HISTORICAL_OPTIONS chain.
+     */
+    acceptFairValueMarks?: boolean;
     /** Receives one plain-English line per provider that was skipped (no secrets), for API diagnostics. */
     issues?: string[];
   },
@@ -274,6 +296,11 @@ export async function fetchSharedOptionsChain<T = Record<string, any>>(
         quoteBasis: quoteBasisFor(fn, quoteCoverage),
         asOfDate: chainAsOfDate(rows, payloadMeta),
       };
+
+      if (opts.acceptFairValueMarks && fn === 'REALTIME_OPTIONS_FMV') {
+        warnings.push(`${fn}:accepted_fair_value_marks_${Math.round(quoteCoverage * 100)}pct`);
+        return finish(value);
+      }
 
       if (fn !== 'HISTORICAL_OPTIONS' && quoteCoverage < MIN_TWO_SIDED_QUOTE_COVERAGE) {
         warnings.push(`${fn}:low_quote_coverage_${Math.round(quoteCoverage * 100)}pct`);
