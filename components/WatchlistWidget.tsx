@@ -1,5 +1,8 @@
 'use client';
 
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import SourceLine from '@/components/visual/SourceLine';
+import { marketText } from '@/lib/marketsPresentation';
 import UpgradeMoment, { useUpgradeMoment } from '@/components/free/UpgradeMoment';
 import { FREE_COPY } from '@/components/free/copy';
 import PriceStamp from '@/components/market/PriceStamp';
@@ -99,6 +102,9 @@ export default function WatchlistWidget() {
   const [moveFilter, setMoveFilter] = useState<MoveFilter>('all');
   const [sortMode, setSortMode] = useState<MoveSort>('saved');
   const [compactView, setCompactView] = useState(false);
+  const [expandedSelection, setExpandedSelection] = useState<string | null>(null);
+  const selectionKey = `${selectedWatchlist?.id}/${moveFilter}/${sortMode}`;
+  const showAll = expandedSelection === selectionKey;
 
   const launchTool = (tool: 'scan' | 'deep' | 'flow' | 'alert' | 'research', symbol: string) => {
     const option = /^([A-Z0-9.\-]+) (\d{4}-\d{2}-\d{2}) [\d.]+[CP]$/.exec(symbol);
@@ -429,37 +435,38 @@ export default function WatchlistWidget() {
   return (
     <div className="rounded-xl border border-slate-700/60 bg-slate-800/50">
       <div className="p-4">
+        <p data-watchlist-summary role="status" className="mb-3 text-sm font-semibold text-slate-200">{error ? 'The last watchlist request did not complete.' : itemsLoading ? 'Loading saved symbols…' : !watchlists.length ? 'No watchlists saved yet.' : `${selectedWatchlist?.name || 'Watchlist'} · ${items.length} saved symbols loaded`}</p>
         {upgrade.moment && <UpgradeMoment kind={upgrade.moment} dismiss={upgrade.dismiss} />}
         {(items.length >= currentLimits.items || watchlists.length >= currentLimits.watchlists) && <p className="text-xs">{FREE_COPY.moments.watchlists}</p>}
         {error && (
           <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
             {error}
-            <button type="button" aria-label="Dismiss error message" onClick={() => setError(null)} className="ml-2 underline">Dismiss</button>
+            <button type="button" aria-label="Dismiss error message" onClick={() => setError(null)} className="min-h-10 ml-2 underline">Dismiss</button>
           </div>
         )}
         {notice && (
           <div role="status" className="mb-4 rounded-lg border border-slate-600/60 bg-slate-700/30 p-3 text-sm text-slate-200">
             {notice}
-            <button type="button" aria-label="Dismiss message" onClick={() => setNotice(null)} className="ml-2 underline">Dismiss</button>
+            <button type="button" aria-label="Dismiss message" onClick={() => setNotice(null)} className="min-h-10 ml-2 underline">Dismiss</button>
           </div>
         )}
 
         {watchlists.length === 0 ? (
           <div className="py-10 text-center">
             <div className="mx-auto mb-3 h-12 w-12 overflow-hidden rounded-xl"><img src="/assets/platform-tools/watchlists.png" alt="Watchlists" className="h-full w-full object-contain p-0.5" /></div>
-            <p className="mb-1 text-slate-300">No active watchlists</p>
-            <p className="mb-4 text-sm text-slate-500">Initialize your first idea pipeline</p>
+            <p className="mb-1 text-slate-300">Create your first watchlist</p>
+            <p className="mb-4 text-sm text-slate-500">Create a list to save research symbols</p>
             <button
               type="button"
               onClick={() => watchlists.length >= currentLimits.watchlists ? upgrade.show('watchlists') : setShowCreate(true)}
-              className="rounded-lg bg-emerald-600 px-4 py-2 text-white transition-colors hover:bg-emerald-500"
+              className="min-h-10 rounded-lg bg-emerald-600 px-4 py-2 text-white transition-colors hover:bg-emerald-500"
             >
               Create Watchlist
             </button>
           </div>
         ) : selectedWatchlist ? (
           <div className="space-y-4">
-            <div className="rounded-xl border border-slate-700 bg-slate-900/50 p-3">
+            <CollapsibleSection title="Switch list and mode">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap gap-2">
                   {watchlists.map((w) => (
@@ -468,7 +475,7 @@ export default function WatchlistWidget() {
                       type="button"
                       aria-pressed={selectedWatchlist.id === w.id}
                       onClick={() => setSelectedWatchlist(w)}
-                      className={`rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.06em] ${
+                      className={`min-h-10 rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.06em] ${
                         selectedWatchlist.id === w.id
                           ? `${getColorClass(w.color)} text-white`
                           : 'border border-slate-700 bg-slate-800 text-slate-300'
@@ -479,18 +486,19 @@ export default function WatchlistWidget() {
                   ))}
                 </div>
                 <select
+                  aria-label="Watchlist mode"
                   value={watchlistMode}
                   onChange={(e) => setWatchlistMode(e.target.value as WatchlistMode)}
-                  className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-slate-100"
+                  className="min-h-10 rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-slate-100"
                 >
-                  <option value="PRE-STAGING">PRE-STAGING</option>
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="RISK-CONTROL">RISK-CONTROL</option>
+                  <option value="PRE-STAGING">Research</option>
+                  <option value="ACTIVE">Tracking</option>
+                  <option value="RISK-CONTROL">Risk review</option>
                 </select>
               </div>
-            </div>
+            </CollapsibleSection>
 
-            <div className="rounded-xl border border-slate-700 bg-slate-900/40 px-4 py-4">
+            <CollapsibleSection title="List details and management">
               <div className="grid gap-3 md:grid-cols-3">
                 <div>
                   <div className="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-slate-400">Watchlist</div>
@@ -508,13 +516,13 @@ export default function WatchlistWidget() {
                         autoFocus
                         className="w-full rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-white"
                       />
-                      <button type="submit" className="rounded-md bg-emerald-600 px-2 py-1 text-xs font-semibold text-white">Save</button>
-                      <button type="button" onClick={() => setRenaming(false)} className="rounded-md px-2 py-1 text-xs text-slate-300">Cancel</button>
+                      <button type="submit" className="min-h-10 rounded-md bg-emerald-600 px-2 py-1 text-xs font-semibold text-white">Save</button>
+                      <button type="button" onClick={() => setRenaming(false)} className="min-h-10 rounded-md px-2 py-1 text-xs text-slate-300">Cancel</button>
                     </form>
                   ) : (
                     <div className="mt-1 text-lg font-black text-white">{(selectedWatchlist.name ?? '').toUpperCase()}</div>
                   )}
-                  <div className="mt-1 text-xs font-semibold uppercase tracking-[0.06em] text-slate-300">Mode: {watchlistMode}</div>
+                  <div className="mt-1 text-xs font-semibold uppercase tracking-[0.06em] text-slate-300">Mode: {watchlistMode === 'PRE-STAGING' ? 'Research' : watchlistMode === 'ACTIVE' ? 'Tracking' : 'Risk review'}</div>
                   <div className="mt-1 text-xs font-semibold uppercase tracking-[0.06em] text-slate-300">
                     Avg move today:{' '}
                     {moveSummary.avgChangePercent == null
@@ -550,7 +558,7 @@ export default function WatchlistWidget() {
                       type="button"
                       onClick={() => items.length >= currentLimits.items ? upgrade.show('watchlists') : setShowAddSymbol(true)}
                       aria-disabled={items.length >= currentLimits.items}
-                      className="rounded-md border border-slate-600 bg-slate-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                      className="min-h-10 rounded-md border border-slate-600 bg-slate-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                     >
                       + Add Symbol
                     </button>
@@ -558,39 +566,39 @@ export default function WatchlistWidget() {
                       type="button"
                       onClick={() => watchlists.length >= currentLimits.watchlists ? upgrade.show('watchlists') : setShowCreate(true)}
                       aria-disabled={watchlists.length >= currentLimits.watchlists}
-                      className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 disabled:opacity-50"
+                      className="min-h-10 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 disabled:opacity-50"
                     >
                       + Create List
                     </button>
                     <button
                       type="button"
                       onClick={startRename}
-                      className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200"
+                      className="min-h-10 rounded-md border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200"
                     >
                       Rename
                     </button>
                     <button
                       type="button"
                       onClick={() => deleteWatchlist(selectedWatchlist.id)}
-                      className="rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-300"
+                      className="min-h-10 rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-300"
                     >
                       Delete List
                     </button>
                   </div>
                 </div>
               </div>
-            </div>
+            </CollapsibleSection>
 
-            <div className="sticky top-4 z-20 rounded-xl border border-slate-700 bg-slate-900/75 p-3 backdrop-blur">
+            <CollapsibleSection title="Filter and sort" summary={`${filteredIdeas.length} matching symbols`}>
               <div className="grid gap-2 md:grid-cols-3">
-                <select aria-label="Filter by today's move" value={moveFilter} onChange={(e) => setMoveFilter(e.target.value as MoveFilter)} className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs text-slate-100">
+                <select aria-label="Filter by today's move" value={moveFilter} onChange={(e) => setMoveFilter(e.target.value as MoveFilter)} className="min-h-10 rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs text-slate-100">
                   <option value="all">Today: All symbols</option>
                   <option value="up">Today: Up</option>
                   <option value="down">Today: Down</option>
                   <option value="flat">Today: Flat</option>
                   <option value="unpriced">Today: No price</option>
                 </select>
-                <select aria-label="Sort symbols" value={sortMode} onChange={(e) => setSortMode(e.target.value as MoveSort)} className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs text-slate-100">
+                <select aria-label="Sort symbols" value={sortMode} onChange={(e) => setSortMode(e.target.value as MoveSort)} className="min-h-10 rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs text-slate-100">
                   <option value="saved">Sort: Saved order</option>
                   <option value="move">Sort: Biggest move today (up or down)</option>
                   <option value="symbol">Sort: Symbol A-Z</option>
@@ -598,11 +606,11 @@ export default function WatchlistWidget() {
               </div>
               <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs text-slate-500">{filteredIdeas.length} of {ideaRows.length} visible</span>
-                <button type="button" aria-pressed={compactView} onClick={() => setCompactView((prev) => !prev)} className="rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] font-semibold uppercase text-slate-300">
+                <button type="button" aria-pressed={compactView} onClick={() => setCompactView((prev) => !prev)} className="min-h-10 rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] font-semibold uppercase text-slate-300">
                   {compactView ? 'Compact View' : 'Grid View'}
                 </button>
               </div>
-            </div>
+            </CollapsibleSection>
 
             {itemsLoading ? (
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -613,36 +621,38 @@ export default function WatchlistWidget() {
             ) : items.length === 0 ? (
               <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 py-10 text-center text-slate-400">
                 <p>This watchlist is empty</p>
-                <button type="button" onClick={() => items.length >= currentLimits.items ? upgrade.show('watchlists') : setShowAddSymbol(true)} className="mt-2 text-sm text-emerald-400 hover:text-emerald-300">
+                <button type="button" onClick={() => items.length >= currentLimits.items ? upgrade.show('watchlists') : setShowAddSymbol(true)} className="min-h-10 mt-2 text-sm text-emerald-400 hover:text-emerald-300">
                   + Add a symbol
                 </button>
               </div>
             ) : filteredIdeas.length === 0 ? (
               <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 py-10 text-center text-slate-400">
                 <p>No symbols match current filters</p>
-                <button type="button" onClick={resetFilters} className="mt-2 text-sm text-emerald-400 hover:text-emerald-300">
+                <button type="button" onClick={resetFilters} className="min-h-10 mt-2 text-sm text-emerald-400 hover:text-emerald-300">
                   Reset filters
                 </button>
               </div>
             ) : (
               <div className={`grid gap-3 ${compactView ? 'md:grid-cols-2' : 'md:grid-cols-2 xl:grid-cols-3'}`}>
-                {filteredIdeas.map((row) => {
+                {(showAll ? filteredIdeas : filteredIdeas.slice(0, 5)).map((row) => {
                   const { item, quote } = row;
 
                   return (
-                    <div key={item.id} className="flex h-full flex-col rounded-lg border border-slate-700 bg-slate-900/55 p-3">
+                    <div key={item.id} data-watchlist-row className="min-w-0 flex h-full flex-col rounded-lg border border-slate-700 bg-slate-900/55 p-3">
                       <div className="mb-2 flex items-start justify-between gap-2">
                         <div>
-                          <Link href={symbolHref(item.symbol.split(' ')[0],item.asset_type)} className="text-lg font-black text-white">{item.symbol}</Link>
+                          <Link href={symbolHref(item.symbol.split(' ')[0],item.asset_type)} className="inline-flex min-h-10 items-center break-words text-base font-semibold text-white">{item.symbol}</Link>
                           <div className="text-[11px] uppercase tracking-[0.06em] text-slate-500">{item.asset_type}</div>
                         </div>
                       </div>
 
+                      <p className="text-sm text-slate-300">Today: {formatTodayMove(row)}</p>
+                      <CollapsibleSection title="Quote details and actions">
                       <div className="grid gap-1 text-[12px] text-slate-300">
                         <div>
                           <PriceStamp compact {...watchlistStamp(item.asset_type,quote)}/>
                           {quote?.source === 'cached' && <span className="ml-1 rounded bg-amber-500/15 px-1 text-[10px] font-semibold uppercase text-amber-300" title="No live quote right now; showing the last stored price">cached</span>}
-                          {quote?.note && <span className="ml-1 text-[10px] text-slate-400">({quote.note})</span>}
+                          {quote?.note && <span className="ml-1 text-[10px] text-slate-400">({marketText(quote.note)})</span>}
                         </div>
                         <div>Today: <span className={`font-mono font-bold ${row.direction === 'up' ? 'text-emerald-400' : row.direction === 'down' ? 'text-red-400' : 'text-slate-300'}`}>{formatTodayMove(row)}</span></div>
                       </div>
@@ -654,38 +664,40 @@ export default function WatchlistWidget() {
                             (item.confluenceScore ?? 0) >= 2 ? 'bg-amber-500/20 text-amber-300' :
                             'bg-slate-700 text-slate-300'
                           }`}>
-                            {item.confluenceScore} signal{(item.confluenceScore ?? 0) > 1 ? 's' : ''}: {(item.confluenceSignals || []).join(', ')}
+                            {item.confluenceScore} signal{(item.confluenceScore ?? 0) > 1 ? 's' : ''}: {marketText((item.confluenceSignals || []).join(', '))}
                           </span>
                         )}
                       </div>
 
                       <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                        <button type="button" aria-label={`Scan ${item.symbol}`} onClick={() => launchTool('scan', item.symbol)} className="rounded border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[11px] font-semibold uppercase text-emerald-300">Scan</button>
-                        <button type="button" aria-label={`Deep analysis ${item.symbol}`} onClick={() => launchTool('deep', item.symbol)} className="rounded border border-slate-600 bg-slate-800 px-1.5 py-1 text-[11px] font-semibold uppercase text-slate-200">Deep</button>
-                        <button type="button" aria-label={`Options flow ${item.symbol}`} onClick={() => launchTool('flow', item.symbol)} className="rounded border border-purple-500/40 bg-purple-500/10 px-1.5 py-1 text-[11px] font-semibold uppercase text-purple-300">Options</button>
-                        <button type="button" aria-label={`Set alert for ${item.symbol}`} onClick={() => launchTool('alert', item.symbol)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-1 text-[11px] font-semibold uppercase text-amber-300">Alert</button>
+                        <button type="button" aria-label={`Scan ${item.symbol}`} onClick={() => launchTool('scan', item.symbol)} className="min-h-10 rounded border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[11px] font-semibold uppercase text-emerald-300">Scan</button>
+                        <button type="button" aria-label={`Deep analysis ${item.symbol}`} onClick={() => launchTool('deep', item.symbol)} className="min-h-10 rounded border border-slate-600 bg-slate-800 px-1.5 py-1 text-[11px] font-semibold uppercase text-slate-200">Symbol</button>
+                        <button type="button" aria-label={`Options flow ${item.symbol}`} onClick={() => launchTool('flow', item.symbol)} className="min-h-10 rounded border border-purple-500/40 bg-purple-500/10 px-1.5 py-1 text-[11px] font-semibold uppercase text-purple-300">Options</button>
+                        <button type="button" aria-label={`Set alert for ${item.symbol}`} onClick={() => launchTool('alert', item.symbol)} className="min-h-10 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-1 text-[11px] font-semibold uppercase text-amber-300">Alert</button>
                       </div>
-                      <div className="mt-2 flex items-center gap-2">
-                        <button type="button" aria-label={`Open scanner cockpit for ${item.symbol}`} onClick={() => launchTool('scan', item.symbol)} className="flex-1 rounded border border-blue-500/40 bg-blue-500/10 px-2 py-1 text-[11px] font-semibold uppercase text-blue-300">Open Cockpit</button>
-                        <button type="button" aria-label={`Research ${item.symbol}`} onClick={() => launchTool('research', item.symbol)} className="rounded border border-cyan-500/40 bg-cyan-500/10 px-2 py-1 text-[11px] font-semibold uppercase text-cyan-300">Research</button>
-                        <button type="button" aria-label={`Remove ${item.symbol} from watchlist`} onClick={() => removeSymbol(item.id)} className="rounded border border-red-500/40 bg-red-500/10 px-2 py-1 text-[11px] font-semibold uppercase text-red-300">Remove</button>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <button type="button" aria-label={`Open scanner for ${item.symbol}`} onClick={() => launchTool('scan', item.symbol)} className="min-h-10 flex-1 rounded border border-blue-500/40 bg-blue-500/10 px-2 py-1 text-[11px] font-semibold uppercase text-blue-300">Open Scanner</button>
+                        <button type="button" aria-label={`Research ${item.symbol}`} onClick={() => launchTool('research', item.symbol)} className="min-h-10 rounded border border-cyan-500/40 bg-cyan-500/10 px-2 py-1 text-[11px] font-semibold uppercase text-cyan-300">Research</button>
+                        <button type="button" aria-label={`Remove ${item.symbol} from watchlist`} onClick={() => removeSymbol(item.id)} className="min-h-10 rounded border border-red-500/40 bg-red-500/10 px-2 py-1 text-[11px] font-semibold uppercase text-red-300">Remove</button>
                       </div>
+                      </CollapsibleSection>
                     </div>
                   );
                 })}
               </div>
             )}
 
-            <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-3">
-              <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Bulk Actions</div>
+            {!itemsLoading && filteredIdeas.length > 5 && <button type="button" className="min-h-10 rounded-lg border border-slate-700 px-3 text-sm" onClick={() => setExpandedSelection(showAll ? null : selectionKey)}>{showAll ? 'Show five' : `Show all ${filteredIdeas.length}`}</button>}
+            <SourceLine source="Saved watchlist · individual quote feeds" basis="Prices may use cached observations · each quote’s source, date and basis appear in its details; no shared observation time" />
+            <CollapsibleSection title="List actions">
               <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={runScanAll} className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-emerald-300">Open Scanner</button>
-                <button type="button" onClick={runConfluenceCheck} className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-cyan-300">Refresh Prices</button>
-                <button type="button" onClick={exportWatchlist} disabled={!canExportCSV(tier)} title={canExportCSV(tier) ? undefined : 'Pro plan required for CSV export'} className="rounded-md border border-purple-500/40 bg-purple-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-purple-300 disabled:cursor-not-allowed disabled:opacity-50">Export Watchlist</button>
-                <button type="button" onClick={() => launchTool('alert', filteredIdeas[0]?.item.symbol || '')} disabled={filteredIdeas.length === 0 || riskLocked} className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold uppercase text-slate-200 disabled:opacity-50">Set Alert (First Visible)</button>
+                <button type="button" onClick={runScanAll} className="min-h-10 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-emerald-300">Open Scanner</button>
+                <button type="button" onClick={runConfluenceCheck} className="min-h-10 rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-cyan-300">Refresh Prices</button>
+                <button type="button" onClick={exportWatchlist} disabled={!canExportCSV(tier)} title={canExportCSV(tier) ? undefined : 'Pro plan required for CSV export'} className="min-h-10 rounded-md border border-purple-500/40 bg-purple-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-purple-300 disabled:cursor-not-allowed disabled:opacity-50">Export Watchlist</button>
+                <button type="button" onClick={() => launchTool('alert', filteredIdeas[0]?.item.symbol || '')} disabled={filteredIdeas.length === 0 || riskLocked} className="min-h-10 rounded-md border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold uppercase text-slate-200 disabled:opacity-50">Set Alert (First Visible)</button>
               </div>
               {riskLocked && <div className="mt-2 text-[11px] text-rose-300">Setting alerts is disabled while Tracking Lock is active.</div>}
-            </div>
+            </CollapsibleSection>
           </div>
         ) : null}
       </div>
