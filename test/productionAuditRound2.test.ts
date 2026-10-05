@@ -8,7 +8,7 @@ const read = (file: string) => readFileSync(join(root, file), 'utf8');
 describe('post-remediation audit round 2 regressions', () => {
   it('preserves canonical asset type and timeframe from Scanner through Golden Egg to Terminal', () => {
     const scanner = read('app/tools/scanner/page.tsx');
-    const goldenEgg = read('app/tools/golden-egg/page.tsx');
+    const goldenEgg = read('app/tools/golden-egg/GoldenEggClient.tsx');
 
     expect(scanner).toContain('symbol=\${encodeURIComponent(headerTopSymbol)}&type=\${handoffAsset}&timeframe=\${encodeURIComponent(handoffTimeframe)}');
     expect(scanner).toContain("const goldenEggHref = handoffQuery ? \`/tools/golden-egg?\${handoffQuery}\`");

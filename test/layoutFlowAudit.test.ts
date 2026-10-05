@@ -1170,7 +1170,7 @@ describe('layout and flow audit regressions', () => {
   });
 
   it('treats Golden Egg as a focused validation workbench with Liquidity Sweep separated', () => {
-    const goldenEggPage = read('app/tools/golden-egg/page.tsx');
+    const goldenEggPage = read('app/tools/golden-egg/GoldenEggClient.tsx');
     const goldenEggLayout = read('app/tools/golden-egg/layout.tsx');
     const intradayChartsPage = read('app/tools/intraday-charts/page.tsx');
     const deepAnalysisPage = read('app/tools/deep-analysis/page.tsx');
@@ -1247,7 +1247,7 @@ describe('layout and flow audit regressions', () => {
   });
 
   it('keeps Golden Egg nested pages in embedded validation mode', () => {
-    const goldenEggPage = read('app/tools/golden-egg/page.tsx');
+    const goldenEggPage = read('app/tools/golden-egg/GoldenEggClient.tsx');
     const chartPage = read('app/tools/intraday-charts/page.tsx');
     const deepAnalysisPage = read('app/tools/deep-analysis/page.tsx');
     const fundamentalsPage = read('app/tools/company-overview/page.tsx');

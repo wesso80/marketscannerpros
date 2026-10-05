@@ -79,7 +79,7 @@ describe('2026-09-21 production audit remediations', () => {
 
   it('bounds Golden Egg and Alerts provider waits and exposes retryable failure states', () => {
     const api = read('app/v2/_lib/api.ts');
-    const goldenEgg = read('app/tools/golden-egg/page.tsx');
+    const goldenEgg = read('app/tools/golden-egg/GoldenEggClient.tsx');
     const alerts = read('app/tools/alerts/page.tsx');
 
     expect(api).toContain("controller.abort(), 20_000");

@@ -2,12 +2,12 @@ import { expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 const read = (p: string) => readFileSync(p, 'utf8');
 it('public pages use the distinct indicator and timing labels', () => {
-  for (const p of ['app/tools/golden-egg/page.tsx','app/tools/deep-analysis/page.tsx','app/api/deep-analysis/route.ts']) {
+  for (const p of ['app/tools/golden-egg/GoldenEggClient.tsx','app/tools/deep-analysis/page.tsx','app/api/deep-analysis/route.ts']) {
     expect(read(p)).not.toMatch(/legacy confluence/i);
     expect(read(p)).toMatch(/Indicator composite/);
   }
-  expect(read('app/tools/golden-egg/page.tsx')).toContain('Timeframe pull and close calendar (display only)');
-  const goldenEgg = read('app/tools/golden-egg/page.tsx');
+  expect(read('app/tools/golden-egg/GoldenEggClient.tsx')).toContain('Timeframe pull and close calendar (display only)');
+  const goldenEgg = read('app/tools/golden-egg/GoldenEggClient.tsx');
   const canonicalBlock = goldenEgg.slice(goldenEgg.indexOf('text-center max-w-xs'), goldenEgg.indexOf('>', goldenEgg.indexOf('text-center max-w-xs')) + 1);
   expect(canonicalBlock).toContain('CANONICAL_SETUP_TOOLTIP');
   expect(canonicalBlock).not.toContain('INDICATOR_COMPOSITE_TOOLTIP');

@@ -49,7 +49,7 @@ describe('RS-19: labelled change basis and IV definitions', () => {
     expect(engine).not.toContain("'Avg IV (chain)'");
   });
   it('Golden Egg and Deep Analysis label their % change', () => {
-    const ge = readFileSync('app/tools/golden-egg/page.tsx', 'utf8');
+    const ge = readFileSync('app/tools/golden-egg/GoldenEggClient.tsx', 'utf8');
     expect(ge).toContain("toFixed(2)}% {priceChangeBasisLabel(ge.meta.assetClass, 'rolling_24h')}");
     const da = readFileSync('app/tools/deep-analysis/page.tsx', 'utf8');
     expect(da).toContain('priceChangeBasisLabel(result.assetType, { barInterval: ge.barInterval })');

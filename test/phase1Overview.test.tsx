@@ -11,7 +11,7 @@ describe('Symbol header hierarchy', () => {
     expect(renderToStaticMarkup(<PageHero eyebrow="Test" title="Title" titleAs="h2" />)).not.toContain('<h1');
   });
   it('removes header composite displays but retains the lower evidence block', () => {
-    const source = readFileSync('app/tools/golden-egg/page.tsx', 'utf8');
+    const source = readFileSync('app/tools/golden-egg/GoldenEggClient.tsx', 'utf8');
     const start = source.indexOf('<PageHero');
     const header = source.slice(start, source.indexOf('/>', start));
     expect(header).toContain('titleAs="h2"');

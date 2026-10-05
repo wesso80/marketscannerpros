@@ -125,7 +125,7 @@ describe('client gates that used to be Pro-Trader-only', () => {
   });
 
   it('no UpgradeGate asks for pro_trader any more', () => {
-    for (const f of ['app/tools/terminal/page.tsx', 'app/tools/workspace/page.tsx', 'app/tools/golden-egg/page.tsx',
+    for (const f of ['app/tools/terminal/page.tsx', 'app/tools/workspace/page.tsx', 'app/tools/golden-egg/GoldenEggClient.tsx',
       'components/options-terminal/OptionsFlowView.tsx', 'components/options-terminal/OptionsConfluenceScanner.tsx', 'app/tools/deep-analysis/page.tsx', 'app/tools/volatility-engine/page.tsx',
       'app/tools/confluence-scanner/page.tsx',
       'app/tools/crypto-time-confluence/CryptoTimeConfluenceInner.tsx', 'components/backtest/BacktestHub.tsx', 'components/time/TimeScannerPage.tsx', 'app/operator/page.tsx']) {

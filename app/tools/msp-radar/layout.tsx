@@ -1,10 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata } from 'next';
+import { sharePreviewMetadata } from '@/lib/og/linkPreview';
 
 export const metadata: Metadata = {
+  ...sharePreviewMetadata('radar'),
   title: "Daily Radar",
-  description:
-    "Once-per-session market intelligence: regime, ranked research candidates, pre-move setups, lifecycle changes, and rotation — for paid MarketScannerPros members.",
-  robots: { index: false, follow: false },
 };
 
 export default function MspRadarLayout({ children }: { children: React.ReactNode }) {
