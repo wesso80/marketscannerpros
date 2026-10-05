@@ -1,3 +1,46 @@
+# WP1-W1 Word-brief follow-up — 5 October 2026
+
+Continues draft #353 on `phase2d/symbol` from `9b8d93a811da008ae9cbac2be773fa1a008baea0`; base remains main `f33130bd969238fc3e959049df1cbd48c819ae04`. The earlier review record below is historical. **Draft remains not merge-ready: viewport and live-session evidence are still missing.**
+
+## Added acceptance evidence
+
+| Brief check | Evidence / limitation |
+|---|---|
+| 1. One top verdict | AAPL/NVDA blocked canonical fixture has one No setup label and its recorded block reason. NEAR/LINK/BTC compact fixtures have one NO BASE stage; duplicate prose prefix removed. Change-symbol fold now follows the summary. No stock stage is invented; stock label uses the existing canonical setup / block state. |
+| 2. Legacy closed | Full-page AAPL/NVDA tests keep legacy Watch/Long/Grade out while folds are closed. Existing deferred legacy fold retained; engine payload unchanged. |
+| 3. One source | All crypto compact folds plus evidence open in render tests: one SourceLine, no per-field stamps. Rule values use the same supplied measurements. |
+| 4. Pro time | Pro close fixture renders Last close Fri, 2 Oct (New York); observed instants use AEDT. Missing observation remains an explicit missing-time note, never a fabricated timestamp. |
+| 5. Codes | Presentation-only labels for named reasons and unknown underscore codes. Expanded AAPL packet and compact crypto folds tested; scoring/storage output untouched. |
+| 6. Numbers | Unit and render checks: 249.4%, $1.09B, $0.4664, 1.49x; ISO instants become dated zoned text. |
+| 7. Advice words | Compact and expanded research labels tested. Existing disclosure “Research alignment, not an outcome probability” intentionally preserved under the brief’s no-disclosure-edits rule. Thus a literal whole-DOM ban on probability is NOT claimed. Embedded dynamic legacy tools are stubbed in render tests and still need browser review. |
+| 8. Parity | Existing AAPL/NVDA/BTC fixed-input replay passes; payload JSON remains identical across rendering. These historical fixtures have null canonical verdicts, so no live canonical parity claim is made. |
+
+Quick fixes: Fundamentals stays available without market cap (“Company overview and ownership”); blocked equity summary uses recorded reasons; compact crypto removes only the dev SHA prefix, keeping its explanatory text. Existing `lib/free/friendlyStatus.ts` and `components/visual/CollapsibleSection.tsx` changes from earlier #353 commits remain; this follow-up introduces a Symbol-only formatter, without extending global friendly-status behavior.
+
+## Verification
+
+- Required dummy-environment `timeout 1500 npx next build`: exit 0. Restored generated next-env.d.ts. Build dependencies had to be local hardlinks because Turbopack rejects a node_modules symlink outside its root. No package/config changes.
+- `npx tsc --noEmit`: exit 0.
+- Focused Symbol/layout/shared-component/parity group: 76 passed across 9 files.
+- Full `env -u CRYPTO_SUMMARY_KEY -u OPENAI_API_KEY npx vitest run`: 4,925 passed, 12 failed, 13 skipped; 554 files passed, 7 failed, 2 skipped.
+- Four named existing failures: commanderCommandState, operatorMarketDataAccuracy, workerEquityBulkWiring, globalM2Reliability.
+- Other failing files: backtestStrategySignals (four 99-days/100-required failures), bulkSelectionRoute (three timeouts in full run), cryptoScanAliasRows (one timeout). The same three files were rerun on untouched starting head and follow-up: both isolated runs had 7 failing / 16 passing tests (two bulk timeouts), confirming the extra baseline failures; timeout counts vary with full-suite load. These files and their implementation were not edited.
+- The three new full-page acceptance tests fail on untouched starting head and pass on this follow-up.
+- Two pre-existing source assertions now expect the display formatter around canonical setup / status warning labels. Their scoring and shared-component assertions remain. No tests skipped or removed.
+
+## Visual and live gates — still pending
+
+No before/after screenshot or screen count is claimed. Required 1280×800 and 390×844 AAPL/NEAR/LINK, folds closed and Rule check open, plus gating differences remain outstanding. No Chromium was installed; agent-browser’s browser install failed certificate validation; the official Playwright installer using the existing system CA bundle returned a truncated/invalid archive. TLS verification was not disabled. No cropped desktop or jsdom image is substituted for browser evidence. Real-session shots remain required before merge.
+
+## Noticed, not changed
+
+- NEAR future OI observation and funding mismatch remain Patch-owned; no provider/data logic change.
+- Main score replay is not live canonical score parity.
+- Existing Cloudflare bot reported failed deployment on the prior head; not fixed by this UI-only work and not a deployment-success claim.
+- Scanner/Options length, nav, analytics, alert email, preview links, admin/operator, scoring, feeds, workers, packages, limits, disclosures and stored values are untouched.
+
+---
+
 # WP1 / PR #353 revision
 
 Base main: `f33130bd969238fc3e959049df1cbd48c819ae04`. Branch: `phase2d/symbol`.

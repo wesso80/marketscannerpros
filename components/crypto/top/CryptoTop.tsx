@@ -1,4 +1,5 @@
 'use client';
+import {symbolText,symbolNumber} from '@/lib/presentation/symbolDisplay';
 import type {ReactNode} from 'react';
 import type {DisplayChart} from './BaseChart';
 import type {DisplayRule} from './RuleChips';
@@ -26,9 +27,9 @@ export default function CryptoTop({data,showSource=true}:{data:Breakdown;showSou
  const t=data.top,spot=t?.spot,change=t?.change24h,status=spot?.status??'Unknown';
  if(!showSource){
  const price=typeof spot?.value==='number'?spot.value:null;
- const tiles:DisplayStat[]=[{label:'Base high',value:t?.chart.baseHigh??null},{label:'Base low',value:t?.chart.baseLow??null},{label:'Rule stop',value:t?.chart.ruleStop??null}].map(v=>({...v,value:v.value==null?null:COPY.top.price(v.value),detail:v.value!=null&&price?`${((v.value/price-1)*100).toFixed(1)}% away`:undefined}));
+ const tiles:DisplayStat[]=[{label:'Base high',value:t?.chart.baseHigh??null},{label:'Base low',value:t?.chart.baseLow??null},{label:'Rule stop',value:t?.chart.ruleStop??null}].map(v=>({...v,value:v.value==null?null:symbolNumber(v.value,'price'),detail:v.value!=null&&price?`${((v.value/price-1)*100).toFixed(1)}% away`:undefined}));
  tiles.push({label:'Market-cap rank',value:typeof t?.rank?.value==='number'?`#${t.rank.value}`:null});
- return <div data-crypto-top className="space-y-3">{data.budget.capped&&<p role="status" className="text-sm text-amber-300">{data.budget.reason?'Daily feed accounting failed; cached observations only.':COPY.capped}</p>}{data.identityMatches!=null&&data.identityMatches>1&&<p className="text-sm text-amber-300">{data.identityMatches} {COPY.matches}</p>}<SymbolSummary stage={t?<StageBadge stage={t.stage}/>:null} verdict={t?verdictLine(t.rule).replace(/time unknown/g,'date not recorded'):'Daily rule feed has no result.'} top={t} tiles={tiles}/></div>;
+ return <div data-crypto-top className="space-y-3">{data.budget.capped&&<p role="status" className="text-sm text-amber-300">{data.budget.reason?'Daily feed accounting failed; cached observations only.':COPY.capped}</p>}{data.identityMatches!=null&&data.identityMatches>1&&<p className="text-sm text-amber-300">{data.identityMatches} {COPY.matches}</p>}<SymbolSummary stage={t?<StageBadge stage={t.stage}/>:null} verdict={t?symbolText(verdictLine(t.rule).replace(/^(?:No base|Extended|Fell back|Not enough data):\s*/i,'')):'Daily rule feed has no result.'} top={t} tiles={tiles}/></div>;
  }
  return <section data-crypto-top className="min-w-0 max-w-full space-y-4 rounded-xl border border-white/10 bg-slate-950/40 p-4" aria-label={COPY.top.title}>
   <div className="grid min-w-0 grid-cols-2 items-start gap-3 md:grid-cols-4">

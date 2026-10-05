@@ -6,6 +6,7 @@ import type {DisplayChart} from './BaseChart';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import RuleChips from './RuleChips';
 import type {DisplayStat} from './StatCards';
+import {symbolText,symbolNumber,symbolDate} from '@/lib/presentation/symbolDisplay';
 
 
 /** Presentation only: no stock stage/base is inferred from crypto rules. */
@@ -17,15 +18,17 @@ export default function EquityTop({data,pick}:{data:GoldenEggPayload;pick?:{grad
  },[data.meta.symbol]);
  const c=data.canonical,engine=data.canonicalVerdict;
  const levels=(data.layer2.setup.keyLevels??[]).filter(l=>Number.isFinite(l.price)&&l.price>0);
- const tiles:DisplayStat[]=levels.slice(0,2).map(l=>({label:l.label,value:l.price.toLocaleString(undefined,{maximumFractionDigits:2}),detail:data.meta.price?`${((l.price/data.meta.price-1)*100).toFixed(1)}% away`:undefined}));
- if(c?.options?.expectedMovePct!=null)tiles.push({label:'Expected move',value:`±${c.options.expectedMovePct.toFixed(2)}%`,detail:c.options.expiry});
- if(pick?.grade)tiles.push({label:"Daily pick grade",value:pick.grade,detail:pick.scan_date?.slice(0,10)});
+ const tiles:DisplayStat[]=levels.slice(0,2).map(l=>({label:symbolText(l.label),value:symbolNumber(l.price,'price'),detail:data.meta.price?`${((l.price/data.meta.price-1)*100).toFixed(1)}% away`:undefined}));
+ if(c?.options?.expectedMovePct!=null)tiles.push({label:'Expected move',value:`±${c.options.expectedMovePct.toFixed(2)}%`,detail:symbolDate(c.options.expiry,true)});
+
  const labels:Record<string,string>={trendQuality:'Trend strength',entryLocation:'Price location',volatilityRegime:'Volatility',volume:'Volume',momentum:'Momentum',structureRoom:'Room to next level',pullbackLocation:'Pullback depth',momentumReset:'Momentum reset',volumeDryUp:'Volume contraction',compression:'Range compression',directionalBias:'Direction checks',catalystPending:'Upcoming event',quietVolume:'Quiet volume',stretch:'Price stretch',rsiRollover:'Momentum cooling',climax:'Volume peak',atOpposingLevel:'Nearby opposing level',trendNotAccelerating:'Trend acceleration'};
  const rules=(engine?.factors??[]).filter(f=>f.value!=null&&Number.isFinite(f.value)).map(f=>({name:labels[f.name]??f.name.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/_/g,' '),value:`${Math.round(f.value!*100)}%`,limit:'',pass:f.pass}));
  const passed=rules.filter(r=>r.pass===true).length;
- const verdict=rules.length?`${passed} of ${rules.length} measured checks meet their recorded thresholds.`:'No measured checks were returned in this packet.';
+ const blocked=engine?.permission==='BLOCK';
+ const blockReason=(engine?.blockReasons??[]).map(reason=>symbolText(typeof reason==='string'?reason:reason.message||reason.code)).join(' · ') || 'The recorded eligibility checks did not pass.';
+ const verdict=blocked?blockReason:rules.length?`${passed} of ${rules.length} measured checks meet their recorded thresholds.`:'No measured checks were returned in this packet.';
  return <div className="space-y-3">{error&&<p role="status" className="text-xs text-amber-300">Daily chart feed failed. Other observations retain their own dates.</p>}
- <SymbolSummary stage={null} verdict={verdict} rules={rules.slice(0,4)} chart={{bars,levels:levels.map(l=>({name:l.label,value:l.price})),basis:'Alpha Vantage daily bars'}} tiles={tiles}/>
+ <SymbolSummary stage={<span data-equity-verdict className="rounded-full border border-amber-300 px-3 py-1 text-sm text-amber-300">{engine?.setupType==='NONE'?'No setup':blocked?'Blocked':symbolText(engine?.setupType??'Research snapshot')}</span>} verdict={verdict} rules={rules.slice(0,4)} chart={{bars,levels:levels.map(l=>({name:symbolText(l.label),value:l.price})),basis:'Alpha Vantage daily bars'}} tiles={tiles}/>
  {rules.length>4&&<CollapsibleSection deferMount title="Additional checks" summary={`${rules.length-4} more measured ${rules.length===5?'check':'checks'}`}><RuleChips items={rules.slice(4)} showSource={false}/></CollapsibleSection>}
  </div>;
 }
