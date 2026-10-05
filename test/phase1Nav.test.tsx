@@ -56,9 +56,10 @@ it('shows the signed-in plan in the Account menu instead of Sign In',()=>{
  expect(menu.querySelector('a[href="/auth"]')).toBeNull();
 });
 it.each(['/tools/command-center','/tools/msp-radar','/tools/scanner','/tools/golden-egg','/tools/options'])('does not repeat the Header as a second bar at %s',pathname=>{state.pathname=pathname;render(<WorkflowNavigation/>);expect(container.innerHTML).toBe('');});
-it('Track includes Signal Accuracy and Settings and selects the current tab only',()=>{
+it('Track owns its tab bar without repeating the legacy tool rail',()=>{
  state.pathname='/tools/workspace';state.params=new URLSearchParams('tab=Settings');render(<WorkflowNavigation/>);
- expect(container.textContent).toContain('Signal Accuracy');expect(container.querySelector('[aria-current="page"]')?.textContent).toBe('Settings');
+ expect(container.innerHTML).toBe('');
+ expect(areaLinks.track.some(link=>link.label==='Signal Accuracy')).toBe(true);
 });
 it('routes Intelligence, Macro, Explorer and My Pages into the correct groups',()=>{
  expect(primaryNavTools).toHaveLength(7);expect(workflowArea('/intelligence/global-m2')).toBe('intelligence');expect(workflowArea('/tools/explorer')).toBe('markets');expect(workflowArea('/tools/dashboard','macro')).toBe('markets');expect(workflowArea('/tools/dashboard','pages')).toBe('track');

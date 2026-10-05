@@ -2,21 +2,14 @@
 
 import UpgradeMoment, { useUpgradeMoment } from '@/components/free/UpgradeMoment';
 
-import PriceStamp from '@/components/market/PriceStamp';
 import {symbolHref} from '@/lib/market/links';
 import { Suspense, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import ToolsPageHeader from '@/components/ToolsPageHeader';
-import AdaptivePersonalityCard from '@/components/AdaptivePersonalityCard';
 import { useUserTier, canExportCSV, getPortfolioLimit, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import { writeOperatorState } from '@/lib/operatorState';
 import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
 import type { TradePayload } from '@/lib/workflow/types';
-import CommandCenterStateBar from '@/components/CommandCenterStateBar';
-import CommandStrip, { type TerminalDensity } from '@/components/terminal/CommandStrip';
-import DecisionCockpit from '@/components/terminal/DecisionCockpit';
-import SignalRail from '@/components/terminal/SignalRail';
 import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
 import { formatDollar } from '@/lib/riskDisplay';
 import { detectAssetClass } from '@/lib/detectAssetClass';
@@ -30,7 +23,12 @@ import { accountEquityValues, updateTodaySnapshot } from '@/lib/portfolio/equity
 import { formatMoney, formatSignedMoney } from '@/lib/portfolio/formatMoney';
 import { measuredDrawdownPct, portfolioReturns, portfolioStateLabels } from '@/lib/portfolio/returnSummary';
 import { isOptionMarkCurrent, optionQuoteUrl } from '@/lib/options/contractQuote';
-import { PageHero } from '@/components/ui';
+import TabBar from '@/components/visual/TabBar';
+import EmptyState from '@/components/visual/EmptyState';
+import SourceLine from '@/components/visual/SourceLine';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import PortfolioOverview from '@/components/portfolio/PortfolioOverview';
+import { useSearchParams } from 'next/navigation';
 import {
   buildPortfolioSyncPayload,
   gateAfterDelete,
@@ -45,7 +43,9 @@ import {
 } from '@/lib/portfolio/clientSync';
 import { mergeLocalLevels, openRiskMetrics, validLevel, validateLevels } from '@/lib/portfolio/positionLevels';
 import { chronologicalCloses, closedLinkLabel, dropServerOwnedRows, realizedByLink, splitClosedBook, type ClosedJournalLink } from '@/lib/portfolio/closedReconcile';
-import { closedTradeR, formatR as formatStopR, formatRiskUnits, RISK_UNITS_NEED_EQUITY, riskUnitBase, riskUnitDollars, summarize, toRiskUnits } from '@/lib/portfolio/rMeasures';
+import { closedTradeR, formatR as formatStopRValue, formatRiskUnits, RISK_UNITS_NEED_EQUITY, riskUnitBase, riskUnitDollars, summarize, toRiskUnits } from '@/lib/portfolio/rMeasures';
+
+const formatStopR = (value: number | null | undefined) => value == null ? 'Not measured' : formatStopRValue(value);
 
 interface Position {
   id: number;
@@ -119,7 +119,7 @@ function PositionSizerCalculator() {
   const [takeProfit, setTakeProfit] = useState<string>('');
   const [side, setSide] = useState<'LONG' | 'SHORT'>('LONG');
   const [method, setMethod] = useState<'fixed' | 'kelly'>('fixed');
-  
+
   // Kelly Criterion inputs
   const [winRate, setWinRate] = useState<string>('55');
   const [avgWin, setAvgWin] = useState<string>('2');
@@ -132,7 +132,7 @@ function PositionSizerCalculator() {
     const entry = parseFloat(entryPrice) || 0;
     const stop = parseFloat(stopLoss) || 0;
     const target = parseFloat(takeProfit) || 0;
-    
+
     if (account <= 0 || entry <= 0 || stop <= 0) {
       return { positionSize: 0, shares: 0, dollarRisk: 0, dollarReward: 0, rr: 0, kellyPercent: 0 };
     }
@@ -140,7 +140,7 @@ function PositionSizerCalculator() {
     // Calculate risk per share based on side
     let riskPerShare: number;
     let rewardPerShare: number;
-    
+
     if (side === 'LONG') {
       riskPerShare = entry - stop;
       rewardPerShare = target > 0 ? target - entry : 0;
@@ -148,7 +148,7 @@ function PositionSizerCalculator() {
       riskPerShare = stop - entry;
       rewardPerShare = target > 0 ? entry - target : 0;
     }
-    
+
     if (riskPerShare <= 0) {
       return { positionSize: 0, shares: 0, dollarRisk: 0, dollarReward: 0, rr: 0, kellyPercent: 0 };
     }
@@ -165,7 +165,7 @@ function PositionSizerCalculator() {
     const avgW = parseFloat(avgWin) || 1;
     const avgL = parseFloat(avgLoss) || 1;
     // Kelly % = W - [(1-W) / (AvgWin/AvgLoss)]
-    const kellyPercent = win > 0 && avgL > 0 
+    const kellyPercent = win > 0 && avgL > 0
       ? Math.max(0, (win - ((1 - win) / (avgW / avgL))) * 100)
       : 0;
 
@@ -305,7 +305,7 @@ function PositionSizerCalculator() {
                 cursor: 'pointer'
               }}
             >
-              Long Exposure
+              Purchased exposure
             </button>
             <button
               type="button"
@@ -322,7 +322,7 @@ function PositionSizerCalculator() {
                 cursor: 'pointer'
               }}
             >
-              Short Exposure
+              Sold exposure
             </button>
           </div>
         </div>
@@ -487,7 +487,7 @@ function PositionSizerCalculator() {
         <h3 style={{ color: 'var(--msp-bull)', fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>
           Position Estimate Results
         </h3>
-        
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: '16px', marginBottom: '20px' }}>
           <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
             <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
@@ -545,10 +545,10 @@ function PositionSizerCalculator() {
       </div>
 
       {/* Risk Warning */}
-      <div style={{ 
-        marginTop: '20px', 
-        padding: '12px 16px', 
-        background: 'rgba(251,191,36,0.1)', 
+      <div style={{
+        marginTop: '20px',
+        padding: '12px 16px',
+        background: 'rgba(251,191,36,0.1)',
         border: '1px solid rgba(251,191,36,0.3)',
         borderRadius: '8px'
       }}>
@@ -569,9 +569,10 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const { tier, isLoading: tierLoading } = useUserTier();
   const portfolioLimit = getPortfolioLimit(tier);
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
+  const portfolioQuery = useSearchParams();
+  const [activeTab, setActiveTab] = useState(portfolioQuery.get('view') === 'add' ? 'add-manual' : 'overview');
+  useEffect(() => { if (portfolioQuery.get('view') === 'add') setActiveTab('add-manual'); }, [portfolioQuery]);
   const [positions, setPositions] = useState<Position[]>([]);
-  const [density, setDensity] = useState<TerminalDensity>('normal');
   const [closedPositions, setClosedPositions] = useState<ClosedPosition[]>([]);
   // TR-38: closed rows whose Journal entry was deleted / re-opened, or duplicate copies. Listed, never counted.
   const [uncountedClosed, setUncountedClosed] = useState<ClosedPosition[]>([]);
@@ -626,7 +627,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
-  const [showAiAnalysis, setShowAiAnalysis] = useState(true);
+  const [showAiAnalysis, setShowAiAnalysis] = useState(false);
   const [aiAutoRequested, setAiAutoRequested] = useState(false);
   const [aiSnapshotKey, setAiSnapshotKey] = useState<string | null>(null);
   const [aiGeneratedAt, setAiGeneratedAt] = useState<string | null>(null);
@@ -688,7 +689,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     setAiLoading(true);
     setAiError(null);
     setShowAiAnalysis(true);
-    
+
     try {
       const res = await fetch('/api/portfolio/analyze', {
         method: 'POST',
@@ -699,13 +700,13 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
           performanceHistory
         })
       });
-      
+
       const data = await res.json();
-      
+
       if (!res.ok) {
         throw new Error(data.error || 'Failed to analyze portfolio');
       }
-      
+
       setAiAnalysis(data.analysis);
       setAiSnapshotKey(portfolioSnapshotSignature(positions, closedPositions));
       setAiGeneratedAt(new Date().toISOString());
@@ -728,12 +729,12 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   // Normalize ticker symbols to clean format
   function normalizeSymbol(raw: string): string {
     let s = raw.toUpperCase().trim();
-    
+
     // Remove common suffixes that APIs don't need (but preserve the base ticker)
     s = s.replace(/[-_\/]?USDT?$/i, ''); // BTCUSDT ? BTC, XRP-USD ? XRP
     s = s.replace(/[-_\/]?EUR$/i, '');
     s = s.replace(/[-_\/]?PERP$/i, '');    // Futures suffix
-    
+
     return s;
   }
 
@@ -746,11 +747,11 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   async function fetchAutoPrice(symbol: string): Promise<number | null> {
     const s = normalizeSymbol(symbol);
     const cacheBust = Date.now(); // Force fresh data
-    
+
     const tryFetch = async (url: string) => {
       try {
         const fullUrl = `${url}&_t=${cacheBust}`;
-        const r = await fetch(fullUrl, { 
+        const r = await fetch(fullUrl, {
           cache: 'no-store',
           headers: { 'Cache-Control': 'no-cache' }
         });
@@ -840,10 +841,10 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const refreshAllPrices = async (positionsToUpdate: Position[]) => {
     if (positionsToUpdate.length === 0) return;
     setRefreshingAll(true);
-    
+
     const updates: { id: number; price: number }[] = [];
     const BATCH_SIZE = 4;
-    
+
     for (let i = 0; i < positionsToUpdate.length; i += BATCH_SIZE) {
       const batch = positionsToUpdate.slice(i, i + BATCH_SIZE);
       const results = await Promise.all(
@@ -861,7 +862,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         }
       }
     }
-    
+
     if (updates.length > 0) {
       for (const update of updates) {
         const position = positionsToUpdate.find((p) => p.id === update.id);
@@ -873,8 +874,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       setPositions(prev => prev.map(p => {
         const update = updates.find(u => u.id === p.id);
         if (update) {
-          const pl = p.side === 'LONG' 
-            ? (update.price - p.entryPrice) * positionUnits(p) 
+          const pl = p.side === 'LONG'
+            ? (update.price - p.entryPrice) * positionUnits(p)
             : (p.entryPrice - update.price) * positionUnits(p);
           const denom = p.entryPrice * positionUnits(p);
           const plPercent = denom > 0 ? ((pl / denom) * 100) : 0;
@@ -931,7 +932,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   // Load positions from database (with localStorage fallback for migration)
   useEffect(() => {
     setMounted(true);
-    
+
     const loadData = async () => {
       let loadedPositions: Position[] = [];
       let serverWasEmpty = false;
@@ -1020,7 +1021,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         refreshAllPrices(loadedPositions);
       }
     };
-    
+
     loadData();
   }, []);
 
@@ -1090,14 +1091,14 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   // Save positions to database (and localStorage as backup)
   useEffect(() => {
     if (!mounted || !dataLoaded) return;
-    
+
     // Save to localStorage as backup
     localStorage.setItem('portfolio_positions', JSON.stringify(positions));
     localStorage.setItem('portfolio_closed', JSON.stringify(closedPositions));
     localStorage.setItem('portfolio_performance', JSON.stringify(performanceHistory));
     localStorage.setItem('portfolio_starting_capital', startingCapitalInput);
     localStorage.setItem('portfolio_cash_ledger', JSON.stringify(cashLedger));
-    
+
     // Sync to database: only on top of the server copy we loaded, and only when something changed.
     const payload = buildPortfolioSyncPayload(positions, closedPositions, performanceHistory, startingCapitalInput, cashLedger);
     latestSyncPayloadRef.current = payload;
@@ -1128,7 +1129,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       upgrade.show('portfolio');
       return;
     }
-    
+
     if (!newPosition.symbol || !newPosition.quantity || !newPosition.entryPrice || !newPosition.currentPrice) {
       alert('Please fill in all fields');
       return;
@@ -1137,9 +1138,9 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     const qty = parseFloat(newPosition.quantity);
     const entry = parseFloat(newPosition.entryPrice);
     const current = parseFloat(newPosition.currentPrice);
-    
-    const pl = newPosition.side === 'LONG' 
-      ? (current - entry) * qty 
+
+    const pl = newPosition.side === 'LONG'
+      ? (current - entry) * qty
       : (entry - current) * qty;
     const denom = entry * qty;
     const plPercent = denom > 0 ? ((pl / denom) * 100) : 0;
@@ -1335,12 +1336,12 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
     setPositions(prev => prev.map(p => {
       if (p.id === id) {
-        const pl = p.side === 'LONG' 
-          ? (newPrice - p.entryPrice) * positionUnits(p) 
+        const pl = p.side === 'LONG'
+          ? (newPrice - p.entryPrice) * positionUnits(p)
           : (p.entryPrice - newPrice) * positionUnits(p);
         const denom = p.entryPrice * positionUnits(p);
         const plPercent = denom > 0 ? ((pl / denom) * 100) : 0;
-        
+
         return {
           ...p,
           currentPrice: newPrice,
@@ -1407,7 +1408,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     setUpdatingId(position.id);
     const fetched = position.tradeType === 'Options' || position.tradeType === 'Futures' || position.strategy === 'options' ? null : await fetchAutoPrice(position.symbol);
     setUpdatingId(null);
-    
+
     if (fetched !== null && !isNaN(fetched)) {
       updatePrice(position.id, fetched);
     } else {
@@ -1479,7 +1480,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       localStorage.removeItem('portfolio_performance');
       localStorage.removeItem('portfolio_cash_ledger');
       localStorage.removeItem('portfolio_starting_capital');
-      
+
       // Also clear from server. This is the only path allowed to send an empty portfolio over a saved one.
       latestSyncPayloadRef.current = buildPortfolioSyncPayload([], [], [], startingCapitalInput, []);
       if (syncGateRef.current.enabled) {
@@ -1618,7 +1619,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     { label: 'Unrealized P&L', value: `$${unrealizedPL >= 0 ? '' : '-'}${Math.abs(unrealizedPL).toFixed(2)}` },
     { label: 'Realized P&L', value: `$${realizedPL >= 0 ? '' : '-'}${Math.abs(realizedPL).toFixed(2)}` },
     { label: 'Total P&L', value: `$${totalPL >= 0 ? '' : '-'}${Math.abs(totalPL).toFixed(2)}` },
-    { label: 'Total Return %', value: totalReturnPct == null ? 'N/A' : `${totalReturnPct.toFixed(2)}%` },
+    { label: 'Total Return %', value: totalReturnPct == null ? 'Not measured' : `${totalReturnPct.toFixed(2)}%` },
     { label: 'Open Return % (unrealized / open cost)', value: `${openReturnPct.toFixed(2)}%` },
     { label: 'Number of Positions', value: numPositions.toString() }
   ];
@@ -1738,11 +1739,10 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
   const modeItems = [
     { key: 'overview', label: 'Overview' },
-    { key: 'add-manual', label: 'Add Position' },
-    { key: 'deploy-capital', label: 'Model Allocation' },
-    { key: 'risk-model', label: 'Risk Model' },
-    { key: 'active-positions', label: 'Active Positions' },
-    { key: 'trade-ledger', label: 'Trade Ledger' },
+    { key: 'active-positions', label: 'Positions' },
+    { key: 'trade-ledger', label: 'Ledger' },
+    { key: 'risk-model', label: 'Risk' },
+    { key: 'deploy-capital', label: 'Allocation' },
   ] as const;
 
   const formatPct = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
@@ -1826,16 +1826,6 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
           Export History
         </button>
       )}
-      {/* TR-15: the embedded hero already has "Add position"; show this one only on the standalone page. */}
-      {!embeddedInWorkspace && (
-        <button
-          type="button"
-          onClick={() => setActiveTab('add-manual')}
-          className="rounded-md border border-emerald-500 px-3 py-1.5 text-[12px] font-semibold text-emerald-400"
-        >
-          Add Position
-        </button>
-      )}
       <button
         type="button"
         onClick={() => {
@@ -1914,95 +1904,17 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         </div>
       )}
       {upgrade.moment && <UpgradeMoment kind={upgrade.moment} dismiss={upgrade.dismiss} />}
-      {embeddedInWorkspace ? (
-        <PageHero
-          ariaLabel="Portfolio command header"
-          eyebrow="Portfolio review"
-          badges={[
-            { label: `${positions.length} open` },
-            { label: `${closedPositions.length} closed` },
-            { label: `Health ${portfolioHealthLabel}` },
-          ]}
-          title="Portfolio tracking"
-          subtitle="Recorded paper positions, exposure, cash controls, and descriptive risk analytics."
-          actions={[
-            { label: 'Add position', variant: 'primary', onClick: () => setActiveTab('add-manual') },
-            { label: 'View overview', variant: 'secondary', onClick: () => setActiveTab('overview') },
-            { label: 'Open risk model', variant: 'ghost', onClick: () => setActiveTab('risk-model') },
-          ]}
-          trailing={portfolioHeaderActions}
-          metrics={[
-            { label: 'Portfolio value', value: `$${totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`, detail: 'Open exposure' },
-            { label: 'Total return', value: totalReturnPct == null ? '—' : `${totalReturnPct >= 0 ? '+' : ''}${totalReturnPct.toFixed(2)}%`, tone: totalReturn >= 0 ? 'bull' : 'bear', detail: `Realized ${formatSignedMoney(realizedPL)} · Open ${openReturnPct >= 0 ? '+' : ''}${openReturnPct.toFixed(2)}%` },
-            { label: 'Top allocation', value: topAllocation?.symbol || '—', detail: topAllocation ? `${concentration.toFixed(1)}% concentration` : 'No positions' },
-            { label: 'Risk load', value: riskLoadLabel, tone: riskLoadLabel === 'High' ? 'bear' : riskLoadLabel === 'Medium' ? 'warn' : 'bull', detail: `Bias ${biasLabel}` },
-          ]}
-        />
-      ) : (
-        <ToolsPageHeader
-          badge="PORTFOLIO TRACKER"
-          title="Portfolio Tracking"
-          subtitle="Track live prices, modeled allocation, and performance in real-time (educational mode)."
-          icon="PF"
-          backHref="/dashboard"
-          actions={portfolioHeaderActions}
-        />
-      )}
-
+      <header className="flex flex-wrap items-center justify-between gap-2 py-3">
+        <h2 className="text-lg font-semibold">Portfolio</h2>
+        <button type="button" onClick={() => setActiveTab('add-manual')} className="min-h-10 rounded-lg border border-slate-600 px-3 text-sm">Add Position</button>
+      </header>
+      <p data-portfolio-verdict className="mb-3 text-sm">{!dataLoaded ? 'Loading saved records…' : positions.length ? `${positions.length} open simulation ${positions.length === 1 ? 'position' : 'positions'}` : 'No open simulation positions'}</p>
+      <TabBar label="Portfolio views" items={modeItems.map(item => ({ id: item.key, label: item.label }))} activeId={activeTab} onChange={setActiveTab} />
       <div className={embeddedInWorkspace ? 'mt-2' : 'mx-4 mt-2'}>
         {!embeddedInWorkspace && <ComplianceDisclaimer compact />}
         <div className={`${embeddedInWorkspace ? '' : 'mt-2'} rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-[11px] leading-relaxed text-slate-400`}>
           This page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.
         </div>
-      </div>
-
-      <div className={`w-full max-w-none pt-3 ${embeddedInWorkspace ? 'px-0' : 'px-4'}`}>
-        <CommandCenterStateBar
-          mode="OBSERVE"
-          actionableNow={positions.length > 0
-            ? `Recorded positions: ${positions.length} open · Largest allocation: ${topAllocation?.symbol || 'N/A'}`
-            : 'No recorded positions.'}
-          nextStep={positions.length > 0
-            ? totalReturn < 0
-              ? 'Portfolio shows negative return with current recorded data'
-              : 'Portfolio shows positive return with current recorded data'
-            : 'No position data recorded yet'}
-        />
-
-        <CommandStrip
-          symbol={positions[0]?.symbol || 'PORT'}
-          status={totalReturn >= 0 ? 'GAINING' : 'NET LOSS'}
-          confidence={Math.max(0, Math.min(100, 50 + totalReturn))}
-          dataHealth={`${positions.length} open / ${closedPositions.length} closed`}
-          mode={tier.toUpperCase()}
-          density={density}
-          onDensityChange={setDensity}
-        />
-
-        <DecisionCockpit
-          left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">Total Value: {formatMoney(totalValue)}</div><div className="msp-muted">Cost Basis: {formatMoney(totalCost)}</div><div className="msp-muted">Positions: {positions.length}</div></div>}
-          center={<div className="grid gap-1 text-sm"><div className={`font-extrabold ${totalPL >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Total P&L: {formatRiskPairText(totalPL)}</div><div className="msp-muted">Unrealized: {formatRiskPairText(unrealizedPL)}</div><div className="msp-muted">Realized: {formatRiskPairText(realizedPL)}</div></div>}
-          right={<div className="grid gap-1 text-sm"><div className={`font-bold ${totalReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Total return: {totalReturnPct == null ? '—' : `${totalReturnPct.toFixed(2)}%`}</div><div className="msp-muted">Tier: {tier.toUpperCase()}</div><div className="msp-muted">CSV: {canExportCSV(tier) ? 'Enabled' : 'Locked'}</div></div>}
-        />
-
-        <SignalRail
-          items={[
-            { label: 'Open', value: `${positions.length}`, tone: 'neutral' },
-            { label: 'Closed', value: `${closedPositions.length}`, tone: 'neutral' },
-            { label: 'Unrealized', value: formatRiskPairText(unrealizedPL), tone: unrealizedPL >= 0 ? 'bull' : 'bear' },
-            { label: 'Realized', value: formatRiskPairText(realizedPL), tone: realizedPL >= 0 ? 'bull' : 'bear' },
-            { label: 'Drawdown', value: cleanRiskReady ? `${currentDrawdownPct.toFixed(1)}%` : 'N/A', tone: cleanRiskReady && currentDrawdownPct > 10 ? 'bear' : 'warn' },
-            { label: 'Limit', value: positionLimitWhenReady(positions.length, getPortfolioLimit(tier), dataLoaded && !tierLoading), tone: dataLoaded && !tierLoading && positions.length >= getPortfolioLimit(tier) ? 'warn' : 'neutral' },
-          ]}
-        />
-
-        {!embeddedInWorkspace && (
-          <AdaptivePersonalityCard
-            skill="portfolio"
-            setupText={`Portfolio return ${totalReturn.toFixed(2)}% with ${positions.length} open positions`}
-            baseScore={Math.max(20, Math.min(90, 50 + totalReturn))}
-          />
-        )}
       </div>
 
       {/* Stop / target editor (manual positions) */}
@@ -2019,7 +1931,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             className="w-[min(92vw,520px)] rounded-xl border border-slate-700 bg-[#0b1220] p-5 shadow-[var(--msp-shadow)]"
           >
             <div className="mb-3 flex items-center justify-between">
-              <div id="level-editor-title" className="font-bold text-slate-200">Stop &amp; target for {levelEditorPosition.symbol} ({levelEditorPosition.side})</div>
+              <div id="level-editor-title" className="font-bold text-slate-200">Recorded levels for {levelEditorPosition.symbol} ({levelEditorPosition.side})</div>
               <button type="button" onClick={() => setLevelEditor(null)} className="cursor-pointer border-none bg-transparent text-xs font-semibold uppercase text-slate-400">Close</button>
             </div>
             <div className="mb-3 text-[12px] text-slate-400">
@@ -2153,18 +2065,19 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       )}
 
       <div className={`${embeddedInWorkspace ? 'px-0' : 'px-4'} pb-6`}>
+        {activeTab === 'risk-model' && (<CollapsibleSection title="Exposure and cash controls" summary={`${positions.length} open positions`}>
         <div className="rounded-xl border border-slate-700/60 bg-[var(--msp-panel)] p-4">
           <div className="grid gap-3 md:grid-cols-3">
             <div>
               <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">Portfolio Value</div>
               <div className="text-2xl font-black text-slate-100">{formatMoney(totalValue)}</div>
               <div className={`text-sm font-semibold ${totalPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>Net P&L {formatSignedMoney(totalPL)}</div>
-              <div className="text-xs text-slate-400">Current drawdown {cleanRiskReady ? `${currentDrawdownPct.toFixed(2)}%` : 'N/A — clean equity history building'}</div>
+              <div className="text-xs text-slate-400">Current drawdown {cleanRiskReady ? `${currentDrawdownPct.toFixed(2)}%` : 'History building'}</div>
             </div>
             <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-3 text-center">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">Portfolio Risk State</div>
-              <div className="mt-1 text-lg font-black" style={{ color: riskStateTone }}>{riskStateLabel}</div>
-              <div className="mt-1 text-[10px] font-black uppercase tracking-[0.1em]" style={{ color: riskStateTone }}>{riskStateCode}</div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">Recorded risk context</div>
+              <div className="mt-1 text-lg font-black" style={{ color: riskStateTone }}>{isRiskEvent ? 'Limit exceeded' : isRiskElevated ? 'Elevated exposure' : 'Within recorded limits'}</div>
+
               <div className="text-xs text-slate-300">{portfolioRiskProfile}</div>
             </div>
             <div className="text-right">
@@ -2226,8 +2139,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
         <div className="mt-3 grid gap-2 md:grid-cols-6">
           {[
-            { label: 'Total Long Exposure', value: `${longExposurePct.toFixed(1)}%` },
-            { label: 'Total Short Exposure', value: `${shortExposurePct.toFixed(1)}%` },
+            { label: 'Purchased exposure', value: `${longExposurePct.toFixed(1)}%` },
+            { label: 'Sold exposure', value: `${shortExposurePct.toFixed(1)}%` },
             { label: 'Largest Position %', value: `${largestPositionPct.toFixed(1)}%` },
             { label: 'Sector Concentration', value: `${sectorConcentrationPct.toFixed(1)}%` },
             { label: 'Correlation Risk', value: `${correlationRiskPct.toFixed(1)}%` },
@@ -2240,27 +2153,14 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
           ))}
         </div>
 
-        {/* TR-14: on phones the section tabs wrap onto a second row instead of running off the screen. */}
-        <div className={`mt-3 flex-wrap sm:flex-nowrap ${embeddedInWorkspace ? 'flex gap-2 overflow-x-auto pb-1' : 'grid gap-2 md:grid-cols-5'}`}>
-          {modeItems.map((item) => {
-            const isActive = activeTab === item.key;
-            return (
-              <button
-                key={item.key}
-                type="button"
-                aria-pressed={isActive}
-                onClick={() => setActiveTab(item.key)}
-                className={`${embeddedInWorkspace ? 'min-w-fit shrink-0 px-3 py-1.5 text-[11px]' : 'px-3 py-2 text-xs'} rounded-lg border font-bold uppercase tracking-[0.06em] transition ${isActive ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 bg-slate-900/40 text-slate-300 hover:border-slate-500'}`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
-
+        </CollapsibleSection>)}
         <div className={`mt-4 rounded-xl border border-slate-700/60 bg-[var(--msp-panel)] ${embeddedInWorkspace ? 'p-3' : 'p-4'}`}>
-          {activeTab === 'overview' && (
-            <div className="space-y-4">
+          {activeTab === 'overview' && (dataLoaded ? positions.length > 0 ? (
+            <PortfolioOverview value={totalValue} openPL={unrealizedPL} allocation={allocationData} limit={riskSettings.maxPositionSize} />
+          ) : <EmptyState title="Add your first position" action="Add Position" href="/tools/workspace?tab=portfolio&view=add" /> : <p role="status">Loading saved records…</p>)}
+
+          {activeTab === 'risk-model' && (
+            <CollapsibleSection title="Performance evidence" summary={`${cleanPerformanceHistory.length} recorded snapshots`}>
               <div className="grid gap-4 lg:grid-cols-5">
                 <div className="lg:col-span-3 rounded-lg border border-slate-700 bg-slate-900/40 p-3">
                   <div className="mb-2 flex items-center justify-between">
@@ -2382,7 +2282,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       {allocationData.length === 0 && <div className="text-xs text-slate-500">No active allocation</div>}
                     </div>
                     <div className="mt-2 border-t border-slate-700 pt-2 text-xs text-slate-400">
-                      Long {longExposurePct.toFixed(1)}% • Short {shortExposurePct.toFixed(1)}%
+                      Purchased {longExposurePct.toFixed(1)}% • Sold {shortExposurePct.toFixed(1)}%
                     </div>
                   </div>
                   <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3 text-xs">
@@ -2396,18 +2296,18 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       ))}
                       {riskContributors.length === 0 && <div className="text-slate-500">No contributors yet</div>}
                     </div>
-                    <div className="mt-2 text-slate-400">Top Gain: {bestPerformer ? `${bestPerformer.symbol} ${formatPct(bestPerformer.plPercent)}` : 'N/A'}</div>
-                    <div className="text-slate-400">Top Loss: {worstPerformer ? `${worstPerformer.symbol} ${formatPct(worstPerformer.plPercent)}` : 'N/A'}</div>
+                    <div className="mt-2 text-slate-400">Top Gain: {bestPerformer ? `${bestPerformer.symbol} ${formatPct(bestPerformer.plPercent)}` : 'Not measured'}</div>
+                    <div className="text-slate-400">Top Loss: {worstPerformer ? `${worstPerformer.symbol} ${formatPct(worstPerformer.plPercent)}` : 'Not measured'}</div>
                   </div>
                 </div>
               </div>
 
               <div className="grid gap-2 md:grid-cols-5">
                 {[
-                  { label: 'CAGR', value: cagrApprox == null ? 'N/A' : `${cagrApprox.toFixed(2)}%` },
-                  { label: 'Sharpe', value: sharpeApprox == null ? 'N/A' : `${sharpeApprox.toFixed(2)}` },
-                  { label: 'Profit Factor', value: profitFactor.label, title: profitFactor.detail },
-                  { label: 'Max DD', value: cleanRiskReady ? `${maxDrawdownFromSnapshots.toFixed(2)}%` : 'N/A' },
+                  { label: 'CAGR', value: cagrApprox == null ? 'Not measured' : `${cagrApprox.toFixed(2)}%` },
+                  { label: 'Sharpe', value: sharpeApprox == null ? 'Not measured' : `${sharpeApprox.toFixed(2)}` },
+                  { label: 'Profit Factor', value: profitFactor.label === 'N/A' ? 'No closed outcomes' : profitFactor.label, title: profitFactor.detail },
+                  { label: 'Max DD', value: cleanRiskReady ? `${maxDrawdownFromSnapshots.toFixed(2)}%` : 'Not measured' },
                   { label: 'Win Rate', value: `${winRatePct.toFixed(1)}%` },
                 ].map((metric) => (
                   <div key={metric.label} className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2" title={'title' in metric ? metric.title : undefined}>
@@ -2424,7 +2324,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
                     <div>
                       <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">Ann. Sharpe</div>
-                      <div className={`text-sm font-bold ${(riskAnalytics.annualizedSharpe ?? -1) >= 1 ? 'text-emerald-400' : (riskAnalytics.annualizedSharpe ?? -1) >= 0 ? 'text-amber-400' : 'text-red-400'}`}>{riskAnalytics.annualizedSharpe?.toFixed(2) ?? 'Unavailable'}</div>
+                      <div className={`text-sm font-bold ${(riskAnalytics.annualizedSharpe ?? -1) >= 1 ? 'text-emerald-400' : (riskAnalytics.annualizedSharpe ?? -1) >= 0 ? 'text-amber-400' : 'text-red-400'}`}>{riskAnalytics.annualizedSharpe?.toFixed(2) ?? 'Not measured'}</div>
                     </div>
                     <div>
                       <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">VaR (95%)</div>
@@ -2450,7 +2350,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                 </div>
               ) : (
                 <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 p-4 text-xs text-amber-200">
-                  <div className="font-semibold">Risk analytics unavailable — clean equity history is still building.</div>
+                  <div className="font-semibold">Risk analytics need more recorded history.</div>
                   <div className="mt-1 text-amber-100/70">{riskAnalyticsMeta?.note || 'At least 5 account-equity snapshots are required. Legacy position-value snapshots are excluded.'}</div>
                   <div className="mt-1 text-amber-100/60">Clean snapshots: {riskAnalyticsMeta?.cleanSnapshots ?? cleanPerformanceHistory.length}/{riskAnalyticsMeta?.requiredSnapshots ?? 5}</div>
                 </div>
@@ -2470,7 +2370,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   {aiLoading ? 'Generating descriptive summary...' : aiError ? aiError : aiAnalysis || 'Run analysis to generate a descriptive data summary.'}
                 </div>
               </details>
-            </div>
+            </CollapsibleSection>
           )}
 
           {activeTab === 'add-manual' && (
@@ -2500,8 +2400,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       onChange={(e) => setNewPosition({ ...newPosition, side: e.target.value as 'LONG' | 'SHORT' })}
                       className="rounded border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 [&>option]:bg-slate-900 [&>option]:text-slate-100"
                     >
-                      <option value="LONG">Long exposure</option>
-                      <option value="SHORT">Short exposure</option>
+                      <option value="LONG">Purchased exposure</option>
+                      <option value="SHORT">Sold exposure</option>
                     </select>
                     <select
                       value={newPosition.strategy || ''}
@@ -2570,7 +2470,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Trade Input Panel</div>
                   <input value={deployDraft.symbol} onChange={(e) => setDeployDraft((prev) => ({ ...prev, symbol: e.target.value.toUpperCase() }))} placeholder="Symbol" className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
                   <div className="grid grid-cols-2 gap-2">
-                    <select value={deployDraft.side} onChange={(e) => setDeployDraft((prev) => ({ ...prev, side: e.target.value as 'LONG' | 'SHORT' }))} className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"><option value="LONG">Long exposure</option><option value="SHORT">Short exposure</option></select>
+                    <select value={deployDraft.side} onChange={(e) => setDeployDraft((prev) => ({ ...prev, side: e.target.value as 'LONG' | 'SHORT' }))} className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"><option value="LONG">Purchased exposure</option><option value="SHORT">Sold exposure</option></select>
                     <input value={deployDraft.strategyTag} onChange={(e) => setDeployDraft((prev) => ({ ...prev, strategyTag: e.target.value }))} placeholder="Strategy Tag" className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
                   </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -2580,7 +2480,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   </div>
                 </div>
                 <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3">
-                  <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Risk Preview Engine</div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Allocation preview</div>
                   <div className="mt-2 space-y-1.5 text-sm text-slate-300">
                     <div className="flex justify-between"><span>Position Size</span><span className="font-bold text-slate-100">{suggestedQuantity.toFixed(2)}</span></div>
                     <div className="flex justify-between"><span>Risk %</span><span className="font-bold text-slate-100">{riskSettings.maxRiskPerTrade.toFixed(2)}%</span></div>
@@ -2671,7 +2571,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                         <tr key={risk.id} className="border-b border-slate-800/60 text-slate-300">
                           <td className="px-2 py-1.5 font-semibold text-slate-100">{risk.symbol}</td>
                           <td className="px-2 py-1.5 text-right">{risk.concentrationPct.toFixed(1)}%</td>
-                          <td className="px-2 py-1.5 text-right">{risk.dollarRisk == null ? 'Stop unavailable' : formatMoney(risk.dollarRisk)}</td>
+                          <td className="px-2 py-1.5 text-right">{risk.dollarRisk == null ? 'Stop not recorded' : formatMoney(risk.dollarRisk)}</td>
                           <td className="px-2 py-1.5">{risk.concentrationPct > riskSettings.maxPositionSize ? 'Concentration warning' : 'Normal'}</td>
                         </tr>
                       ))}
@@ -2717,7 +2617,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       <th scope="col" className="px-2 py-2 text-right">Cost</th>
                       <th scope="col" className="px-2 py-2 text-right">Current</th>
                       <th scope="col" className="px-2 py-2 text-right">Stop</th>
-                      <th scope="col" className="px-2 py-2 text-right">Target</th>
+                      <th scope="col" className="px-2 py-2 text-right">Recorded exit</th>
                       <th scope="col" className="px-2 py-2 text-right">R Multiple</th>
                       <th scope="col" className="px-2 py-2 text-right">P&L %</th>
                       <th scope="col" className="px-2 py-2 text-right">Risk Remaining</th>
@@ -2729,7 +2629,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                     {positions.map((position) => {
                       const notional = position.currentPrice * positionUnits(position);
                       const sizePct = totalValue > 0 ? (notional / totalValue) * 100 : 0;
-                      // No hidden default stop: without a stop, R / Risk Remaining / Inval Dist show '—'.
+                      // No hidden default stop: without a stop, R / Risk Remaining / Inval Dist show 'Not recorded'.
                       const stop = validLevel(position.stopPrice);
                       const target = validLevel(position.targetPrice);
                       const { rMultiple: rMultipleOpen, riskRemainingPct, stopDistancePct, stopAtOrPastEntry } = openRiskMetrics({ ...position, stopPrice: stop });
@@ -2741,20 +2641,20 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       return (
                         <tr key={position.id} className="border-b border-slate-800/60 text-slate-300">
                           <td className="px-2 py-2 font-semibold text-slate-100"><Link href={symbolHref(position.symbol,position.assetClass??'equity')}>{position.symbol}</Link></td>
-                          <td className="px-2 py-2">{position.side}</td>
+                          <td className="px-2 py-2">{position.side === 'LONG' ? 'Purchased' : 'Sold'}</td>
                           <td className="px-2 py-2 text-right tabular-nums">{position.quantity.toLocaleString(undefined, { maximumFractionDigits: 4 })}</td>
                           <td className="px-2 py-2 text-right tabular-nums text-slate-100">${notional.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
                           <td className="px-2 py-2 text-right">{sizePct.toFixed(1)}%</td>
                           <td className="px-2 py-2 text-right">{formatPriceRaw(position.entryPrice)}</td>
-                          <td className="px-2 py-2 text-right"><PriceStamp compact price={position.currentPrice} assetType={position.tradeType==='Options'?'option':position.assetClass} priceBasis="unknown" source="recorded position mark"/></td>
-                          <td className="px-2 py-2 text-right tabular-nums" title={stop != null && levelsFromJournal ? 'From the linked Journal entry' : undefined}>{stop != null ? formatPriceRaw(stop) : <span className="text-slate-500" title="No stop set">—</span>}</td>
-                          <td className="px-2 py-2 text-right tabular-nums" title={target != null && levelsFromJournal ? 'From the linked Journal entry' : undefined}>{target != null ? formatPriceRaw(target) : <span className="text-slate-500" title="No target set">—</span>}</td>
+                          <td className="px-2 py-2 text-right"><span title="Recorded mark; price basis and observation time not collected">{formatPrice(position.currentPrice)}</span></td>
+                          <td className="px-2 py-2 text-right tabular-nums" title={stop != null && levelsFromJournal ? 'From the linked Journal entry' : undefined}>{stop != null ? formatPriceRaw(stop) : <span className="text-slate-500" title="No stop set">Not set</span>}</td>
+                          <td className="px-2 py-2 text-right tabular-nums" title={target != null && levelsFromJournal ? 'From the linked Journal entry' : undefined}>{target != null ? formatPriceRaw(target) : <span className="text-slate-500" title="No exit level recorded">Not set</span>}</td>
                           {rMultipleOpen == null
-                            ? <td className="px-2 py-2 text-right text-slate-500" title={noRiskTitle}>—</td>
+                            ? <td className="px-2 py-2 text-right text-slate-500" title={noRiskTitle}>Not measured</td>
                             : <td className={`px-2 py-2 text-right ${rMultipleOpen >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{rMultipleOpen >= 0 ? '+' : ''}{rMultipleOpen.toFixed(2)}R</td>}
                           <td className={`px-2 py-2 text-right font-semibold ${position.plPercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatPct(position.plPercent)}</td>
-                          <td className={`px-2 py-2 text-right ${riskRemainingPct == null ? 'text-slate-500' : ''}`} title={riskRemainingPct == null ? noRiskTitle : undefined}>{riskRemainingPct == null ? '—' : `${riskRemainingPct.toFixed(0)}%`}</td>
-                          <td className={`px-2 py-2 text-right ${stopDistancePct == null ? 'text-slate-500' : ''}`} title={stopDistancePct == null ? 'No stop set — use Edit Stop' : undefined}>{stopDistancePct == null ? '—' : `${stopDistancePct.toFixed(2)}%`}</td>
+                          <td className={`px-2 py-2 text-right ${riskRemainingPct == null ? 'text-slate-500' : ''}`} title={riskRemainingPct == null ? noRiskTitle : undefined}>{riskRemainingPct == null ? 'Not recorded' : `${riskRemainingPct.toFixed(0)}%`}</td>
+                          <td className={`px-2 py-2 text-right ${stopDistancePct == null ? 'text-slate-500' : ''}`} title={stopDistancePct == null ? 'No stop set — use Edit Stop' : undefined}>{stopDistancePct == null ? 'Not recorded' : `${stopDistancePct.toFixed(2)}%`}</td>
                           <td className="px-2 py-2">
                             {riskRemainingPct != null && (
                               <div className="mb-1 h-1.5 overflow-hidden rounded bg-slate-700">
@@ -2800,7 +2700,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   </div>
                 ))}
               </div>
-              <div className="text-[11px] text-slate-500">R = P&L ÷ risk to a recorded stop (only trades with a stop). Risk units = P&L ÷ account risk per trade ({riskUnitUsd != null ? formatMoney(riskUnitUsd) : '—'} = account equity × {riskSettings.maxRiskPerTrade}%).{riskUnitUsd == null ? ` Risk units are unavailable: ${RISK_UNITS_NEED_EQUITY} (top of the page).` : ''}</div>
+              <div className="text-[11px] text-slate-500">R = P&L ÷ risk to a recorded stop (only trades with a stop). Risk units = P&L ÷ account risk per trade ({riskUnitUsd != null ? formatMoney(riskUnitUsd) : 'Not recorded'} = account equity × {riskSettings.maxRiskPerTrade}%).{riskUnitUsd == null ? ` Risk units need a recorded basis: ${RISK_UNITS_NEED_EQUITY} (top of the page).` : ''}</div>
 
               <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3">
                 <div className="mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Closed Trades Equity Curve</div>
@@ -2885,18 +2785,18 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       const r = measure?.r ?? null;
                       const riskUnits = measure?.riskUnits ?? null;
                       const holdDays = Math.max(0, Math.round((new Date(trade.closeDate).getTime() - new Date(trade.entryDate).getTime()) / 86_400_000));
-                      const outcomeType = trade.realizedPL > 0 ? 'Target' : trade.realizedPL < 0 ? 'Stop' : 'Manual';
+                      const outcomeType = trade.realizedPL > 0 ? 'Gain' : trade.realizedPL < 0 ? 'Loss' : 'Flat';
                       return (
                         <tr key={trade.id} className="border-b border-slate-800/60 text-slate-300">
                           <td className="px-2 py-2">{trade.symbol} @ {trade.entryPrice.toFixed(2)}</td>
                           <td className="px-2 py-2">{trade.closePrice.toFixed(2)}</td>
                           <td className={`px-2 py-2 text-right font-semibold ${trade.realizedPL > 0 ? 'text-emerald-400' : trade.realizedPL < 0 ? 'text-red-400' : 'text-slate-400'}`}>{formatSignedMoney(trade.realizedPL)}</td>
                           {r == null
-                            ? <td className="px-2 py-2 text-right text-slate-500" title="No stop recorded for this trade, so R is unavailable">—</td>
+                            ? <td className="px-2 py-2 text-right text-slate-500" title="No stop recorded for this trade, so R cannot be measured">Not measured</td>
                             : <td className={`px-2 py-2 text-right font-semibold ${r >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatStopR(r)}</td>}
-                          <td className={`px-2 py-2 text-right ${riskUnits == null ? 'text-slate-500' : riskUnits >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{riskUnits == null ? '—' : riskUnits.toFixed(2)}</td>
+                          <td className={`px-2 py-2 text-right ${riskUnits == null ? 'text-slate-500' : riskUnits >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{riskUnits == null ? 'Not recorded' : riskUnits.toFixed(2)}</td>
                           <td className="px-2 py-2 text-right">{holdDays}d</td>
-                          <td className="px-2 py-2">{trade.strategy || '—'}</td>
+                          <td className="px-2 py-2">{trade.strategy || 'Not recorded'}</td>
                           <td className="px-2 py-2">{outcomeType}</td>
                           <td className="px-2 py-2">
                             {closedLinkLabel(trade) === 'Journal'
@@ -2943,6 +2843,13 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
           )}
         </div>
       </div>
+
+      <CollapsibleSection title="Record actions" summary={`${positions.length} open · ${closedPositions.length} closed`}>
+        <p className="mb-2 text-xs text-slate-400">Position limit: {positionLimitWhenReady(positions.length, getPortfolioLimit(tier), dataLoaded && !tierLoading)}</p>
+        <div className="flex flex-wrap gap-2">{portfolioHeaderActions}</div>
+      </CollapsibleSection>
+      <div className="mt-3"><SourceLine source="Saved simulation records" tradingDay="Mark basis and observation times not collected" basis="User-entered records; descriptive analytics" /></div>
+      <p className="mt-2 text-xs text-slate-400">General information only, not financial advice.</p>
 
     </div>
   );

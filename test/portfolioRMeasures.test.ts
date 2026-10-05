@@ -9,7 +9,7 @@ describe('risk units (TR-5): one definition, never called R', () => {
     expect(formatRiskUnits(2)).toBe('+2.00 risk units');
     expect(formatRiskUnits(-0.5)).toBe('-0.50 risk units');
     expect(riskUnitDollars(0, 1)).toBeNull();
-    expect(formatRiskUnits(toRiskUnits(100, null))).toBe('— risk units');
+    expect(formatRiskUnits(toRiskUnits(100, null))).toBe('Not measured');
     expect(formatRiskUnits(1)).not.toMatch(/\bR\b/);
   });
 });
@@ -38,7 +38,7 @@ describe('summarize / formatR', () => {
   it('ignores trades without R and reports the count', () => {
     expect(summarize([1, null, -0.5, undefined, 2])).toEqual({ count: 3, avg: 2.5 / 3, best: 2, worst: -0.5 });
     expect(summarize([null])).toEqual({ count: 0, avg: null, best: null, worst: null });
-    expect(formatR(null)).toBe('—');
+    expect(formatR(null)).toBe('Not measured');
     expect(formatR(1.234)).toBe('+1.23R');
   });
 });
