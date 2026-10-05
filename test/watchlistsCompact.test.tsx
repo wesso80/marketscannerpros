@@ -38,7 +38,25 @@ it('keeps asset-aware links and explicit actions inside each quote fold',async()
  fireEvent.click(screen.getByRole('button',{name:'Options flow NEAR'}));
  expect(mocks.push.mock.calls[0][0]).toContain('type=crypto');
  expect(container.textContent).toContain('no shared observation time');
+ expect(container.textContent).toContain('Each symbol uses its own quote');
  expect(container.textContent).not.toContain('Open Cockpit');
+ expect(container.textContent).not.toContain('idea pipeline');
+ const scan=screen.getByRole('button',{name:'Scan NEAR'});
+ expect(scan.className).toContain('min-h-10');
+ expect(scan.className).toContain('text-sm');
+ expect(scan.className).not.toContain('text-[11px]');
+ expect(scan.className).not.toMatch(/(?:^|\s)py-1(?:\s|$)/);
+ expect(screen.getByRole('link',{name:'NEAR'}).className).toContain('break-words');
+});
+it('keeps a failed catalog load distinct from an empty watchlist',async()=>{
+ vi.stubGlobal('fetch',vi.fn(async()=>({ok:false,json:async()=>({})})));
+ const {container}=render(<WatchlistWidget/>);
+ await screen.findByText('The last watchlist request did not complete.');
+ expect(screen.queryByText('Create your first watchlist')).toBeNull();
+ expect(screen.getByRole('button',{name:'Retry loading watchlists'})).toBeTruthy();
+ expect(container.querySelectorAll('[data-source-line]')).toHaveLength(0);
+ expect(container.textContent).not.toContain('Cockpit');
+ expect(container.textContent).not.toContain('idea pipeline');
 });
 it('retains internal mode values and tracking lock on the bulk alert action',async()=>{
  mocks.locked=true;render(<WatchlistWidget/>);await screen.findByText('Research list · 8 saved symbols loaded');
