@@ -1,3 +1,4 @@
+import { isResearchRecord } from '@/lib/journal/researchRecords';
 import { computeKpis, orderedClosedTrades } from '@/lib/journal/computeKpis';
 import { computePlaybookExpectancy } from '@/lib/journal/playbookExpectancy';
 import { normalizeExpiration, normalizeOptionRight } from '@/lib/options/contractQuote';
@@ -46,6 +47,8 @@ function mapEntry(entry: any): TradeRowModel {
     pnlPct: Number(entry?.plPercent || 0),
     rMultiple: entry?.rMultiple == null ? undefined : Number(entry.rMultiple),
     strategyTag: entry?.strategy || undefined,
+    tags: Array.isArray(entry?.tags) ? entry.tags : [],
+    executionMode: entry?.executionMode ?? entry?.execution_mode,
     notesPreview: notes ? notes.split('\n').slice(0, 3) : [],
     notes,
     lastAiNoteTs: undefined,
@@ -56,12 +59,13 @@ function mapEntry(entry: any): TradeRowModel {
 export function mapJournalResponseToPayload(raw: any, nowMs = Date.now()): JournalPayload {
   const rows = Array.isArray(raw?.entries) ? raw.entries : [];
   const trades: TradeRowModel[] = rows.map(mapEntry);
-  const kpis = computeKpis(trades, null, nowMs);
-  const completed = orderedClosedTrades(trades, nowMs);
+  const personalTrades = trades.filter(trade => !isResearchRecord(trade));
+  const kpis = computeKpis(personalTrades, null, nowMs);
+  const completed = orderedClosedTrades(personalTrades, nowMs);
   let cumulativePnl = 0;
-  const openTrades = trades.filter((trade) => trade.status === 'open');
-  const closedTrades = trades.filter((trade) => trade.status === 'closed');
-  const playbookExpectancy = computePlaybookExpectancy(trades);
+  const openTrades = personalTrades.filter((trade) => trade.status === 'open');
+  const closedTrades = personalTrades.filter((trade) => trade.status === 'closed');
+  const playbookExpectancy = computePlaybookExpectancy(personalTrades);
   const weakestPlaybookSample = playbookExpectancy.some((item) => item.sampleStatus === 'insufficient')
     ? 'insufficient'
     : playbookExpectancy.some((item) => item.sampleStatus === 'developing')
@@ -105,7 +109,7 @@ export function mapJournalResponseToPayload(raw: any, nowMs = Date.now()): Journ
         oversizeFlags: openTrades.filter((trade) => (trade.qty || 0) > 100).length,
         blocker:
           openTrades.filter((trade) => trade.stop == null).length > 0 || openTrades.filter((trade) => (trade.qty || 0) > 100).length > 0
-            ? 'Missing stop or oversize trade detected.'
+            ? 'Stop not recorded or position exceeds the size check.'
             : '',
       },
       review: {
@@ -123,7 +127,7 @@ export function mapJournalResponseToPayload(raw: any, nowMs = Date.now()): Journ
           .map((trade) => ({ tradeId: trade.id, symbol: trade.symbol })),
       },
       evidence: {
-        links: trades.slice(0, 10).map((trade) => ({
+        links: personalTrades.slice(0, 10).map((trade) => ({
           tradeId: trade.id,
           symbol: trade.symbol,
           scanner: true,

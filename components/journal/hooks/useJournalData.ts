@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { mapJournalResponseToPayload } from '@/lib/journal/mapPayload';
+import { isResearchRecord } from '@/lib/journal/researchRecords';
 import { matchesAssetClassFilter } from '@/lib/journal/assetClassFilter';
 import { JournalPayload, JournalQueryState, SortModel, TradeRowModel } from '@/types/journal';
 
-function matchesQuery(trade: TradeRowModel, query: JournalQueryState): boolean {
+export function matchesQuery(trade: TradeRowModel, query: JournalQueryState): boolean {
+  if (!query.research && isResearchRecord(trade)) return false;
   if (query.status !== 'all' && trade.status !== query.status) return false;
   if (query.symbol && trade.symbol !== query.symbol.toUpperCase()) return false;
   if (query.strategyTag && trade.strategyTag !== query.strategyTag) return false;
@@ -51,7 +53,7 @@ export function useJournalData(query: JournalQueryState, sort: SortModel) {
       setPayload(mapJournalResponseToPayload(json));
     } catch (e) {
       if (signal?.aborted) return;
-      setError(e instanceof Error ? e.message : 'Unknown error');
+      setError(e instanceof Error ? e.message : 'Journal records could not be loaded');
       setPayload(null);
     } finally {
       if (!signal?.aborted) setLoading(false);

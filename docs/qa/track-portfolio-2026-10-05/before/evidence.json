@@ -1,0 +1,504 @@
+{
+  "mocked": true,
+  "results": [
+    {
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T10:53:37.631Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 2469,
+      "scrollWidth": 1280,
+      "screens": 3.08625,
+      "text": "MarketScannerPros\nMenu\nJournal\nPortfolio\nWatchlists\nAlerts\nBacktest\nLearning\nSettings\nSignal Accuracy\nMy Pages\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nWorkflow memory\n3. Open exposure\nTier Pro\nWorkspace\n\nWatchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.\n\nOpen watchlists\nOpen Learning\nAll tools\nActive tab\nPortfolio\n3. Open exposure\nTier\nPro\nSubscription level\nFocus\nOpen exposure\nCurrent workbench focus\nNext tab\nLearning\nContinue the workspace loop\n1. Symbol shortlist\nWatchlists\n2. Trade journal\nJournal\n3. Open exposure\nPortfolio\n4. Doctrine\nLearning\n5. Historical test\nBacktest\n6. Triggers\nAlerts\n7. Account\nSettings\nPortfolio review\n2 open\n0 closed\nHealth Near Baseline\nPortfolio tracking\n\nRecorded paper positions, exposure, cash controls, and descriptive risk analytics.\n\nAdd position\nView overview\nOpen risk model\nExport Positions\nModel Allocation\nClear All Data\nPortfolio value\n$3,000\nOpen exposure\nTotal return\n+2.80%\nRealized +$0 · Open +10.29%\nTop allocation\nAAPL\n66.7% concentration\nRisk load\nHigh\nBias Bullish\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nMARKET CONTEXT\nREGIME\nRange\nRISK\nLOW\nMARKET BIAS\nNEUTRAL\nANALYSIS MODE\nMarket Review\nLIVE PULSE — SCANNING MARKET RHYTHM\n—\nCURRENT STATUS\nRecorded positions: 2 open · Largest allocation: AAPL\nNext: Portfolio shows positive return with current recorded data\nAAPL\nSTATUS: GAINING\nCONFIDENCE: 53%\nDATA: 2 OPEN / 0 CLOSED\nMODE: PRO\nCOMPACT\nNORMAL\nCONTEXT\nBias & Regime\nTotal Value: $3,000\nCost Basis: $2,720\nPositions: 2\nANALYSIS\nSetup Status\nTotal P&L: +$280 (+2.72 risk units)\nUnrealized: +$280 (+2.72 risk units)\nRealized: +$0 (0.00 risk units)\nLEVELS\nRisk & Trigger\nTotal return: 2.80%\nTier: PRO\nCSV: Enabled\nOPEN\n2\nCLOSED\n0\nUNREALIZED\n+$280 (+2.72 risk units)\nREALIZED\n+$0 (0.00 risk units)\nDRAWDOWN\nN/A\nLIMIT\n2 open (no limit)\nPORTFOLIO VALUE\n$3,000\nNet P&L +$280\nCurrent drawdown N/A — clean equity history building\nPORTFOLIO RISK STATE\nRISK EVENT\nRISK\nAggressive\nGROSS EXPOSURE / EQUITY\n29.2%\nAvailable Cash +$7,280\nAccount Equity $10,280\nExposure 29.2%\nStarting Capital\nCash Flow Type\nDeposit\nWithdrawal\nAmount\nCASH CONTROLS\nAPPLY CASH FLOW\nNet Deposits +$0\nTOTAL LONG EXPOSURE\n29.2%\nTOTAL SHORT EXPOSURE\n0.0%\nLARGEST POSITION %\n66.7%\nSECTOR CONCENTRATION\n66.7%\nCORRELATION RISK\n77.3%\nMAX POSITION SIZE %\n20.0%\nOVERVIEW\nADD POSITION\nMODEL ALLOCATION\nRISK MODEL\nACTIVE POSITIONS\nTRADE LEDGER\nEQUITY CURVE\nHIDE DRAWDOWN OVERLAY\n$10.3k\n$10.3k\n$10.3k\n$10.3k\n$10.3k\nOct 5\nRisk event markers: Active\nALLOCATION & EXPOSURE\nAAPL\n66.7%\nNEAR\n33.3%\nLong 29.2% • Short 0.0%\nEXPOSURE BY POSITION\nAAPL\n$2,000\nNEAR\n$1,000\nTop Gain: NEAR +25.00%\nTop Loss: AAPL +4.17%\nCAGR\nN/A\nSHARPE\nN/A\nPROFIT FACTOR\nN/A\nMAX DD\nN/A\nWIN RATE\n0.0%\nRisk analytics unavailable — clean equity history is still building.\nAt least 5 account-equity snapshots are required. Legacy position-value snapshots are excluded.\nClean snapshots: 1/5\nAI PORTFOLIO SUMMARY (DESCRIPTIVE ONLY)\nThis summary is a factual restatement of one recorded snapshot only. Generated 10/5/2026, 9:53:26 PM.\nRefresh summary from current snapshot\nRun analysis to generate a descriptive data summary.\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T10:53:50.021Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 6130,
+      "scrollWidth": 390,
+      "screens": 7.26303317535545,
+      "text": "MSP\nMenu\nJournal\nPortfolio\nWatchlists\nAlerts\nBacktest\nLearning\nSettings\nSignal Accuracy\nMy Pages\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nWorkflow memory\n3. Open exposure\nTier Pro\nWorkspace\n\nWatchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.\n\nOpen watchlists\nOpen Learning\nAll tools\nActive tab\nPortfolio\n3. Open exposure\nTier\nPro\nSubscription level\nFocus\nOpen exposure\nCurrent workbench focus\nNext tab\nLearning\nContinue the workspace loop\n1. Symbol shortlist\nWatchlists\n2. Trade journal\nJournal\n3. Open exposure\nPortfolio\n4. Doctrine\nLearning\n5. Historical test\nBacktest\n6. Triggers\nAlerts\n7. Account\nSettings\nPortfolio review\n2 open\n0 closed\nHealth Near Baseline\nPortfolio tracking\n\nRecorded paper positions, exposure, cash controls, and descriptive risk analytics.\n\nAdd position\nView overview\nOpen risk model\nExport Positions\nModel Allocation\nClear All Data\nPortfolio value\n$3,000\nOpen exposure\nTotal return\n+2.80%\nRealized +$0 · Open +10.29%\nTop allocation\nAAPL\n66.7% concentration\nRisk load\nHigh\nBias Bullish\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nMARKET CONTEXT\nREGIME\nRange\nRISK\nLOW\nMARKET BIAS\nNEUTRAL\nANALYSIS MODE\nMarket Review\nLIVE PULSE — SCANNING MARKET RHYTHM\n—\nCURRENT STATUS\nRecorded positions: 2 open · Largest allocation: AAPL\nNext: Portfolio shows positive return with current recorded data\nAAPL\nSTATUS: GAINING\nCONFIDENCE: 53%\nDATA: 2 OPEN / 0 CLOSED\nMODE: PRO\nCOMPACT\nNORMAL\nCONTEXT\nBias & Regime\nTotal Value: $3,000\nCost Basis: $2,720\nPositions: 2\nANALYSIS\nSetup Status\nTotal P&L: +$280 (+2.72 risk units)\nUnrealized: +$280 (+2.72 risk units)\nRealized: +$0 (0.00 risk units)\nLEVELS\nRisk & Trigger\nTotal return: 2.80%\nTier: PRO\nCSV: Enabled\nOPEN\n2\nCLOSED\n0\nUNREALIZED\n+$280 (+2.72 risk units)\nREALIZED\n+$0 (0.00 risk units)\nDRAWDOWN\nN/A\nLIMIT\n2 open (no limit)\nPORTFOLIO VALUE\n$3,000\nNet P&L +$280\nCurrent drawdown N/A — clean equity history building\nPORTFOLIO RISK STATE\nRISK EVENT\nRISK\nAggressive\nGROSS EXPOSURE / EQUITY\n29.2%\nAvailable Cash +$7,280\nAccount Equity $10,280\nExposure 29.2%\nStarting Capital\nCash Flow Type\nDeposit\nWithdrawal\nAmount\nCASH CONTROLS\nAPPLY CASH FLOW\nNet Deposits +$0\nTOTAL LONG EXPOSURE\n29.2%\nTOTAL SHORT EXPOSURE\n0.0%\nLARGEST POSITION %\n66.7%\nSECTOR CONCENTRATION\n66.7%\nCORRELATION RISK\n77.3%\nMAX POSITION SIZE %\n20.0%\nOVERVIEW\nADD POSITION\nMODEL ALLOCATION\nRISK MODEL\nACTIVE POSITIONS\nTRADE LEDGER\nEQUITY CURVE\nHIDE DRAWDOWN OVERLAY\n$10.3k\n$10.3k\n$10.3k\n$10.3k\n$10.3k\nOct 5\nRisk event markers: Active\nALLOCATION & EXPOSURE\nAAPL\n66.7%\nNEAR\n33.3%\nLong 29.2% • Short 0.0%\nEXPOSURE BY POSITION\nAAPL\n$2,000\nNEAR\n$1,000\nTop Gain: NEAR +25.00%\nTop Loss: AAPL +4.17%\nCAGR\nN/A\nSHARPE\nN/A\nPROFIT FACTOR\nN/A\nMAX DD\nN/A\nWIN RATE\n0.0%\nRisk analytics unavailable — clean equity history is still building.\nAt least 5 account-equity snapshots are required. Legacy position-value snapshots are excluded.\nClean snapshots: 1/5\nAI PORTFOLIO SUMMARY (DESCRIPTIVE ONLY)\nThis summary is a factual restatement of one recorded snapshot only. Generated 10/5/2026, 9:53:39 PM.\nRefresh summary from current snapshot\nRun analysis to generate a descriptive data summary.\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T10:54:02.218Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 2449,
+      "scrollWidth": 1280,
+      "screens": 3.06125,
+      "text": "MarketScannerPros\nMenu\nJournal\nPortfolio\nWatchlists\nAlerts\nBacktest\nLearning\nSettings\nSignal Accuracy\nMy Pages\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nWorkflow memory\n3. Open exposure\nTier Pro\nWorkspace\n\nWatchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.\n\nOpen watchlists\nOpen Learning\nAll tools\nActive tab\nPortfolio\n3. Open exposure\nTier\nPro\nSubscription level\nFocus\nOpen exposure\nCurrent workbench focus\nNext tab\nLearning\nContinue the workspace loop\n1. Symbol shortlist\nWatchlists\n2. Trade journal\nJournal\n3. Open exposure\nPortfolio\n4. Doctrine\nLearning\n5. Historical test\nBacktest\n6. Triggers\nAlerts\n7. Account\nSettings\nPortfolio review\n0 open\n0 closed\nHealth Near Baseline\nPortfolio tracking\n\nRecorded paper positions, exposure, cash controls, and descriptive risk analytics.\n\nAdd position\nView overview\nOpen risk model\nModel Allocation\nPortfolio value\n$0\nOpen exposure\nTotal return\n+0.00%\nRealized +$0 · Open +0.00%\nTop allocation\n—\nNo positions\nRisk load\nLow\nBias Neutral\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nMARKET CONTEXT\nREGIME\nRange\nRISK\nLOW\nMARKET BIAS\nNEUTRAL\nANALYSIS MODE\nMarket Review\nLIVE PULSE — SCANNING MARKET RHYTHM\n—\nCURRENT STATUS\nNo recorded positions.\nNext: No position data recorded yet\nPORT\nSTATUS: GAINING\nCONFIDENCE: 50%\nDATA: 0 OPEN / 0 CLOSED\nMODE: PRO\nCOMPACT\nNORMAL\nCONTEXT\nBias & Regime\nTotal Value: $0\nCost Basis: $0\nPositions: 0\nANALYSIS\nSetup Status\nTotal P&L: +$0 (0.00 risk units)\nUnrealized: +$0 (0.00 risk units)\nRealized: +$0 (0.00 risk units)\nLEVELS\nRisk & Trigger\nTotal return: 0.00%\nTier: PRO\nCSV: Enabled\nOPEN\n0\nCLOSED\n0\nUNREALIZED\n+$0 (0.00 risk units)\nREALIZED\n+$0 (0.00 risk units)\nDRAWDOWN\nN/A\nLIMIT\n0 open (no limit)\nPORTFOLIO VALUE\n$0\nNet P&L +$0\nCurrent drawdown N/A — clean equity history building\nPORTFOLIO RISK STATE\nSTABLE\nSTABLE\nLow\nGROSS EXPOSURE / EQUITY\n0.0%\nAvailable Cash +$10,000\nAccount Equity $10,000\nExposure 0.0%\nStarting Capital\nCash Flow Type\nDeposit\nWithdrawal\nAmount\nCASH CONTROLS\nAPPLY CASH FLOW\nNet Deposits +$0\nTOTAL LONG EXPOSURE\n0.0%\nTOTAL SHORT EXPOSURE\n0.0%\nLARGEST POSITION %\n0.0%\nSECTOR CONCENTRATION\n0.0%\nCORRELATION RISK\n0.0%\nMAX POSITION SIZE %\n20.0%\nOVERVIEW\nADD POSITION\nMODEL ALLOCATION\nRISK MODEL\nACTIVE POSITIONS\nTRADE LEDGER\nEQUITY CURVE\nHIDE DRAWDOWN OVERLAY\n$10.0k\n$10.0k\n$10.0k\n$10.0k\n$10.0k\nOct 5\nRisk event markers: Stable\nALLOCATION & EXPOSURE\nNo active allocation\nLong 0.0% • Short 0.0%\nEXPOSURE BY POSITION\nNo contributors yet\nTop Gain: N/A\nTop Loss: N/A\nCAGR\nN/A\nSHARPE\nN/A\nPROFIT FACTOR\nN/A\nMAX DD\nN/A\nWIN RATE\n0.0%\nRisk analytics unavailable — clean equity history is still building.\nAt least 5 account-equity snapshots are required. Legacy position-value snapshots are excluded.\nClean snapshots: 0/5\nAI PORTFOLIO SUMMARY (DESCRIPTIVE ONLY)\nThis summary is a factual restatement of one recorded snapshot only.\nRefresh summary from current snapshot\nRun analysis to generate a descriptive data summary.\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 0,
+      "verdicts": []
+    },
+    {
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T10:54:14.703Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 5935,
+      "scrollWidth": 390,
+      "screens": 7.031990521327014,
+      "text": "MSP\nMenu\nJournal\nPortfolio\nWatchlists\nAlerts\nBacktest\nLearning\nSettings\nSignal Accuracy\nMy Pages\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nWorkflow memory\n3. Open exposure\nTier Pro\nWorkspace\n\nWatchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.\n\nOpen watchlists\nOpen Learning\nAll tools\nActive tab\nPortfolio\n3. Open exposure\nTier\nPro\nSubscription level\nFocus\nOpen exposure\nCurrent workbench focus\nNext tab\nLearning\nContinue the workspace loop\n1. Symbol shortlist\nWatchlists\n2. Trade journal\nJournal\n3. Open exposure\nPortfolio\n4. Doctrine\nLearning\n5. Historical test\nBacktest\n6. Triggers\nAlerts\n7. Account\nSettings\nPortfolio review\n0 open\n0 closed\nHealth Near Baseline\nPortfolio tracking\n\nRecorded paper positions, exposure, cash controls, and descriptive risk analytics.\n\nAdd position\nView overview\nOpen risk model\nModel Allocation\nPortfolio value\n$0\nOpen exposure\nTotal return\n+0.00%\nRealized +$0 · Open +0.00%\nTop allocation\n—\nNo positions\nRisk load\nLow\nBias Neutral\nThis page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.\nMARKET CONTEXT\nREGIME\nRange\nRISK\nLOW\nMARKET BIAS\nNEUTRAL\nANALYSIS MODE\nMarket Review\nLIVE PULSE — SCANNING MARKET RHYTHM\n—\nCURRENT STATUS\nNo recorded positions.\nNext: No position data recorded yet\nPORT\nSTATUS: GAINING\nCONFIDENCE: 50%\nDATA: 0 OPEN / 0 CLOSED\nMODE: PRO\nCOMPACT\nNORMAL\nCONTEXT\nBias & Regime\nTotal Value: $0\nCost Basis: $0\nPositions: 0\nANALYSIS\nSetup Status\nTotal P&L: +$0 (0.00 risk units)\nUnrealized: +$0 (0.00 risk units)\nRealized: +$0 (0.00 risk units)\nLEVELS\nRisk & Trigger\nTotal return: 0.00%\nTier: PRO\nCSV: Enabled\nOPEN\n0\nCLOSED\n0\nUNREALIZED\n+$0 (0.00 risk units)\nREALIZED\n+$0 (0.00 risk units)\nDRAWDOWN\nN/A\nLIMIT\n0 open (no limit)\nPORTFOLIO VALUE\n$0\nNet P&L +$0\nCurrent drawdown N/A — clean equity history building\nPORTFOLIO RISK STATE\nSTABLE\nSTABLE\nLow\nGROSS EXPOSURE / EQUITY\n0.0%\nAvailable Cash +$10,000\nAccount Equity $10,000\nExposure 0.0%\nStarting Capital\nCash Flow Type\nDeposit\nWithdrawal\nAmount\nCASH CONTROLS\nAPPLY CASH FLOW\nNet Deposits +$0\nTOTAL LONG EXPOSURE\n0.0%\nTOTAL SHORT EXPOSURE\n0.0%\nLARGEST POSITION %\n0.0%\nSECTOR CONCENTRATION\n0.0%\nCORRELATION RISK\n0.0%\nMAX POSITION SIZE %\n20.0%\nOVERVIEW\nADD POSITION\nMODEL ALLOCATION\nRISK MODEL\nACTIVE POSITIONS\nTRADE LEDGER\nEQUITY CURVE\nHIDE DRAWDOWN OVERLAY\n$10.0k\n$10.0k\n$10.0k\n$10.0k\n$10.0k\nOct 5\nRisk event markers: Stable\nALLOCATION & EXPOSURE\nNo active allocation\nLong 0.0% • Short 0.0%\nEXPOSURE BY POSITION\nNo contributors yet\nTop Gain: N/A\nTop Loss: N/A\nCAGR\nN/A\nSHARPE\nN/A\nPROFIT FACTOR\nN/A\nMAX DD\nN/A\nWIN RATE\n0.0%\nRisk analytics unavailable — clean equity history is still building.\nAt least 5 account-equity snapshots are required. Legacy position-value snapshots are excluded.\nClean snapshots: 0/5\nAI PORTFOLIO SUMMARY (DESCRIPTIVE ONLY)\nThis summary is a factual restatement of one recorded snapshot only.\nRefresh summary from current snapshot\nRun analysis to generate a descriptive data summary.\n✕\nMSP AI",
+      "openFolds": 1,
+      "sourceCount": 0,
+      "verdicts": []
+    }
+  ],
+  "requests": [
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/portfolio",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/operator/state",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/operator/state",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/portfolio/analyze",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/portfolio",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/portfolio",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/operator/state",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/quote",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/operator/state",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/portfolio/analyze",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/portfolio",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/portfolio",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/operator/state",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/portfolio",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/operator/state",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    }
+  ],
+  "errors": []
+}

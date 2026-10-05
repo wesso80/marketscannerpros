@@ -6,6 +6,7 @@ import { FREE_COPY } from '@/components/free/copy';
 import {journalLinkAsset} from '@/lib/market/symbolSnapshot';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { isResearchRecord } from '@/lib/journal/researchRecords';
 import { computeKpis } from '@/lib/journal/computeKpis';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import TradeDrawer from '@/components/journal/drawer/TradeDrawer';
@@ -47,7 +48,7 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
   // Compute enriched KPIs (unrealized P&L from live prices)
   const enrichedKpis = useMemo(() => {
     if (!payload?.kpis) return payload?.kpis;
-    return computeKpis(enrichedTrades);
+    return computeKpis(enrichedTrades.filter(trade => !isResearchRecord(trade)));
   }, [payload?.kpis, enrichedTrades]);
 
   const [selectedTradeId, setSelectedTradeId] = useState<string | undefined>(undefined);
@@ -114,9 +115,10 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
   useEffect(() => {
     if (!payload) return;
     const kpis = enrichedKpis || payload.kpis;
-    const openTrades = enrichedTrades.filter((t) => t.status === 'open');
-    const closedTrades = enrichedTrades.filter((t) => t.status === 'closed');
-    const recentTrades = enrichedTrades.slice(0, 10).map((t) => ({
+    const personalTrades = enrichedTrades.filter(trade => !isResearchRecord(trade));
+    const openTrades = personalTrades.filter((t) => t.status === 'open');
+    const closedTrades = personalTrades.filter((t) => t.status === 'closed');
+    const recentTrades = personalTrades.slice(0, 10).map((t) => ({
       symbol: t.symbol,
       side: t.side,
       status: t.status,
@@ -128,9 +130,9 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
     }));
     setPageData({
       skill: 'journal',
-      symbols: [...new Set(enrichedTrades.slice(0, 20).map((t) => t.symbol))],
+      symbols: [...new Set(personalTrades.slice(0, 20).map((t) => t.symbol))],
       data: {
-        totalTrades: enrichedTrades.length,
+        totalTrades: personalTrades.length,
         openCount: openTrades.length,
         closedCount: closedTrades.length,
         equity: kpis?.equity,
@@ -144,7 +146,7 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
         avgR30d: kpis?.avgR30d,
         recentTrades,
       },
-      summary: `Journal records, including automated research: ${enrichedTrades.length} (${openTrades.length} open, ${closedTrades.length} closed). 30d win rate ${kpis.winRate30d == null ? 'unavailable' : `${(kpis.winRate30d * 100).toFixed(1)}%`}, PF ${kpis.profitFactor30d == null ? kpis.profitFactorLabel : kpis.profitFactor30d.toFixed(2)}. Account equity unavailable; open P&L is estimated before fees.`,
+      summary: `Personal journal records: ${personalTrades.length} (${openTrades.length} open, ${closedTrades.length} closed). 30d win rate ${kpis.winRate30d == null ? 'not collected' : `${(kpis.winRate30d * 100).toFixed(1)}%`}, PF ${kpis.profitFactor30d == null ? kpis.profitFactorLabel : kpis.profitFactor30d.toFixed(2)}. Account equity not collected; open P&L is estimated before fees.`,
     });
   }, [enrichedTrades, enrichedKpis, payload, setPageData]);
 
@@ -217,6 +219,7 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
           onQueryChange={onQueryChange}
           onResetFilters={onResetFilters}
           rows={enrichedPageRows}
+          hasAnyPersonalRecords={allTrades.some(trade => !isResearchRecord(trade))}
           total={total}
           sort={sort}
           onSort={onSort}

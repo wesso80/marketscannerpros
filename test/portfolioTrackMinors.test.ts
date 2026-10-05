@@ -13,7 +13,7 @@ describe('TR-6: profit factor', () => {
     expect(profitFactorDisplay([])).toMatchObject({ value: null, label: 'N/A' });
     expect(profitFactorDisplay([0])).toMatchObject({ value: null, label: 'N/A' });
     expect(page).not.toMatch(/\? 9\.99/);
-    expect(page).toContain("{ label: 'Profit Factor', value: profitFactor.label, title: profitFactor.detail }");
+    expect(page).toContain("{ label: 'Profit Factor', value: profitFactor.label === 'N/A' ? 'No closed outcomes' : profitFactor.label, title: profitFactor.detail }");
   });
 });
 
@@ -21,13 +21,14 @@ describe('TR-7: position limit', () => {
   it('never prints Infinity', () => {
     expect(positionLimitLabel(6, Infinity)).toBe('6 open (no limit)');
     expect(positionLimitLabel(3, 5)).toBe('3/5');
-    expect(page).toContain("value: positionLimitWhenReady(positions.length, getPortfolioLimit(tier), dataLoaded && !tierLoading)");
+    expect(page).toContain("positionLimitWhenReady(positions.length, getPortfolioLimit(tier), dataLoaded && !tierLoading)");
   });
 });
 
 describe('TR-14: section tabs on phones', () => {
   it('wrap below the sm breakpoint', () => {
-    expect(page).toContain("mt-3 flex-wrap sm:flex-nowrap ${embeddedInWorkspace ? 'flex gap-2 overflow-x-auto pb-1'");
+    expect(page).toContain('label="Portfolio views"');
+    expect(readFileSync(join(process.cwd(), 'components/visual/TabBar.tsx'), 'utf8')).toContain('flex flex-wrap gap-1');
   });
 });
 
@@ -35,7 +36,8 @@ describe('TR-15: one Add Position, Clear All Data set apart', () => {
   it('hides the duplicate add button when embedded and puts Clear All Data last', () => {
     const start = page.indexOf('const portfolioHeaderActions = (');
     const block = page.slice(start, page.indexOf('if (tier === \'anonymous\')', start));
-    expect(block).toMatch(/\{!embeddedInWorkspace && \(\s*<button[\s\S]*?Add Position/);
+    expect(block).not.toContain('Add Position');
+    expect(page.match(/>Add Position<\/button>/g)).toHaveLength(1);
     expect(block.indexOf('Clear All Data')).toBeGreaterThan(block.indexOf('Model Allocation'));
   });
 });

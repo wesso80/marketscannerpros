@@ -1,55 +1,51 @@
-import { EquityCurveModel } from '@/types/journal';
-
-type EquityCurveCardProps = {
+import { EquityCurveModel } from "@/types/journal";
+import { formatUsd } from "@/lib/journal/display";
+export default function EquityCurveCard({
+  equityCurve,
+}: {
   equityCurve?: EquityCurveModel;
-};
-
-export default function EquityCurveCard({ equityCurve }: EquityCurveCardProps) {
-  const points = equityCurve?.points || [];
-  const latest = points[points.length - 1]?.value || 0;
-  const peak = points.length ? Math.max(...points.map((p) => p.value)) : 0;
-  const trough = points.length ? Math.min(...points.map((p) => p.value)) : 0;
-  const range = peak - trough || 1;
-
+}) {
+  const points = equityCurve?.points ?? [];
+  if (!points.length) return null;
+  const values = points.map((p) => p.value),
+    min = Math.min(0, ...values),
+    max = Math.max(0, ...values),
+    range = max - min || 1;
+  const line = points
+    .map(
+      (p, i) =>
+        `${points.length > 1 ? (i / (points.length - 1)) * 300 : 150},${75 - ((p.value - min) / range) * 65}`,
+    )
+    .join(" ");
   return (
-    <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-4">
-      <div className="flex items-center justify-between">
-        <div className="text-sm font-semibold text-slate-100">Cumulative closed P&amp;L</div>
-        <span className="text-[10px] text-slate-500">{points.length} closed trades</span>
-      </div>
-
-      <div className={`mt-2 text-lg font-semibold ${latest >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-        {latest >= 0 ? '+' : ''}{latest.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
-      </div>
-
-      {/* Mini sparkline bar */}
-      {points.length > 1 && (
-        <div className="mt-3 flex h-10 items-end gap-[2px]">
-          {points.slice(-20).map((point, i) => {
-            const height = Math.max(4, ((point.value - trough) / range) * 100);
-            return (
-              <div
-                key={`${point.ts}_${i}`}
-                className={`flex-1 rounded-t-sm ${point.value >= 0 ? 'bg-emerald-500/60' : 'bg-rose-500/60'}`}
-                style={{ height: `${height}%` }}
-                title={`${new Date(point.ts).toLocaleDateString()}: $${point.value.toFixed(2)}`}
-              />
-            );
-          })}
-        </div>
-      )}
-
-      {/* Recent points */}
-      <div className="mt-3 space-y-1">
-        {points.slice(-6).map((point, idx) => (
-          <div key={`${point.ts}_${point.value}_${idx}`} className="flex items-center justify-between rounded bg-white/5 px-2 py-1 text-xs text-slate-300">
-            <span>{new Date(point.ts).toLocaleDateString()}</span>
-            <span className={point.value >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
-              {point.value >= 0 ? '+' : ''}{point.value.toFixed(2)}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
+    <figure className="rounded-lg border border-slate-700 p-3">
+      <figcaption className="flex flex-wrap justify-between gap-2 text-sm">
+        <span>
+          Cumulative closed P&amp;L · {points.length} personal records
+        </span>
+        <strong>{formatUsd(values[values.length - 1])}</strong>
+      </figcaption>
+      <svg
+        viewBox="0 0 300 85"
+        role="img"
+        aria-label="Cumulative personal closed P&L"
+        className="mt-2 h-12 w-full"
+        preserveAspectRatio="none"
+      >
+        <polyline
+          points={line}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          vectorEffect="non-scaling-stroke"
+        />
+        <circle
+          cx={points.length > 1 ? 300 : 150}
+          cy={75 - ((values[values.length - 1] - min) / range) * 65}
+          r="2"
+          fill="currentColor"
+        />
+      </svg>
+    </figure>
   );
 }

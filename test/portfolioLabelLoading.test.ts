@@ -25,7 +25,7 @@ describe('TR-37: no fallback wording before load', () => {
   it('the page waits for positions (and the tier, for the limit)', () => {
     expect(page).toContain('const { tier, isLoading: tierLoading } = useUserTier();');
     expect(page).toContain('profitFactorWhenReady(closedPositions.map((trade) => trade.realizedPL), dataLoaded)');
-    expect(page).toContain("tone: dataLoaded && !tierLoading && positions.length >= getPortfolioLimit(tier) ? 'warn' : 'neutral'");
+    expect(page).toContain("positionLimitWhenReady(positions.length, getPortfolioLimit(tier), dataLoaded && !tierLoading)");
     expect(page).not.toMatch(/value: positionLimitLabel\(/);
   });
 });

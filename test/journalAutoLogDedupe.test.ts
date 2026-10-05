@@ -1,0 +1,22 @@
+import {beforeEach,it,expect,vi} from 'vitest';
+import {NextRequest} from 'next/server';
+const state=vi.hoisted(()=>({queries:[] as {sql:string;params:unknown[]}[],workspaceId:'one',duplicate:true,atr:vi.fn(),event:vi.fn()}));
+vi.mock('@/lib/auth',()=>({getSessionFromCookie:async()=>({workspaceId:state.workspaceId})}));
+vi.mock('@/lib/db',()=>({q:async(sql:string,params:unknown[]=[])=>{state.queries.push({sql,params});return sql.includes('SELECT id FROM journal_entries')&&state.duplicate?[{id:77}]:[];}}));
+vi.mock('@/lib/execution/fetchATR',()=>({fetchATR:state.atr}));
+vi.mock('@/lib/brain/engineBridge',()=>({recordEngineEvent:state.event}));
+vi.mock('@/lib/notifications/tradeEvents',()=>({emitTradeLifecycleEvent:vi.fn(),hashDedupeKey:vi.fn()}));
+vi.mock('@/lib/risk-governor-hard',()=>({buildPermissionSnapshot:vi.fn()}));
+vi.mock('@/lib/journal/riskAtEntry',()=>({computeEntryRiskMetrics:vi.fn(),getLatestPortfolioEquity:vi.fn()}));
+import {POST} from '@/app/api/journal/auto-log/route';
+beforeEach(()=>{state.queries=[];state.workspaceId='one';state.duplicate=true;vi.clearAllMocks();});
+it.each([['one','price_above','LONG'],['two','price_below','SHORT']])('returns existing row for %s before provider/event/insert work',async(workspace,conditionType,side)=>{
+ state.workspaceId=workspace;
+ const response=await POST(new NextRequest('https://example.test/api/journal/auto-log',{method:'POST',body:JSON.stringify({symbol:'aapl',conditionType,triggeredAt:'2026-10-05T14:30:00Z',source:'scanner',triggerPrice:100})}));
+ expect(response.status).toBe(200);expect(await response.json()).toEqual({success:true,entryId:77,deduplicated:true});
+ const check=state.queries.find(q=>q.sql.includes('SELECT id FROM journal_entries'))!;
+ expect(check.params).toEqual([workspace,'AAPL',side,'2026-10-05','scanner']);
+ expect(check.sql).toContain("ANY(COALESCE(tags, '{}'::text[]))");
+ expect(state.queries.some(q=>/INSERT INTO journal_entries|DELETE FROM/.test(q.sql))).toBe(false);
+ expect(state.atr).not.toHaveBeenCalled();expect(state.event).not.toHaveBeenCalled();
+});

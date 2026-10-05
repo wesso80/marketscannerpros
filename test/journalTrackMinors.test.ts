@@ -96,8 +96,8 @@ describe('TR-31: quantity, target and option contract details', () => {
   });
   it('table and drawer show quantity, target and the contract', () => {
     const table = read('components/journal/layer2/TradeTable.tsx');
-    expect(table).toContain('>Qty</th>');
-    expect(table).toContain('>Stop / Target</th>');
+    expect(read('components/journal/layer2/TradeRowExpanded.tsx')).toContain('Quantity:');
+    expect(read('components/journal/layer2/TradeRowExpanded.tsx')).toContain('Recorded exit:');
     expect(table).toContain('optionContractLabel(row)');
     const drawer = read('components/journal/drawer/tabs/TradeOverviewTab.tsx');
     expect(drawer).toContain('Contract: {contract}');

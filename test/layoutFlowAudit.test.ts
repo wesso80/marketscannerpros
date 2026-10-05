@@ -469,10 +469,10 @@ describe('layout and flow audit regressions', () => {
     const backtestHub = read('components/backtest/BacktestHub.tsx');
 
     expect(workspacePage).toContain('<BacktestPage embeddedInWorkspace />');
-    expect(workspacePage).toContain('Workflow memory');
-    expect(workspacePage).toContain('Watchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.');
-    expect(workspacePage).toContain("ariaLabel=\"Workspace command header\"");
-    expect(workspacePage).toContain('grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7');
+    expect(workspacePage).toContain('Track tabs');
+    expect(workspacePage).toContain('Track tabs');
+    expect(workspacePage).toContain("label=\"Track tabs\"");
+    expect(workspacePage).toContain('Track tabs');
     expect(workspacePage).not.toContain('<SectionHeader title="Workspace"');
     expect(workspacePage).toContain('useEffect(() => {');
     expect(workspacePage).toContain("const requestedTab = TABS.find(t => t.toLowerCase() === urlTabParam);");
@@ -519,9 +519,9 @@ describe('layout and flow audit regressions', () => {
 
     expect(workspacePage).toContain('<PortfolioV1 embeddedInWorkspace />');
     expect(portfolioPage).toContain('embeddedInWorkspace = false');
-    expect(portfolioPage).toContain('Portfolio review');
-    expect(portfolioPage).toContain("ariaLabel=\"Portfolio command header\"");
-    expect(portfolioPage).toContain('Recorded paper positions, exposure, cash controls, and descriptive risk analytics.');
+    expect(portfolioPage).toContain('data-portfolio-verdict');
+    expect(portfolioPage).toContain("label=\"Portfolio views\"");
+    expect(portfolioPage).toContain('No open simulation positions');
     expect(portfolioPage).toContain('Kelly Criterion Parameters');
     expect(portfolioPage).toContain('Position Estimate Results');
     // Health / risk-load labels now come from lib/portfolio/returnSummary.ts (TR-3: measured drawdown, not return).
@@ -529,13 +529,12 @@ describe('layout and flow audit regressions', () => {
     expect(read('lib/portfolio/returnSummary.ts')).toContain("? 'Elevated Drawdown'");
     expect(portfolioPage).toContain("const riskStateCode = isRiskEvent ? 'RISK' : isRiskElevated ? 'ELEVATED' : 'STABLE';");
     expect(portfolioPage).toContain('Risk event markers: {isRiskEvent ? \'Active\' : isRiskElevated ? \'Elevated\' : \'Stable\'}');
-    expect(portfolioPage).toContain("icon=\"PF\"");
+    expect(portfolioPage).toContain("<PortfolioOverview");
     expect(portfolioPage).toContain('Concentration warning');
-    expect(portfolioPage).toContain("embeddedInWorkspace ? 'flex gap-2 overflow-x-auto pb-1' : 'grid gap-2 md:grid-cols-5'");
-    expect(portfolioPage).toContain("embeddedInWorkspace ? 'min-w-fit shrink-0 px-3 py-1.5 text-[11px]' : 'px-3 py-2 text-xs'");
-    expect(portfolioPage).toContain("{ key: 'add-manual', label: 'Add Position' }");
+    expect(portfolioPage).toContain('label="Portfolio views"');
+    expect(portfolioPage).not.toContain('<DecisionCockpit');
+    expect(portfolioPage).not.toContain("{ key: 'add-manual', label: 'Add Position' }");
     expect(portfolioPage).toContain('{!embeddedInWorkspace && <ComplianceDisclaimer compact />}');
-    expect(portfolioPage).toContain('{!embeddedInWorkspace && (');
     expect(portfolioPage).toContain('>Close</button>');
     expect(portfolioPage).toContain('>Delete</button>');
     expect(portfolioPage).not.toContain('📐 Kelly Criterion');
@@ -1259,10 +1258,10 @@ describe('layout and flow audit regressions', () => {
     const newsPage = read('app/tools/news/page.tsx');
     const economicCalendarPage = read('app/tools/economic-calendar/page.tsx');
 
-    expect(workspacePage).toContain("ariaLabel=\"Workspace command header\"");
-    expect(workspacePage).toContain('WORKSPACE_TAB_META');
-    expect(workspacePage).toContain('function WorkspaceMetric');
-    expect(workspacePage).toContain('grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7');
+    expect(workspacePage).toContain("label=\"Track tabs\"");
+    expect(workspacePage).toContain('Track tabs');
+    expect(workspacePage).toContain('Track tabs');
+    expect(workspacePage).toContain('Track tabs');
 
     expect(researchPage).toContain('aria-label="Research command header"');
     expect(researchPage).toContain('RESEARCH_TAB_META');

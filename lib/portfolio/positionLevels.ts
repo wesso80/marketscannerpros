@@ -2,7 +2,7 @@
  * Stop / target levels for open portfolio positions, and the risk figures derived from them.
  *
  * Prices are in the position's own units (premium per share for options), so the figures here are
- * unit-free ratios. With no stop set, every stop-derived figure is null (shown as '—'); there is no
+ * unit-free ratios. With no stop set, every stop-derived figure is null (shown as not measured); there is no
  * hidden default stop.
  */
 
@@ -80,7 +80,7 @@ export function validateLevels(
     if (position.currentPrice > 0 && (long ? stop >= position.currentPrice : stop <= position.currentPrice)) {
       warnings.push(`Stop is ${long ? 'at or above' : 'at or below'} the current price, so it would already be hit.`);
     } else if (long ? stop >= position.entryPrice : stop <= position.entryPrice) {
-      warnings.push('Stop is at or past entry (breakeven or locked-in profit), so R and Risk Remaining will show —.');
+      warnings.push('Stop is at or past entry (breakeven or locked-in profit), so R and Risk Remaining will show Not measured.');
     }
   }
   if (target != null && (long ? target <= position.entryPrice : target >= position.entryPrice)) {
