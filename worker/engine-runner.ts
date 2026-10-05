@@ -398,12 +398,25 @@ async function handleCoachRecompute(job: {
   };
 }
 
-async function handleJournalPrefill(job: {
+/** Default off. journal.prefill inserts auto_plan_draft rows only when this is explicitly set true. */
+export const AUTO_PLAN_DRAFT_INSERT_ENABLED: boolean = false;
+
+export async function handleJournalPrefill(job: {
   id: number;
   workspace_id: string;
   payload: Record<string, unknown>;
   attempts: number;
 }): Promise<Record<string, unknown>> {
+  if (!AUTO_PLAN_DRAFT_INSERT_ENABLED) {
+    return {
+      ok: true,
+      action: 'journal_prefill',
+      workspaceId: job.workspace_id,
+      inserted: false,
+      reason: 'auto_plan_draft_disabled',
+    };
+  }
+
   await ensureJournalSchema();
 
   const planId = asString(job.payload.planId).trim();
@@ -719,8 +732,12 @@ async function main() {
   }
 }
 
-main().catch(async (error) => {
-  console.error('[engine] fatal error', error);
-  await alertWorkerError('engine-runner', error?.message || String(error));
-  process.exit(1);
-});
+const engineRunnerEntry = process.argv[1] || '';
+const launchedAsEngineRunner = /(?:^|[\\/])engine-runner\.[cm]?[jt]s$/.test(engineRunnerEntry);
+if (launchedAsEngineRunner && process.env.VITEST !== 'true') {
+  main().catch(async (error) => {
+    console.error('[engine] fatal error', error);
+    await alertWorkerError('engine-runner', error?.message || String(error));
+    process.exit(1);
+  });
+}
