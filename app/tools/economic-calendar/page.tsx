@@ -22,6 +22,7 @@ import type {
   ReleaseStatus,
   TimingStatus,
 } from '@/lib/macro/calendar/types';
+import CalendarIntelligenceCompact from '@/components/research/CalendarIntelligenceCompact';
 
 interface CalendarData {
   events: CalendarEvent[];
@@ -317,6 +318,74 @@ export default function EconomicCalendarPage({ embeddedInResearch = false }: { e
 
   if (tierLoading) return <div className="min-h-screen bg-[var(--msp-bg)]" />;
   if (!canAccessPortfolioInsights(tier)) return <UpgradeGate requiredTier="pro" feature="Economic Calendar" />;
+
+  if (embeddedInResearch) {
+    const provider = data?.meta?.provider;
+    const sourceLabel = !data?.meta || provider === 'curated' ? 'Curated economic schedule' : `Calendar feed ${provider}`;
+    const sourceBasis = data?.meta?.providerStatus === 'LIVE'
+      ? 'Live feed plus curated seed · scheduled releases'
+      : 'Curated dates · live releases not configured · scheduled releases';
+    return (
+      <CalendarIntelligenceCompact
+        loading={loading}
+        error={error}
+        nowMs={nowMs}
+        events={enrichedEvents.map((event) => ({
+          id: event.id,
+          name: event.eventName,
+          country: event.country,
+          countryCode: event.countryCode,
+          impact: event.impact,
+          releaseMs: event.releaseMs,
+          when: displayTime(event, timeMode),
+          actual: event.display.actual,
+          forecast: event.display.consensus,
+          previous: event.display.previous,
+          status: event.dataStatus,
+          timing: event.timingStatus,
+          sourceUrl: event.sourceUrl,
+        }))}
+        countdown={gate.countdown}
+        nextEventName={gate.nextMajorEvent?.eventName ?? null}
+        reviewState={gate.reviewState}
+        reason={gate.reason}
+        riskState={gate.riskState}
+        volRegime={gate.volRegime}
+        liquidity={gate.liquidity}
+        density={gate.density}
+        researchMode={gate.researchMode}
+        dangerWindow={gate.dangerWindow}
+        warnings={data?.warnings ?? []}
+        days={days}
+        onDays={setDays}
+        onRefresh={() => setRefreshKey((key) => key + 1)}
+        impact={impactFilter}
+        onImpact={setImpactFilter}
+        hideLowImpact={hideLowImpact}
+        onHideLowImpact={setHideLowImpact}
+        timeMode={timeMode}
+        onTimeMode={setTimeMode}
+        userTz={userTz}
+        country={selectedCountry}
+        onCountry={setSelectedCountry}
+        categories={selectedCategories}
+        onToggleCategory={toggleCategory}
+        focusAssets={focusAssets}
+        onToggleFocus={toggleFocusAsset}
+        japan={showJapanContext && japan ? {
+          dataStatus: japan.dataStatus,
+          lean: japan.lean,
+          inflationTrend: japan.inflationTrend,
+          nextDecision: japan.nextBojDecision?.eventName ?? null,
+          notes: japan.notes,
+        } : null}
+        sourceLabel={sourceLabel}
+        sourceAsOf={data?.lastUpdated}
+        sourceBasis={sourceBasis}
+        statusCounts={statusCounts}
+      />
+    );
+  }
 
   return (
     <div className={`${embeddedInResearch ? '' : 'min-h-screen bg-[var(--msp-bg)]'} text-white`}>

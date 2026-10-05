@@ -24,12 +24,22 @@ export function SymbolCryptoContext({symbol}:{symbol:string}){
   <Link className="text-emerald-300" href={`/tools/crypto-dashboard?symbol=${encodeURIComponent(base)}`}>Derivatives detail</Link>
  </section>;
 }
-export function SymbolOptionsContext({symbol,expiry}:{symbol:string;expiry?:string}){
+export function SymbolOptionsContext({symbol,expiry,compact=false}:{symbol:string;expiry?:string;compact?:boolean}){
  const chain=useOptionsChain();
  useEffect(()=>{chain.fetch(symbol,expiry);},[symbol,expiry,chain.fetch]);
  // This is the same hook and buildIVMetrics output as OptionsTerminalView: no parallel calculation.
  const metrics=chain.ivMetrics,selected=chain.contracts[0]?.expiration;
  const quality=chainQuality(chain.contracts,chain.underlyingPrice,chain.quoteBasis,chain.asOfDate);
+ if(compact)return <section aria-label="Symbol options" className="space-y-2 text-sm">
+  {chain.loading?<p>Loading options…</p>:chain.error?<p className="text-amber-300">Options feed failed.</p>:<>
+   {(quality.stale||quality.degraded)&&<p className="text-amber-300">Options quotes are partial or from a previous session.</p>}
+   {selected&&<p>Expiry {selected}</p>}
+   {metrics.avgIV>0&&<p>ATM IV (2% band): {(metrics.avgIV*100).toFixed(1)}%</p>}
+   {metrics.atmStraddleMid!=null&&<p>ATM straddle mid: ${metrics.atmStraddleMid.toFixed(2)}</p>}
+   {metrics.expectedMoveAbs>0&&<p>1-sigma move to expiry: ±${metrics.expectedMoveAbs.toFixed(2)} (±{metrics.expectedMovePct.toFixed(1)}%) · model estimate, not a guaranteed range.</p>}
+  </>}
+  <Link className="inline-flex min-h-10 items-center underline" href={optionsHref(symbol,selected)}>Open options</Link>
+ </section>;
  return <section className="rounded-lg border border-white/10 p-4 space-y-2" aria-label="Symbol options">
   <h2 className="font-bold">Options · {selected??'expiry unavailable'}</h2>
   {chain.loading?<p>Loading chain…</p>:chain.error?<p className="text-amber-300">{chain.error}</p>:<>

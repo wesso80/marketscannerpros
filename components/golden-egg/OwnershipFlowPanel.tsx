@@ -11,7 +11,7 @@ const box = 'rounded-md bg-[var(--msp-panel-2)] px-3 py-2 text-xs';
 const title = 'text-slate-400 text-[10px] uppercase tracking-wide mb-1';
 
 function UnavailableLine({ u }: { u: Unavailable }) {
-  return <div className="text-slate-500">Unavailable ({u.reason})</div>;
+  return <div className="text-amber-300">Ownership data not collected ({u.reason})</div>;
 }
 
 export default function OwnershipFlowPanel({ symbol }: { symbol: string }) {
@@ -37,7 +37,7 @@ export default function OwnershipFlowPanel({ symbol }: { symbol: string }) {
     <section className="mt-4 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-card)] p-4" aria-label="Ownership and insider activity">
       <h3 className="text-xs font-semibold text-emerald-400 mb-1">Ownership & insider activity — {symbol}</h3>
       <p className="text-[11px] text-slate-500 mb-3">Reported filings from Alpha Vantage (insider transactions, congressional trade disclosures, quarterly 13F institutional holdings). Filings lag the trades they describe. Research context only — not a signal or advice.</p>
-      {error && <div className="text-xs text-slate-500">Unavailable ({error})</div>}
+      {error && <div className="text-xs text-amber-300">Ownership feed failed ({error})</div>}
       {!error && !data && <div className="text-xs text-slate-500 animate-pulse">Loading ownership data…</div>}
       {data && (
         <div className="grid gap-2 lg:grid-cols-3">

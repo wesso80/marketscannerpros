@@ -84,8 +84,8 @@ describe('2026-09-21 production audit remediations', () => {
 
     expect(api).toContain("controller.abort(), 20_000");
     expect(api).toContain("Golden Egg timed out after 20 seconds");
-    expect(goldenEgg).toContain("goldenEgg.error ? 'Unavailable'");
-    expect(goldenEgg).toContain("Retry the selected symbol");
+    expect(goldenEgg).toContain("Symbol data feed failed.");
+    expect(goldenEgg).toContain("goldenEgg.refetch()");
     expect(alerts).toContain("Promise.allSettled");
     expect(alerts).toContain("controller.abort(), 8000");
     expect(alerts).toContain("Partial alert data:");
