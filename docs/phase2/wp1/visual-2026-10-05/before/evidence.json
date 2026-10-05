@@ -1,0 +1,659 @@
+{
+  "mocked": true,
+  "root": "/workspace/scratch/0535040d28c6/symbol-w1-baseline",
+  "results": [
+    {
+      "symbol": "AAPL",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "closed": {
+        "observedAt": "2026-10-05T08:02:35.800Z",
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "scrollHeight": 1095,
+        "scrollWidth": 1280,
+        "screens": 1.36875,
+        "openFolds": [],
+        "verdicts": [],
+        "sourceCount": 1,
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nAAPL\nSymbol · Stock\n\n$100\n\nLast close 2026-10-02 (New York)\nLog to journal\nWatchlist\nBacktest\n\nResearch snapshot only — not a trade instruction.\n\nChange symbolAAPL · daily\n\nNo measured checks were returned in this packet.\n\nBB Upper $105.00\nSMA 20 $99.00\nSMA 50 $98.00\nBB Lower $95.00\nEMA 200 $90.00\n$105.00\n$90.00\n2026-07-05\n2026-10-02\n\n90 daily closes · Alpha Vantage daily bars · last bar 2026-10-02 · grey: 50-day average\n\n99\n\nSMA 20\n\n-1.0% away\n\n98\n\nSMA 50\n\n-2.0% away\n\nScenario map5 recorded levels\nOptionsNo options snapshot in this packet\nEvidence and data checks · 4 checks · Show\nDeep analysis4 recorded components\nBacktest300 recorded daily bars\n\nSource · Alpha Vantage · 11:00 AEDT Mon 5 Oct · daily\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions."
+      },
+      "allOpen": {
+        "observedAt": "2026-10-05T08:02:38.193Z",
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "scrollHeight": 4585,
+        "scrollWidth": 1280,
+        "screens": 5.73125,
+        "openFolds": [
+          "Change symbolAAPL · daily",
+          "Scenario map5 recorded levels",
+          "OptionsNo options snapshot in this packet",
+          "Deep analysis4 recorded components",
+          "Backtest300 recorded daily bars"
+        ],
+        "verdicts": [],
+        "sourceCount": 1,
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nAAPL\nSymbol · Stock\n\n$100\n\nLast close 2026-10-02 (New York)\nLog to journal\nWatchlist\nBacktest\n\nResearch snapshot only — not a trade instruction.\n\nChange symbolAAPL · daily\nReview\nAsset \nAuto\nStock\nCrypto\nTimeframe \n15m\n1H\nDaily\nWeekly\n\nNo measured checks were returned in this packet.\n\nBB Upper $105.00\nSMA 20 $99.00\nSMA 50 $98.00\nBB Lower $95.00\nEMA 200 $90.00\n$105.00\n$90.00\n2026-07-05\n2026-10-02\n\n90 daily closes · Alpha Vantage daily bars · last bar 2026-10-02 · grey: 50-day average\n\n99\n\nSMA 20\n\n-1.0% away\n\n98\n\nSMA 50\n\n-2.0% away\n\nScenario map5 recorded levels\n\nBullish scenario active at current price $100.00 — reference is the live quote.\n\nBeyond SMA 50 (structure-anchored, 1.15x ATR buffer)\n\nOptionsNo options snapshot in this packet\n\nOptions feed failed.\n\nOpen options\nEvidence and data checks · 4 checks · Hide\nEVIDENCE\nWhy This Appeared\nSUPPORTED\nlong no qualifying setup has an indicator composite of at least 70/100 with no primary blocker flagged.\nCross Market\nNEUTRAL\nNo cross-market data\nScenario Levels\nAVAILABLE\nReference $100.00 / invalidation $97.70.\nResearch Caution\nMONITOR\nResearch caution: verify whether price interaction confirms or rejects the scenario.\nDeep analysis4 recorded components\nVALIDATION WORKBENCH\nVerdict first, then inspect chart, evidence detail, and business context.\nOPEN LIQUIDITY SWEEP\n1. VERDICT PACKET\nVerdict\n2. PRICE CONTEXT\nChart\n3. EVIDENCE DETAIL\nDeep Analysis\n4. BUSINESS CONTEXT\nFundamentals\nAAPL\nLONG\nGRADE A\nINVALIDATED\nNeutral\nData Checks passed\n$100.00\nequity — 1D — 10/6/2026, 2:43:00 AM\nSCENARIO ALIGNED\nASSESSMENT\nBlocked: NO_STRUCTURAL_STOP\nNO_STRUCTURAL_STOP\nCANONICAL\nIndicator composite 76/100\nEVIDENCE ALIGNMENT\nVERDICT PACKET\nequity · 1D\nASSESSMENT\nScenario Aligned\nDATA TRUST\nGOOD\nREFERENCE\n$100.00\nINVALIDATION\n$97.70\nNEXT CHECK\nMonitor whether price respects the reference level and indicator composite holds.\nBLOCKER\nNone flagged\nSYMBOL EVIDENCE STACK\nWhy This Appeared\nSUPPORTED\nlong no qualifying setup has an indicator composite of at least 70/100 with no primary blocker flagged.\nCross Market\nNEUTRAL\nNo cross-market data\nScenario Levels\nAVAILABLE\nReference $100.00 / invalidation $97.70.\nResearch Caution\nMONITOR\nResearch caution: verify whether price interaction confirms or rejects the scenario.\nQuote · OBSERVED\nRegime · Not collected\nDVE · Not collected\nOptions · Not collected\nTime · Not collected\nVALIDATED SCENARIO LEVELS\nCanonical bars + structure-anchored levels where structure exists; model (ATR) levels are labelled as such. Scanner shows a faster preliminary ATR estimate; these supersede it.\nLEVEL OF INTEREST (MODEL REFERENCE)\nBullish scenario active at current price $100.00 — reference is the live quote.\n$100.00 (reference)\nINVALIDATION (STRUCTURAL · 1.15 ATR)\n$97.70\nBeyond SMA 50 (structure-anchored, 1.15x ATR buffer)\nREACTION ZONES\n$102.30M›\n$103.45M›\n$105.00S\nS = structural level, M = model zone (reference-to-invalidation risk multiple, with price caps labelled). Illustrative R to the primary zone ≈ 1.5 — not a forecast.\nRESEARCH CASE INVALIDATES IF\nREFERENCE OR INVALIDATION LEVEL BECOMES UNAVAILABLE.\nINDICATOR COMPOSITE DROPS BELOW 60/100.\nCROSS-MARKET CONDITIONS FLIP TO HEADWIND.\nDVE FLIPS INTO CLIMAX RISK.\nTIMING NOTE ONLY: MIDPOINT PULL MAY DISAGREE; DOES NOT CHANGE THE VERDICT.\nReference or invalidation level becomes unavailable.\nIndicator composite drops below 60/100.\nCross-market conditions flip to headwind.\nDVE flips into climax risk.\nTiming note only: midpoint pull may disagree; does not change the verdict.\nDriver: Structure leads at 95/100 — price aligned with the 20/50-bar means; EMA200 below price — long-term anchor agrees\nSAVE CASE\nOPEN TERMINAL\nSCORE BREAKDOWN\nStructure (w:30)\n95.0\n28.50 points · 30% effective weight\nLONG structure alignment\nMomentum (w:20)\n80.0\n16.00 points · 20% effective weight\nLONG momentum alignment; 60.0 · bullish momentum\nRisk (w:25)\n75.0\n18.75 points · 25% effective weight\nRisk quality — no material risk flags — volatility, extension and liquidity within normal ranges\n\nCoverage 75% · Component total 75.75 · Final 76/100. Research alignment, not an outcome probability.\n\nCross-Market Influence\nSetup\nSETUP TYPE\nNo qualifying setup\nTHESIS\nAAPL shows a bullish trend continuation setup (ADX 30 confirms trend strength). ADX 30 · trending.\nTIMEFRAME ALIGNMENT\n2/4\n• Daily structure aligned\n• MACD histogram positive\n• Above EMA200 $90.00\nINVALIDATION\nScenario weakens if price closes below $97.70 with volume confirmation.\nStructure\n\nAll levels below are bar-close references · 2026-10-05T00:00:00Z\n\nSTRUCTURE VERDICT:\nAGREE\nHTF\nBullish\nMTF\nBullish\nLTF\nBullish\nKEY LEVELS\nSMA 20 (pivot)\n$99.00\nSMA 50 (support)\n$98.00\nBB Upper (resistance)\n$105.00\nBB Lower (support)\n$95.00\nEMA 200 (support)\n$90.00\nMOMENTUM\nRSI(14): 60.0 · BULLISH MOMENTUM\nADX (TREND STRENGTH): 30 · TRENDING\nMACD HIST: 0.500\nSTOCHASTIC: 60\nTimeframe pull and close calendar (display only)\nTimeframe pull and close calendar unavailable\nVolatility\nCOMPRESSION\nBBWP: 0.4\nDVE endpoint unavailable — showing Golden Egg volatility data\nOptions / Derivatives\nOptions data not available for AAPL\nScenario Map\n\nAll levels below are bar-close references · 2026-10-05T00:00:00Z\n\nREFERENCE LEVEL\nBullish scenario active at current price $100.00 — reference is the live quote.\n$100.00 (reference)\nRISK LEVEL\n$97.70\nBeyond SMA 50 (structure-anchored, 1.15x ATR buffer)\nKEY LEVELS\n$102.30\n1.0R\nModel zone (1.0× reference-to-invalidation risk)\n$103.45\n1.5R\nModel zone (1.5× reference-to-invalidation risk)\n$105.00\n2.2R\nBB Upper\nHypothetical R:R1.5R\nOpen in Terminal\nLevels are calculated from technical indicators for educational and informational purposes only. This does not constitute financial advice, does not recommend any course of action, and does not consider your personal circumstances. Past performance does not guarantee future results.\nNarrative\nAAPL shows long alignment with 76/100 confluence. Multiple factors support a trend educational scenario.\n• Multiple factors aligned — conditions support educational scenario analysis.\n• Price structure supports the directional thesis.\n• EMA200 below price — long-term anchor agrees.\n• Volatility compressed (BBWP 0.4) — expansion risk is elevated.\nRISKS\nEarnings date UNKNOWN — calendar unavailable; not verified clear of the holding window.\nBacktest300 recorded daily bars\nOpen Backtest with AAPL\n\nSource · Alpha Vantage · 11:00 AEDT Mon 5 Oct · daily\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions."
+      }
+    },
+    {
+      "symbol": "AAPL",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "closed": {
+        "observedAt": "2026-10-05T08:02:39.747Z",
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "scrollHeight": 1328,
+        "scrollWidth": 390,
+        "screens": 1.5734597156398105,
+        "openFolds": [],
+        "verdicts": [],
+        "sourceCount": 1,
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nAAPL\nSymbol · Stock\n\n$100\n\nLast close 2026-10-02 (New York)\nLog to journal\nWatchlist\nBacktest\n\nResearch snapshot only — not a trade instruction.\n\nChange symbolAAPL · daily\n\nNo measured checks were returned in this packet.\n\nBB Upper $105.00\nSMA 20 $99.00\nSMA 50 $98.00\nBB Lower $95.00\nEMA 200 $90.00\n$105.00\n$90.00\n2026-07-05\n2026-10-02\n\n90 daily closes · Alpha Vantage daily bars · last bar 2026-10-02 · grey: 50-day average\n\n99\n\nSMA 20\n\n-1.0% away\n\n98\n\nSMA 50\n\n-2.0% away\n\nScenario map5 recorded levels\nOptionsNo options snapshot in this packet\nEvidence and data checks · 4 checks · Show\nDeep analysis4 recorded components\nBacktest300 recorded daily bars\n\nSource · Alpha Vantage · 11:00 AEDT Mon 5 Oct · daily\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions."
+      },
+      "allOpen": {
+        "observedAt": "2026-10-05T08:02:43.028Z",
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "scrollHeight": 7406,
+        "scrollWidth": 390,
+        "screens": 8.774881516587678,
+        "openFolds": [
+          "Change symbolAAPL · daily",
+          "Scenario map5 recorded levels",
+          "OptionsNo options snapshot in this packet",
+          "Deep analysis4 recorded components",
+          "Backtest300 recorded daily bars"
+        ],
+        "verdicts": [],
+        "sourceCount": 1,
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nAAPL\nSymbol · Stock\n\n$100\n\nLast close 2026-10-02 (New York)\nLog to journal\nWatchlist\nBacktest\n\nResearch snapshot only — not a trade instruction.\n\nChange symbolAAPL · daily\nReview\nAsset \nAuto\nStock\nCrypto\nTimeframe \n15m\n1H\nDaily\nWeekly\n\nNo measured checks were returned in this packet.\n\nBB Upper $105.00\nSMA 20 $99.00\nSMA 50 $98.00\nBB Lower $95.00\nEMA 200 $90.00\n$105.00\n$90.00\n2026-07-05\n2026-10-02\n\n90 daily closes · Alpha Vantage daily bars · last bar 2026-10-02 · grey: 50-day average\n\n99\n\nSMA 20\n\n-1.0% away\n\n98\n\nSMA 50\n\n-2.0% away\n\nScenario map5 recorded levels\n\nBullish scenario active at current price $100.00 — reference is the live quote.\n\nBeyond SMA 50 (structure-anchored, 1.15x ATR buffer)\n\nOptionsNo options snapshot in this packet\n\nOptions feed failed.\n\nOpen options\nEvidence and data checks · 4 checks · Hide\nEVIDENCE\nWhy This Appeared\nSUPPORTED\nlong no qualifying setup has an indicator composite of at least 70/100 with no primary blocker flagged.\nCross Market\nNEUTRAL\nNo cross-market data\nScenario Levels\nAVAILABLE\nReference $100.00 / invalidation $97.70.\nResearch Caution\nMONITOR\nResearch caution: verify whether price interaction confirms or rejects the scenario.\nDeep analysis4 recorded components\nVALIDATION WORKBENCH\nVerdict first, then inspect chart, evidence detail, and business context.\nOPEN LIQUIDITY SWEEP\n1. VERDICT PACKET\nVerdict\n2. PRICE CONTEXT\nChart\n3. EVIDENCE DETAIL\nDeep Analysis\n4. BUSINESS CONTEXT\nFundamentals\nAAPL\nLONG\nGRADE A\nINVALIDATED\nNeutral\nData Checks passed\n$100.00\nequity — 1D — 10/6/2026, 2:43:00 AM\nSCENARIO ALIGNED\nASSESSMENT\nBlocked: NO_STRUCTURAL_STOP\nNO_STRUCTURAL_STOP\nCANONICAL\nIndicator composite 76/100\nEVIDENCE ALIGNMENT\nVERDICT PACKET\nequity · 1D\nASSESSMENT\nScenario Aligned\nDATA TRUST\nGOOD\nREFERENCE\n$100.00\nINVALIDATION\n$97.70\nNEXT CHECK\nMonitor whether price respects the reference level and indicator composite holds.\nBLOCKER\nNone flagged\nSYMBOL EVIDENCE STACK\nWhy This Appeared\nSUPPORTED\nlong no qualifying setup has an indicator composite of at least 70/100 with no primary blocker flagged.\nCross Market\nNEUTRAL\nNo cross-market data\nScenario Levels\nAVAILABLE\nReference $100.00 / invalidation $97.70.\nResearch Caution\nMONITOR\nResearch caution: verify whether price interaction confirms or rejects the scenario.\nQuote · OBSERVED\nRegime · Not collected\nDVE · Not collected\nOptions · Not collected\nTime · Not collected\nVALIDATED SCENARIO LEVELS\nCanonical bars + structure-anchored levels where structure exists; model (ATR) levels are labelled as such. Scanner shows a faster preliminary ATR estimate; these supersede it.\nLEVEL OF INTEREST (MODEL REFERENCE)\nBullish scenario active at current price $100.00 — reference is the live quote.\n$100.00 (reference)\nINVALIDATION (STRUCTURAL · 1.15 ATR)\n$97.70\nBeyond SMA 50 (structure-anchored, 1.15x ATR buffer)\nREACTION ZONES\n$102.30M›\n$103.45M›\n$105.00S\nS = structural level, M = model zone (reference-to-invalidation risk multiple, with price caps labelled). Illustrative R to the primary zone ≈ 1.5 — not a forecast.\nRESEARCH CASE INVALIDATES IF\nREFERENCE OR INVALIDATION LEVEL BECOMES UNAVAILABLE.\nINDICATOR COMPOSITE DROPS BELOW 60/100.\nCROSS-MARKET CONDITIONS FLIP TO HEADWIND.\nDVE FLIPS INTO CLIMAX RISK.\nTIMING NOTE ONLY: MIDPOINT PULL MAY DISAGREE; DOES NOT CHANGE THE VERDICT.\nReference or invalidation level becomes unavailable.\nIndicator composite drops below 60/100.\nCross-market conditions flip to headwind.\nDVE flips into climax risk.\nTiming note only: midpoint pull may disagree; does not change the verdict.\nDriver: Structure leads at 95/100 — price aligned with the 20/50-bar means; EMA200 below price — long-term anchor agrees\nSAVE CASE\nOPEN TERMINAL\nSCORE BREAKDOWN\nStructure (w:30)\n95.0\n28.50 points · 30% effective weight\nLONG structure alignment\nMomentum (w:20)\n80.0\n16.00 points · 20% effective weight\nLONG momentum alignment; 60.0 · bullish momentum\nRisk (w:25)\n75.0\n18.75 points · 25% effective weight\nRisk quality — no material risk flags — volatility, extension and liquidity within normal ranges\n\nCoverage 75% · Component total 75.75 · Final 76/100. Research alignment, not an outcome probability.\n\nCross-Market Influence\nSetup\nSETUP TYPE\nNo qualifying setup\nTHESIS\nAAPL shows a bullish trend continuation setup (ADX 30 confirms trend strength). ADX 30 · trending.\nTIMEFRAME ALIGNMENT\n2/4\n• Daily structure aligned\n• MACD histogram positive\n• Above EMA200 $90.00\nINVALIDATION\nScenario weakens if price closes below $97.70 with volume confirmation.\nStructure\n\nAll levels below are bar-close references · 2026-10-05T00:00:00Z\n\nSTRUCTURE VERDICT:\nAGREE\nHTF\nBullish\nMTF\nBullish\nLTF\nBullish\nKEY LEVELS\nSMA 20 (pivot)\n$99.00\nSMA 50 (support)\n$98.00\nBB Upper (resistance)\n$105.00\nBB Lower (support)\n$95.00\nEMA 200 (support)\n$90.00\nMOMENTUM\nRSI(14): 60.0 · BULLISH MOMENTUM\nADX (TREND STRENGTH): 30 · TRENDING\nMACD HIST: 0.500\nSTOCHASTIC: 60\nTimeframe pull and close calendar (display only)\nTimeframe pull and close calendar unavailable\nVolatility\nCOMPRESSION\nBBWP: 0.4\nDVE endpoint unavailable — showing Golden Egg volatility data\nOptions / Derivatives\nOptions data not available for AAPL\nScenario Map\n\nAll levels below are bar-close references · 2026-10-05T00:00:00Z\n\nREFERENCE LEVEL\nBullish scenario active at current price $100.00 — reference is the live quote.\n$100.00 (reference)\nRISK LEVEL\n$97.70\nBeyond SMA 50 (structure-anchored, 1.15x ATR buffer)\nKEY LEVELS\n$102.30\n1.0R\nModel zone (1.0× reference-to-invalidation risk)\n$103.45\n1.5R\nModel zone (1.5× reference-to-invalidation risk)\n$105.00\n2.2R\nBB Upper\nHypothetical R:R1.5R\nOpen in Terminal\nLevels are calculated from technical indicators for educational and informational purposes only. This does not constitute financial advice, does not recommend any course of action, and does not consider your personal circumstances. Past performance does not guarantee future results.\nNarrative\nAAPL shows long alignment with 76/100 confluence. Multiple factors support a trend educational scenario.\n• Multiple factors aligned — conditions support educational scenario analysis.\n• Price structure supports the directional thesis.\n• EMA200 below price — long-term anchor agrees.\n• Volatility compressed (BBWP 0.4) — expansion risk is elevated.\nRISKS\nEarnings date UNKNOWN — calendar unavailable; not verified clear of the holding window.\nBacktest300 recorded daily bars\nOpen Backtest with AAPL\n\nSource · Alpha Vantage · 11:00 AEDT Mon 5 Oct · daily\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions."
+      }
+    },
+    {
+      "symbol": "NEAR",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "closed": {
+        "observedAt": "2026-10-05T08:02:44.987Z",
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "scrollHeight": 1328,
+        "scrollWidth": 1280,
+        "screens": 1.66,
+        "openFolds": [],
+        "verdicts": [
+          {
+            "text": "NO BASE",
+            "top": 369.5
+          }
+        ],
+        "sourceCount": 1,
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nNEAR\nSymbol · Crypto\n\n$16\n\nLog to journal\nWatchlist\nBacktest\n\nResearch snapshot only — not a trade instruction.\n\nChange symbolNEAR · daily\nNO BASE\n\nNo base: range 128.6% vs the 35% limit. Volume 1.00x the base median (rule: 3x). Last completed bar: 2026-09-28 (UTC day).\n\n✗ Base · 128.6%\n✗ Volume · 1.00x\n✗ Breakout · 1.000\n✓ Extension · 0.00 ATR\nBase high $16.00\nRule stop $13.60\nBase low $7.00\n$16.00\n$7.00\n2026-07-01\n2026-09-28\n\nDaily closes, up to 90 completed UTC daily bars (90 shown) · CoinGecko aggregate daily OHLC · last bar 2026-09-28. Box = the 60-day base the rule uses. Rule stop is the rule's definition, not a recommendation. · grey: 50-day average\n\n$16.00\n\nBase high\n\n$7.00\n\nBase low\n\n$13.60\n\nRule stop\n\nScenario map5 recorded values\nDerivatives5 recorded values\nVolatility and range5 recorded values\nMarket and supply5 recorded values\nEvidence and data checks · 10 sections · Show\n\nResearch snapshot. Not a trade instruction. The rules shown are research rules; none has a proven edge.\n\nMore detail4 recorded components\nBacktest300 recorded daily bars\n\nSource · CoinGecko daily bars · CoinGecko daily bars · 11:00 AEDT Sun 4 Oct · Completed UTC day\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions."
+      },
+      "ruleCheckOpen": {
+        "observedAt": "2026-10-05T08:02:45.326Z",
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "scrollHeight": 2506,
+        "scrollWidth": 1280,
+        "screens": 3.1325,
+        "openFolds": [],
+        "verdicts": [
+          {
+            "text": "NO BASE",
+            "top": -158.5
+          }
+        ],
+        "sourceCount": 1,
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nNEAR\nSymbol · Crypto\n\n$16\n\nLog to journal\nWatchlist\nBacktest\n\nResearch snapshot only — not a trade instruction.\n\nChange symbolNEAR · daily\nNO BASE\n\nNo base: range 128.6% vs the 35% limit. Volume 1.00x the base median (rule: 3x). Last completed bar: 2026-09-28 (UTC day).\n\n✗ Base · 128.6%\n✗ Volume · 1.00x\n✗ Breakout · 1.000\n✓ Extension · 0.00 ATR\nBase high $16.00\nRule stop $13.60\nBase low $7.00\n$16.00\n$7.00\n2026-07-01\n2026-09-28\n\nDaily closes, up to 90 completed UTC daily bars (90 shown) · CoinGecko aggregate daily OHLC · last bar 2026-09-28. Box = the 60-day base the rule uses. Rule stop is the rule's definition, not a recommendation. · grey: 50-day average\n\n$16.00\n\nBase high\n\n$7.00\n\nBase low\n\n$13.60\n\nRule stop\n\nScenario map5 recorded values\nDerivatives5 recorded values\nVolatility and range5 recorded values\nMarket and supply5 recorded values\nEvidence and data checks · 10 sections · Hide\nPrice\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nRule check\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nLiquidity\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nSupply\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nRisks and warnings\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nSources check\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nResearch snapshot. Not a trade instruction. The rules shown are research rules; none has a proven edge.\n\nMore detail4 recorded components\nBacktest300 recorded daily bars\n\nSource · CoinGecko daily bars · CoinGecko daily bars · 11:00 AEDT Sun 4 Oct · Completed UTC day\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions."
+      },
+      "allOpen": {
+        "observedAt": "2026-10-05T08:02:50.116Z",
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "scrollHeight": 6291,
+        "scrollWidth": 1280,
+        "screens": 7.86375,
+        "openFolds": [
+          "Change symbolNEAR · daily",
+          "Scenario map5 recorded values",
+          "Derivatives5 recorded values",
+          "Volatility and range5 recorded values",
+          "Market and supply5 recorded values",
+          "More detail4 recorded components",
+          "Backtest300 recorded daily bars"
+        ],
+        "verdicts": [
+          {
+            "text": "NO BASE",
+            "top": -4880.5
+          }
+        ],
+        "sourceCount": 1,
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nNEAR\nSymbol · Crypto\n\n$16\n\nLog to journal\nWatchlist\nBacktest\n\nResearch snapshot only — not a trade instruction.\n\nChange symbolNEAR · daily\nReview\nAsset \nAuto\nStock\nCrypto\nTimeframe \n15m\n1H\nDaily\nWeekly\nNO BASE\n\nNo base: range 128.6% vs the 35% limit. Volume 1.00x the base median (rule: 3x). Last completed bar: 2026-09-28 (UTC day).\n\n✗ Base · 128.6%\n✗ Volume · 1.00x\n✗ Breakout · 1.000\n✓ Extension · 0.00 ATR\nBase high $16.00\nRule stop $13.60\nBase low $7.00\n$16.00\n$7.00\n2026-07-01\n2026-09-28\n\nDaily closes, up to 90 completed UTC daily bars (90 shown) · CoinGecko aggregate daily OHLC · last bar 2026-09-28. Box = the 60-day base the rule uses. Rule stop is the rule's definition, not a recommendation. · grey: 50-day average\n\n$16.00\n\nBase high\n\n$7.00\n\nBase low\n\n$13.60\n\nRule stop\n\nScenario map5 recorded values\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nDerivatives5 recorded values\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nOpen Crypto Derivatives\nVolatility and range5 recorded values\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nMarket and supply5 recorded values\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nEvidence and data checks · 10 sections · Hide\nPrice\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nRule check\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nLiquidity\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nSupply\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nRisks and warnings\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nSources check\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nResearch snapshot. Not a trade instruction. The rules shown are research rules; none has a proven edge.\n\nMore detail4 recorded components\nVALIDATION WORKBENCH\nVerdict first, then inspect chart, evidence detail, and business context.\nOPEN LIQUIDITY SWEEP\n1. VERDICT PACKET\nVerdict\n2. PRICE CONTEXT\nChart\n3. EVIDENCE DETAIL\nDeep Analysis\n4. BUSINESS CONTEXT\nFundamentals\nNEAR\nLONG\nGRADE C\nINVALIDATED\nNeutral\nData Some checks failed\n$16.00\ncrypto — 1D — 10/6/2026, 2:43:00 AM\nNOT ALIGNED\nASSESSMENT\n43/100\nINDICATOR COMPOSITE\nEVIDENCE ALIGNMENT\nVERDICT PACKET\ncrypto · 1D\nASSESSMENT\nNot Aligned\nDATA TRUST\nSTALE\nREFERENCE\nNot recorded\nINVALIDATION\n$13.60\nNEXT CHECK\nRefresh Golden Egg inputs before relying on reference levels.\nBLOCKER\nData trust stale: last completed bar is behind the market\nSYMBOL EVIDENCE STACK\nWhy This Appeared\nSOME DATA IS OLDER; CHECK ITS DATE BEFORE RESEARCHING FURTHER.\nSome data is older; check its date before researching further.\nCross Market\nNEUTRAL\nNo cross-market data\nScenario Levels\nINCOMPLETE\nScenario reference and invalidation levels are not both available.\nResearch Caution\nACTIVE\nResearch caution: core inputs are incomplete or weak.\nQuote · OBSERVED\nRegime · Not collected\nDVE · Not collected\nDerivatives · Not collected\nTime · Not collected\nVALIDATED SCENARIO LEVELS\nCanonical bars + structure-anchored levels where structure exists; model (ATR) levels are labelled as such. Scanner shows a faster preliminary ATR estimate; these supersede it.\nLEVEL OF INTEREST (MODEL REFERENCE)\nMonitor whether flip conditions are met.\nINVALIDATION (MECHANICAL · 1.2 ATR)\n$13.60\n1.5x ATR model stop — no structural level within 1–2 ATR\nREACTION ZONES\n$18.40M›\n$19.60M›\n$20.80M\nAll zones are model zones based on reference-to-invalidation risk; price caps are labelled. No structural targets were found within range. R is a mechanical calculation, not a forecast.\nRESEARCH CASE INVALIDATES IF\nREFERENCE OR INVALIDATION LEVEL BECOMES UNAVAILABLE.\nDATA TRUST REMAINS DEGRADED OR MISSING.\nINDICATOR COMPOSITE REMAINS BELOW 60/100.\nPRIMARY BLOCKER PERSISTS: DATA TRUST STALE: LAST COMPLETED BAR IS BEHIND THE MARKET.\nCROSS-MARKET CONDITIONS FLIP TO HEADWIND.\nDVE FLIPS INTO CLIMAX RISK.\nReference or invalidation level becomes unavailable.\nData trust remains degraded or missing.\nIndicator composite remains below 60/100.\nPrimary blocker persists: Data trust stale: last completed bar is behind the market.\nCross-market conditions flip to headwind.\nDVE flips into climax risk.\nDriver: Momentum leads at 80/100 — 60.0 · bullish momentum; session +2.0%\nBlocker: Data trust stale: last completed bar is behind the market\nSAVE CASE\nOPEN TERMINAL\nSCORE BREAKDOWN\nStructure (w:30)\n30.0\n12.00 points · 40% effective weight\nLONG structure alignment\nMomentum (w:20)\n80.0\n21.33 points · 27% effective weight\nLONG momentum alignment; 60.0 · bullish momentum\nRisk (w:25)\n30.0\n10.00 points · 33% effective weight\nRisk quality — volatility high — daily-equivalent ATR 12.5%\n\nCoverage 100% · Component total 43.33 · Final 43/100. Research alignment, not an outcome probability.\n\nCross-Market Influence\nSetup\nSETUP TYPE\ntrend\nTHESIS\nNEAR shows a bullish trend continuation setup (ADX 30 confirms trend strength). ADX 30 · trending.\nTIMEFRAME ALIGNMENT\n2/4\n• Daily structure opposing\n• MACD histogram positive\n• Below EMA200 $90.00\nINVALIDATION\nScenario weakens if price closes below $13.60 with volume confirmation.\nStructure\n\nAll levels below are bar-close references · 2026-09-28T00:00:00.000Z\n\nSTRUCTURE VERDICT:\nDISAGREE\nHTF\nBearish\nMTF\nBearish\nLTF\nBullish\nKEY LEVELS\nEMA 200 (resistance)\n$90.00\nBB Lower (support)\n$95.00\nSMA 50 (resistance)\n$98.00\nSMA 20 (pivot)\n$99.00\nBB Upper (resistance)\n$105.00\nMOMENTUM\nRSI(14): 60.0 · BULLISH MOMENTUM\nADX (TREND STRENGTH): 30 · TRENDING\nMACD HIST: 0.500\nSTOCHASTIC: 60\nTimeframe pull and close calendar (display only)\nTimeframe pull and close calendar unavailable\nVolatility\nCOMPRESSION\nBBWP: 0.4\nDVE endpoint unavailable — showing Golden Egg volatility data\nDerivatives\nDerivatives data not available\nScenario Map\n\nAll levels below are bar-close references · 2026-09-28T00:00:00.000Z\n\nREFERENCE LEVEL\nMonitor whether flip conditions are met.\nRISK LEVEL\n$13.60\n1.5x ATR model stop — no structural level within 1–2 ATR\nKEY LEVELS\n$18.40\n1.0R\nModel zone (1.0× reference-to-invalidation risk)\n$19.60\n1.5R\nModel zone (1.5× reference-to-invalidation risk)\n$20.80\n2.0R\nModel zone (2.0× reference-to-invalidation risk (30% price cap))\nHypothetical R:R1.5R\nOpen in Terminal\nLevels are calculated from technical indicators for educational and informational purposes only. This does not constitute financial advice, does not recommend any course of action, and does not consider your personal circumstances. Past performance does not guarantee future results.\nNarrative\nNEAR is not aligned. Data trust stale: last completed bar is behind the market — monitor flip conditions.\n• EMA200 above price — long-term anchor agrees.\n• Price 41.5 ATR from the 20-bar mean — blow-off extension.\n• Volatility compressed (BBWP 0.4) — expansion risk is elevated.\nRISKS\nVolatility high — daily-equivalent ATR 12.5%.\nData trust stale.\nData trust STALE: last completed bar is behind the market.\nStructure score is weak — significant blocker to thesis.\nBacktest300 recorded daily bars\nOpen Backtest with NEAR\n\nSource · CoinGecko daily bars · CoinGecko daily bars · 11:00 AEDT Sun 4 Oct · Completed UTC day\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions."
+      }
+    },
+    {
+      "symbol": "NEAR",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "closed": {
+        "observedAt": "2026-10-05T08:02:51.126Z",
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "scrollHeight": 1803,
+        "scrollWidth": 390,
+        "screens": 2.1362559241706163,
+        "openFolds": [],
+        "verdicts": [
+          {
+            "text": "NO BASE",
+            "top": 365.5
+          }
+        ],
+        "sourceCount": 1,
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nNEAR\nSymbol · Crypto\n\n$16\n\nLog to journal\nWatchlist\nBacktest\n\nResearch snapshot only — not a trade instruction.\n\nChange symbolNEAR · daily\nNO BASE\n\nNo base: range 128.6% vs the 35% limit. Volume 1.00x the base median (rule: 3x). Last completed bar: 2026-09-28 (UTC day).\n\n✗ Base · 128.6%\n✗ Volume · 1.00x\n✗ Breakout · 1.000\n✓ Extension · 0.00 ATR\nBase high $16.00\nRule stop $13.60\nBase low $7.00\n$16.00\n$7.00\n2026-07-01\n2026-09-28\n\nDaily closes, up to 90 completed UTC daily bars (90 shown) · CoinGecko aggregate daily OHLC · last bar 2026-09-28. Box = the 60-day base the rule uses. Rule stop is the rule's definition, not a recommendation. · grey: 50-day average\n\n$16.00\n\nBase high\n\n$7.00\n\nBase low\n\n$13.60\n\nRule stop\n\nScenario map5 recorded values\nDerivatives5 recorded values\nVolatility and range5 recorded values\nMarket and supply5 recorded values\nEvidence and data checks · 10 sections · Show\n\nResearch snapshot. Not a trade instruction. The rules shown are research rules; none has a proven edge.\n\nMore detail4 recorded components\nBacktest300 recorded daily bars\n\nSource · CoinGecko daily bars · CoinGecko daily bars · 11:00 AEDT Sun 4 Oct · Completed UTC day\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions."
+      },
+      "ruleCheckOpen": {
+        "observedAt": "2026-10-05T08:02:51.394Z",
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "scrollHeight": 3113,
+        "scrollWidth": 390,
+        "screens": 3.688388625592417,
+        "openFolds": [],
+        "verdicts": [
+          {
+            "text": "NO BASE",
+            "top": -593.5
+          }
+        ],
+        "sourceCount": 1,
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nNEAR\nSymbol · Crypto\n\n$16\n\nLog to journal\nWatchlist\nBacktest\n\nResearch snapshot only — not a trade instruction.\n\nChange symbolNEAR · daily\nNO BASE\n\nNo base: range 128.6% vs the 35% limit. Volume 1.00x the base median (rule: 3x). Last completed bar: 2026-09-28 (UTC day).\n\n✗ Base · 128.6%\n✗ Volume · 1.00x\n✗ Breakout · 1.000\n✓ Extension · 0.00 ATR\nBase high $16.00\nRule stop $13.60\nBase low $7.00\n$16.00\n$7.00\n2026-07-01\n2026-09-28\n\nDaily closes, up to 90 completed UTC daily bars (90 shown) · CoinGecko aggregate daily OHLC · last bar 2026-09-28. Box = the 60-day base the rule uses. Rule stop is the rule's definition, not a recommendation. · grey: 50-day average\n\n$16.00\n\nBase high\n\n$7.00\n\nBase low\n\n$13.60\n\nRule stop\n\nScenario map5 recorded values\nDerivatives5 recorded values\nVolatility and range5 recorded values\nMarket and supply5 recorded values\nEvidence and data checks · 10 sections · Hide\nPrice\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nRule check\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nLiquidity\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nSupply\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nRisks and warnings\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nSources check\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nResearch snapshot. Not a trade instruction. The rules shown are research rules; none has a proven edge.\n\nMore detail4 recorded components\nBacktest300 recorded daily bars\n\nSource · CoinGecko daily bars · CoinGecko daily bars · 11:00 AEDT Sun 4 Oct · Completed UTC day\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions."
+      },
+      "allOpen": {
+        "observedAt": "2026-10-05T08:02:56.000Z",
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "scrollHeight": 9394,
+        "scrollWidth": 390,
+        "screens": 11.130331753554502,
+        "openFolds": [
+          "Change symbolNEAR · daily",
+          "Scenario map5 recorded values",
+          "Derivatives5 recorded values",
+          "Volatility and range5 recorded values",
+          "Market and supply5 recorded values",
+          "More detail4 recorded components",
+          "Backtest300 recorded daily bars"
+        ],
+        "verdicts": [
+          {
+            "text": "NO BASE",
+            "top": -7859.5
+          }
+        ],
+        "sourceCount": 1,
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nNEAR\nSymbol · Crypto\n\n$16\n\nLog to journal\nWatchlist\nBacktest\n\nResearch snapshot only — not a trade instruction.\n\nChange symbolNEAR · daily\nReview\nAsset \nAuto\nStock\nCrypto\nTimeframe \n15m\n1H\nDaily\nWeekly\nNO BASE\n\nNo base: range 128.6% vs the 35% limit. Volume 1.00x the base median (rule: 3x). Last completed bar: 2026-09-28 (UTC day).\n\n✗ Base · 128.6%\n✗ Volume · 1.00x\n✗ Breakout · 1.000\n✓ Extension · 0.00 ATR\nBase high $16.00\nRule stop $13.60\nBase low $7.00\n$16.00\n$7.00\n2026-07-01\n2026-09-28\n\nDaily closes, up to 90 completed UTC daily bars (90 shown) · CoinGecko aggregate daily OHLC · last bar 2026-09-28. Box = the 60-day base the rule uses. Rule stop is the rule's definition, not a recommendation. · grey: 50-day average\n\n$16.00\n\nBase high\n\n$7.00\n\nBase low\n\n$13.60\n\nRule stop\n\nScenario map5 recorded values\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nDerivatives5 recorded values\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nOpen Crypto Derivatives\nVolatility and range5 recorded values\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nMarket and supply5 recorded values\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nEvidence and data checks · 10 sections · Hide\nPrice\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nRule check\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nLiquidity\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nSupply\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nRisks and warnings\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nSources check\nChange\n249.3506%\nMarket cap\n1089567600.7099\nReference\n0.466412\nRatio\n1.49333\nBlock reason\nNO_SETUP\n\nLocked rule sha256 prefix 181d9024. Base low uses daily lows.\n\nResearch snapshot. Not a trade instruction. The rules shown are research rules; none has a proven edge.\n\nMore detail4 recorded components\nVALIDATION WORKBENCH\nVerdict first, then inspect chart, evidence detail, and business context.\nOPEN LIQUIDITY SWEEP\n1. VERDICT PACKET\nVerdict\n2. PRICE CONTEXT\nChart\n3. EVIDENCE DETAIL\nDeep Analysis\n4. BUSINESS CONTEXT\nFundamentals\nNEAR\nLONG\nGRADE C\nINVALIDATED\nNeutral\nData Some checks failed\n$16.00\ncrypto — 1D — 10/6/2026, 2:43:00 AM\nNOT ALIGNED\nASSESSMENT\n43/100\nINDICATOR COMPOSITE\nEVIDENCE ALIGNMENT\nVERDICT PACKET\ncrypto · 1D\nASSESSMENT\nNot Aligned\nDATA TRUST\nSTALE\nREFERENCE\nNot recorded\nINVALIDATION\n$13.60\nNEXT CHECK\nRefresh Golden Egg inputs before relying on reference levels.\nBLOCKER\nData trust stale: last completed bar is behind the market\nSYMBOL EVIDENCE STACK\nWhy This Appeared\nSOME DATA IS OLDER; CHECK ITS DATE BEFORE RESEARCHING FURTHER.\nSome data is older; check its date before researching further.\nCross Market\nNEUTRAL\nNo cross-market data\nScenario Levels\nINCOMPLETE\nScenario reference and invalidation levels are not both available.\nResearch Caution\nACTIVE\nResearch caution: core inputs are incomplete or weak.\nQuote · OBSERVED\nRegime · Not collected\nDVE · Not collected\nDerivatives · Not collected\nTime · Not collected\nVALIDATED SCENARIO LEVELS\nCanonical bars + structure-anchored levels where structure exists; model (ATR) levels are labelled as such. Scanner shows a faster preliminary ATR estimate; these supersede it.\nLEVEL OF INTEREST (MODEL REFERENCE)\nMonitor whether flip conditions are met.\nINVALIDATION (MECHANICAL · 1.2 ATR)\n$13.60\n1.5x ATR model stop — no structural level within 1–2 ATR\nREACTION ZONES\n$18.40M›\n$19.60M›\n$20.80M\nAll zones are model zones based on reference-to-invalidation risk; price caps are labelled. No structural targets were found within range. R is a mechanical calculation, not a forecast.\nRESEARCH CASE INVALIDATES IF\nREFERENCE OR INVALIDATION LEVEL BECOMES UNAVAILABLE.\nDATA TRUST REMAINS DEGRADED OR MISSING.\nINDICATOR COMPOSITE REMAINS BELOW 60/100.\nPRIMARY BLOCKER PERSISTS: DATA TRUST STALE: LAST COMPLETED BAR IS BEHIND THE MARKET.\nCROSS-MARKET CONDITIONS FLIP TO HEADWIND.\nDVE FLIPS INTO CLIMAX RISK.\nReference or invalidation level becomes unavailable.\nData trust remains degraded or missing.\nIndicator composite remains below 60/100.\nPrimary blocker persists: Data trust stale: last completed bar is behind the market.\nCross-market conditions flip to headwind.\nDVE flips into climax risk.\nDriver: Momentum leads at 80/100 — 60.0 · bullish momentum; session +2.0%\nBlocker: Data trust stale: last completed bar is behind the market\nSAVE CASE\nOPEN TERMINAL\nSCORE BREAKDOWN\nStructure (w:30)\n30.0\n12.00 points · 40% effective weight\nLONG structure alignment\nMomentum (w:20)\n80.0\n21.33 points · 27% effective weight\nLONG momentum alignment; 60.0 · bullish momentum\nRisk (w:25)\n30.0\n10.00 points · 33% effective weight\nRisk quality — volatility high — daily-equivalent ATR 12.5%\n\nCoverage 100% · Component total 43.33 · Final 43/100. Research alignment, not an outcome probability.\n\nCross-Market Influence\nSetup\nSETUP TYPE\ntrend\nTHESIS\nNEAR shows a bullish trend continuation setup (ADX 30 confirms trend strength). ADX 30 · trending.\nTIMEFRAME ALIGNMENT\n2/4\n• Daily structure opposing\n• MACD histogram positive\n• Below EMA200 $90.00\nINVALIDATION\nScenario weakens if price closes below $13.60 with volume confirmation.\nStructure\n\nAll levels below are bar-close references · 2026-09-28T00:00:00.000Z\n\nSTRUCTURE VERDICT:\nDISAGREE\nHTF\nBearish\nMTF\nBearish\nLTF\nBullish\nKEY LEVELS\nEMA 200 (resistance)\n$90.00\nBB Lower (support)\n$95.00\nSMA 50 (resistance)\n$98.00\nSMA 20 (pivot)\n$99.00\nBB Upper (resistance)\n$105.00\nMOMENTUM\nRSI(14): 60.0 · BULLISH MOMENTUM\nADX (TREND STRENGTH): 30 · TRENDING\nMACD HIST: 0.500\nSTOCHASTIC: 60\nTimeframe pull and close calendar (display only)\nTimeframe pull and close calendar unavailable\nVolatility\nCOMPRESSION\nBBWP: 0.4\nDVE endpoint unavailable — showing Golden Egg volatility data\nDerivatives\nDerivatives data not available\nScenario Map\n\nAll levels below are bar-close references · 2026-09-28T00:00:00.000Z\n\nREFERENCE LEVEL\nMonitor whether flip conditions are met.\nRISK LEVEL\n$13.60\n1.5x ATR model stop — no structural level within 1–2 ATR\nKEY LEVELS\n$18.40\n1.0R\nModel zone (1.0× reference-to-invalidation risk)\n$19.60\n1.5R\nModel zone (1.5× reference-to-invalidation risk)\n$20.80\n2.0R\nModel zone (2.0× reference-to-invalidation risk (30% price cap))\nHypothetical R:R1.5R\nOpen in Terminal\nLevels are calculated from technical indicators for educational and informational purposes only. This does not constitute financial advice, does not recommend any course of action, and does not consider your personal circumstances. Past performance does not guarantee future results.\nNarrative\nNEAR is not aligned. Data trust stale: last completed bar is behind the market — monitor flip conditions.\n• EMA200 above price — long-term anchor agrees.\n• Price 41.5 ATR from the 20-bar mean — blow-off extension.\n• Volatility compressed (BBWP 0.4) — expansion risk is elevated.\nRISKS\nVolatility high — daily-equivalent ATR 12.5%.\nData trust stale.\nData trust STALE: last completed bar is behind the market.\nStructure score is weak — significant blocker to thesis.\nBacktest300 recorded daily bars\nOpen Backtest with NEAR\n\nSource · CoinGecko daily bars · CoinGecko daily bars · 11:00 AEDT Sun 4 Oct · Completed UTC day\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions."
+      }
+    }
+  ],
+  "requests": [
+    {
+      "url": "http://127.0.0.1:3104/api/disclosure/status",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/auth/session",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/me",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/context/heartbeat",
+      "method": "POST",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/analytics/heartbeat",
+      "method": "POST",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/auth/session",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/health/data",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/regime",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/favorites",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/scanner/top-cached?type=all&limit=5&_ts=1791187355099",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/golden-egg?symbol=AAPL&timeframe=daily",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/dve?symbol=AAPL&timeframe=daily",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/quote?symbol=AAPL&type=stock",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/scanner/daily-picks?limit=20",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/risk/governor/preferences",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/regime",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/bars?symbol=AAPL&timeframe=daily&limit=140",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/options-chain?symbol=AAPL",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/disclosure/status",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/auth/session",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/me",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/context/heartbeat",
+      "method": "POST",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/analytics/heartbeat",
+      "method": "POST",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/health/data",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/auth/session",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/regime",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/favorites",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/scanner/top-cached?type=all&limit=5&_ts=1791187359092",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/golden-egg?symbol=AAPL&timeframe=daily",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/dve?symbol=AAPL&timeframe=daily",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/quote?symbol=AAPL&type=stock",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/scanner/daily-picks?limit=20",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/risk/governor/preferences",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/regime",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/bars?symbol=AAPL&timeframe=daily&limit=140",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/options-chain?symbol=AAPL",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/disclosure/status",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/auth/session",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/me",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/context/heartbeat",
+      "method": "POST",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/analytics/heartbeat",
+      "method": "POST",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/health/data",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/auth/session",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/regime",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/favorites",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/crypto/breakdown?symbol=NEAR",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/scanner/top-cached?type=all&limit=5&_ts=1791187364209",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/golden-egg?symbol=NEAR&timeframe=daily&type=crypto",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/dve?symbol=NEAR&timeframe=daily&type=crypto",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/quote?symbol=NEAR&type=crypto",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/scanner/daily-picks?limit=20",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/risk/governor/preferences",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/regime",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/disclosure/status",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/auth/session",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/me",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/context/heartbeat",
+      "method": "POST",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/analytics/heartbeat",
+      "method": "POST",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/health/data",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/auth/session",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/regime",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/favorites",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/crypto/breakdown?symbol=NEAR",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/scanner/top-cached?type=all&limit=5&_ts=1791187370492",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/golden-egg?symbol=NEAR&timeframe=daily&type=crypto",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/dve?symbol=NEAR&timeframe=daily&type=crypto",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/quote?symbol=NEAR&type=crypto",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/scanner/daily-picks?limit=20",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/risk/governor/preferences",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3104/api/regime",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    }
+  ],
+  "consoleErrors": []
+}

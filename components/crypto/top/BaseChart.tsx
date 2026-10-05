@@ -2,6 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {V1} from '@/lib/crypto/breakdown/baseBreakoutV1';
 import {topNumber,type TopFacts} from '@/lib/crypto/breakdown/top';
+import {symbolDate} from '@/lib/presentation/symbolDisplay';
 import {COPY} from '../copy';
 import SourceLine from './SourceLine';
 const DAY=86400000;
@@ -22,7 +23,7 @@ export default function BaseChart({top,zone='UTC',model,showSource=true}:{top?:T
  const groups:typeof bars[]=[];
  bars.forEach((b,i)=>{if(!i||Date.parse(b.t)-Date.parse(bars[i-1].t)!==DAY&&(!model||Date.parse(b.t)-Date.parse(bars[i-1].t)>4*DAY))groups.push([]);groups.at(-1)!.push(b);});
  const base=bars.slice(-(V1.baseDays+1),-1),box=base.length===V1.baseDays&&chart.baseHigh!=null&&chart.baseLow!=null;
- const date=bars.at(-1)!.t.slice(0,10),caption=model?`${bars.length} daily closes · ${model.basis} · last bar ${date}`:c.chartCaption(date,V1.baseDays,bars.length);
+ const date=showSource?bars.at(-1)!.t.slice(0,10):symbolDate(bars.at(-1)!.t.slice(0,10),true),caption=model?`${bars.length} daily closes · ${model.basis} · last bar ${date}`:c.chartCaption(date,V1.baseDays,bars.length);
  const averages=bars.map(b=>{const i=allBars.indexOf(b);return i<49?null:{t:b.t,close:allBars.slice(i-49,i+1).reduce((sum,v)=>sum+v.close,0)/50};}).filter((b):b is {t:string;close:number}=>b!==null);
  const baseBox=model?.base??(box?{from:base[0].t,to:base.at(-1)!.t,high:chart.baseHigh!,low:chart.baseLow!}:null);
  // Keep level labels readable when their prices are close; the connector retains the true level.
@@ -36,7 +37,7 @@ export default function BaseChart({top,zone='UTC',model,showSource=true}:{top?:T
    {groups.map((group,i)=><polyline key={i} points={group.map(b=>`${x(b.t).toFixed(2)},${y(b.close).toFixed(2)}`).join(' ')} fill="none" stroke="var(--msp-text)" strokeWidth="1.8" vectorEffect="non-scaling-stroke"/>)}
    {labels.map(l=><g key={l.name}><line x1={left} x2={right} y1={y(l.value)} y2={y(l.value)} stroke="currentColor" strokeDasharray="4 4" opacity="0.6"/><line x1={right} x2={right+8} y1={y(l.value)} y2={l.at} stroke="currentColor" opacity="0.6"/><text x={width-2} y={l.at} textAnchor="end" fontSize="10" fill="currentColor">{c.chartLevel(l.name,topNumber(l.value,'price'))}</text></g>)}
    <text x="0" y="22" fontSize="10" fill="currentColor">{topNumber(max,'price')}</text><text x="0" y="148" fontSize="10" fill="currentColor">{topNumber(min,'price')}</text>
-   <text x={left} y="172" fontSize="10" fill="currentColor">{bars[0].t.slice(0,10)}</text><text x={width-2} y="172" textAnchor="end" fontSize="10" fill="currentColor">{date}</text>
+   <text x={left} y="172" fontSize="10" fill="currentColor">{showSource?bars[0].t.slice(0,10):symbolDate(bars[0].t.slice(0,10),true)}</text><text x={width-2} y="172" textAnchor="end" fontSize="10" fill="currentColor">{date}</text>
   </svg>
   {showSource&&chart.baseLow==null&&<p className="text-xs text-amber-300">{c.baseLowUnavailable}</p>}
   <p className="text-xs text-slate-400">{caption}{!showSource&&averages.length>1?' · grey: 50-day average':''}</p>{showSource&&top&&<SourceLine stamp={top.daily} zone={zone}/>}

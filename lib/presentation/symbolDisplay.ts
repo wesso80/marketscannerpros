@@ -8,7 +8,7 @@ const reasons: Record<string, string> = {
 };
 export function symbolText(value: unknown): string {
   if (value == null) return 'Not recorded';
-  let text = String(value);
+  let text = String(value).replace(/Golden Egg/g, 'Symbol');
   for (const [code, label] of Object.entries(reasons)) text = text.replaceAll(code, label);
   return text.replace(/\b[A-Z]+(?:_[A-Z]+)+\b/g, code => code.toLowerCase().replaceAll('_', ' '))
     .replace(/\b(?:time unknown|time unavailable)\b/gi, 'observation time not recorded')
@@ -30,7 +30,8 @@ export function symbolText(value: unknown): string {
     .replace(/\bprobability\b/gi, 'outcome estimate')
     .replace(/\blikely\b/gi, 'potentially').replace(/\bshould\b/gi, 'may')
     .replace(/\bwill\b/gi, 'may')
-    .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z/g, time => symbolDate(time));
+    .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z/g, time => symbolDate(time))
+    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, day => symbolDate(day,true));
 }
 export function symbolDate(value: string, sessionOnly = false): string {
   const date = new Date(value);

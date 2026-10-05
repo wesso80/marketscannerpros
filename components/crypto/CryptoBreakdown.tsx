@@ -25,7 +25,7 @@ export default function CryptoBreakdown({symbol,timeframe:_,coinId,compact=false
  useEffect(()=>{
   const abort=new AbortController();setLoading(true);setData(null);setError(null);onStamp?.(null);
   const params=new URLSearchParams({symbol:base});if(coinId)params.set('id',coinId);
-  fetch(`/api/crypto/breakdown?${params}`,{signal:abort.signal}).then(async r=>{if(!r.ok)throw Error(COPY.error);const body=await r.json();if(!body.sections||!body.budget)throw Error(COPY.error);if(!abort.signal.aborted){setData(body);onStamp?.({source:[body.top?.daily.source,body.top?.derivatives.source].filter(Boolean).join(' · '),asOf:body.top?.daily.asOf,basis:body.top?.daily.basis});}}).catch(e=>{if(!abort.signal.aborted)setError(e.message);}).finally(()=>{if(!abort.signal.aborted)setLoading(false);});
+  fetch(`/api/crypto/breakdown?${params}`,{signal:abort.signal}).then(async r=>{if(!r.ok)throw Error(COPY.error);const body=await r.json();if(!body.sections||!body.budget)throw Error(COPY.error);if(!abort.signal.aborted){setData(body);onStamp?.({source:[...new Set([body.top?.daily.source,body.top?.derivatives.source].filter(Boolean))].join(' · '),asOf:body.top?.daily.asOf,basis:body.top?.daily.basis});}}).catch(e=>{if(!abort.signal.aborted)setError(e.message);}).finally(()=>{if(!abort.signal.aborted)setLoading(false);});
   return ()=>abort.abort();
  },[base,coinId,refresh,onStamp]);
  if(compact){
@@ -39,7 +39,7 @@ export default function CryptoBreakdown({symbol,timeframe:_,coinId,compact=false
      {detail(key)}{key==='derivatives'&&<a className="inline-flex min-h-10 items-center underline" href={`/tools/crypto-dashboard?symbol=${encodeURIComponent(base)}`}>Open Crypto Derivatives</a>}
     </CollapsibleSection>)}
     <ChipRow items={[{id:'evidence',label:`${Object.values(data.sections).some(s=>['Unknown','Degraded'].includes(s.status))?'Some data checks failed':'Evidence and data checks'} · ${Object.keys(data.sections).length} sections`,warning:Object.values(data.sections).some(s=>['Unknown','Degraded'].includes(s.status)),detail:<div className="space-y-3">{(['price','ruleCheck','liquidity','supply','risks','sourcesCheck'] as const).map(key=><div key={key}><h3 className="font-semibold">{COPY.titles[key]}</h3>{detail(key)}</div>)}</div>}]}/>
-    {showSource&&<PageSourceLine source={[data.top?.daily.source,data.top?.derivatives.source].filter(Boolean).join(' · ')} asOf={data.top?.daily.asOf} basis={data.top?.daily.basis}/>}
+    {showSource&&<PageSourceLine source={[...new Set([data.top?.daily.source,data.top?.derivatives.source].filter(Boolean))].join(' · ')} asOf={data.top?.daily.asOf} basis={data.top?.daily.basis}/>}
    </>}
    <p className="text-xs text-[var(--msp-text-muted)]">{COPY.footer}</p>
   </div>;

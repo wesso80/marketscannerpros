@@ -47,3 +47,7 @@ it('Pro price header shows dated session close without inventing an instant',()=
  const {container}=render(<SymbolSnapshotHeader compact symbol="AAPL" asset="equity" timeframe="daily" stamp={{assetType:'equity',price:250,priceBasis:'last_close',latestDay:'2026-10-02'}} pick={null}/>);
  expect(container.textContent).toContain('Last close Fri, 2 Oct (New York)');expect(container.textContent).not.toMatch(raw);
 });
+
+it('renders date-only chart/session labels as readable dates without changing ISO instants',()=>{expect(symbolText('Last completed bar: 2026-09-28 (UTC day).')).toBe('Last completed bar: Mon, 28 Sept (UTC day).');});
+
+it('maps the legacy Symbol name inside rendered next-check text',()=>{expect(symbolText('Refresh Golden Egg inputs.')).toBe('Refresh Symbol inputs.');});
