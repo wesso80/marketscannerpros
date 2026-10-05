@@ -908,9 +908,9 @@ describe('layout and flow audit regressions', () => {
     expect(cryptoExplorerPage).not.toContain('❌ {error}');
     expect(commoditiesPage).toContain('type ReviewState');
     expect(commoditiesPage).toContain('const reviewBadge');
-    expect(commoditiesPage).toContain('REVIEW: {derivedState.reviewState');
-    expect(commoditiesPage).toContain('Long Evidence');
-    expect(commoditiesPage).toContain('Scenario Implications');
+    expect(commoditiesPage).toContain('data-commodity-verdict');
+    expect(commoditiesPage).toContain('Upside case');
+    expect(commoditiesPage).toContain('Market context');
     expect(commoditiesPage).not.toContain('type PermissionState');
     expect(commoditiesPage).not.toContain('const permissionBadge');
     expect(commoditiesPage).not.toContain("{derivedState.longsAllowed ? 'Allowed' : 'Restricted'}");

@@ -565,359 +565,68 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
     );
   }
 
+  const eligible = filteredCommodities.filter((item) => item.eligibleForGate);
+  const excluded = filteredCommodities.filter((item) => !item.eligibleForGate);
+  const plain = (value: string) => value.toLowerCase().replaceAll('_', ' ');
   const mainContent = (
-    <div className={embedded ? 'text-white' : 'min-h-screen bg-[var(--msp-bg)] text-white'}>
-      {!embedded && (
-        <ToolsPageHeader 
-          badge="Commodities"
-          title="Commodities Dashboard" 
-          subtitle="Real-time commodity impulse, rotation, and inflation/growth confirmation"
-          icon="CMD"
-          actions={
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/60">US/Eastern aligned</span>
-              <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/60">
-                {data?.lastUpdate ? `Fetched ${new Date(data.lastUpdate).toLocaleTimeString()}` : 'Awaiting update'}
-              </span>
-              <label className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70">
-                <input id="auto-refresh" name="autoRefresh" type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
-                Auto refresh (15m)
-              </label>
-              <button
-                type="button"
-                onClick={fetchCommodities}
-                className="rounded-md border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-200"
-              >
-                Refresh
-              </button>
-            </div>
-          }
-        />
-      )}
-      <main className={embedded ? 'py-2' : 'mx-auto max-w-none px-4 py-6 sm:px-6 lg:px-8'}>
-        <ComplianceDisclaimer compact />
-        {data?.dataHealth && data.dataHealth.staleSymbols.length > 0 && (
-          <section className={`mt-4 rounded-xl border px-4 py-3 text-sm ${data.dataHealth.gateReady ? 'border-amber-400/30 bg-amber-500/10 text-amber-100' : 'border-rose-400/30 bg-rose-500/10 text-rose-100'}`}>
-            <div className="font-semibold">{data.dataHealth.gateReady ? 'Data degraded — stale rows excluded from analysis' : 'Analysis gate unavailable — insufficient fresh commodity coverage'}</div>
-            <div className="mt-1 text-xs opacity-80">
-              Gate eligible {data.dataHealth.eligibleCount}/{data.dataHealth.totalCount}. Excluded: {data.dataHealth.staleSymbols.join(', ')}.
-              {data.sourceAsOf ? ` Latest eligible source date: ${data.sourceAsOf}.` : ''}
-            </div>
-          </section>
-        )}
-        {derivedState && (
-          <>
-            <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <article className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <h2 className="text-sm font-semibold text-white/90">Commodities Analysis Gate</h2>
-                  <span className={`rounded-md border px-2 py-1 text-[11px] font-semibold ${reviewBadge[derivedState.reviewState]}`}>
-                    REVIEW: {derivedState.reviewState === 'YES' ? 'CLEAR' : derivedState.reviewState === 'CONDITIONAL' ? 'CAUTION' : 'BLOCKED'}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <span className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/20 px-2 py-1 text-white/75">
-                    Impulse: {derivedState.impulseType}
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/20 px-2 py-1 text-white/75">
-                    Rotation: {derivedState.rotationLeader}
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/20 px-2 py-1 text-white/75">
-                    USD: {derivedState.usdImpact}
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/20 px-2 py-1 text-white/75">
-                    Real Rates: {derivedState.realRatesImpact}
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/20 px-2 py-1 text-white/75">
-                    Vol: {derivedState.volRegime}
-                  </span>
-                </div>
-                <p className="mt-3 text-sm text-white/70">{derivedState.reviewReason}</p>
-                <div className="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
-                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
-                    <span className="text-white/60">Long Evidence</span>
-                    <span className={derivedState.longsAllowed ? 'text-emerald-300' : 'text-rose-300'}>
-                      {derivedState.longsAllowed ? 'Clear' : 'Limited'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
-                    <span className="text-white/60">Short Evidence</span>
-                    <span className={derivedState.shortsAllowed ? 'text-emerald-300' : 'text-rose-300'}>
-                      {derivedState.shortsAllowed ? 'Clear' : 'Limited'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
-                    <span className="text-white/60">Breakouts</span>
-                    <span className={derivedState.breakoutsAllowed ? 'text-emerald-300' : 'text-amber-300'}>
-                      {derivedState.breakoutsAllowed ? 'Supportive' : 'Mixed'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
-                    <span className="text-white/60">Mean Reversion</span>
-                    <span className={derivedState.meanReversionAllowed ? 'text-emerald-300' : 'text-amber-300'}>
-                      {derivedState.meanReversionAllowed ? 'Supportive' : 'Mixed'}
-                    </span>
-                  </div>
-                </div>
-              </article>
-
-              <article className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-                <h2 className="mb-3 text-sm font-semibold text-white/90">Environment Breakdown</h2>
-                <div className="space-y-1 text-sm">
-                  <div className="flex items-center justify-between border-b border-white/5 py-1">
-                    <span className="text-white/60">Macro Regime</span>
-                    <span className="text-white/80">{derivedState.macroRiskState}</span>
-                  </div>
-                  <div className="flex items-center justify-between border-b border-white/5 py-1">
-                    <span className="text-white/60">USD Trend</span>
-                    <span className="text-white/80">{trendIcon[derivedState.usdTrend]} {derivedState.usdTrend} ({derivedState.usdImpact})</span>
-                  </div>
-                  <div className="flex items-center justify-between border-b border-white/5 py-1">
-                    <span className="text-white/60">Real Rates Trend</span>
-                    <span className="text-white/80">{trendIcon[derivedState.realRatesTrend]} {derivedState.realRatesTrend} ({derivedState.realRatesImpact})</span>
-                  </div>
-                  <div className="flex items-center justify-between border-b border-white/5 py-1">
-                    <span className="text-white/60">Growth Proxy</span>
-                    <span className="text-white/80">{trendIcon[derivedState.growthTrend]} {derivedState.growthTrend} ({derivedState.growthSupport})</span>
-                  </div>
-                  <div className="flex items-center justify-between py-1">
-                    <span className="text-white/60">Commodity Breadth</span>
-                    <span className="text-white/80">{derivedState.breadthScore}/100</span>
-                  </div>
-                </div>
-                {(derivedState.volRegime === 'EXPANSION' && derivedState.signalQuality !== 'HIGH') && (
-                  <p className="mt-3 rounded-md border border-amber-400/30 bg-amber-500/10 px-2 py-1 text-xs text-amber-200">
-                    Correlation warning: high cross-asset volatility, reduce leverage until signal quality improves.
-                  </p>
-                )}
-              </article>
-            </section>
-
-            <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <article className="rounded-xl border border-white/10 bg-white/5 p-4">
-                <h3 className="mb-2 text-sm font-semibold text-white/90">Rotation Leader Strip</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
-                    <span className="text-white/60">Energy vs Metals</span>
-                    <span className={derivedState.relative.energyVsMetals >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
-                      {signed(derivedState.relative.energyVsMetals)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
-                    <span className="text-white/60">Metals vs Ag</span>
-                    <span className={derivedState.relative.metalsVsAg >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
-                      {signed(derivedState.relative.metalsVsAg)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
-                    <span className="text-white/60">Copper vs Gold</span>
-                    <span className={derivedState.relative.copperVsGold >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
-                      {signed(derivedState.relative.copperVsGold)}
-                    </span>
-                  </div>
-                </div>
-                <div className="mt-3 inline-flex items-center gap-2 rounded-md border border-emerald-400/30 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-200">
-                  Leader: {derivedState.rotationLeader}
-                </div>
-              </article>
-
-              <article className="rounded-xl border border-white/10 bg-white/5 p-4">
-                <h3 className="mb-2 text-sm font-semibold text-white/90">Breadth & Participation</h3>
-                <div className="text-2xl font-bold text-white/90">{derivedState.breadthScore}</div>
-                <div className="text-xs text-white/60">Breadth Score (0-100)</div>
-                <div className="mt-3 flex items-center gap-3 text-sm">
-                  <span className="text-emerald-300">{data?.summary.gainers} Advancing</span>
-                  <span className="text-rose-300">{data?.summary.losers} Declining</span>
-                </div>
-                <div className="mt-2 text-xs text-white/70">
-                  Participation: {derivedState.breadthScore >= 65 ? 'Strong' : derivedState.breadthScore >= 45 ? 'Mixed' : 'Weak'}
-                </div>
-              </article>
-
-              <article className="rounded-xl border border-white/10 bg-white/5 p-4">
-                <h3 className="mb-2 text-sm font-semibold text-white/90">Trend Quality</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
-                    <span className="text-white/60">Impulse Stability</span>
-                    <span className="text-white/80">{derivedState.impulseStability}</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
-                    <span className="text-white/60">Volatility</span>
-                    <span className="text-white/80">{derivedState.volRegime}</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
-                    <span className="text-white/60">Signal Quality</span>
-                    <span className="text-white/80">{derivedState.signalQuality}</span>
-                  </div>
-                </div>
-              </article>
-            </section>
-
-            <section className="mt-4 rounded-xl border border-white/10 bg-white/5 p-4">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    aria-pressed={selectedCategory === 'all'}
-                    onClick={() => setSelectedCategory('all')}
-                    className={`rounded-md border px-3 py-1 text-xs ${selectedCategory === 'all' ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200' : 'border-white/15 bg-black/20 text-white/70'}`}
-                  >
-                    All ({data?.commodities.length || 0})
-                  </button>
-                  {(['Energy', 'Metals', 'Agriculture'] as const).map((cat) => (
-                    <button
-                      type="button"
-                      key={cat}
-                      aria-pressed={selectedCategory === cat}
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`rounded-md border px-3 py-1 text-xs ${selectedCategory === cat ? 'border-white/30 bg-white/10 text-white' : 'border-white/15 bg-black/20 text-white/70'}`}
-                    >
-                      {CATEGORY_CONFIG[cat].icon} {cat} ({data?.byCategory[cat]?.length || 0})
-                    </button>
-                  ))}
-                </div>
-                <div className="text-xs text-white/60">Sort: Market Impact (default)</div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredCommodities.map((commodity) => {
-                  const safeCommodityChangePercent = safeNumber(commodity.changePercent) ?? 0;
-                  const isPositive = safeCommodityChangePercent >= 0;
-                  const catConfig = CATEGORY_CONFIG[commodity.category as keyof typeof CATEGORY_CONFIG];
-                  const inflationSensitive = commodity.category === 'Energy' || commodity.symbol === 'GOLD';
-                  const growthSensitive = commodity.symbol === 'WTI' || commodity.symbol === 'COPPER' || commodity.category === 'Energy';
-                  const usdSensitive = commodity.symbol === 'GOLD' || commodity.symbol === 'SILVER';
-                  const longAllowed = commodity.eligibleForGate && derivedState.longsAllowed && safeCommodityChangePercent > -1.5;
-                  const shortAllowed = commodity.eligibleForGate && derivedState.shortsAllowed && safeCommodityChangePercent < 1.5;
-
-                  return (
-                    <article key={commodity.symbol} className="rounded-xl border border-white/10 bg-white/5 p-4 transition hover:bg-white/[0.07]">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] font-black text-white/70">{COMMODITY_ICONS[commodity.symbol] || 'CMD'}</span>
-                          <div>
-                            <div className="text-sm font-semibold text-white/90">{commodity.name}</div>
-                            <div
-                              className="mt-1 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px]"
-                              style={{ color: catConfig.color, background: catConfig.bgColor }}
-                            >
-                              {catConfig.icon} {commodity.category}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-3">
-                        <div className="text-2xl font-bold text-white/90">{formatPrice(commodity.price, commodity.unit)}</div>
-                        <div className="text-[11px] text-white/45">{commodity.unit}</div>
-                      </div>
-
-                      <div className={`mt-2 flex items-center gap-2 rounded-md px-2 py-1 text-sm ${isPositive ? 'bg-emerald-500/10 text-emerald-300' : 'bg-rose-500/10 text-rose-300'}`}>
-                        <span>{isPositive ? '▲' : '▼'}</span>
-                        <span>{formatChange(commodity.change, commodity.changePercent)}</span>
-                      </div>
-
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {inflationSensitive && <span className={`rounded px-1.5 py-0.5 text-[11px] border ${chipTone.warn}`}>Inflation-sensitive</span>}
-                        {growthSensitive && <span className={`rounded px-1.5 py-0.5 text-[11px] border ${chipTone.good}`}>Growth-sensitive</span>}
-                        {usdSensitive && <span className={`rounded px-1.5 py-0.5 text-[11px] border ${chipTone.neutral}`}>USD-sensitive</span>}
-                        {Math.abs(safeCommodityChangePercent) > 1.4 && (
-                          <span className={`rounded px-1.5 py-0.5 text-[11px] border ${chipTone.bad}`}>Breakout watch</span>
-                        )}
-                      </div>
-
-                      {sparklineBars(commodity.history, isPositive)}
-
-                      <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-                        <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
-                          <span className="text-white/55">Long Evidence</span>
-                          <span className={longAllowed ? 'text-emerald-300' : 'text-amber-300'}>{longAllowed ? 'Clear' : 'Limited'}</span>
-                        </div>
-                        <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
-                          <span className="text-white/55">Short Evidence</span>
-                          <span className={shortAllowed ? 'text-emerald-300' : 'text-amber-300'}>{shortAllowed ? 'Clear' : 'Limited'}</span>
-                        </div>
-                      </div>
-
+    <div className="text-white">
+      {!embedded && <ToolsPageHeader badge="Markets" title="Commodities" subtitle="Commodity observations and market context" icon="CMD" />}
+      <main className={embedded ? 'space-y-3' : 'mx-auto max-w-6xl space-y-3 p-4'}>
+        <section className="rounded-xl border border-white/10 bg-white/5 p-4">
+          <p className="text-sm text-white/60">Commodities overview</p>
+          <p data-commodity-verdict className="mt-1 text-lg font-semibold">{derivedState ? (derivedState.reviewState === 'YES' ? 'Broad participation observed' : derivedState.reviewState === 'CONDITIONAL' ? 'Mixed commodity evidence' : 'Limited commodity alignment') : 'Insufficient current observations'}</p>
+          <p className="mt-1 text-sm text-white/65">{derivedState ? `${derivedState.rotationLeader} leads · ${derivedState.breadthScore}% advancing · ${plain(derivedState.impulseType)} conditions` : 'The available data does not support a combined market assessment.'}</p>
+        </section>
+        {data?.dataHealth?.gateReady === false && <p data-commodity-warning className="text-sm text-amber-200">Stale data limits this assessment; excluded observations are not used.</p>}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label className="text-xs text-white/65">Category <select aria-label="Commodity category" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value as typeof selectedCategory)} className="ml-2 rounded border border-white/15 bg-slate-900 p-2 text-white"><option value="all">All commodities</option>{(['Energy', 'Metals', 'Agriculture'] as const).map(cat => <option key={cat}>{cat}</option>)}</select></label>
+          <button type="button" onClick={fetchCommodities} className="rounded border border-white/15 px-3 py-2 text-xs">Refresh</button>
+        </div>
+        {derivedState && <p data-commodity-legend className="text-xs text-white/60">Evidence legend: Upside case = rising-price conditions; Downside case = falling-price conditions. Clear or limited describes observed alignment, not a recommendation.</p>}
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {eligible.map(commodity => {
+            const safeCommodityChangePercent = safeNumber(commodity.changePercent) ?? 0;
+            const longAllowed = derivedState && commodity.eligibleForGate && derivedState.longsAllowed && safeCommodityChangePercent > -1.5;
+            const shortAllowed = derivedState && commodity.eligibleForGate && derivedState.shortsAllowed && safeCommodityChangePercent < 1.5;
+            return <article data-commodity-card key={commodity.symbol} className="min-w-0 rounded-lg border border-white/10 bg-white/5 p-3">
+              <div className="flex items-start justify-between gap-2"><h3 className="min-w-0 text-sm font-semibold">{commodity.name}</h3><span className="shrink-0 text-sm">{formatPrice(commodity.price, commodity.unit)}</span></div>
+              <div className="mt-1 flex justify-between gap-2 text-xs text-white/60"><span>{commodity.category}</span><span>{signed(commodity.changePercent)}</span></div>
+              <details className="mt-2 text-xs text-white/60"><summary className="cursor-pointer">Observation details</summary>
+                <p className="mt-2">{commodity.unit}</p>
+                {derivedState && <p className="mt-1">Upside case: {longAllowed ? 'Clear' : 'Limited'} · Downside case: {shortAllowed ? 'Clear' : 'Limited'}</p>}
                       <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-white/40">
                         <span className={commodity.freshnessStatus === 'STALE' ? 'text-rose-300' : commodity.freshnessStatus === 'DELAYED' ? 'text-amber-300' : 'text-emerald-300'}>
                           {commodity.cadence === 'monthly' && commodity.freshnessStatus !== 'STALE' ? 'MONTHLY' : commodity.freshnessStatus}{commodity.sourceSymbol ? ` · proxy ${commodity.sourceSymbol}` : ''}
                         </span>
                         <span>{commodity.asOfLabel ?? `Source date: ${commodity.date} · age ${commodity.dataAgeDays}d`}</span>
                       </div>
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
 
-            <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <article className="rounded-xl border border-white/10 bg-white/5 p-4">
-                <h3 className="mb-2 text-sm font-semibold text-white/90">USD Driver (DXY proxy)</h3>
-                <p className="text-sm text-white/80">{trendIcon[derivedState.usdTrend]} {derivedState.usdTrend} → {derivedState.usdImpact}</p>
-                <p className="mt-2 text-xs text-white/60">What this means: stronger USD suppresses commodities; weaker USD supports broad upside.</p>
-              </article>
-              <article className="rounded-xl border border-white/10 bg-white/5 p-4">
-                <h3 className="mb-2 text-sm font-semibold text-white/90">Rates Driver (Real yield proxy)</h3>
-                <p className="text-sm text-white/80">{trendIcon[derivedState.realRatesTrend]} {derivedState.realRatesTrend} → {derivedState.realRatesImpact}</p>
-                <p className="mt-2 text-xs text-white/60">What this means: rising real rates pressure metals, falling real rates support gold and inflation trades.</p>
-              </article>
-              <article className="rounded-xl border border-white/10 bg-white/5 p-4">
-                <h3 className="mb-2 text-sm font-semibold text-white/90">Inflation/Growth Driver</h3>
-                <p className="text-sm text-white/80">{trendIcon[derivedState.growthTrend]} {derivedState.growthTrend} → {derivedState.growthSupport}</p>
-                <p className="mt-2 text-xs text-white/60">What this means: copper + energy leadership confirms growth impulse; weak ag dampens food inflation pressure.</p>
-              </article>
-            </section>
-
-            <section className="mt-4 rounded-xl border border-white/10 bg-white/5 p-4">
-              <h3 className="mb-3 text-sm font-semibold text-white/90">Scenario Implications</h3>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 text-sm">
-                <div className="rounded-md border border-white/10 bg-black/20 p-3">
-                  <div className="mb-2 text-xs font-medium text-[var(--msp-text-muted)]">Long scenario</div>
-                  <p className="text-white/75">
-                    {derivedState.rotationLeader === 'Energy' ? 'Review Energy leaders.' : `Review ${derivedState.rotationLeader} leaders.`}{' '}
-                    {derivedState.realRatesTrend === 'UP' ? 'Gold breakout evidence is weaker while real rates rise.' : 'Gold evidence improves if breadth confirms.'}
-                  </p>
-                </div>
-                <div className="rounded-md border border-white/10 bg-black/20 p-3">
-                  <div className="mb-2 text-xs font-medium text-[var(--msp-text-muted)]">Short scenario</div>
-                  <p className="text-white/75">
-                    {derivedState.impulseType === 'DEFLATION'
-                      ? 'Deflation pressure adds evidence for weakness in the weakest complex.'
-                      : 'Overextended spikes need volatility expansion and weaker breadth before relying on a reversal scenario.'}
-                  </p>
-                </div>
-                <div className="rounded-md border border-white/10 bg-black/20 p-3">
-                  <div className="mb-2 text-xs font-medium text-[var(--msp-text-muted)]">Portfolio review</div>
-                  <p className="text-white/75">
-                    {derivedState.impulseType === 'INFLATION' && 'Inflation impulse building; review duration risk and real-asset evidence.'}
-                    {derivedState.impulseType === 'GROWTH' && 'Growth impulse active; review cyclicals and copper-linked evidence.'}
-                    {derivedState.impulseType === 'DEFLATION' && 'Deflation pressure rising; high-beta and weak breakout evidence needs extra scrutiny.'}
-                    {derivedState.impulseType === 'MIXED' && 'Mixed impulse; keep assumptions conservative and prioritize confirmation over anticipation.'}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-3 rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/75">
-                Analysis summary: {derivedState.impulseType} impulse, {derivedState.rotationLeader} leading, review {derivedState.reviewState.toLowerCase()} ({derivedState.score}/100).
-              </div>
-            </section>
-
-            <section className="mt-4 flex flex-wrap justify-end gap-2">
-              <button type="button" disabled className="cursor-not-allowed rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/45" title="Coming soon">Create Alert</button>
-              <button type="button" disabled className="cursor-not-allowed rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/45" title="Coming soon">Add to Watchlist</button>
-              <button type="button" disabled className="cursor-not-allowed rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/45" title="Coming soon">Run Confluence Scan</button>
-              <button type="button" disabled className="cursor-not-allowed rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/45" title="Coming soon">Open Journal Draft</button>
-            </section>
-          </>
-        )}
-
-        {data?.lastUpdate && (
-          <div className="mt-6 text-center text-xs text-white/45">
-            Data from Alpha Vantage • Request fetched: {new Date(data.lastUpdate).toLocaleTimeString()}
-            {data.sourceAsOf ? ` • Latest eligible source date: ${data.sourceAsOf}` : ''}
-            {autoRefresh && ' • Refetching every 15 minutes'}
-          </div>
-        )}
+              </details>
+            </article>;
+          })}
+        </div>
+        {!eligible.length && <p className="text-sm text-amber-200">No included observations in this category.</p>}
+        {excluded.length > 0 && <details data-excluded-commodities className="rounded-lg border border-amber-400/25 px-3 py-2 text-xs text-amber-100">
+          <summary className="cursor-pointer">{excluded.length} excluded {excluded.length === 1 ? 'observation' : 'observations'} · date check failed</summary>
+          <p className="mt-2">These rows are excluded from the assessment by the data feed.</p>
+          <ul className="mt-2 space-y-1">{excluded.map(item => <li key={item.symbol}>{item.name} · {item.asOfLabel || item.date} · {formatPrice(item.price, item.unit)}</li>)}</ul>
+        </details>}
+        {derivedState && <details className="rounded-lg border border-white/10 px-3 py-2 text-sm">
+          <summary className="cursor-pointer">Market context</summary>
+          <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-white/65">
+            <dt>Assessment score</dt><dd>{derivedState.score}/100</dd>
+            <dt>US dollar proxy</dt><dd>{plain(derivedState.usdTrend)} · {plain(derivedState.usdImpact)}</dd>
+            <dt>Real rates</dt><dd>{plain(derivedState.realRatesTrend)} · {plain(derivedState.realRatesImpact)}</dd>
+            <dt>Growth proxy</dt><dd>{plain(derivedState.growthTrend)} · {plain(derivedState.growthSupport)}</dd>
+            <dt>Market context</dt><dd>{plain(derivedState.macroRiskState)}</dd>
+            <dt>Price range</dt><dd>{plain(derivedState.volRegime)}</dd>
+            <dt>Energy vs metals</dt><dd>{signed(derivedState.relative.energyVsMetals)}</dd>
+            <dt>Metals vs agriculture</dt><dd>{signed(derivedState.relative.metalsVsAg)}</dd>
+            <dt>Copper vs gold</dt><dd>{signed(derivedState.relative.copperVsGold)}</dd>
+          </dl>
+        </details>}
+        <p data-commodity-source className="text-xs text-white/45">Source: Alpha Vantage · {data?.sourceAsOf ? `Latest included observation: ${new Date(`${data.sourceAsOf}T12:00:00Z`).toLocaleDateString('en-AU', {timeZone:'UTC',weekday:'short',day:'numeric',month:'short'}).replace(',', '')}` : 'Observation date not collected'}{data?.lastUpdate ? ` · Retrieved ${new Date(data.lastUpdate).toLocaleString('en-AU', {timeZone:'Australia/Sydney',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})}` : ''} · Individual dates and proxy units in observation details.</p>
+        <ComplianceDisclaimer compact />
       </main>
     </div>
   );

@@ -1,0 +1,299 @@
+{
+  "mocked": true,
+  "root": "/workspace/scratch/0535040d28c6/symbol-w1-baseline",
+  "results": [
+    {
+      "symbol": "commodities",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "closed": {
+        "observedAt": "2026-10-05T08:14:11.072Z",
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "scrollHeight": 2720,
+        "scrollWidth": 1280,
+        "screens": 3.4,
+        "openFolds": [],
+        "verdicts": [],
+        "sourceCount": 0,
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime unavailable\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Golden Egg\nOpen Macro Lens\nSectors leading\n—\nSector data loading\nCrypto cap\n$2.1T\nBTC 58.0% · ETH 12.0%\nTop gainer\n—\nMovers loading\nNext check\nCommodities\nPick one lens, then drop into Scanner or Golden Egg\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nData degraded — stale rows excluded from analysis\nGate eligible 9/10. Excluded: SUGAR. Latest eligible source date: 2026-10-02.\nCommodities Analysis Gate\nREVIEW: CAUTION\nImpulse: MIXED\nRotation: Metals\nUSD: NEUTRAL\nReal Rates: NEUTRAL\nVol: COMPRESSION\n\nMIXED conditions are incomplete; indicators suggest caution.\n\nLong Evidence\nClear\nShort Evidence\nLimited\nBreakouts\nMixed\nMean Reversion\nSupportive\nEnvironment Breakdown\nMacro Regime\nNEUTRAL\nUSD Trend\n→ FLAT (NEUTRAL)\nReal Rates Trend\n→ FLAT (NEUTRAL)\nGrowth Proxy\n→ FLAT (NEUTRAL)\nCommodity Breadth\n44/100\nRotation Leader Strip\nEnergy vs Metals\n-0.84%\nMetals vs Ag\n+1.52%\nCopper vs Gold\n+0.00%\nLeader: Metals\nBreadth & Participation\n44\nBreadth Score (0-100)\n4 Advancing\n5 Declining\nParticipation: Weak\nTrend Quality\nImpulse Stability\nCHOPPY\nVolatility\nCOMPRESSION\nSignal Quality\nLOW\nAll (10)\nEN Energy (3)\nMT Metals (4)\nAG Agriculture (3)\nSort: Market Impact (default)\nWTI\nUSO (WTI Crude Oil proxy)\nEN Energy\n$45.12\nUSD per fund share\n▼\n+0.50 (+-0.79%)\nInflation-sensitive\nGrowth-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED · proxy USO\nSource date: 2026-10-02 · age 3d\nCMD\nBNO (Brent Crude Oil proxy)\nEN Energy\n$55.12\nUSD per fund share\n▲\n+0.50 (+1.23%)\nInflation-sensitive\nGrowth-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED · proxy BNO\nSource date: 2026-10-02 · age 3d\nNG\nUNG (Natural Gas proxy)\nEN Energy\n$65.12\nUSD per fund share\n▼\n+0.50 (+-0.79%)\nInflation-sensitive\nGrowth-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED · proxy UNG\nSource date: 2026-10-02 · age 3d\nAU\nGold\nMT Metals\n$75.12\nUSD per unit\n▲\n+0.50 (+1.23%)\nInflation-sensitive\nUSD-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nAG\nSilver\nMT Metals\n$85.12\nUSD per unit\n▼\n+0.50 (+-0.79%)\nUSD-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nCU\nCopper\nMT Metals\n$95.12\nUSD per unit\n▲\n+0.50 (+1.23%)\nGrowth-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nWHT\nWheat\nAG Agriculture\n$105.12\nUSD per unit\n▼\n+0.50 (+-0.79%)\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nCMD\nAluminum\nMT Metals\n$115.12\nUSD per unit\n▲\n+0.50 (+1.23%)\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nCMD\nCoffee\nAG Agriculture\n$125.12\nUSD per unit\n▼\n+0.50 (+-0.79%)\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nCMD\nSugar\nAG Agriculture\n$135.12\nUSD per unit\n▲\n+0.50 (+1.23%)\nLong Evidence\nLimited\nShort Evidence\nLimited\nSTALE\nSource date: 2026-01-01 · age 277d\nUSD Driver (DXY proxy)\n\n→ FLAT → NEUTRAL\n\nWhat this means: stronger USD suppresses commodities; weaker USD supports broad upside.\n\nRates Driver (Real yield proxy)\n\n→ FLAT → NEUTRAL\n\nWhat this means: rising real rates pressure metals, falling real rates support gold and inflation trades.\n\nInflation/Growth Driver\n\n→ FLAT → NEUTRAL\n\nWhat this means: copper + energy leadership confirms growth impulse; weak ag dampens food inflation pressure.\n\nScenario Implications\nLong scenario\n\nReview Metals leaders. Gold evidence improves if breadth confirms.\n\nShort scenario\n\nOverextended spikes need volatility expansion and weaker breadth before relying on a reversal scenario.\n\nPortfolio review\n\nMixed impulse; keep assumptions conservative and prioritize confirmation over anticipation.\n\nAnalysis summary: MIXED impulse, Metals leading, review conditional (47/100).\nCreate Alert\nAdd to Watchlist\nRun Confluence Scan\nOpen Journal Draft\nData from Alpha Vantage • Request fetched: 11:00:00 AM • Latest eligible source date: 2026-10-02 • Refetching every 15 minutes\n✕\nARCA AI"
+      },
+      "allOpen": {
+        "observedAt": "2026-10-05T08:14:11.960Z",
+        "innerWidth": 1280,
+        "innerHeight": 800,
+        "scrollHeight": 2720,
+        "scrollWidth": 1280,
+        "screens": 3.4,
+        "openFolds": [],
+        "verdicts": [],
+        "sourceCount": 0,
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime unavailable\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Golden Egg\nOpen Macro Lens\nSectors leading\n—\nSector data loading\nCrypto cap\n$2.1T\nBTC 58.0% · ETH 12.0%\nTop gainer\n—\nMovers loading\nNext check\nCommodities\nPick one lens, then drop into Scanner or Golden Egg\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nData degraded — stale rows excluded from analysis\nGate eligible 9/10. Excluded: SUGAR. Latest eligible source date: 2026-10-02.\nCommodities Analysis Gate\nREVIEW: CAUTION\nImpulse: MIXED\nRotation: Metals\nUSD: NEUTRAL\nReal Rates: NEUTRAL\nVol: COMPRESSION\n\nMIXED conditions are incomplete; indicators suggest caution.\n\nLong Evidence\nClear\nShort Evidence\nLimited\nBreakouts\nMixed\nMean Reversion\nSupportive\nEnvironment Breakdown\nMacro Regime\nNEUTRAL\nUSD Trend\n→ FLAT (NEUTRAL)\nReal Rates Trend\n→ FLAT (NEUTRAL)\nGrowth Proxy\n→ FLAT (NEUTRAL)\nCommodity Breadth\n44/100\nRotation Leader Strip\nEnergy vs Metals\n-0.84%\nMetals vs Ag\n+1.52%\nCopper vs Gold\n+0.00%\nLeader: Metals\nBreadth & Participation\n44\nBreadth Score (0-100)\n4 Advancing\n5 Declining\nParticipation: Weak\nTrend Quality\nImpulse Stability\nCHOPPY\nVolatility\nCOMPRESSION\nSignal Quality\nLOW\nAll (10)\nEN Energy (3)\nMT Metals (4)\nAG Agriculture (3)\nSort: Market Impact (default)\nWTI\nUSO (WTI Crude Oil proxy)\nEN Energy\n$45.12\nUSD per fund share\n▼\n+0.50 (+-0.79%)\nInflation-sensitive\nGrowth-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED · proxy USO\nSource date: 2026-10-02 · age 3d\nCMD\nBNO (Brent Crude Oil proxy)\nEN Energy\n$55.12\nUSD per fund share\n▲\n+0.50 (+1.23%)\nInflation-sensitive\nGrowth-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED · proxy BNO\nSource date: 2026-10-02 · age 3d\nNG\nUNG (Natural Gas proxy)\nEN Energy\n$65.12\nUSD per fund share\n▼\n+0.50 (+-0.79%)\nInflation-sensitive\nGrowth-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED · proxy UNG\nSource date: 2026-10-02 · age 3d\nAU\nGold\nMT Metals\n$75.12\nUSD per unit\n▲\n+0.50 (+1.23%)\nInflation-sensitive\nUSD-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nAG\nSilver\nMT Metals\n$85.12\nUSD per unit\n▼\n+0.50 (+-0.79%)\nUSD-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nCU\nCopper\nMT Metals\n$95.12\nUSD per unit\n▲\n+0.50 (+1.23%)\nGrowth-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nWHT\nWheat\nAG Agriculture\n$105.12\nUSD per unit\n▼\n+0.50 (+-0.79%)\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nCMD\nAluminum\nMT Metals\n$115.12\nUSD per unit\n▲\n+0.50 (+1.23%)\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nCMD\nCoffee\nAG Agriculture\n$125.12\nUSD per unit\n▼\n+0.50 (+-0.79%)\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nCMD\nSugar\nAG Agriculture\n$135.12\nUSD per unit\n▲\n+0.50 (+1.23%)\nLong Evidence\nLimited\nShort Evidence\nLimited\nSTALE\nSource date: 2026-01-01 · age 277d\nUSD Driver (DXY proxy)\n\n→ FLAT → NEUTRAL\n\nWhat this means: stronger USD suppresses commodities; weaker USD supports broad upside.\n\nRates Driver (Real yield proxy)\n\n→ FLAT → NEUTRAL\n\nWhat this means: rising real rates pressure metals, falling real rates support gold and inflation trades.\n\nInflation/Growth Driver\n\n→ FLAT → NEUTRAL\n\nWhat this means: copper + energy leadership confirms growth impulse; weak ag dampens food inflation pressure.\n\nScenario Implications\nLong scenario\n\nReview Metals leaders. Gold evidence improves if breadth confirms.\n\nShort scenario\n\nOverextended spikes need volatility expansion and weaker breadth before relying on a reversal scenario.\n\nPortfolio review\n\nMixed impulse; keep assumptions conservative and prioritize confirmation over anticipation.\n\nAnalysis summary: MIXED impulse, Metals leading, review conditional (47/100).\nCreate Alert\nAdd to Watchlist\nRun Confluence Scan\nOpen Journal Draft\nData from Alpha Vantage • Request fetched: 11:00:00 AM • Latest eligible source date: 2026-10-02 • Refetching every 15 minutes\n✕\nARCA AI"
+      }
+    },
+    {
+      "symbol": "commodities",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "closed": {
+        "observedAt": "2026-10-05T08:14:12.984Z",
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "scrollHeight": 6546,
+        "scrollWidth": 390,
+        "screens": 7.7559241706161135,
+        "openFolds": [],
+        "verdicts": [],
+        "sourceCount": 0,
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime unavailable\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Golden Egg\nOpen Macro Lens\nSectors leading\n—\nSector data loading\nCrypto cap\n$2.1T\nBTC 58.0% · ETH 12.0%\nTop gainer\n—\nMovers loading\nNext check\nCommodities\nPick one lens, then drop into Scanner or Golden Egg\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nData degraded — stale rows excluded from analysis\nGate eligible 9/10. Excluded: SUGAR. Latest eligible source date: 2026-10-02.\nCommodities Analysis Gate\nREVIEW: CAUTION\nImpulse: MIXED\nRotation: Metals\nUSD: NEUTRAL\nReal Rates: NEUTRAL\nVol: COMPRESSION\n\nMIXED conditions are incomplete; indicators suggest caution.\n\nLong Evidence\nClear\nShort Evidence\nLimited\nBreakouts\nMixed\nMean Reversion\nSupportive\nEnvironment Breakdown\nMacro Regime\nNEUTRAL\nUSD Trend\n→ FLAT (NEUTRAL)\nReal Rates Trend\n→ FLAT (NEUTRAL)\nGrowth Proxy\n→ FLAT (NEUTRAL)\nCommodity Breadth\n44/100\nRotation Leader Strip\nEnergy vs Metals\n-0.84%\nMetals vs Ag\n+1.52%\nCopper vs Gold\n+0.00%\nLeader: Metals\nBreadth & Participation\n44\nBreadth Score (0-100)\n4 Advancing\n5 Declining\nParticipation: Weak\nTrend Quality\nImpulse Stability\nCHOPPY\nVolatility\nCOMPRESSION\nSignal Quality\nLOW\nAll (10)\nEN Energy (3)\nMT Metals (4)\nAG Agriculture (3)\nSort: Market Impact (default)\nWTI\nUSO (WTI Crude Oil proxy)\nEN Energy\n$45.12\nUSD per fund share\n▼\n+0.50 (+-0.79%)\nInflation-sensitive\nGrowth-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED · proxy USO\nSource date: 2026-10-02 · age 3d\nCMD\nBNO (Brent Crude Oil proxy)\nEN Energy\n$55.12\nUSD per fund share\n▲\n+0.50 (+1.23%)\nInflation-sensitive\nGrowth-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED · proxy BNO\nSource date: 2026-10-02 · age 3d\nNG\nUNG (Natural Gas proxy)\nEN Energy\n$65.12\nUSD per fund share\n▼\n+0.50 (+-0.79%)\nInflation-sensitive\nGrowth-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED · proxy UNG\nSource date: 2026-10-02 · age 3d\nAU\nGold\nMT Metals\n$75.12\nUSD per unit\n▲\n+0.50 (+1.23%)\nInflation-sensitive\nUSD-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nAG\nSilver\nMT Metals\n$85.12\nUSD per unit\n▼\n+0.50 (+-0.79%)\nUSD-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nCU\nCopper\nMT Metals\n$95.12\nUSD per unit\n▲\n+0.50 (+1.23%)\nGrowth-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nWHT\nWheat\nAG Agriculture\n$105.12\nUSD per unit\n▼\n+0.50 (+-0.79%)\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nCMD\nAluminum\nMT Metals\n$115.12\nUSD per unit\n▲\n+0.50 (+1.23%)\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nCMD\nCoffee\nAG Agriculture\n$125.12\nUSD per unit\n▼\n+0.50 (+-0.79%)\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nCMD\nSugar\nAG Agriculture\n$135.12\nUSD per unit\n▲\n+0.50 (+1.23%)\nLong Evidence\nLimited\nShort Evidence\nLimited\nSTALE\nSource date: 2026-01-01 · age 277d\nUSD Driver (DXY proxy)\n\n→ FLAT → NEUTRAL\n\nWhat this means: stronger USD suppresses commodities; weaker USD supports broad upside.\n\nRates Driver (Real yield proxy)\n\n→ FLAT → NEUTRAL\n\nWhat this means: rising real rates pressure metals, falling real rates support gold and inflation trades.\n\nInflation/Growth Driver\n\n→ FLAT → NEUTRAL\n\nWhat this means: copper + energy leadership confirms growth impulse; weak ag dampens food inflation pressure.\n\nScenario Implications\nLong scenario\n\nReview Metals leaders. Gold evidence improves if breadth confirms.\n\nShort scenario\n\nOverextended spikes need volatility expansion and weaker breadth before relying on a reversal scenario.\n\nPortfolio review\n\nMixed impulse; keep assumptions conservative and prioritize confirmation over anticipation.\n\nAnalysis summary: MIXED impulse, Metals leading, review conditional (47/100).\nCreate Alert\nAdd to Watchlist\nRun Confluence Scan\nOpen Journal Draft\nData from Alpha Vantage • Request fetched: 11:00:00 AM • Latest eligible source date: 2026-10-02 • Refetching every 15 minutes\n✕\nARCA AI"
+      },
+      "allOpen": {
+        "observedAt": "2026-10-05T08:14:14.030Z",
+        "innerWidth": 390,
+        "innerHeight": 844,
+        "scrollHeight": 6546,
+        "scrollWidth": 390,
+        "screens": 7.7559241706161135,
+        "openFolds": [],
+        "verdicts": [],
+        "sourceCount": 0,
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nCross-market map\n9 lenses\nTier Pro\nRegime unavailable\nMarkets.\n\nScan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.\n\nOpen Scanner\nOpen Golden Egg\nOpen Macro Lens\nSectors leading\n—\nSector data loading\nCrypto cap\n$2.1T\nBTC 58.0% · ETH 12.0%\nTop gainer\n—\nMovers loading\nNext check\nCommodities\nPick one lens, then drop into Scanner or Golden Egg\nOverview\nSectors\nCommodities\nCross-Market\nEquity Deep-Dive\nCrypto Deep-Dive\nCrypto Command\nCrypto Intel\nMovers\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\nData degraded — stale rows excluded from analysis\nGate eligible 9/10. Excluded: SUGAR. Latest eligible source date: 2026-10-02.\nCommodities Analysis Gate\nREVIEW: CAUTION\nImpulse: MIXED\nRotation: Metals\nUSD: NEUTRAL\nReal Rates: NEUTRAL\nVol: COMPRESSION\n\nMIXED conditions are incomplete; indicators suggest caution.\n\nLong Evidence\nClear\nShort Evidence\nLimited\nBreakouts\nMixed\nMean Reversion\nSupportive\nEnvironment Breakdown\nMacro Regime\nNEUTRAL\nUSD Trend\n→ FLAT (NEUTRAL)\nReal Rates Trend\n→ FLAT (NEUTRAL)\nGrowth Proxy\n→ FLAT (NEUTRAL)\nCommodity Breadth\n44/100\nRotation Leader Strip\nEnergy vs Metals\n-0.84%\nMetals vs Ag\n+1.52%\nCopper vs Gold\n+0.00%\nLeader: Metals\nBreadth & Participation\n44\nBreadth Score (0-100)\n4 Advancing\n5 Declining\nParticipation: Weak\nTrend Quality\nImpulse Stability\nCHOPPY\nVolatility\nCOMPRESSION\nSignal Quality\nLOW\nAll (10)\nEN Energy (3)\nMT Metals (4)\nAG Agriculture (3)\nSort: Market Impact (default)\nWTI\nUSO (WTI Crude Oil proxy)\nEN Energy\n$45.12\nUSD per fund share\n▼\n+0.50 (+-0.79%)\nInflation-sensitive\nGrowth-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED · proxy USO\nSource date: 2026-10-02 · age 3d\nCMD\nBNO (Brent Crude Oil proxy)\nEN Energy\n$55.12\nUSD per fund share\n▲\n+0.50 (+1.23%)\nInflation-sensitive\nGrowth-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED · proxy BNO\nSource date: 2026-10-02 · age 3d\nNG\nUNG (Natural Gas proxy)\nEN Energy\n$65.12\nUSD per fund share\n▼\n+0.50 (+-0.79%)\nInflation-sensitive\nGrowth-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED · proxy UNG\nSource date: 2026-10-02 · age 3d\nAU\nGold\nMT Metals\n$75.12\nUSD per unit\n▲\n+0.50 (+1.23%)\nInflation-sensitive\nUSD-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nAG\nSilver\nMT Metals\n$85.12\nUSD per unit\n▼\n+0.50 (+-0.79%)\nUSD-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nCU\nCopper\nMT Metals\n$95.12\nUSD per unit\n▲\n+0.50 (+1.23%)\nGrowth-sensitive\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nWHT\nWheat\nAG Agriculture\n$105.12\nUSD per unit\n▼\n+0.50 (+-0.79%)\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nCMD\nAluminum\nMT Metals\n$115.12\nUSD per unit\n▲\n+0.50 (+1.23%)\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nCMD\nCoffee\nAG Agriculture\n$125.12\nUSD per unit\n▼\n+0.50 (+-0.79%)\nLong Evidence\nClear\nShort Evidence\nLimited\nDELAYED\nSource date: 2026-10-02 · age 3d\nCMD\nSugar\nAG Agriculture\n$135.12\nUSD per unit\n▲\n+0.50 (+1.23%)\nLong Evidence\nLimited\nShort Evidence\nLimited\nSTALE\nSource date: 2026-01-01 · age 277d\nUSD Driver (DXY proxy)\n\n→ FLAT → NEUTRAL\n\nWhat this means: stronger USD suppresses commodities; weaker USD supports broad upside.\n\nRates Driver (Real yield proxy)\n\n→ FLAT → NEUTRAL\n\nWhat this means: rising real rates pressure metals, falling real rates support gold and inflation trades.\n\nInflation/Growth Driver\n\n→ FLAT → NEUTRAL\n\nWhat this means: copper + energy leadership confirms growth impulse; weak ag dampens food inflation pressure.\n\nScenario Implications\nLong scenario\n\nReview Metals leaders. Gold evidence improves if breadth confirms.\n\nShort scenario\n\nOverextended spikes need volatility expansion and weaker breadth before relying on a reversal scenario.\n\nPortfolio review\n\nMixed impulse; keep assumptions conservative and prioritize confirmation over anticipation.\n\nAnalysis summary: MIXED impulse, Metals leading, review conditional (47/100).\nCreate Alert\nAdd to Watchlist\nRun Confluence Scan\nOpen Journal Draft\nData from Alpha Vantage • Request fetched: 11:00:00 AM • Latest eligible source date: 2026-10-02 • Refetching every 15 minutes\n✕\nARCA AI"
+      }
+    }
+  ],
+  "requests": [
+    {
+      "url": "http://127.0.0.1:3121/api/disclosure/status",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/auth/session",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/me",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/context/heartbeat",
+      "method": "POST",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/analytics/heartbeat",
+      "method": "POST",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/health/data",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/auth/session",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/regime",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/favorites",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/sectors/heatmap",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/crypto/market-overview",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/crypto/categories",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/market-movers?duration=24h",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/commodities",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/risk/governor/preferences",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/regime",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/commodities",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/economic-indicators?all=true",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/disclosure/status",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/auth/session",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/me",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/context/heartbeat",
+      "method": "POST",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/analytics/heartbeat",
+      "method": "POST",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/health/data",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/auth/session",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/regime",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/favorites",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/sectors/heatmap",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/crypto/market-overview",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/crypto/categories",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/market-movers?duration=24h",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/commodities",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/risk/governor/preferences",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "action": "mocked",
+      "status": 503
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/regime",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/commodities",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3121/api/economic-indicators?all=true",
+      "method": "GET",
+      "action": "mocked",
+      "status": 200
+    }
+  ],
+  "consoleErrors": []
+}
