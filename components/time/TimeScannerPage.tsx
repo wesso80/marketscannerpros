@@ -15,6 +15,7 @@ import MarketPressureWidget from '@/components/MarketPressureWidget';
 import { detectAssetClass } from '@/lib/detectAssetClass';
 import { useUserTier, canAccessTimeScanner } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
+import TimeConfluenceWidget from '@/components/TimeConfluenceWidget';
 
 type ScanModeType = 'scalping' | 'intraday_30m' | 'intraday_1h' | 'intraday_4h' | 'swing_1d' | 'swing_3d' | 'swing_1w' | 'macro_monthly' | 'macro_yearly';
 
@@ -534,6 +535,26 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
     return (
       <TimeScannerShell embedded={embeddedInTerminal}>
         <UpgradeGate requiredTier="pro" feature="Time Scanner" />
+      </TimeScannerShell>
+    );
+  }
+
+  // Before a run, do not show Unavailable tiles, Window UNKNOWN, or a 0 score together.
+  if (embeddedInTerminal && !scanData) {
+    return (
+      <TimeScannerShell embedded>
+        <section aria-label="Time Confluence" className="rounded-2xl border border-slate-800 bg-slate-900/40 px-4 py-6">
+          {error && <p className="mb-3 text-sm text-rose-200">{error}</p>}
+          <h2 className="text-base font-semibold text-slate-100">Run Time Confluence for {symbol}</h2>
+          <button
+            type="button"
+            onClick={() => { void runScan(); }}
+            disabled={loading}
+            className="mt-4 inline-flex min-h-10 items-center rounded-lg border border-slate-700 px-4 text-sm font-semibold text-slate-100 disabled:opacity-40"
+          >
+            {loading ? 'Running…' : 'Run Time Confluence'}
+          </button>
+        </section>
       </TimeScannerShell>
     );
   }
@@ -1084,6 +1105,9 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
         </details>
 
         {/* ── Intel accordion sections removed — core purpose is cluster + direction output ── */}
+        {embeddedInTerminal && scanData && (
+          <TimeConfluenceWidget showMacro showMicro showCalendar assetClass={isCrypto ? 'crypto' : 'equity'} symbol={displaySymbol} />
+        )}
       </main>
     </TimeScannerShell>
   );

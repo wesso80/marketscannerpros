@@ -16,6 +16,8 @@ import { isPaidTier } from '@/lib/tiers';
 import { useCachedTopSymbols } from '@/hooks/useCachedTopSymbols';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { detectMarketPath, type MarketPath } from '@/lib/terminal/marketPath';
+import { terminalUsesSymbolLabel } from '@/lib/terminal/symbolLabel';
+import TerminalCryptoDesk from '@/components/terminal/TerminalCryptoDesk';
 import { hasCommoditySessionMap } from '@/lib/terminal/futures/cashBridgeMap';
 
 const OptionsTerminalView = dynamic(() => import('@/components/options-terminal/OptionsTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div> });
@@ -25,7 +27,6 @@ const OptionsConfluence = dynamic(() => import('@/components/options-terminal/Op
 const OptionsFlow = dynamic(() => import('@/components/options-terminal/OptionsFlowView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Flow…</div> });
 const TimeScanner = dynamic(() => import('@/app/tools/time-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Gravity…</div> });
 const ConfluenceScanner = dynamic(() => import('@/app/tools/confluence-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Confluence Scanner…</div> });
-const TimeConfluenceWidget = dynamic(() => import('@/components/TimeConfluenceWidget').then(m => ({ default: m.default })), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Fib Confluence…</div> });
 import {
   useCloseCalendar,
   useFlow,
@@ -255,6 +256,11 @@ function TerminalSubviewFrame({
   onSelectTab: (tab: TerminalTab) => void;
   children: React.ReactNode;
 }) {
+  // These three tabs carry their own one-line state. Skip the second hero and the four repeated tiles so that state sits in the first screen.
+  if (tab === 'Options Flow' || tab === 'Crypto' || tab === 'Time Confluence') {
+    return <div className="min-w-0 space-y-3">{children}</div>;
+  }
+
   const meta = TERMINAL_TAB_META[tab];
   const sequence: TerminalTab[] = visibleTabsForPath(marketPath, commodityFutures).filter((t): t is Exclude<TerminalTab, 'Close Calendar'> => t !== 'Close Calendar');
   const idx = sequence.indexOf(tab);
@@ -478,8 +484,37 @@ export default function TerminalPage() {
           ? 'Review capital pressure'
           : 'Validate mechanics context';
 
+  const quickSymbolRows = (
+    <>
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="w-20 text-[10px] font-bold uppercase tracking-[0.1em] text-cyan-300">Futures</span>
+        {FUTURES_QUICK.map((s) => (
+          <button key={s} type="button" aria-pressed={sym === s} onClick={() => { selectSymbol(s, { assetType: 'futures' }); setSymInput(s); }} className={`px-2 py-1 text-[11px] rounded border transition-colors ${sym === s ? 'bg-cyan-500/20 text-cyan-200 border-cyan-500/30' : 'text-slate-500 border-slate-800 hover:text-slate-300'}`}>
+            {s}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="w-20 text-[10px] font-bold uppercase tracking-[0.1em] text-amber-300">Crypto</span>
+        {quickCrypto.map((s) => (
+          <button key={s} type="button" aria-pressed={sym === s} onClick={() => { selectSymbol(s, { assetType: 'crypto' }); setSymInput(s); }} className={`px-2 py-1 text-[11px] rounded border transition-colors ${sym === s ? 'bg-amber-500/20 text-amber-200 border-amber-500/30' : 'text-slate-500 border-slate-800 hover:text-slate-300'}`}>
+            {s}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="w-20 text-[10px] font-bold uppercase tracking-[0.1em] text-indigo-300">Equity</span>
+        {quickEquity.map((s) => (
+          <button key={s} type="button" aria-pressed={sym === s} onClick={() => { selectSymbol(s, { assetType: 'equity' }); setSymInput(s); }} className={`px-2 py-1 text-[11px] rounded border transition-colors ${sym === s ? 'bg-indigo-500/20 text-indigo-200 border-indigo-500/30' : 'text-slate-500 border-slate-800 hover:text-slate-300'}`}>
+            {s}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+
   return (
-    <div className="space-y-3">
+    <div className="flex min-w-0 max-w-full flex-col gap-3">
       <ComplianceDisclaimer compact variant={asset === 'crypto' ? 'cryptoDerivatives' : 'options'} />
 
       <PageHero
@@ -490,13 +525,17 @@ export default function TerminalPage() {
           { label: `${asset.toUpperCase()} path` },
         ]}
         title="Use Terminal before Backtest."
-        subtitle="Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically."
+        subtitle={terminalUsesSymbolLabel(tab)
+          ? 'Symbol validates the symbol.'
+          : 'Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically.'}
         actions={[
-          { label: 'Back to Golden Egg', variant: 'primary', href: `/tools/golden-egg?symbol=${encodeURIComponent(sym)}&type=${marketPath}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
+          { label: terminalUsesSymbolLabel(tab) ? 'Back to Symbol' : 'Back to Golden Egg', variant: 'primary', href: `/tools/golden-egg?symbol=${encodeURIComponent(sym)}&type=${marketPath}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
           { label: 'Continue to Backtest', variant: 'secondary', href: `/tools/workspace?tab=backtest&symbol=${encodeURIComponent(sym)}&type=${marketPath}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
           { label: 'All tools', variant: 'ghost', href: '/tools' },
         ]}
-        metrics={[
+        metrics={terminalUsesSymbolLabel(tab) ? [
+          { label: 'Symbol', value: sym, tone: asset === 'crypto' ? 'warn' : 'info', detail: `${asset.toUpperCase()} mechanics path` },
+        ] : [
           { label: 'Symbol', value: sym, tone: asset === 'crypto' ? 'warn' : 'info', detail: `${asset.toUpperCase()} mechanics path` },
           { label: 'Active lens', value: tab, tone: 'bull', detail: activeMeta.eyebrow },
           { label: 'Data state', value: terminalDataState, tone: terminalDataState.includes('issue') ? 'warn' : terminalDataState === 'Loading' ? 'info' : 'bull', detail: calendar.error || 'No blocking route errors' },
@@ -504,8 +543,8 @@ export default function TerminalPage() {
         ]}
       />
 
-      {/* Symbol Bar */}
-      <Card>
+      {/* Symbol Bar. On the three layout-gate tabs it follows the tab state so that state is in the first screen. */}
+      <Card className={terminalUsesSymbolLabel(tab) ? 'order-last' : ''}>
         <div className="space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
             <input
@@ -525,36 +564,22 @@ export default function TerminalPage() {
             </div>
           </div>
 
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-1">
-              <span className="w-20 text-[10px] font-bold uppercase tracking-[0.1em] text-cyan-300">Futures</span>
-              {FUTURES_QUICK.map((s) => (
-                <button key={s} type="button" aria-pressed={sym === s} onClick={() => { selectSymbol(s, { assetType: 'futures' }); setSymInput(s); }} className={`px-2 py-1 text-[11px] rounded border transition-colors ${sym === s ? 'bg-cyan-500/20 text-cyan-200 border-cyan-500/30' : 'text-slate-500 border-slate-800 hover:text-slate-300'}`}>
-                  {s}
-                </button>
-              ))}
-            </div>
-            <div className="flex flex-wrap items-center gap-1">
-              <span className="w-20 text-[10px] font-bold uppercase tracking-[0.1em] text-amber-300">Crypto</span>
-              {quickCrypto.map((s) => (
-                <button key={s} type="button" aria-pressed={sym === s} onClick={() => { selectSymbol(s, { assetType: 'crypto' }); setSymInput(s); }} className={`px-2 py-1 text-[11px] rounded border transition-colors ${sym === s ? 'bg-amber-500/20 text-amber-200 border-amber-500/30' : 'text-slate-500 border-slate-800 hover:text-slate-300'}`}>
-                  {s}
-                </button>
-              ))}
-            </div>
-            <div className="flex flex-wrap items-center gap-1">
-              <span className="w-20 text-[10px] font-bold uppercase tracking-[0.1em] text-indigo-300">Equity</span>
-              {quickEquity.map((s) => (
-                <button key={s} type="button" aria-pressed={sym === s} onClick={() => { selectSymbol(s, { assetType: 'equity' }); setSymInput(s); }} className={`px-2 py-1 text-[11px] rounded border transition-colors ${sym === s ? 'bg-indigo-500/20 text-indigo-200 border-indigo-500/30' : 'text-slate-500 border-slate-800 hover:text-slate-300'}`}>
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
+          {terminalUsesSymbolLabel(tab) ? (
+            <details className="rounded-md border border-slate-800">
+              <summary className="min-h-10 cursor-pointer list-none px-2 py-2 text-xs text-slate-300">More symbols</summary>
+              <div className="space-y-1 px-2 pb-2">
+                {quickSymbolRows}
+              </div>
+            </details>
+          ) : (
+            <div className="space-y-1">{quickSymbolRows}</div>
+          )}
         </div>
       </Card>
 
-      <TerminalTabRail activeTab={tab} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={selectTab} />
+      <div className={terminalUsesSymbolLabel(tab) ? 'order-last' : undefined}>
+        <TerminalTabRail activeTab={tab} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={selectTab} />
+      </div>
 
       {/* -- CLOSE CALENDAR ------------------------------------------- */}
       {tab === 'Close Calendar' && (marketPath === 'futures' ? (
@@ -780,11 +805,10 @@ export default function TerminalPage() {
 
       {/* -- CRYPTO TERMINAL ------------------------------------------------ */}
       {tab === 'Crypto' && (
-        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Crypto Terminal">
-          <TerminalSubviewFrame tab="Crypto" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
-            <a className="block rounded border border-emerald-400/30 p-4 text-emerald-300" href="/tools/crypto-dashboard">Open market-wide crypto derivatives</a>
-          </TerminalSubviewFrame>
-        </UpgradeGate>
+        <TerminalSubviewFrame tab="Crypto" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
+          <TerminalCryptoDesk symbol={sym} />
+          <a className="mt-3 inline-flex min-h-10 items-center text-sm text-emerald-300 underline" href="/tools/crypto-dashboard">Open market-wide crypto derivatives</a>
+        </TerminalSubviewFrame>
       )}
       {/* -- FLOW ----------------------------------------------------- */}
       {tab === 'Capital Pressure' && (() => {
@@ -1133,11 +1157,9 @@ export default function TerminalPage() {
 
       {/* ─── Options Flow (v1 flow intelligence) ─── */}
       {tab === 'Options Flow' && (
-        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Options Flow Intelligence">
-          <TerminalSubviewFrame tab="Options Flow" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
-            <OptionsFlow embeddedInTerminal symbol={sym} expiry={requestedExpiry} />
-          </TerminalSubviewFrame>
-        </UpgradeGate>
+        <TerminalSubviewFrame tab="Options Flow" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
+          <OptionsFlow embeddedInTerminal symbol={sym} expiry={requestedExpiry} />
+        </TerminalSubviewFrame>
       )}
 
       {/* ─── Time Gravity Map (v1 time scanner) ─── */}
@@ -1151,14 +1173,9 @@ export default function TerminalPage() {
 
       {/* ─── Time Confluence Scanner ─── */}
       {tab === 'Time Confluence' && (
-        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Time Confluence Scanner">
-          <TerminalSubviewFrame tab="Time Confluence" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
-            <ConfluenceScanner key={`${asset}:${sym}:${requestedTimeframe}`} symbol={sym} assetType={asset} timeframe={requestedTimeframe} embeddedInTerminal />
-            <div className="mt-6">
-              <TimeConfluenceWidget showMacro showMicro showCalendar assetClass={asset} />
-            </div>
-          </TerminalSubviewFrame>
-        </UpgradeGate>
+        <TerminalSubviewFrame tab="Time Confluence" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
+          <ConfluenceScanner key={`${asset}:${sym}:${requestedTimeframe}`} symbol={sym} assetType={asset} timeframe={requestedTimeframe} embeddedInTerminal />
+        </TerminalSubviewFrame>
       )}
     </div>
   );
