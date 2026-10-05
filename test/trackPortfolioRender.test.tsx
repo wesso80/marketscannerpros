@@ -36,6 +36,6 @@ it.each(['Positions','Ledger','Risk','Allocation'])('%s keeps raw missing values
  const {container}=render(<PortfolioContent embeddedInWorkspace/>);
  await screen.findByRole('img',{name:'Allocation by recorded position value'});
  fireEvent.click(screen.getByRole('tab',{name,exact:true}));
- expect(container.textContent).not.toMatch(/\b(?:N\/A|UNKNOWN|Unavailable|undefined|NaN|bullish|bearish)\b|[A-Z]+_[A-Z_]+/i);
+ expect(container.textContent).not.toMatch(/\b(?:N\/A|UNKNOWN|Unavailable|undefined|NaN|bullish|bearish)\b|—|[A-Z]+_[A-Z_]+/i);
  expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);
 });

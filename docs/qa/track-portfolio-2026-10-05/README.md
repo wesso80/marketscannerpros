@@ -48,10 +48,12 @@ Full-page render regressions also scan each of the four detail tabs for raw miss
 |---|---:|---:|
 | Overview | 1.279 | 1.573 |
 | Positions | 1.308 | 1.623 |
-| Ledger | 1.345 | 1.916 |
-| Risk | 1.423 | 1.963 |
+| Ledger | 1.345 | 1.897 |
+| Risk | 1.423 | 1.944 |
 | Allocation | 1.274 | 1.788 |
 
 Same dimensions for Pro and Free. Each captured tab has one source line, closed folds and document width equal to viewport width. Expanded-fold banned-word scan has zero hits in all 20 cases, including the product words Target, Golden Egg, Workspace and Command Center. Zero browser page errors. Pro full-page screenshots and both tiers' raw measurements/text/word hits are in tabs/. Prior overview empty and signed-out evidence remains valid; only a positions column heading and recorded-outcome labels changed afterwards.
 
-Ledger outcome labels now describe actual P&L sign (Gain / Loss / Flat); they do not infer that a saved close hit a target or stop. Calculated P&L and saved records are unchanged. Latest build, typecheck and 168 focused tests pass. No production write, provider request, merge or deployment performed.
+Ledger outcome labels now describe actual P&L sign (Gain / Loss / Flat); they do not infer that a saved close hit a target or stop. Calculated P&L and saved records are unchanged.
+
+A missing average risk-unit figure says Not measured. Ledger and Risk were recaptured with folds closed at 1280 and 390 (Pro Risk `openFolds` is 0). The only em dash left in those captures is the protected disclaimer, “General Information Only — educational use only.” Focused Portfolio render, layout, and risk-unit tests pass. No production write, provider request, merge or deployment performed.

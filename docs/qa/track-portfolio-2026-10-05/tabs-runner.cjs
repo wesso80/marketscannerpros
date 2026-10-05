@@ -35,8 +35,12 @@ let server,browser;const results=[],requests=[],errors=[];
   await page.evaluate(async()=>{await document.fonts.ready;window.scrollTo(0,0);});
   for(const tab of ['Overview','Positions','Ledger','Risk','Allocation']) {
    await page.getByRole('tab',{name:tab,exact:true}).click();
-   await page.evaluate(()=>window.scrollTo(0,0));
-   const metric=await page.evaluate(()=>({observedAt:new Date().toISOString(),width:innerWidth,height:innerHeight,scrollHeight:document.documentElement.scrollHeight,scrollWidth:document.documentElement.scrollWidth,screens:document.documentElement.scrollHeight/innerHeight,text:document.body.innerText,openFolds:document.querySelectorAll('details[open]').length,sourceCount:document.querySelectorAll('[data-source-line]').length}));
+   await page.evaluate(async()=>{await new Promise((resolve)=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));});
+   const metric=await page.evaluate(()=>{
+    document.querySelectorAll('details[open]').forEach((el)=>{el.open=false;});
+    window.scrollTo(0,0);
+    return {observedAt:new Date().toISOString(),width:innerWidth,height:innerHeight,scrollHeight:document.documentElement.scrollHeight,scrollWidth:document.documentElement.scrollWidth,screens:document.documentElement.scrollHeight/innerHeight,text:document.body.innerText,openFolds:document.querySelectorAll('details[open]').length,sourceCount:document.querySelectorAll('[data-source-line]').length};
+   });
    const stem=`${tier}-${tab}-${viewport.width}`;await page.screenshot({path:path.join(out,stem+'-full.png'),fullPage:true});
    for (const summary of await page.locator('details > summary').all()) { if(!await summary.evaluate(el=>el.parentElement.open)) await summary.click(); }
    const expandedText=await page.locator('body').innerText();

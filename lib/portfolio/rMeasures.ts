@@ -3,7 +3,7 @@
  *
  *  - R: P&L divided by the risk to a REAL stop (entry-to-stop distance x units). Only shown where a stop
  *    exists: open positions with a stop, closed trades whose journal entry recorded a stop (journal R), or
- *    closed trades that kept a stop on this device. Otherwise '—'.
+ *    closed trades that kept a stop on this device. Otherwise the value is not measured.
  *  - Risk units: P&L divided by the account risk per trade (account equity x max risk per trade %). One
  *    definition, used everywhere a stop isn't available, and never called R.
  */
@@ -34,7 +34,7 @@ export function toRiskUnits(amount: number, unitDollars: number | null): number 
 }
 
 export function formatRiskUnits(value: number | null): string {
-  if (value == null || !Number.isFinite(value)) return '— risk units';
+  if (value == null || !Number.isFinite(value)) return 'Not measured';
   const sign = value > 0 ? '+' : value < 0 ? '-' : '';
   return `${sign}${Math.abs(value).toFixed(2)} risk units`;
 }
@@ -88,6 +88,6 @@ export function summarize(values: Array<number | null | undefined>): Summary {
 }
 
 export function formatR(value: number | null): string {
-  if (value == null || !Number.isFinite(value)) return '—';
+  if (value == null || !Number.isFinite(value)) return 'Not measured';
   return `${value >= 0 ? '+' : ''}${value.toFixed(2)}R`;
 }
