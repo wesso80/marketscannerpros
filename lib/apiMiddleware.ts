@@ -16,12 +16,20 @@ import { apiLimiter, scannerLimiter, aiLimiter, loginLimiter, getClientIP, creat
 import { getSessionFromCookie, SessionPayload } from '@/lib/auth';
 import { q } from '@/lib/db';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
+import { registerMemoryGauge } from '@/lib/memory/debugLog';
 
 export type RateLimitPreset = 'api' | 'scanner' | 'ai' | 'login';
 
 // ─── S2 FIX: Refresh tier from DB with 5-minute cache ───────────────────────
 const tierCache = new Map<string, { tier: string; status: string; ts: number }>();
 const TIER_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+/** Workspace tier rows held in this process. Expired rows stay until that workspace is read again. */
+export function verifiedTierCacheSize(): number {
+  return tierCache.size;
+}
+
+registerMemoryGauge('tierCache', () => ({ entries: verifiedTierCacheSize() }));
 
 export async function getVerifiedTier(session: SessionPayload): Promise<string> {
   // DEV BYPASS: skip DB lookup for dev session

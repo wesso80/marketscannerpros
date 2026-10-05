@@ -1,6 +1,7 @@
 import { Pool, PoolClient, QueryResult } from "pg";
 import { createHash } from "node:crypto";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { registerMemoryGauge } from "@/lib/memory/debugLog";
 
 const queryTransaction = new AsyncLocalStorage<{ client: PoolClient; deadline: number; failed?: unknown }>();
 
@@ -120,3 +121,15 @@ export async function tx<T>(work: (client: PoolClient) => Promise<T>): Promise<T
     client.release();
   }
 }
+
+/** Pool counters, or null before the first query creates the pool. Does not connect. */
+export function pgPoolStats(): { total: number; idle: number; waiting: number } | null {
+  const pool = global.__pgPool;
+  if (!pool) return null;
+  return { total: pool.totalCount, idle: pool.idleCount, waiting: pool.waitingCount };
+}
+
+registerMemoryGauge('pg', () => {
+  const stats = pgPoolStats();
+  return stats ?? { total: 0, idle: 0, waiting: 0 };
+});

@@ -10,6 +10,8 @@
  * if (!result.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
  */
 
+import { registerMemoryGauge } from '@/lib/memory/debugLog';
+
 interface RateLimitOptions {
   windowMs: number;  // Time window in milliseconds
   max: number;       // Max requests per window
@@ -29,6 +31,15 @@ interface RateLimitResult {
 
 // Global stores for different limiters (persists on Render)
 const stores = new Map<string, Map<string, RateLimitEntry>>();
+
+/** Limiters and keys currently held. A cleanup interval drops expired keys. */
+export function rateLimitMemoryStats(): { limiters: number; keys: number } {
+  let keys = 0;
+  for (const store of stores.values()) keys += store.size;
+  return { limiters: stores.size, keys };
+}
+
+registerMemoryGauge('rateLimit', () => rateLimitMemoryStats());
 
 // Cleanup old entries every 5 minutes
 let cleanupScheduled = false;

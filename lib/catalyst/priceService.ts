@@ -12,6 +12,7 @@
 
 import type { PriceBar } from './types';
 import { avFetch } from '@/lib/avRateGovernor';
+import { registerMemoryGauge } from '@/lib/memory/debugLog';
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 const AV_BASE = 'https://www.alphavantage.co/query';
@@ -40,6 +41,15 @@ function getCached(key: string): PriceBar[] | null {
 function setCache(key: string, bars: PriceBar[]): void {
   barCache.set(key, { bars, fetchedAt: Date.now() });
 }
+
+/** Entries and retained bars. Expired keys stay until that key is read again. */
+export function catalystBarCacheStats(): { entries: number; bars: number } {
+  let bars = 0;
+  for (const entry of barCache.values()) bars += entry.bars.length;
+  return { entries: barCache.size, bars };
+}
+
+registerMemoryGauge('catalystBars', () => catalystBarCacheStats());
 
 // ─── Alpha Vantage fetchers ─────────────────────────────────────────
 

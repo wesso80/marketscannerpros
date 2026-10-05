@@ -9,6 +9,7 @@
  */
 import { fetchOptionsChain } from '@/lib/options-confluence-analyzer';
 import { findOptionContractMark, isOptionMarkCurrent, type OptionContractSpec } from '@/lib/options/contractQuote';
+import { registerMemoryGauge } from '@/lib/memory/debugLog';
 
 type Chain = Awaited<ReturnType<typeof fetchOptionsChain>>;
 
@@ -28,6 +29,17 @@ export type OptionContractMarkResult =
 const CHAIN_TTL_MS = 10 * 60_000;
 const MISS_TTL_MS = 2 * 60_000;
 const chainCache = new Map<string, { chain: Chain; expires: number }>();
+
+/** Entries (capped at 500) and call+put contracts still held, including expired ones not yet evicted. */
+export function optionContractChainCacheStats(): { entries: number; contracts: number } {
+  let contracts = 0;
+  for (const entry of chainCache.values()) {
+    contracts += (entry.chain?.calls?.length ?? 0) + (entry.chain?.puts?.length ?? 0);
+  }
+  return { entries: chainCache.size, contracts };
+}
+
+registerMemoryGauge('optionContractChains', () => optionContractChainCacheStats());
 
 async function getChain(underlying: string, expiration: string): Promise<Chain> {
   const key = `${underlying}|${expiration}`;

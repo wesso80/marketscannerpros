@@ -6,6 +6,7 @@ import { ImageResponse } from 'next/og';
 import type { ReactElement } from 'react';
 import { SHARE_CARD_HEIGHT, SHARE_CARD_WIDTH } from './validate';
 import { shareCardFonts } from './font';
+import { registerMemoryGauge } from '@/lib/memory/debugLog';
 
 const MAX_ENTRIES = 48;
 const cache = new Map<string, { at: number; ttlMs: number; body: ArrayBuffer; headers: Record<string, string> }>();
@@ -62,3 +63,12 @@ export function clearShareCache(): void {
 export function shareCacheSize(): number {
   return cache.size;
 }
+
+/** Cached PNG count and retained bytes. */
+export function shareCacheStats(): { entries: number; bytes: number } {
+  let bytes = 0;
+  for (const hit of cache.values()) bytes += hit.body.byteLength;
+  return { entries: cache.size, bytes };
+}
+
+registerMemoryGauge('sharePng', () => shareCacheStats());
