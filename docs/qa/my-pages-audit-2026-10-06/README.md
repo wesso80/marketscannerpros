@@ -8,17 +8,17 @@ Scope: FavoritesPanel only. Catalog, nav menus, Dashboard/Macro layout, favorite
 
 Validation: 11 focused tests passed (myPagesCompact + phase2aCatalog), TypeScript and whitespace check passed. Tests verify original destinations/order, expansion/collapse, closed catalogue, alias removal, canonical add key, filtering, target classes and loading/cache/error/sign-in states. Hook is mocked; no provider requests or production writes.
 
-| Hard layout gate | Status |
-|---|---|
-| One verdict above first fold | One summary tested; position for Pip |
-| About two screens closed | Pending Pip |
-| No sideways scroll at 390 | Pending Pip |
-| No fake/empty tool | Empty/loading/cache/error states explicit |
-| No banned/engine words | Raw error hidden; populated copy for Pip |
-| Readable numbers + one source line | Simple counts; one preferences source |
-| Screenshots 1280 and 390 | Pending Pip; no screenshots claimed |
-| Symbol / Overview / Track chrome | Existing canonical catalogue names; nav unchanged |
+Measured on `/tools/dashboard?tab=pages` with mocked fixtures. The screen count includes Dashboard chrome and the compact disclaimer. Details, PNG paths, and raw `scrollHeight` values are in [evidence.md](evidence.md) and [evidence.json](evidence.json).
 
-**Pip to check:** `/tools/dashboard?tab=pages`, before/after at 1280×800 and 390×844. Capture five saved tools, closed browser, first-fold summary, page-height/screen counts and overflow. Check long labels, always-visible removal targets, Show all/five, Manage pages, category filters, keyboard focus, empty archive and signed-out/cache/error states. Add/remove only on a disposable test account; verify shortcuts retain exact destinations. Check combined Dashboard chrome and disclaimer height.
+| # | Hard layout gate | Status |
+|---|---|---|
+| 1 | One verdict above first fold | Pass. One `[data-my-pages-summary]`. Five-shortcut phone position is y 479–499 inside 844. |
+| 2 | About two screens closed | **Pass.** Five shortcuts: 1.030 at 1280 and 1.495 at 390. Tallest closed state is cached copy at 1.519. Show all is 1.164 / 1.878, under 2.0. |
+| 3 | No sideways scroll at 390 | **Pass.** Document and body width 390. Dashboard lens tabs do not overflow. |
+| 4 | No fake/empty tool | Empty, cached, failed, and signed-out copy are distinct. |
+| 5 | No banned/engine words | Not re-scanned beyond the visible fixture labels. Raw error text is not shown. |
+| 6 | Readable numbers + one source line | One preferences source on populated, cached, and empty. Error and signed-out have zero. |
+| 7 | Screenshots at 1280 and 390 | **Pass.** Five shortcuts, Show all, cache, empty, error, and signed out. |
+| 8 | Symbol / Overview / Track chrome | Unchanged by this evidence commit. Remove controls measure 40×40. Add/remove was not run on a signed-in account. |
 
-User assigned visual acceptance to Pip. Keep draft/HOLD pending that evidence. No merge/deploy.
+Before screenshots against `batch/oct-wp` @ `9c9d40a8` were not taken. Keep draft. No merge or deploy.
