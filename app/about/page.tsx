@@ -1,3 +1,4 @@
+import CollapsibleSection from "@/components/visual/CollapsibleSection";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -9,11 +10,14 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <main className="min-h-screen bg-[var(--msp-bg)] px-4 py-16 text-slate-200">
+    <main className="min-h-screen bg-[var(--msp-bg)] px-4 py-5 text-slate-200">
       <div className="mx-auto max-w-[800px]">
-        <div className="rounded-3xl border border-emerald-500/20 bg-[var(--msp-card)] p-8 shadow-2xl md:p-12">
+        <div className="rounded-3xl border border-emerald-500/20 bg-[var(--msp-card)] p-4 shadow-2xl md:p-6">
           <div className="prose prose-invert prose-emerald max-w-none prose-headings:text-slate-100 prose-a:text-emerald-400 prose-strong:text-slate-200">
-            <h1 className="text-emerald-400">About MarketScanner Pros</h1>
+            <h1 className="text-2xl font-bold text-emerald-400">About</h1>
+            <p data-learn-verdict className="text-sm">Market research and simulation tools.</p>
+            <div className="space-y-3">
+            <CollapsibleSection title="About MarketScanner Pros">
 
             <p>
               MarketScanner Pros is an advanced market scanning and trading
@@ -22,7 +26,8 @@ export default function AboutPage() {
               professional-level tools in a single web-based dashboard.
             </p>
 
-            <h2>What we offer</h2>
+            </CollapsibleSection>
+            <CollapsibleSection title="What we offer">
             <ul>
               <li>
                 <strong>Market Scanner</strong> — screen thousands of equities
@@ -48,13 +53,14 @@ export default function AboutPage() {
                 review analytics to improve decision-making over time.
               </li>
               <li>
-                <strong>Time Confluence Engine</strong> — proprietary timing
+                <strong>Time Confluence</strong> — proprietary timing
                 analysis that identifies technically aligned trade windows using
                 multi-timeframe data.
               </li>
             </ul>
 
-            <h2>Our mission</h2>
+            </CollapsibleSection>
+            <CollapsibleSection title="Our mission">
             <p>
               We believe every trader deserves access to the same calibre of
               tools used by institutional desks. MarketScanner Pros levels the
@@ -62,7 +68,8 @@ export default function AboutPage() {
               price — no expensive terminals, no lock-in contracts.
             </p>
 
-            <h2>Jurisdiction</h2>
+            </CollapsibleSection>
+            <CollapsibleSection title="Jurisdiction">
             <p>
               MarketScanner Pros operates under the laws of New South Wales,
               Australia. For full legal details, see our{" "}
@@ -70,7 +77,8 @@ export default function AboutPage() {
               <a href="/privacy">Privacy Policy</a>.
             </p>
 
-            <h2>Contact</h2>
+            </CollapsibleSection>
+            <CollapsibleSection title="Contact">
             <p>
               Questions or feedback? Reach us at{" "}
               <a href="mailto:support@marketscannerpros.app">
@@ -78,6 +86,9 @@ export default function AboutPage() {
               </a>
               .
             </p>
+            </CollapsibleSection>
+            </div>
+            <p data-source-line className="text-xs text-slate-400">Source · MarketScanner Pros documentation</p>
           </div>
         </div>
       </div>

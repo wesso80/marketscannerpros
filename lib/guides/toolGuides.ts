@@ -56,7 +56,7 @@ export const TOOL_GUIDES: ToolGuide[] = [
   {
     route: '/tools',
     badge: 'Tools Hub',
-    title: 'Tools Workspace',
+    title: 'All tools',
     summary: 'Use the tools hub to choose your workflow: discover, validate, test, and review.',
     steps: [
       'Choose your current task: scanning, planning, testing, or review.',
@@ -64,21 +64,6 @@ export const TOOL_GUIDES: ToolGuide[] = [
       'Move outcomes into alerts, portfolio, and journal for continuity.',
     ],
     tips: ['Run a consistent daily sequence to avoid context switching.', 'Favor depth over tool-hopping when conditions are noisy.'],
-  },
-  {
-    route: '/operator',
-    badge: 'Private',
-    title: 'Private Research Dashboard',
-    summary: 'Private internal dashboard for reviewing presence, context, and workflow state.',
-    steps: [
-      'Check presence mode and context state first.',
-      'Review top-attention symbols and confidence context.',
-      'Compare suggested next checks with risk posture before escalating a scenario.',
-    ],
-    tips: [
-      'Use feedback buttons after each review to improve adaptation.',
-      'Treat controlMatrix output as internal research state, not public advice.',
-    ],
   },
   {
     route: '/tools/scanner',
@@ -136,7 +121,7 @@ export const TOOL_GUIDES: ToolGuide[] = [
       'Use performance history to evaluate consistency over time.',
     ],
     tips: [
-      'High concentration should reduce new position sizing.',
+      'Review concentration alongside simulated position sizes.',
       'Use drawdown state as a hard guardrail for pace.',
     ],
   },
@@ -344,7 +329,7 @@ export const TOOL_GUIDES: ToolGuide[] = [
   {
     route: '/tools/golden-egg',
     badge: 'Deep Analysis',
-    title: 'Golden Egg Deep Analysis',
+    title: 'Symbol Deep Analysis',
     summary: 'Generate structured multi-factor analysis for high-conviction decisions.',
     steps: ['Run deep analysis on selected symbol.', 'Review confidence and risk factors.', 'Convert strong outputs into actionable plans.'],
     tips: ['Use this for fewer but higher-quality decisions.', 'Document assumptions in journal before execution.'],

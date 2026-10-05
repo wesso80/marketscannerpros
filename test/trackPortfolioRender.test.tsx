@@ -14,6 +14,7 @@ beforeEach(()=>{vi.stubGlobal('React',React);localStorage.clear();state.position
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 it('renders the actual empty page without zero-value summary tiles and opens the existing form',async()=>{
  const {container}=render(<PortfolioContent embeddedInWorkspace/>);
+ expect(container.textContent).toContain('Loading saved records…');
  await screen.findByText('Add your first position');
  expect(within(screen.getByRole('tablist',{name:'Portfolio views'})).getAllByRole('tab')).toHaveLength(5);
  expect(container.textContent).not.toContain('$0.00');

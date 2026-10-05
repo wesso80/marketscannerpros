@@ -1858,7 +1858,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     </>
   );
 
-  if (tier === 'anonymous') {
+  if (tier === 'anonymous' && !tierLoading) {
     return (
       <div className="min-h-screen bg-[var(--msp-bg)]">
         <main className="pt-6 pb-16">
@@ -1881,10 +1881,10 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     );
   }
 
-  if (!mounted) {
+  if (!mounted || tierLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--msp-bg)]">
-        <div className="h-12 w-12 animate-spin rounded-full border-t-2 border-b-2 border-emerald-500" />
+      <div className={`flex items-center justify-center ${embeddedInWorkspace ? 'min-h-40' : 'min-h-screen bg-[var(--msp-bg)]'}`}>
+        <p className="text-sm text-slate-300">Loading saved records…</p>
       </div>
     );
   }

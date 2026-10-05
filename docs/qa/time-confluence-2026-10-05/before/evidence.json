@@ -1,0 +1,1697 @@
+{
+  "mocked": true,
+  "root": "/workspace/scratch/0535040d28c6/titles-small",
+  "results": [
+    {
+      "tab": "time-confluence",
+      "symbol": "BTCUSD",
+      "type": "crypto",
+      "tier": "pro",
+      "measured": false,
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T15:59:37.988Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nTime Confluence · Change view\nRun Time Confluence for BTCUSD\nRun Time Confluence",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "BTCUSD"
+        }
+      ],
+      "openFolds": 0,
+      "afterRun": {
+        "sourceCount": 0,
+        "openFolds": 1,
+        "verdicts": [],
+        "screens": 2.4625,
+        "scrollWidth": 1280,
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nTime Confluence · Change view\nScalp 15m\n30min\n1H\n4H\nDaily\n3-Day\nWeekly\nMonthly\nYearly\nRun\nneutral • 1H • BTCUSD\nNOT ALIGNED\nCONFLUENCE\n11 / 100\nRISK\nHIGH\nR:R\nUnavailable\n↔ NEUTRAL\nNo directional bias detected — No measured timeframes in this observation.\n$100.00\nMarket Pressure EngineComposite pressure from time, volatility, liquidity & options\n▾ expand\nClose Calendar — Forward Schedule\nWhich timeframes close on your target day? Where do closes stack?\n↻ Refresh\nANCHOR\nNow\nToday\nPrior Day\nEnd of Week\nEnd of Month\nPick Date\nHORIZON\n1d\n3d\n7d\n14d\n30d\nTime Confluence EngineAlignment score, decompression & structure\n▾ expand\nTime Gravity MapMidpoint debt, decompression windows & gravity fields\n▾ expand\n⏰\nTime Confluence Engine\n🟢 Market Open\n🔴 Live\n📅 Today\n🔢 Fib\n📊 Macro\n🗓️ Calendar\nCONFLUENCE SCORE\n?\n2\nLOW\n📈\n48%\ntarget hit rate\nSimulated — modelled from 456 pattern setups\n🔔 Set Confluence Alert\nNotify when score hits strong again\nScore ≥ 6\nScore ≥ 8\nScore ≥ 10\nScore ≥ 12\nScore ≥ 15\nSet Alert\nCLOSING NOW\n1m\nFib1m\n⏳ NEXT US EQUITY WINDOW (CROSS-MARKET CONTEXT)\n12:00 PM ET\n11-way confluence\n1m\n🏦 US EQUITY SESSION WINDOWS · ET\n9:30 AM - 10:00 AM\nOpening Range\n10:00 AM - 10:30 AM\nPost-Open\n11:30 AM - 12:00 PM\nEurope Close",
+        "observedAt": "2026-10-05T15:59:39.216Z"
+      },
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nFUTURES\n/ES\n/NQ\n/YM\n/RTY\n/CL\n/GC\n/SI\n/M2K\n/MES\n/MNQ\n/MCL\n/MGC\nCRYPTO\nBTCUSD\nETHUSD\nSOLUSD\nXRPUSD\nBNBUSD\nEQUITY\nAAPL\nMSFT\nNVDA\nGOOGL\nAMZN\nTime Confluence · Change view\nMECHANICS WORKBENCH\nTiming first, then positioning, flow, and final confluence before Backtest.\nCRYPTO PATH\n1. TIMING MAP\nClose Calendar\n2. DERIVATIVES MAP\nCrypto\n5. CAPITAL PRESSURE\nCapital Pressure\n6. GRAVITY MAP\nTime Gravity\n7. FINAL TIMING CHECK\nTime Confluence\nScalp 15m\n30min\n1H\n4H\nDaily\n3-Day\nWeekly\nMonthly\nYearly\nRun\nneutral • 1H • BTCUSD\nNOT ALIGNED\nCONFLUENCE\n11 / 100\nRISK\nHIGH\nR:R\nUnavailable\n↔ NEUTRAL\nNo directional bias detected — No measured timeframes in this observation.\n$100.00\nMarket Pressure EngineComposite pressure from time, volatility, liquidity & options\n▾ expand\nFixture feed not collected\nClose Calendar — Forward Schedule\nWhich timeframes close on your target day? Where do closes stack?\n↻ Refresh\nANCHOR\nNow\nToday\nPrior Day\nEnd of Week\nEnd of Month\nPick Date\nHORIZON\n1d\n3d\n7d\n14d\n30d\nAnchor: Mon Oct 5 09:00 UTC\nCRYPTO DAILY UTC\nBasis: UTC\nHorizon: 1d → Tue Oct 6 09:00 UTC\nDaily+ closes in window: 0\nSchedule Basis: Fixture calendar\nCloses on Anchor Day (0)\nFull Schedule (0)\nNo daily+ timeframes close on the anchor day.\nTime Confluence EngineAlignment score, decompression & structure\n▾ expand\nConfluence Engine\nTime alignment → confluence quality\nTrend Alignment\n37%\nClose Evidence\n10%\nAlignment 0/1 • Window INACTIVE\nTiming\nKey timing context for analysis\nCLOSE\nFAILED\nRISK\nhigh\nLIQUIDITY\nTHIN\nGATE\n5%\nTIME\n11 / 100\nWINDOW\n0%\nNo measured timeframes in this observation.\nTime Gravity MapMidpoint debt, decompression windows & gravity fields\n▾ expand\n🧲 Time Gravity Map\nFixture feed not collected\n🔄 Generate Data for BTCUSD\n⏰\nTime Confluence Engine\n🟢 Market Open\n🔴 Live\n📅 Today\n🔢 Fib\n📊 Macro\n🗓️ Calendar\nCONFLUENCE SCORE\n?\n2\nLOW\n📈\n48%\ntarget hit rate\nSimulated — modelled from 456 pattern setups\n🔔 Set Confluence Alert\nNotify when score hits strong again\nScore ≥ 6\nScore ≥ 8\nScore ≥ 10\nScore ≥ 12\nScore ≥ 15\nSet Alert\nCLOSING NOW\n1m\nFib1m\n⏳ NEXT US EQUITY WINDOW (CROSS-MARKET CONTEXT)\n12:00 PM ET\n11-way confluence\n1m\n🏦 US EQUITY SESSION WINDOWS · ET\n9:30 AM - 10:00 AM\nOpening Range\n10:00 AM - 10:30 AM\nPost-Open\n11:30 AM - 12:00 PM\nEurope Close",
+      "expandedWidth": 1280,
+      "expandedSourceCount": 0,
+      "expandedAttributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Terminal command header Terminal symbol Terminal market mechanics views Fixture calendar Score breakdown info"
+    },
+    {
+      "tab": "time-confluence",
+      "symbol": "BTCUSD",
+      "type": "crypto",
+      "tier": "pro",
+      "measured": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T15:59:42.377Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nTime Confluence · Change view\nRun Time Confluence for BTCUSD\nRun Time Confluence",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "BTCUSD"
+        }
+      ],
+      "openFolds": 0,
+      "afterRun": {
+        "sourceCount": 0,
+        "openFolds": 1,
+        "verdicts": [],
+        "screens": 3.674170616113744,
+        "scrollWidth": 390,
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nTime Confluence · Change view\nScalp 15m\n30min\n1H\n4H\nDaily\n3-Day\nWeekly\nMonthly\nYearly\nRun\nneutral • 1H • BTCUSD\nNOT ALIGNED\nCONFLUENCE\n11 / 100\nRISK\nHIGH\nR:R\nUnavailable\n↔ NEUTRAL\nNo directional bias detected — No measured timeframes in this observation.\n$100.00\nMarket Pressure EngineComposite pressure from time, volatility, liquidity & options\n▾ expand\nFixture feed not collected\nClose Calendar — Forward Schedule\nWhich timeframes close on your target day? Where do closes stack?\n↻ Refresh\nANCHOR\nNow\nToday\nPrior Day\nEnd of Week\nEnd of Month\nPick Date\nHORIZON\n1d\n3d\n7d\n14d\n30d\nAnchor: Mon Oct 5 09:00 UTC\nCRYPTO DAILY UTC\nBasis: UTC\nHorizon: 1d → Tue Oct 6 09:00 UTC\nDaily+ closes in window: 0\nSchedule Basis: Fixture calendar\nCloses on Anchor Day (0)\nFull Schedule (0)\nNo daily+ timeframes close on the anchor day.\nTime Confluence EngineAlignment score, decompression & structure\n▾ expand\nTime Gravity MapMidpoint debt, decompression windows & gravity fields\n▾ expand\n⏰\nTime Confluence Engine\n🟢 Market Open\n🔴 Live\n📅 Today\n🔢 Fib\n📊 Macro\n🗓️ Calendar\nCONFLUENCE SCORE\n?\n2\nLOW\n📈\n48%\ntarget hit rate\nSimulated — modelled from 456 pattern setups\n🔔 Set Confluence Alert\nNotify when score hits strong again\nScore ≥ 6\nScore ≥ 8\nScore ≥ 10\nScore ≥ 12\nScore ≥ 15\nSet Alert\nCLOSING NOW\n1m\nFib1m\n⏳ NEXT US EQUITY WINDOW (CROSS-MARKET CONTEXT)\n12:00 PM ET\n11-way confluence\n1m\n🏦 US EQUITY SESSION WINDOWS · ET\n9:30 AM - 10:00 AM\nOpening Range\n10:00 AM - 10:30 AM\nPost-Open\n11:30 AM - 12:00 PM\nEurope Close",
+        "observedAt": "2026-10-05T15:59:42.871Z"
+      },
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nFUTURES\n/ES\n/NQ\n/YM\n/RTY\n/CL\n/GC\n/SI\n/M2K\n/MES\n/MNQ\n/MCL\n/MGC\nCRYPTO\nBTCUSD\nETHUSD\nSOLUSD\nXRPUSD\nBNBUSD\nEQUITY\nAAPL\nMSFT\nNVDA\nGOOGL\nAMZN\nTime Confluence · Change view\nMECHANICS WORKBENCH\nTiming first, then positioning, flow, and final confluence before Backtest.\nCRYPTO PATH\n1. TIMING MAP\nClose Calendar\n2. DERIVATIVES MAP\nCrypto\n5. CAPITAL PRESSURE\nCapital Pressure\n6. GRAVITY MAP\nTime Gravity\n7. FINAL TIMING CHECK\nTime Confluence\nScalp 15m\n30min\n1H\n4H\nDaily\n3-Day\nWeekly\nMonthly\nYearly\nRun\nneutral • 1H • BTCUSD\nNOT ALIGNED\nCONFLUENCE\n11 / 100\nRISK\nHIGH\nR:R\nUnavailable\n↔ NEUTRAL\nNo directional bias detected — No measured timeframes in this observation.\n$100.00\nMarket Pressure EngineComposite pressure from time, volatility, liquidity & options\n▾ expand\nFixture feed not collected\nClose Calendar — Forward Schedule\nWhich timeframes close on your target day? Where do closes stack?\n↻ Refresh\nANCHOR\nNow\nToday\nPrior Day\nEnd of Week\nEnd of Month\nPick Date\nHORIZON\n1d\n3d\n7d\n14d\n30d\nAnchor: Mon Oct 5 09:00 UTC\nCRYPTO DAILY UTC\nBasis: UTC\nHorizon: 1d → Tue Oct 6 09:00 UTC\nDaily+ closes in window: 0\nSchedule Basis: Fixture calendar\nCloses on Anchor Day (0)\nFull Schedule (0)\nNo daily+ timeframes close on the anchor day.\nTime Confluence EngineAlignment score, decompression & structure\n▾ expand\nConfluence Engine\nTime alignment → confluence quality\nTrend Alignment\n37%\nClose Evidence\n10%\nAlignment 0/1 • Window INACTIVE\nTiming\nKey timing context for analysis\nCLOSE\nFAILED\nRISK\nhigh\nLIQUIDITY\nTHIN\nGATE\n5%\nTIME\n11 / 100\nWINDOW\n0%\nNo measured timeframes in this observation.\nTime Gravity MapMidpoint debt, decompression windows & gravity fields\n▾ expand\n🧲 Time Gravity Map\nFixture feed not collected\n🔄 Generate Data for BTCUSD\n⏰\nTime Confluence Engine\n🟢 Market Open\n🔴 Live\n📅 Today\n🔢 Fib\n📊 Macro\n🗓️ Calendar\nCONFLUENCE SCORE\n?\n2\nLOW\n📈\n48%\ntarget hit rate\nSimulated — modelled from 456 pattern setups\n🔔 Set Confluence Alert\nNotify when score hits strong again\nScore ≥ 6\nScore ≥ 8\nScore ≥ 10\nScore ≥ 12\nScore ≥ 15\nSet Alert\nCLOSING NOW\n1m\nFib1m\n⏳ NEXT US EQUITY WINDOW (CROSS-MARKET CONTEXT)\n12:00 PM ET\n11-way confluence\n1m\n🏦 US EQUITY SESSION WINDOWS · ET\n9:30 AM - 10:00 AM\nOpening Range\n10:00 AM - 10:30 AM\nPost-Open\n11:30 AM - 12:00 PM\nEurope Close",
+      "expandedWidth": 390,
+      "expandedSourceCount": 0,
+      "expandedAttributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Terminal command header Terminal symbol Terminal market mechanics views Fixture calendar Score breakdown info"
+    },
+    {
+      "tab": "time-confluence",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "pro",
+      "measured": false,
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T15:59:45.378Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Confluence · Change view\nRun Time Confluence for MU\nRun Time Confluence",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0,
+      "afterRun": {
+        "sourceCount": 0,
+        "openFolds": 1,
+        "verdicts": [],
+        "screens": 3.32125,
+        "scrollWidth": 1280,
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Confluence · Change view\nScalp 15m\n30min\n1H\n4H\nDaily\n3-Day\nWeekly\nMonthly\nYearly\nRTH (9:30–16:00)\nExtended (4:00–20:00)\nFull (00:00–24:00)\nRun\nneutral • 1H • MU • Extended\nNOT ALIGNED\nCONFLUENCE\n11 / 100\nRISK\nHIGH\nR:R\nUnavailable\n↔ NEUTRAL\nNo directional bias detected — No measured timeframes in this observation.\n$100.00\nMarket Pressure EngineComposite pressure from time, volatility, liquidity & options\n▾ expand\nFixture feed not collected\nIntraday Equity Close Schedule\nFixed candle closes every trading day (Extended 4:00–20:00 ET) — these never change\nTIME (ET)\tEVENT\tCANDLE CLOSES\n04:00\tSession Open\tNew bars begin anchoring\n08:00\tEarly Pre-Market\t1H (7:00–8:00) · 2H (6:00–8:00) · 4H (4:00–8:00)\n09:30\tNYSE Open\t30M (9:00–9:30) — RTH volume surge\n10:00\tOpening Range Close\t30M · 1H (9:00–10:00) · 2H (8:00–10:00) · 3H (7:00–10:00) · 6H (4:00–10:00)\n12:00\tMidday\t1H (11:00–12:00) · 2H (10:00–12:00) · 4H (8:00–12:00) · 8H (4:00–12:00)\n14:00\tMid-Afternoon\t30M (13:30–14:00) · 1H (13:00–14:00) · 2H (12:00–14:00)\n16:00\tNYSE Close\t30M (15:30–16:00) · 1H (15:00–16:00) · 2H (14:00–16:00) · 4H (12:00–16:00) · Daily (9:30–16:00)\n20:00\tAfter-Hours Close\t1H (19:00–20:00) · 2H (18:00–20:00) · 4H (16:00–20:00)\nRepeats identically every trading day (Mon–Fri, excluding NYSE holidays). Only daily+ timeframes have variable close dates.\nClose Calendar — Forward Schedule\nWhich timeframes close on your target day? Where do closes stack?\n↻ Refresh\nANCHOR\nNow\nToday\nPrior Day\nEnd of Week\nEnd of Month\nPick Date\nHORIZON\n1d\n3d\n7d\n14d\n30d\nAnchor: Mon Oct 5 05:00 EDT\nCRYPTO DAILY UTC\nBasis: UTC\nHorizon: 1d → Tue Oct 6 05:00 EDT\nDaily+ closes in window: 0\nSchedule Basis: Fixture calendar\nCloses on Anchor Day (0)\nFull Schedule (0)\nNo daily+ timeframes close on the anchor day.\nTime Confluence EngineAlignment score, decompression & structure\n▾ expand\nTime Gravity MapMidpoint debt, decompression windows & gravity fields\n▾ expand\n⏰\nTime Confluence Engine\n🟢 Market Open\n🔴 Live\n📅 Today\n🔢 Fib\n📊 Macro\n🗓️ Calendar\nCONFLUENCE SCORE\n?\n2\nLOW\n📈\n48%\ntarget hit rate\nSimulated — modelled from 456 pattern setups\n🔔 Set Confluence Alert\nNotify when score hits strong again\nScore ≥ 6\nScore ≥ 8\nScore ≥ 10\nScore ≥ 12\nScore ≥ 15\nSet Alert\nCLOSING NOW\n1m\nFib1m\n⏳ NEXT MAJOR CONFLUENCE\n12:00 PM ET\n11-way confluence\n1m\n🏦 US EQUITY SESSION WINDOWS · ET\n9:30 AM - 10:00 AM\nOpening Range\n10:00 AM - 10:30 AM\nPost-Open\n11:30 AM - 12:00 PM\nEurope Close",
+        "observedAt": "2026-10-05T15:59:46.011Z"
+      },
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nFUTURES\n/ES\n/NQ\n/YM\n/RTY\n/CL\n/GC\n/SI\n/M2K\n/MES\n/MNQ\n/MCL\n/MGC\nCRYPTO\nBTCUSD\nETHUSD\nSOLUSD\nXRPUSD\nBNBUSD\nEQUITY\nAAPL\nMSFT\nNVDA\nGOOGL\nAMZN\nTime Confluence · Change view\nMECHANICS WORKBENCH\nTiming first, then positioning, flow, and final confluence before Backtest.\nEQUITY PATH\n1. TIMING MAP\nClose Calendar\n2. CHAIN QUALITY\nOptions Terminal\n3. OPTIONS SETUP\nOptions Confluence\n4. FLOW ESTIMATE\nOptions Flow\n5. CAPITAL PRESSURE\nCapital Pressure\n6. GRAVITY MAP\nTime Gravity\n7. FINAL TIMING CHECK\nTime Confluence\nScalp 15m\n30min\n1H\n4H\nDaily\n3-Day\nWeekly\nMonthly\nYearly\nRTH (9:30–16:00)\nExtended (4:00–20:00)\nFull (00:00–24:00)\nRun\nneutral • 1H • MU • Extended\nNOT ALIGNED\nCONFLUENCE\n11 / 100\nRISK\nHIGH\nR:R\nUnavailable\n↔ NEUTRAL\nNo directional bias detected — No measured timeframes in this observation.\n$100.00\nMarket Pressure EngineComposite pressure from time, volatility, liquidity & options\n▾ expand\nFixture feed not collected\nIntraday Equity Close Schedule\nFixed candle closes every trading day (Extended 4:00–20:00 ET) — these never change\nTIME (ET)\tEVENT\tCANDLE CLOSES\n04:00\tSession Open\tNew bars begin anchoring\n08:00\tEarly Pre-Market\t1H (7:00–8:00) · 2H (6:00–8:00) · 4H (4:00–8:00)\n09:30\tNYSE Open\t30M (9:00–9:30) — RTH volume surge\n10:00\tOpening Range Close\t30M · 1H (9:00–10:00) · 2H (8:00–10:00) · 3H (7:00–10:00) · 6H (4:00–10:00)\n12:00\tMidday\t1H (11:00–12:00) · 2H (10:00–12:00) · 4H (8:00–12:00) · 8H (4:00–12:00)\n14:00\tMid-Afternoon\t30M (13:30–14:00) · 1H (13:00–14:00) · 2H (12:00–14:00)\n16:00\tNYSE Close\t30M (15:30–16:00) · 1H (15:00–16:00) · 2H (14:00–16:00) · 4H (12:00–16:00) · Daily (9:30–16:00)\n20:00\tAfter-Hours Close\t1H (19:00–20:00) · 2H (18:00–20:00) · 4H (16:00–20:00)\nRepeats identically every trading day (Mon–Fri, excluding NYSE holidays). Only daily+ timeframes have variable close dates.\nClose Calendar — Forward Schedule\nWhich timeframes close on your target day? Where do closes stack?\n↻ Refresh\nANCHOR\nNow\nToday\nPrior Day\nEnd of Week\nEnd of Month\nPick Date\nHORIZON\n1d\n3d\n7d\n14d\n30d\nAnchor: Mon Oct 5 05:00 EDT\nCRYPTO DAILY UTC\nBasis: UTC\nHorizon: 1d → Tue Oct 6 05:00 EDT\nDaily+ closes in window: 0\nSchedule Basis: Fixture calendar\nCloses on Anchor Day (0)\nFull Schedule (0)\nNo daily+ timeframes close on the anchor day.\nTime Confluence EngineAlignment score, decompression & structure\n▾ expand\nConfluence Engine\nTime alignment → confluence quality\nTrend Alignment\n37%\nClose Evidence\n10%\nAlignment 0/1 • Window INACTIVE\nTiming\nKey timing context for analysis\nCLOSE\nFAILED\nRISK\nhigh\nLIQUIDITY\nTHIN\nGATE\n5%\nTIME\n11 / 100\nWINDOW\n0%\nNo measured timeframes in this observation.\nTime Gravity MapMidpoint debt, decompression windows & gravity fields\n▾ expand\n🧲 Time Gravity Map\nFixture feed not collected\n🔄 Generate Data for MU\n⏰\nTime Confluence Engine\n🟢 Market Open\n🔴 Live\n📅 Today\n🔢 Fib\n📊 Macro\n🗓️ Calendar\nCONFLUENCE SCORE\n?\n2\nLOW\n📈\n48%\ntarget hit rate\nSimulated — modelled from 456 pattern setups\n🔔 Set Confluence Alert\nNotify when score hits strong again\nScore ≥ 6\nScore ≥ 8\nScore ≥ 10\nScore ≥ 12\nScore ≥ 15\nSet Alert\nCLOSING NOW\n1m\nFib1m\n⏳ NEXT MAJOR CONFLUENCE\n12:00 PM ET\n11-way confluence\n1m\n🏦 US EQUITY SESSION WINDOWS · ET\n9:30 AM - 10:00 AM\nOpening Range\n10:00 AM - 10:30 AM\nPost-Open\n11:30 AM - 12:00 PM\nEurope Close",
+      "expandedWidth": 1280,
+      "expandedSourceCount": 0,
+      "expandedAttributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Terminal command header Terminal symbol Terminal market mechanics views Session hours — affects intraday candle close anchors Fixture calendar Score breakdown info"
+    },
+    {
+      "tab": "time-confluence",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "pro",
+      "measured": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T15:59:47.551Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Confluence · Change view\nRun Time Confluence for MU\nRun Time Confluence",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0,
+      "afterRun": {
+        "sourceCount": 0,
+        "openFolds": 1,
+        "verdicts": [],
+        "screens": 4.1350710900473935,
+        "scrollWidth": 390,
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Confluence · Change view\nScalp 15m\n30min\n1H\n4H\nDaily\n3-Day\nWeekly\nMonthly\nYearly\nRTH (9:30–16:00)\nExtended (4:00–20:00)\nFull (00:00–24:00)\nRun\nneutral • 1H • MU • Extended\nNOT ALIGNED\nCONFLUENCE\n11 / 100\nRISK\nHIGH\nR:R\nUnavailable\n↔ NEUTRAL\nNo directional bias detected — No measured timeframes in this observation.\n$100.00\nMarket Pressure EngineComposite pressure from time, volatility, liquidity & options\n▾ expand\nFixture feed not collected\nIntraday Equity Close Schedule\nFixed candle closes every trading day (Extended 4:00–20:00 ET) — these never change\nTIME (ET)\tEVENT\tCANDLE CLOSES\n04:00\tSession Open\tNew bars begin anchoring\n08:00\tEarly Pre-Market\t1H (7:00–8:00) · 2H (6:00–8:00) · 4H (4:00–8:00)\n09:30\tNYSE Open\t30M (9:00–9:30) — RTH volume surge\n10:00\tOpening Range Close\t30M · 1H (9:00–10:00) · 2H (8:00–10:00) · 3H (7:00–10:00) · 6H (4:00–10:00)\n12:00\tMidday\t1H (11:00–12:00) · 2H (10:00–12:00) · 4H (8:00–12:00) · 8H (4:00–12:00)\n14:00\tMid-Afternoon\t30M (13:30–14:00) · 1H (13:00–14:00) · 2H (12:00–14:00)\n16:00\tNYSE Close\t30M (15:30–16:00) · 1H (15:00–16:00) · 2H (14:00–16:00) · 4H (12:00–16:00) · Daily (9:30–16:00)\n20:00\tAfter-Hours Close\t1H (19:00–20:00) · 2H (18:00–20:00) · 4H (16:00–20:00)\nRepeats identically every trading day (Mon–Fri, excluding NYSE holidays). Only daily+ timeframes have variable close dates.\nClose Calendar — Forward Schedule\nWhich timeframes close on your target day? Where do closes stack?\n↻ Refresh\nANCHOR\nNow\nToday\nPrior Day\nEnd of Week\nEnd of Month\nPick Date\nHORIZON\n1d\n3d\n7d\n14d\n30d\nAnchor: Mon Oct 5 05:00 EDT\nCRYPTO DAILY UTC\nBasis: UTC\nHorizon: 1d → Tue Oct 6 05:00 EDT\nDaily+ closes in window: 0\nSchedule Basis: Fixture calendar\nCloses on Anchor Day (0)\nFull Schedule (0)\nNo daily+ timeframes close on the anchor day.\nTime Confluence EngineAlignment score, decompression & structure\n▾ expand\nTime Gravity MapMidpoint debt, decompression windows & gravity fields\n▾ expand\n⏰\nTime Confluence Engine\n🟢 Market Open\n🔴 Live\n📅 Today\n🔢 Fib\n📊 Macro\n🗓️ Calendar\nCONFLUENCE SCORE\n?\n2\nLOW\n📈\n48%\ntarget hit rate\nSimulated — modelled from 456 pattern setups\n🔔 Set Confluence Alert\nNotify when score hits strong again\nScore ≥ 6\nScore ≥ 8\nScore ≥ 10\nScore ≥ 12\nScore ≥ 15\nSet Alert\nCLOSING NOW\n1m\nFib1m\n⏳ NEXT MAJOR CONFLUENCE\n12:00 PM ET\n11-way confluence\n1m\n🏦 US EQUITY SESSION WINDOWS · ET\n9:30 AM - 10:00 AM\nOpening Range\n10:00 AM - 10:30 AM\nPost-Open\n11:30 AM - 12:00 PM\nEurope Close",
+        "observedAt": "2026-10-05T15:59:48.419Z"
+      },
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nFUTURES\n/ES\n/NQ\n/YM\n/RTY\n/CL\n/GC\n/SI\n/M2K\n/MES\n/MNQ\n/MCL\n/MGC\nCRYPTO\nBTCUSD\nETHUSD\nSOLUSD\nXRPUSD\nBNBUSD\nEQUITY\nAAPL\nMSFT\nNVDA\nGOOGL\nAMZN\nTime Confluence · Change view\nMECHANICS WORKBENCH\nTiming first, then positioning, flow, and final confluence before Backtest.\nEQUITY PATH\n1. TIMING MAP\nClose Calendar\n2. CHAIN QUALITY\nOptions Terminal\n3. OPTIONS SETUP\nOptions Confluence\n4. FLOW ESTIMATE\nOptions Flow\n5. CAPITAL PRESSURE\nCapital Pressure\n6. GRAVITY MAP\nTime Gravity\n7. FINAL TIMING CHECK\nTime Confluence\nScalp 15m\n30min\n1H\n4H\nDaily\n3-Day\nWeekly\nMonthly\nYearly\nRTH (9:30–16:00)\nExtended (4:00–20:00)\nFull (00:00–24:00)\nRun\nneutral • 1H • MU • Extended\nNOT ALIGNED\nCONFLUENCE\n11 / 100\nRISK\nHIGH\nR:R\nUnavailable\n↔ NEUTRAL\nNo directional bias detected — No measured timeframes in this observation.\n$100.00\nMarket Pressure EngineComposite pressure from time, volatility, liquidity & options\n▾ expand\nFixture feed not collected\nIntraday Equity Close Schedule\nFixed candle closes every trading day (Extended 4:00–20:00 ET) — these never change\nTIME (ET)\tEVENT\tCANDLE CLOSES\n04:00\tSession Open\tNew bars begin anchoring\n08:00\tEarly Pre-Market\t1H (7:00–8:00) · 2H (6:00–8:00) · 4H (4:00–8:00)\n09:30\tNYSE Open\t30M (9:00–9:30) — RTH volume surge\n10:00\tOpening Range Close\t30M · 1H (9:00–10:00) · 2H (8:00–10:00) · 3H (7:00–10:00) · 6H (4:00–10:00)\n12:00\tMidday\t1H (11:00–12:00) · 2H (10:00–12:00) · 4H (8:00–12:00) · 8H (4:00–12:00)\n14:00\tMid-Afternoon\t30M (13:30–14:00) · 1H (13:00–14:00) · 2H (12:00–14:00)\n16:00\tNYSE Close\t30M (15:30–16:00) · 1H (15:00–16:00) · 2H (14:00–16:00) · 4H (12:00–16:00) · Daily (9:30–16:00)\n20:00\tAfter-Hours Close\t1H (19:00–20:00) · 2H (18:00–20:00) · 4H (16:00–20:00)\nRepeats identically every trading day (Mon–Fri, excluding NYSE holidays). Only daily+ timeframes have variable close dates.\nClose Calendar — Forward Schedule\nWhich timeframes close on your target day? Where do closes stack?\n↻ Refresh\nANCHOR\nNow\nToday\nPrior Day\nEnd of Week\nEnd of Month\nPick Date\nHORIZON\n1d\n3d\n7d\n14d\n30d\nAnchor: Mon Oct 5 05:00 EDT\nCRYPTO DAILY UTC\nBasis: UTC\nHorizon: 1d → Tue Oct 6 05:00 EDT\nDaily+ closes in window: 0\nSchedule Basis: Fixture calendar\nCloses on Anchor Day (0)\nFull Schedule (0)\nNo daily+ timeframes close on the anchor day.\nTime Confluence EngineAlignment score, decompression & structure\n▾ expand\nConfluence Engine\nTime alignment → confluence quality\nTrend Alignment\n37%\nClose Evidence\n10%\nAlignment 0/1 • Window INACTIVE\nTiming\nKey timing context for analysis\nCLOSE\nFAILED\nRISK\nhigh\nLIQUIDITY\nTHIN\nGATE\n5%\nTIME\n11 / 100\nWINDOW\n0%\nNo measured timeframes in this observation.\nTime Gravity MapMidpoint debt, decompression windows & gravity fields\n▾ expand\n🧲 Time Gravity Map\nFixture feed not collected\n🔄 Generate Data for MU\n⏰\nTime Confluence Engine\n🟢 Market Open\n🔴 Live\n📅 Today\n🔢 Fib\n📊 Macro\n🗓️ Calendar\nCONFLUENCE SCORE\n?\n2\nLOW\n📈\n48%\ntarget hit rate\nSimulated — modelled from 456 pattern setups\n🔔 Set Confluence Alert\nNotify when score hits strong again\nScore ≥ 6\nScore ≥ 8\nScore ≥ 10\nScore ≥ 12\nScore ≥ 15\nSet Alert\nCLOSING NOW\n1m\nFib1m\n⏳ NEXT MAJOR CONFLUENCE\n12:00 PM ET\n11-way confluence\n1m\n🏦 US EQUITY SESSION WINDOWS · ET\n9:30 AM - 10:00 AM\nOpening Range\n10:00 AM - 10:30 AM\nPost-Open\n11:30 AM - 12:00 PM\nEurope Close",
+      "expandedWidth": 390,
+      "expandedSourceCount": 0,
+      "expandedAttributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Terminal command header Terminal symbol Terminal market mechanics views Session hours — affects intraday candle close anchors Fixture calendar Score breakdown info"
+    },
+    {
+      "tab": "time-confluence",
+      "symbol": "BTCUSD",
+      "type": "crypto",
+      "tier": "pro",
+      "measured": true,
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T15:59:49.984Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nTime Confluence · Change view\nRun Time Confluence for BTCUSD\nRun Time Confluence",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "BTCUSD"
+        }
+      ],
+      "openFolds": 0,
+      "afterRun": {
+        "sourceCount": 0,
+        "openFolds": 1,
+        "verdicts": [],
+        "screens": 3.3925,
+        "scrollWidth": 1280,
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nTime Confluence · Change view\nScalp 15m\n30min\n1H\n4H\nDaily\n3-Day\nWeekly\nMonthly\nYearly\nRun\nbullish • 1H • BTCUSD\nNOT ALIGNED\nCONFLUENCE\n62 / 100\nRISK\nHIGH\nR:R\nUnavailable\n↑ BULLISH\nAlignment: 57%MODERATE\nCURRENT\n$100.00\nKEY LEVEL\n$105.00\nANALYSIS\nThree measured timeframes agree.\n50% PULL LEVELS (BULLISH)\nAll TFs (3)\n1H\n4H\n1D\n1H\n$101.00+1.0%\n4H\n$102.00+2.0%\n1D\n$103.00+3.0%\nMarket Pressure EngineComposite pressure from time, volatility, liquidity & options\n▾ expand\nPRESSURE\n64\nBUILDING\n↑ LONG\n·\nAlignment: 75%\nRegime: TREND UP\n4/4\n⏱ Time (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n📊 Volatility (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n💧 Liquidity (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n⚙️ Options (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\nBUILDING: LONG evidence with bullish components.\nClose Calendar — Forward Schedule\nWhich timeframes close on your target day? Where do closes stack?\n↻ Refresh\nANCHOR\nNow\nToday\nPrior Day\nEnd of Week\nEnd of Month\nPick Date\nHORIZON\n1d\n3d\n7d\n14d\n30d\nAnchor: Mon Oct 5 09:00 UTC\nCRYPTO DAILY UTC\nBasis: UTC\nHorizon: 1d → Tue Oct 6 09:00 UTC\nDaily+ closes in window: 0\nSchedule Basis: Fixture calendar\nCloses on Anchor Day (0)\nFull Schedule (0)\nNo daily+ timeframes close on the anchor day.\nTime Confluence EngineAlignment score, decompression & structure\n▾ expand\nTime Gravity MapMidpoint debt, decompression windows & gravity fields\n▾ expand\n⏰\nTime Confluence Engine\n🟢 Market Open\n🔴 Live\n📅 Today\n🔢 Fib\n📊 Macro\n🗓️ Calendar\nCONFLUENCE SCORE\n?\n2\nLOW\n📈\n48%\ntarget hit rate\nSimulated — modelled from 456 pattern setups\n🔔 Set Confluence Alert\nNotify when score hits strong again\nScore ≥ 6\nScore ≥ 8\nScore ≥ 10\nScore ≥ 12\nScore ≥ 15\nSet Alert\nCLOSING NOW\n1m\nFib1m\n⏳ NEXT US EQUITY WINDOW (CROSS-MARKET CONTEXT)\n12:00 PM ET\n11-way confluence\n1m\n🏦 US EQUITY SESSION WINDOWS · ET\n9:30 AM - 10:00 AM\nOpening Range\n10:00 AM - 10:30 AM\nPost-Open\n11:30 AM - 12:00 PM\nEurope Close",
+        "observedAt": "2026-10-05T15:59:50.970Z"
+      },
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nFUTURES\n/ES\n/NQ\n/YM\n/RTY\n/CL\n/GC\n/SI\n/M2K\n/MES\n/MNQ\n/MCL\n/MGC\nCRYPTO\nBTCUSD\nETHUSD\nSOLUSD\nXRPUSD\nBNBUSD\nEQUITY\nAAPL\nMSFT\nNVDA\nGOOGL\nAMZN\nTime Confluence · Change view\nMECHANICS WORKBENCH\nTiming first, then positioning, flow, and final confluence before Backtest.\nCRYPTO PATH\n1. TIMING MAP\nClose Calendar\n2. DERIVATIVES MAP\nCrypto\n5. CAPITAL PRESSURE\nCapital Pressure\n6. GRAVITY MAP\nTime Gravity\n7. FINAL TIMING CHECK\nTime Confluence\nScalp 15m\n30min\n1H\n4H\nDaily\n3-Day\nWeekly\nMonthly\nYearly\nRun\nbullish • 1H • BTCUSD\nNOT ALIGNED\nCONFLUENCE\n62 / 100\nRISK\nHIGH\nR:R\nUnavailable\n↑ BULLISH\nAlignment: 57%MODERATE\nCURRENT\n$100.00\nKEY LEVEL\n$105.00\nANALYSIS\nThree measured timeframes agree.\n50% PULL LEVELS (BULLISH)\nAll TFs (3)\n1H\n4H\n1D\n1H\n$101.00+1.0%\n4H\n$102.00+2.0%\n1D\n$103.00+3.0%\nMarket Pressure EngineComposite pressure from time, volatility, liquidity & options\n▾ expand\nPRESSURE\n64\nBUILDING\n↑ LONG\n·\nAlignment: 75%\nRegime: TREND UP\n4/4\n⏱ Time (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n📊 Volatility (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n💧 Liquidity (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n⚙️ Options (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\nBUILDING: LONG evidence with bullish components.\nClose Calendar — Forward Schedule\nWhich timeframes close on your target day? Where do closes stack?\n↻ Refresh\nANCHOR\nNow\nToday\nPrior Day\nEnd of Week\nEnd of Month\nPick Date\nHORIZON\n1d\n3d\n7d\n14d\n30d\nAnchor: Mon Oct 5 09:00 UTC\nCRYPTO DAILY UTC\nBasis: UTC\nHorizon: 1d → Tue Oct 6 09:00 UTC\nDaily+ closes in window: 0\nSchedule Basis: Fixture calendar\nCloses on Anchor Day (0)\nFull Schedule (0)\nNo daily+ timeframes close on the anchor day.\nTime Confluence EngineAlignment score, decompression & structure\n▾ expand\nConfluence Engine\nTime alignment → confluence quality\nTrend Alignment\n67%\nFlow Strength\n58%\nClose Evidence\n69%\nCluster Integrity\n35%\nWindow Quality\n66%\nAlignment 3/3 • Window ACTIVE\nTiming\nKey timing context for analysis\nCLOSE\nPENDING\nRISK\ncontrolled\nLIQUIDITY\nOK\nGATE\n65%\nTIME\n62 / 100\nWINDOW\n66%\nThree measured timeframes agree.\nTime Gravity MapMidpoint debt, decompression windows & gravity fields\n▾ expand\n🧲 Time Gravity Map\nFixture feed not collected\n🔄 Generate Data for BTCUSD\n⏰\nTime Confluence Engine\n🟢 Market Open\n🔴 Live\n📅 Today\n🔢 Fib\n📊 Macro\n🗓️ Calendar\nCONFLUENCE SCORE\n?\n2\nLOW\n📈\n48%\ntarget hit rate\nSimulated — modelled from 456 pattern setups\n🔔 Set Confluence Alert\nNotify when score hits strong again\nScore ≥ 6\nScore ≥ 8\nScore ≥ 10\nScore ≥ 12\nScore ≥ 15\nSet Alert\nCLOSING NOW\n1m\nFib1m\n⏳ NEXT US EQUITY WINDOW (CROSS-MARKET CONTEXT)\n12:00 PM ET\n11-way confluence\n1m\n🏦 US EQUITY SESSION WINDOWS · ET\n9:30 AM - 10:00 AM\nOpening Range\n10:00 AM - 10:30 AM\nPost-Open\n11:30 AM - 12:00 PM\nEurope Close",
+      "expandedWidth": 1280,
+      "expandedSourceCount": 0,
+      "expandedAttributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Terminal command header Terminal symbol Terminal market mechanics views Time: active Volatility: active Liquidity: active Options: active Fixture calendar Score breakdown info"
+    },
+    {
+      "tab": "time-confluence",
+      "symbol": "BTCUSD",
+      "type": "crypto",
+      "tier": "pro",
+      "measured": true,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T15:59:52.852Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nTime Confluence · Change view\nRun Time Confluence for BTCUSD\nRun Time Confluence",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "BTCUSD"
+        }
+      ],
+      "openFolds": 0,
+      "afterRun": {
+        "sourceCount": 0,
+        "openFolds": 1,
+        "verdicts": [],
+        "screens": 4.351895734597156,
+        "scrollWidth": 390,
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nTime Confluence · Change view\nScalp 15m\n30min\n1H\n4H\nDaily\n3-Day\nWeekly\nMonthly\nYearly\nRun\nbullish • 1H • BTCUSD\nNOT ALIGNED\nCONFLUENCE\n62 / 100\nRISK\nHIGH\nR:R\nUnavailable\n↑ BULLISH\nAlignment: 57%MODERATE\nCURRENT\n$100.00\nKEY LEVEL\n$105.00\nANALYSIS\nThree measured timeframes agree.\n50% PULL LEVELS (BULLISH)\nAll TFs (3)\n1H\n4H\n1D\n1H\n$101.00+1.0%\n4H\n$102.00+2.0%\n1D\n$103.00+3.0%\nMarket Pressure EngineComposite pressure from time, volatility, liquidity & options\n▾ expand\nPRESSURE\n64\nBUILDING\n↑ LONG\n·\nAlignment: 75%\nRegime: TREND UP\n4/4\n⏱ Time (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n📊 Volatility (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n💧 Liquidity (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n⚙️ Options (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\nBUILDING: LONG evidence with bullish components.\nClose Calendar — Forward Schedule\nWhich timeframes close on your target day? Where do closes stack?\n↻ Refresh\nANCHOR\nNow\nToday\nPrior Day\nEnd of Week\nEnd of Month\nPick Date\nHORIZON\n1d\n3d\n7d\n14d\n30d\nAnchor: Mon Oct 5 09:00 UTC\nCRYPTO DAILY UTC\nBasis: UTC\nHorizon: 1d → Tue Oct 6 09:00 UTC\nDaily+ closes in window: 0\nSchedule Basis: Fixture calendar\nCloses on Anchor Day (0)\nFull Schedule (0)\nNo daily+ timeframes close on the anchor day.\nTime Confluence EngineAlignment score, decompression & structure\n▾ expand\nTime Gravity MapMidpoint debt, decompression windows & gravity fields\n▾ expand\n⏰\nTime Confluence Engine\n🟢 Market Open\n🔴 Live\n📅 Today\n🔢 Fib\n📊 Macro\n🗓️ Calendar\nCONFLUENCE SCORE\n?\n2\nLOW\n📈\n48%\ntarget hit rate\nSimulated — modelled from 456 pattern setups\n🔔 Set Confluence Alert\nNotify when score hits strong again\nScore ≥ 6\nScore ≥ 8\nScore ≥ 10\nScore ≥ 12\nScore ≥ 15\nSet Alert\nCLOSING NOW\n1m\nFib1m\n⏳ NEXT US EQUITY WINDOW (CROSS-MARKET CONTEXT)\n12:00 PM ET\n11-way confluence\n1m\n🏦 US EQUITY SESSION WINDOWS · ET\n9:30 AM - 10:00 AM\nOpening Range\n10:00 AM - 10:30 AM\nPost-Open\n11:30 AM - 12:00 PM\nEurope Close",
+        "observedAt": "2026-10-05T15:59:53.684Z"
+      },
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nFUTURES\n/ES\n/NQ\n/YM\n/RTY\n/CL\n/GC\n/SI\n/M2K\n/MES\n/MNQ\n/MCL\n/MGC\nCRYPTO\nBTCUSD\nETHUSD\nSOLUSD\nXRPUSD\nBNBUSD\nEQUITY\nAAPL\nMSFT\nNVDA\nGOOGL\nAMZN\nTime Confluence · Change view\nMECHANICS WORKBENCH\nTiming first, then positioning, flow, and final confluence before Backtest.\nCRYPTO PATH\n1. TIMING MAP\nClose Calendar\n2. DERIVATIVES MAP\nCrypto\n5. CAPITAL PRESSURE\nCapital Pressure\n6. GRAVITY MAP\nTime Gravity\n7. FINAL TIMING CHECK\nTime Confluence\nScalp 15m\n30min\n1H\n4H\nDaily\n3-Day\nWeekly\nMonthly\nYearly\nRun\nbullish • 1H • BTCUSD\nNOT ALIGNED\nCONFLUENCE\n62 / 100\nRISK\nHIGH\nR:R\nUnavailable\n↑ BULLISH\nAlignment: 57%MODERATE\nCURRENT\n$100.00\nKEY LEVEL\n$105.00\nANALYSIS\nThree measured timeframes agree.\n50% PULL LEVELS (BULLISH)\nAll TFs (3)\n1H\n4H\n1D\n1H\n$101.00+1.0%\n4H\n$102.00+2.0%\n1D\n$103.00+3.0%\nMarket Pressure EngineComposite pressure from time, volatility, liquidity & options\n▾ expand\nPRESSURE\n64\nBUILDING\n↑ LONG\n·\nAlignment: 75%\nRegime: TREND UP\n4/4\n⏱ Time (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n📊 Volatility (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n💧 Liquidity (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n⚙️ Options (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\nBUILDING: LONG evidence with bullish components.\nClose Calendar — Forward Schedule\nWhich timeframes close on your target day? Where do closes stack?\n↻ Refresh\nANCHOR\nNow\nToday\nPrior Day\nEnd of Week\nEnd of Month\nPick Date\nHORIZON\n1d\n3d\n7d\n14d\n30d\nAnchor: Mon Oct 5 09:00 UTC\nCRYPTO DAILY UTC\nBasis: UTC\nHorizon: 1d → Tue Oct 6 09:00 UTC\nDaily+ closes in window: 0\nSchedule Basis: Fixture calendar\nCloses on Anchor Day (0)\nFull Schedule (0)\nNo daily+ timeframes close on the anchor day.\nTime Confluence EngineAlignment score, decompression & structure\n▾ expand\nConfluence Engine\nTime alignment → confluence quality\nTrend Alignment\n67%\nFlow Strength\n58%\nClose Evidence\n69%\nCluster Integrity\n35%\nWindow Quality\n66%\nAlignment 3/3 • Window ACTIVE\nTiming\nKey timing context for analysis\nCLOSE\nPENDING\nRISK\ncontrolled\nLIQUIDITY\nOK\nGATE\n65%\nTIME\n62 / 100\nWINDOW\n66%\nThree measured timeframes agree.\nTime Gravity MapMidpoint debt, decompression windows & gravity fields\n▾ expand\n🧲 Time Gravity Map\nFixture feed not collected\n🔄 Generate Data for BTCUSD\n⏰\nTime Confluence Engine\n🟢 Market Open\n🔴 Live\n📅 Today\n🔢 Fib\n📊 Macro\n🗓️ Calendar\nCONFLUENCE SCORE\n?\n2\nLOW\n📈\n48%\ntarget hit rate\nSimulated — modelled from 456 pattern setups\n🔔 Set Confluence Alert\nNotify when score hits strong again\nScore ≥ 6\nScore ≥ 8\nScore ≥ 10\nScore ≥ 12\nScore ≥ 15\nSet Alert\nCLOSING NOW\n1m\nFib1m\n⏳ NEXT US EQUITY WINDOW (CROSS-MARKET CONTEXT)\n12:00 PM ET\n11-way confluence\n1m\n🏦 US EQUITY SESSION WINDOWS · ET\n9:30 AM - 10:00 AM\nOpening Range\n10:00 AM - 10:30 AM\nPost-Open\n11:30 AM - 12:00 PM\nEurope Close",
+      "expandedWidth": 390,
+      "expandedSourceCount": 0,
+      "expandedAttributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Terminal command header Terminal symbol Terminal market mechanics views Time: active Volatility: active Liquidity: active Options: active Fixture calendar Score breakdown info"
+    },
+    {
+      "tab": "time-confluence",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "pro",
+      "measured": true,
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T15:59:55.316Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Confluence · Change view\nRun Time Confluence for MU\nRun Time Confluence",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0,
+      "afterRun": {
+        "sourceCount": 0,
+        "openFolds": 1,
+        "verdicts": [],
+        "screens": 3.8825,
+        "scrollWidth": 1280,
+        "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Confluence · Change view\nScalp 15m\n30min\n1H\n4H\nDaily\n3-Day\nWeekly\nMonthly\nYearly\nRTH (9:30–16:00)\nExtended (4:00–20:00)\nFull (00:00–24:00)\nRun\nbullish • 1H • MU • Extended\nNOT ALIGNED\nCONFLUENCE\n62 / 100\nRISK\nHIGH\nR:R\nUnavailable\n↑ BULLISH\nAlignment: 57%MODERATE\nCURRENT\n$100.00\nKEY LEVEL\n$105.00\nANALYSIS\nThree measured timeframes agree.\n50% PULL LEVELS (BULLISH)\nAll TFs (3)\n1H\n4H\n1D\n1H\n$101.00+1.0%\n4H\n$102.00+2.0%\n1D\n$103.00+3.0%\nMarket Pressure EngineComposite pressure from time, volatility, liquidity & options\n▾ expand\nPRESSURE\n64\nBUILDING\n↑ LONG\n·\nAlignment: 75%\nRegime: TREND UP\n4/4\n⏱ Time (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n📊 Volatility (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n💧 Liquidity (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n⚙️ Options (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\nBUILDING: LONG evidence with bullish components.\nIntraday Equity Close Schedule\nFixed candle closes every trading day (Extended 4:00–20:00 ET) — these never change\nTIME (ET)\tEVENT\tCANDLE CLOSES\n04:00\tSession Open\tNew bars begin anchoring\n08:00\tEarly Pre-Market\t1H (7:00–8:00) · 2H (6:00–8:00) · 4H (4:00–8:00)\n09:30\tNYSE Open\t30M (9:00–9:30) — RTH volume surge\n10:00\tOpening Range Close\t30M · 1H (9:00–10:00) · 2H (8:00–10:00) · 3H (7:00–10:00) · 6H (4:00–10:00)\n12:00\tMidday\t1H (11:00–12:00) · 2H (10:00–12:00) · 4H (8:00–12:00) · 8H (4:00–12:00)\n14:00\tMid-Afternoon\t30M (13:30–14:00) · 1H (13:00–14:00) · 2H (12:00–14:00)\n16:00\tNYSE Close\t30M (15:30–16:00) · 1H (15:00–16:00) · 2H (14:00–16:00) · 4H (12:00–16:00) · Daily (9:30–16:00)\n20:00\tAfter-Hours Close\t1H (19:00–20:00) · 2H (18:00–20:00) · 4H (16:00–20:00)\nRepeats identically every trading day (Mon–Fri, excluding NYSE holidays). Only daily+ timeframes have variable close dates.\nClose Calendar — Forward Schedule\nWhich timeframes close on your target day? Where do closes stack?\n↻ Refresh\nANCHOR\nNow\nToday\nPrior Day\nEnd of Week\nEnd of Month\nPick Date\nHORIZON\n1d\n3d\n7d\n14d\n30d\nAnchor: Mon Oct 5 05:00 EDT\nCRYPTO DAILY UTC\nBasis: UTC\nHorizon: 1d → Tue Oct 6 05:00 EDT\nDaily+ closes in window: 0\nSchedule Basis: Fixture calendar\nCloses on Anchor Day (0)\nFull Schedule (0)\nNo daily+ timeframes close on the anchor day.\nTime Confluence EngineAlignment score, decompression & structure\n▾ expand\nTime Gravity MapMidpoint debt, decompression windows & gravity fields\n▾ expand\n⏰\nTime Confluence Engine\n🟢 Market Open\n🔴 Live\n📅 Today\n🔢 Fib\n📊 Macro\n🗓️ Calendar\nCONFLUENCE SCORE\n?\n2\nLOW\n📈\n48%\ntarget hit rate\nSimulated — modelled from 456 pattern setups\n🔔 Set Confluence Alert\nNotify when score hits strong again\nScore ≥ 6\nScore ≥ 8\nScore ≥ 10\nScore ≥ 12\nScore ≥ 15\nSet Alert\nCLOSING NOW\n1m\nFib1m\n⏳ NEXT MAJOR CONFLUENCE\n12:00 PM ET\n11-way confluence\n1m\n🏦 US EQUITY SESSION WINDOWS · ET\n9:30 AM - 10:00 AM\nOpening Range\n10:00 AM - 10:30 AM\nPost-Open\n11:30 AM - 12:00 PM\nEurope Close",
+        "observedAt": "2026-10-05T15:59:56.218Z"
+      },
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nFUTURES\n/ES\n/NQ\n/YM\n/RTY\n/CL\n/GC\n/SI\n/M2K\n/MES\n/MNQ\n/MCL\n/MGC\nCRYPTO\nBTCUSD\nETHUSD\nSOLUSD\nXRPUSD\nBNBUSD\nEQUITY\nAAPL\nMSFT\nNVDA\nGOOGL\nAMZN\nTime Confluence · Change view\nMECHANICS WORKBENCH\nTiming first, then positioning, flow, and final confluence before Backtest.\nEQUITY PATH\n1. TIMING MAP\nClose Calendar\n2. CHAIN QUALITY\nOptions Terminal\n3. OPTIONS SETUP\nOptions Confluence\n4. FLOW ESTIMATE\nOptions Flow\n5. CAPITAL PRESSURE\nCapital Pressure\n6. GRAVITY MAP\nTime Gravity\n7. FINAL TIMING CHECK\nTime Confluence\nScalp 15m\n30min\n1H\n4H\nDaily\n3-Day\nWeekly\nMonthly\nYearly\nRTH (9:30–16:00)\nExtended (4:00–20:00)\nFull (00:00–24:00)\nRun\nbullish • 1H • MU • Extended\nNOT ALIGNED\nCONFLUENCE\n62 / 100\nRISK\nHIGH\nR:R\nUnavailable\n↑ BULLISH\nAlignment: 57%MODERATE\nCURRENT\n$100.00\nKEY LEVEL\n$105.00\nANALYSIS\nThree measured timeframes agree.\n50% PULL LEVELS (BULLISH)\nAll TFs (3)\n1H\n4H\n1D\n1H\n$101.00+1.0%\n4H\n$102.00+2.0%\n1D\n$103.00+3.0%\nMarket Pressure EngineComposite pressure from time, volatility, liquidity & options\n▾ expand\nPRESSURE\n64\nBUILDING\n↑ LONG\n·\nAlignment: 75%\nRegime: TREND UP\n4/4\n⏱ Time (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n📊 Volatility (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n💧 Liquidity (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n⚙️ Options (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\nBUILDING: LONG evidence with bullish components.\nIntraday Equity Close Schedule\nFixed candle closes every trading day (Extended 4:00–20:00 ET) — these never change\nTIME (ET)\tEVENT\tCANDLE CLOSES\n04:00\tSession Open\tNew bars begin anchoring\n08:00\tEarly Pre-Market\t1H (7:00–8:00) · 2H (6:00–8:00) · 4H (4:00–8:00)\n09:30\tNYSE Open\t30M (9:00–9:30) — RTH volume surge\n10:00\tOpening Range Close\t30M · 1H (9:00–10:00) · 2H (8:00–10:00) · 3H (7:00–10:00) · 6H (4:00–10:00)\n12:00\tMidday\t1H (11:00–12:00) · 2H (10:00–12:00) · 4H (8:00–12:00) · 8H (4:00–12:00)\n14:00\tMid-Afternoon\t30M (13:30–14:00) · 1H (13:00–14:00) · 2H (12:00–14:00)\n16:00\tNYSE Close\t30M (15:30–16:00) · 1H (15:00–16:00) · 2H (14:00–16:00) · 4H (12:00–16:00) · Daily (9:30–16:00)\n20:00\tAfter-Hours Close\t1H (19:00–20:00) · 2H (18:00–20:00) · 4H (16:00–20:00)\nRepeats identically every trading day (Mon–Fri, excluding NYSE holidays). Only daily+ timeframes have variable close dates.\nClose Calendar — Forward Schedule\nWhich timeframes close on your target day? Where do closes stack?\n↻ Refresh\nANCHOR\nNow\nToday\nPrior Day\nEnd of Week\nEnd of Month\nPick Date\nHORIZON\n1d\n3d\n7d\n14d\n30d\nAnchor: Mon Oct 5 05:00 EDT\nCRYPTO DAILY UTC\nBasis: UTC\nHorizon: 1d → Tue Oct 6 05:00 EDT\nDaily+ closes in window: 0\nSchedule Basis: Fixture calendar\nCloses on Anchor Day (0)\nFull Schedule (0)\nNo daily+ timeframes close on the anchor day.\nTime Confluence EngineAlignment score, decompression & structure\n▾ expand\nConfluence Engine\nTime alignment → confluence quality\nTrend Alignment\n67%\nFlow Strength\n58%\nClose Evidence\n69%\nCluster Integrity\n35%\nWindow Quality\n66%\nAlignment 3/3 • Window ACTIVE\nTiming\nKey timing context for analysis\nCLOSE\nPENDING\nRISK\ncontrolled\nLIQUIDITY\nOK\nGATE\n65%\nTIME\n62 / 100\nWINDOW\n66%\nThree measured timeframes agree.\nTime Gravity MapMidpoint debt, decompression windows & gravity fields\n▾ expand\n🧲 Time Gravity Map\nFixture feed not collected\n🔄 Generate Data for MU\n⏰\nTime Confluence Engine\n🟢 Market Open\n🔴 Live\n📅 Today\n🔢 Fib\n📊 Macro\n🗓️ Calendar\nCONFLUENCE SCORE\n?\n2\nLOW\n📈\n48%\ntarget hit rate\nSimulated — modelled from 456 pattern setups\n🔔 Set Confluence Alert\nNotify when score hits strong again\nScore ≥ 6\nScore ≥ 8\nScore ≥ 10\nScore ≥ 12\nScore ≥ 15\nSet Alert\nCLOSING NOW\n1m\nFib1m\n⏳ NEXT MAJOR CONFLUENCE\n12:00 PM ET\n11-way confluence\n1m\n🏦 US EQUITY SESSION WINDOWS · ET\n9:30 AM - 10:00 AM\nOpening Range\n10:00 AM - 10:30 AM\nPost-Open\n11:30 AM - 12:00 PM\nEurope Close",
+      "expandedWidth": 1280,
+      "expandedSourceCount": 0,
+      "expandedAttributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Terminal command header Terminal symbol Terminal market mechanics views Session hours — affects intraday candle close anchors Time: active Volatility: active Liquidity: active Options: active Fixture calendar Score breakdown info"
+    },
+    {
+      "tab": "time-confluence",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "pro",
+      "measured": true,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T15:59:57.945Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Confluence · Change view\nRun Time Confluence for MU\nRun Time Confluence",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0,
+      "afterRun": {
+        "sourceCount": 0,
+        "openFolds": 1,
+        "verdicts": [],
+        "screens": 4.812796208530806,
+        "scrollWidth": 390,
+        "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Confluence · Change view\nScalp 15m\n30min\n1H\n4H\nDaily\n3-Day\nWeekly\nMonthly\nYearly\nRTH (9:30–16:00)\nExtended (4:00–20:00)\nFull (00:00–24:00)\nRun\nbullish • 1H • MU • Extended\nNOT ALIGNED\nCONFLUENCE\n62 / 100\nRISK\nHIGH\nR:R\nUnavailable\n↑ BULLISH\nAlignment: 57%MODERATE\nCURRENT\n$100.00\nKEY LEVEL\n$105.00\nANALYSIS\nThree measured timeframes agree.\n50% PULL LEVELS (BULLISH)\nAll TFs (3)\n1H\n4H\n1D\n1H\n$101.00+1.0%\n4H\n$102.00+2.0%\n1D\n$103.00+3.0%\nMarket Pressure EngineComposite pressure from time, volatility, liquidity & options\n▾ expand\nPRESSURE\n64\nBUILDING\n↑ LONG\n·\nAlignment: 75%\nRegime: TREND UP\n4/4\n⏱ Time (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n📊 Volatility (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n💧 Liquidity (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n⚙️ Options (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\nBUILDING: LONG evidence with bullish components.\nIntraday Equity Close Schedule\nFixed candle closes every trading day (Extended 4:00–20:00 ET) — these never change\nTIME (ET)\tEVENT\tCANDLE CLOSES\n04:00\tSession Open\tNew bars begin anchoring\n08:00\tEarly Pre-Market\t1H (7:00–8:00) · 2H (6:00–8:00) · 4H (4:00–8:00)\n09:30\tNYSE Open\t30M (9:00–9:30) — RTH volume surge\n10:00\tOpening Range Close\t30M · 1H (9:00–10:00) · 2H (8:00–10:00) · 3H (7:00–10:00) · 6H (4:00–10:00)\n12:00\tMidday\t1H (11:00–12:00) · 2H (10:00–12:00) · 4H (8:00–12:00) · 8H (4:00–12:00)\n14:00\tMid-Afternoon\t30M (13:30–14:00) · 1H (13:00–14:00) · 2H (12:00–14:00)\n16:00\tNYSE Close\t30M (15:30–16:00) · 1H (15:00–16:00) · 2H (14:00–16:00) · 4H (12:00–16:00) · Daily (9:30–16:00)\n20:00\tAfter-Hours Close\t1H (19:00–20:00) · 2H (18:00–20:00) · 4H (16:00–20:00)\nRepeats identically every trading day (Mon–Fri, excluding NYSE holidays). Only daily+ timeframes have variable close dates.\nClose Calendar — Forward Schedule\nWhich timeframes close on your target day? Where do closes stack?\n↻ Refresh\nANCHOR\nNow\nToday\nPrior Day\nEnd of Week\nEnd of Month\nPick Date\nHORIZON\n1d\n3d\n7d\n14d\n30d\nAnchor: Mon Oct 5 05:00 EDT\nCRYPTO DAILY UTC\nBasis: UTC\nHorizon: 1d → Tue Oct 6 05:00 EDT\nDaily+ closes in window: 0\nSchedule Basis: Fixture calendar\nCloses on Anchor Day (0)\nFull Schedule (0)\nNo daily+ timeframes close on the anchor day.\nTime Confluence EngineAlignment score, decompression & structure\n▾ expand\nTime Gravity MapMidpoint debt, decompression windows & gravity fields\n▾ expand\n⏰\nTime Confluence Engine\n🟢 Market Open\n🔴 Live\n📅 Today\n🔢 Fib\n📊 Macro\n🗓️ Calendar\nCONFLUENCE SCORE\n?\n2\nLOW\n📈\n48%\ntarget hit rate\nSimulated — modelled from 456 pattern setups\n🔔 Set Confluence Alert\nNotify when score hits strong again\nScore ≥ 6\nScore ≥ 8\nScore ≥ 10\nScore ≥ 12\nScore ≥ 15\nSet Alert\nCLOSING NOW\n1m\nFib1m\n⏳ NEXT MAJOR CONFLUENCE\n12:00 PM ET\n11-way confluence\n1m\n🏦 US EQUITY SESSION WINDOWS · ET\n9:30 AM - 10:00 AM\nOpening Range\n10:00 AM - 10:30 AM\nPost-Open\n11:30 AM - 12:00 PM\nEurope Close",
+        "observedAt": "2026-10-05T15:59:58.799Z"
+      },
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nFUTURES\n/ES\n/NQ\n/YM\n/RTY\n/CL\n/GC\n/SI\n/M2K\n/MES\n/MNQ\n/MCL\n/MGC\nCRYPTO\nBTCUSD\nETHUSD\nSOLUSD\nXRPUSD\nBNBUSD\nEQUITY\nAAPL\nMSFT\nNVDA\nGOOGL\nAMZN\nTime Confluence · Change view\nMECHANICS WORKBENCH\nTiming first, then positioning, flow, and final confluence before Backtest.\nEQUITY PATH\n1. TIMING MAP\nClose Calendar\n2. CHAIN QUALITY\nOptions Terminal\n3. OPTIONS SETUP\nOptions Confluence\n4. FLOW ESTIMATE\nOptions Flow\n5. CAPITAL PRESSURE\nCapital Pressure\n6. GRAVITY MAP\nTime Gravity\n7. FINAL TIMING CHECK\nTime Confluence\nScalp 15m\n30min\n1H\n4H\nDaily\n3-Day\nWeekly\nMonthly\nYearly\nRTH (9:30–16:00)\nExtended (4:00–20:00)\nFull (00:00–24:00)\nRun\nbullish • 1H • MU • Extended\nNOT ALIGNED\nCONFLUENCE\n62 / 100\nRISK\nHIGH\nR:R\nUnavailable\n↑ BULLISH\nAlignment: 57%MODERATE\nCURRENT\n$100.00\nKEY LEVEL\n$105.00\nANALYSIS\nThree measured timeframes agree.\n50% PULL LEVELS (BULLISH)\nAll TFs (3)\n1H\n4H\n1D\n1H\n$101.00+1.0%\n4H\n$102.00+2.0%\n1D\n$103.00+3.0%\nMarket Pressure EngineComposite pressure from time, volatility, liquidity & options\n▾ expand\nPRESSURE\n64\nBUILDING\n↑ LONG\n·\nAlignment: 75%\nRegime: TREND UP\n4/4\n⏱ Time (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n📊 Volatility (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n💧 Liquidity (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\n⚙️ Options (bullish)\n64 × 0.25w\nConfluence 65\nUnusual activity (bullish)\nBUILDING: LONG evidence with bullish components.\nIntraday Equity Close Schedule\nFixed candle closes every trading day (Extended 4:00–20:00 ET) — these never change\nTIME (ET)\tEVENT\tCANDLE CLOSES\n04:00\tSession Open\tNew bars begin anchoring\n08:00\tEarly Pre-Market\t1H (7:00–8:00) · 2H (6:00–8:00) · 4H (4:00–8:00)\n09:30\tNYSE Open\t30M (9:00–9:30) — RTH volume surge\n10:00\tOpening Range Close\t30M · 1H (9:00–10:00) · 2H (8:00–10:00) · 3H (7:00–10:00) · 6H (4:00–10:00)\n12:00\tMidday\t1H (11:00–12:00) · 2H (10:00–12:00) · 4H (8:00–12:00) · 8H (4:00–12:00)\n14:00\tMid-Afternoon\t30M (13:30–14:00) · 1H (13:00–14:00) · 2H (12:00–14:00)\n16:00\tNYSE Close\t30M (15:30–16:00) · 1H (15:00–16:00) · 2H (14:00–16:00) · 4H (12:00–16:00) · Daily (9:30–16:00)\n20:00\tAfter-Hours Close\t1H (19:00–20:00) · 2H (18:00–20:00) · 4H (16:00–20:00)\nRepeats identically every trading day (Mon–Fri, excluding NYSE holidays). Only daily+ timeframes have variable close dates.\nClose Calendar — Forward Schedule\nWhich timeframes close on your target day? Where do closes stack?\n↻ Refresh\nANCHOR\nNow\nToday\nPrior Day\nEnd of Week\nEnd of Month\nPick Date\nHORIZON\n1d\n3d\n7d\n14d\n30d\nAnchor: Mon Oct 5 05:00 EDT\nCRYPTO DAILY UTC\nBasis: UTC\nHorizon: 1d → Tue Oct 6 05:00 EDT\nDaily+ closes in window: 0\nSchedule Basis: Fixture calendar\nCloses on Anchor Day (0)\nFull Schedule (0)\nNo daily+ timeframes close on the anchor day.\nTime Confluence EngineAlignment score, decompression & structure\n▾ expand\nConfluence Engine\nTime alignment → confluence quality\nTrend Alignment\n67%\nFlow Strength\n58%\nClose Evidence\n69%\nCluster Integrity\n35%\nWindow Quality\n66%\nAlignment 3/3 • Window ACTIVE\nTiming\nKey timing context for analysis\nCLOSE\nPENDING\nRISK\ncontrolled\nLIQUIDITY\nOK\nGATE\n65%\nTIME\n62 / 100\nWINDOW\n66%\nThree measured timeframes agree.\nTime Gravity MapMidpoint debt, decompression windows & gravity fields\n▾ expand\n🧲 Time Gravity Map\nFixture feed not collected\n🔄 Generate Data for MU\n⏰\nTime Confluence Engine\n🟢 Market Open\n🔴 Live\n📅 Today\n🔢 Fib\n📊 Macro\n🗓️ Calendar\nCONFLUENCE SCORE\n?\n2\nLOW\n📈\n48%\ntarget hit rate\nSimulated — modelled from 456 pattern setups\n🔔 Set Confluence Alert\nNotify when score hits strong again\nScore ≥ 6\nScore ≥ 8\nScore ≥ 10\nScore ≥ 12\nScore ≥ 15\nSet Alert\nCLOSING NOW\n1m\nFib1m\n⏳ NEXT MAJOR CONFLUENCE\n12:00 PM ET\n11-way confluence\n1m\n🏦 US EQUITY SESSION WINDOWS · ET\n9:30 AM - 10:00 AM\nOpening Range\n10:00 AM - 10:30 AM\nPost-Open\n11:30 AM - 12:00 PM\nEurope Close",
+      "expandedWidth": 390,
+      "expandedSourceCount": 0,
+      "expandedAttributes": "Main navigation Today Scan & Analyse Markets Intelligence Track Learn Account Open menu Site navigation Close menu Today Scan & Analyse Markets Intelligence Track Learn Account Terminal command header Terminal symbol Terminal market mechanics views Session hours — affects intraday candle close anchors Time: active Volatility: active Liquidity: active Options: active Fixture calendar Score breakdown info"
+    },
+    {
+      "tab": "time-confluence",
+      "symbol": "BTCUSD",
+      "type": "crypto",
+      "tier": "free",
+      "measured": false,
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T16:00:00.485Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nTime Confluence · Change view\nTime Confluence for BTCUSD\n\nBTCUSD is already loaded. Time Confluence is on the Pro plan. Opening this view does not use a free scan.\n\nUnlock Time Confluence",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "BTCUSD"
+        }
+      ],
+      "openFolds": 0
+    },
+    {
+      "tab": "time-confluence",
+      "symbol": "BTCUSD",
+      "type": "crypto",
+      "tier": "free",
+      "measured": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T16:00:02.574Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 881,
+      "scrollWidth": 390,
+      "screens": 1.0438388625592416,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nCrypto Derivatives Risk — Educational Only — Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nBTCUSD\nMore symbols\nTime Confluence · Change view\nTime Confluence for BTCUSD\n\nBTCUSD is already loaded. Time Confluence is on the Pro plan. Opening this view does not use a free scan.\n\nUnlock Time Confluence",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "BTCUSD"
+        }
+      ],
+      "openFolds": 0
+    },
+    {
+      "tab": "time-confluence",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "anonymous",
+      "measured": false,
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "observedAt": "2026-10-05T16:00:04.287Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Confluence · Change view\nTime Confluence for MU\n\nMU is already loaded. Time Confluence is on the Pro plan. Opening this view does not use a free scan.\n\nUnlock Time Confluence",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0
+    },
+    {
+      "tab": "time-confluence",
+      "symbol": "MU",
+      "type": "equity",
+      "tier": "anonymous",
+      "measured": false,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "observedAt": "2026-10-05T16:00:06.000Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1066,
+      "scrollWidth": 390,
+      "screens": 1.2630331753554502,
+      "text": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\nOptions Risk — Educational Only — Options can expire worthless and may involve rapid losses, assignment risk, liquidity gaps, implied-volatility changes, and complex tax or margin consequences. This page displays educational market observations only — not options advice, not broker execution, and not a recommendation to buy, sell, write, or exercise contracts.\nWorkflow step 3 · Market mechanics check\n7. Final timing check\nTerminal\n\nSymbol checks the setup. Terminal shows timing and market mechanics.\n\nBack to Symbol\nContinue to Backtest\nAll tools\nLoad\nMU\nMore symbols\nTime Confluence · Change view\nTime Confluence for MU\n\nMU is already loaded. Time Confluence is on the Pro plan. Opening this view does not use a free scan.\n\nUnlock Time Confluence",
+      "heroes": [
+        "Terminal"
+      ],
+      "textInputs": [
+        {
+          "label": "Terminal symbol",
+          "value": "MU"
+        }
+      ],
+      "openFolds": 0
+    }
+  ],
+  "requests": [
+    {
+      "url": "http://127.0.0.1:3107/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/scanner/top-cached?type=all&limit=5&_ts=1791215976167",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/flow?symbol=BTCUSD&marketType=crypto",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/market-pressure?symbol=BTCUSD&scanMode=intraday_1h&sessionMode=extended",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/time-gravity-map?symbol=BTCUSD&price=100&assetType=crypto",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/scanner/top-cached?type=all&limit=5&_ts=1791215981389",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/flow?symbol=BTCUSD&marketType=crypto",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/market-pressure?symbol=BTCUSD&scanMode=intraday_1h&sessionMode=extended",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/time-gravity-map?symbol=BTCUSD&price=100&assetType=crypto",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/scanner/top-cached?type=all&limit=5&_ts=1791215984071",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/market-pressure?symbol=MU&scanMode=intraday_1h&sessionMode=extended",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/time-gravity-map?symbol=MU&price=100&assetType=stock",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/scanner/top-cached?type=all&limit=5&_ts=1791215986883",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/market-pressure?symbol=MU&scanMode=intraday_1h&sessionMode=extended",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/time-gravity-map?symbol=MU&price=100&assetType=stock",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/scanner/top-cached?type=all&limit=5&_ts=1791215989339",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/flow?symbol=BTCUSD&marketType=crypto",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/market-pressure?symbol=BTCUSD&scanMode=intraday_1h&sessionMode=extended",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/time-gravity-map?symbol=BTCUSD&price=100&assetType=crypto",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/scanner/top-cached?type=all&limit=5&_ts=1791215992179",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/flow?symbol=BTCUSD&marketType=crypto",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/market-pressure?symbol=BTCUSD&scanMode=intraday_1h&sessionMode=extended",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/time-gravity-map?symbol=BTCUSD&price=100&assetType=crypto",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/scanner/top-cached?type=all&limit=5&_ts=1791215994663",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/market-pressure?symbol=MU&scanMode=intraday_1h&sessionMode=extended",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/time-gravity-map?symbol=MU&price=100&assetType=stock",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/scanner/top-cached?type=all&limit=5&_ts=1791215997290",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/market-pressure?symbol=MU&scanMode=intraday_1h&sessionMode=extended",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/time-gravity-map?symbol=MU&price=100&assetType=stock",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/scanner/top-cached?type=all&limit=5&_ts=1791215999766",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/flow?symbol=BTCUSD&marketType=crypto",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/scanner/top-cached?type=all&limit=5&_ts=1791216001484",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/flow?symbol=BTCUSD&marketType=crypto",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/scanner/top-cached?type=all&limit=5&_ts=1791216003169",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/scanner/top-cached?type=all&limit=5&_ts=1791216004838",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/confluence-scan",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/flow?symbol=MU&marketType=equity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "url": "http://127.0.0.1:3107/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    }
+  ],
+  "errors": []
+}

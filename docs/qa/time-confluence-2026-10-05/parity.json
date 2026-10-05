@@ -1,0 +1,571 @@
+{
+  "base": "ce0272eab0cace659e53d54772a265fed50e605c",
+  "mathFilesUnchanged": [
+    "components/time/scoring.ts",
+    "lib/marketPressureEngine.ts",
+    "lib/time-confluence.ts",
+    "lib/time/crossMarketConfluence.ts",
+    "lib/time/cryptoTimeConfluence.ts",
+    "lib/time/dataFreshness.ts",
+    "lib/time/decompressionEngine.ts",
+    "lib/time/decompressionStack.ts",
+    "lib/time/decompressionTiming.ts",
+    "lib/time/equityTimeConfluence.ts",
+    "lib/time/fxSession.ts",
+    "lib/time/marketHolidays.ts",
+    "lib/time/midpointDebt.ts",
+    "lib/time/momentumOverride.ts",
+    "lib/time/nyWallClock.ts",
+    "lib/time/sessionCloseEngine.ts",
+    "lib/time/timeGravityMap.ts",
+    "lib/time/usSession.ts"
+  ],
+  "mapScanToInputUnchanged": true,
+  "normalizeDirectionUnchanged": true,
+  "snapshots": [
+    {
+      "symbol": "BTCUSD",
+      "type": "crypto",
+      "measured": false,
+      "before": {
+        "contextScore": 37,
+        "setupScore": 0,
+        "executionScore": 10,
+        "timeConfluenceScore": 11,
+        "permission": "BLOCK",
+        "gateScore": 5,
+        "direction": "neutral",
+        "confidence": 3,
+        "directionEvidence": {
+          "aligned": 0,
+          "opposed": 0,
+          "gap": 0,
+          "floorMet": false
+        },
+        "reasons": [
+          "Gate penalties applied: -6 (HTF_CONFLICT).",
+          "BLOCK: Data integrity below 50.",
+          "BLOCK: Risk=high while close is not confirmed.",
+          "BLOCK: Setup score < 40 (no reliable time structure).",
+          "Low multi-timeframe alignment count.",
+          "Cluster integrity is low (noisy/unstable windows).",
+          "Direction consistency is weak across timeframes.",
+          "Close confirmation not confirmed.",
+          "Close strength is weak.",
+          "Entry window quality is weak.",
+          "Data integrity is degraded (freshness/coverage/gaps)."
+        ],
+        "debug": {
+          "rawDirection": "neutral",
+          "contextBreakdown": {
+            "dataIntegrity": 18,
+            "regime": 50,
+            "volatility": 100,
+            "trendStrength": 0,
+            "biasAgreement": 50
+          },
+          "setupBreakdown": {
+            "alignmentRatio": 0,
+            "alignedStrength": 0,
+            "directionConsistency": 0,
+            "clusterIntegrity": 0,
+            "windowStrength": 0,
+            "mixedPenalty": 0,
+            "presentTFs": 0,
+            "coverage": 52
+          },
+          "executionBreakdown": {
+            "closeConfirmation": 10,
+            "closeStrength": 0,
+            "entryWindowQuality": 0,
+            "liquidity": 30,
+            "riskState": 35
+          },
+          "penalties": [
+            {
+              "flag": "HTF_CONFLICT",
+              "delta": 6
+            }
+          ],
+          "gateScorePrePenalty": 11,
+          "coverageFactor": 23,
+          "coverageParts": {
+            "dataFreshness": 0,
+            "dataCoverage": 0,
+            "tfCoverage": 0,
+            "setupCoverage": 52,
+            "dirCoverage": 60
+          }
+        }
+      },
+      "after": {
+        "contextScore": 37,
+        "setupScore": 0,
+        "executionScore": 10,
+        "timeConfluenceScore": 11,
+        "permission": "BLOCK",
+        "gateScore": 5,
+        "direction": "neutral",
+        "confidence": 3,
+        "directionEvidence": {
+          "aligned": 0,
+          "opposed": 0,
+          "gap": 0,
+          "floorMet": false
+        },
+        "reasons": [
+          "Gate penalties applied: -6 (HTF_CONFLICT).",
+          "BLOCK: Data integrity below 50.",
+          "BLOCK: Risk=high while close is not confirmed.",
+          "BLOCK: Setup score < 40 (no reliable time structure).",
+          "Low multi-timeframe alignment count.",
+          "Cluster integrity is low (noisy/unstable windows).",
+          "Direction consistency is weak across timeframes.",
+          "Close confirmation not confirmed.",
+          "Close strength is weak.",
+          "Entry window quality is weak.",
+          "Data integrity is degraded (freshness/coverage/gaps)."
+        ],
+        "debug": {
+          "rawDirection": "neutral",
+          "contextBreakdown": {
+            "dataIntegrity": 18,
+            "regime": 50,
+            "volatility": 100,
+            "trendStrength": 0,
+            "biasAgreement": 50
+          },
+          "setupBreakdown": {
+            "alignmentRatio": 0,
+            "alignedStrength": 0,
+            "directionConsistency": 0,
+            "clusterIntegrity": 0,
+            "windowStrength": 0,
+            "mixedPenalty": 0,
+            "presentTFs": 0,
+            "coverage": 52
+          },
+          "executionBreakdown": {
+            "closeConfirmation": 10,
+            "closeStrength": 0,
+            "entryWindowQuality": 0,
+            "liquidity": 30,
+            "riskState": 35
+          },
+          "penalties": [
+            {
+              "flag": "HTF_CONFLICT",
+              "delta": 6
+            }
+          ],
+          "gateScorePrePenalty": 11,
+          "coverageFactor": 23,
+          "coverageParts": {
+            "dataFreshness": 0,
+            "dataCoverage": 0,
+            "tfCoverage": 0,
+            "setupCoverage": 52,
+            "dirCoverage": 60
+          }
+        }
+      }
+    },
+    {
+      "symbol": "BTCUSD",
+      "type": "crypto",
+      "measured": true,
+      "before": {
+        "contextScore": 67,
+        "setupScore": 58,
+        "executionScore": 69,
+        "timeConfluenceScore": 62,
+        "permission": "BLOCK",
+        "gateScore": 65,
+        "direction": "bullish",
+        "confidence": 37,
+        "directionEvidence": {
+          "aligned": 3,
+          "opposed": 0,
+          "gap": 3,
+          "floorMet": true
+        },
+        "reasons": [
+          "BLOCK: Data integrity below 50.",
+          "Cluster integrity is low (noisy/unstable windows).",
+          "Active window strength is weak.",
+          "Close confirmation not confirmed.",
+          "Data integrity is degraded (freshness/coverage/gaps)."
+        ],
+        "debug": {
+          "rawDirection": "bullish",
+          "contextBreakdown": {
+            "dataIntegrity": 35,
+            "regime": 85,
+            "volatility": 100,
+            "trendStrength": 70,
+            "biasAgreement": 100
+          },
+          "setupBreakdown": {
+            "alignmentRatio": 100,
+            "alignedStrength": 70,
+            "directionConsistency": 70,
+            "clusterIntegrity": 35,
+            "windowStrength": 0,
+            "mixedPenalty": 0,
+            "presentTFs": 3,
+            "coverage": 100
+          },
+          "executionBreakdown": {
+            "closeConfirmation": 55,
+            "closeStrength": 65,
+            "entryWindowQuality": 66,
+            "liquidity": 100,
+            "riskState": 100
+          },
+          "penalties": [],
+          "gateScorePrePenalty": 65,
+          "coverageFactor": 60,
+          "coverageParts": {
+            "dataFreshness": 0,
+            "dataCoverage": 38,
+            "tfCoverage": 60,
+            "setupCoverage": 100,
+            "dirCoverage": 100
+          }
+        }
+      },
+      "after": {
+        "contextScore": 67,
+        "setupScore": 58,
+        "executionScore": 69,
+        "timeConfluenceScore": 62,
+        "permission": "BLOCK",
+        "gateScore": 65,
+        "direction": "bullish",
+        "confidence": 37,
+        "directionEvidence": {
+          "aligned": 3,
+          "opposed": 0,
+          "gap": 3,
+          "floorMet": true
+        },
+        "reasons": [
+          "BLOCK: Data integrity below 50.",
+          "Cluster integrity is low (noisy/unstable windows).",
+          "Active window strength is weak.",
+          "Close confirmation not confirmed.",
+          "Data integrity is degraded (freshness/coverage/gaps)."
+        ],
+        "debug": {
+          "rawDirection": "bullish",
+          "contextBreakdown": {
+            "dataIntegrity": 35,
+            "regime": 85,
+            "volatility": 100,
+            "trendStrength": 70,
+            "biasAgreement": 100
+          },
+          "setupBreakdown": {
+            "alignmentRatio": 100,
+            "alignedStrength": 70,
+            "directionConsistency": 70,
+            "clusterIntegrity": 35,
+            "windowStrength": 0,
+            "mixedPenalty": 0,
+            "presentTFs": 3,
+            "coverage": 100
+          },
+          "executionBreakdown": {
+            "closeConfirmation": 55,
+            "closeStrength": 65,
+            "entryWindowQuality": 66,
+            "liquidity": 100,
+            "riskState": 100
+          },
+          "penalties": [],
+          "gateScorePrePenalty": 65,
+          "coverageFactor": 60,
+          "coverageParts": {
+            "dataFreshness": 0,
+            "dataCoverage": 38,
+            "tfCoverage": 60,
+            "setupCoverage": 100,
+            "dirCoverage": 100
+          }
+        }
+      }
+    },
+    {
+      "symbol": "MU",
+      "type": "equity",
+      "measured": false,
+      "before": {
+        "contextScore": 37,
+        "setupScore": 0,
+        "executionScore": 10,
+        "timeConfluenceScore": 11,
+        "permission": "BLOCK",
+        "gateScore": 5,
+        "direction": "neutral",
+        "confidence": 3,
+        "directionEvidence": {
+          "aligned": 0,
+          "opposed": 0,
+          "gap": 0,
+          "floorMet": false
+        },
+        "reasons": [
+          "Gate penalties applied: -6 (HTF_CONFLICT).",
+          "BLOCK: Data integrity below 50.",
+          "BLOCK: Risk=high while close is not confirmed.",
+          "BLOCK: Setup score < 40 (no reliable time structure).",
+          "Low multi-timeframe alignment count.",
+          "Cluster integrity is low (noisy/unstable windows).",
+          "Direction consistency is weak across timeframes.",
+          "Close confirmation not confirmed.",
+          "Close strength is weak.",
+          "Entry window quality is weak.",
+          "Data integrity is degraded (freshness/coverage/gaps)."
+        ],
+        "debug": {
+          "rawDirection": "neutral",
+          "contextBreakdown": {
+            "dataIntegrity": 18,
+            "regime": 50,
+            "volatility": 100,
+            "trendStrength": 0,
+            "biasAgreement": 50
+          },
+          "setupBreakdown": {
+            "alignmentRatio": 0,
+            "alignedStrength": 0,
+            "directionConsistency": 0,
+            "clusterIntegrity": 0,
+            "windowStrength": 0,
+            "mixedPenalty": 0,
+            "presentTFs": 0,
+            "coverage": 52
+          },
+          "executionBreakdown": {
+            "closeConfirmation": 10,
+            "closeStrength": 0,
+            "entryWindowQuality": 0,
+            "liquidity": 30,
+            "riskState": 35
+          },
+          "penalties": [
+            {
+              "flag": "HTF_CONFLICT",
+              "delta": 6
+            }
+          ],
+          "gateScorePrePenalty": 11,
+          "coverageFactor": 23,
+          "coverageParts": {
+            "dataFreshness": 0,
+            "dataCoverage": 0,
+            "tfCoverage": 0,
+            "setupCoverage": 52,
+            "dirCoverage": 60
+          }
+        }
+      },
+      "after": {
+        "contextScore": 37,
+        "setupScore": 0,
+        "executionScore": 10,
+        "timeConfluenceScore": 11,
+        "permission": "BLOCK",
+        "gateScore": 5,
+        "direction": "neutral",
+        "confidence": 3,
+        "directionEvidence": {
+          "aligned": 0,
+          "opposed": 0,
+          "gap": 0,
+          "floorMet": false
+        },
+        "reasons": [
+          "Gate penalties applied: -6 (HTF_CONFLICT).",
+          "BLOCK: Data integrity below 50.",
+          "BLOCK: Risk=high while close is not confirmed.",
+          "BLOCK: Setup score < 40 (no reliable time structure).",
+          "Low multi-timeframe alignment count.",
+          "Cluster integrity is low (noisy/unstable windows).",
+          "Direction consistency is weak across timeframes.",
+          "Close confirmation not confirmed.",
+          "Close strength is weak.",
+          "Entry window quality is weak.",
+          "Data integrity is degraded (freshness/coverage/gaps)."
+        ],
+        "debug": {
+          "rawDirection": "neutral",
+          "contextBreakdown": {
+            "dataIntegrity": 18,
+            "regime": 50,
+            "volatility": 100,
+            "trendStrength": 0,
+            "biasAgreement": 50
+          },
+          "setupBreakdown": {
+            "alignmentRatio": 0,
+            "alignedStrength": 0,
+            "directionConsistency": 0,
+            "clusterIntegrity": 0,
+            "windowStrength": 0,
+            "mixedPenalty": 0,
+            "presentTFs": 0,
+            "coverage": 52
+          },
+          "executionBreakdown": {
+            "closeConfirmation": 10,
+            "closeStrength": 0,
+            "entryWindowQuality": 0,
+            "liquidity": 30,
+            "riskState": 35
+          },
+          "penalties": [
+            {
+              "flag": "HTF_CONFLICT",
+              "delta": 6
+            }
+          ],
+          "gateScorePrePenalty": 11,
+          "coverageFactor": 23,
+          "coverageParts": {
+            "dataFreshness": 0,
+            "dataCoverage": 0,
+            "tfCoverage": 0,
+            "setupCoverage": 52,
+            "dirCoverage": 60
+          }
+        }
+      }
+    },
+    {
+      "symbol": "MU",
+      "type": "equity",
+      "measured": true,
+      "before": {
+        "contextScore": 67,
+        "setupScore": 58,
+        "executionScore": 69,
+        "timeConfluenceScore": 62,
+        "permission": "BLOCK",
+        "gateScore": 65,
+        "direction": "bullish",
+        "confidence": 37,
+        "directionEvidence": {
+          "aligned": 3,
+          "opposed": 0,
+          "gap": 3,
+          "floorMet": true
+        },
+        "reasons": [
+          "BLOCK: Data integrity below 50.",
+          "Cluster integrity is low (noisy/unstable windows).",
+          "Active window strength is weak.",
+          "Close confirmation not confirmed.",
+          "Data integrity is degraded (freshness/coverage/gaps)."
+        ],
+        "debug": {
+          "rawDirection": "bullish",
+          "contextBreakdown": {
+            "dataIntegrity": 35,
+            "regime": 85,
+            "volatility": 100,
+            "trendStrength": 70,
+            "biasAgreement": 100
+          },
+          "setupBreakdown": {
+            "alignmentRatio": 100,
+            "alignedStrength": 70,
+            "directionConsistency": 70,
+            "clusterIntegrity": 35,
+            "windowStrength": 0,
+            "mixedPenalty": 0,
+            "presentTFs": 3,
+            "coverage": 100
+          },
+          "executionBreakdown": {
+            "closeConfirmation": 55,
+            "closeStrength": 65,
+            "entryWindowQuality": 66,
+            "liquidity": 100,
+            "riskState": 100
+          },
+          "penalties": [],
+          "gateScorePrePenalty": 65,
+          "coverageFactor": 60,
+          "coverageParts": {
+            "dataFreshness": 0,
+            "dataCoverage": 38,
+            "tfCoverage": 60,
+            "setupCoverage": 100,
+            "dirCoverage": 100
+          }
+        }
+      },
+      "after": {
+        "contextScore": 67,
+        "setupScore": 58,
+        "executionScore": 69,
+        "timeConfluenceScore": 62,
+        "permission": "BLOCK",
+        "gateScore": 65,
+        "direction": "bullish",
+        "confidence": 37,
+        "directionEvidence": {
+          "aligned": 3,
+          "opposed": 0,
+          "gap": 3,
+          "floorMet": true
+        },
+        "reasons": [
+          "BLOCK: Data integrity below 50.",
+          "Cluster integrity is low (noisy/unstable windows).",
+          "Active window strength is weak.",
+          "Close confirmation not confirmed.",
+          "Data integrity is degraded (freshness/coverage/gaps)."
+        ],
+        "debug": {
+          "rawDirection": "bullish",
+          "contextBreakdown": {
+            "dataIntegrity": 35,
+            "regime": 85,
+            "volatility": 100,
+            "trendStrength": 70,
+            "biasAgreement": 100
+          },
+          "setupBreakdown": {
+            "alignmentRatio": 100,
+            "alignedStrength": 70,
+            "directionConsistency": 70,
+            "clusterIntegrity": 35,
+            "windowStrength": 0,
+            "mixedPenalty": 0,
+            "presentTFs": 3,
+            "coverage": 100
+          },
+          "executionBreakdown": {
+            "closeConfirmation": 55,
+            "closeStrength": 65,
+            "entryWindowQuality": 66,
+            "liquidity": 100,
+            "riskState": 100
+          },
+          "penalties": [],
+          "gateScorePrePenalty": 65,
+          "coverageFactor": 60,
+          "coverageParts": {
+            "dataFreshness": 0,
+            "dataCoverage": 38,
+            "tfCoverage": 60,
+            "setupCoverage": 100,
+            "dirCoverage": 100
+          }
+        }
+      }
+    }
+  ]
+}
