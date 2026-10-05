@@ -8,6 +8,7 @@ import Stamp, { localStamp } from './Stamp';
 import { scoreTone } from './SavedPicks';
 import UpgradeMoment, { useUpgradeMoment } from './UpgradeMoment';
 import { FREE_COPY } from './copy';
+import { findFreeScanResult, freeScanBody } from '@/lib/free/startHere';
 export type Usage = { used: number; limit: number; resetsAt: string };
 export default function DemoScan() {
   const upgrade = useUpgradeMoment();
@@ -31,12 +32,12 @@ export default function DemoScan() {
     const before = usage;
     try {
       if (!usage) await refreshUsage();
-      const response = await fetch('/api/scanner/run', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: symbol === 'BTC' ? 'crypto' : 'equity', symbols: [symbol], timeframe: 'daily', minScore: 0 }) });
+      const response = await fetch('/api/scanner/run', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(freeScanBody(symbol === 'BTC' ? 'crypto' : 'equity', symbol)) });
       const data = await response.json();
       if (response.status === 429 && data.limitReached) { trackFreeEvent('scan_limit_hit', 'demo', usage?.resetsAt); setLimitHit(true); upgrade.show('scan'); return; }
       if (!response.ok) throw new Error();
-      const result = data.results?.find((item: ScanResult) => item.symbol?.replace(/[-/]?(USDT|USD)$/i, '').toUpperCase() === symbol);
-      if (!result || !Number.isFinite(result.score)) throw new Error();
+      const result = findFreeScanResult<ScanResult>(data.results, symbol);
+      if (!result) throw new Error();
       setRow(result);
       scanned = true;
     } catch { setError(true); }
