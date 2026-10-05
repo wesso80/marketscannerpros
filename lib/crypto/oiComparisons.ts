@@ -41,6 +41,30 @@ export function buildOiObservation(symbol: string, rows: OiRow[], now = Date.now
   };
 }
 
+function isOiObservation(value: unknown): value is OiObservation {
+  if (!value || typeof value !== 'object') return false;
+  const row = value as OiObservation;
+  return typeof row.symbol === 'string' && row.method === OI_METHOD && Number.isFinite(row.value) && row.contracts != null && typeof row.contracts === 'object';
+}
+
+/**
+ * Hourly OI snapshots are stored through setCached, which spreads objects and adds `_ts`.
+ * A raw array therefore comes back as `{ "0": row, "1": row, _ts }` unless it was wrapped as `{ coins }`.
+ */
+export function readStoredOiSnapshot(value: unknown): OiObservation[] {
+  let parsed = value;
+  if (typeof parsed === 'string') {
+    try { parsed = JSON.parse(parsed); } catch { return []; }
+  }
+  if (Array.isArray(parsed)) return parsed.filter(isOiObservation);
+  if (!parsed || typeof parsed !== 'object') return [];
+  const record = parsed as Record<string, unknown>;
+  if (Array.isArray(record.coins)) return record.coins.filter(isOiObservation);
+  const indexed = Object.keys(record).filter((key) => /^\d+$/.test(key)).sort((a, b) => Number(a) - Number(b));
+  if (!indexed.length) return [];
+  return indexed.map((key) => record[key]).filter(isOiObservation);
+}
+
 /** Sum of OI over the contracts both snapshots observed; null when the overlap is too small to be the same position. */
 function matchedOi(current: OiObservation, previous: OiObservation): { current: number; previous: number } | null {
   if (!current.contracts || !previous.contracts || typeof previous.contracts !== 'object') return null;
@@ -59,10 +83,12 @@ function matchedOi(current: OiObservation, previous: OiObservation): { current: 
 /** Only the same venue contracts are compared, so a coverage change is never read as a position change. */
 export function compareOi24h(current: OiObservation, history: OiObservation[], now = Date.now()) {
   const empty = { change24h: null, comparisonAt: null, previousValue: null, comparedValue: null } as const;
-  if (("carriedContracts" in current && Number(current.carriedContracts) > 0) || current.method !== OI_METHOD || !Number.isFinite(current.value) || current.value < 0 ||
+  // A carried (stale) contract used to reject the whole coin. Compare the overlap instead; matchedOi
+  // already withholds the change when shared contracts are under OI_MIN_MATCHED_SHARE of either side.
+  if (current.method !== OI_METHOD || !Number.isFinite(current.value) || current.value < 0 ||
       !Number.isFinite(current.observedAt) || now - current.observedAt < 0 || now - current.observedAt > 900_000) return empty;
   const candidates = history.flatMap(previous => {
-    if (!previous || ("carriedContracts" in previous && Number(previous.carriedContracts) > 0) || previous?.method !== OI_METHOD || previous.symbol !== current.symbol || !Number.isFinite(previous.value) || !(previous.value > 0) ||
+    if (!previous || previous.method !== OI_METHOD || previous.symbol !== current.symbol || !Number.isFinite(previous.value) || !(previous.value > 0) ||
         current.observedAt - previous.observedAt < 23 * HOUR_MS || current.observedAt - previous.observedAt > 25 * HOUR_MS) return [];
     const matched = matchedOi(current, previous);
     return matched ? [{ previous, matched }] : [];
