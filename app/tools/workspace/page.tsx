@@ -5,20 +5,26 @@
    Real APIs: /api/watchlists, /api/journal, links to v1 portfolio & settings
    --------------------------------------------------------------------------- */
 
-import { Suspense, useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
+import { Suspense, useEffect, useState, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { UpgradeGate } from '@/app/v2/_components/ui';
 import TabBar from '@/components/visual/TabBar';
 import { useUserTier } from '@/lib/useUserTier';
 import { RiskPermissionProvider } from '@/components/risk/RiskPermissionContext';
+import WatchlistWidget from '@/components/WatchlistWidget';
+import JournalPageV1 from '@/components/journal/JournalPage';
+import { PortfolioContent as PortfolioV1 } from '@/app/tools/portfolio/page';
+import { AlertsContent as AlertsContentV1 } from '@/app/tools/alerts/page';
+import BacktestPage from '@/components/backtest/BacktestHub';
+import LearningTab from './LearningTab';
 
-const WatchlistWidget = dynamic(() => import('@/components/WatchlistWidget'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
-const JournalPageV1 = dynamic(() => import('@/components/journal/JournalPage'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
-const PortfolioV1 = dynamic(() => import('@/app/tools/portfolio/page').then(m => ({ default: m.PortfolioContent })), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
-const AlertsContentV1 = dynamic(() => import('@/app/tools/alerts/page').then(m => ({ default: m.AlertsContent })), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
-const BacktestPage = dynamic(() => import('@/components/backtest/BacktestHub'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
-const LearningTab = dynamic(() => import('./LearningTab'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
+function Panel({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <Suspense fallback={<p className="py-6 text-sm text-slate-300">{label}</p>}>
+      {children}
+    </Suspense>
+  );
+}
 
 const TABS = ['Watchlists', 'Journal', 'Portfolio', 'Learning', 'Backtest', 'Alerts', 'Settings'] as const;
 type WorkspaceTab = typeof TABS[number];
@@ -71,41 +77,27 @@ function WorkspaceContent() {
     );
   }
 
+  // Bodies belong in the active tabpanel. A client-only dynamic() chunk left this
+  // bar painted while the panel stayed blank (textless pulse) until that chunk arrived.
+  const panels: Record<WorkspaceTab, ReactNode> = {
+    Watchlists: <Panel label="Loading watchlists…"><RiskPermissionProvider><WatchlistWidget /></RiskPermissionProvider></Panel>,
+    Journal: <Panel label="Loading journal…"><JournalPageV1 tier={tier} embeddedInWorkspace /></Panel>,
+    Portfolio: <Panel label="Loading portfolio…"><RiskPermissionProvider><PortfolioV1 embeddedInWorkspace /></RiskPermissionProvider></Panel>,
+    Learning: <Panel label="Loading learning…"><UpgradeGate requiredTier="pro" currentTier={tier} feature="Doctrine Learning"><LearningTab /></UpgradeGate></Panel>,
+    Backtest: <Panel label="Loading backtest…"><UpgradeGate requiredTier="pro" currentTier={tier} feature="Backtest"><BacktestPage embeddedInWorkspace /></UpgradeGate></Panel>,
+    Alerts: <Panel label="Loading alerts…"><RiskPermissionProvider><AlertsContentV1 embeddedInWorkspace /></RiskPermissionProvider></Panel>,
+    Settings: <p className="text-sm text-slate-400">Opening account settings…</p>,
+  };
+
   return (
     <div className="space-y-3">
       <h1 className="text-2xl font-semibold">Track</h1>
-      <TabBar label="Track tabs" items={TABS.map(t => ({ id: t, label: t }))} activeId={tab} onChange={id => selectWorkspaceTab(id as WorkspaceTab)} />
-
-      {/* -- WATCHLISTS ----------------------------------------------- */}
-      {tab === 'Watchlists' && <RiskPermissionProvider><WatchlistWidget /></RiskPermissionProvider>}
-
-      {/* -- JOURNAL -------------------------------------------------- */}
-      {tab === 'Journal' && (
-        <JournalPageV1 tier={tier} embeddedInWorkspace />
-      )}
-
-      {/* -- PORTFOLIO ------------------------------------------------ */}
-      {tab === 'Portfolio' && <RiskPermissionProvider><PortfolioV1 embeddedInWorkspace /></RiskPermissionProvider>}
-
-      {/* -- LEARNING ------------------------------------------------- */}
-      {tab === 'Learning' && (
-        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Doctrine Learning">
-          <LearningTab />
-        </UpgradeGate>
-      )}
-
-      {/* -- BACKTEST ------------------------------------------------- */}
-      {tab === 'Backtest' && (
-        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Backtest">
-          <BacktestPage embeddedInWorkspace />
-        </UpgradeGate>
-      )}
-
-      {/* -- ALERTS --------------------------------------------------- */}
-      {tab === 'Alerts' && <RiskPermissionProvider><AlertsContentV1 embeddedInWorkspace /></RiskPermissionProvider>}
-
-      {/* -- SETTINGS / ACCOUNT -------------------------------------- */}
-      {tab === 'Settings' && <p className="text-sm text-slate-400">Opening account settings…</p>}
+      <TabBar
+        label="Track tabs"
+        items={TABS.map(t => ({ id: t, label: t, content: panels[t] }))}
+        activeId={tab}
+        onChange={id => selectWorkspaceTab(id as WorkspaceTab)}
+      />
     </div>
   );
 }
