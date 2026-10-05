@@ -1,7 +1,8 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import React, { useState, useCallback } from 'react';
+import Link from 'next/link';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import ToolIdentityHeader from '@/components/tools/ToolIdentityHeader';
 import { useUserTier, canAccessOptionsTerminal } from '@/lib/useUserTier';
@@ -160,7 +161,9 @@ function skewLabel(signal: string): { label: string; color: string } {
 export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: propSymbol, expiry }: { embeddedInTerminal?: boolean; symbol?: string; expiry?:string } = {}) {
   const params = useSearchParams();
   const activeExpiry = expiry ?? params.get('expiry') ?? '';
-  const { tier } = useUserTier();
+  const { tier, isLoading: tierLoading } = useUserTier();
+  const shellSymbol = embeddedInTerminal ? (propSymbol || '').trim().toUpperCase() : '';
+  const paid = canAccessOptionsTerminal(tier);
   const [symbol, setSymbol] = useState(propSymbol?.toUpperCase() || 'SPY');
 
   React.useEffect(() => {
@@ -169,30 +172,59 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<FlowResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const runId = useRef(0);
 
-  const runScan = useCallback(async () => {
-    const trimmed = symbol.trim().toUpperCase();
+  const runScan = useCallback(async (overrideSymbol?: string) => {
+    const trimmed = (overrideSymbol ?? symbol).trim().toUpperCase();
     if (!trimmed) return;
+    const id = ++runId.current;
     setLoading(true);
     setError(null);
     setData(null);
     try {
       const res = await fetch(`/api/options-flow?symbol=${encodeURIComponent(trimmed)}${activeExpiry ? `&expiry=${encodeURIComponent(activeExpiry)}` : ''}`);
+      if (id !== runId.current) return;
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || `Request failed (${res.status})`);
       }
       const json: FlowResponse = await res.json();
+      if (id !== runId.current) return;
       if (!json.success) throw new Error('Analysis returned unsuccessful');
       setData(json);
     } catch (err: any) {
+      if (id !== runId.current) return;
       setError(err?.message || 'Analysis failed');
     } finally {
-      setLoading(false);
+      if (id === runId.current) setLoading(false);
     }
   }, [symbol, activeExpiry]);
 
-  if (!canAccessOptionsTerminal(tier)) {
+  // Pro: run the loaded Terminal symbol. Free: never call the flow route (no scan allowance).
+  useEffect(() => {
+    if (tierLoading || !paid || !shellSymbol) return;
+    void runScan(shellSymbol);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tierLoading, paid, shellSymbol, activeExpiry]);
+
+  if (tierLoading && shellSymbol) {
+    return <div className="py-8 text-center text-sm text-slate-400">Loading Options Flow for {shellSymbol}</div>;
+  }
+
+  if (!paid) {
+    if (shellSymbol) {
+      return (
+        <section aria-label="Options Flow unlock" className="rounded-lg border border-[var(--msp-border)] p-4">
+          <h2 className="text-base font-semibold text-[var(--msp-text)]">Options Flow for {shellSymbol}</h2>
+          <p className="mt-2 text-sm text-[var(--msp-text-muted)]">
+            {shellSymbol} is already loaded. Options Flow is on the Pro plan. Opening this view does not use a free scan.
+          </p>
+          <Link href="/pricing" className="mt-4 inline-flex min-h-10 items-center rounded-lg border border-[var(--msp-border)] px-4 text-sm font-semibold">
+            Unlock Options Flow
+          </Link>
+        </section>
+      );
+    }
     return <UpgradeGate requiredTier="pro" feature="Options Flow Intelligence" />;
   }
 
@@ -224,7 +256,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                   border: '1px solid var(--msp-border)', outline: 'none',
                 }}
               />
-              <button type="button" onClick={runScan} disabled={loading || !symbol.trim()}
+              <button type="button" onClick={() => { void runScan(); }} disabled={loading || !symbol.trim()}
                 style={{
                   padding: '8px 24px', fontSize: '13px', fontWeight: 800,
                   borderRadius: '10px', cursor: loading ? 'wait' : 'pointer',
@@ -518,8 +550,8 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
             );
           })()}
 
-          {/* Empty state */}
-          {!loading && !data && !error && (
+          {/* Empty state — only when the Terminal shell has no symbol yet */}
+          {!loading && !data && !error && !shellSymbol && (
             <div style={{ background: 'var(--msp-panel)', borderRadius: '12px', padding: '48px', textAlign: 'center', color: 'var(--msp-text-muted)' }}>
               <div style={{ margin: '0 auto 12px', width: '44px', height: '44px', borderRadius: '8px', border: '1px solid var(--msp-border)', display: 'grid', placeItems: 'center', fontSize: '12px', fontWeight: 800 }}>OF</div>
               <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--msp-text)' }}>Options Flow Intelligence</div>
@@ -528,6 +560,11 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                 expiry. Buy/sell splits are rough bid/ask estimates from chain snapshots; no trade-direction,
                 sweep/block or large-order calls are made.
               </div>
+            </div>
+          )}
+          {!loading && !data && !error && shellSymbol && (
+            <div style={{ background: 'var(--msp-panel)', borderRadius: '12px', padding: '24px', textAlign: 'center', color: 'var(--msp-text-muted)' }}>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--msp-text)' }}>Preparing options flow for {shellSymbol}</div>
             </div>
           )}
         </div>

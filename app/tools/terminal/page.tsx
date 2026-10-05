@@ -16,6 +16,8 @@ import { isPaidTier } from '@/lib/tiers';
 import { useCachedTopSymbols } from '@/hooks/useCachedTopSymbols';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { detectMarketPath, type MarketPath } from '@/lib/terminal/marketPath';
+import { terminalUsesSymbolLabel } from '@/lib/terminal/symbolLabel';
+import TerminalCryptoDesk from '@/components/terminal/TerminalCryptoDesk';
 import { hasCommoditySessionMap } from '@/lib/terminal/futures/cashBridgeMap';
 
 const OptionsTerminalView = dynamic(() => import('@/components/options-terminal/OptionsTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div> });
@@ -25,7 +27,6 @@ const OptionsConfluence = dynamic(() => import('@/components/options-terminal/Op
 const OptionsFlow = dynamic(() => import('@/components/options-terminal/OptionsFlowView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Flow…</div> });
 const TimeScanner = dynamic(() => import('@/app/tools/time-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Gravity…</div> });
 const ConfluenceScanner = dynamic(() => import('@/app/tools/confluence-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Confluence Scanner…</div> });
-const TimeConfluenceWidget = dynamic(() => import('@/components/TimeConfluenceWidget').then(m => ({ default: m.default })), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Fib Confluence…</div> });
 import {
   useCloseCalendar,
   useFlow,
@@ -490,9 +491,11 @@ export default function TerminalPage() {
           { label: `${asset.toUpperCase()} path` },
         ]}
         title="Use Terminal before Backtest."
-        subtitle="Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically."
+        subtitle={terminalUsesSymbolLabel(tab)
+          ? 'Symbol validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically.'
+          : 'Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically.'}
         actions={[
-          { label: 'Back to Golden Egg', variant: 'primary', href: `/tools/golden-egg?symbol=${encodeURIComponent(sym)}&type=${marketPath}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
+          { label: terminalUsesSymbolLabel(tab) ? 'Back to Symbol' : 'Back to Golden Egg', variant: 'primary', href: `/tools/golden-egg?symbol=${encodeURIComponent(sym)}&type=${marketPath}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
           { label: 'Continue to Backtest', variant: 'secondary', href: `/tools/workspace?tab=backtest&symbol=${encodeURIComponent(sym)}&type=${marketPath}${requestedTimeframe ? `&timeframe=${encodeURIComponent(requestedTimeframe)}` : ''}` },
           { label: 'All tools', variant: 'ghost', href: '/tools' },
         ]}
@@ -782,7 +785,8 @@ export default function TerminalPage() {
       {tab === 'Crypto' && (
         <UpgradeGate requiredTier="pro" currentTier={tier} feature="Crypto Terminal">
           <TerminalSubviewFrame tab="Crypto" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
-            <a className="block rounded border border-emerald-400/30 p-4 text-emerald-300" href="/tools/crypto-dashboard">Open market-wide crypto derivatives</a>
+            <TerminalCryptoDesk symbol={sym} />
+            <a className="mt-3 inline-flex min-h-10 items-center text-sm text-emerald-300 underline" href="/tools/crypto-dashboard">Open market-wide crypto derivatives</a>
           </TerminalSubviewFrame>
         </UpgradeGate>
       )}
@@ -1133,11 +1137,9 @@ export default function TerminalPage() {
 
       {/* ─── Options Flow (v1 flow intelligence) ─── */}
       {tab === 'Options Flow' && (
-        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Options Flow Intelligence">
-          <TerminalSubviewFrame tab="Options Flow" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
-            <OptionsFlow embeddedInTerminal symbol={sym} expiry={requestedExpiry} />
-          </TerminalSubviewFrame>
-        </UpgradeGate>
+        <TerminalSubviewFrame tab="Options Flow" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
+          <OptionsFlow embeddedInTerminal symbol={sym} expiry={requestedExpiry} />
+        </TerminalSubviewFrame>
       )}
 
       {/* ─── Time Gravity Map (v1 time scanner) ─── */}
@@ -1154,9 +1156,6 @@ export default function TerminalPage() {
         <UpgradeGate requiredTier="pro" currentTier={tier} feature="Time Confluence Scanner">
           <TerminalSubviewFrame tab="Time Confluence" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
             <ConfluenceScanner key={`${asset}:${sym}:${requestedTimeframe}`} symbol={sym} assetType={asset} timeframe={requestedTimeframe} embeddedInTerminal />
-            <div className="mt-6">
-              <TimeConfluenceWidget showMacro showMicro showCalendar assetClass={asset} />
-            </div>
           </TerminalSubviewFrame>
         </UpgradeGate>
       )}
