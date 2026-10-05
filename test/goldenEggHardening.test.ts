@@ -4,6 +4,7 @@ vi.mock('@/lib/coingecko', () => ({
   getOHLC: vi.fn(), getOHLCRange: vi.fn(), getMarketChartRange: vi.fn(), resolveSymbolToId: vi.fn(), getCoinDetail: vi.fn(), COINGECKO_ID_MAP: { BTC: 'bitcoin' },
   getAggregatedFundingRates: vi.fn(), getAggregatedOpenInterest: vi.fn(), getGlobalData: vi.fn(),
 }));
+vi.mock('@/lib/crypto/okxDerivatives', () => ({ getOkxFundingRates: vi.fn(async () => []) }));
 
 import { assessTimingEvidence, sanitizeTimeConfluence, timingVerdict, describeLevelRelation, TIMING_WARNING } from '../lib/goldenEgg/timing';
 import { fetchCryptoDerivatives, type TimeConfluenceData } from '../lib/goldenEggFetchers';
@@ -306,7 +307,7 @@ describe('crypto derivative evidence availability', () => {
     vi.mocked(getAggregatedOpenInterest).mockResolvedValue([{symbol:'ETH',totalOpenInterest:17e9,avgVolume24h:33e9,exchanges:3}]);
     expect(await fetchCryptoDerivatives('ETHUSD')).toEqual({
       fundingRate:null,fundingRatePercent:null,annualizedFunding:null,
-      totalOpenInterest:17e9,volume24h:33e9,exchanges:3,sentiment:'Unavailable',
+      totalOpenInterest:17e9,volume24h:33e9,exchanges:3,sentiment:'Unavailable',displayFunding:null,
     });
     vi.mocked(getAggregatedOpenInterest).mockResolvedValue([]);
     expect(await fetchCryptoDerivatives('ETH')).toBeNull();

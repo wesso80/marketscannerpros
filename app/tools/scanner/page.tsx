@@ -19,6 +19,7 @@ import { formatExclusionBreakdown, proCandidateMetrics, type ProScanFilters } fr
 import { RANKED_VERDICT_CLASS, rankedVerdictBadge } from '@/lib/scanner/rankedVerdict';
 import { boundedJsonFetch } from '@/lib/boundedFetch';
 import { HIGH_MSP_SCORE, rowHasWeakData } from '@/lib/scanner/researchValidity';
+import { scannerSourceAgreement } from '@/lib/scanner/sourceAgreement';
 import { legacyExecutionReason } from '@/lib/scanner/legacyReason';
 import Link from 'next/link';
 import { useV2 } from '@/app/v2/_lib/V2Context';
@@ -1508,9 +1509,21 @@ function ScannerContent() {
     proScanResults?.universe?.valid < proScanResults?.universe?.input ? 'Partial universe coverage' : null,
   ]).filter(Boolean) as string[];
   const dataLoadingCount = (mode === 'ranked' ? [equity.loading, crypto.loading, detailLoading] : [proScanLoading, detailLoading]).filter(Boolean).length;
-  const dataHealthValue = dataIssues.length ? `${dataIssues.length} issue${dataIssues.length === 1 ? '' : 's'}` : dataLoadingCount ? `${dataLoadingCount} loading` : mode === 'pro' && !proScanResults ? 'Not scanned' : 'Ready';
-  const dataHealthTone = dataIssues.length ? 'var(--msp-warn)' : dataLoadingCount ? 'var(--msp-flat)' : 'var(--msp-bull)';
-  const dataHealthDetail = dataIssues.length ? dataIssues.join(', ') : dataLoadingCount ? 'Feeds syncing' : 'No feed errors reported';
+  const scannerDemo = Boolean(rankedLocalDemo || proScanResults?.dataQuality?.source === 'local_demo');
+  const feedWouldClaimReady = dataIssues.length === 0 && dataLoadingCount === 0 && !(mode === 'pro' && !proScanResults);
+  const sourceAgreement = scannerSourceAgreement({
+    feedClear: feedWouldClaimReady,
+    demo: scannerDemo,
+    sources: mode === 'ranked'
+      ? rankedRows.map((row) => row.dataBasis?.source)
+      : [proScanResults?.dataQuality?.source, ...(proScanResults?.topPicks ?? []).map((pick) => pick.dataBasis?.source)],
+    lastCompletedBars: mode === 'ranked'
+      ? rankedRows.map((row) => row.dataBasis?.lastCompletedBarAt)
+      : (proScanResults?.topPicks ?? []).map((pick) => pick.dataBasis?.lastCompletedBarAt ?? null),
+  });
+  const dataHealthValue = dataIssues.length ? `${dataIssues.length} issue${dataIssues.length === 1 ? '' : 's'}` : dataLoadingCount ? `${dataLoadingCount} loading` : mode === 'pro' && !proScanResults ? 'Not scanned' : sourceAgreement.ready ? 'Ready' : 'Not collected';
+  const dataHealthTone = dataHealthValue === 'Ready' ? 'var(--msp-bull)' : dataIssues.length ? 'var(--msp-warn)' : 'var(--msp-flat)';
+  const dataHealthDetail = dataIssues.length ? dataIssues.join(', ') : dataLoadingCount ? 'Feeds syncing' : dataHealthValue === 'Ready' ? 'No feed errors reported' : dataHealthValue === 'Not scanned' ? 'Scan has not run' : 'Source or last completed bar was not collected';
   const topRankedSymbol = rankedRows[0]?.symbol;
   const topProSymbol = proScreenerRows[0]?.symbol;
   const headerTopSymbol = selectedSymbol || (mode === 'ranked' ? topRankedSymbol : topProSymbol);
@@ -2100,7 +2113,7 @@ function ScannerContent() {
           {crypto.error && <div>Crypto scan: {crypto.error}</div>}
         </div>
       )}
-      <SourceLine source={rankedLocalDemo || proScanResults?.dataQuality?.source === 'local_demo' ? 'Example' : 'Scanner queue'} basis="Last completed bar" />
+      <SourceLine source={sourceAgreement.ready ? sourceAgreement.source : scannerDemo ? 'Example' : 'Scanner queue'} asOf={sourceAgreement.ready ? sourceAgreement.asOf : undefined} tradingDay={sourceAgreement.ready ? sourceAgreement.tradingDay : undefined} basis="Last completed bar" />
     </div>
   );
 }

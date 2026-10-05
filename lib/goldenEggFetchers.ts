@@ -18,6 +18,7 @@ import {
 } from '@/lib/marketPressureEngine';
 import { confluenceLearningAgent, type ScanMode, type SessionMode } from '@/lib/confluence-learning-agent';
 import { getAggregatedFundingRates, getAggregatedOpenInterest, resolveSymbolToId, getCoinDetail, COINGECKO_ID_MAP } from '@/lib/coingecko';
+import { getOkxFundingRates } from '@/lib/crypto/okxDerivatives';
 import { fetchCryptoSeries, type CryptoScanTimeframe } from '@/lib/scanner/cryptoBars';
 import * as scannerMath from '@/lib/scanner/indicatorMath';
 import { latestObservation } from '@/lib/macro/avRateSeries';
@@ -470,7 +471,16 @@ export async function fetchOptionsSnapshot(
 
 
 // ── Helper: fetch crypto derivatives (funding rates + OI via CoinGecko) ─
+export interface CryptoDisplayFunding {
+  /** 8h-equivalent rate in percent. Same number the crypto funding tile formats. */
+  ratePercent8h: number;
+  annualizedPercent: number;
+  intervalHours: number;
+  observedAt: string;
+}
+
 export interface CryptoDerivatives {
+  /** Score input. Stays null so a display rate cannot change risk quality. */
   fundingRate: null;
   fundingRatePercent: null;
   annualizedFunding: null;
@@ -478,6 +488,8 @@ export interface CryptoDerivatives {
   volume24h: number;
   exchanges: number;
   sentiment: 'Unavailable';
+  /** OKX observation for the derivatives card. Null when that venue did not return a rate. */
+  displayFunding: CryptoDisplayFunding | null;
 }
 
 export async function fetchCryptoDerivatives(symbol: string): Promise<CryptoDerivatives | null> {
@@ -485,10 +497,22 @@ export async function fetchCryptoDerivatives(symbol: string): Promise<CryptoDeri
     const base = symbol.toUpperCase().replace(/[-/]?USD[T]?$/, '');
     const oi = (await getAggregatedOpenInterest([base]))?.find(row => row.symbol === base);
     if (!oi || !Number.isFinite(oi.totalOpenInterest) || !Number.isFinite(oi.avgVolume24h)) return null;
+    let displayFunding: CryptoDisplayFunding | null = null;
+    try {
+      const observed = (await getOkxFundingRates([base])).find(row => row.symbol === base);
+      if (observed && Number.isFinite(observed.ratePercent8h) && Number.isFinite(observed.annualizedPercent)) {
+        displayFunding = {
+          ratePercent8h: observed.ratePercent8h,
+          annualizedPercent: observed.annualizedPercent,
+          intervalHours: observed.intervalHours,
+          observedAt: new Date(observed.observedAt).toISOString(),
+        };
+      }
+    } catch { displayFunding = null; }
     return {
       fundingRate: null, fundingRatePercent: null, annualizedFunding: null,
       totalOpenInterest: oi.totalOpenInterest, volume24h: oi.avgVolume24h,
-      exchanges: oi.exchanges, sentiment: 'Unavailable',
+      exchanges: oi.exchanges, sentiment: 'Unavailable', displayFunding,
     };
   } catch { return null; }
 }

@@ -7,6 +7,7 @@ import { ToolsPageHeader } from '@/components/ToolsPageHeader';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import UpgradeGate from '@/components/UpgradeGate';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import { commodityCardStatusLabel } from '@/lib/commodityFreshness';
 
 interface CommodityData {
   symbol: string;
@@ -789,6 +790,7 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
                   const usdSensitive = commodity.symbol === 'GOLD' || commodity.symbol === 'SILVER';
                   const longAllowed = commodity.eligibleForGate && derivedState.longsAllowed && safeCommodityChangePercent > -1.5;
                   const shortAllowed = commodity.eligibleForGate && derivedState.shortsAllowed && safeCommodityChangePercent < 1.5;
+                  const statusLabel = commodityCardStatusLabel(commodity);
 
                   return (
                     <article key={commodity.symbol} className="rounded-xl border border-white/10 bg-white/5 p-4 transition hover:bg-white/[0.07]">
@@ -840,8 +842,8 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
                       </div>
 
                       <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-white/40">
-                        <span className={commodity.freshnessStatus === 'STALE' ? 'text-rose-300' : commodity.freshnessStatus === 'DELAYED' ? 'text-amber-300' : 'text-emerald-300'}>
-                          {commodity.cadence === 'monthly' && commodity.freshnessStatus !== 'STALE' ? 'MONTHLY' : commodity.freshnessStatus}{commodity.sourceSymbol ? ` · proxy ${commodity.sourceSymbol}` : ''}
+                        <span className={statusLabel === 'STALE' ? 'text-rose-300' : statusLabel === 'LIVE' ? 'text-emerald-300' : 'text-amber-300'}>
+                          {statusLabel}{commodity.sourceSymbol ? ` · proxy ${commodity.sourceSymbol}` : ''}
                         </span>
                         <span>{commodity.asOfLabel ?? `Source date: ${commodity.date} · age ${commodity.dataAgeDays}d`}</span>
                       </div>

@@ -1,3 +1,5 @@
+import { FRESHNESS_RULES } from '@/lib/marketData/freshness';
+
 /**
  * Freshness for Alpha Vantage commodity series that are only published MONTHLY (ALUMINUM, COTTON, COFFEE, and COPPER /
  * WHEAT / CORN / SUGAR when their ETF proxy is unavailable — https://www.alphavantage.co/documentation/#commodities).
@@ -36,4 +38,45 @@ export function isMonthlyObservationCurrent(date: string, nowMs: number = Date.n
 export function monthlyAsOfLabel(date: string): string | null {
   const obs = yearMonth(date);
   return obs ? `monthly, as of ${MONTHS[obs.m - 1]} ${obs.y}` : null;
+}
+
+export type CommoditySourceKind = 'ETF_PROXY' | 'SPOT' | 'LEGACY_DAILY' | 'LEGACY_MONTHLY';
+export type CommodityFreshnessStatus = 'LIVE' | 'DELAYED' | 'STALE';
+
+/**
+ * LIVE only when an observation instant is inside the shared quote real-time window.
+ * A session date with no clock cannot prove that window, so it is not LIVE.
+ */
+export function quoteObservationIsLive(observedAtMs: number | null | undefined, nowMs: number = Date.now()): boolean {
+  if (observedAtMs == null || !Number.isFinite(observedAtMs)) return false;
+  const ageMs = nowMs - observedAtMs;
+  return ageMs >= 0 && ageMs <= FRESHNESS_RULES.quote.realTime * 1000;
+}
+
+export function classifyCommodityFreshness(input: {
+  source: CommoditySourceKind;
+  date: string;
+  maxAgeDays: number;
+  observedAtMs?: number | null;
+  nowMs?: number;
+  ageDays?: number;
+}): CommodityFreshnessStatus {
+  const nowMs = input.nowMs ?? Date.now();
+  const monthly = input.source === 'LEGACY_MONTHLY';
+  const age = input.ageDays ?? Number.NaN;
+  const stale = monthly ? !isMonthlyObservationCurrent(input.date, nowMs) : !Number.isFinite(age) || age > input.maxAgeDays;
+  if (stale) return 'STALE';
+  if (quoteObservationIsLive(input.observedAtMs, nowMs)) return 'LIVE';
+  return 'DELAYED';
+}
+
+/** Card word. STALE and MONTHLY keep their existing meaning. Non-live session quotes say Last close, never LIVE. */
+export function commodityCardStatusLabel(input: {
+  freshnessStatus: CommodityFreshnessStatus;
+  cadence?: 'live' | 'daily' | 'monthly' | null;
+}): 'LIVE' | 'STALE' | 'MONTHLY' | 'Last close' {
+  if (input.freshnessStatus === 'STALE') return 'STALE';
+  if (input.cadence === 'monthly') return 'MONTHLY';
+  if (input.freshnessStatus === 'LIVE') return 'LIVE';
+  return 'Last close';
 }
