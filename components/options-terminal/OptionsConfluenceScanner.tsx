@@ -1,5 +1,6 @@
 "use client";
 
+import OptionsResearchView from "@/components/terminal/OptionsResearchView";
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { withOptionsExpiry } from '@/lib/options/expiry';
 import { useState, useMemo, useEffect, useRef } from "react";
@@ -379,7 +380,7 @@ interface TradeSnapshot {
   };
 }
 
-interface OptionsSetup {
+export interface OptionsSetup {
   directionStatus?: 'determined' | 'unknown';
   directionReason?: string;
   unmeasuredTFs?: string[];
@@ -2239,6 +2240,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
 
   // Avoid premature gating while tier is still resolving
   if (isTierLoading) {
+    if (embeddedInTerminal) return <p role="status" className="p-4 text-sm text-slate-400">Checking Options Confluence access…</p>;
     return (
       <div className="min-h-screen bg-[var(--msp-bg)]">
         <main className="max-w-none px-4 py-8 text-slate-200">
@@ -2255,6 +2257,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
 
   // Pro feature gate
   if (!canAccessOptionsConfluence(tier)) {
+    if (embeddedInTerminal) return <UpgradeGate requiredTier="pro" feature="Options Confluence" />;
     return (
       <div className="min-h-screen bg-[var(--msp-bg)]">
         <header className="max-w-none px-4 py-8 text-center">
@@ -2269,6 +2272,14 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
         </main>
       </div>
     );
+  }
+
+  if (embeddedInTerminal) {
+    return <OptionsResearchView symbol={symbol} result={result?.symbol === symbol ? result : null} blocked={optionsAnalysisBlocked} alignment={unifiedPermission} loading={loading} error={error} onScan={handleScan} controls={<>
+      <label className="min-w-0 text-xs text-slate-400">Analysis timeframe<select aria-label="Analysis timeframe" value={selectedTF} onChange={e => setSelectedTF(e.target.value as ScanModeType)} className="mt-1 block max-w-full rounded border border-slate-700 bg-slate-950 p-2 text-sm text-slate-200">{TIMEFRAME_OPTIONS.map(tf => <option key={tf.value} value={tf.value}>{tf.label}</option>)}</select></label>
+      <label className="min-w-0 text-xs text-slate-400">Expiry<select aria-label="Analysis expiry" value={selectedExpiry} disabled={loadingExpirations || expirations.length === 0} onChange={e => { setSelectedExpiry(e.target.value); router.replace(`${pathname}?${withOptionsExpiry(new URLSearchParams(params.toString()),e.target.value)}`, {scroll:false}); }} className="mt-1 block max-w-full rounded border border-slate-700 bg-slate-950 p-2 text-sm text-slate-200"><option value="">Shared default</option>{expirations.map(exp => <option key={exp.date} value={exp.date}>{exp.date}</option>)}</select></label>
+      {expirationsError && <p role="alert" className="w-full text-xs text-amber-300">Expiry feed failed: {expirationsError}</p>}
+    </>} />;
   }
 
   return (

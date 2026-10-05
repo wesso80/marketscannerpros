@@ -108,7 +108,7 @@ export default function TimeScannerPage({ symbol: propSymbol, assetType, embedde
             assetType={assetType === 'equity' ? 'stock' : assetType === 'crypto' ? 'crypto' : /(?:BTC|ETH|SOL|XRP|[-/]USD)/i.test(symbol) ? 'crypto' : 'stock'}
             autoRefresh={false}
             refreshInterval={30000}
-            variant="full"
+            variant={embeddedInTerminal ? 'terminal' : 'full'}
           />
         </div>
 
