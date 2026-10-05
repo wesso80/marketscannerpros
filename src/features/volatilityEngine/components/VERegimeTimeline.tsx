@@ -1,13 +1,14 @@
 'use client';
+import { volatilityText } from '../displayText';
 
 import type { StateTransition, ExhaustionRisk, DVEFlag, VolatilityState, PhasePersistence, VolRegime, RateDirection } from '@/src/features/volatilityEngine/types';
 
 function regimeColor(regime: string): string {
   switch (regime) {
-    case 'compression': return 'var(--msp-info)';
+    case 'compression': return 'var(--msp-text-muted)';
     case 'expansion': return 'var(--msp-warn)';
     case 'climax': return 'var(--msp-bear)';
-    case 'transition': return '#8B5CF6';
+    case 'transition': return '#94A3B8';
     default: return 'var(--msp-text-muted)';
   }
 }
@@ -19,7 +20,7 @@ const FLAG_CFG: Record<string, { bg: string; text: string }> = {
   TRAP_CANDIDATE: { bg: 'bg-amber-500/10', text: 'text-amber-400' },
   TRAP_DETECTED: { bg: 'bg-red-500/20', text: 'text-red-300' },
   CLIMAX_WARNING: { bg: 'bg-red-500/15', text: 'text-red-400' },
-  COMPRESSION_EXTREME: { bg: 'bg-blue-500/15', text: 'text-blue-400' },
+  COMPRESSION_EXTREME: { bg: 'bg-slate-500/15', text: 'text-slate-400' },
   CONTRACTION_EXIT_RISK: { bg: 'bg-amber-500/15', text: 'text-amber-400' },
   EXPANSION_EXIT_RISK: { bg: 'bg-red-500/15', text: 'text-red-400' },
   SIGNAL_UP: { bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
@@ -102,14 +103,14 @@ export default function VERegimeTimeline({
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-5">
       <div className="mb-4 flex items-center gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-amber-400">
+        <h3 className="text-xs font-semibold tracking-widest text-amber-400">
           Regime &amp; Outlook
         </h3>
       </div>
 
       {/* ── Visual Regime Timeline ── */}
       <div className="mb-5 rounded-lg border border-white/10 bg-white/[0.03] p-4">
-        <div className="mb-3 text-[11px] uppercase text-white/40">Volatility Regime Timeline</div>
+        <div className="mb-3 text-[11px] text-white/40">Volatility Regime Timeline</div>
         <div className="relative">
           {/* Timeline track */}
           <div className="relative h-8 rounded-full bg-slate-800/80">
@@ -156,10 +157,10 @@ export default function VERegimeTimeline({
             {REGIMES_ORDER.map((r) => (
               <div
                 key={r}
-                className="absolute -translate-x-1/2 text-[11px] font-bold uppercase"
+                className="absolute -translate-x-1/2 text-[11px] font-bold"
                 style={{ left: `${REGIME_POS[r]}%`, color: r === currentRegime ? regimeColor(r) : regimeColor(r) + '66' }}
               >
-                {r}
+                {volatilityText(r)}
               </div>
             ))}
           </div>
@@ -177,7 +178,7 @@ export default function VERegimeTimeline({
             <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold text-emerald-300">Breakout Watch</span>
           )}
           {phase?.contraction.active && phase.contraction.stats.agePercentile > 80 && (
-            <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-[11px] font-bold text-blue-300">Extended Compression</span>
+            <span className="rounded-full bg-slate-500/15 px-2 py-0.5 text-[11px] font-bold text-slate-300">Extended Compression</span>
           )}
           {phase?.expansion.active && phase.expansion.stats.agePercentile > 80 && (
             <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-300">Extended Expansion</span>
@@ -187,29 +188,29 @@ export default function VERegimeTimeline({
 
       {/* Transition */}
       <div className="mb-4 flex items-center gap-3">
-        <span className="rounded-full px-3 py-1 text-[0.75rem] font-bold uppercase" style={{ background: regimeColor(transition.from) + '30', color: regimeColor(transition.from) }}>
+        <span className="rounded-full px-3 py-1 text-[0.75rem] font-bold" style={{ background: regimeColor(transition.from) + '30', color: regimeColor(transition.from) }}>
           {transition.from}
         </span>
         <span className="text-white/30">→</span>
-        <span className="rounded-full px-3 py-1 text-[0.75rem] font-bold uppercase" style={{ background: regimeColor(transition.to) + '30', color: regimeColor(transition.to) }}>
+        <span className="rounded-full px-3 py-1 text-[0.75rem] font-bold" style={{ background: regimeColor(transition.to) + '30', color: regimeColor(transition.to) }}>
           {transition.to}
         </span>
         <span className="text-[0.7rem] text-white/40">{transition.probability.toFixed(0)}/100 weight</span>
       </div>
       {transition.trigger && (
-        <p className="mb-3 text-[0.7rem] text-white/40">Trigger: {transition.trigger}</p>
+        <p className="mb-3 text-[0.7rem] text-white/40">Trigger: {volatilityText(transition.trigger)}</p>
       )}
 
       {/* ── Next regime weights · heuristic Forecast ── */}
       {forecast.length > 0 && (
         <div className="mb-4 rounded-lg border border-white/10 bg-white/[0.03] p-3">
-          <div className="text-[0.65rem] uppercase text-white/40 mb-2">Next regime weights · heuristic</div>
+          <div className="text-[0.65rem] text-white/40 mb-2">Next regime weights · heuristic</div>
           <div className="space-y-1.5">
             {forecast.map((f) => {
               const c = regimeColor(f.regime);
               return (
                 <div key={f.regime} className="flex items-center gap-2">
-                  <span className="w-20 text-[0.65rem] font-bold uppercase" style={{ color: c }}>{f.regime}</span>
+                  <span className="w-20 text-[0.65rem] font-bold" style={{ color: c }}>{f.regime}</span>
                   <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
                     <div className="h-full rounded-full transition-all" style={{ width: `${f.probability}%`, background: c }} />
                   </div>
@@ -225,13 +226,13 @@ export default function VERegimeTimeline({
       <div className="mb-4 flex items-center gap-3">
         <span className="text-[0.72rem] text-white/50">Exhaustion:</span>
         <span className={`text-sm font-bold ${exhaustion.level >= 70 ? 'text-red-400' : exhaustion.level >= 40 ? 'text-amber-400' : 'text-emerald-400'}`}>
-          {exhaustion.level.toFixed(0)}/100 ({exhaustion.label})
+          {exhaustion.level.toFixed(0)}/100 ({volatilityText(exhaustion.label)})
         </span>
       </div>
       {exhaustion.signals.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-1">
           {exhaustion.signals.map((s, i) => (
-            <span key={i} className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[0.7rem] text-white/40">{s}</span>
+            <span key={i} className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[0.7rem] text-white/40">{volatilityText(s)}</span>
           ))}
         </div>
       )}
@@ -239,13 +240,13 @@ export default function VERegimeTimeline({
       {/* Flags */}
       {flags.length > 0 && (
         <div className="mb-4">
-          <div className="mb-1.5 text-[11px] uppercase text-white/40">Active Flags</div>
+          <div className="mb-1.5 text-[11px] text-white/40">Active Flags</div>
           <div className="flex flex-wrap gap-1.5">
             {flags.map((f) => {
               const c = FLAG_CFG[f] || { bg: 'bg-white/10', text: 'text-white/60' };
               return (
-                <span key={f} className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-bold uppercase ${c.bg} ${c.text}`}>
-                  {f.replace(/_/g, ' ')}
+                <span key={f} className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-bold ${c.bg} ${c.text}`}>
+                  {volatilityText(f)}
                 </span>
               );
             })}
@@ -255,8 +256,8 @@ export default function VERegimeTimeline({
 
       {/* Summary */}
       <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-        <div className="mb-1 text-[0.7rem] uppercase text-white/40">Summary</div>
-        <p className="text-[0.72rem] leading-relaxed text-white/70">{summary}</p>
+        <div className="mb-1 text-[0.7rem] text-white/40">Summary</div>
+        <p className="text-[0.72rem] leading-relaxed text-white/70">{volatilityText(summary)}</p>
       </div>
     </div>
   );

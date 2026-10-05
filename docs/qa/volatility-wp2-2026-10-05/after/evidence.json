@@ -1,0 +1,1997 @@
+{
+  "mocked": true,
+  "offSession": true,
+  "results": [
+    {
+      "name": "volatility-AAPL",
+      "width": 1280,
+      "tier": "pro",
+      "state": "AAPL",
+      "symbol": "AAPL",
+      "url": "/tools/volatility-engine?symbol=AAPL",
+      "observedAt": "2026-10-05T17:14:37.578Z",
+      "height": 800,
+      "scrollHeight": 1611,
+      "scrollWidth": 1280,
+      "screens": 2.01375,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nVolatility\n\nAAPL · Climax\n\nAnalyze\nBTC\nETH\nAAPL\nTSLA\nNVDA\nSPX\nGOLD\n\n97.6\n\nBBWP percentile\n\n40\n\nPressure score\n\n10/100\n\nBreakout score\n\n100%\n\nData coverage\n\nVOL\nBBWP Gauge\n97.6BBWP\nclimax\nSMA5: 99.2\nRate: -0.5 (decelerating)\nSqueeze: None\nConfluence: 76%\nEvidence and limits100% coverage · 3 flags\nPhase detailclimax · 65/100 exhaustion\nBreakout evidence10/100 · Low\nDirectional pressureupward · 40% confluence\nPhase persistenceExpansion\nSignal and invalidationNo active signal\nProjectionVolatility range · no active signal\nRegime contextclimax → expansion\n\nSource · Volatility calculation · Price bar session 2026-10-02 · Cached reading; freshness based on price bars\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "AAPL · Climax",
+          "bottom": 221
+        }
+      ],
+      "inputs": [
+        {
+          "value": "AAPL",
+          "label": "Volatility symbol"
+        }
+      ],
+      "visibleCharts": 1,
+      "buttons": [
+        {
+          "text": "Analyze",
+          "height": 40
+        },
+        {
+          "text": "BTC",
+          "height": 40
+        },
+        {
+          "text": "ETH",
+          "height": 40
+        },
+        {
+          "text": "AAPL",
+          "height": 40
+        },
+        {
+          "text": "TSLA",
+          "height": 40
+        },
+        {
+          "text": "NVDA",
+          "height": 40
+        },
+        {
+          "text": "SPX",
+          "height": 40
+        },
+        {
+          "text": "GOLD",
+          "height": 40
+        }
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nVolatility\n\nAAPL · Climax\n\nAnalyze\nBTC\nETH\nAAPL\nTSLA\nNVDA\nSPX\nGOLD\n\n97.6\n\nBBWP percentile\n\n40\n\nPressure score\n\n10/100\n\nBreakout score\n\n100%\n\nData coverage\n\nVOL\nBBWP Gauge\n97.6BBWP\nclimax\nSMA5: 99.2\nRate: -0.5 (decelerating)\nSqueeze: None\nConfluence: 76%\nEvidence and limits100% coverage · 3 flags\n\nVolatility Regime: Climax · 76% confluence with BBWP 98.\n\nDirectional Pressure: upward · 40% confluence, score 40.\n\nPhase State: Expansion · Contraction exit 0%, expansion exit 45%.\n\nSignal Projection: not collected · Projection not collected: no active signal or not enough historical data.\n\nExhaustion HIGH.\nClimax warning active.\nInvalidation level not collected.\n\nVolatility · 100% coverage\n\nInputs · 100% coverage\n\nProjection · 0% coverage\n\nPhase detailclimax · 65/100 exhaustion\nVolatility Phase Read\nclimax\nExpansion / Stretched\nRisk: High Friction\nPhase Age\n100%\nContinuation\n75%\nExit Risk\n45%\nBreakout\n10/100\nLow\nTrap\nClear\n0/100 score\nExhaustion\nHigh\n65/100 risk\nInvalidation\nNo price invalidation level returned\nRead Limits\nExhaustion High\nBreakout evidence10/100 · Low\nVOL\nLAYER 1 — VOLATILITY STATE\nBreakout Readiness\n10/100\nLow\nHeuristic score · not a probability\nVol Compression\n0/40\nTime Alignment\n22/30\nGamma Wall\n0/20\nADX Rising\n7/10\n\n3 TFs active (22/30)\n\nADX 25 moderate (7/10)\n\nTime alignment 22/30 (display only; not included in score)\n\nDirectional pressureupward · 40% confluence\nDIR\nLAYER 2 — DIRECTIONAL BIAS\nDirectional Bias\n40% confluence\n← Downward\nNeutral\nUpward →\n+40\nupward\nConfluence: Moderate\nStoch Momentum\n+15/15\nTrend Structure\n+15/20\nOptions Flow\n0/20\nVolume\n+10/10\nDealer Gamma\n0/15\nFunding Rate\n0/10\nMarket Breadth\n0/10\n\nStoch momentum: +15/15\n\nPrice > SMA20 (+5)\n\nPrice > SMA50 (+5)\n\nPhase persistenceExpansion\nPH\nLAYER 3 — PHASE PERSISTENCE\nPH\nPhase Persistence\nContraction (Inactive)\nCurrent: 0 bars\nMedian: 2.0 bars\nAverage: 2.2 bars\nMax: 3 bars\nEpisodes: 17\nPercentile: 0%\nExpansion (Active)\nStretched\nCurrent: 12 bars\nMedian: 2.0 bars\nAverage: 1.9 bars\nMax: 7 bars\nEpisodes: 18\nPercentile: 100%\nContinuation\n75%\nExit weight\n45%\nSignal and invalidationNo active signal\nSIG\nLAYER 4 — SIGNAL & INVALIDATION\nSIG\nSignal Status\nidle\n\nConditions needed to trigger a signal:\n\nCompression Release ↑\n3/5\n○\nRecent compression (BBWP ≤ 15)\n✓\nBBWP breaks above 15 (now 97.6)\n○\nBBWP > SMA5 or accelerating\n✓\nStoch momentum upward\n✓\nDirectional bias upward\nCompression Release ↓\n1/5\n○\nRecent compression (BBWP ≤ 15)\n✓\nBBWP breaks above 15 (now 97.6)\n○\nBBWP > SMA5 or accelerating\n○\nStoch momentum downward\n○\nDirectional bias downward\nExpansion Continuation ↑\n4/5\n✓\nBBWP ≥ 85 climax zone (now 97.6)\n✓\nSMA5 ≥ 85 confirms (now 99.2)\n✓\nStoch momentum upward\n✓\nDirectional bias upward\n○\nLow exhaustion risk\nExpansion Continuation ↓\n2/5\n✓\nBBWP ≥ 85 climax zone (now 97.6)\n✓\nSMA5 ≥ 85 confirms (now 99.2)\n○\nStoch momentum downward\n○\nDirectional bias downward\n○\nLow exhaustion risk\nInvalidation Levels\nNot collected\nMode\nextreme\nProjectionVolatility range · no active signal\nPROJ\nLAYER 5 — OUTCOME PROJECTION\nPROJ\nOutcome Projection\n\nNo active signal — showing expected move range based on current volatility\n\nModel range (1 ATR)\nDownside\n$108.38\n-0.9%\nUpside\n$110.38\n+0.9%\nExtended range (1.5× ATR)\nDownside\n$107.88\n-1.4%\nUpside\n$110.88\n+1.4%\nBBWP: 97.6 • climax\nexpansion exit weight: 45%\nRegime contextclimax → expansion\nSUP\nSUPPORTING ANALYSIS\nRegime & Outlook\nVolatility Regime Timeline\n→\ncompression\nneutral\ntransition\nexpansion\nclimax\nExhaustion Risk\nExtended Expansion\nclimax\n→\nexpansion\n60/100 weight\n\nTrigger: BBWP decelerating from climax\n\nNext regime weights · heuristic\nexpansion\n50%\ntransition\n30%\nclimax\n20%\nExhaustion:\n65/100 (High)\nBBWP 97.6 > 85\nBBWP > 95: extreme\nBBWP decelerating during expansion\nActive Flags\nClimax Warning\nSummary\n\nAAPL BBWP at 97.6 (climax). Stochastic momentum upward (+15). Expansion episode at 100th percentile age.\n\nSource · Volatility calculation · Price bar session 2026-10-02 · Cached reading; freshness based on price bars\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "expandedWidth": 1280,
+      "expandedSourceCount": 1
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 1280,
+      "tier": "pro",
+      "state": "BTC",
+      "symbol": "BTC",
+      "url": "/tools/volatility-engine?symbol=BTC",
+      "observedAt": "2026-10-05T17:14:39.630Z",
+      "height": 800,
+      "scrollHeight": 1611,
+      "scrollWidth": 1280,
+      "screens": 2.01375,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nVolatility\n\nBTC · Climax\n\nAnalyze\nBTC\nETH\nAAPL\nTSLA\nNVDA\nSPX\nGOLD\n\n97.6\n\nBBWP percentile\n\n40\n\nPressure score\n\n10/100\n\nBreakout score\n\n100%\n\nData coverage\n\nVOL\nBBWP Gauge\n97.6BBWP\nclimax\nSMA5: 99.2\nRate: -0.5 (decelerating)\nSqueeze: None\nConfluence: 76%\nEvidence and limits100% coverage · 3 flags\nPhase detailclimax · 65/100 exhaustion\nBreakout evidence10/100 · Low\nDirectional pressureupward · 40% confluence\nPhase persistenceExpansion\nSignal and invalidationNo active signal\nProjectionVolatility range · no active signal\nRegime contextclimax → expansion\n\nSource · Volatility calculation · Price bar session 2026-10-02 · Cached reading; freshness based on price bars\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "BTC · Climax",
+          "bottom": 221
+        }
+      ],
+      "inputs": [
+        {
+          "value": "BTC",
+          "label": "Volatility symbol"
+        }
+      ],
+      "visibleCharts": 1,
+      "buttons": [
+        {
+          "text": "Analyze",
+          "height": 40
+        },
+        {
+          "text": "BTC",
+          "height": 40
+        },
+        {
+          "text": "ETH",
+          "height": 40
+        },
+        {
+          "text": "AAPL",
+          "height": 40
+        },
+        {
+          "text": "TSLA",
+          "height": 40
+        },
+        {
+          "text": "NVDA",
+          "height": 40
+        },
+        {
+          "text": "SPX",
+          "height": 40
+        },
+        {
+          "text": "GOLD",
+          "height": 40
+        }
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nVolatility\n\nBTC · Climax\n\nAnalyze\nBTC\nETH\nAAPL\nTSLA\nNVDA\nSPX\nGOLD\n\n97.6\n\nBBWP percentile\n\n40\n\nPressure score\n\n10/100\n\nBreakout score\n\n100%\n\nData coverage\n\nVOL\nBBWP Gauge\n97.6BBWP\nclimax\nSMA5: 99.2\nRate: -0.5 (decelerating)\nSqueeze: None\nConfluence: 76%\nEvidence and limits100% coverage · 3 flags\n\nVolatility Regime: Climax · 76% confluence with BBWP 98.\n\nDirectional Pressure: upward · 40% confluence, score 40.\n\nPhase State: Expansion · Contraction exit 0%, expansion exit 45%.\n\nSignal Projection: not collected · Projection not collected: no active signal or not enough historical data.\n\nExhaustion HIGH.\nClimax warning active.\nInvalidation level not collected.\n\nVolatility · 100% coverage\n\nInputs · 100% coverage\n\nProjection · 0% coverage\n\nPhase detailclimax · 65/100 exhaustion\nVolatility Phase Read\nclimax\nExpansion / Stretched\nRisk: High Friction\nPhase Age\n100%\nContinuation\n75%\nExit Risk\n45%\nBreakout\n10/100\nLow\nTrap\nClear\n0/100 score\nExhaustion\nHigh\n65/100 risk\nInvalidation\nNo price invalidation level returned\nRead Limits\nExhaustion High\nBreakout evidence10/100 · Low\nVOL\nLAYER 1 — VOLATILITY STATE\nBreakout Readiness\n10/100\nLow\nHeuristic score · not a probability\nVol Compression\n0/40\nTime Alignment\n22/30\nGamma Wall\n0/20\nADX Rising\n7/10\n\n3 TFs active (22/30)\n\nADX 25 moderate (7/10)\n\nTime alignment 22/30 (display only; not included in score)\n\nDirectional pressureupward · 40% confluence\nDIR\nLAYER 2 — DIRECTIONAL BIAS\nDirectional Bias\n40% confluence\n← Downward\nNeutral\nUpward →\n+40\nupward\nConfluence: Moderate\nStoch Momentum\n+15/15\nTrend Structure\n+15/20\nOptions Flow\n0/20\nVolume\n+10/10\nDealer Gamma\n0/15\nFunding Rate\n0/10\nMarket Breadth\n0/10\n\nStoch momentum: +15/15\n\nPrice > SMA20 (+5)\n\nPrice > SMA50 (+5)\n\nPhase persistenceExpansion\nPH\nLAYER 3 — PHASE PERSISTENCE\nPH\nPhase Persistence\nContraction (Inactive)\nCurrent: 0 bars\nMedian: 2.0 bars\nAverage: 2.2 bars\nMax: 3 bars\nEpisodes: 17\nPercentile: 0%\nExpansion (Active)\nStretched\nCurrent: 12 bars\nMedian: 2.0 bars\nAverage: 1.9 bars\nMax: 7 bars\nEpisodes: 18\nPercentile: 100%\nContinuation\n75%\nExit weight\n45%\nSignal and invalidationNo active signal\nSIG\nLAYER 4 — SIGNAL & INVALIDATION\nSIG\nSignal Status\nidle\n\nConditions needed to trigger a signal:\n\nCompression Release ↑\n3/5\n○\nRecent compression (BBWP ≤ 15)\n✓\nBBWP breaks above 15 (now 97.6)\n○\nBBWP > SMA5 or accelerating\n✓\nStoch momentum upward\n✓\nDirectional bias upward\nCompression Release ↓\n1/5\n○\nRecent compression (BBWP ≤ 15)\n✓\nBBWP breaks above 15 (now 97.6)\n○\nBBWP > SMA5 or accelerating\n○\nStoch momentum downward\n○\nDirectional bias downward\nExpansion Continuation ↑\n4/5\n✓\nBBWP ≥ 85 climax zone (now 97.6)\n✓\nSMA5 ≥ 85 confirms (now 99.2)\n✓\nStoch momentum upward\n✓\nDirectional bias upward\n○\nLow exhaustion risk\nExpansion Continuation ↓\n2/5\n✓\nBBWP ≥ 85 climax zone (now 97.6)\n✓\nSMA5 ≥ 85 confirms (now 99.2)\n○\nStoch momentum downward\n○\nDirectional bias downward\n○\nLow exhaustion risk\nInvalidation Levels\nNot collected\nMode\nextreme\nProjectionVolatility range · no active signal\nPROJ\nLAYER 5 — OUTCOME PROJECTION\nPROJ\nOutcome Projection\n\nNo active signal — showing expected move range based on current volatility\n\nModel range (1 ATR)\nDownside\n$108.38\n-0.9%\nUpside\n$110.38\n+0.9%\nExtended range (1.5× ATR)\nDownside\n$107.88\n-1.4%\nUpside\n$110.88\n+1.4%\nBBWP: 97.6 • climax\nexpansion exit weight: 45%\nRegime contextclimax → expansion\nSUP\nSUPPORTING ANALYSIS\nRegime & Outlook\nVolatility Regime Timeline\n→\ncompression\nneutral\ntransition\nexpansion\nclimax\nExhaustion Risk\nExtended Expansion\nclimax\n→\nexpansion\n60/100 weight\n\nTrigger: BBWP decelerating from climax\n\nNext regime weights · heuristic\nexpansion\n50%\ntransition\n30%\nclimax\n20%\nExhaustion:\n65/100 (High)\nBBWP 97.6 > 85\nBBWP > 95: extreme\nBBWP decelerating during expansion\nActive Flags\nClimax Warning\nSummary\n\nBTC BBWP at 97.6 (climax). Stochastic momentum upward (+15). Expansion episode at 100th percentile age.\n\nSource · Volatility calculation · Price bar session 2026-10-02 · Cached reading; freshness based on price bars\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "expandedWidth": 1280,
+      "expandedSourceCount": 1
+    },
+    {
+      "name": "volatility-partial",
+      "width": 1280,
+      "tier": "pro",
+      "state": "partial",
+      "symbol": "AAPL",
+      "url": "/tools/volatility-engine?symbol=AAPL",
+      "observedAt": "2026-10-05T17:14:41.729Z",
+      "height": 800,
+      "scrollHeight": 1639,
+      "scrollWidth": 1280,
+      "screens": 2.04875,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nVolatility\n\nAAPL · Climax\n\nAnalyze\nBTC\nETH\nAAPL\nTSLA\nNVDA\nSPX\nGOLD\n\n97.6\n\nBBWP percentile\n\n10\n\nPressure score\n\n0/100\n\nBreakout score\n\n72%\n\nData coverage\n\nPrice bar date not collected. 3 inputs not collected.\n\nVOL\nBBWP Gauge\n97.6BBWP\nclimax\nSMA5: 99.2\nRate: -0.5 (decelerating)\nSqueeze: None\nConfluence: 76%\nEvidence and limits72% coverage · 4 flags\nPhase detailclimax · 65/100 exhaustion\nBreakout evidence0/100 · Low\nDirectional pressureneutral · 10% confluence\nPhase persistenceExpansion\nSignal and invalidationNo active signal\nProjectionVolatility range · no active signal\nRegime contextclimax → expansion\n\nSource · Volatility calculation · Price bar date not collected · Calculated from price bars\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "AAPL · Climax",
+          "bottom": 221
+        }
+      ],
+      "inputs": [
+        {
+          "value": "AAPL",
+          "label": "Volatility symbol"
+        }
+      ],
+      "visibleCharts": 1,
+      "buttons": [
+        {
+          "text": "Analyze",
+          "height": 40
+        },
+        {
+          "text": "BTC",
+          "height": 40
+        },
+        {
+          "text": "ETH",
+          "height": 40
+        },
+        {
+          "text": "AAPL",
+          "height": 40
+        },
+        {
+          "text": "TSLA",
+          "height": 40
+        },
+        {
+          "text": "NVDA",
+          "height": 40
+        },
+        {
+          "text": "SPX",
+          "height": 40
+        },
+        {
+          "text": "GOLD",
+          "height": 40
+        }
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nVolatility\n\nAAPL · Climax\n\nAnalyze\nBTC\nETH\nAAPL\nTSLA\nNVDA\nSPX\nGOLD\n\n97.6\n\nBBWP percentile\n\n10\n\nPressure score\n\n0/100\n\nBreakout score\n\n72%\n\nData coverage\n\nPrice bar date not collected. 3 inputs not collected.\n\nVOL\nBBWP Gauge\n97.6BBWP\nclimax\nSMA5: 99.2\nRate: -0.5 (decelerating)\nSqueeze: None\nConfluence: 76%\nEvidence and limits72% coverage · 4 flags\n\nVolatility Regime: Climax · 76% confluence with BBWP 98.\n\nDirectional Pressure: Neutral · 10% confluence, score 10.\n\nPhase State: Expansion · Contraction exit 0%, expansion exit 45%.\n\nSignal Projection: not collected · Projection not collected: no active signal or not enough historical data.\n\nExhaustion HIGH.\nClimax warning active.\n3 not collected Volatility inputs.\nInvalidation level not collected.\n\nVolatility · 72% coverage\n\nInputs · 72% coverage\n\nProjection · 0% coverage\n\nPhase detailclimax · 65/100 exhaustion\nVolatility Phase Read\nclimax\nExpansion / Stretched\nRisk: High Friction\nPhase Age\n100%\nContinuation\n55%\nExit Risk\n45%\nBreakout\n0/100\nLow\nTrap\nClear\n0/100 score\nExhaustion\nHigh\n65/100 risk\nInvalidation\nNo price invalidation level returned\nRead Limits\nExhaustion High · 3 missing inputs\nBreakout evidence0/100 · Low\nVOL\nLAYER 1 — VOLATILITY STATE\nBreakout Readiness\n0/100\nLow\nHeuristic score · not a probability\nVol Compression\n0/40\nTime Alignment\n0/30\nGamma Wall\nNot collected\nADX Rising\n0/10\n\nTime alignment 0/30 (display only; not included in score)\n\nDirectional pressureneutral · 10% confluence\nDIR\nLAYER 2 — DIRECTIONAL BIAS\nDirectional Bias\n10% confluence\n← Downward\nNeutral\nUpward →\n+10\nneutral\nConfluence: Low\nStoch Momentum\n0/15\nTrend Structure\n0/20\nOptions Flow\nNot collected\nVolume\n+10/10\nDealer Gamma\nNot collected\nFunding Rate\nNot collected\nMarket Breadth\n0/10\n\nMACD fallback: 0/15\n\nVolume 2.0x avg (+10)\n\nPhase persistenceExpansion\nPH\nLAYER 3 — PHASE PERSISTENCE\nPH\nPhase Persistence\nContraction (Inactive)\nCurrent: 0 bars\nMedian: 2.0 bars\nAverage: 2.2 bars\nMax: 3 bars\nEpisodes: 17\nPercentile: 0%\nExpansion (Active)\nStretched\nCurrent: 12 bars\nMedian: 2.0 bars\nAverage: 1.9 bars\nMax: 7 bars\nEpisodes: 18\nPercentile: 100%\nContinuation\n55%\nExit weight\n45%\nSignal and invalidationNo active signal\nSIG\nLAYER 4 — SIGNAL & INVALIDATION\nSIG\nSignal Status\nidle\n\nConditions needed to trigger a signal:\n\nCompression Release ↑\n1/5\n○\nRecent compression (BBWP ≤ 15)\n✓\nBBWP breaks above 15 (now 97.6)\n○\nBBWP > SMA5 or accelerating\n○\nStoch momentum upward\n○\nDirectional bias upward\nCompression Release ↓\n1/5\n○\nRecent compression (BBWP ≤ 15)\n✓\nBBWP breaks above 15 (now 97.6)\n○\nBBWP > SMA5 or accelerating\n○\nStoch momentum downward\n○\nDirectional bias downward\nExpansion Continuation ↑\n2/5\n✓\nBBWP ≥ 85 climax zone (now 97.6)\n✓\nSMA5 ≥ 85 confirms (now 99.2)\n○\nStoch momentum upward\n○\nDirectional bias upward\n○\nLow exhaustion risk\nExpansion Continuation ↓\n2/5\n✓\nBBWP ≥ 85 climax zone (now 97.6)\n✓\nSMA5 ≥ 85 confirms (now 99.2)\n○\nStoch momentum downward\n○\nDirectional bias downward\n○\nLow exhaustion risk\nInvalidation Levels\nNot collected\nMode\nextreme\nProjectionVolatility range · no active signal\nPROJ\nLAYER 5 — OUTCOME PROJECTION\nPROJ\nOutcome Projection\n\nNo active signal — showing expected move range based on current volatility\n\nModel range (BBWP-based estimate)\nDownside\n$105.10\n-3.9%\nUpside\n$113.67\n+3.9%\nExtended range (1.5× BBWP-based estimate)\nDownside\n$102.95\n-5.9%\nUpside\n$115.81\n+5.9%\nBBWP: 97.6 • climax\nexpansion exit weight: 45%\nRegime contextclimax → expansion\nSUP\nSUPPORTING ANALYSIS\nRegime & Outlook\nVolatility Regime Timeline\n→\ncompression\nneutral\ntransition\nexpansion\nclimax\nExhaustion Risk\nExtended Expansion\nclimax\n→\nexpansion\n60/100 weight\n\nTrigger: BBWP decelerating from climax\n\nNext regime weights · heuristic\nexpansion\n50%\ntransition\n30%\nclimax\n20%\nExhaustion:\n65/100 (High)\nBBWP 97.6 > 85\nBBWP > 95: extreme\nBBWP decelerating during expansion\nActive Flags\nClimax Warning\nSummary\n\nAAPL BBWP at 97.6 (climax). Expansion episode at 100th percentile age.\n\nSource · Volatility calculation · Price bar date not collected · Calculated from price bars\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "expandedWidth": 1280,
+      "expandedSourceCount": 1
+    },
+    {
+      "name": "volatility-error",
+      "width": 1280,
+      "tier": "pro",
+      "state": "error",
+      "symbol": "AAPL",
+      "url": "/tools/volatility-engine?symbol=AAPL",
+      "observedAt": "2026-10-05T17:14:43.778Z",
+      "height": 800,
+      "scrollHeight": 800,
+      "scrollWidth": 1280,
+      "screens": 1,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nVolatility\n\nVolatility reading not collected\n\nAnalyze\nBTC\nETH\nAAPL\nTSLA\nNVDA\nSPX\nGOLD\nPrice history not collected\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "Volatility reading not collected",
+          "bottom": 221
+        }
+      ],
+      "inputs": [
+        {
+          "value": "AAPL",
+          "label": "Volatility symbol"
+        }
+      ],
+      "visibleCharts": 0,
+      "buttons": [
+        {
+          "text": "Analyze",
+          "height": 40
+        },
+        {
+          "text": "BTC",
+          "height": 40
+        },
+        {
+          "text": "ETH",
+          "height": 40
+        },
+        {
+          "text": "AAPL",
+          "height": 40
+        },
+        {
+          "text": "TSLA",
+          "height": 40
+        },
+        {
+          "text": "NVDA",
+          "height": 40
+        },
+        {
+          "text": "SPX",
+          "height": 40
+        },
+        {
+          "text": "GOLD",
+          "height": 40
+        }
+      ],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nVolatility\n\nVolatility reading not collected\n\nAnalyze\nBTC\nETH\nAAPL\nTSLA\nNVDA\nSPX\nGOLD\nPrice history not collected\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "expandedWidth": 1280,
+      "expandedSourceCount": 0
+    },
+    {
+      "name": "volatility-free",
+      "width": 1280,
+      "tier": "free",
+      "state": "free",
+      "symbol": "AAPL",
+      "url": "/tools/volatility-engine?symbol=AAPL",
+      "observedAt": "2026-10-05T17:14:46.012Z",
+      "height": 800,
+      "scrollHeight": 806,
+      "scrollWidth": 1280,
+      "screens": 1.0075,
+      "text": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nPro Feature\n\nDirectional Volatility Engine is available on the Pro plan.\n\nUnlock Pro\n$24.99/month\nUpgrade to Pro\n\n7-day money-back guarantee • Cancel anytime\n\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "visibleCharts": 0,
+      "buttons": [],
+      "expandedText": "MarketScannerPros\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nPro Feature\n\nDirectional Volatility Engine is available on the Pro plan.\n\nUnlock Pro\n$24.99/month\nUpgrade to Pro\n\n7-day money-back guarantee • Cancel anytime\n\n✕\nMSP AI",
+      "expandedWidth": 1280,
+      "expandedSourceCount": 0
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 1280,
+      "tier": "anonymous",
+      "state": "anonymous",
+      "symbol": "AAPL",
+      "url": "/tools/volatility-engine?symbol=AAPL",
+      "observedAt": "2026-10-05T17:14:48.194Z",
+      "height": 800,
+      "scrollHeight": 947,
+      "scrollWidth": 1280,
+      "screens": 1.18375,
+      "text": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nPro Feature\n\nDirectional Volatility Engine is available on the Pro plan.\n\nUnlock Pro\n$24.99/month\nUpgrade to Pro\n\n7-day money-back guarantee • Cancel anytime\n\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "visibleCharts": 0,
+      "buttons": [],
+      "expandedText": "MarketScannerPros\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nPro Feature\n\nDirectional Volatility Engine is available on the Pro plan.\n\nUnlock Pro\n$24.99/month\nUpgrade to Pro\n\n7-day money-back guarantee • Cancel anytime\n\n✕\nMSP AI",
+      "expandedWidth": 1280,
+      "expandedSourceCount": 0
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 390,
+      "tier": "pro",
+      "state": "AAPL",
+      "symbol": "AAPL",
+      "url": "/tools/volatility-engine?symbol=AAPL",
+      "observedAt": "2026-10-05T17:14:49.977Z",
+      "height": 844,
+      "scrollHeight": 1804,
+      "scrollWidth": 390,
+      "screens": 2.137440758293839,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nVolatility\n\nAAPL · Climax\n\nAnalyze\nBTC\nETH\nAAPL\nTSLA\nNVDA\nSPX\nGOLD\n\n97.6\n\nBBWP percentile\n\n40\n\nPressure score\n\n10/100\n\nBreakout score\n\n100%\n\nData coverage\n\nVOL\nBBWP Gauge\n97.6BBWP\nclimax\nSMA5: 99.2\nRate: -0.5 (decelerating)\nSqueeze: None\nConfluence: 76%\nEvidence and limits100% coverage · 3 flags\nPhase detailclimax · 65/100 exhaustion\nBreakout evidence10/100 · Low\nDirectional pressureupward · 40% confluence\nPhase persistenceExpansion\nSignal and invalidationNo active signal\nProjectionVolatility range · no active signal\nRegime contextclimax → expansion\n\nSource · Volatility calculation · Price bar session 2026-10-02 · Cached reading; freshness based on price bars\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "AAPL · Climax",
+          "bottom": 252.5
+        }
+      ],
+      "inputs": [
+        {
+          "value": "AAPL",
+          "label": "Volatility symbol"
+        }
+      ],
+      "visibleCharts": 1,
+      "buttons": [
+        {
+          "text": "Analyze",
+          "height": 40
+        },
+        {
+          "text": "BTC",
+          "height": 40
+        },
+        {
+          "text": "ETH",
+          "height": 40
+        },
+        {
+          "text": "AAPL",
+          "height": 40
+        },
+        {
+          "text": "TSLA",
+          "height": 40
+        },
+        {
+          "text": "NVDA",
+          "height": 40
+        },
+        {
+          "text": "SPX",
+          "height": 40
+        },
+        {
+          "text": "GOLD",
+          "height": 40
+        }
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nVolatility\n\nAAPL · Climax\n\nAnalyze\nBTC\nETH\nAAPL\nTSLA\nNVDA\nSPX\nGOLD\n\n97.6\n\nBBWP percentile\n\n40\n\nPressure score\n\n10/100\n\nBreakout score\n\n100%\n\nData coverage\n\nVOL\nBBWP Gauge\n97.6BBWP\nclimax\nSMA5: 99.2\nRate: -0.5 (decelerating)\nSqueeze: None\nConfluence: 76%\nEvidence and limits100% coverage · 3 flags\n\nVolatility Regime: Climax · 76% confluence with BBWP 98.\n\nDirectional Pressure: upward · 40% confluence, score 40.\n\nPhase State: Expansion · Contraction exit 0%, expansion exit 45%.\n\nSignal Projection: not collected · Projection not collected: no active signal or not enough historical data.\n\nExhaustion HIGH.\nClimax warning active.\nInvalidation level not collected.\n\nVolatility · 100% coverage\n\nInputs · 100% coverage\n\nProjection · 0% coverage\n\nPhase detailclimax · 65/100 exhaustion\nVolatility Phase Read\nclimax\nExpansion / Stretched\nRisk: High Friction\nPhase Age\n100%\nContinuation\n75%\nExit Risk\n45%\nBreakout\n10/100\nLow\nTrap\nClear\n0/100 score\nExhaustion\nHigh\n65/100 risk\nInvalidation\nNo price invalidation level returned\nRead Limits\nExhaustion High\nBreakout evidence10/100 · Low\nVOL\nLAYER 1 — VOLATILITY STATE\nBreakout Readiness\n10/100\nLow\nHeuristic score · not a probability\nVol Compression\n0/40\nTime Alignment\n22/30\nGamma Wall\n0/20\nADX Rising\n7/10\n\n3 TFs active (22/30)\n\nADX 25 moderate (7/10)\n\nTime alignment 22/30 (display only; not included in score)\n\nDirectional pressureupward · 40% confluence\nDIR\nLAYER 2 — DIRECTIONAL BIAS\nDirectional Bias\n40% confluence\n← Downward\nNeutral\nUpward →\n+40\nupward\nConfluence: Moderate\nStoch Momentum\n+15/15\nTrend Structure\n+15/20\nOptions Flow\n0/20\nVolume\n+10/10\nDealer Gamma\n0/15\nFunding Rate\n0/10\nMarket Breadth\n0/10\n\nStoch momentum: +15/15\n\nPrice > SMA20 (+5)\n\nPrice > SMA50 (+5)\n\nPhase persistenceExpansion\nPH\nLAYER 3 — PHASE PERSISTENCE\nPH\nPhase Persistence\nContraction (Inactive)\nCurrent: 0 bars\nMedian: 2.0 bars\nAverage: 2.2 bars\nMax: 3 bars\nEpisodes: 17\nPercentile: 0%\nExpansion (Active)\nStretched\nCurrent: 12 bars\nMedian: 2.0 bars\nAverage: 1.9 bars\nMax: 7 bars\nEpisodes: 18\nPercentile: 100%\nContinuation\n75%\nExit weight\n45%\nSignal and invalidationNo active signal\nSIG\nLAYER 4 — SIGNAL & INVALIDATION\nSIG\nSignal Status\nidle\n\nConditions needed to trigger a signal:\n\nCompression Release ↑\n3/5\n○\nRecent compression (BBWP ≤ 15)\n✓\nBBWP breaks above 15 (now 97.6)\n○\nBBWP > SMA5 or accelerating\n✓\nStoch momentum upward\n✓\nDirectional bias upward\nCompression Release ↓\n1/5\n○\nRecent compression (BBWP ≤ 15)\n✓\nBBWP breaks above 15 (now 97.6)\n○\nBBWP > SMA5 or accelerating\n○\nStoch momentum downward\n○\nDirectional bias downward\nExpansion Continuation ↑\n4/5\n✓\nBBWP ≥ 85 climax zone (now 97.6)\n✓\nSMA5 ≥ 85 confirms (now 99.2)\n✓\nStoch momentum upward\n✓\nDirectional bias upward\n○\nLow exhaustion risk\nExpansion Continuation ↓\n2/5\n✓\nBBWP ≥ 85 climax zone (now 97.6)\n✓\nSMA5 ≥ 85 confirms (now 99.2)\n○\nStoch momentum downward\n○\nDirectional bias downward\n○\nLow exhaustion risk\nInvalidation Levels\nNot collected\nMode\nextreme\nProjectionVolatility range · no active signal\nPROJ\nLAYER 5 — OUTCOME PROJECTION\nPROJ\nOutcome Projection\n\nNo active signal — showing expected move range based on current volatility\n\nModel range (1 ATR)\nDownside\n$108.38\n-0.9%\nUpside\n$110.38\n+0.9%\nExtended range (1.5× ATR)\nDownside\n$107.88\n-1.4%\nUpside\n$110.88\n+1.4%\nBBWP: 97.6 • climax\nexpansion exit weight: 45%\nRegime contextclimax → expansion\nSUP\nSUPPORTING ANALYSIS\nRegime & Outlook\nVolatility Regime Timeline\n→\ncompression\nneutral\ntransition\nexpansion\nclimax\nExhaustion Risk\nExtended Expansion\nclimax\n→\nexpansion\n60/100 weight\n\nTrigger: BBWP decelerating from climax\n\nNext regime weights · heuristic\nexpansion\n50%\ntransition\n30%\nclimax\n20%\nExhaustion:\n65/100 (High)\nBBWP 97.6 > 85\nBBWP > 95: extreme\nBBWP decelerating during expansion\nActive Flags\nClimax Warning\nSummary\n\nAAPL BBWP at 97.6 (climax). Stochastic momentum upward (+15). Expansion episode at 100th percentile age.\n\nSource · Volatility calculation · Price bar session 2026-10-02 · Cached reading; freshness based on price bars\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "expandedWidth": 390,
+      "expandedSourceCount": 1
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 390,
+      "tier": "pro",
+      "state": "BTC",
+      "symbol": "BTC",
+      "url": "/tools/volatility-engine?symbol=BTC",
+      "observedAt": "2026-10-05T17:14:51.677Z",
+      "height": 844,
+      "scrollHeight": 1804,
+      "scrollWidth": 390,
+      "screens": 2.137440758293839,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nVolatility\n\nBTC · Climax\n\nAnalyze\nBTC\nETH\nAAPL\nTSLA\nNVDA\nSPX\nGOLD\n\n97.6\n\nBBWP percentile\n\n40\n\nPressure score\n\n10/100\n\nBreakout score\n\n100%\n\nData coverage\n\nVOL\nBBWP Gauge\n97.6BBWP\nclimax\nSMA5: 99.2\nRate: -0.5 (decelerating)\nSqueeze: None\nConfluence: 76%\nEvidence and limits100% coverage · 3 flags\nPhase detailclimax · 65/100 exhaustion\nBreakout evidence10/100 · Low\nDirectional pressureupward · 40% confluence\nPhase persistenceExpansion\nSignal and invalidationNo active signal\nProjectionVolatility range · no active signal\nRegime contextclimax → expansion\n\nSource · Volatility calculation · Price bar session 2026-10-02 · Cached reading; freshness based on price bars\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "BTC · Climax",
+          "bottom": 252.5
+        }
+      ],
+      "inputs": [
+        {
+          "value": "BTC",
+          "label": "Volatility symbol"
+        }
+      ],
+      "visibleCharts": 1,
+      "buttons": [
+        {
+          "text": "Analyze",
+          "height": 40
+        },
+        {
+          "text": "BTC",
+          "height": 40
+        },
+        {
+          "text": "ETH",
+          "height": 40
+        },
+        {
+          "text": "AAPL",
+          "height": 40
+        },
+        {
+          "text": "TSLA",
+          "height": 40
+        },
+        {
+          "text": "NVDA",
+          "height": 40
+        },
+        {
+          "text": "SPX",
+          "height": 40
+        },
+        {
+          "text": "GOLD",
+          "height": 40
+        }
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nVolatility\n\nBTC · Climax\n\nAnalyze\nBTC\nETH\nAAPL\nTSLA\nNVDA\nSPX\nGOLD\n\n97.6\n\nBBWP percentile\n\n40\n\nPressure score\n\n10/100\n\nBreakout score\n\n100%\n\nData coverage\n\nVOL\nBBWP Gauge\n97.6BBWP\nclimax\nSMA5: 99.2\nRate: -0.5 (decelerating)\nSqueeze: None\nConfluence: 76%\nEvidence and limits100% coverage · 3 flags\n\nVolatility Regime: Climax · 76% confluence with BBWP 98.\n\nDirectional Pressure: upward · 40% confluence, score 40.\n\nPhase State: Expansion · Contraction exit 0%, expansion exit 45%.\n\nSignal Projection: not collected · Projection not collected: no active signal or not enough historical data.\n\nExhaustion HIGH.\nClimax warning active.\nInvalidation level not collected.\n\nVolatility · 100% coverage\n\nInputs · 100% coverage\n\nProjection · 0% coverage\n\nPhase detailclimax · 65/100 exhaustion\nVolatility Phase Read\nclimax\nExpansion / Stretched\nRisk: High Friction\nPhase Age\n100%\nContinuation\n75%\nExit Risk\n45%\nBreakout\n10/100\nLow\nTrap\nClear\n0/100 score\nExhaustion\nHigh\n65/100 risk\nInvalidation\nNo price invalidation level returned\nRead Limits\nExhaustion High\nBreakout evidence10/100 · Low\nVOL\nLAYER 1 — VOLATILITY STATE\nBreakout Readiness\n10/100\nLow\nHeuristic score · not a probability\nVol Compression\n0/40\nTime Alignment\n22/30\nGamma Wall\n0/20\nADX Rising\n7/10\n\n3 TFs active (22/30)\n\nADX 25 moderate (7/10)\n\nTime alignment 22/30 (display only; not included in score)\n\nDirectional pressureupward · 40% confluence\nDIR\nLAYER 2 — DIRECTIONAL BIAS\nDirectional Bias\n40% confluence\n← Downward\nNeutral\nUpward →\n+40\nupward\nConfluence: Moderate\nStoch Momentum\n+15/15\nTrend Structure\n+15/20\nOptions Flow\n0/20\nVolume\n+10/10\nDealer Gamma\n0/15\nFunding Rate\n0/10\nMarket Breadth\n0/10\n\nStoch momentum: +15/15\n\nPrice > SMA20 (+5)\n\nPrice > SMA50 (+5)\n\nPhase persistenceExpansion\nPH\nLAYER 3 — PHASE PERSISTENCE\nPH\nPhase Persistence\nContraction (Inactive)\nCurrent: 0 bars\nMedian: 2.0 bars\nAverage: 2.2 bars\nMax: 3 bars\nEpisodes: 17\nPercentile: 0%\nExpansion (Active)\nStretched\nCurrent: 12 bars\nMedian: 2.0 bars\nAverage: 1.9 bars\nMax: 7 bars\nEpisodes: 18\nPercentile: 100%\nContinuation\n75%\nExit weight\n45%\nSignal and invalidationNo active signal\nSIG\nLAYER 4 — SIGNAL & INVALIDATION\nSIG\nSignal Status\nidle\n\nConditions needed to trigger a signal:\n\nCompression Release ↑\n3/5\n○\nRecent compression (BBWP ≤ 15)\n✓\nBBWP breaks above 15 (now 97.6)\n○\nBBWP > SMA5 or accelerating\n✓\nStoch momentum upward\n✓\nDirectional bias upward\nCompression Release ↓\n1/5\n○\nRecent compression (BBWP ≤ 15)\n✓\nBBWP breaks above 15 (now 97.6)\n○\nBBWP > SMA5 or accelerating\n○\nStoch momentum downward\n○\nDirectional bias downward\nExpansion Continuation ↑\n4/5\n✓\nBBWP ≥ 85 climax zone (now 97.6)\n✓\nSMA5 ≥ 85 confirms (now 99.2)\n✓\nStoch momentum upward\n✓\nDirectional bias upward\n○\nLow exhaustion risk\nExpansion Continuation ↓\n2/5\n✓\nBBWP ≥ 85 climax zone (now 97.6)\n✓\nSMA5 ≥ 85 confirms (now 99.2)\n○\nStoch momentum downward\n○\nDirectional bias downward\n○\nLow exhaustion risk\nInvalidation Levels\nNot collected\nMode\nextreme\nProjectionVolatility range · no active signal\nPROJ\nLAYER 5 — OUTCOME PROJECTION\nPROJ\nOutcome Projection\n\nNo active signal — showing expected move range based on current volatility\n\nModel range (1 ATR)\nDownside\n$108.38\n-0.9%\nUpside\n$110.38\n+0.9%\nExtended range (1.5× ATR)\nDownside\n$107.88\n-1.4%\nUpside\n$110.88\n+1.4%\nBBWP: 97.6 • climax\nexpansion exit weight: 45%\nRegime contextclimax → expansion\nSUP\nSUPPORTING ANALYSIS\nRegime & Outlook\nVolatility Regime Timeline\n→\ncompression\nneutral\ntransition\nexpansion\nclimax\nExhaustion Risk\nExtended Expansion\nclimax\n→\nexpansion\n60/100 weight\n\nTrigger: BBWP decelerating from climax\n\nNext regime weights · heuristic\nexpansion\n50%\ntransition\n30%\nclimax\n20%\nExhaustion:\n65/100 (High)\nBBWP 97.6 > 85\nBBWP > 95: extreme\nBBWP decelerating during expansion\nActive Flags\nClimax Warning\nSummary\n\nBTC BBWP at 97.6 (climax). Stochastic momentum upward (+15). Expansion episode at 100th percentile age.\n\nSource · Volatility calculation · Price bar session 2026-10-02 · Cached reading; freshness based on price bars\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "expandedWidth": 390,
+      "expandedSourceCount": 1
+    },
+    {
+      "name": "volatility-partial",
+      "width": 390,
+      "tier": "pro",
+      "state": "partial",
+      "symbol": "AAPL",
+      "url": "/tools/volatility-engine?symbol=AAPL",
+      "observedAt": "2026-10-05T17:14:53.378Z",
+      "height": 844,
+      "scrollHeight": 1816,
+      "scrollWidth": 390,
+      "screens": 2.1516587677725116,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nVolatility\n\nAAPL · Climax\n\nAnalyze\nBTC\nETH\nAAPL\nTSLA\nNVDA\nSPX\nGOLD\n\n97.6\n\nBBWP percentile\n\n10\n\nPressure score\n\n0/100\n\nBreakout score\n\n72%\n\nData coverage\n\nPrice bar date not collected. 3 inputs not collected.\n\nVOL\nBBWP Gauge\n97.6BBWP\nclimax\nSMA5: 99.2\nRate: -0.5 (decelerating)\nSqueeze: None\nConfluence: 76%\nEvidence and limits72% coverage · 4 flags\nPhase detailclimax · 65/100 exhaustion\nBreakout evidence0/100 · Low\nDirectional pressureneutral · 10% confluence\nPhase persistenceExpansion\nSignal and invalidationNo active signal\nProjectionVolatility range · no active signal\nRegime contextclimax → expansion\n\nSource · Volatility calculation · Price bar date not collected · Calculated from price bars\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "sourceCount": 1,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "AAPL · Climax",
+          "bottom": 252.5
+        }
+      ],
+      "inputs": [
+        {
+          "value": "AAPL",
+          "label": "Volatility symbol"
+        }
+      ],
+      "visibleCharts": 1,
+      "buttons": [
+        {
+          "text": "Analyze",
+          "height": 40
+        },
+        {
+          "text": "BTC",
+          "height": 40
+        },
+        {
+          "text": "ETH",
+          "height": 40
+        },
+        {
+          "text": "AAPL",
+          "height": 40
+        },
+        {
+          "text": "TSLA",
+          "height": 40
+        },
+        {
+          "text": "NVDA",
+          "height": 40
+        },
+        {
+          "text": "SPX",
+          "height": 40
+        },
+        {
+          "text": "GOLD",
+          "height": 40
+        }
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nVolatility\n\nAAPL · Climax\n\nAnalyze\nBTC\nETH\nAAPL\nTSLA\nNVDA\nSPX\nGOLD\n\n97.6\n\nBBWP percentile\n\n10\n\nPressure score\n\n0/100\n\nBreakout score\n\n72%\n\nData coverage\n\nPrice bar date not collected. 3 inputs not collected.\n\nVOL\nBBWP Gauge\n97.6BBWP\nclimax\nSMA5: 99.2\nRate: -0.5 (decelerating)\nSqueeze: None\nConfluence: 76%\nEvidence and limits72% coverage · 4 flags\n\nVolatility Regime: Climax · 76% confluence with BBWP 98.\n\nDirectional Pressure: Neutral · 10% confluence, score 10.\n\nPhase State: Expansion · Contraction exit 0%, expansion exit 45%.\n\nSignal Projection: not collected · Projection not collected: no active signal or not enough historical data.\n\nExhaustion HIGH.\nClimax warning active.\n3 not collected Volatility inputs.\nInvalidation level not collected.\n\nVolatility · 72% coverage\n\nInputs · 72% coverage\n\nProjection · 0% coverage\n\nPhase detailclimax · 65/100 exhaustion\nVolatility Phase Read\nclimax\nExpansion / Stretched\nRisk: High Friction\nPhase Age\n100%\nContinuation\n55%\nExit Risk\n45%\nBreakout\n0/100\nLow\nTrap\nClear\n0/100 score\nExhaustion\nHigh\n65/100 risk\nInvalidation\nNo price invalidation level returned\nRead Limits\nExhaustion High · 3 missing inputs\nBreakout evidence0/100 · Low\nVOL\nLAYER 1 — VOLATILITY STATE\nBreakout Readiness\n0/100\nLow\nHeuristic score · not a probability\nVol Compression\n0/40\nTime Alignment\n0/30\nGamma Wall\nNot collected\nADX Rising\n0/10\n\nTime alignment 0/30 (display only; not included in score)\n\nDirectional pressureneutral · 10% confluence\nDIR\nLAYER 2 — DIRECTIONAL BIAS\nDirectional Bias\n10% confluence\n← Downward\nNeutral\nUpward →\n+10\nneutral\nConfluence: Low\nStoch Momentum\n0/15\nTrend Structure\n0/20\nOptions Flow\nNot collected\nVolume\n+10/10\nDealer Gamma\nNot collected\nFunding Rate\nNot collected\nMarket Breadth\n0/10\n\nMACD fallback: 0/15\n\nVolume 2.0x avg (+10)\n\nPhase persistenceExpansion\nPH\nLAYER 3 — PHASE PERSISTENCE\nPH\nPhase Persistence\nContraction (Inactive)\nCurrent: 0 bars\nMedian: 2.0 bars\nAverage: 2.2 bars\nMax: 3 bars\nEpisodes: 17\nPercentile: 0%\nExpansion (Active)\nStretched\nCurrent: 12 bars\nMedian: 2.0 bars\nAverage: 1.9 bars\nMax: 7 bars\nEpisodes: 18\nPercentile: 100%\nContinuation\n55%\nExit weight\n45%\nSignal and invalidationNo active signal\nSIG\nLAYER 4 — SIGNAL & INVALIDATION\nSIG\nSignal Status\nidle\n\nConditions needed to trigger a signal:\n\nCompression Release ↑\n1/5\n○\nRecent compression (BBWP ≤ 15)\n✓\nBBWP breaks above 15 (now 97.6)\n○\nBBWP > SMA5 or accelerating\n○\nStoch momentum upward\n○\nDirectional bias upward\nCompression Release ↓\n1/5\n○\nRecent compression (BBWP ≤ 15)\n✓\nBBWP breaks above 15 (now 97.6)\n○\nBBWP > SMA5 or accelerating\n○\nStoch momentum downward\n○\nDirectional bias downward\nExpansion Continuation ↑\n2/5\n✓\nBBWP ≥ 85 climax zone (now 97.6)\n✓\nSMA5 ≥ 85 confirms (now 99.2)\n○\nStoch momentum upward\n○\nDirectional bias upward\n○\nLow exhaustion risk\nExpansion Continuation ↓\n2/5\n✓\nBBWP ≥ 85 climax zone (now 97.6)\n✓\nSMA5 ≥ 85 confirms (now 99.2)\n○\nStoch momentum downward\n○\nDirectional bias downward\n○\nLow exhaustion risk\nInvalidation Levels\nNot collected\nMode\nextreme\nProjectionVolatility range · no active signal\nPROJ\nLAYER 5 — OUTCOME PROJECTION\nPROJ\nOutcome Projection\n\nNo active signal — showing expected move range based on current volatility\n\nModel range (BBWP-based estimate)\nDownside\n$105.10\n-3.9%\nUpside\n$113.67\n+3.9%\nExtended range (1.5× BBWP-based estimate)\nDownside\n$102.95\n-5.9%\nUpside\n$115.81\n+5.9%\nBBWP: 97.6 • climax\nexpansion exit weight: 45%\nRegime contextclimax → expansion\nSUP\nSUPPORTING ANALYSIS\nRegime & Outlook\nVolatility Regime Timeline\n→\ncompression\nneutral\ntransition\nexpansion\nclimax\nExhaustion Risk\nExtended Expansion\nclimax\n→\nexpansion\n60/100 weight\n\nTrigger: BBWP decelerating from climax\n\nNext regime weights · heuristic\nexpansion\n50%\ntransition\n30%\nclimax\n20%\nExhaustion:\n65/100 (High)\nBBWP 97.6 > 85\nBBWP > 95: extreme\nBBWP decelerating during expansion\nActive Flags\nClimax Warning\nSummary\n\nAAPL BBWP at 97.6 (climax). Expansion episode at 100th percentile age.\n\nSource · Volatility calculation · Price bar date not collected · Calculated from price bars\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "expandedWidth": 390,
+      "expandedSourceCount": 1
+    },
+    {
+      "name": "volatility-error",
+      "width": 390,
+      "tier": "pro",
+      "state": "error",
+      "symbol": "AAPL",
+      "url": "/tools/volatility-engine?symbol=AAPL",
+      "observedAt": "2026-10-05T17:14:55.228Z",
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nVolatility\n\nVolatility reading not collected\n\nAnalyze\nBTC\nETH\nAAPL\nTSLA\nNVDA\nSPX\nGOLD\nPrice history not collected\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [
+        {
+          "text": "Volatility reading not collected",
+          "bottom": 252.5
+        }
+      ],
+      "inputs": [
+        {
+          "value": "AAPL",
+          "label": "Volatility symbol"
+        }
+      ],
+      "visibleCharts": 0,
+      "buttons": [
+        {
+          "text": "Analyze",
+          "height": 40
+        },
+        {
+          "text": "BTC",
+          "height": 40
+        },
+        {
+          "text": "ETH",
+          "height": 40
+        },
+        {
+          "text": "AAPL",
+          "height": 40
+        },
+        {
+          "text": "TSLA",
+          "height": 40
+        },
+        {
+          "text": "NVDA",
+          "height": 40
+        },
+        {
+          "text": "SPX",
+          "height": 40
+        },
+        {
+          "text": "GOLD",
+          "height": 40
+        }
+      ],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nVolatility\n\nVolatility reading not collected\n\nAnalyze\nBTC\nETH\nAAPL\nTSLA\nNVDA\nSPX\nGOLD\nPrice history not collected\n\nGeneral information only, not financial advice.\n\n✕\nMSP AI",
+      "expandedWidth": 390,
+      "expandedSourceCount": 0
+    },
+    {
+      "name": "volatility-free",
+      "width": 390,
+      "tier": "free",
+      "state": "free",
+      "symbol": "AAPL",
+      "url": "/tools/volatility-engine?symbol=AAPL",
+      "observedAt": "2026-10-05T17:14:57.227Z",
+      "height": 844,
+      "scrollHeight": 844,
+      "scrollWidth": 390,
+      "screens": 1,
+      "text": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nPro Feature\n\nDirectional Volatility Engine is available on the Pro plan.\n\nUnlock Pro\n$24.99/month\nUpgrade to Pro\n\n7-day money-back guarantee • Cancel anytime\n\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "visibleCharts": 0,
+      "buttons": [],
+      "expandedText": "MSP\nMenu\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nPro Feature\n\nDirectional Volatility Engine is available on the Pro plan.\n\nUnlock Pro\n$24.99/month\nUpgrade to Pro\n\n7-day money-back guarantee • Cancel anytime\n\n✕\nMSP AI",
+      "expandedWidth": 390,
+      "expandedSourceCount": 0
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 390,
+      "tier": "anonymous",
+      "state": "anonymous",
+      "symbol": "AAPL",
+      "url": "/tools/volatility-engine?symbol=AAPL",
+      "observedAt": "2026-10-05T17:14:59.176Z",
+      "height": 844,
+      "scrollHeight": 987,
+      "scrollWidth": 390,
+      "screens": 1.169431279620853,
+      "text": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nPro Feature\n\nDirectional Volatility Engine is available on the Pro plan.\n\nUnlock Pro\n$24.99/month\nUpgrade to Pro\n\n7-day money-back guarantee • Cancel anytime\n\n✕\nMSP AI",
+      "sourceCount": 0,
+      "openFolds": 0,
+      "verdicts": [],
+      "inputs": [],
+      "visibleCharts": 0,
+      "buttons": [],
+      "expandedText": "MSP\nMenu\nResearch and education only. Not financial advice. Read the disclosure\n\nResearch and education only. Not a trade instruction.\n\nStart Free · no card needed\nMARKET REGIME\nNOT AVAILABLE RIGHT NOW\n☆\nⓘ General Information Only — educational use only.\nRead ▾\nPro Feature\n\nDirectional Volatility Engine is available on the Pro plan.\n\nUnlock Pro\n$24.99/month\nUpgrade to Pro\n\n7-day money-back guarantee • Cancel anytime\n\n✕\nMSP AI",
+      "expandedWidth": 390,
+      "expandedSourceCount": 0
+    }
+  ],
+  "requests": [
+    {
+      "name": "volatility-AAPL",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:36.440Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:36.442Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:36.442Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:36.455Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:36.458Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:36.459Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:36.459Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:36.501Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 1280,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:36.501Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 1280,
+      "path": "/api/dve",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:36.503Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:36.507Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:36.508Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:36.508Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:38.570Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:38.571Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:38.571Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:38.577Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:38.578Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:38.579Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:38.633Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:38.635Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 1280,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:38.636Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 1280,
+      "path": "/api/dve",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:38.640Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:38.641Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:38.641Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:38.643Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:40.618Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:40.620Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:40.620Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:40.636Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:40.660Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 1280,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:40.661Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 1280,
+      "path": "/api/dve",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:40.662Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:40.663Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:40.664Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:40.665Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:40.691Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:40.692Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:40.692Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:42.733Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:42.735Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:42.735Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:42.739Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:42.740Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:42.740Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:42.803Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:42.803Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 1280,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:42.804Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 1280,
+      "path": "/api/dve",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:42.805Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:42.809Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:42.809Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:42.810Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:44.658Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:44.659Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:44.660Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:44.668Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:44.669Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:44.670Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:44.689Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 1280,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:44.689Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:44.690Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:44.690Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:44.691Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:44.764Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 1280,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:46.787Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:46.787Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 1280,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:46.788Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 1280,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:46.801Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 1280,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:46.802Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 1280,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:46.802Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 1280,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:46.802Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:46.816Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 1280,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:46.817Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 1280,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:46.818Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 1280,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:46.819Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 1280,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:46.819Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:48.965Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:48.966Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:48.966Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:48.970Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:48.971Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:48.971Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:49.020Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:49.021Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 390,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:49.021Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 390,
+      "path": "/api/dve",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:49.022Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:49.023Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:49.024Z"
+    },
+    {
+      "name": "volatility-AAPL",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:49.024Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:50.663Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:50.663Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:50.665Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:50.670Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:50.672Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:50.673Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:50.719Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:50.725Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 390,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:50.725Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 390,
+      "path": "/api/dve",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:50.725Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:50.726Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:50.727Z"
+    },
+    {
+      "name": "volatility-BTC",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:50.728Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:52.375Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:52.375Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:52.376Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:52.380Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:52.381Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:52.382Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:52.389Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 390,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:52.390Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:52.391Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:52.392Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:52.394Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:52.429Z"
+    },
+    {
+      "name": "volatility-partial",
+      "width": 390,
+      "path": "/api/dve",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:52.430Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:54.219Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:54.220Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:54.220Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:54.237Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:54.238Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:54.238Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:54.239Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:54.253Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 390,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:54.255Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 390,
+      "path": "/api/dve",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:54.256Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:54.261Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:54.262Z"
+    },
+    {
+      "name": "volatility-error",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:54.262Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:55.914Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:55.915Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:55.915Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:55.918Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:55.919Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:55.920Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:55.967Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:55.968Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 390,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:55.969Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:55.970Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:55.978Z"
+    },
+    {
+      "name": "volatility-free",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:55.978Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 390,
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:57.898Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:57.898Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 390,
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:57.900Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 390,
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:57.913Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 390,
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:57.914Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 390,
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:57.914Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 390,
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:57.914Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:57.925Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 390,
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:57.927Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 390,
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:57.931Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 390,
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:57.931Z"
+    },
+    {
+      "name": "volatility-anonymous",
+      "width": 390,
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "mocked": true,
+      "observedAt": "2026-10-05T17:14:57.932Z"
+    }
+  ],
+  "errors": []
+}
