@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'How to Read Open Interest | MarketScanner Pros Guide',
+  title: 'How to Read Open Interest',
   description: 'Learn how to interpret Open Interest, Funding Rates, and Long/Short Ratios for educational crypto derivatives research.',
   keywords: ['open interest', 'crypto research', 'funding rates', 'long short ratio', 'derivatives education', 'bitcoin', 'ethereum'],
   openGraph: {

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — MarketScanner Pros",
+  title: "Privacy Policy",
   description:
     "How MarketScanner Pros collects, uses, and protects your data, including secure access code authentication and Stripe billing.",
   alternates: { canonical: "https://marketscannerpros.app/privacy" },

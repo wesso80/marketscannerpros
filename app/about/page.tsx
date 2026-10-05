@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "About — MarketScanner Pros",
+  title: "About",
   description:
     "Learn about MarketScanner Pros — an advanced market scanning and trading intelligence platform for retail and professional traders.",
   alternates: { canonical: "/about" },

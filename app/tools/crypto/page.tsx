@@ -500,7 +500,7 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
       )}
       <main className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
         <PageHero
-          ariaLabel="Crypto Command Center command header"
+          ariaLabel="Crypto Overview header"
           eyebrow="Crypto command"
           badges={[
             { label: marketData ? `Verdict ${reviewLabel(morningDecision.verdict)}` : 'Verdict pending' },
@@ -508,7 +508,7 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
             { label: marketData ? `Vol ${morningDecision.volatility}` : 'Vol pending' },
             { label: morningDecision.dataComplete ? 'Feeds fresh' : marketData ? 'Data incomplete' : 'Loading' },
           ]}
-          title="Crypto Command Center."
+          title="Crypto Overview"
           subtitle="Permission, leadership, liquidity, volatility, and breadth across crypto. Drop into Scanner or Derivatives once the gate is clear."
           actions={[
             { label: 'Refresh evidence', variant: 'primary', onClick: () => void fetchOverview() },

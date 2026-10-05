@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Disclaimer — MarketScanner Pros",
+  title: "Disclaimer",
   alternates: { canonical: "/disclaimer" }
 };
 

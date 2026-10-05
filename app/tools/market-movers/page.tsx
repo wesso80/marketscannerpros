@@ -92,7 +92,6 @@ interface MoversData {
 }
 
 type MoverTab = 'gainers' | 'losers' | 'active';
-type LogTab = 'alerts' | 'regime' | 'scanner' | 'notrade' | 'data';
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -159,7 +158,6 @@ export default function MarketMoversPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<MoverTab>('gainers');
-  const [logTab, setLogTab] = useState<LogTab>('alerts');
   const [setupMode, setSetupMode] = useState<SetupMode>('breakout');
   const [assetFilter, setAssetFilter] = useState<AssetFilter>('all');
   const [upeBySymbol, setUpeBySymbol] = useState<Record<string, UpeMoverRow>>({});
@@ -576,33 +574,6 @@ export default function MarketMoversPage() {
     setupMode,
   ]);
 
-  const logs = useMemo(() => {
-    const first = evaluatedRows[0];
-    const top = data?.summary;
-    return {
-      alerts: [
-        { t: '09:31', e: `Top mover alert: ${first?.ticker || 'No reading'}`, d: 'Adaptive threshold evaluation completed for lead mover.' },
-        { t: '09:58', e: 'Liquidity watch', d: 'Spread widening detected on lower-ranked names.' },
-      ],
-      regime: [
-        { t: '08:55', e: `Mode: ${environment.marketMode}`, d: `Breadth ${environment.breadthState} / Liquidity ${environment.liquidityState}.` },
-        { t: '10:07', e: 'Leadership stable', d: 'Top ranks remained concentrated in current basket.' },
-      ],
-      scanner: [
-        { t: '09:42', e: `${top?.topGainerTicker || 'No reading'} scanner handoff`, d: 'Forwarded to setup scanner for confirmation.' },
-        { t: '10:11', e: `${top?.topLoserTicker || 'No reading'} weakness stack`, d: 'Continuation reading improved on volume.' },
-      ],
-      notrade: [
-        { t: '09:47', e: 'No-trade: eligibility block', d: 'Rows blocked by adaptive liquidity or confluence floor.' },
-        { t: '10:22', e: 'No-trade: gap risk', d: 'Late extension exceeded entry risk envelope.' },
-      ],
-      data: [
-        { t: '09:30', e: 'Data feed check', d: loading ? 'Refreshing movers feed.' : 'Movers feed healthy.' },
-        { t: '10:08', e: 'Update cadence', d: 'Auto-refresh every 5 minutes active.' },
-      ],
-    } as Record<LogTab, Array<{ t: string; e: string; d: string }>>;
-  }, [data, loading, evaluatedRows, environment]);
-
   const formatVolume = (vol: number) => {
     if (!Number.isFinite(vol)) return 'No reading';
     if (vol >= 1e9) return `${(vol / 1e9).toFixed(1)}B`;
@@ -1001,54 +972,6 @@ export default function MarketMoversPage() {
                 </div>
               </div>
             </section>
-
-            <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
-              <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
-                <span>Zone 3 • Audit / Log</span>
-                <span className="text-[11px] text-slate-500 group-open:hidden">Expand</span>
-                <span className="hidden text-[11px] text-slate-500 group-open:inline">Collapse</span>
-              </summary>
-
-              <div className="mt-2 grid gap-2">
-                <div className="flex flex-wrap gap-1">
-                  {([
-                    ['alerts', 'Triggered Alerts'],
-                    ['regime', 'Regime Flips'],
-                    ['scanner', 'Scanner Hits'],
-                    ['notrade', 'No-Trade Reasons'],
-                    ['data', 'Data Gaps'],
-                  ] as Array<[LogTab, string]>).map(([id, label]) => (
-                    <button
-                      type="button"
-                      key={id}
-                      aria-pressed={logTab === id}
-                      onClick={() => setLogTab(id)}
-                      className={`rounded-full border px-2 py-0.5 text-[11px] ${
-                        logTab === id
-                          ? 'border-emerald-400 bg-emerald-500/10 text-emerald-200'
-                          : 'border-slate-700 text-slate-400'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="max-h-[210px] overflow-y-auto rounded-md border border-slate-700 bg-slate-950/60 p-1.5">
-                  <div className="grid gap-1.5">
-                    {logs[logTab].map((entry, idx) => (
-                      <div key={`${entry.t}-${idx}`} className="rounded border border-slate-700 bg-slate-900/70 p-1.5">
-                        <div className="flex items-center justify-between text-[11px] text-slate-500">
-                          <span>{entry.t}</span>
-                          <span className="text-slate-300">{entry.e}</span>
-                        </div>
-                        <p className="mt-0.5 text-[11px] text-slate-400">{entry.d}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </details>
 
             <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
               <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">

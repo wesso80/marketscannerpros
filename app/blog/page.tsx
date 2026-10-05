@@ -2,7 +2,7 @@ import Link from "next/link";
 import { blogPosts } from "./posts-data";
 
 export const metadata = {
-  title: "Trading Insights — MarketScanner Pros",
+  title: "Trading Insights",
   alternates: { canonical: "/blog" },
 };
 

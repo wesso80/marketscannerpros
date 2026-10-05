@@ -975,7 +975,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
         {/* Execution Plan */}
         <div className="md:col-span-5 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 md:p-4">
           <div className="mb-1 text-[0.72rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Preliminary Research Levels</div>
-          <div className="mb-3 text-[0.68rem] leading-4 text-slate-500">Fast ATR-based estimate from scan-time price ({formatLevel(detail.price)}) on {barIntervalLabel} bars (ATR {formatLevel(detail.atr)}). Golden Egg recomputes <em>validated scenario levels</em> from a live quote and price structure — expect them to differ.</div>
+          <div className="mb-3 text-[0.68rem] leading-4 text-slate-500">Fast ATR-based estimate from scan-time price ({formatLevel(detail.price)}) on {barIntervalLabel} bars (ATR {formatLevel(detail.atr)}). Symbol recomputes <em>validated scenario levels</em> from a live quote and price structure — expect them to differ.</div>
           <div className="grid gap-3">
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
               <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Level of Interest (preliminary)</div>
@@ -1515,14 +1515,14 @@ function ScannerContent() {
   const topProSymbol = proScreenerRows[0]?.symbol;
   const headerTopSymbol = selectedSymbol || (mode === 'ranked' ? topRankedSymbol : topProSymbol);
   const nextCheckValue = headerStage === 'analysis'
-    ? 'Validate in Golden Egg'
+    ? 'Validate in Symbol'
     : headerStage === 'pro'
       ? proScanResults
         ? topProSymbol ? `Review ${topProSymbol}` : 'Review filter exclusions'
         : 'Run Educational Scan'
       : topRankedSymbol ? `Review ${topRankedSymbol}` : v2Loading ? 'Loading queue…' : 'Awaiting ranked data';
   const nextCheckDetail = headerStage === 'analysis'
-    ? 'Open Golden Egg from this case'
+    ? 'Open Symbol from this case'
     : headerStage === 'pro'
       ? proScanResults ? 'Click a row to inspect a candidate' : 'Configure filters then run scan'
       : topRankedSymbol ? 'Top-ranked candidate' : 'Cached scanner data syncing';
@@ -1631,7 +1631,7 @@ function ScannerContent() {
               {headerStage === 'pro'
                 ? 'Pro: choose the exact technical and market conditions you want and scan the universe for matches.'
                 : headerStage === 'analysis'
-                  ? 'Analysis: the evidence behind one row — then validate it in Golden Egg.'
+                  ? 'Analysis: the evidence behind one row — then validate it in Symbol.'
                   : 'Ranked: system-ranked research opportunities based on MarketScannerPros evidence and risk filters. Switch to Pro to define your own conditions.'}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -1640,7 +1640,7 @@ function ScannerContent() {
               ) : (
                 <button type="button" onClick={() => selectScannerMode(mode === 'pro' ? 'pro' : 'ranked')} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">{mode === 'pro' ? 'Configure Pro Scan' : 'Refresh Ranked Queue'}</button>
               )}
-              <Link href={goldenEggHref} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">{headerTopSymbol ? `Validate ${headerTopSymbol}` : 'Open Golden Egg'}</Link>
+              <Link href={goldenEggHref} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">{headerTopSymbol ? `Validate ${headerTopSymbol}` : 'Open Symbol'}</Link>
               <Link href={terminalHref} className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Open Terminal</Link>
             </div>
           </div>

@@ -71,7 +71,7 @@ const COMING_SOON: ModuleCard[] = [
   },
   {
     href: '/intelligence/master',
-    title: 'Master Command Centre',
+    title: 'Intelligence Overview',
     summary:
       'Cross-engine fusion. Public composite paused while Lead/Lag, Pressure and Auction remain non-native.',
     status: 'UNDER CONSTRUCTION',

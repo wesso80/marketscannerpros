@@ -134,7 +134,7 @@ export default function AdaptivePersonalityCard(props: AdaptivePersonalityCardPr
             <span style={{ color: 'var(--msp-text-faint)', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 800 }}>
               Analytical Filter Engine
             </span>
-            <span title="Legacy filter grade on the adaptive base score — the canonical verdict (scanner / Golden Egg) is the primary setup grade" style={{
+            <span title="Legacy filter grade on the adaptive base score — the canonical verdict (scanner / Symbol) is the primary setup grade" style={{
               color: data.institutionalFilter.noTrade ? 'var(--msp-bear)' : 'var(--msp-bull)',
               fontSize: '0.75rem',
               fontWeight: 800,

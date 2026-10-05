@@ -24,7 +24,7 @@ function researchHref(symbol: string, assetClass: string, from: string): string 
 }
 const symLink: React.CSSProperties = { color: "#E5E7EB", textDecoration: "none", borderBottom: "1px dotted rgba(16,185,129,0.6)" };
 function SymbolLink({ symbol, assetClass, from }: { symbol: string; assetClass: string; from: string }) {
-  return <Link href={researchHref(symbol, assetClass, from)} style={symLink} title={`Validate ${symbol} in Golden Egg`}>{symbol}</Link>;
+  return <Link href={researchHref(symbol, assetClass, from)} style={symLink} title={`Validate ${symbol} in Symbol`}>{symbol}</Link>;
 }
 
 type Ops = { runId: string | null; emailStatus: EmailStatus; emailSentAt: string | null };

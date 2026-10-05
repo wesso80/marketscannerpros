@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Scoring Methodology & Glossary — MarketScanner Pros",
+  title: "Scoring Methodology & Glossary",
   description:
     "How MarketScanner Pros scores work: composite strength (not probability), independent factor groups, evidence quality, setup stage, extension state, data freshness, and market regime. Educational market analysis, not financial advice.",
   alternates: { canonical: "/methodology" },
