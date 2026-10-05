@@ -23,6 +23,54 @@ interface SendEmailParams {
   to: string;
   subject: string;
   html: string;
+  text?: string;
+  from?: string;
+  replyTo?: string;
+}
+
+/** Dedicated sign-in sender. The domain is already verified with Resend, so this mailbox does not need its own DNS. */
+export const DEFAULT_AUTH_FROM_EMAIL = "MarketScanner Pros <login@marketscannerpros.app>";
+
+export const SIGN_IN_EMAIL_SUBJECT = "Your sign-in link";
+
+const SAFE_SIGN_IN_URL = /^https:\/\/[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+$/;
+
+export function resolveAuthFromEmail(env: NodeJS.ProcessEnv = process.env): string {
+  const dedicated = (env.AUTH_FROM_EMAIL || "").trim();
+  if (dedicated) return dedicated;
+  return DEFAULT_AUTH_FROM_EMAIL;
+}
+
+/** Optional Reply-To. Omitted when unset — the repo has no shared support-address constant. */
+export function resolveAuthReplyTo(env: NodeJS.ProcessEnv = process.env): string | undefined {
+  const replyTo = (env.AUTH_REPLY_TO || "").trim();
+  return replyTo || undefined;
+}
+
+export function buildSignInEmail(verifyUrl: string): { subject: string; text: string; html: string } {
+  if (!SAFE_SIGN_IN_URL.test(verifyUrl)) {
+    throw new Error("Invalid sign-in URL");
+  }
+
+  const text = [
+    "Use this link to sign in. It expires in 15 minutes.",
+    "",
+    verifyUrl,
+    "",
+    "If you did not request this email, you can ignore it.",
+  ].join("\n");
+
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:24px;background-color:#ffffff;color:#1f2937;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;">
+  <p style="margin:0 0 16px;">Use this link to sign in. It expires in 15 minutes.</p>
+  <p style="margin:0 0 16px;"><a href="${verifyUrl}" style="color:#1d4ed8;">Sign in</a></p>
+  <p style="margin:0;color:#4b5563;font-size:14px;">If you did not request this email, you can ignore it.</p>
+</body>
+</html>`;
+
+  return { subject: SIGN_IN_EMAIL_SUBJECT, text, html };
 }
 
 interface SendAlertEmailParams {
@@ -224,31 +272,50 @@ export async function sendNewSignupNotification(email: string, tier: string) {
   }
 }
 
-async function sendEmail({ to, subject, html }: SendEmailParams) {
+async function sendEmail({ to, subject, html, text, from, replyTo }: SendEmailParams) {
   const client = getResendClient();
   if (!client) {
     throw new Error('RESEND_API_KEY not set');
   }
 
-  const fromEmail = process.env.RESEND_FROM_EMAIL || "MarketScanner Pros <alerts@marketscannerpros.app>";
+  const fromEmail = (from || "").trim() || process.env.RESEND_FROM_EMAIL || "MarketScanner Pros <alerts@marketscannerpros.app>";
 
   try {
-    const { data, error } = await client.emails.send({ 
-      from: fromEmail,
-      to, 
-      subject, 
-      html 
-    });
+    const payload: {
+      from: string;
+      to: string;
+      subject: string;
+      html: string;
+      text?: string;
+      replyTo?: string;
+    } = { from: fromEmail, to, subject, html };
+    if (text) payload.text = text;
+    if (replyTo) payload.replyTo = replyTo;
+
+    const { data, error } = await client.emails.send(payload);
     
     if (error) {
-      console.error("Resend error:", error);
+      console.error("Resend error:", error.message || "Resend send failed");
       throw new Error(error.message || "Resend send failed");
     }
-    
-    console.log(`Email sent to ${to}: ${subject}`);
+
+    // Log the provider id only. Never log the body — sign-in mail contains the token URL.
+    console.log(`Email sent to ${to}: ${subject} id=${data?.id ?? "missing"}`);
     return data?.id ?? null;
   } catch (err) {
-    console.error("Email send failed:", err);
+    console.error("Email send failed:", err instanceof Error ? err.message : "send failed");
     throw err;
   }
+}
+
+export async function sendSignInEmail(params: { to: string; verifyUrl: string }) {
+  const content = buildSignInEmail(params.verifyUrl);
+  return sendEmail({
+    to: params.to,
+    subject: content.subject,
+    html: content.html,
+    text: content.text,
+    from: resolveAuthFromEmail(),
+    replyTo: resolveAuthReplyTo(),
+  });
 }
