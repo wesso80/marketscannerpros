@@ -6,7 +6,7 @@ import ToolsPageHeader from '@/components/ToolsPageHeader';
 import MarketStatusBadge from '@/components/MarketStatusBadge';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import { FREE_COPY } from '@/components/free/copy';
-import Stamp from '@/components/free/Stamp';
+import { friendlyStatus } from '@/lib/free/friendlyStatus';
 import { useUserTier } from '@/lib/useUserTier';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
@@ -88,8 +88,22 @@ function safeNumber(value: unknown, fallback = 0) {
 }
 
 function toPct(value: number | null | undefined, digits = 2) {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return 'N/A';
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 'Not collected';
   return `${value.toFixed(digits)}%`;
+}
+
+/** Presentation only: never changes the macro gate or provider response. */
+function macroLabel(value: unknown): string {
+  if (value == null) return 'Not collected';
+  const text = String(value).trim();
+  if (!text || /\b(unknown|unavailable|missing|undefined|NaN|N\/A)\b/i.test(text)) return 'Not collected';
+  if (/^(Wait for|Monitor for)/i.test(text)) return 'Evidence does not support a clear assessment.';
+  const friendly = friendlyStatus(text);
+  if (friendly === FREE_COPY.unavailable) return 'Not collected';
+  return friendly.replace(/alpha_vantage/gi, 'Alpha Vantage').replace(/bullish/gi, 'Rising').replace(/bearish/gi, 'Falling').replace(/_/g, ' ').replace(/\b[A-Z]{3,}\b/g, word => ['USD', 'BTC', 'SPY', 'VIX', 'GDP', 'CPI'].includes(word) ? word : word[0] + word.slice(1).toLowerCase());
+}
+function macroNumber(value: unknown, digits = 2): string {
+  return typeof value === 'number' && Number.isFinite(value) ? value.toLocaleString('en-US', { maximumFractionDigits: digits }) : 'Not collected';
 }
 
 function trendDirection(history?: { date: string; value: number }[]) {
@@ -349,19 +363,25 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
     });
   }, [data, gate, setPageData]);
 
+  const completeAssessment = !!data && [data.rates.fedFunds.value, data.rates.treasury10y.value, data.rates.yieldCurve.value, data.inflation.inflationRate.value, data.employment.unemployment.value, data.growth.realGDP.value].every(value => typeof value === 'number' && Number.isFinite(value));
+  const assessment = !completeAssessment ? 'Macro assessment not collected' : gate?.permission === 'yes' ? 'Aligned' : gate?.permission === 'conditional' ? 'Mixed' : 'Not aligned';
+  const incompleteFeeds = [!completeAssessment && 'Required macro observations', commoditiesError && 'Commodities', correlationError && 'Cross-asset context', spyPCRError && 'Options positioning'].filter(Boolean);
+
   if (!isAdmin && tier !== 'pro' && tier !== 'pro_trader') return <main id="macro-summary" className="space-y-4 p-4">
     <h1 className="text-2xl font-semibold">{FREE_COPY.macro}</h1>
-    {tierLoading || loading ? <p>{FREE_COPY.loading}</p> : !data ? <p>{FREE_COPY.unavailable}</p> : <div className="grid gap-4 sm:grid-cols-2">
+    {tierLoading ? <p>{FREE_COPY.loading}</p> : !data ? <p data-verdict-box className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-amber-200">Macro observations not collected for this view.</p> : <div className="grid gap-4 sm:grid-cols-2">
       {[[FREE_COPY.treasury, data.rates.treasury10y], [FREE_COPY.inflation, data.inflation.inflationRate]].map(([label, observation]) => {
         const item = observation as IndicatorValue;
-        return typeof item.value === 'number' ? <section key={String(label)} className="rounded-xl border border-white/10 p-4"><h2>{String(label)}</h2><p className="text-4xl">{toPct(item.value)}</p><Stamp source={FREE_COPY.macroSource} at={item.date || null} basis={FREE_COPY.observation} /></section> : null;
+        return typeof item.value === 'number' ? <section key={String(label)} className="rounded-xl border border-white/10 p-4"><h2>{String(label)}</h2><p className="text-4xl">{toPct(item.value)}</p><p className="text-xs text-slate-400">{item.date || "Observation date not supplied"}</p></section> : null;
       })}
     </div>}
+    <SourceLine source={FREE_COPY.macroSource} asOf={data?.timestamp} basis={FREE_COPY.observation} />
     <a className="inline-flex min-h-10 items-center underline" href="/intelligence/global-m2">{FREE_COPY.deepMacro}</a><p className="text-xs">{FREE_COPY.research}</p>
   </main>;
 
   return (
     <div className={`${embeddedInDashboard ? '' : 'min-h-screen'} bg-[var(--msp-bg)] text-white`}>
+      {embeddedInDashboard && <h1 className="text-2xl font-semibold">Macro</h1>}
       {!embeddedInDashboard && (<>
         <section
           className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
@@ -430,27 +450,6 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
       </>)}
 
       <div className={`mx-auto w-full max-w-none space-y-4 ${embeddedInDashboard ? 'px-0 pb-6 pt-3' : 'px-4 pb-24 pt-6 md:px-6'}`}>
-        <div className={`${embeddedInDashboard ? 'rounded-lg' : 'sticky top-2 z-20 rounded-xl'} border border-white/10 bg-slate-950/95 p-3 backdrop-blur`}>
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-3">
-              <MarketStatusBadge showGlobal />
-              <span className="text-xs text-white/60">US ET {lastRefresh ? `• Last refresh ${lastRefresh}` : ''}</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {!embeddedInDashboard && (
-                <label className="flex items-center gap-2 text-xs text-white/70">
-                  <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} className="h-4 w-4" />
-                  Auto refresh
-                </label>
-              )}
-              {['decision', 'rates', 'yieldcurve', 'commodities', 'correlation', 'sentiment', 'inflation', 'growth', 'employment', 'implications'].map((tab) => (
-                <a key={tab} href={`#${tab}`} onClick={followMacroAnchor} className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30">
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
 
         {loading ? (
           <div data-macro-skeleton className="space-y-3" aria-busy="true">
@@ -460,38 +459,30 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
             <p className="text-sm text-slate-400">Loading macro regime…</p>
           </div>
         ) : error ? (
-          <div className="rounded-lg border border-red-500/50 bg-red-500/20 p-6 text-center text-red-400"><span className="font-bold text-red-200">WARN</span> {error}</div>
+          <><p data-verdict-box className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-amber-200">Macro observations could not be loaded.</p><button type="button" className="min-h-10 underline" onClick={fetchData}>Try again</button><SourceLine source="Macro database" basis="Published observations not collected" /></>
         ) : data && gate ? (
           <>
             <section data-global-regime className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
-              <h2 className="text-xl font-semibold">Global regime</h2>
+              <h2 className="text-sm text-slate-400">Published macro observations</h2>
               <div data-verdict-box className="rounded-xl border border-white/10 p-3">
-                <p className="text-3xl font-semibold" style={{ color: gate.permission === 'yes' ? 'var(--msp-bull)' : gate.permission === 'conditional' ? 'var(--msp-warn)' : 'var(--msp-bear)' }}>{gate.permission === 'yes' ? 'Aligned' : gate.permission === 'conditional' ? 'Mixed' : 'Not aligned'}</p>
-                <p className="text-sm text-white/70">Score {gate.score >= 0 ? '+' : ''}{gate.score} · {gate.riskState.replace('_', ' ')}</p>
-                <p className="mt-2 text-sm text-white/60">{gate.notes}</p>
+                <p className="text-3xl font-semibold" style={{ color: gate.permission === 'yes' ? 'var(--msp-bull)' : gate.permission === 'conditional' ? 'var(--msp-warn)' : 'var(--msp-bear)' }}>{assessment}</p>
+                {completeAssessment && <p className="text-sm text-white/70">Score {gate.score >= 0 ? '+' : ''}{gate.score} · {macroLabel(gate.riskState)}</p>}
+                <p className="mt-2 text-sm text-white/60">Rates, liquidity, growth and inflation observations.</p>
               </div>
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <div data-macro-tile><StatTile label="Rates" value={typeof data.rates.treasury10y.value === 'number' ? toPct(data.rates.treasury10y.value) : null} /></div>
-                <div data-macro-tile><StatTile label="Curve" value={typeof data.rates.yieldCurve.value === 'number' ? toPct(data.rates.yieldCurve.value) : null} /></div>
-                <div data-macro-tile><StatTile label="Inflation" value={typeof data.inflation.inflationRate.value === 'number' ? toPct(data.inflation.inflationRate.value, 1) : null} /></div>
-                <div data-macro-tile><StatTile label="Growth" value={typeof data.growth.realGDP.value === 'number' ? `$${(safeNumber(data.growth.realGDP.value) / 1000).toFixed(1)}T` : null} /></div>
+                {[
+                  {label: 'Rates', value: data.rates.treasury10y.value, format: (n: number) => toPct(n)},
+                  {label: 'Curve', value: data.rates.yieldCurve.value, format: (n: number) => toPct(n)},
+                  {label: 'Inflation', value: data.inflation.inflationRate.value, format: (n: number) => toPct(n, 1)},
+                  {label: 'Growth', value: data.growth.realGDP.value, format: (n: number) => `$${(n / 1000).toFixed(1)}T`},
+                ].filter(item => typeof item.value === 'number' && Number.isFinite(item.value)).map(item => <div data-macro-tile key={item.label}><StatTile label={item.label} value={item.format(item.value!)} /></div>)}
               </div>
-              <div data-macro-charts className="grid gap-3 md:grid-cols-2">
-                <p className="text-sm text-white/60">Commodities with a measured change:</p>
-                <ul className="space-y-2">
-                  {(commodities ?? []).filter((c) => typeof c.changePercent === 'number' && Number.isFinite(c.changePercent)).slice(0, 4).map((c) => (
-                    <li key={c.symbol || c.name} className="text-sm">
-                      <span>{c.name || c.symbol}</span>
-                      <span className="ml-2" style={{ color: c.changePercent >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)' }}>{c.changePercent >= 0 ? '+' : ''}{c.changePercent.toFixed(1)}%</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              {incompleteFeeds.length > 0 && <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-200">Not collected: {incompleteFeeds.join(' · ')}.</p>}
               <SourceLine source="Macro database" asOf={data.timestamp} basis="Published observations" />
             </section>
 
             {/* ─── Yield Curve ─── */}
-            <section id="yieldcurve" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
+            <section data-macro-chart id="yieldcurve" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
               <div className="text-sm font-semibold text-white">Treasury Yield Curve</div>
               <div className="mt-1 text-xs text-white/50">Full maturity spectrum: 3M → 2Y → 5Y → 10Y → 30Y</div>
               <div className="mt-3">
@@ -502,8 +493,8 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                     { label: '5Y', value: data.rates.treasury5y?.value ?? null },
                     { label: '10Y', value: data.rates.treasury10y.value },
                     { label: '30Y', value: data.rates.treasury30y?.value ?? null },
-                  ].filter(p => p.value !== null) as { label: string; value: number }[];
-                  if (points.length < 2) return <div className="text-xs text-white/40">Yield data loading…</div>;
+                  ].filter(p => typeof p.value === 'number' && Number.isFinite(p.value)) as { label: string; value: number }[];
+                  if (points.length < 2) return <div className="text-xs text-white/40">Yield curve not collected: at least two measured maturities are needed.</div>;
                   const minY = Math.min(...points.map(p => p.value)) - 0.2;
                   const maxY = Math.max(...points.map(p => p.value)) + 0.2;
                   const rangeY = maxY - minY || 1;
@@ -540,9 +531,9 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                         ))}
                       </svg>
                       <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                        <span className="text-white/60">2s10s Spread: <span className={data.rates.yieldCurve.inverted ? 'text-rose-400 font-semibold' : 'text-emerald-400 font-semibold'}>{toPct(data.rates.yieldCurve.value)} {data.rates.yieldCurve.label}</span></span>
+                        <span className="text-white/60">2s10s Spread: <span className={data.rates.yieldCurve.inverted ? 'text-rose-400 font-semibold' : 'text-emerald-400 font-semibold'}>{toPct(data.rates.yieldCurve.value)} {macroLabel(data.rates.yieldCurve.label)}</span></span>
                         {data.rates.yieldCurve3m10y && (
-                          <span className="text-white/60">3m10y Spread: <span className={data.rates.yieldCurve3m10y.inverted ? 'text-rose-400 font-semibold' : 'text-emerald-400 font-semibold'}>{toPct(data.rates.yieldCurve3m10y.value)} {data.rates.yieldCurve3m10y.label}</span></span>
+                          <span className="text-white/60">3m10y Spread: <span className={data.rates.yieldCurve3m10y.inverted ? 'text-rose-400 font-semibold' : 'text-emerald-400 font-semibold'}>{toPct(data.rates.yieldCurve3m10y.value)} {macroLabel(data.rates.yieldCurve3m10y.label)}</span></span>
                         )}
                         <span className="text-white/60">Fed Funds: <span className="text-white font-semibold">{toPct(data.rates.fedFunds.value)}</span></span>
                       </div>
@@ -552,12 +543,35 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
               </div>
             </section>
 
-            <CollapsibleSection title="Decision detail" summary={gate.permission}>
+            <CollapsibleSection title="Macro evidence" summary={`${gate.drivers.length} model factors · rates and cross-asset observations`}>
+            <div className="space-y-4">
+        <div className={`${embeddedInDashboard ? 'rounded-lg' : 'sticky top-2 z-20 rounded-xl'} border border-white/10 bg-slate-950/95 p-3 backdrop-blur`}>
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3">
+              <MarketStatusBadge showGlobal />
+              <span className="text-xs text-white/60">US session · ET</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {!embeddedInDashboard && (
+                <label className="flex items-center gap-2 text-xs text-white/70">
+                  <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} className="h-4 w-4" />
+                  Auto refresh
+                </label>
+              )}
+              {['decision', 'rates', 'yieldcurve', 'commodities', 'correlation', 'sentiment', 'inflation', 'growth', 'employment', 'implications'].map((tab) => (
+                <a key={tab} href={`#${tab}`} onClick={followMacroAnchor} className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30">
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+            {completeAssessment && <CollapsibleSection title="Assessment detail" summary={`Score ${gate.score}`}>
             <section id="decision" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_420px]">
                 <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
                   {[
-                    ['Permission', gate.permission.toUpperCase()],
+                    ['Assessment', assessment],
                     ['Risk State', gate.riskState.replace('_', '-').toUpperCase()],
                     ['Liquidity', gate.liquidity],
                     ['Volatility', gate.volRegime],
@@ -569,7 +583,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                       <div className="mt-0.5 flex items-center gap-2">
                         <span
                           className={`h-2 w-2 rounded-full ${
-                            label === 'Permission'
+                            label === 'Assessment'
                               ? gate.permission === 'yes'
                                 ? 'bg-emerald-400'
                                 : gate.permission === 'conditional'
@@ -582,7 +596,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                                   : 'bg-amber-400'
                           }`}
                         />
-                        <span className="text-sm font-semibold text-white">{value}</span>
+                        <span className="text-sm font-semibold text-white">{macroLabel(value)}</span>
                       </div>
                     </div>
                   ))}
@@ -607,26 +621,26 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                             driver.impact === 'pos' ? 'text-emerald-300' : driver.impact === 'neg' ? 'text-rose-300' : 'text-slate-300'
                           }`}
                         >
-                          {driver.impact.toUpperCase()} ({driver.weight})
+                          {driver.impact === 'pos' ? 'Positive' : driver.impact === 'neg' ? 'Negative' : 'Neutral'} ({driver.weight})
                         </span>
                       </div>
                     ))}
                   </div>
 
                   <div className="mt-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs text-white/70">
-                    {gate.notes}
+                    {assessment} macro evidence.
                   </div>
                 </div>
               </div>
             </section>
-            </CollapsibleSection>
+            </CollapsibleSection>}
 
             <CollapsibleSection title="Rates, inflation, growth, employment" summary="One line per measured series">
             <section id="rates" className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
                 <div className="mb-2 flex items-center justify-between">
                   <div className="text-xs text-white/50">Rates & Real Rates</div>
-                  <Sparkline data={data.rates.treasury10y.history} stroke="#60a5fa" />
+                  <Sparkline data={data.rates.treasury10y.history} stroke="#94a3b8" />
                 </div>
                 <div className="text-2xl font-semibold">{toPct(data.rates.treasury10y.value)}</div>
                 <div className="mt-1 text-xs text-white/60">10Y Treasury{data.rates.treasury10y.date ? ` (as of ${data.rates.treasury10y.date})` : ''} • {gate.ratesRegime}</div>
@@ -638,16 +652,16 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   <Sparkline data={data.inflation.inflationRate.history} stroke="#f87171" />
                 </div>
                 <div className="text-2xl font-semibold">{toPct(data.inflation.inflationRate.value, 1)}</div>
-                <div className="mt-1 text-xs text-white/60">CPI YoY • {data.inflation.trend}</div>
+                <div className="mt-1 text-xs text-white/60">CPI YoY • {macroLabel(data.inflation.trend)}</div>
               </div>
 
               <div id="growth" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
                 <div className="mb-2 flex items-center justify-between">
                   <div className="text-xs text-white/50">Growth</div>
-                  <Sparkline data={data.growth.realGDP.history} stroke="#34d399" />
+                  <Sparkline data={data.growth.realGDP.history} stroke="#94a3b8" />
                 </div>
-                <div className="text-2xl font-semibold">${(safeNumber(data.growth.realGDP.value) / 1000).toFixed(1)}T</div>
-                <div className="mt-1 text-xs text-white/60">Real GDP • {trendDirection(data.growth.realGDP.history)}</div>
+                <div className="text-2xl font-semibold">{typeof data.growth.realGDP.value === 'number' ? `$${(data.growth.realGDP.value / 1000).toFixed(1)}T` : 'Not collected'}</div>
+                <div className="mt-1 text-xs text-white/60">Real GDP • {(data.growth.realGDP.history?.length ?? 0) > 1 ? trendDirection(data.growth.realGDP.history) : 'Not collected'}</div>
               </div>
 
               <div id="employment" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
@@ -656,7 +670,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   <Sparkline data={data.employment.unemployment.history} stroke="#fbbf24" />
                 </div>
                 <div className="text-2xl font-semibold">{toPct(data.employment.unemployment.value, 1)}</div>
-                <div className="mt-1 text-xs text-white/60">Unemployment • {data.employment.trend}</div>
+                <div className="mt-1 text-xs text-white/60">Unemployment • {macroLabel(data.employment.trend)}</div>
               </div>
             </section>
             </CollapsibleSection>
@@ -680,15 +694,15 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                     <div key={c.symbol || c.name} className={`rounded-lg border p-2 ${c.eligibleForGate === false ? 'border-rose-500/25 bg-rose-500/5' : 'border-white/10 bg-black/20'}`}>
                       <div className="flex items-center justify-between gap-2 text-[11px] text-white/50">
                         <span>{c.name || c.symbol}</span>
-                        <span className={c.freshnessStatus === 'STALE' ? 'text-rose-300' : c.freshnessStatus === 'DELAYED' ? 'text-amber-300' : 'text-emerald-300'}>{c.freshnessStatus || 'UNKNOWN'}</span>
+                        <span className={c.freshnessStatus === 'STALE' ? 'text-rose-300' : c.freshnessStatus === 'DELAYED' ? 'text-amber-300' : 'text-emerald-300'}>{macroLabel(c.freshnessStatus)}</span>
                       </div>
                       <div className="mt-1 flex items-center justify-between">
-                        <span className="text-sm font-semibold text-white">{typeof c.price === 'number' ? `${c.price.toFixed(2)}` : 'N/A'}</span>
+                        <span className="text-sm font-semibold text-white">{typeof c.price === 'number' ? `${c.price.toFixed(2)}` : 'Not collected'}</span>
                         <span className={`text-xs font-semibold ${(c.changePercent ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {(c.changePercent ?? 0) >= 0 ? '+' : ''}{typeof c.changePercent === 'number' ? c.changePercent.toFixed(1) : '0.0'}%
+                          {typeof c.changePercent === 'number' && Number.isFinite(c.changePercent) ? `${c.changePercent >= 0 ? '+' : ''}${c.changePercent.toFixed(1)}%` : 'Not collected'}
                         </span>
                       </div>
-                      <div className="text-[11px] text-white/40">{c.category} · {c.unit || 'unit unavailable'}</div>
+                      <div className="text-[11px] text-white/40">{macroLabel(c.category)} · {c.unit || 'Unit not supplied'}</div>
                       <div className="mt-1 text-[10px] text-white/35">
                         Observation {c.date || 'not dated'}{Number.isFinite(c.dataAgeDays) ? ` · age ${c.dataAgeDays}d` : ''}{c.sourceSymbol ? ` · proxy ${c.sourceSymbol}` : ''}
                       </div>
@@ -697,7 +711,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                 </div>
               ) : (
                 <div className="mt-3 text-xs text-amber-400/80">
-                  {commoditiesError ? `Feed unavailable: ${commoditiesError}` : commodities === null ? 'Loading commodities data…' : 'No commodity data available'}
+                  {commoditiesError ? 'Commodities feed could not be loaded' : commodities === null ? 'Loading commodities data…' : 'No commodity data available'}
                 </div>
               )}
               {commodities && commodities.length > 4 ? (
@@ -725,71 +739,39 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
               <div className="mt-1 text-[11px] text-white/50">How this differs from Risk State: Risk State is a slow macro score (rates, liquidity, growth, inflation); this panel reads the current tape (BTC and SPY moves, VIX level, USD trend, BTC↔SPY correlation), so the two can disagree.</div>
               {correlationRegime && correlationRegime.available === false ? (
                 <div className="mt-3 space-y-2">
-                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">{correlationRegime.reason ?? 'Cross-asset regime unavailable.'}</div>
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">Cross-asset assessment not collected.</div>
                   <CrossAssetInputList inputs={correlationRegime.inputs} />
                 </div>
               ) : correlationRegime ? (
                 <div className="mt-3">
-                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                    <div className="rounded-lg border border-white/10 bg-black/20 p-2">
-                      <div className="text-[11px] text-white/50">Regime</div>
-                      <div className={`mt-1 text-sm font-semibold ${
-                        correlationRegime.regime === 'RISK_ON' ? 'text-emerald-400' :
-                        correlationRegime.regime === 'RISK_OFF' || correlationRegime.regime === 'STRESS' ? 'text-rose-400' :
-                        'text-amber-400'
-                      }`}>{correlationRegime.regime.replace('_', ' ')}</div>
-                    </div>
-                    <div className="rounded-lg border border-white/10 bg-black/20 p-2">
-                      <div className="text-[11px] text-white/50">VIX Regime</div>
-                      <div className={`mt-1 text-sm font-semibold ${
-                        correlationRegime.vixRegime === 'LOW' ? 'text-emerald-400' :
-                        correlationRegime.vixRegime === 'EXTREME' ? 'text-rose-400' :
-                        correlationRegime.vixRegime === 'ELEVATED' ? 'text-amber-400' :
-                        correlationRegime.vixRegime === 'UNAVAILABLE' ? 'text-white/40' :
-                        'text-white'
-                      }`}>{correlationRegime.vixRegime === 'UNAVAILABLE' ? 'Unavailable' : correlationRegime.vixRegime}</div>
-                    </div>
-                    <div className="rounded-lg border border-white/10 bg-black/20 p-2">
-                      <div className="text-[11px] text-white/50">Risk Score</div>
-                      <div className="mt-1 text-sm font-semibold text-white">{correlationRegime.riskScore}/100</div>
-                    </div>
-                    <div className="rounded-lg border border-white/10 bg-black/20 p-2">
-                      <div className="text-[11px] text-white/50">Size Multiplier</div>
-                      <div className="mt-1 text-sm font-semibold text-white">{correlationRegime.sizeMultiplier}x</div>
-                    </div>
-                  </div>
-                  <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">
-                    <div className="rounded-lg border border-white/10 bg-black/20 p-2">
-                      <div className="text-[11px] text-white/50">USD Trend</div>
-                      <div className="mt-1 text-xs text-white/80">{correlationRegime.dxyTrend === 'unavailable' ? 'Unavailable' : correlationRegime.dxyTrend}</div>
-                    </div>
-                    <div className="rounded-lg border border-white/10 bg-black/20 p-2">
-                      <div className="text-[11px] text-white/50">BTC↔SPY Corr (20d)</div>
-                      <div className="mt-1 text-xs text-white/80">{correlationRegime.btcSpyCorrelation == null ? 'Unavailable' : correlationRegime.btcSpyCorrelation}</div>
-                    </div>
-                    <div className="rounded-lg border border-white/10 bg-black/20 p-2">
-                      <div className="text-[11px] text-white/50">Sector Rotation</div>
-                      <div className="mt-1 text-xs text-white/80">{!correlationRegime.sectorRotation || correlationRegime.sectorRotation === 'UNAVAILABLE' ? 'Unavailable' : correlationRegime.sectorRotation.replace('_', ' ')}</div>
-                    </div>
-                    <div className="rounded-lg border border-white/10 bg-black/20 p-2">
-                      <div className="text-[11px] text-white/50">Gold Safe Haven</div>
-                      <div className="mt-1 text-xs text-white/80">{correlationRegime.components?.goldSafeHaven == null ? 'Unavailable' : correlationRegime.components.goldSafeHaven ? 'Active' : 'Inactive'}</div>
-                    </div>
-                  </div>
+                  {(() => {
+                    const metrics = [
+                      ['Regime', macroLabel(correlationRegime.regime)],
+                      ['VIX regime', macroLabel(correlationRegime.vixRegime)],
+                      ['Risk score', typeof correlationRegime.riskScore === 'number' ? `${macroNumber(correlationRegime.riskScore, 0)}/100` : 'Not collected'],
+                      ['Weighting factor', typeof correlationRegime.sizeMultiplier === 'number' && correlationRegime.sizeMultiplier !== 0 ? `${macroNumber(correlationRegime.sizeMultiplier)}x` : 'Not collected'],
+                      ['USD trend', macroLabel(correlationRegime.dxyTrend)],
+                      ['BTC–SPY correlation (20d)', macroNumber(correlationRegime.btcSpyCorrelation)],
+                      ['Sector rotation', macroLabel(correlationRegime.sectorRotation)],
+                      ['Gold safe haven', correlationRegime.components?.goldSafeHaven == null ? 'Not collected' : correlationRegime.components.goldSafeHaven ? 'Active' : 'Inactive'],
+                    ];
+                    const absent = metrics.filter(([, value]) => value === 'Not collected').map(([label]) => label);
+                    return <><div className="grid grid-cols-2 gap-2 md:grid-cols-4">{metrics.filter(([, value]) => value !== 'Not collected').map(([label, value]) => <div key={label} className="rounded-lg border border-white/10 p-2"><div className="text-xs text-white/50">{label}</div><div className="text-sm">{value}</div></div>)}</div>{absent.length > 0 && <p className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-200">Not collected: {absent.join(' · ')}.</p>}</>;
+                  })()}
                   {correlationRegime.warnings?.length > 0 && (
                     <div className="mt-2 space-y-1">
                       {correlationRegime.warnings.map((w: string, i: number) => (
-                        <div key={i} className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300">{w}</div>
+                        <div key={i} className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300">{macroLabel(w)}</div>
                       ))}
                     </div>
                   )}
                   <div className="mt-2 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs text-white/70">
-                    {correlationRegime.recommendation}
+                    {macroLabel(correlationRegime.recommendation)}
                   </div>
                   <CrossAssetInputList inputs={correlationRegime.inputs} />
                 </div>
               ) : (
-                <div className="mt-3 text-xs text-amber-400/80">{correlationError ? `Feed unavailable: ${correlationError}` : 'Loading correlation regime…'}</div>
+                <div className="mt-3 text-xs text-amber-400/80">{correlationError ? 'Cross-asset feed could not be loaded' : 'Loading correlation regime…'}</div>
               )}
             </section>
 
@@ -797,8 +779,8 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
             <section id="sentiment" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
               <div className="text-sm font-semibold text-white">Market Sentiment — SPY Put/Call Ratio</div>
               <div className="mt-1 text-xs text-white/50">Aggregate options positioning as a contrarian sentiment indicator</div>
-              {spyPCRFetched && <div className="mt-0.5 text-[11px] text-white/30">Computed from options OI · fetched {spyPCRFetched} ET · educational indicator only</div>}
-              {spyPCRatio ? (
+              {spyPCRFetched && <div className="mt-0.5 text-[11px] text-white/30">Computed from options OI · educational indicator only</div>}
+              {spyPCRatio && spyPCRatio.totalCalls > 0 ? (
                 <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
                   <div className="rounded-lg border border-white/10 bg-black/20 p-3">
                     <div className="text-[11px] text-white/50">P/C Ratio</div>
@@ -810,7 +792,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                     <div className="text-[11px] text-white/50">Signal</div>
                     <div className={`mt-1 text-sm font-semibold ${
                       spyPCRatio.signal.startsWith('Bearish') ? 'text-rose-400' : spyPCRatio.signal.startsWith('Bullish') ? 'text-emerald-400' : 'text-white'
-                    }`}>{spyPCRatio.signal}</div>
+                    }`}>{spyPCRatio.ratio > 1 ? 'More put than call open interest' : spyPCRatio.ratio < 0.7 ? 'Lower put than call open interest' : 'Comparable put and call open interest'}</div>
                   </div>
                   <div className="rounded-lg border border-white/10 bg-black/20 p-3">
                     <div className="text-[11px] text-white/50">Total Call OI</div>
@@ -822,11 +804,11 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   </div>
                 </div>
               ) : (
-                <div className="mt-3 text-xs text-amber-400/80">{spyPCRError ? `Feed unavailable: ${spyPCRError}` : 'Loading SPY options data…'}</div>
+                <div className="mt-3 text-xs text-amber-400/80">{spyPCRError ? 'Options feed could not be loaded' : spyPCRatio ? 'Options positioning not collected: call open interest is absent.' : 'Loading SPY options data…'}</div>
               )}
             </section>
 
-            <section id="implications" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
+            {completeAssessment && <section id="implications" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
               <div className="text-sm font-semibold text-white">Implications Matrix</div>
               <div className="mt-1 text-xs text-white/50">Regime → educational scenario map across asset classes</div>
               <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
@@ -851,7 +833,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   {gate.ratesRegime === 'tightening' ? 'Duration headwind.' : gate.ratesRegime === 'easing' ? 'Duration tailwind.' : 'Rates neutral; balanced duration.'}
                 </div>
               </div>
-            </section>
+            </section>}
 
             <section className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
               <div className="text-sm font-semibold text-white">Macro Event Awareness</div>
@@ -878,28 +860,28 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
             <details className="rounded-xl border border-white/10 bg-white/5" open={false}>
               <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-xl">Deep Dive: Rates</summary>
               <div className="border-t border-white/10 p-3 md:p-4 text-xs text-white/75">
-                10Y: {toPct(data.rates.treasury10y.value)} • 2Y: {toPct(data.rates.treasury2y.value)} • Curve: {toPct(data.rates.yieldCurve.value)} ({data.rates.yieldCurve.label})
+                10Y: {toPct(data.rates.treasury10y.value)} • 2Y: {toPct(data.rates.treasury2y.value)} • Curve: {toPct(data.rates.yieldCurve.value)} ({macroLabel(data.rates.yieldCurve.label)})
               </div>
             </details>
 
             <details className="rounded-xl border border-white/10 bg-white/5" open={false}>
               <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-xl">Deep Dive: Inflation</summary>
               <div className="border-t border-white/10 p-3 md:p-4 text-xs text-white/75">
-                CPI: {safeNumber(data.inflation.cpi.value).toFixed(1)} • Inflation YoY: {toPct(data.inflation.inflationRate.value, 1)} • Trend: {data.inflation.trend}
+                CPI: {macroNumber(data.inflation.cpi.value, 1)} • Inflation YoY: {toPct(data.inflation.inflationRate.value, 1)} • Trend: {macroLabel(data.inflation.trend)}
               </div>
             </details>
 
             <details className="rounded-xl border border-white/10 bg-white/5" open={false}>
               <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-xl">Deep Dive: Employment</summary>
               <div className="border-t border-white/10 p-3 md:p-4 text-xs text-white/75">
-                Unemployment: {toPct(data.employment.unemployment.value, 1)} • Trend: {data.employment.trend}
+                Unemployment: {toPct(data.employment.unemployment.value, 1)} • Trend: {macroLabel(data.employment.trend)}
               </div>
             </details>
 
             <details className="rounded-xl border border-white/10 bg-white/5" open={false}>
               <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-xl">Deep Dive: Growth</summary>
               <div className="border-t border-white/10 p-3 md:p-4 text-xs text-white/75">
-                Real GDP: ${((safeNumber(data.growth.realGDP.value)) / 1000).toFixed(1)}T • Trend: {trendDirection(data.growth.realGDP.history)}
+                Real GDP: {typeof data.growth.realGDP.value === 'number' ? `$${(data.growth.realGDP.value / 1000).toFixed(1)}T` : 'Not collected'} • Trend: {(data.growth.realGDP.history?.length ?? 0) > 1 ? trendDirection(data.growth.realGDP.history) : 'Not collected'}
               </div>
             </details>
 
@@ -914,7 +896,8 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
               </details>
             )}
 
-            <p className="text-center text-xs text-slate-500">Global regime object is active in AI context for cross-page consumption.</p>
+            </div>
+            </CollapsibleSection>
           </>
         ) : null}
       </div>
@@ -928,7 +911,7 @@ type CrossAssetInputInfo = { label: string; available: boolean; value: number | 
 function CrossAssetInputList({ inputs }: { inputs?: Record<string, CrossAssetInputInfo> | null }) {
   if (!inputs) return null;
   const fmt = (i: CrossAssetInputInfo) => {
-    if (!i.available) return `unavailable${i.note ? ` (${i.note})` : ''}`;
+    if (!i.available) return 'Not collected';
     const parts: string[] = [];
     if (i.value != null) parts.push(Math.abs(i.value) >= 1000 ? i.value.toLocaleString('en-US', { maximumFractionDigits: 0 }) : String(Number(i.value.toFixed(3))));
     if (i.changePct != null) parts.push(`${i.changePct >= 0 ? '+' : ''}${i.changePct.toFixed(2)}%`);
@@ -939,7 +922,7 @@ function CrossAssetInputList({ inputs }: { inputs?: Record<string, CrossAssetInp
     <div className="mt-2 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-white/50">
       <div className="mb-1 font-semibold text-white/60">Inputs</div>
       {Object.entries(inputs).map(([k, i]) => (
-        <div key={k} title={i.source ?? ''}><span className="text-white/70">{i.label}:</span> <span className={i.available ? '' : 'text-amber-300/80'}>{fmt(i)}</span></div>
+        <div key={k} title={macroLabel(i.source)}><span className="text-white/70">{macroLabel(i.label)}:</span> <span className={i.available ? '' : 'text-amber-300/80'}>{fmt(i)}</span></div>
       ))}
     </div>
   );
