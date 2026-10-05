@@ -23,11 +23,11 @@ describe('moversDataChipLabel', () => {
     expect(isUsRegularSessionOpen(Date.parse('2026-09-25T19:59:00Z'))).toBe(true);
     expect(isUsRegularSessionOpen(Date.parse('2026-09-25T20:00:00Z'))).toBe(false);
   });
-  it('the Movers page chip uses it (no hard-coded "Live")', () => {
-    const src = readFileSync('app/tools/market-movers/page.tsx', 'utf8');
-    expect(src).toContain("['Data', loading ? 'Refreshing' : error ? 'Needs a check' : moversDataChipLabel(data?.equityFeed)]");
+  it('the compact source uses the received equity basis without a hard-coded Live badge', () => {
+    const src = readFileSync('components/markets/MoversView.tsx', 'utf8');
+    expect(src).toContain('equityMoversBasisLabel(data.equityFeed)');
     expect(src).not.toContain("error ? 'Degraded' : 'Live']");
     expect(src).not.toContain('badge="Live"');
-    expect(src).toContain('badge={moversEquityBadge(data?.equityFeed)}');
+    expect(src).toContain('asOf={data.equityAsOf || undefined}');
   });
 });
