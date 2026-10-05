@@ -691,7 +691,7 @@ export default function GoldenEggPage() {
         {goldenEgg.error&&!loading&&<p role="alert" className="text-sm text-amber-300">Symbol data feed failed. <button className="min-h-10 underline" onClick={()=>goldenEgg.refetch()}>Retry</button></p>}
         {ge&&<>
         <CollapsibleSection deferMount title="Scenario map" summary={`${ge.layer2.setup.keyLevels.length} recorded levels`}><p>{symbolText(ge.layer2.scenario.referenceTrigger)}</p><p>{symbolText(ge.layer2.scenario.invalidationLevel.logic)}</p></CollapsibleSection>
-        <CollapsibleSection deferMount title="Options" summary={geCanonical?.options?`Expiry ${geCanonical.options.expiry}`:'No options snapshot in this packet'}><SymbolOptionsContext compact symbol={sym} expiry={searchParams.get('expiry')??undefined}/></CollapsibleSection>
+        <CollapsibleSection deferMount title="Options" summary={geCanonical?.options?`Expiry ${geCanonical.options.expiry}`:'Options data not collected'}><SymbolOptionsContext compact symbol={sym} expiry={searchParams.get('expiry')??undefined}/></CollapsibleSection>
         <CollapsibleSection deferMount title="Fundamentals" summary={geCanonical?.fundamentals?.marketCap!=null?`Market cap ${formatUsdShort(geCanonical.fundamentals.marketCap)}`:'Company overview and ownership'}><CompanyOverview symbol={sym}/><OwnershipFlowPanel symbol={sym}/></CollapsibleSection>
         <ChipRow items={[{id:'evidence',label:`${geDataQuality==='GOOD'?'Evidence and data checks':'Some data checks failed'} · ${geEvidenceItems.length} checks`,warning:geDataQuality!=='GOOD',detail:<EvidenceStack title="Evidence" items={geEvidenceItems.map(item=>({...item,value:symbolText(item.value),detail:item.detail?symbolText(item.detail):undefined}))}/>}]} />
         </>}
@@ -743,7 +743,7 @@ export default function GoldenEggPage() {
                     </div>
                     <div className="rounded-md bg-[var(--msp-panel-2)] px-2 py-1.5 text-xs">
                       <div className="text-slate-500 text-[10px] uppercase mb-1">Relative strength (20 daily bars)</div>
-                      {n.relative.length === 0 ? <div className="text-slate-500">Benchmark series unavailable{symbolText(sym.toUpperCase().startsWith('BTC') ? ' — BTC is the benchmark' : '')}.</div> : n.relative.map((r) => (
+                      {n.relative.length === 0 ? <div className="text-slate-500">Benchmark data not collected{symbolText(sym.toUpperCase().startsWith('BTC') ? ' — BTC is the benchmark' : '')}.</div> : n.relative.map((r) => (
                         <div key={r.benchmark} className="flex justify-between"><span className="text-slate-400">vs {symbolText(r.benchmark)}</span><span className={r.label === 'outperforming' ? 'text-emerald-400' : r.label === 'underperforming' ? 'text-red-400' : 'text-slate-300'}>{symbolText(r.ratio.toFixed(3))} · {symbolText(r.label)} ({symbolText(r.symbolPct >= 0 ? '+' : '')}{r.symbolPct}% vs {symbolText(r.benchmarkPct >= 0 ? '+' : '')}{r.benchmarkPct}%)</span></div>
                       ))}
                     </div>
@@ -835,7 +835,7 @@ export default function GoldenEggPage() {
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <h2 className="text-2xl font-bold text-white">{symbolText(ge.meta.symbol)}</h2>
                     {regime.data && <Badge label={symbolText(`Regime: ${humanizeEnum(regime.data.regime)}`)} color={REGIME_COLORS[regime.data.regime?.toLowerCase() as RegimePriority] || 'var(--msp-text-muted)'} small />}
-                    <span title="Directional research bias from the Golden Egg evidence stack"><Badge label={symbolText(ge.layer1.direction)} color={dirColor(ge.layer1.direction)} /></span>
+                    <span title="Directional context from the Symbol evidence"><Badge label={symbolText(ge.layer1.direction)} color={dirColor(ge.layer1.direction)} /></span>
                     {geNoQualifyingSetup ? null : <span title={symbolText(geEngine ? 'Canonical grade (A/B/C; F = blocked) from the canonical setup engine' : 'Grade summarizes setup quality across the Golden Egg model')}><Badge label={symbolText(`Grade ${ge.layer1.grade}`)} color={gradeColor(ge.layer1.grade)} small /></span>}
                     {geNoQualifyingSetup ? null : (() => { const lc = geEngine ? (geEngine.permission === 'PASS' ? 'READY' : geEngine.permission === 'WATCH' ? 'WATCHING' : 'INVALIDATED') : deriveGELifecycle(geAssessment, geConfluenceScore); return <span title="Lifecycle describes whether the setup is forming, ready, watching, or invalidated" className="text-[11px] px-1.5 py-0.5 rounded border font-semibold" style={{ color: LIFECYCLE_COLORS[lc], borderColor: LIFECYCLE_COLORS[lc] + '40', backgroundColor: LIFECYCLE_COLORS[lc] + '15' }}>{symbolText(lc.replace('_', ' '))}</span>; })()}
                     <span title="Cross-market factors can support, oppose, or remain neutral to the setup" className="text-[11px] px-1.5 py-0.5 rounded border font-semibold" style={{ color: ALIGNMENT_COLOR[crossMarketAlignment.alignment], borderColor: ALIGNMENT_COLOR[crossMarketAlignment.alignment] + '40', backgroundColor: ALIGNMENT_COLOR[crossMarketAlignment.alignment] + '15' }}>{symbolText(crossMarketAlignment.alignment === 'headwind' ? 'Headwind' : crossMarketAlignment.alignment === 'supportive' ? 'Tailwind' : 'Neutral')}</span>

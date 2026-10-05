@@ -51,3 +51,5 @@ it('Pro price header shows dated session close without inventing an instant',()=
 it('renders date-only chart/session labels as readable dates without changing ISO instants',()=>{expect(symbolText('Last completed bar: 2026-09-28 (UTC day).')).toBe('Last completed bar: Mon, 28 Sept (UTC day).');});
 
 it('maps the legacy Symbol name inside rendered next-check text',()=>{expect(symbolText('Refresh Golden Egg inputs.')).toBe('Refresh Symbol inputs.');});
+
+it('replaces the remaining imperative flip-condition copy',()=>{expect(symbolText('Monitor flip conditions.')).toBe('conditions for a change are not established.');});

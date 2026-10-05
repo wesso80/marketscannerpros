@@ -24,6 +24,7 @@ export function symbolText(value: unknown): string {
     .replace(/\bentry signal\b/gi, 'reference condition')
     .replace(/\bwatch for follow-through\b/gi, 'follow-through not established')
     .replace(/\bWait for decompression\b/gi, 'Decompression not established')
+    .replace(/\bmonitor flip conditions\b/gi, 'conditions for a change are not established')
     .replace(/\bMonitor for\b/gi, 'Unconfirmed observation:')
     .replace(/\bMonitor whether\b/gi, 'Unconfirmed whether')
     .replace(/\bbuy\b/gi, 'purchase').replace(/\bsell\b/gi, 'sale')
