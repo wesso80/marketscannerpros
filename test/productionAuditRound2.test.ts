@@ -63,15 +63,17 @@ describe('post-remediation audit round 2 regressions', () => {
   });
 
   it('flags stale short-timeframe scalper bars using cadence-aware thresholds', () => {
-    const scalper = read('app/tools/scalper/page.tsx');
-    // Thresholds moved to the shared helper (also used by /api/scalper/run to unscore stale rows).
+    // The public page no longer renders a live scan. Cadence checks stay on the API.
+    const api = read('app/api/scalper/run/route.ts');
     const freshness = read('lib/scalper/freshness.ts');
+    const page = read('app/tools/scalper/page.tsx');
 
     expect(freshness).toContain("return timeframe === '15min' ? 45 : 15");
-    expect(scalper).toContain("from '@/lib/scalper/freshness'");
-    expect(scalper).toContain('STALE · UNAVAILABLE');
-    expect(scalper).toContain('STALE FOR THIS CADENCE');
-    expect(scalper).toContain('Last source bar:');
+    expect(api).toContain("from '@/lib/scalper/freshness'");
+    expect(api).toContain('withScalpFreshness');
+    expect(page).toContain('Live scalping scan not available yet. Coming soon.');
+    expect(page).not.toContain("from '@/lib/scalper/freshness'");
+    expect(page).not.toContain('fetch(');
   });
 
   it('never fabricates treasury P&L when cost basis is absent', () => {

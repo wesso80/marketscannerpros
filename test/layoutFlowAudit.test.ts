@@ -967,9 +967,10 @@ describe('layout and flow audit regressions', () => {
     expect(veHeatmapGauge).not.toContain('🔥 Extreme High');
     expect(vePhasePanel).toContain('>PH</span>');
     expect(vePhasePanel).not.toContain('⏱️');
-    expect(scalperPage).toContain("function directionLabel(direction: ScalpResult['direction'])");
-    expect(scalperPage).toContain('<th className="text-left py-2 px-2">Context</th>');
-    expect(scalperPage).toContain('{directionLabel(r.direction)} context');
+    expect(scalperPage).toContain('Live scalping scan not available yet. Coming soon.');
+    expect(scalperPage).toContain('Short-timeframe research for crypto and equities.');
+    expect(scalperPage).not.toContain('Find scalping setups in real time');
+    expect(scalperPage).not.toContain('designed for fast intraday decisions');
     expect(scalperPage).not.toContain('<th className="text-left py-2 px-2">Direction</th>');
     expect(scalperPage).not.toContain("{r.direction === 'long' ? '▲ LONG' : r.direction === 'short' ? '▼ SHORT' : '— NEUTRAL'}");
     expect(intradayChartsPage).toContain("const reviewState: 'Clear' | 'Caution' | 'Blocked'");
@@ -1287,7 +1288,9 @@ describe('layout and flow audit regressions', () => {
     expect(liquiditySweepPage).toContain('Open Golden Egg');
 
     expect(scalperPage).toContain('aria-label="Scalper command header"');
-    expect(scalperPage).toContain('Open Golden Egg');
+    expect(scalperPage).toContain('Open Symbol');
+    expect(scalperPage).toContain('href="/tools/golden-egg"');
+    expect(scalperPage).not.toContain('Open Golden Egg');
 
     expect(signalAccuracyPage).toContain('aria-label="Signal Accuracy command header"');
     expect(signalAccuracyPage).toContain('Open Scanner');
