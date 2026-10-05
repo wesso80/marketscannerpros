@@ -1,0 +1,322 @@
+{
+  "mocked": true,
+  "fixtureBasis": "Existing mapper test and development fixture; not live acceptance",
+  "results": [
+    {
+      "tab": "global-m2",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:09:02.413Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1246,
+      "scrollWidth": 1280,
+      "screens": 1.5575,
+      "text": "MarketScannerPros\nMenu\nOverview\nGlobal M2\nFragility\nLiquidity\nGlobal M2 Liquidity\n\nUSD-normalized national M2 across up to 11 economic blocs, from official central-bank / statistics sources.\n\nExcludes India and South Korea (sources unavailable): weighted coverage and interpretation eligibility are measured over the remaining blocs.\n\nTOTAL M2 (USD)\n$126.000T\nBLOCS\n9 available · 2 missing\nEST. WEIGHTED COVERAGE (INCLUDED BLOCS)\n96.3%\n1M\n+0.52%\n3M ANNUALISED\n+6.24%\nYOY\n+4.78%\nCYCLE\nEXPANSION\nACCELERATION\nACCELERATION\nBLOC BREAKDOWN\n\nLag-1 USD M2 per bloc (MONTH_END_LAST_VALID FX). Source = LIVE or STALE (persisted last-known-good).\n\nLast updated: 12:09:01 AM\nBLOC\tCLASSⒾ\tSOURCEⒾ\tUSD M2\tSHARE\t1M\t3M\tYOY\tOBS\nUnited States\tEXACT\tLIVE\t$22.000T\t17.5%\t+0.52%\t+1.51%\t+4.78%\t2026-08\nEuro area\tEXACT\tLIVE\t$20.000T\t15.9%\t+0.52%\t+1.51%\t+4.78%\t2026-08\nChina\tEXACT\tLIVE\t$18.000T\t14.3%\t+0.52%\t+1.51%\t+4.78%\t2026-08\nJapan\tEXACT\tLIVE\t$16.000T\t12.7%\t+0.52%\t+1.51%\t+4.78%\t2026-08\nUnited Kingdom\tEXACT\tLIVE\t$14.000T\t11.1%\t+0.52%\t+1.51%\t+4.78%\t2026-08\nCanada\tEXACT\tLIVE\t$12.000T\t9.5%\t+0.52%\t+1.51%\t+4.78%\t2026-08\nAustralia\tEXACT\tLIVE\t$10.000T\t7.9%\t+0.52%\t+1.51%\t+4.78%\t2026-08\nSwitzerland\tEXACT\tLIVE\t$8.000T\t6.3%\t+0.52%\t+1.51%\t+4.78%\t2026-08\nBrazil\tEXACT\tLIVE\t$6.000T\t4.8%\t+0.52%\t+1.51%\t+4.78%\t2026-08\nMISSING BLOCS\n\nFail-closed — no aggregate is ever silently substituted.\n\nIN [DATA_UNAVAILABLE] · excluded from coverage: No provider mapping\nKR [DATA_UNAVAILABLE] · excluded from coverage: No provider mapping\n\nEducational and research use only. Scores are analytical composites summarising the current weight of evidence — they are not probabilities, forecasts, or personal financial advice. Each page identifies its source, coverage, and freshness. Nothing here is an instruction to buy or sell any security.\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": []
+    },
+    {
+      "tab": "global-m2",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:09:04.688Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1980,
+      "scrollWidth": 390,
+      "screens": 2.345971563981043,
+      "text": "MSP\nMenu\nOverview\nGlobal M2\nFragility\nLiquidity\nGlobal M2 Liquidity\n\nUSD-normalized national M2 across up to 11 economic blocs, from official central-bank / statistics sources.\n\nExcludes India and South Korea (sources unavailable): weighted coverage and interpretation eligibility are measured over the remaining blocs.\n\nTOTAL M2 (USD)\n$126.000T\nBLOCS\n9 available · 2 missing\nEST. WEIGHTED COVERAGE (INCLUDED BLOCS)\n96.3%\n1M\n+0.52%\n3M ANNUALISED\n+6.24%\nYOY\n+4.78%\nCYCLE\nEXPANSION\nACCELERATION\nACCELERATION\nBLOC BREAKDOWN\n\nLag-1 USD M2 per bloc (MONTH_END_LAST_VALID FX). Source = LIVE or STALE (persisted last-known-good).\n\nLast updated: 12:09:03 AM\nBLOC\tCLASSⒾ\tSOURCEⒾ\tUSD M2\tSHARE\t1M\t3M\tYOY\tOBS\nUnited States\tEXACT\tLIVE\t$22.000T\t17.5%\t+0.52%\t+1.51%\t+4.78%\t2026-08\nEuro area\tEXACT\tLIVE\t$20.000T\t15.9%\t+0.52%\t+1.51%\t+4.78%\t2026-08\nChina\tEXACT\tLIVE\t$18.000T\t14.3%\t+0.52%\t+1.51%\t+4.78%\t2026-08\nJapan\tEXACT\tLIVE\t$16.000T\t12.7%\t+0.52%\t+1.51%\t+4.78%\t2026-08\nUnited Kingdom\tEXACT\tLIVE\t$14.000T\t11.1%\t+0.52%\t+1.51%\t+4.78%\t2026-08\nCanada\tEXACT\tLIVE\t$12.000T\t9.5%\t+0.52%\t+1.51%\t+4.78%\t2026-08\nAustralia\tEXACT\tLIVE\t$10.000T\t7.9%\t+0.52%\t+1.51%\t+4.78%\t2026-08\nSwitzerland\tEXACT\tLIVE\t$8.000T\t6.3%\t+0.52%\t+1.51%\t+4.78%\t2026-08\nBrazil\tEXACT\tLIVE\t$6.000T\t4.8%\t+0.52%\t+1.51%\t+4.78%\t2026-08\nMISSING BLOCS\n\nFail-closed — no aggregate is ever silently substituted.\n\nIN [DATA_UNAVAILABLE] · excluded from coverage: No provider mapping\nKR [DATA_UNAVAILABLE] · excluded from coverage: No provider mapping\n\nEducational and research use only. Scores are analytical composites summarising the current weight of evidence — they are not probabilities, forecasts, or personal financial advice. Each page identifies its source, coverage, and freshness. Nothing here is an instruction to buy or sell any security.\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": []
+    },
+    {
+      "tab": "fragility",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:09:05.892Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1892,
+      "scrollWidth": 1280,
+      "screens": 2.365,
+      "text": "MarketScannerPros\nMenu\nOverview\nGlobal M2\nFragility\nLiquidity\nMarket Fragility\n\nMarket health beneath headline price — breadth, credit, volatility, USD/rates, leadership, and capital rotation.\n\nSTRUCTURE\nLIVE · PARTIAL\nLast updated: 12:09:05 AM\nDATA: LIVE · PARTIAL | COVERAGE: 94.4% | EXACT: 0 | PROXY: 0 | MISSING: 1\nDATA PARITY PENDING\nHEALTH\n67.8 · HEALTHY\nFRAGILITY\n17.71\nTRANSITION\n7.97\nDIVERGENCE\n0\nROTATION\nMIXED ROTATION\nVERDICT\nRISK-ON\nCOMPONENTS\nBREADTH\n66.55\nCREDIT\n45.87\nVOL\n98.12\nUSD/RATES\n59.79\nLEADERSHIP\n66.48\nTREND\n83.33\nWARNINGS\nWARNINGS\n0/5\nBREADTH\nCLEAR\nCREDIT\nCLEAR\nVOL\nCLEAR\nUSD/RATES\nCLEAR\nLEAD\nCLEAR\nPATH & ROTATION LEADERS\nPATH\nRISK-ON STABLE\nPLAYBOOK\nFAVOR PULLBACKS\nEVIDENCE QUALITY\n80.06 · HIGH\nROT #1\nCRYPTO 90.14\nROT #2\nMETALS 80.25\nROT #3\nEM 73\nINTERNALS\nMETRIC\tVALUE\tSTATE\tRISK\tDETAIL\tTREND\nEqual Weight / SPY\t-1.15%\tNEUTRAL\tOK\tRSP breadth\tBULL\nSmall Caps / SPY\t-1.5%\tNEUTRAL\tOK\tIWM participation\tBULL\nSemis / Nasdaq\t-0.37%\tNEUTRAL\tOK\tSOX leadership\tMIXED\nHigh Yield / IG\t+0.2%\tCONFIRM\tOK\tHYG 20D 0.5%\tMIXED\nVIX Term\t+17.37%\tCONTANGO\tOK\tVIX 5D -9.37%\tBEAR\nDollar\t-0.84%\tTAILWIND\tOK\tDXY 20D\tMIXED\nUS 10Y Shock\t+0.3bp\tOK\tOK\t2s10s +44.2bp\tRATES\nCyclical / Defensive\t+3.56%\tLEADING\tOK\tXLY vs XLP\tMIXED\nPrice vs Internals\tPRICE STRONG\tALIGNED\t0\tHealth Δ5 0\tΔ20 0\nROTATION RADAR\nROTATION\tSCORE\tSTATE\tREPRESENTATIVE\t20D\tREL/SPY\nGrowth\t66.89\tBUILDING\tQQQ / SOX / XLK\t5.49%\t+1.53%\nSmall Caps\t63.58\tBUILDING\tIWM\t2.47%\t-1.5%\nCyclicals\t57.37\tMIXED\tXLI / XLY / XLF\t0.23%\t-3.74%\nEM\t73.00\tSTRONG\tEEM\t6.32%\t+2.36%\nCrypto\t90.14\tSTRONG\tBTC / ETH / TOTAL3\t23.74%\t+19.77%\nMetals\t80.25\tSTRONG\tGOLD / SILVER\t12.16%\tABS\nCommodities\t65.81\tBUILDING\tCOPPER / OIL\t1.78%\tABS\nBonds\t43.92\tWEAK\tTLT\t0.4%\t-3.57%\nDefensive\t37.53\tWEAK\tXLP / XLU\t-0.46%\t-4.42%\n\nEducational and research use only. Scores are analytical composites summarising the current weight of evidence — they are not probabilities, forecasts, or personal financial advice. Each page identifies its source, coverage, and freshness. Nothing here is an instruction to buy or sell any security.\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": []
+    },
+    {
+      "tab": "fragility",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:09:07.493Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 2933,
+      "scrollWidth": 390,
+      "screens": 3.4751184834123223,
+      "text": "MSP\nMenu\nOverview\nGlobal M2\nFragility\nLiquidity\nMarket Fragility\n\nMarket health beneath headline price — breadth, credit, volatility, USD/rates, leadership, and capital rotation.\n\nSTRUCTURE\nLIVE · PARTIAL\nLast updated: 12:09:06 AM\nDATA: LIVE · PARTIAL | COVERAGE: 94.4% | EXACT: 0 | PROXY: 0 | MISSING: 1\nDATA PARITY PENDING\nHEALTH\n67.8 · HEALTHY\nFRAGILITY\n17.71\nTRANSITION\n7.97\nDIVERGENCE\n0\nROTATION\nMIXED ROTATION\nVERDICT\nRISK-ON\nCOMPONENTS\nBREADTH\n66.55\nCREDIT\n45.87\nVOL\n98.12\nUSD/RATES\n59.79\nLEADERSHIP\n66.48\nTREND\n83.33\nWARNINGS\nWARNINGS\n0/5\nBREADTH\nCLEAR\nCREDIT\nCLEAR\nVOL\nCLEAR\nUSD/RATES\nCLEAR\nLEAD\nCLEAR\nPATH & ROTATION LEADERS\nPATH\nRISK-ON STABLE\nPLAYBOOK\nFAVOR PULLBACKS\nEVIDENCE QUALITY\n80.06 · HIGH\nROT #1\nCRYPTO 90.14\nROT #2\nMETALS 80.25\nROT #3\nEM 73\nINTERNALS\nMETRIC\tVALUE\tSTATE\tRISK\tDETAIL\tTREND\nEqual Weight / SPY\t-1.15%\tNEUTRAL\tOK\tRSP breadth\tBULL\nSmall Caps / SPY\t-1.5%\tNEUTRAL\tOK\tIWM participation\tBULL\nSemis / Nasdaq\t-0.37%\tNEUTRAL\tOK\tSOX leadership\tMIXED\nHigh Yield / IG\t+0.2%\tCONFIRM\tOK\tHYG 20D 0.5%\tMIXED\nVIX Term\t+17.37%\tCONTANGO\tOK\tVIX 5D -9.37%\tBEAR\nDollar\t-0.84%\tTAILWIND\tOK\tDXY 20D\tMIXED\nUS 10Y Shock\t+0.3bp\tOK\tOK\t2s10s +44.2bp\tRATES\nCyclical / Defensive\t+3.56%\tLEADING\tOK\tXLY vs XLP\tMIXED\nPrice vs Internals\tPRICE STRONG\tALIGNED\t0\tHealth Δ5 0\tΔ20 0\nROTATION RADAR\nROTATION\tSCORE\tSTATE\tREPRESENTATIVE\t20D\tREL/SPY\nGrowth\t66.89\tBUILDING\tQQQ / SOX / XLK\t5.49%\t+1.53%\nSmall Caps\t63.58\tBUILDING\tIWM\t2.47%\t-1.5%\nCyclicals\t57.37\tMIXED\tXLI / XLY / XLF\t0.23%\t-3.74%\nEM\t73.00\tSTRONG\tEEM\t6.32%\t+2.36%\nCrypto\t90.14\tSTRONG\tBTC / ETH / TOTAL3\t23.74%\t+19.77%\nMetals\t80.25\tSTRONG\tGOLD / SILVER\t12.16%\tABS\nCommodities\t65.81\tBUILDING\tCOPPER / OIL\t1.78%\tABS\nBonds\t43.92\tWEAK\tTLT\t0.4%\t-3.57%\nDefensive\t37.53\tWEAK\tXLP / XLU\t-0.46%\t-4.42%\n\nEducational and research use only. Scores are analytical composites summarising the current weight of evidence — they are not probabilities, forecasts, or personal financial advice. Each page identifies its source, coverage, and freshness. Nothing here is an instruction to buy or sell any security.\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": []
+    },
+    {
+      "tab": "liquidity",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:09:09.158Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 2247,
+      "scrollWidth": 1280,
+      "screens": 2.80875,
+      "text": "MarketScannerPros\nMenu\nOverview\nGlobal M2\nFragility\nLiquidity\nNative Liquidity Transmission\n\nCross-asset validated liquidity, the 8-stage rotation clock, and downstream risk appetite — all from the native engine. Research-only; some inputs use proxies, alternatives or derived data (see Data Quality).\n\nLIVE · PARTIAL UPSTREAM\nDATA_PARITY_PENDING\nLOCAL LIVE\nTRANSMISSION HEADLINE\nLast updated: 12:09:08 AM\nMASTER LINK\n55.22\nFLOW\nTRANSITION\nCLOCK\n8/8 LATE-CYCLE / DIVERGENCE · DECELERATION\nCYCLE\nDECELERATION\nVALIDATED\n58.03\nDOWNSTREAM\n72.50\nGAP\n+17.28\nLATE-CYCLE\n70.00 WARNING\nEARLY WARNING\n70.00 WARNING\nEVIDENCE QUALITY\n91 HIGH\nM2 BIAS\n50.00\nDIVERGENCE\nDIVERGENCE\nCRYPTO WINDOW\nINACTIVE\nALERTS\n\n3 active · engine-generated only\n\nBroad Risk-On\nBroad Risk-Off\nDivergence Warning\nEarly Warning Elevated\nEarly Warning High\nCrypto Window Active\nSTAGE 8 · LATE-CYCLE / DIVERGENCE\n\nACTIVE\n\nDownstream risk assets are running materially ahead of validated liquidity support.\n\nTRIGGERED\nDownstream extended\nDownstream risk-on 72.5/100\nTRIGGERED\nRisk–liquidity gap elevated\nGap +17.28\nTRIGGERED\nM2 cycle slowing\nLiquidity cycle: DECELERATION\nTRIGGERED\nValidated liquidity below threshold\nValidated 58.03/100 (threshold 62)\n\nLate-cycle/divergence risk elevated. Research signal only; watch for reset or new cycle.\n\nEIGHT-STAGE ROTATION CLOCK\n\nFurthest confirmed stage determines the clock position.\n\nSTAGE\tDRIVER\tGRADEⒾ\tSCORE\tSTATE\tGATE\tACTIVE\n1. Liquidity Ignition\ttest driver\tA\t50.00/100\tMIXED\tPARTIAL\t—\n2. USD Release\ttest driver\tA\t50.22/100\tMIXED\tPARTIAL\t—\n3. Credit Easing\ttest driver\tA\t30.42/100\tOPPOSING\tFAIL\t—\n4. Cyclical / Global Breadth\ttest driver\tA\t64.66/100\tSUPPORTIVE\tPARTIAL\t—\n5. US Risk Transmission\ttest driver\tA\t51.09/100\tMIXED\tPARTIAL\t—\n6. Crypto Majors\ttest driver\tA\t94.29/100\tCONFIRMED\tPASS\t—\n7. Alt Expansion\ttest driver\tA\t93.54/100\tCONFIRMED\tPASS\t—\n8. Late-Cycle / Divergence\ttest driver\tA\t70.00/100\tWARNING\tACTIVE\t● ACTIVE\nDOWNSTREAM VS MASTER LINK\n\nGap = Downstream − Master Link; the validated component is shown separately in the headline.\n\nMASTER LINK\n55.22\nDOWNSTREAM\n72.50\nRISK–LIQUIDITY GAP\n+17.28\nDIVERGENCE\nDIVERGENCE\nGLOBAL M2 UPSTREAM\n\nInterpretation ineligible · partial upstream\n\nBLOC AVAILABILITY\n9 / 11\n81.8% bloc count\nESTIMATED WEIGHTED COVERAGE\n94.4%\nThreshold 95% for interpretation\nUPSTREAM STATUS\nLIVE/PARTIAL UPSTREAM\nPARITY\nDATA_PARITY_PENDING\nMissing blocs: india, south-korea\nProviders used: fred · ecb\nPLAYBOOK\n\nEngine-generated · research language\n\nTRANSITION · LATE-CYCLE / DIVERGENCE. Early-warning risk. Divergence: DIVERGENCE.\nHISTORY\n\nHISTORY BUILDING\n\nCURRENT MASTER LINK\n55.22\nPREVIOUS MASTER LINK\n—\nNo prior observation\nΔ (5D)\nHISTORY BUILDING\nDATA QUALITY & SOURCE CLASSIFICATION\n\nEducational and research use only. Scores are analytical composites summarising the current weight of evidence — they are not probabilities, forecasts, or personal financial advice. Each page identifies its source, coverage, and freshness. Nothing here is an instruction to buy or sell any security.\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": []
+    },
+    {
+      "tab": "liquidity",
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T13:09:10.841Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 4356,
+      "scrollWidth": 390,
+      "screens": 5.161137440758294,
+      "text": "MSP\nMenu\nOverview\nGlobal M2\nFragility\nLiquidity\nNative Liquidity Transmission\n\nCross-asset validated liquidity, the 8-stage rotation clock, and downstream risk appetite — all from the native engine. Research-only; some inputs use proxies, alternatives or derived data (see Data Quality).\n\nLIVE · PARTIAL UPSTREAM\nDATA_PARITY_PENDING\nLOCAL LIVE\nTRANSMISSION HEADLINE\nLast updated: 12:09:10 AM\nMASTER LINK\n55.22\nFLOW\nTRANSITION\nCLOCK\n8/8 LATE-CYCLE / DIVERGENCE · DECELERATION\nCYCLE\nDECELERATION\nVALIDATED\n58.03\nDOWNSTREAM\n72.50\nGAP\n+17.28\nLATE-CYCLE\n70.00 WARNING\nEARLY WARNING\n70.00 WARNING\nEVIDENCE QUALITY\n91 HIGH\nM2 BIAS\n50.00\nDIVERGENCE\nDIVERGENCE\nCRYPTO WINDOW\nINACTIVE\nALERTS\n\n3 active · engine-generated only\n\nBroad Risk-On\nBroad Risk-Off\nDivergence Warning\nEarly Warning Elevated\nEarly Warning High\nCrypto Window Active\nSTAGE 8 · LATE-CYCLE / DIVERGENCE\n\nACTIVE\n\nDownstream risk assets are running materially ahead of validated liquidity support.\n\nTRIGGERED\nDownstream extended\nDownstream risk-on 72.5/100\nTRIGGERED\nRisk–liquidity gap elevated\nGap +17.28\nTRIGGERED\nM2 cycle slowing\nLiquidity cycle: DECELERATION\nTRIGGERED\nValidated liquidity below threshold\nValidated 58.03/100 (threshold 62)\n\nLate-cycle/divergence risk elevated. Research signal only; watch for reset or new cycle.\n\nEIGHT-STAGE ROTATION CLOCK\n\nFurthest confirmed stage determines the clock position.\n\nSTAGE\tDRIVER\tGRADEⒾ\tSCORE\tSTATE\tGATE\tACTIVE\n1. Liquidity Ignition\ttest driver\tA\t50.00/100\tMIXED\tPARTIAL\t—\n2. USD Release\ttest driver\tA\t50.22/100\tMIXED\tPARTIAL\t—\n3. Credit Easing\ttest driver\tA\t30.42/100\tOPPOSING\tFAIL\t—\n4. Cyclical / Global Breadth\ttest driver\tA\t64.66/100\tSUPPORTIVE\tPARTIAL\t—\n5. US Risk Transmission\ttest driver\tA\t51.09/100\tMIXED\tPARTIAL\t—\n6. Crypto Majors\ttest driver\tA\t94.29/100\tCONFIRMED\tPASS\t—\n7. Alt Expansion\ttest driver\tA\t93.54/100\tCONFIRMED\tPASS\t—\n8. Late-Cycle / Divergence\ttest driver\tA\t70.00/100\tWARNING\tACTIVE\t● ACTIVE\nDOWNSTREAM VS MASTER LINK\n\nGap = Downstream − Master Link; the validated component is shown separately in the headline.\n\nMASTER LINK\n55.22\nDOWNSTREAM\n72.50\nRISK–LIQUIDITY GAP\n+17.28\nDIVERGENCE\nDIVERGENCE\nGLOBAL M2 UPSTREAM\n\nInterpretation ineligible · partial upstream\n\nBLOC AVAILABILITY\n9 / 11\n81.8% bloc count\nESTIMATED WEIGHTED COVERAGE\n94.4%\nThreshold 95% for interpretation\nUPSTREAM STATUS\nLIVE/PARTIAL UPSTREAM\nPARITY\nDATA_PARITY_PENDING\nMissing blocs: india, south-korea\nProviders used: fred · ecb\nPLAYBOOK\n\nEngine-generated · research language\n\nTRANSITION · LATE-CYCLE / DIVERGENCE. Early-warning risk. Divergence: DIVERGENCE.\nHISTORY\n\nHISTORY BUILDING\n\nCURRENT MASTER LINK\n55.22\nPREVIOUS MASTER LINK\n—\nNo prior observation\nΔ (5D)\nHISTORY BUILDING\nDATA QUALITY & SOURCE CLASSIFICATION\n\nEducational and research use only. Scores are analytical composites summarising the current weight of evidence — they are not probabilities, forecasts, or personal financial advice. Each page identifies its source, coverage, and freshness. Nothing here is an instruction to buy or sell any security.\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "charts": []
+    }
+  ],
+  "requests": [
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/intelligence/global-m2",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/intelligence/global-m2",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/intelligence/fragility",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/intelligence/fragility",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/intelligence/liquidity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/intelligence/liquidity",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    }
+  ],
+  "errors": [],
+  "redirects": []
+}

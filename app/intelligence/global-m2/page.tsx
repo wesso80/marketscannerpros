@@ -2,12 +2,14 @@
 
 import { useEndpoint } from '@/components/intelligence/useEndpoint';
 import IntelligenceTable, { type IntelColumn, type IntelRow } from '@/components/intelligence/IntelligenceTable';
-import { MetricCell, SectionHeader, LastUpdatedBadge } from '@/components/intelligence/primitives';
+import { MetricCell } from '@/components/intelligence/primitives';
 import type { GlobalM2Dto } from '@/app/api/intelligence/global-m2/route';
-import { excludedBlocsLabel } from '@/lib/intelligence/globalM2Exclusions';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import SourceLine from '@/components/visual/SourceLine';
+import { EvidenceBars, EvidenceMetrics, EvidenceVerdict, EvidenceWarning, evidenceLabel } from '@/components/intelligence/CompactEvidence';
 
-const T = (n: number) => `$${(n / 1e12).toFixed(3)}T`;
-const pct = (n: number | null) => (n == null ? '—' : `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`);
+const T = (n: number) => `$${(n / 1e12).toFixed(2)}T`;
+const pct = (n: number | null) => (n == null ? 'Not collected' : `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`);
 
 const COLUMNS: IntelColumn[] = [
   { key: 'bloc', label: 'Bloc', align: 'left' },
@@ -26,8 +28,8 @@ function blocRow(b: GlobalM2Dto['blocs'][number]): IntelRow {
     id: b.id,
     cells: [
       <MetricCell key="b" align="left" strong>{b.name}</MetricCell>,
-      <MetricCell key="c" align="left" muted>{b.classification}</MetricCell>,
-      <MetricCell key="h" align="left" muted>{b.health}</MetricCell>,
+      <MetricCell key="c" align="left" muted>{evidenceLabel(b.classification)}</MetricCell>,
+      <MetricCell key="h" align="left" muted>{evidenceLabel(b.health)}</MetricCell>,
       <MetricCell key="u" align="right">{T(b.usdM2)}</MetricCell>,
       <MetricCell key="s" align="right" muted>{b.sharePct.toFixed(1)}%</MetricCell>,
       <MetricCell key="r1" align="right">{pct(b.r1)}</MetricCell>,
@@ -39,7 +41,7 @@ function blocRow(b: GlobalM2Dto['blocs'][number]): IntelRow {
 }
 
 export default function GlobalM2Page() {
-  const { data, loading, error, updatedAt } = useEndpoint<GlobalM2Dto>('/api/intelligence/global-m2');
+  const { data, loading, error } = useEndpoint<GlobalM2Dto>('/api/intelligence/global-m2');
 
   return (
     <div>
@@ -55,75 +57,28 @@ export default function GlobalM2Page() {
       {loading && <StateBox>Loading Global M2…</StateBox>}
       {error && <StateBox tone="error">Could not load Global M2: {error}</StateBox>}
 
-      {data && !data.enabled && (
-        <StateBox>
-          Global M2 live pipeline is not enabled in this environment (set <code>INTELLIGENCE_LIVE_DATA</code>).
-          Providers, normalization and the engine are ready; this view stays quiet until live data is switched on.
-        </StateBox>
-      )}
-
-      {data && data.enabled && (
-        <>
-          {!data.interpretationEligible && (
-            <div
-              style={{
-                margin: '4px 0 14px', padding: '10px 12px', borderRadius: 'var(--msp-radius-card)',
-                border: '1px solid var(--msp-warn)', background: 'var(--msp-warn-tint, rgba(234,179,8,0.08))',
-                fontSize: '0.8rem', color: 'var(--msp-text-muted)',
-              }}
-            >
-              <strong style={{ color: 'var(--msp-text)' }}>DIAGNOSTIC — not the headline Global M2 regime.</strong>{' '}
-              Estimated weighted coverage is {data.estimatedWeightedCoveragePercent.toFixed(1)}% (need ≥{data.weightedCoverageThreshold}%).
-              With {data.missingBlocCount} bloc(s) missing, the cross-bloc cycle is shown for engineering diagnostics only.
-              Parity: {data.parityStatus}.
-            </div>
-          )}
-
-          {excludedBlocsLabel(data.excludedBlocs) && (
-            <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: 'var(--msp-text-muted)' }}>
-              {excludedBlocsLabel(data.excludedBlocs)}: weighted coverage and interpretation eligibility are measured over the remaining blocs.
-            </p>
-          )}
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, marginBottom: 16 }}>
-            <Metric label="Total M2 (USD)" value={T(data.totalUsd)} />
-            <Metric label="Blocs" value={`${data.validBlocCount} available · ${data.missingBlocCount} missing`} />
-            <Metric label={data.excludedBlocs?.length ? 'Est. weighted coverage (included blocs)' : 'Est. weighted coverage'} value={`${data.estimatedWeightedCoveragePercent.toFixed(1)}%`} />
-            <Metric label="1M" value={pct(data.oneMonthPct)} />
-            <Metric label="3M annualised" value={pct(data.threeMonthAnnualizedPct)} />
-            <Metric label="YoY" value={pct(data.yoyPct)} />
-            <Metric label={data.interpretationEligible ? 'Cycle' : 'Cycle (diagnostic)'} value={data.liquidityCycle} />
-            <Metric label="Acceleration" value={data.accelerationState} />
-          </div>
-
-          <SectionHeader
-            title="Bloc Breakdown"
-            subtitle="Lag-1 USD M2 per bloc (MONTH_END_LAST_VALID FX). Source = LIVE or STALE (persisted last-known-good)."
-            right={<LastUpdatedBadge timestamp={updatedAt ?? undefined} />}
-          />
+      {data && !data.enabled && <EvidenceWarning><span data-layout-verdict>Global M2 observations are not collected in this environment.</span></EvidenceWarning>}
+      {data?.enabled && <>
+        <EvidenceVerdict>{data.interpretationEligible ? evidenceLabel(data.liquidityCycle) : 'Coverage is below the threshold for a Global M2 assessment.'}</EvidenceVerdict>
+        <EvidenceMetrics items={[
+          { label: 'Total M2 (USD)', value: T(data.totalUsd) },
+          { label: 'Included-bloc coverage', value: `${data.estimatedWeightedCoveragePercent.toFixed(1)}%` },
+          { label: '1 month', value: pct(data.oneMonthPct) },
+          { label: 'Year over year', value: pct(data.yoyPct) },
+        ]} />
+        <EvidenceBars title="M2 by economic bloc · USD" rows={data.blocs.map(b => ({ label: b.name, value: b.usdM2 }))} money />
+        <EvidenceWarning>{data.missingBlocCount} blocs not collected · {evidenceLabel(data.parityStatus)}{data.excludedBlocs?.length ? ` · ${data.excludedBlocs.map(b => b.name).join(', ')} excluded from weighted coverage` : ''}{data.blocs.some(b => b.stale) ? ' · Some observations use older saved data' : ''}</EvidenceWarning>
+        <CollapsibleSection title="Show blocs" summary={`${data.validBlocCount} observations · ${data.weightedCoverageThreshold}% coverage required`}>
           <IntelligenceTable columns={COLUMNS} rows={data.blocs.map(blocRow)} />
+          <EvidenceMetrics items={[
+            { label: '3 month annualised', value: pct(data.threeMonthAnnualizedPct) },
+            { label: 'Acceleration', value: evidenceLabel(data.accelerationState) },
+          ]} />
+          {data.missing.length > 0 && <ul className="text-xs space-y-2">{data.missing.map(m => <li key={m.id}>{m.id}: {evidenceLabel(m.reason)}</li>)}</ul>}
+        </CollapsibleSection>
+      </>}
+      {data && <SourceLine source="Official central-bank and statistics series" asOf={data.calculatedAt} basis={`Calculation time · lag-1 monthly USD M2 using last valid month-end FX${data.blocs.length ? ` · observation months ${[...new Set(data.blocs.map(b => b.observationMonth))].sort().join(', ')}` : ''}`} />}
 
-          {data.missing.length > 0 && (
-            <div style={{ marginTop: 16 }}>
-              <SectionHeader title="Missing Blocs" subtitle="Fail-closed — no aggregate is ever silently substituted." />
-              <ul style={{ margin: 0, padding: '4px 0 0 18px', fontSize: '0.78rem', color: 'var(--msp-text-muted)', lineHeight: 1.5 }}>
-                {data.missing.map((m) => (
-                  <li key={m.id}><strong style={{ color: 'var(--msp-text)' }}>{m.id}</strong> <span style={{ color: 'var(--msp-text-faint)' }}>[{m.health}]{data.excludedBlocs?.some((x) => x.id === m.id) ? ' · excluded from coverage' : ''}</span>: {m.reason}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ padding: '10px 12px', borderRadius: 'var(--msp-radius-card)', border: '1px solid var(--msp-border)', background: 'var(--msp-panel)' }}>
-      <div style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--msp-text-faint)' }}>{label}</div>
-      <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--msp-text)', fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>{value}</div>
     </div>
   );
 }
