@@ -1,5 +1,9 @@
 "use client";
 
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import SourceLine from '@/components/visual/SourceLine';
+import ReferralCard from '@/components/account/ReferralCard';
+import { getDailyAiLimit } from '@/lib/entitlements';
 import { ALERT_LIMITS } from '@/lib/alerts/planLimits';
 import { WATCHLIST_LIMITS } from '@/lib/tiers';
 import { FREE_COPY } from '@/components/free/copy';
@@ -21,7 +25,7 @@ type TierKey = "free" | "pro" | "pro_trader" | "anonymous";
 
 type UsageMetric = {
   label: string;
-  used: number;
+  used: number | null;
   limit: number;
 };
 
@@ -41,7 +45,9 @@ export default function AccountPage() {
   const [prefsSaving, setPrefsSaving] = useState(false);
   const [prefsMessage, setPrefsMessage] = useState<string | null>(null);
   const [prefsError, setPrefsError] = useState<string | null>(null);
-  const [realUsage, setRealUsage] = useState<{ aiUsed: number; alertCount: number; watchlistCount: number } | null>(null);
+  const [realUsage, setRealUsage] = useState<{ aiUsed: number | null; alertCount: number | null; watchlistCount: number | null } | null>(null);
+
+  const [loadedAt, setLoadedAt] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/me", { credentials: "include" })
@@ -60,24 +66,24 @@ export default function AccountPage() {
         // AI usage comes from the entitlements endpoint (the analyst route is POST-only; probing it produced a 405).
         try {
           const res = await fetch("/api/entitlements", { credentials: "include" });
-          if (res.ok) { const d = await res.json(); return d?.aiUsedToday ?? 0; }
+          if (res.ok) { const d = await res.json(); return typeof d?.aiUsedToday === "number" && Number.isFinite(d.aiUsedToday) && d.aiUsedToday >= 0 ? d.aiUsedToday : null; }
         } catch {}
-        return 0;
+        return null;
       })(),
       fetch("/api/alerts", { credentials: "include" }).then(async (res) => {
-        if (res.ok) { const d = await res.json(); return Array.isArray(d?.alerts) ? d.alerts.filter((alert: { is_active?: boolean }) => alert.is_active).length : 0; }
-        return 0;
-      }).catch(() => 0),
+        if (res.ok) { const d = await res.json(); return Array.isArray(d?.alerts) ? d.alerts.filter((alert: { is_active?: boolean }) => alert.is_active).length : null; }
+        return null;
+      }).catch(() => null),
       fetch("/api/watchlists", { credentials: "include" }).then(async (res) => {
         if (res.ok) {
           const d = await res.json();
-          const lists = Array.isArray(d?.watchlists) ? d.watchlists : [];
-          return lists.length;
+          return Array.isArray(d?.watchlists) ? d.watchlists.length : null;
         }
-        return 0;
-      }).catch(() => 0),
+        return null;
+      }).catch(() => null),
     ]).then(([aiUsed, alertCount, watchlistCount]) => {
-      setRealUsage({ aiUsed: aiUsed as number, alertCount: alertCount as number, watchlistCount: watchlistCount as number });
+      setRealUsage({ aiUsed, alertCount, watchlistCount });
+      setLoadedAt(new Date().toISOString());
     });
   }, [isLoggedIn]);
 
@@ -188,19 +194,19 @@ export default function AccountPage() {
   const currentTier = tierDisplay[normalizedTier] ?? tierDisplay.anonymous;
   const isPaid = normalizedTier === "pro" || normalizedTier === "pro_trader";
 
-  const aiLimit = isPaid ? 50 : 10;
-  const aiUsed = realUsage?.aiUsed ?? 0;
+  const aiLimit = getDailyAiLimit(normalizedTier);
+  const aiUsed = realUsage?.aiUsed ?? null;
 
   const usage: UsageMetric[] = [
     { label: "MSP AI Analyst", used: aiUsed, limit: aiLimit },
-    { label: "Saved Alerts", used: realUsage?.alertCount ?? 0, limit: isPaid ? ALERT_LIMITS.pro : ALERT_LIMITS.free },
-    { label: "Watchlists", used: realUsage?.watchlistCount ?? 0, limit: isPaid ? WATCHLIST_LIMITS.pro.watchlists : WATCHLIST_LIMITS.free.watchlists },
+    { label: "Saved Alerts", used: realUsage?.alertCount ?? null, limit: isPaid ? ALERT_LIMITS.pro : ALERT_LIMITS.free },
+    { label: "Watchlists", used: realUsage?.watchlistCount ?? null, limit: isPaid ? WATCHLIST_LIMITS.pro.watchlists : WATCHLIST_LIMITS.free.watchlists },
   ];
 
   const planFeatures = useMemo(() => {
     if (isPaid) {
       return [
-        "Unlimited scanning + Golden Egg",
+        "Unlimited scanning + Symbol",
         "Production Intelligence (Global M2, Liquidity Transmission, Fragility)",
         "Backtesting, options and derivatives tools",
         "Unlimited portfolio and trade journal",
@@ -216,7 +222,6 @@ export default function AccountPage() {
     ];
   }, [isPaid]);
 
-  const aiRemaining = Math.max(0, aiLimit - aiUsed);
 
   if (isLoading) {
     return (
@@ -244,12 +249,12 @@ export default function AccountPage() {
 
   return (
     <main className="min-h-screen bg-[var(--msp-bg)] text-white">
-      <div className="mx-auto max-w-6xl px-4 pb-16">
-        <div className="pt-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="mx-auto max-w-4xl px-4 pb-8">
+        <div className="pt-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">Account Settings</h1>
             <p className="text-sm text-white/60 mt-1">Manage your subscription, alerts, and intelligence access.</p>
-            <p className="text-xs text-white/50 mt-2">{email || "Email unavailable"}</p>
+            <p className="text-xs text-white/50 mt-2">{email || "Email not collected"}</p>
           </div>
 
           <div className="flex flex-wrap gap-3">
@@ -272,22 +277,17 @@ export default function AccountPage() {
                 await fetch('/api/auth/logout', { method: 'POST' });
                 window.location.href = '/';
               }}
-              className="px-4 py-2 rounded-xl border border-red-400/30 bg-red-500/10 text-red-300 text-sm hover:bg-red-500/20"
+              className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-white/80 text-sm hover:bg-white/10"
             >
               Sign Out
             </button>
           </div>
         </div>
 
-        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-200">
-          <span className="font-semibold">AI Requests Remaining Today</span>
-          <span>{aiRemaining} / {aiLimit}</span>
-        </div>
+        <div className="mt-4 space-y-3">
+            <p data-account-verdict className="text-sm text-white/80">Your {currentTier.name} account settings.</p>
+            <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
 
-        <div className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-8 space-y-6">
-            <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
-              <h2 className="text-sm font-semibold mb-4">Subscription</h2>
 
               <div className="flex items-center justify-between">
                 <div>
@@ -303,25 +303,22 @@ export default function AccountPage() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
-              <h2 className="text-sm font-semibold mb-4">Usage</h2>
-              <p className="mb-3 text-xs">{isPaid ? `${WATCHLIST_LIMITS.pro.watchlists} × ${WATCHLIST_LIMITS.pro.items}` : FREE_COPY.pricing.watchlists}</p>
-              {usage.map((metric) => (
-                <UsageBar key={metric.label} label={metric.label} used={metric.used} limit={metric.limit} />
-              ))}
+            <section aria-label="Account usage" className="rounded-xl border border-white/10 p-3">
+              <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+                {usage.map(metric => <UsageRing key={metric.label} {...metric} />)}
+              </div>
+              {realUsage && usage.some(metric => metric.used === null) ? <p className="mt-2 text-xs text-amber-300">Some usage counts were not collected.</p> : null}
+              <p className="mt-2 text-xs text-white/60">{isPaid ? `${WATCHLIST_LIMITS.pro.watchlists} × ${WATCHLIST_LIMITS.pro.items}` : FREE_COPY.pricing.watchlists}</p>
             </section>
-
-            <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
-              <h2 className="text-sm font-semibold mb-4">Plan Features</h2>
+            <CollapsibleSection title="Plan Features" summary={`${planFeatures.length} features`}>
               <ul className="space-y-2 text-xs text-white/75">
                 {planFeatures.map((feature) => (
                   <li key={feature}>• {feature}</li>
                 ))}
               </ul>
-            </section>
+            </CollapsibleSection>
 
-            <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
-              <h2 className="text-sm font-semibold mb-4">Notifications</h2>
+            <CollapsibleSection title="Notifications" summary={prefsLoading ? "Loading settings" : "Email, app and Discord"}>
 
               {prefsLoading ? (
                 <div className="text-sm text-white/60">Loading settings...</div>
@@ -386,17 +383,14 @@ export default function AccountPage() {
                   </button>
                 </>
               )}
-            </section>
-          </div>
-
-          <div className="lg:col-span-4 space-y-6">
-            <section className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-6">
-              <h3 className="text-sm font-semibold">Unlock More</h3>
+            </CollapsibleSection>
+            {!isPaid ? (
+            <CollapsibleSection title="Unlock More">
 
               <ul className="mt-4 space-y-2 text-xs text-white/70">
                 <li>• AI-Triggered Smart Alerts</li>
                 <li>• Full Derivatives Intelligence</li>
-                <li>• Golden Egg Deep Analysis</li>
+                <li>• Symbol Deep Analysis</li>
                 <li>• Higher AI daily limits</li>
               </ul>
 
@@ -409,26 +403,11 @@ export default function AccountPage() {
                   You have full Pro access
                 </div>
               )}
-            </section>
-
-            <section className="rounded-2xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/10 to-emerald-500/5 p-6">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xl">🎁</span>
-                <h3 className="text-sm font-semibold text-emerald-400">Refer &amp; Earn</h3>
-              </div>
-              <p className="text-xs text-white/70">
-                Share your referral link — your friend gets <strong className="text-emerald-300">$5 off Pro</strong> and you earn <strong className="text-emerald-300">matching credit</strong>.
-              </p>
-              <Link
-                href="/tools/referrals"
-                className="mt-4 block w-full px-4 py-3 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-sm font-semibold text-emerald-300 hover:bg-emerald-500/30 text-center"
-              >
-                Get Your Referral Link
-              </Link>
-            </section>
-
-            <section className="rounded-2xl border border-red-500/20 bg-red-500/5 p-6">
-              <h3 className="text-sm font-semibold text-red-300">Data Management</h3>
+            </CollapsibleSection>
+            ) : null}
+            <ReferralCard />
+            <CollapsibleSection title="Data Management" summary="Account data">
+            <CollapsibleSection title="Danger zone">
               <p className="mt-2 text-xs text-white/60">Request deletion of your account and associated data.</p>
 
               <button
@@ -438,28 +417,26 @@ export default function AccountPage() {
               >
                 Request Data Deletion
               </button>
-            </section>
-          </div>
+            </CollapsibleSection>
+            </CollapsibleSection>
+            <SourceLine source="Account and saved usage records" asOf={loadedAt} basis="Page load time; counts may arrive separately" />
         </div>
       </div>
     </main>
   );
 }
 
-function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
-  const pct = Math.max(0, Math.min(100, (used / Math.max(1, limit)) * 100));
-
-  return (
-    <div className="mb-4">
-      <div className="flex justify-between text-xs text-white/60 mb-2">
-        <span>{label}</span>
-        <span>{used}/{limit}</span>
-      </div>
-      <div className="h-2 rounded-full bg-white/10">
-        <div className="h-2 rounded-full bg-emerald-400/40" style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
+function UsageRing({ label, used, limit }: UsageMetric) {
+  const pct = used === null ? 0 : Math.max(0, Math.min(100, used / Math.max(1, limit) * 100));
+  return <div className="min-w-0 text-center" data-usage-ring>
+    <svg viewBox="0 0 80 80" className="mx-auto h-16 w-16" aria-hidden="true">
+      <circle cx="40" cy="40" r="32" fill="none" stroke="currentColor" className="text-white/10" strokeWidth="6" />
+      {used !== null && <circle cx="40" cy="40" r="32" fill="none" stroke="currentColor" className={pct >= 90 ? 'text-amber-400' : 'text-white/60'} strokeWidth="6" pathLength="100" strokeDasharray={`${pct} 100`} transform="rotate(-90 40 40)" />}
+    </svg>
+    <p className="text-xs font-semibold">{label}</p>
+    <p className="mt-1 text-xs text-white/70">{used === null ? 'Not collected' : `${used.toLocaleString()} / ${limit.toLocaleString()}`}</p>
+    {used === null && <p className="text-xs text-white/50">Limit {limit.toLocaleString()}</p>}
+  </div>;
 }
 
 function ToggleRow({

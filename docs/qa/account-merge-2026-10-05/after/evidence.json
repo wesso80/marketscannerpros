@@ -1,0 +1,1116 @@
+{
+  "mocked": true,
+  "results": [
+    {
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:20:56.779Z",
+      "finalUrl": "http://127.0.0.1:3122/account",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1375,
+      "scrollWidth": 1280,
+      "screens": 1.71875,
+      "text": "MarketScannerPros\nMenu\nAccount Settings\n\nManage your subscription, alerts, and intelligence access.\n\nEmail not collected\n\nManage Billing\nSign Out\n\nYour Pro account settings.\n\nPro\nActive · Renewal date in billing portal\nActive\n\nMSP AI Analyst\n\nNot collected\n\nLimit 50\n\nSaved Alerts\n\n12 / 999\n\nWatchlists\n\n1 / 100\n\nSome usage counts were not collected.\n\n100 × 500\n\nPlan Features5 features\nNotificationsEmail, app and Discord\nRefer & Earn\nYour Referral Link\nCopy\n\nShare this link with friends. They get $5 off Pro at checkout and you earn matching credit.\n\nReferral details1 conversions\nData ManagementAccount data\n\nSource · Account and saved usage records · 23:20 AEDT Mon 5 Oct · Page load time; counts may arrive separately\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "Your Pro account settings.",
+          "top": 173,
+          "bottom": 193
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nAccount Settings\n\nManage your subscription, alerts, and intelligence access.\n\nEmail not collected\n\nManage Billing\nSign Out\n\nYour Pro account settings.\n\nPro\nActive · Renewal date in billing portal\nActive\n\nMSP AI Analyst\n\nNot collected\n\nLimit 50\n\nSaved Alerts\n\n12 / 999\n\nWatchlists\n\n1 / 100\n\nSome usage counts were not collected.\n\n100 × 500\n\nPlan Features5 features\n• Unlimited scanning + Golden Egg\n• Production Intelligence (Global M2, Liquidity Transmission, Fragility)\n• Backtesting, options and derivatives tools\n• Unlimited portfolio and trade journal\n• Alerts, exports, priority support\nNotificationsEmail, app and Discord\nIn-App Notifications\nEmail Notifications\nAlert emails\nDaily summary\nEach alert (up to the daily cap)\nOff\n\nDaily summary is the default. Alerts still show in the app. Off stops alert and summary emails only.\n\nDiscord Webhook Alerts\nSave Settings\nRefer & Earn\nYour Referral Link\nCopy\n\nShare this link with friends. They get $5 off Pro at checkout and you earn matching credit.\n\nReferral details1 conversions\n\nShare your link — earn credit for every friend who subscribes. They get $5 off Pro at checkout! 5 referrals = $500 draw entry.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n12\nLINK CLICKS\n3\nSIGNUPS\n1\nCONVERSIONS\n$5\nCREDITS EARNED\nMonthly $500 Draw — October 2026\n\nEvery 5 qualifying referrals = 1 draw entry. Draw date: November 1, 2026\n\n0\nYOUR ENTRIES\nProgress to next entry\n1/5 referrals\n\n4 total entries in this month's draw\n\nReferral History\n\nNo referrals yet. Share your link to get started!\n\nHow It Works\n1\nShare Your Link\nSend your unique referral link to friends or post it on social media.\n2\nFriend Subscribes\nThey get $5 off Pro at checkout. You earn matching credit on your next invoice.\n3\nEnter the Draw\nEvery 5 qualifying referrals earns 1 entry in the monthly $500 cash draw.\nData ManagementAccount data\nDanger zone\n\nRequest deletion of your account and associated data.\n\nRequest Data Deletion\n\nSource · Account and saved usage records · 23:20 AEDT Mon 5 Oct · Page load time; counts may arrive separately\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "hits": [
+        "Golden Egg"
+      ]
+    },
+    {
+      "tier": "pro",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:20:58.333Z",
+      "finalUrl": "http://127.0.0.1:3122/account",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1659,
+      "scrollWidth": 390,
+      "screens": 1.9656398104265402,
+      "text": "MSP\nMenu\nAccount Settings\n\nManage your subscription, alerts, and intelligence access.\n\nEmail not collected\n\nManage Billing\nSign Out\n\nYour Pro account settings.\n\nPro\nActive · Renewal date in billing portal\nActive\n\nMSP AI Analyst\n\nNot collected\n\nLimit 50\n\nSaved Alerts\n\n12 / 999\n\nWatchlists\n\n1 / 100\n\nSome usage counts were not collected.\n\n100 × 500\n\nPlan Features5 features\nNotificationsEmail, app and Discord\nRefer & Earn\nYour Referral Link\nCopy\n\nShare this link with friends. They get $5 off Pro at checkout and you earn matching credit.\n\nReferral details1 conversions\nData ManagementAccount data\n\nSource · Account and saved usage records · 23:20 AEDT Mon 5 Oct · Page load time; counts may arrive separately\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "Your Pro account settings.",
+          "top": 247,
+          "bottom": 267
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nAccount Settings\n\nManage your subscription, alerts, and intelligence access.\n\nEmail not collected\n\nManage Billing\nSign Out\n\nYour Pro account settings.\n\nPro\nActive · Renewal date in billing portal\nActive\n\nMSP AI Analyst\n\nNot collected\n\nLimit 50\n\nSaved Alerts\n\n12 / 999\n\nWatchlists\n\n1 / 100\n\nSome usage counts were not collected.\n\n100 × 500\n\nPlan Features5 features\n• Unlimited scanning + Golden Egg\n• Production Intelligence (Global M2, Liquidity Transmission, Fragility)\n• Backtesting, options and derivatives tools\n• Unlimited portfolio and trade journal\n• Alerts, exports, priority support\nNotificationsEmail, app and Discord\nIn-App Notifications\nEmail Notifications\nAlert emails\nDaily summary\nEach alert (up to the daily cap)\nOff\n\nDaily summary is the default. Alerts still show in the app. Off stops alert and summary emails only.\n\nDiscord Webhook Alerts\nSave Settings\nRefer & Earn\nYour Referral Link\nCopy\n\nShare this link with friends. They get $5 off Pro at checkout and you earn matching credit.\n\nReferral details1 conversions\n\nShare your link — earn credit for every friend who subscribes. They get $5 off Pro at checkout! 5 referrals = $500 draw entry.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n12\nLINK CLICKS\n3\nSIGNUPS\n1\nCONVERSIONS\n$5\nCREDITS EARNED\nMonthly $500 Draw — October 2026\n\nEvery 5 qualifying referrals = 1 draw entry. Draw date: November 1, 2026\n\n0\nYOUR ENTRIES\nProgress to next entry\n1/5 referrals\n\n4 total entries in this month's draw\n\nReferral History\n\nNo referrals yet. Share your link to get started!\n\nHow It Works\n1\nShare Your Link\nSend your unique referral link to friends or post it on social media.\n2\nFriend Subscribes\nThey get $5 off Pro at checkout. You earn matching credit on your next invoice.\n3\nEnter the Draw\nEvery 5 qualifying referrals earns 1 entry in the monthly $500 cash draw.\nData ManagementAccount data\nDanger zone\n\nRequest deletion of your account and associated data.\n\nRequest Data Deletion\n\nSource · Account and saved usage records · 23:20 AEDT Mon 5 Oct · Page load time; counts may arrive separately\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "hits": [
+        "Golden Egg"
+      ],
+      "redirects": [
+        {
+          "from": "/tools/workspace?tab=settings",
+          "to": "http://127.0.0.1:3122/account"
+        },
+        {
+          "from": "/tools/workspace?tab=Settings",
+          "to": "http://127.0.0.1:3122/account"
+        },
+        {
+          "from": "/tools/referrals",
+          "to": "http://127.0.0.1:3122/account#refer"
+        }
+      ]
+    },
+    {
+      "tier": "pro",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:21:02.912Z",
+      "finalUrl": "http://127.0.0.1:3122/account",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1375,
+      "scrollWidth": 1280,
+      "screens": 1.71875,
+      "text": "MarketScannerPros\nMenu\nAccount Settings\n\nManage your subscription, alerts, and intelligence access.\n\nEmail not collected\n\nManage Billing\nSign Out\n\nYour Pro account settings.\n\nPro\nActive · Renewal date in billing portal\nActive\n\nMSP AI Analyst\n\nNot collected\n\nLimit 50\n\nSaved Alerts\n\n0 / 999\n\nWatchlists\n\n1 / 100\n\nSome usage counts were not collected.\n\n100 × 500\n\nPlan Features5 features\nNotificationsEmail, app and Discord\nRefer & Earn\nYour Referral Link\nCopy\n\nShare this link with friends. They get $5 off Pro at checkout and you earn matching credit.\n\nReferral details1 conversions\nData ManagementAccount data\n\nSource · Account and saved usage records · 23:21 AEDT Mon 5 Oct · Page load time; counts may arrive separately\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "Your Pro account settings.",
+          "top": 173,
+          "bottom": 193
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nAccount Settings\n\nManage your subscription, alerts, and intelligence access.\n\nEmail not collected\n\nManage Billing\nSign Out\n\nYour Pro account settings.\n\nPro\nActive · Renewal date in billing portal\nActive\n\nMSP AI Analyst\n\nNot collected\n\nLimit 50\n\nSaved Alerts\n\n0 / 999\n\nWatchlists\n\n1 / 100\n\nSome usage counts were not collected.\n\n100 × 500\n\nPlan Features5 features\n• Unlimited scanning + Golden Egg\n• Production Intelligence (Global M2, Liquidity Transmission, Fragility)\n• Backtesting, options and derivatives tools\n• Unlimited portfolio and trade journal\n• Alerts, exports, priority support\nNotificationsEmail, app and Discord\nIn-App Notifications\nEmail Notifications\nAlert emails\nDaily summary\nEach alert (up to the daily cap)\nOff\n\nDaily summary is the default. Alerts still show in the app. Off stops alert and summary emails only.\n\nDiscord Webhook Alerts\nSave Settings\nRefer & Earn\nYour Referral Link\nCopy\n\nShare this link with friends. They get $5 off Pro at checkout and you earn matching credit.\n\nReferral details1 conversions\n\nShare your link — earn credit for every friend who subscribes. They get $5 off Pro at checkout! 5 referrals = $500 draw entry.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n12\nLINK CLICKS\n3\nSIGNUPS\n1\nCONVERSIONS\n$5\nCREDITS EARNED\nMonthly $500 Draw — October 2026\n\nEvery 5 qualifying referrals = 1 draw entry. Draw date: November 1, 2026\n\n0\nYOUR ENTRIES\nProgress to next entry\n1/5 referrals\n\n4 total entries in this month's draw\n\nReferral History\n\nNo referrals yet. Share your link to get started!\n\nHow It Works\n1\nShare Your Link\nSend your unique referral link to friends or post it on social media.\n2\nFriend Subscribes\nThey get $5 off Pro at checkout. You earn matching credit on your next invoice.\n3\nEnter the Draw\nEvery 5 qualifying referrals earns 1 entry in the monthly $500 cash draw.\nData ManagementAccount data\nDanger zone\n\nRequest deletion of your account and associated data.\n\nRequest Data Deletion\n\nSource · Account and saved usage records · 23:21 AEDT Mon 5 Oct · Page load time; counts may arrive separately\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "hits": [
+        "Golden Egg"
+      ]
+    },
+    {
+      "tier": "pro",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:21:04.424Z",
+      "finalUrl": "http://127.0.0.1:3122/account",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1659,
+      "scrollWidth": 390,
+      "screens": 1.9656398104265402,
+      "text": "MSP\nMenu\nAccount Settings\n\nManage your subscription, alerts, and intelligence access.\n\nEmail not collected\n\nManage Billing\nSign Out\n\nYour Pro account settings.\n\nPro\nActive · Renewal date in billing portal\nActive\n\nMSP AI Analyst\n\nNot collected\n\nLimit 50\n\nSaved Alerts\n\n0 / 999\n\nWatchlists\n\n1 / 100\n\nSome usage counts were not collected.\n\n100 × 500\n\nPlan Features5 features\nNotificationsEmail, app and Discord\nRefer & Earn\nYour Referral Link\nCopy\n\nShare this link with friends. They get $5 off Pro at checkout and you earn matching credit.\n\nReferral details1 conversions\nData ManagementAccount data\n\nSource · Account and saved usage records · 23:21 AEDT Mon 5 Oct · Page load time; counts may arrive separately\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "Your Pro account settings.",
+          "top": 247,
+          "bottom": 267
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nAccount Settings\n\nManage your subscription, alerts, and intelligence access.\n\nEmail not collected\n\nManage Billing\nSign Out\n\nYour Pro account settings.\n\nPro\nActive · Renewal date in billing portal\nActive\n\nMSP AI Analyst\n\nNot collected\n\nLimit 50\n\nSaved Alerts\n\n0 / 999\n\nWatchlists\n\n1 / 100\n\nSome usage counts were not collected.\n\n100 × 500\n\nPlan Features5 features\n• Unlimited scanning + Golden Egg\n• Production Intelligence (Global M2, Liquidity Transmission, Fragility)\n• Backtesting, options and derivatives tools\n• Unlimited portfolio and trade journal\n• Alerts, exports, priority support\nNotificationsEmail, app and Discord\nIn-App Notifications\nEmail Notifications\nAlert emails\nDaily summary\nEach alert (up to the daily cap)\nOff\n\nDaily summary is the default. Alerts still show in the app. Off stops alert and summary emails only.\n\nDiscord Webhook Alerts\nSave Settings\nRefer & Earn\nYour Referral Link\nCopy\n\nShare this link with friends. They get $5 off Pro at checkout and you earn matching credit.\n\nReferral details1 conversions\n\nShare your link — earn credit for every friend who subscribes. They get $5 off Pro at checkout! 5 referrals = $500 draw entry.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n12\nLINK CLICKS\n3\nSIGNUPS\n1\nCONVERSIONS\n$5\nCREDITS EARNED\nMonthly $500 Draw — October 2026\n\nEvery 5 qualifying referrals = 1 draw entry. Draw date: November 1, 2026\n\n0\nYOUR ENTRIES\nProgress to next entry\n1/5 referrals\n\n4 total entries in this month's draw\n\nReferral History\n\nNo referrals yet. Share your link to get started!\n\nHow It Works\n1\nShare Your Link\nSend your unique referral link to friends or post it on social media.\n2\nFriend Subscribes\nThey get $5 off Pro at checkout. You earn matching credit on your next invoice.\n3\nEnter the Draw\nEvery 5 qualifying referrals earns 1 entry in the monthly $500 cash draw.\nData ManagementAccount data\nDanger zone\n\nRequest deletion of your account and associated data.\n\nRequest Data Deletion\n\nSource · Account and saved usage records · 23:21 AEDT Mon 5 Oct · Page load time; counts may arrive separately\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "hits": [
+        "Golden Egg"
+      ]
+    },
+    {
+      "tier": "free",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:21:05.978Z",
+      "finalUrl": "http://127.0.0.1:3122/account",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1453,
+      "scrollWidth": 1280,
+      "screens": 1.81625,
+      "text": "MarketScannerPros\nMenu\nAccount Settings\n\nManage your subscription, alerts, and intelligence access.\n\nEmail not collected\n\nManage Billing\nUpgrade Plan\nSign Out\n\nYour Free account settings.\n\nFree\nFree tier · Upgrade any time\nActive\n\nMSP AI Analyst\n\nNot collected\n\nLimit 10\n\nSaved Alerts\n\n12 / 3\n\nWatchlists\n\n1 / 3\n\nSome usage counts were not collected.\n\n3 watchlists of 10 symbols\n\nPlan Features5 features\nNotificationsEmail, app and Discord\nUnlock More\nRefer & Earn\nYour Referral Link\nCopy\n\nShare this link with friends. They get $5 off Pro at checkout and you earn matching credit.\n\nReferral details1 conversions\nData ManagementAccount data\n\nSource · Account and saved usage records · 23:21 AEDT Mon 5 Oct · Page load time; counts may arrive separately\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "Your Free account settings.",
+          "top": 173,
+          "bottom": 193
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nAccount Settings\n\nManage your subscription, alerts, and intelligence access.\n\nEmail not collected\n\nManage Billing\nUpgrade Plan\nSign Out\n\nYour Free account settings.\n\nFree\nFree tier · Upgrade any time\nActive\n\nMSP AI Analyst\n\nNot collected\n\nLimit 10\n\nSaved Alerts\n\n12 / 3\n\nWatchlists\n\n1 / 3\n\nSome usage counts were not collected.\n\n3 watchlists of 10 symbols\n\nPlan Features5 features\n• 5 scans a day\n• Watchlists, markets and macro dashboards\n• Macro summary\n• Journal (5 open entries)\n• Educational content and platform guides\nNotificationsEmail, app and Discord\nIn-App Notifications\nEmail Notifications\nAlert emails\nDaily summary\nEach alert (up to the daily cap)\nOff\n\nDaily summary is the default. Alerts still show in the app. Off stops alert and summary emails only.\n\nDiscord Webhook Alerts\nSave Settings\nUnlock More\n• AI-Triggered Smart Alerts\n• Full Derivatives Intelligence\n• Golden Egg Deep Analysis\n• Higher AI daily limits\nUpgrade to Pro\nRefer & Earn\nYour Referral Link\nCopy\n\nShare this link with friends. They get $5 off Pro at checkout and you earn matching credit.\n\nReferral details1 conversions\n\nShare your link — earn credit for every friend who subscribes. They get $5 off Pro at checkout! 5 referrals = $500 draw entry.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n12\nLINK CLICKS\n3\nSIGNUPS\n1\nCONVERSIONS\n$5\nCREDITS EARNED\nMonthly $500 Draw — October 2026\n\nEvery 5 qualifying referrals = 1 draw entry. Draw date: November 1, 2026\n\n0\nYOUR ENTRIES\nProgress to next entry\n1/5 referrals\n\n4 total entries in this month's draw\n\nReferral History\n\nNo referrals yet. Share your link to get started!\n\nHow It Works\n1\nShare Your Link\nSend your unique referral link to friends or post it on social media.\n2\nFriend Subscribes\nThey get $5 off Pro at checkout. You earn matching credit on your next invoice.\n3\nEnter the Draw\nEvery 5 qualifying referrals earns 1 entry in the monthly $500 cash draw.\nData ManagementAccount data\nDanger zone\n\nRequest deletion of your account and associated data.\n\nRequest Data Deletion\n\nSource · Account and saved usage records · 23:21 AEDT Mon 5 Oct · Page load time; counts may arrive separately\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "hits": [
+        "Golden Egg"
+      ]
+    },
+    {
+      "tier": "free",
+      "dataCase": "populated",
+      "observedAt": "2026-10-05T12:21:07.625Z",
+      "finalUrl": "http://127.0.0.1:3122/account",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1787,
+      "scrollWidth": 390,
+      "screens": 2.117298578199052,
+      "text": "MSP\nMenu\nAccount Settings\n\nManage your subscription, alerts, and intelligence access.\n\nEmail not collected\n\nManage Billing\nUpgrade Plan\nSign Out\n\nYour Free account settings.\n\nFree\nFree tier · Upgrade any time\nActive\n\nMSP AI Analyst\n\nNot collected\n\nLimit 10\n\nSaved Alerts\n\n12 / 3\n\nWatchlists\n\n1 / 3\n\nSome usage counts were not collected.\n\n3 watchlists of 10 symbols\n\nPlan Features5 features\nNotificationsEmail, app and Discord\nUnlock More\nRefer & Earn\nYour Referral Link\nCopy\n\nShare this link with friends. They get $5 off Pro at checkout and you earn matching credit.\n\nReferral details1 conversions\nData ManagementAccount data\n\nSource · Account and saved usage records · 23:21 AEDT Mon 5 Oct · Page load time; counts may arrive separately\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "openFolds": 0,
+      "sourceCount": 1,
+      "verdicts": [
+        {
+          "text": "Your Free account settings.",
+          "top": 297,
+          "bottom": 317
+        }
+      ],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nAccount Settings\n\nManage your subscription, alerts, and intelligence access.\n\nEmail not collected\n\nManage Billing\nUpgrade Plan\nSign Out\n\nYour Free account settings.\n\nFree\nFree tier · Upgrade any time\nActive\n\nMSP AI Analyst\n\nNot collected\n\nLimit 10\n\nSaved Alerts\n\n12 / 3\n\nWatchlists\n\n1 / 3\n\nSome usage counts were not collected.\n\n3 watchlists of 10 symbols\n\nPlan Features5 features\n• 5 scans a day\n• Watchlists, markets and macro dashboards\n• Macro summary\n• Journal (5 open entries)\n• Educational content and platform guides\nNotificationsEmail, app and Discord\nIn-App Notifications\nEmail Notifications\nAlert emails\nDaily summary\nEach alert (up to the daily cap)\nOff\n\nDaily summary is the default. Alerts still show in the app. Off stops alert and summary emails only.\n\nDiscord Webhook Alerts\nSave Settings\nUnlock More\n• AI-Triggered Smart Alerts\n• Full Derivatives Intelligence\n• Golden Egg Deep Analysis\n• Higher AI daily limits\nUpgrade to Pro\nRefer & Earn\nYour Referral Link\nCopy\n\nShare this link with friends. They get $5 off Pro at checkout and you earn matching credit.\n\nReferral details1 conversions\n\nShare your link — earn credit for every friend who subscribes. They get $5 off Pro at checkout! 5 referrals = $500 draw entry.\n\nGeneral Information Only — This page displays analytical information and scenario modelling only. It does not constitute financial advice, does not recommend any course of action, and does not consider your personal financial situation or objectives. Past performance does not guarantee future results. Always consult a licensed financial adviser before making investment decisions.\n12\nLINK CLICKS\n3\nSIGNUPS\n1\nCONVERSIONS\n$5\nCREDITS EARNED\nMonthly $500 Draw — October 2026\n\nEvery 5 qualifying referrals = 1 draw entry. Draw date: November 1, 2026\n\n0\nYOUR ENTRIES\nProgress to next entry\n1/5 referrals\n\n4 total entries in this month's draw\n\nReferral History\n\nNo referrals yet. Share your link to get started!\n\nHow It Works\n1\nShare Your Link\nSend your unique referral link to friends or post it on social media.\n2\nFriend Subscribes\nThey get $5 off Pro at checkout. You earn matching credit on your next invoice.\n3\nEnter the Draw\nEvery 5 qualifying referrals earns 1 entry in the monthly $500 cash draw.\nData ManagementAccount data\nDanger zone\n\nRequest deletion of your account and associated data.\n\nRequest Data Deletion\n\nSource · Account and saved usage records · 23:21 AEDT Mon 5 Oct · Page load time; counts may arrive separately\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "hits": [
+        "Golden Egg"
+      ]
+    },
+    {
+      "tier": "anonymous",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:21:09.089Z",
+      "finalUrl": "http://127.0.0.1:3122/account",
+      "rowCount": 0,
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1181,
+      "scrollWidth": 1280,
+      "screens": 1.47625,
+      "text": "MarketScannerPros\nMenu\nSign In Required\n\nPlease sign in to view your account settings.\n\nSign In\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "closedHits": [],
+      "expandedText": "MarketScannerPros\nMenu\nSign In Required\n\nPlease sign in to view your account settings.\n\nSign In\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "hits": []
+    },
+    {
+      "tier": "anonymous",
+      "dataCase": "empty",
+      "observedAt": "2026-10-05T12:21:10.473Z",
+      "finalUrl": "http://127.0.0.1:3122/account",
+      "rowCount": 0,
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1403,
+      "scrollWidth": 390,
+      "screens": 1.6623222748815165,
+      "text": "MSP\nMenu\nSign In Required\n\nPlease sign in to view your account settings.\n\nSign In\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "openFolds": 0,
+      "sourceCount": 0,
+      "verdicts": [],
+      "closedHits": [],
+      "expandedText": "MSP\nMenu\nSign In Required\n\nPlease sign in to view your account settings.\n\nSign In\n\nImportant: MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.\n\nRefund policy\nCompliance Hub\nPartners\nBlog\nAbout\nGuide\nMethodology\nDisclaimer\nPrivacy\nTerms\nCookies\nCookie Settings\nContact\nData provided by CoinGecko · Equity data by Alpha Vantage\nDo Not Sell My Personal Information",
+      "hits": []
+    }
+  ],
+  "requests": [
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/referral/dashboard",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/entitlements",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/watchlists",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/referral/dashboard",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/entitlements",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/watchlists",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/referral/dashboard",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/entitlements",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/watchlists",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/referral/dashboard",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/entitlements",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/watchlists",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/disclosure/status",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/favorites",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/preferences",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/risk/governor/permission-snapshot",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/regime",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/referral/dashboard",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/entitlements",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/watchlists",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/referral/dashboard",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/entitlements",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/watchlists",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/referral/dashboard",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/entitlements",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/watchlists",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/referral/dashboard",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/entitlements",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/watchlists",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/referral/dashboard",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/entitlements",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/alerts",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/watchlists",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/notifications/prefs",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/me",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/context/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/auth/session",
+      "method": "GET",
+      "status": 503,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/health/data",
+      "method": "GET",
+      "status": 200,
+      "action": "mocked"
+    },
+    {
+      "path": "/api/analytics/heartbeat",
+      "method": "POST",
+      "status": 200,
+      "action": "mocked"
+    }
+  ],
+  "errors": []
+}
