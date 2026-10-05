@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { checkoutAlreadyRecorded, checkoutRef, recordPaidCheckout, safeFunnelProps } from '@/lib/analytics/serverFunnel';
+import { checkoutRef, paidEventId, recordPaidCheckout, safeFunnelProps } from '@/lib/analytics/serverFunnel';
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -19,11 +19,60 @@ describe('paid checkout funnel', () => {
     })).toEqual({ tier: 'pro', amount_cents: 2499, billing: 'monthly', livemode: true });
   });
 
-  it('records a checkout once per subscription id', () => {
-    expect(checkoutAlreadyRecorded({ stripe_subscription_id: 'sub_1', status: 'active' }, 'sub_1')).toBe(true);
-    expect(checkoutAlreadyRecorded({ stripe_subscription_id: 'sub_1', status: 'active' }, 'sub_2')).toBe(false);
-    expect(checkoutAlreadyRecorded({ stripe_subscription_id: null, status: 'active' }, 'sub_1')).toBe(false);
-    expect(checkoutAlreadyRecorded(undefined, 'sub_1')).toBe(false);
+  it('still sends once when the subscription row is already active', async () => {
+    vi.stubEnv('NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN', 'phc_test');
+    vi.stubEnv('NEXT_PUBLIC_POSTHOG_HOST', 'https://us.i.posthog.com');
+    const fetchImpl = vi.fn(async () => ({ ok: true, status: 200 }));
+    const result = await recordPaidCheckout({
+      tier: 'pro',
+      payment_status: 'paid',
+      subscription_status: 'active',
+      billing: 'monthly',
+      currency: 'usd',
+      amount_cents: 2499,
+      checkout_session_id: 'cs_already_active',
+      checkout_ref: checkoutRef('cs_already_active'),
+    }, fetchImpl as unknown as typeof fetch);
+    expect(result.events).toEqual(['purchase', 'paid']);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    const bodies = fetchImpl.mock.calls.map((call) => JSON.parse(String(call[1]?.body)));
+    expect(bodies.map((body) => body.event)).toEqual(['purchase', 'paid']);
+    expect(JSON.stringify(bodies)).not.toContain('active');
+    expect(bodies[0].uuid).toBe(paidEventId('cs_already_active', 'purchase'));
+    expect(bodies[0].properties.$insert_id).toBe(bodies[0].uuid);
+  });
+
+  it('reuses the same event id when the same checkout session is delivered twice', async () => {
+    vi.stubEnv('NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN', 'phc_test');
+    const send = () => {
+      const fetchImpl = vi.fn(async () => ({ ok: true, status: 200 }));
+      return recordPaidCheckout({
+        tier: 'pro',
+        payment_status: 'paid',
+        checkout_session_id: 'cs_retry',
+        amount_cents: 2499,
+      }, fetchImpl as unknown as typeof fetch).then(() => fetchImpl);
+    };
+    const first = await send();
+    const second = await send();
+    const ids = (impl: ReturnType<typeof vi.fn>) => impl.mock.calls.map((call) => JSON.parse(String(call[1]?.body)).uuid);
+    expect(ids(first)).toEqual(ids(second));
+    expect(ids(first)).toEqual([paidEventId('cs_retry', 'purchase'), paidEventId('cs_retry', 'paid')]);
+    expect(new Set(ids(first)).size).toBe(2);
+  });
+
+  it('does not send an unpaid checkout session', async () => {
+    vi.stubEnv('NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN', 'phc_test');
+    const fetchImpl = vi.fn(async () => ({ ok: true, status: 200 }));
+    const result = await recordPaidCheckout({
+      tier: 'pro',
+      payment_status: 'unpaid',
+      subscription_status: 'active',
+      checkout_session_id: 'cs_unpaid',
+      amount_cents: 0,
+    }, fetchImpl as unknown as typeof fetch);
+    expect(result).toEqual({ events: [], forwarded: false });
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it('logs purchase and paid without calling PostHog when the token is unset', async () => {

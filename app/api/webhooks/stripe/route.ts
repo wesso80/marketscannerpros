@@ -4,7 +4,7 @@ import { q } from '@/lib/db';
 import { hashWorkspaceId } from '@/lib/auth';
 import { sendWelcomeEmail } from '@/lib/email';
 import { checkContestEntry } from '@/lib/referralContest';
-import { checkoutAlreadyRecorded, checkoutRef, recordPaidCheckout } from '@/lib/analytics/serverFunnel';
+import { checkoutRef, recordPaidCheckout, shouldSendPaidCheckout } from '@/lib/analytics/serverFunnel';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-09-30.clover',
@@ -223,17 +223,7 @@ export async function POST(req: NextRequest) {
           const priceId = subscription.items.data[0]?.price.id || '';
           const tier = getTierFromPriceId(priceId);
           const workspaceId = hashWorkspaceId((customer.email || '').toLowerCase().trim());
-          let alreadyPaid = false;
-          try {
-            const prior = await q<{ stripe_subscription_id: string | null; status: string | null }>(
-              `SELECT stripe_subscription_id, status FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1`,
-              [workspaceId],
-            );
-            alreadyPaid = checkoutAlreadyRecorded(prior[0], subscription.id);
-          } catch (priorError) {
-            console.error('[funnel] could not check an existing subscription', priorError);
-          }
-          
+
           await upsertSubscription(
             customer.id,
             customer.email || '',
@@ -276,15 +266,17 @@ export async function POST(req: NextRequest) {
             await processReferralReward(workspaceId, customer.email || '', customer.id, true, tier);
           }
 
-          if (!alreadyPaid && session.payment_status === 'paid' && (tier === 'pro' || tier === 'pro_trader')) {
+          if (shouldSendPaidCheckout({ paymentStatus: session.payment_status, tier })) {
             const interval = subscription.items.data[0]?.price?.recurring?.interval;
             try {
               await recordPaidCheckout({
                 tier,
+                payment_status: 'paid',
                 billing: interval === 'year' ? 'yearly' : interval === 'month' ? 'monthly' : 'unknown',
                 currency: session.currency || 'usd',
                 amount_cents: session.amount_total ?? 0,
                 checkout_ref: checkoutRef(session.id),
+                checkout_session_id: session.id,
                 livemode: session.livemode === true,
               });
             } catch (funnelError) {
