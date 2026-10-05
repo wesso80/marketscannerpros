@@ -479,7 +479,7 @@ describe('layout and flow audit regressions', () => {
     expect(workspacePage).toContain('if (requestedTab) setTab(requestedTab);');
     expect(backtestHub).toContain('embeddedInWorkspace = false');
     expect(backtestHub).toContain('Backtest method');
-    expect(backtestHub).toContain('Choose one engine, then read the full result stack below.');
+    expect(backtestHub).toContain('Choose a method and review the historical simulation.');
     expect(backtestHub).toContain('const showTabbedResults = !embeddedInWorkspace;');
     expect(backtestHub).toContain('{showTabbedResults && (');
     expect(backtestHub).toContain("{(!showTabbedResults || resultTab === 'Summary') && (");
