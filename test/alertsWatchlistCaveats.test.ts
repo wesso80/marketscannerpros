@@ -26,8 +26,8 @@ describe('new alerts get a sensible default cooldown', () => {
 
 describe('Alerts Console lists every alert', () => {
   const page = read('app/tools/alerts/page.tsx');
-  it('shows the first 12 then "Show all N alerts" instead of silently dropping the rest', () => {
-    expect(page).toContain('const CONSOLE_ROW_LIMIT = 12;');
+  it('shows the first 5 then "Show all N alerts" instead of silently dropping the rest', () => {
+    expect(page).toContain('const CONSOLE_ROW_LIMIT = 5;');
     expect(page).not.toMatch(/filtered\)\.slice\(0, 12\)/);
     expect(page).toContain('visibleAlertRows.map(');
     expect(page).toContain('Show all ${alertRows.length} alerts');

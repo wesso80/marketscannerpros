@@ -12,12 +12,16 @@ import UpgradeGate from "@/components/UpgradeGate";
 import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 import { useRiskPermission } from "@/components/risk/RiskPermissionContext";
-import { alertConditionLabel } from '@/lib/alertPresentation';
+import { alertConditionLabel, alertHistoryLabel } from '@/lib/alertPresentation';
 import { isDiscordWebhookUrl } from '@/lib/notifications/discordWebhook';
 import { checkedActiveAlerts, deriveStatus, legacyMultiAlerts, smartAlertShare } from '@/lib/alerts/consoleStatus';
 import { ALERT_LIMITS } from '@/lib/alerts/planLimits';
 import RegimeBanner from '@/components/RegimeBanner';
-import { PageHero } from '@/components/ui';
+import StatTile from '@/components/visual/StatTile';
+import CollapsibleSection from '@/components/visual/CollapsibleSection';
+import SourceLine from '@/components/visual/SourceLine';
+import TabBar from '@/components/visual/TabBar';
+import AlertRowActions from '@/components/alerts/AlertRowActions';
 import { useSearchParams } from 'next/navigation';
 import { buildAlertEdit, canEditLevel, consoleListAlerts, consoleRowLabel, symbolFromQuery } from '@/lib/alerts/consoleList';
 
@@ -54,15 +58,6 @@ type NotificationPrefs = {
   discord_webhook_url: string | null;
 };
 
-function MetricPill({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-[80px] flex-1 rounded-lg border border-slate-800 bg-slate-950/30 px-3 py-2">
-      <div className="text-[11px] uppercase tracking-wider text-slate-400">{label}</div>
-      <div className="text-sm font-semibold text-slate-100">{value}</div>
-    </div>
-  );
-}
-
 function StatusBadge({ label, state }: { label: string; state: string }) {
   const good = ['enabled', 'connected', 'active'].includes(state.toLowerCase());
   return (
@@ -83,16 +78,16 @@ function classifyAlertType(alert: AlertItem): 'Basic' | 'Strategy' | 'Multi' {
 
 
 function fmtDateTime(value?: string) {
-  if (!value) return '—';
+  if (!value) return 'Not triggered yet';
   const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleString();
+  if (Number.isNaN(d.getTime())) return 'Trigger time not recorded';
+  return d.toLocaleString('en-AU', { day:'numeric', month:'short', year:'numeric', hour:'numeric', minute:'2-digit', timeZoneName:'short' });
 }
 
 // Avg interval between re-triggers of the same alert (not across all alerts/symbols): see lib/alerts/summaryStats.
 const avgTriggerInterval = avgRetriggerInterval;
 /** Rows shown in the Alerts Console before "Show all". */
-const CONSOLE_ROW_LIMIT = 12;
+const CONSOLE_ROW_LIMIT = 5;
 
 export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorkspace?: boolean } = {}) {
   const upgrade = useUpgradeMoment();
@@ -107,9 +102,10 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   const [pushState, setPushState] = useState<PushBadgeState>('Checking');
   const [loadingData, setLoadingData] = useState(true);
   const [loadWarning, setLoadWarning] = useState<string | null>(null);
+  const [loadedAt, setLoadedAt] = useState<string | undefined>();
   const [consoleTab, setConsoleTab] = useState<'basic' | 'strategy' | 'smart' | 'triggered'>('basic');
   const [showAllRows, setShowAllRows] = useState(false);
-  const [zone3Open, setZone3Open] = useState(true);
+  const [zone3Open, setZone3Open] = useState(false);
   const [zone4Open, setZone4Open] = useState(false);
   const [activeZone4Tab, setActiveZone4Tab] = useState<'basic' | 'strategy'>('basic');
   const [cleanupStatus, setCleanupStatus] = useState<'idle' | 'cleaning' | 'done'>('idle');
@@ -157,6 +153,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
       setHistory(Array.isArray(historyJson?.history) ? historyJson.history : []);
       setServerLast24h(typeof historyJson?.stats?.last24h === 'number' ? historyJson.stats.last24h : null);
       setPrefs(prefsJson?.prefs || null);
+      setLoadedAt(new Date().toISOString());
 
       const failed = results
         .map((result, index) => result.status === 'rejected' ? ['alerts', 'history', 'delivery settings'][index] : null)
@@ -200,12 +197,12 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   const smartPct = useMemo(() => smartAlertShare(alerts), [alerts]);
 
   const mostActiveSymbol = useMemo(() => {
-    if (history.length === 0) return 'N/A';
+    if (history.length === 0) return 'Not triggered yet';
     const counts = new Map<string, number>();
     for (const row of history) {
       counts.set(row.symbol, (counts.get(row.symbol) || 0) + 1);
     }
-    let topSymbol = 'N/A';
+    let topSymbol = 'Not triggered yet';
     let topCount = -1;
     for (const [symbol, count] of counts.entries()) {
       if (count > topCount) {
@@ -339,29 +336,10 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   return (
     <div className={`mx-auto w-full max-w-none space-y-4 ${embeddedInWorkspace ? 'px-0 py-0' : 'px-4 py-6 md:px-6'}`}>
       {upgrade.moment && <UpgradeMoment kind={upgrade.moment} dismiss={upgrade.dismiss} />}
-      {embeddedInWorkspace && (
-      <PageHero
-          ariaLabel="Alerts command header"
-          eyebrow="Alerts review"
-          badges={[
-            { label: `${activeAlerts.length} active` },
-            { label: `${triggeredToday} in 24h` },
-          ]}
-          title="Alert radar console"
-          subtitle="User-defined notifications, delivery status, triggered history, and alert cleanup."
-          actions={[
-            { label: 'New alert', variant: 'primary', onClick: () => { if (tier === 'free' && alerts.filter(alert => alert.is_active).length >= ALERT_LIMITS.free) { upgrade.show('alerts'); return; } setActiveZone4Tab('basic'); setZone4Open(true); }, disabled: riskLocked },
-            { label: 'Quick alert', variant: 'secondary', onClick: () => { if (tier === 'free' && alerts.filter(alert => alert.is_active).length >= ALERT_LIMITS.free) { upgrade.show('alerts'); return; } setActiveZone4Tab('basic'); setZone4Open(true); }, disabled: riskLocked },
-            { label: 'All tools', variant: 'ghost', href: '/tools' },
-          ]}
-          metrics={[
-            { label: 'Active', value: `${activeAlerts.length}`, tone: 'bull', detail: 'Open notifications' },
-            { label: 'Last 24h', value: `${triggeredToday}`, tone: 'warn', detail: 'Triggers in the last 24 hours' },
-            { label: 'Smart %', value: `${smartPct}%`, tone: 'info', detail: 'Smart/strategy share of checked alerts' },
-            { label: 'Tracking', value: riskLocked ? 'Locked' : 'Open', tone: riskLocked ? 'bear' : 'bull', detail: riskLocked ? 'Rule guard active' : 'No guard active' },
-          ]}
-        />
-      )}
+      <header className="rounded-lg border border-slate-700 p-3">
+        <div className="flex items-center justify-between gap-2"><h2 className="!text-base font-semibold">Alerts</h2><button type="button" onClick={() => { if (tier === 'free' && alerts.filter(alert => alert.is_active).length >= ALERT_LIMITS.free) { upgrade.show('alerts'); return; } setActiveZone4Tab('basic'); setZone4Open(true); }} disabled={riskLocked} className="min-h-10 rounded border border-slate-600 px-3 text-sm disabled:opacity-50">New alert</button></div>
+        <p data-alerts-verdict className="mt-1 text-sm text-slate-300">{loadWarning ? 'Alert data could not be fully loaded.' : `${activeAlerts.length} active user-defined notification${activeAlerts.length === 1 ? '' : 's'}.`}</p>
+      </header>
       {loadWarning && (
         <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-xs text-rose-200">
           {loadWarning}
@@ -373,36 +351,14 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
       </div>
       {!embeddedInWorkspace && <ComplianceDisclaimer compact />}
 
-      <section className="rounded-xl border border-slate-800 bg-slate-900/40 px-3 py-3 md:h-[88px] md:px-6">
-        <div className="grid h-full grid-cols-1 items-center gap-3 md:grid-cols-[1.2fr_1fr_1fr]">
-          <div className="flex gap-2 lg:gap-3">
-            <MetricPill label="Active" value={`${activeAlerts.length}`} />
-            <MetricPill label="Last 24h" value={`${triggeredToday}`} />
-            <MetricPill label="Smart %" value={`${smartPct}%`} />
-          </div>
-
-          <div className="flex justify-start gap-2 lg:justify-center">
-            <StatusBadge label="Push (this browser)" state={pushState} />
-            <StatusBadge label="Webhook" state={prefs?.discord_enabled && isDiscordWebhookUrl(prefs?.discord_webhook_url) ? 'Connected' : prefs?.discord_enabled && prefs?.discord_webhook_url ? 'Not a Discord URL' : 'Not Set'} />
-          </div>
-
-          <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
-            <div className="inline-flex rounded-lg border border-slate-700 bg-slate-950/30 p-1" role="tablist" aria-label="Alert type">
-              <button type="button" role="tab" aria-selected={activeZone4Tab === 'basic'} onClick={() => { setActiveZone4Tab('basic'); setZone4Open(true); }} className={`h-7 rounded-md px-2 text-[11px] font-semibold ${activeZone4Tab === 'basic' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>
-                Basic
-              </button>
-              <button type="button" role="tab" aria-selected={activeZone4Tab === 'strategy'} onClick={() => { setActiveZone4Tab('strategy'); setZone4Open(true); }} className={`h-7 rounded-md px-2 text-[11px] font-semibold ${activeZone4Tab === 'strategy' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>
-                Strategy
-              </button>
-            </div>
-            <button type="button" onClick={() => { setActiveZone4Tab('basic'); setZone4Open(true); }} disabled={riskLocked} className="rounded-xl border border-slate-700 bg-slate-950/40 px-3 py-2 text-xs font-semibold text-slate-100 disabled:opacity-50">
-              Quick Alert
-            </button>
-            <button type="button" onClick={() => { setActiveZone4Tab('basic'); setZone4Open(true); }} disabled={riskLocked} className="rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-200 disabled:opacity-50">
-              + New Alert
-            </button>
-          </div>
+      <section className="space-y-3">
+        {!loadWarning && <>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 [&_[data-stat-card]]:p-2 [&_[data-stat-card]>p:first-child]:!text-xl">
+          <StatTile label="Active" value={activeAlerts.length}/><StatTile label="Triggers · last 24h" value={triggeredToday}/><StatTile label="Smart / strategy share" value={`${smartPct}%`}/>
         </div>
+        <div className="flex flex-wrap gap-2"><StatusBadge label="Push (this browser)" state={pushState}/><StatusBadge label="Webhook" state={prefs?.discord_enabled && isDiscordWebhookUrl(prefs?.discord_webhook_url) ? 'Connected' : prefs?.discord_enabled && prefs?.discord_webhook_url ? 'Not a Discord URL' : 'Not Set'}/></div>
+        {alerts.length > 0 && <figure className="rounded-lg border border-slate-700 p-3 text-xs"><figcaption>{activeAlerts.length} checked active · {alerts.length-activeAlerts.length} other saved alerts</figcaption><svg className="mt-2 h-4 w-full" viewBox="0 0 100 8" preserveAspectRatio="none" role="img" aria-label="Checked active share of saved alerts"><rect width="100" height="8" fill="currentColor" opacity="0.2"/><rect width={100*activeAlerts.length/alerts.length} height="8" fill="currentColor"/></svg></figure>}
+        </>}
         {riskLocked && (
           <div className="mt-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
             Tracking Lock active: alert automation remains notification-only until rule guard unlocks.
@@ -425,48 +381,42 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
 
       <section className="rounded-xl border border-slate-800 bg-slate-900/30 p-3 md:p-4">
         <div className="mb-3 flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="inline-flex h-9 rounded-lg border border-slate-700 bg-slate-950/30 p-1" role="tablist" aria-label="Alert filter">
-            <button type="button" role="tab" aria-selected={consoleTab === 'basic'} onClick={() => setConsoleTab('basic')} className={`h-7 rounded-md px-3 text-xs font-semibold ${consoleTab === 'basic' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>Basic</button>
-            <button type="button" role="tab" aria-selected={consoleTab === 'strategy'} onClick={() => setConsoleTab('strategy')} className={`h-7 rounded-md px-3 text-xs font-semibold ${consoleTab === 'strategy' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>Strategy</button>
-            <button type="button" role="tab" aria-selected={consoleTab === 'smart'} onClick={() => setConsoleTab('smart')} className={`h-7 rounded-md px-3 text-xs font-semibold ${consoleTab === 'smart' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>Smart</button>
-            <button type="button" role="tab" aria-selected={consoleTab === 'triggered'} onClick={() => setConsoleTab('triggered')} className={`h-7 rounded-md px-3 text-xs font-semibold ${consoleTab === 'triggered' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>Triggered</button>
-          </div>
+          <TabBar label="Alert filter" activeId={consoleTab} items={[{id:'basic',label:'Basic'},{id:'strategy',label:'Strategy'},{id:'smart',label:'Smart'},{id:'triggered',label:'Triggered'}]} onChange={id=>setConsoleTab(id as typeof consoleTab)}/>
           <div className="text-xs text-slate-400">{visibleAlertRows.length < alertRows.length ? `${visibleAlertRows.length} of ${alertRows.length} shown` : `${alertRows.length} shown`}</div>
         </div>
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[2fr_1fr] lg:gap-6">
+        <div className="space-y-3">
           <div className="rounded-xl border border-slate-800 bg-slate-950/25">
             <div className="border-b border-slate-800 px-4 py-3 text-sm font-semibold text-slate-100">Alerts Console</div>
             {alertRows.length === 0 ? (
               <div className="px-4 py-5 text-sm text-slate-400">
-                {activeAlerts.length === 0
-                  ? 'No active alerts. Use Quick Alert or New Alert to arm your radar.'
+                {loadWarning ? 'Alert rules could not be fully loaded. Use Retry above.' : activeAlerts.length === 0
+                  ? 'No active alerts. Create a notification with New alert.'
                   : consoleTab === 'triggered'
                     ? 'No alerts have triggered yet.'
                     : `No ${consoleTab} alerts — ${activeAlerts.length} active alert${activeAlerts.length === 1 ? '' : 's'} are under the other filters.`}
               </div>
             ) : (
-              <div className="max-h-[520px] overflow-auto">
+              <div className="min-w-0">
                 {visibleAlertRows.map((alert) => {
                   const status = consoleRowLabel(alert, deriveStatus(alert));
                   const type = classifyAlertType(alert);
                   const isEditing = editingId === alert.id;
                   return (
-                    <div key={alert.id} className="group border-b border-slate-800 px-3 py-2 sm:py-0">
-                      <div className="flex flex-col justify-center gap-1.5 sm:h-[60px] sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                        <div className="flex items-center gap-2 overflow-hidden sm:gap-3">
+                    <div data-alert-row key={alert.id} className="group border-b border-slate-800 px-3 py-2 sm:py-0">
+                      <div className="flex items-center justify-between gap-2 min-h-14">
+                        <div className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3">
                           <span className="min-w-[56px] rounded-md border border-slate-700 bg-slate-950/40 px-2 py-1 text-xs font-semibold text-slate-100">{alert.symbol}</span>
-                          <span className="truncate text-sm font-semibold text-slate-100">{alertConditionLabel(alert.condition_type ?? '', alert.condition_value)}</span>
+                          <span className="break-words text-xs font-semibold text-slate-100 sm:text-sm">{alertConditionLabel(alert.condition_type ?? '', alert.condition_value)}</span>
                           <span className="hidden rounded bg-white/5 px-2 py-0.5 text-xs text-slate-400 sm:inline">{type}</span>
                         </div>
 
-                        <div className="flex items-center gap-2 sm:ml-auto md:opacity-0 md:transition md:group-hover:opacity-100">
+                        <div className="flex shrink-0 items-center gap-2 sm:ml-auto">
                           <span className="hidden text-xs text-slate-400 sm:inline">Triggered {alert.trigger_count}x</span>
                           <span className={`rounded-full px-2 py-0.5 text-[11px] ${status === 'Armed' ? 'bg-emerald-500/15 text-emerald-200' : status === 'Cooldown' || status === 'Not checked' ? 'bg-amber-500/15 text-amber-200' : 'bg-slate-700 text-slate-300'}`} title={status === 'Not checked' ? 'Multi-condition alerts are not evaluated by the alert checker, so this alert will not fire.' : undefined}>
                             {status}
                           </span>
-                          <button type="button" onClick={() => editAlert(alert)} className="rounded bg-indigo-500/15 px-2 py-1 text-[11px] text-indigo-200">Edit</button>
-                          <button type="button" onClick={() => void toggleAlert(alert)} className="rounded bg-white/10 px-2 py-1 text-[11px] text-slate-100">{alert.is_active ? 'Pause' : 'Arm'}</button>
-                          <button type="button" onClick={() => void deleteAlert(alert.id)} className="rounded bg-rose-500/15 px-2 py-1 text-[11px] text-rose-200">Delete</button>
+                          <AlertRowActions label={`${alert.symbol} alert ${alert.id}`} active={alert.is_active} onEdit={()=>editAlert(alert)} onToggle={()=>void toggleAlert(alert)} onDelete={()=>void deleteAlert(alert.id)}/>
+
                         </div>
                       </div>
                       {isEditing && (
@@ -506,19 +456,19 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
             )}
           </div>
 
-          <div className="rounded-xl border border-slate-700 bg-slate-950/35 p-3">
-            <div className="text-sm font-semibold text-slate-100">Trigger Summary</div>
+          <CollapsibleSection title="Trigger summary" summary={loadWarning ? "History not fully loaded" : fmtDateTime(history[0]?.triggered_at)}>
+
             <div className="mt-3 space-y-2 text-sm text-slate-300">
-              <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Last Trigger: <span className="text-slate-100">{fmtDateTime(history[0]?.triggered_at)}</span></div>
-              <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Most Active Symbol: <span className="text-slate-100">{mostActiveSymbol}</span></div>
-              <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Avg Re-trigger Interval (same alert): <span className="text-slate-100">{avgTriggerInterval(history)}</span></div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Last Trigger: <span className="text-slate-100">{loadWarning ? "History not fully loaded" : fmtDateTime(history[0]?.triggered_at)}</span></div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Most Active Symbol: <span className="text-slate-100">{loadWarning ? "Not collected" : mostActiveSymbol}</span></div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Avg Re-trigger Interval (same alert): <span className="text-slate-100">{avgTriggerInterval(history) === 'N/A' ? 'Needs two triggers for the same alert' : avgTriggerInterval(history)}</span></div>
               <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Pending Cooldowns: <span className="text-slate-100">{pendingCooldowns}</span></div>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <a href="/tools/scanner" className="rounded-xl border border-slate-800 bg-slate-200/5 px-3 py-2 text-center text-xs font-semibold text-slate-100">Scanner</a>
               <a href="/tools/workspace?tab=journal" className="rounded-xl border border-slate-800 bg-slate-200/5 px-3 py-2 text-center text-xs font-semibold text-slate-100">Journal</a>
             </div>
-          </div>
+          </CollapsibleSection>
         </div>
       </section>
 
@@ -526,8 +476,8 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
         <details className="rounded-xl border border-slate-800 bg-slate-900/25" open={zone3Open}>
           <summary onClick={(e) => { e.preventDefault(); setZone3Open((v) => !v); }} className="flex cursor-pointer list-none items-center justify-between px-4 py-3" aria-expanded={zone3Open}>
             <div>
-              <div className="text-sm font-semibold text-slate-100">Trigger Log + Intelligence</div>
-              <div className="text-xs text-slate-400">Live educational tracking outcomes and response behavior</div>
+              <div className="text-sm font-semibold text-slate-100">Trigger log</div>
+              <div className="text-xs text-slate-400">{`${history.length} loaded records`}</div>
             </div>
             <span className="h-7 rounded-lg border border-slate-700 bg-slate-950/30 px-2 text-xs leading-7 text-slate-300">{zone3Open ? 'Collapse' : 'Expand'}</span>
           </summary>
@@ -548,14 +498,14 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
                     <tr key={row.id} className="border-t border-slate-800 text-slate-200">
                       <td className="px-3 py-2 text-xs text-slate-300">{fmtDateTime(row.triggered_at)}</td>
                       <td className="px-3 py-2 font-semibold">{row.symbol}</td>
-                      <td className="px-3 py-2">{row.condition_met || row.condition_type || row.alert_name}</td>
+                      <td className="px-3 py-2">{alertHistoryLabel(row.condition_met || row.condition_type || row.alert_name)}</td>
                       <td className="px-3 py-2">{row.user_action || 'No action'}</td>
-                      <td className="px-3 py-2">{row.user_action === 'traded' ? 'Opened Trade' : row.user_action ? 'Handled' : 'Ignored'}</td>
+                      <td className="px-3 py-2">{row.user_action === 'traded' ? 'Opened Trade' : row.user_action ? 'Handled' : 'No response recorded'}</td>
                     </tr>
                   ))}
                   {history.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-3 py-4 text-center text-slate-400">No triggers logged yet.</td>
+                      <td colSpan={5} className="px-3 py-4 text-center text-slate-400">{loadWarning ? "Trigger history could not be fully loaded." : "No triggers logged yet."}</td>
                     </tr>
                   )}
                 </tbody>
@@ -568,7 +518,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
           <summary onClick={(e) => { e.preventDefault(); setZone4Open((v) => !v); }} className="flex cursor-pointer list-none items-center justify-between px-4 py-3" aria-expanded={zone4Open}>
             <div>
               <div className="text-sm font-semibold text-slate-100">Alert Capabilities</div>
-              <div className="text-xs text-slate-400">Feature set and plan limits (collapsed by default)</div>
+              <div className="text-xs text-slate-400">Create alerts and view existing plan limits</div>
             </div>
             <span className="h-7 rounded-lg border border-slate-700 bg-slate-950/30 px-2 text-xs leading-7 text-slate-300">{zone4Open ? 'Collapse' : 'Expand'}</span>
           </summary>
@@ -614,7 +564,8 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
           </div>
         </details>
       </section>
-
+      <SourceLine source="Saved alert rules and trigger history" asOf={loadedAt} basis="Loaded for this view; delivery state shown for this browser"/>
+      <p className="text-xs text-slate-400">General information only, not financial advice.</p>
     </div>
   );
 }
@@ -625,7 +576,7 @@ export default function AlertsPage() {
       <ToolsPageHeader 
         badge="TOOLS"
         title="Alert Intelligence"
-        subtitle="Detect, validate, execute, and learn from triggered market events"
+        subtitle="User-defined notifications and recorded triggers"
         icon="ALR"
       />
       <div className="max-w-none mx-auto px-4 pt-4">

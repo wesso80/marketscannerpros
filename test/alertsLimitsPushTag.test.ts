@@ -39,6 +39,6 @@ describe('TR-25 remaining alert details', () => {
     expect(smartAlertShare(alerts)).toBe(50);
     expect(smartAlertShare([])).toBe(0);
     expect(smartAlertShare([{ ...base, condition_type: 'price_above', is_multi_condition: true }])).toBe(0);
-    expect(read('app/tools/alerts/page.tsx')).toContain("detail: 'Smart/strategy share of checked alerts'");
+    expect(read('app/tools/alerts/page.tsx')).toContain("label=\"Smart / strategy share\"");
   });
 });
