@@ -241,6 +241,9 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
           {/* Symbol input + scan */}
           <div className="msp-elite-panel" style={{ padding: '14px 20px' }}>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              {embeddedInTerminal ? (
+                <span data-testid="flow-loaded-symbol" style={{ fontSize: '14px', fontWeight: 700, color: 'var(--msp-text)' }}>{symbol}</span>
+              ) : (
               <input
                 type="text"
                 id="flow-symbol"
@@ -257,6 +260,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                   border: '1px solid var(--msp-border)', outline: 'none',
                 }}
               />
+              )}
               <button type="button" onClick={() => { void runScan(); }} disabled={loading || !symbol.trim()}
                 style={{
                   padding: '8px 24px', fontSize: '13px', fontWeight: 800,

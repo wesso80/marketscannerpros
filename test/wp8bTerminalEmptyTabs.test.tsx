@@ -57,7 +57,8 @@ describe('Options Flow uses the loaded Terminal symbol', () => {
     render(<OptionsFlowPage embeddedInTerminal symbol="MU" />);
     await waitFor(() => expect(calls.some((url) => url.includes('/api/options-flow?symbol=MU'))).toBe(true));
     expect(screen.queryByText(/Enter a symbol/)).toBeNull();
-    expect(screen.getByDisplayValue('MU')).toBeTruthy();
+    expect(screen.queryByLabelText('Ticker symbol')).toBeNull();
+    expect(screen.getByTestId('flow-loaded-symbol').textContent).toBe('MU');
   });
 
   it('shows the loaded symbol and an unlock path for free users without calling the flow route', async () => {
