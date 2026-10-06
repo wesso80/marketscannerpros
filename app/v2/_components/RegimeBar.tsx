@@ -22,29 +22,35 @@ export default function RegimeBar({ hideIfMissing = false }: { hideIfMissing?: b
 
   if (hideIfMissing && (!regimeLabel || /unknown|unavailable/i.test(regimeLabel))) return null;
 
+  const summary = (
+    <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+      <span className="text-[10px] uppercase tracking-wider text-slate-500">Market Regime</span>
+      {loading ? <span className="text-xs text-slate-500">Loading</span> : regimeLabel
+        ? <Badge label={humanizeEnum(regimeLabel)} color={REGIME_COLORS[regimeLabel as RegimePriority] || 'var(--msp-text-muted)'} small />
+        : <Badge label="Not available right now" color="var(--msp-text-muted)" small />}
+    </span>
+  );
+
   return (
-    <div className="flex items-center gap-3 px-4 py-2 bg-[var(--msp-panel-2)] border-b border-[var(--msp-border)] overflow-x-auto">
-      <span className="text-[10px] uppercase tracking-wider text-slate-500 whitespace-nowrap">Market Regime</span>
-      {loading ? (
-        <span className="text-[10px] text-slate-600 animate-pulse">Loading</span>
-      ) : (
-        <>
-          {regimeLabel
-            ? <Badge label={humanizeEnum(regimeLabel)} color={REGIME_COLORS[regimeLabel as RegimePriority] || 'var(--msp-text-muted)'} small />
-            : <Badge label="Not available right now" color="var(--msp-text-muted)" small />}
-          {nonStaleSignals.length > 0 && (
-            <>
-              <div className="h-3 w-px bg-slate-700" />
-              {nonStaleSignals.map(s => (
-                <span key={s.source} className="text-[10px] text-slate-500 whitespace-nowrap">
-                  <span style={{ color: REGIME_COLORS[s.regime as RegimePriority] || 'var(--msp-text-muted)' }}>{s.kind === 'market' ? 'market data' : s.source}</span>
-                  <span className="text-slate-600 ml-1">{humanizeEnum(s.regime)}</span>
-                </span>
-              ))}
-            </>
-          )}
-        </>
-      )}
+    <div className="min-w-0 px-4 py-1 bg-[var(--msp-panel-2)] border-b border-[var(--msp-border)]">
+      {!loading && nonStaleSignals.length > 0 ? (
+        <details data-regime-evidence className="min-w-0">
+          <summary className="min-h-10 cursor-pointer content-center text-xs text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">
+            <span className="inline-flex max-w-full flex-wrap items-center gap-x-3 gap-y-1 align-middle">
+              {summary}
+              <span>{nonStaleSignals.length} supporting {nonStaleSignals.length === 1 ? 'signal' : 'signals'}</span>
+            </span>
+          </summary>
+          <ul aria-label="Market regime supporting signals" className="grid min-w-0 gap-2 pb-2 pt-1 sm:grid-cols-2 lg:grid-cols-3">
+            {nonStaleSignals.map((signal) => (
+              <li key={signal.source} className="min-w-0 break-words text-xs text-slate-400">
+                <span>{signal.kind === 'market' ? 'Market data' : humanizeEnum(signal.source)}</span>
+                <span className="ml-2" style={{ color: REGIME_COLORS[signal.regime as RegimePriority] || 'var(--msp-text-muted)' }}>{humanizeEnum(signal.regime)}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : <div className="min-h-10 content-center">{summary}</div>}
     </div>
   );
 }
