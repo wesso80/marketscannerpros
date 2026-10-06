@@ -316,4 +316,15 @@ describe('alert_history price columns', () => {
     const unread = await (await unreadGet(new NextRequest('https://example.test/api/alerts/unread'))).json();
     expect(unread.alerts[0].trigger_price).toBeNull();
   });
+
+  it('recent target_price is null for a percent_change_up alert', async () => {
+    const stored = { trigger_price: 80, triggered_price: 91, condition_type: 'percent_change_up' };
+    mocks.q.mockImplementation(async (sql: string) => {
+      if (sql.includes('alert_history')) return [priceFromReaderSql(sql, stored)];
+      return [];
+    });
+    const recent = await (await recentGet(new NextRequest('https://example.test/api/alerts/recent'))).json();
+    expect(recent.alerts[0].condition).toBe('percent_change_up');
+    expect(recent.alerts[0].target_price).toBeNull();
+  });
 });

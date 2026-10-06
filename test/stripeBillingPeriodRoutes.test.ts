@@ -328,11 +328,12 @@ describe('clover period fields on the paid signup paths', () => {
 
     expect(res.status).toBe(200);
     expect((await res.json()).tier).toBe('pro');
-    const trackLogs = errSpy.mock.calls.filter((call) => String(call[0]).includes('[login] Track subscription failed:'));
+    const trackLogs = errSpy.mock.calls.filter((call) => String(call[0]).includes('[login] Track subscription failed'));
     expect(trackLogs).toHaveLength(1);
-    expect(trackLogs[0][1]).toEqual({ message: 'invalid input syntax for type timestamp', code: '22007' });
+    expect(trackLogs[0][0]).toBe('[login] Track subscription failed');
+    expect(trackLogs[0][1]).toEqual({ code: '22007' });
+    expect(JSON.stringify(trackLogs[0])).not.toContain('invalid input syntax for type timestamp');
     expect(JSON.stringify(trackLogs[0])).not.toContain('paid-fail@example.com');
-    expect(JSON.stringify(trackLogs[0])).not.toContain('stack');
     errSpy.mockRestore();
   });
 });

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
-import { historyPriceSelect, PRICE_CONDITION_TYPES } from '@/lib/alerts/historyPrice';
+import { historyPriceSelect } from '@/lib/alerts/historyPrice';
 
-const PRICE_CONDITION_SQL = PRICE_CONDITION_TYPES.map((type) => `'${type}'`).join(', ');
+/** Dollar levels only. Percent thresholds and indicator crosses are not toast prices. */
+const TARGET_PRICE_CONDITION_TYPES = ['price_above', 'price_below'] as const;
+const TARGET_PRICE_SQL = TARGET_PRICE_CONDITION_TYPES.map((type) => `'${type}'`).join(', ');
 
 // GET /api/alerts/recent - Get recently triggered alerts for toast notifications
 export async function GET(req: NextRequest) {
@@ -27,7 +29,7 @@ export async function GET(req: NextRequest) {
         h.id,
         a.symbol,
         a.condition_type AS condition,
-        (CASE WHEN a.condition_type IN (${PRICE_CONDITION_SQL}) THEN a.condition_value ELSE NULL END) AS target_price,
+        (CASE WHEN a.condition_type IN (${TARGET_PRICE_SQL}) THEN a.condition_value ELSE NULL END) AS target_price,
         ${historyPriceSelect('h', 'trigger_price')},
         ${historyPriceSelect('h', 'triggered_price')},
         h.triggered_at

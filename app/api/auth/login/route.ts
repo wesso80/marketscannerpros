@@ -120,19 +120,16 @@ async function trackSubscription(
       sendNewSignupNotification(email, tier).catch(() => {});
     }
   } catch (error: unknown) {
-    // Login still succeeds. Log the failure without the error object, query, or email.
-    const { message, code } = subscriptionFailureFields(error);
-    console.error("[login] Track subscription failed:", { message, code });
+    // Login still succeeds. Log the code only: no message, query, or email.
+    const code = subscriptionFailureCode(error);
+    console.error('[login] Track subscription failed', { code });
   }
 }
 
-function subscriptionFailureFields(error: unknown): { message?: string; code?: string | number } {
-  if (typeof error === 'string') return { message: error };
-  if (!error || typeof error !== 'object') return {};
-  const record = error as { message?: unknown; code?: unknown };
-  const message = typeof record.message === 'string' ? record.message : undefined;
-  const code = typeof record.code === 'string' || typeof record.code === 'number' ? record.code : undefined;
-  return { message, code };
+function subscriptionFailureCode(error: unknown): string | number | undefined {
+  if (!error || typeof error !== 'object' || !('code' in error)) return undefined;
+  const code = (error as { code?: unknown }).code;
+  return typeof code === 'string' || typeof code === 'number' ? code : undefined;
 }
 
 // Check if user has an active trial
