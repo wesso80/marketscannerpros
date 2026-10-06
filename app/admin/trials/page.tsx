@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useAdmin } from "../admin-client-layout";
+import ReadOnlyPauseNote from "@/components/admin/ReadOnlyPauseNote";
 
 interface Trial {
   id: string;
@@ -14,6 +16,7 @@ interface Trial {
 }
 
 export default function AdminTrialsPage() {
+  const { discoveryPaused } = useAdmin();
   const [trials, setTrials] = useState<Trial[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -145,7 +148,20 @@ export default function AdminTrialsPage() {
         </p>
       </div>
 
-        {/* Grant New Trial Form */}
+        {discoveryPaused && error && (
+          <div style={{
+            padding: "12px",
+            background: "rgba(239,68,68,0.1)",
+            border: "1px solid rgba(239,68,68,0.3)",
+            borderRadius: "8px",
+            color: "#fca5a5",
+            marginBottom: "16px",
+          }}>
+            {error}
+          </div>
+        )}
+
+        {discoveryPaused ? <ReadOnlyPauseNote /> : (
         <div style={{
           background: "rgba(17, 24, 39, 0.8)",
           border: "1px solid rgba(16, 185, 129, 0.2)",
@@ -290,6 +306,7 @@ export default function AdminTrialsPage() {
             </button>
           </form>
         </div>
+        )}
 
         {/* Trials List */}
         <div style={{
@@ -372,7 +389,7 @@ export default function AdminTrialsPage() {
                         {trial.notes || "-"}
                       </td>
                       <td style={{ padding: "16px 20px", textAlign: "right" }}>
-                        {trial.is_active && (
+                        {trial.is_active && !discoveryPaused && (
                           <button
                             onClick={() => revokeTrial(trial.email)}
                             style={{

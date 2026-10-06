@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useAdmin } from "../admin-client-layout";
+import ReadOnlyPauseNote from "@/components/admin/ReadOnlyPauseNote";
 
 interface Subscription {
   id: string;
@@ -15,6 +17,7 @@ interface Subscription {
 }
 
 export default function AdminSubscriptionsPage() {
+  const { discoveryPaused } = useAdmin();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -124,6 +127,7 @@ export default function AdminSubscriptionsPage() {
         <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB" }}>
           💳 Subscriptions
         </h1>
+        {discoveryPaused ? <ReadOnlyPauseNote /> : (
         <button
           onClick={syncFromStripe}
           disabled={syncing}
@@ -140,6 +144,7 @@ export default function AdminSubscriptionsPage() {
         >
           {syncing ? "Syncing…" : "↻ Sync from Stripe"}
         </button>
+        )}
       </div>
 
       {syncResult && (

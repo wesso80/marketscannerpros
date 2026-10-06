@@ -125,7 +125,7 @@ setInterval(() => {
 export async function middleware(req: NextRequest) {
   // ── Global rate limit on API routes ──
   const { pathname } = req.nextUrl;
-  const discoveryAction = discoveryOnlyAction(pathname);
+  const discoveryAction = discoveryOnlyAction(pathname, req.method);
   if (discoveryAction === 'pause_page') {
     const pausedUrl = req.nextUrl.clone();
     pausedUrl.pathname = '/admin/paused';
