@@ -1,5 +1,6 @@
 'use client';
 import { volatilityText } from '../displayText';
+import { volatilityBadgeLabel } from '@/lib/presentation/volatilityLayerLabel';
 
 import type { VolatilityState } from '@/src/features/volatilityEngine/types';
 
@@ -36,8 +37,8 @@ export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-4 sm:p-5">
-      <div className="mb-3 flex items-center gap-2">
-        <span className="rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.62rem] font-bold text-amber-300">VOL</span>
+      <div className="mb-3 flex min-w-0 flex-wrap items-center gap-2">
+        <span className="shrink-0 whitespace-nowrap rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.62rem] font-semibold text-amber-300">{volatilityBadgeLabel('VOL')}</span>
         <h3 className="text-xs font-semibold tracking-widest text-amber-400">
           BBWP Gauge
         </h3>

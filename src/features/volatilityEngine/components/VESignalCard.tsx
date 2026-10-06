@@ -1,5 +1,6 @@
 'use client';
 import { volatilityText } from '../displayText';
+import { volatilityBadgeLabel } from '@/lib/presentation/volatilityLayerLabel';
 
 import type { DVESignal, VolatilityState, DirectionalPressure, ExhaustionRisk } from '@/src/features/volatilityEngine/types';
 
@@ -86,9 +87,9 @@ export default function VESignalCard({ signal, volatility, direction, exhaustion
 
   return (
     <div className={`rounded-xl border p-5 ${isActive ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/10 bg-white/5'}`}>
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.62rem] font-bold text-amber-300">SIG</span>
+      <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className="shrink-0 whitespace-nowrap rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.62rem] font-semibold text-amber-300">{volatilityBadgeLabel('SIG')}</span>
           <h3 className="text-xs font-semibold tracking-widest text-amber-400">
             Signal Status
           </h3>
