@@ -15,8 +15,8 @@ const previews = [
     href: '/tools/scanner',
     src: '/home/scanner-2026-10-07.webp',
     width: 1200,
-    height: 1263,
-    alt: 'The Scanner page: preset choices, a one-symbol scan, and the latest saved research list with BAC, META, XRP, MSFT and JPM.',
+    height: 563,
+    alt: 'The Scanner page: preset choices, Quick scan and Pro scanner, and a one-symbol scan for AAPL, SPY, BTC and NVDA.',
     ring: 'focus-visible:ring-emerald-400/60',
     border: 'border-emerald-500/20',
   },
@@ -34,14 +34,14 @@ const previews = [
 export default function HomePreviewStrip() {
   return (
     <section className="border-b border-white/5 bg-gradient-to-b from-slate-950/80 to-slate-950/40">
-      <div className="mx-auto max-w-7xl px-4 py-2 md:py-8">
-        <div className="mb-2 md:mb-5">
+      <div className="mx-auto max-w-7xl px-4 py-1.5 md:py-8">
+        <div className="mb-1.5 md:mb-5">
           <h2 className="text-xl font-bold text-white sm:text-2xl">Inside the platform</h2>
           <p className="mt-1 text-sm text-slate-400">
             What the two main tools look like. Open them for real markets.
           </p>
         </div>
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-4">
+        <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2 md:gap-4">
           {previews.map((preview) => (
             <Link
               key={preview.href}
@@ -58,7 +58,7 @@ export default function HomePreviewStrip() {
                 className={`h-auto w-full max-w-full rounded-xl border ${preview.border}`}
                 style={{ width: '100%', height: 'auto' }}
               />
-              <p className="mt-2 text-xs leading-5 text-slate-300">{CAPTION}</p>
+              <p className="mt-1.5 text-xs leading-5 text-slate-300">{CAPTION}</p>
             </Link>
           ))}
         </div>
