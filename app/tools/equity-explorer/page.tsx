@@ -740,7 +740,7 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
                             href={`/tools/terminal?tab=time-confluence&symbol=${data.company.symbol}&eligibility=${upeSignal.eligibilityUser}&crcs=${upeSignal.crcsUser.toFixed(1)}`}
                             className="rounded border border-emerald-500/50 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-200"
                           >
-                            Open Scanner
+                            Open Time Confluence
                           </Link>
                         )}
                       </div>
