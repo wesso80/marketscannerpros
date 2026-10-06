@@ -161,7 +161,6 @@ export default function PricingPage() {
           group: "Validate",
           lines: [
             "Live with Pro: Global M2, Liquidity Transmission and Market Fragility",
-            "Lead/Lag, NQ Pressure, Auction and Master are roadmap modules and are not included as live features today",
             "Deep Analysis, Options Terminal, Options Confluence",
             "Time Confluence Scanner and Volatility Engine",
           ],
@@ -197,7 +196,7 @@ export default function PricingPage() {
     },
     {
       q: "What does Pro include?",
-      a: "Pro unlocks the full platform: unlimited scanning, Golden Egg, the live Intelligence modules (Global M2, Liquidity Transmission and Market Fragility), research and workspace premium features, portfolio/journal advanced analytics, backtesting, options and derivatives tools, alerts, exports and priority support. Lead/Lag, NQ Pressure, Auction and Master are roadmap modules and are not live today.",
+      a: "Pro unlocks the full platform: unlimited scanning, Golden Egg, the live Intelligence modules (Global M2, Liquidity Transmission and Market Fragility), research and workspace premium features, portfolio/journal advanced analytics, backtesting, options and derivatives tools, alerts, exports and priority support.",
     },
     {
       q: "Can I cancel anytime?",
@@ -213,13 +212,14 @@ export default function PricingPage() {
     },
   ];
 
-  const annualSavingsText = (plan: Plan) => {
+  const monthsFreeBesideMonthly = (plan: Plan) => {
     if (plan.priceMonthlyRaw === 0) return "";
     const yearlyEquivalent = plan.priceMonthlyRaw * 12;
     const savings = Math.max(0, yearlyEquivalent - plan.priceYearlyRaw);
     if (savings <= 0) return "";
     const monthsFree = Math.round((savings / plan.priceMonthlyRaw) * 10) / 10;
-    return `~${monthsFree} months free`;
+    const shown = Number.isInteger(monthsFree) ? String(monthsFree) : String(monthsFree);
+    return `about ${shown} ${shown === "1" ? "month" : "months"} free`;
   };
 
   const annualEquivalent = (plan: Plan) => {
@@ -239,7 +239,9 @@ export default function PricingPage() {
         <header className="pt-10 text-center">
           <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
             <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
-            Start free. Upgrade to Pro for the full platform.
+            {currentTier
+              ? "Your current plan is marked below."
+              : "Start free. Upgrade to Pro for the full platform."}
           </div>
 
           <h1 className="mt-4 text-3xl font-semibold tracking-tight">Simple, transparent pricing</h1>
@@ -279,7 +281,7 @@ export default function PricingPage() {
               key={p.id}
               plan={p}
               cycle={cycle}
-              savingsText={annualSavingsText(p)}
+              yearlyBesideMonthly={monthsFreeBesideMonthly(p)}
               equivalentLine={annualEquivalent(p)}
               currentTier={currentTier}
               isPaidUser={isPaidUser}
@@ -325,7 +327,7 @@ export default function PricingPage() {
 function PlanCard({
   plan,
   cycle,
-  savingsText,
+  yearlyBesideMonthly,
   equivalentLine,
   currentTier,
   isPaidUser,
@@ -334,7 +336,7 @@ function PlanCard({
 }: {
   plan: Plan;
   cycle: BillingCycle;
-  savingsText: string;
+  yearlyBesideMonthly: string;
   equivalentLine: string;
   currentTier: string | null;
   isPaidUser: boolean;
@@ -343,11 +345,14 @@ function PlanCard({
 }) {
   const priceLabel = cycle === "monthly" ? plan.priceMonthlyLabel : plan.priceYearlyLabel;
   const cadence = cycle === "monthly" ? "/ month" : "/ year";
+  const signedIn = currentTier != null;
 
-  // "Current Plan" state — Pro subscribers on the Pro card, Free/anon on Free card.
+  // "Current plan" — Pro subscribers on the Pro card, signed-in Free on the Free card.
   const isCurrentPlan =
     (plan.id === "pro" && isPaidUser) ||
     (plan.id === "free" && currentTier === "free");
+  const freeIncludedInPaidPlan = plan.id === "free" && isPaidUser;
+  const showSubCta = Boolean(plan.subCta) && !(plan.id === "free" && signedIn);
 
   return (
     <div
@@ -378,7 +383,9 @@ function PlanCard({
         </div>
         {plan.priceMonthlyRaw > 0 ? (
           <div className="mt-1 text-xs text-white/50">
-            {cycle === "yearly" ? equivalentLine : (savingsText ? `Annual: ${savingsText}` : "")}
+            {cycle === "yearly"
+              ? equivalentLine
+              : `or ${PLAN_PRICES.pro.yearly}/year${yearlyBesideMonthly ? ` (${yearlyBesideMonthly})` : ""}`}
           </div>
         ) : null}
       </div>
@@ -400,21 +407,27 @@ function PlanCard({
       </div>
 
       <div className="mt-6">
-        <button
-          type="button"
-          onClick={onCheckout}
-          disabled={loading || isCurrentPlan}
-          className={[
-            "w-full rounded-lg px-4 py-3 text-sm font-semibold transition-colors",
-            plan.highlight
-              ? "border border-emerald-400/40 bg-emerald-400/15 text-emerald-50 hover:bg-emerald-400/25"
-              : "border border-white/10 bg-white/10 hover:bg-white/20",
-            (loading || isCurrentPlan) ? "opacity-60 cursor-not-allowed" : "",
-          ].join(" ")}
-        >
-          {isCurrentPlan ? "Current Plan" : loading ? "Redirecting…" : plan.cta}
-        </button>
-        {plan.subCta ? <div className="mt-2 text-center text-xs text-white/55">{plan.subCta}</div> : null}
+        {freeIncludedInPaidPlan ? (
+          <div className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-center text-sm text-white/70">
+            Included in your plan
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onCheckout}
+            disabled={loading || isCurrentPlan}
+            className={[
+              "w-full rounded-lg px-4 py-3 text-sm font-semibold transition-colors",
+              plan.highlight
+                ? "border border-emerald-400/40 bg-emerald-400/15 text-emerald-50 hover:bg-emerald-400/25"
+                : "border border-white/10 bg-white/10 hover:bg-white/20",
+              (loading || isCurrentPlan) ? "opacity-60 cursor-not-allowed" : "",
+            ].join(" ")}
+          >
+            {isCurrentPlan ? "Current plan" : loading ? "Redirecting…" : plan.cta}
+          </button>
+        )}
+        {showSubCta ? <div className="mt-2 text-center text-xs text-white/55">{plan.subCta}</div> : null}
       </div>
     </div>
   );

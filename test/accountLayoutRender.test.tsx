@@ -30,7 +30,7 @@ it.each(['pro','pro_trader','free'])('uses existing limits and closed folds for 
 it('does not turn absent AI usage into zero usage',async()=>{
  state.missing=true;
  const {container}=render(<AccountPage/>);
- await screen.findByText('1 / 999');
+ await screen.findByText(`1 / ${ALERT_LIMITS.pro}`);
  expect(container.querySelector('[data-usage-ring]')?.textContent).toContain('Not collected');
  expect(container.querySelector('[data-usage-ring]')?.textContent).not.toContain('0 /');
 });

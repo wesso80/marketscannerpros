@@ -3,7 +3,8 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { validateBasicAlertAssetType } from '@/lib/alerts/assetTypes';
-import { ALERT_LIMITS } from '@/lib/alerts/planLimits';
+import { ALERT_LIMITS, alertLimitReachedPayload } from '@/lib/alerts/planLimits';
+import { countActiveAlertsForCap } from '@/lib/alerts/activeCount';
 import { newAlertCooldownMinutes } from '@/lib/alerts/alertTiming';
 
 /**
@@ -15,7 +16,7 @@ import { newAlertCooldownMinutes } from '@/lib/alerts/alertTiming';
  * DELETE - Delete alert
  */
 
-// Alert limits: two plans only. Pro (incl. legacy pro_trader) and admins get 999
+// Alert limits: two plans only. Pro (incl. legacy pro_trader) and admins get 100
 // active alerts; Free stays at 3. Shared with the Alerts page (lib/alerts/planLimits).
 function alertPlan(session: Parameters<typeof hasPaidSessionAccess>[0]): { tier: 'free' | 'pro'; maxAlerts: number } {
   const tier = hasPaidSessionAccess(session) ? 'pro' : 'free';
@@ -165,7 +166,7 @@ export async function GET(req: NextRequest) {
     );
 
     const { tier, maxAlerts } = alertPlan(session);
-    const activeCount = alerts.filter((a: any) => a.is_active).length;
+    const activeCount = await countActiveAlertsForCap(session.workspaceId);
 
     return NextResponse.json({
       alerts,
@@ -281,24 +282,11 @@ export async function POST(req: NextRequest) {
       assetType = assetCheck.assetType;
     }
 
-    // Check quota
-    
-    const activeResult = await q(
-      `SELECT COUNT(*) as count FROM alerts WHERE workspace_id = $1 AND is_active = true`,
-      [session.workspaceId]
-    );
-    const activeCount = parseInt(activeResult[0]?.count || '0');
+    // Check quota. Empty zero-level smart orphans do not count.
+    const activeCount = await countActiveAlertsForCap(session.workspaceId);
 
     if (activeCount >= maxAlerts) {
-      return NextResponse.json(
-        { 
-          error: 'Alert limit reached',
-          message: `Your ${tier} plan allows ${maxAlerts} active alerts. Upgrade to create more.`,
-          limit: maxAlerts,
-          current: activeCount,
-        },
-        { status: 403 }
-      );
+      return NextResponse.json(alertLimitReachedPayload(tier, activeCount), { status: 403 });
     }
 
     // Generate alert name
