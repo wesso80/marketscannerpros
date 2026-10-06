@@ -9,6 +9,7 @@ import { avTakeToken } from '@/lib/avRateGovernor';
 import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
 import { decideAlert, isStaleStockQuote } from '@/lib/alerts/alertTiming';
 import { fxQuoteUrl, parseFxAlertQuote, quoteSourceFor } from '@/lib/alerts/assetTypes';
+import { historyPriceInsert } from '@/lib/alerts/historyPrice';
 
 /**
  * Alert Price Checker
@@ -232,17 +233,14 @@ async function triggerAlert(alert: Alert, quote: AlertQuote) {
     }
   }
   
-  // alert_history has both price columns. migrations/010 names it trigger_price NOT NULL;
-  // migrations/000 and COMPLETE_ALERTS_FIX name it triggered_price NOT NULL.
-  // Production has triggered_price NOT NULL (inserts were rejected for omitting it)
-  // and also accepts trigger_price (that column name is what the failing INSERT used).
-  // Write the same price to both so the NOT NULL column is filled and the older name stays populated.
+  // Same quote price in trigger_price and triggered_price. See lib/alerts/historyPrice.ts.
+  const historyPrice = historyPriceInsert('$3');
   try {
     await q(
       `INSERT INTO alert_history (
-        alert_id, workspace_id, triggered_at, trigger_price, triggered_price, condition_met,
+        alert_id, workspace_id, triggered_at, ${historyPrice.columns}, condition_met,
         symbol, condition_type, condition_value, notification_sent, notification_channel
-      ) VALUES ($1, $2, NOW(), $3, $3, $4, $5, $6, $7, $8, $9)`,
+      ) VALUES ($1, $2, NOW(), ${historyPrice.values}, $4, $5, $6, $7, $8, $9)`,
       [
         alert.id,
         alert.workspace_id,

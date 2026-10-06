@@ -337,7 +337,6 @@ async function getAIHighlights(skill: PageSkill): Promise<string[]> {
     derivatives: [
       'Open interest rising across major pairs',
       'Funding rates elevated - caution on longs',
-      'Liquidation clusters near current price',
     ],
     portfolio: [
       'Your portfolio beta is 1.2 vs market',

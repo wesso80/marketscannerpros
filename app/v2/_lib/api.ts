@@ -451,9 +451,9 @@ export interface CryptoOverviewResponse {
 export interface CommodityData {
   symbol: string;
   name: string;
-  price: number;
-  change: number;
-  changePercent: number;
+  price: number | null;
+  change: number | null;
+  changePercent: number | null;
   unit: string;
   category: string;
   history: Array<{ date: string; value: number }>;

@@ -116,7 +116,7 @@ const TERMINAL_TAB_META: Record<TerminalTab, { eyebrow: string; description: str
   },
   Crypto: {
     eyebrow: '2. Derivatives map',
-    description: 'Inspect funding, open interest, liquidations, exchanges, and stablecoin context.',
+    description: 'Inspect funding, open interest, exchanges, and stablecoin context.',
   },
   'Futures Session': {
     eyebrow: '2. Futures session map',

@@ -22,13 +22,21 @@ it('shows five ordered observations, expands without dropping exclusions, and re
   expect(JSON.stringify(base.rows)).toBe(snapshot);
 });
 it('has one summary and source, starts all folds closed and preserves the equity observation time', () => {
-  const {container} = render(<MoversView {...base}/>);
-  expect(container.querySelectorAll('[data-movers-verdict]')).toHaveLength(1);
-  expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);
-  expect(container.querySelectorAll('details[open]')).toHaveLength(0);
-  expect(container.querySelector('[data-source-line]')?.textContent).toContain('Fri 2 Oct');
-  expect(container.textContent).toContain('separate feed basis');
-  expect(container.textContent).not.toMatch(/Bullish|PROFILE_BLOCK_MICROCAPS|2\.3456|1\.23456/);
+  const resolved = Intl.DateTimeFormat.prototype.resolvedOptions;
+  const zone = vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (this: Intl.DateTimeFormat) {
+    return { ...resolved.call(this), timeZone: 'UTC' };
+  });
+  try {
+    const {container} = render(<MoversView {...base}/>);
+    expect(container.querySelectorAll('[data-movers-verdict]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);
+    expect(container.querySelectorAll('details[open]')).toHaveLength(0);
+    expect(container.querySelector('[data-source-line]')?.textContent).toContain('Fri 2 Oct');
+    expect(container.textContent).toContain('separate feed basis');
+    expect(container.textContent).not.toMatch(/Bullish|PROFILE_BLOCK_MICROCAPS|2\.3456|1\.23456/);
+  } finally {
+    zone.mockRestore();
+  }
 });
 it('does not present a computed assessment or zero scores as observations when the feed is empty', () => {
   const empty = {...base.data!, topGainers: [], topLosers: [], mostActive: []};
@@ -42,6 +50,14 @@ it('does not leak backend errors or retained rows into an error view', () => {
   expect(screen.getByRole('status').textContent).toBe('Movers could not be collected.');
   expect(container.textContent).not.toMatch(/PROVIDER_UNKNOWN|HOOD/);
   expect(container.querySelectorAll('[data-source-line]')).toHaveLength(0);
+});
+it('shows a plain count when extreme moves were hidden', () => {
+  const { container, rerender } = render(<MoversView {...base} data={{ ...base.data!, extremeHiddenCount: 1 }} />);
+  expect(screen.getByText('1 extreme move hidden')).toBeTruthy();
+  rerender(<MoversView {...base} data={{ ...base.data!, extremeHiddenCount: 2 }} />);
+  expect(screen.getByText('2 extreme moves hidden')).toBeTruthy();
+  rerender(<MoversView {...base} />);
+  expect(container.textContent).not.toContain('extreme move');
 });
 it('retains list and filter controls without launching a scan', () => {
   render(<MoversView {...base}/>);

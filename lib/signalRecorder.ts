@@ -9,8 +9,10 @@
 
 import { q } from './db';
 import { computeSignalBucket } from './signals/signalBucket';
+import { ACCURACY_DISPLAY_HORIZONS } from './signals/accuracyHorizons';
 
 const SCANNER_VERSION = 'v3.0';
+const ACCURACY_HORIZON_SQL = `IN (${ACCURACY_DISPLAY_HORIZONS.join(', ')})`;
 
 export interface SignalFeatures {
   rsi?: number;
@@ -179,6 +181,7 @@ export async function getAccuracyStats(signalType?: string, horizonMinutes?: num
       conditions.push(`sas.horizon_minutes = $${paramIdx++}`);
       params.push(horizonMinutes);
     }
+    conditions.push(`sas.horizon_minutes ${ACCURACY_HORIZON_SQL}`);
     
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     
@@ -235,6 +238,7 @@ export async function getRecentSignals(limit: number = 50) {
           FROM signal_outcomes so
           LEFT JOIN outcome_thresholds ot ON so.horizon_minutes = ot.horizon_minutes
           WHERE so.signal_id = sf.id
+            AND so.horizon_minutes ${ACCURACY_HORIZON_SQL}
         ) as outcomes
       FROM signals_fired sf
       ORDER BY sf.signal_at DESC
@@ -265,6 +269,7 @@ export async function getOverallStats() {
         SELECT so.outcome
         FROM signal_outcomes so
         WHERE so.signal_id = sf.id
+          AND so.horizon_minutes ${ACCURACY_HORIZON_SQL}
         ORDER BY so.horizon_minutes DESC
         LIMIT 1
       ) latest ON TRUE

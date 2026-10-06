@@ -116,6 +116,7 @@ it('folds crypto derivatives and hides an empty feed wall', () => {
   expect(page).toContain('Displayed values may be incomplete.');
   expect(page.indexOf('Some feeds are not available right now')).toBeLessThan(page.indexOf('title="Research scenarios"'));
   expect(page).not.toMatch(/get\('\/api\/crypto\/liquidations'\)/);
-  expect(page).toContain('Liquidations: not collected');
+  expect(page).not.toContain('Liquidations: not collected');
+  expect(page).toContain('24h change on the fixed contract basket, not this total');
   expect(page).toContain('Object.keys(data.prices).length === 0');
 });

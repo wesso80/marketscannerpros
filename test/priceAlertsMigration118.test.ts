@@ -60,11 +60,11 @@ describe('migration 118 price-alert backfill', () => {
     expect(flip).not.toMatch(/condition_value >= 0/);
 
     const route = read('app/api/alerts/route.ts');
-    const cleanup = route.slice(route.indexOf("bulk === 'auto-orphaned'"), route.indexOf('deletedCount'));
-    expect(cleanup).toMatch(/is_smart_alert = true/);
-    expect(cleanup).toMatch(/condition_value = 0/);
-    expect(cleanup).toMatch(/smart_alert_context->>'source' = 'workflow\.auto'/);
-    expect(read('app/tools/alerts/page.tsx')).toContain('a.is_smart_alert && Number(a.condition_value) === 0');
+    const cleanup = route.slice(route.indexOf("bulk === 'auto-orphaned'"), route.indexOf('switchedOffCount'));
+    expect(cleanup).toMatch(/ACTIVE_WORKFLOW_AUTO_ORPHAN_SQL/);
+    expect(cleanup).toMatch(/SET is_active = false/);
+    expect(cleanup).not.toMatch(/DELETE FROM alerts/);
+    expect(read('app/tools/alerts/page.tsx')).toContain('isActiveWorkflowAutoOrphan');
   });
 
   it('marks focus crypto symbols and does not mark EURUSD, GBPUSD, or AUDUSD', () => {

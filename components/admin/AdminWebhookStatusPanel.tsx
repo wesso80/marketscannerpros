@@ -37,12 +37,21 @@ function statusColor(status?: WebhookRow["lastStatus"]): string {
   }
 }
 
-export default function AdminWebhookStatusPanel() {
+export default function AdminWebhookStatusPanel(props?: {
+  rows?: WebhookRow[];
+  loading?: boolean;
+  error?: string;
+}) {
+  const controlled = !!props && Object.prototype.hasOwnProperty.call(props, "rows");
   const [rows, setRows] = useState<WebhookRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
+  const viewRows = controlled ? props?.rows ?? [] : rows;
+  const viewLoading = controlled ? !!props?.loading : loading;
+  const viewError = controlled ? props?.error ?? "" : error;
 
   useEffect(() => {
+    if (controlled) return;
     let cancelled = false;
     const load = async () => {
       try {
@@ -66,7 +75,7 @@ export default function AdminWebhookStatusPanel() {
       cancelled = true;
       stop();
     };
-  }, []);
+  }, [controlled]);
 
   return (
     <section style={{ marginBottom: "1.5rem" }}>
@@ -74,11 +83,11 @@ export default function AdminWebhookStatusPanel() {
         <div style={{ color: "#E5E7EB", fontWeight: 700 }}>Webhook Activity</div>
         <div style={{ color: "#64748B", fontSize: 11 }}>Read-only · last 24h · NOT MONITORED = we do not log it</div>
       </div>
-      {loading && rows.length === 0 ? (
+      {viewLoading && viewRows.length === 0 ? (
         <div style={{ color: "#94A3B8", fontSize: 13 }}>Loading webhook activity…</div>
-      ) : error ? (
-        <div style={{ color: "#F87171", fontSize: 13 }}>{error}</div>
-      ) : rows.length === 0 ? (
+      ) : viewError ? (
+        <div style={{ color: "#F87171", fontSize: 13 }}>{viewError}</div>
+      ) : viewRows.length === 0 ? (
         <div style={{ color: "#94A3B8", fontSize: 13 }}>No webhook activity reported.</div>
       ) : (
         <div
@@ -88,7 +97,7 @@ export default function AdminWebhookStatusPanel() {
             gap: "0.75rem",
           }}
         >
-          {rows.map((row) => (
+          {viewRows.map((row) => (
             <div
               key={row.id}
               style={{

@@ -3,8 +3,9 @@ import { getTopGainersLosers, getMarketData } from '@/lib/coingecko';
 import { q } from '@/lib/db';
 import { normalizeCryptoMover } from '@/lib/analysis/publicMover';
 import { fetchAvTopMovers } from '@/lib/avTopMovers';
-import { EQUITY_MOVER_MIN_VOLUME, passesServerMoverFilter } from '@/lib/analysis/moverQuality';
+import { EQUITY_MOVER_MIN_VOLUME, isExtremeDailyMove, isUncheckedExtremeMove, passesServerMoverFilter } from '@/lib/analysis/moverQuality';
 import { isWarmupStatus, momentumAccelFromWarmup, type MomentumBar } from '@/lib/movers/momentumAccel';
+import { latestUsSessionDate, toYmd, usSessionsBetween } from '@/lib/time/usSession';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -38,6 +39,59 @@ function normalizeAVMover(item: any) {
   };
 }
 
+type StoredClose = { prevClose: number; assetType: string | null; tradingDay: string | null };
+
+/**
+ * Stored previous closes only. The feed row's own previous_close is ignored: it always agrees with its own percent.
+ * null means the lookup failed, so every extreme stays hidden. No vendor call.
+ *
+ * quotes_latest is keyed by symbol only. Crypto extremes will nearly always hide: the close is used only when
+ * symbol_universe says that one row is crypto, and a US session close is almost never the 24h reference a crypto
+ * percent was measured from.
+ */
+async function storedClosesFor(symbols: string[]): Promise<Map<string, StoredClose> | null> {
+  const unique = [...new Set(symbols.map((s) => String(s || '').toUpperCase()).filter(Boolean))];
+  const map = new Map<string, StoredClose>();
+  if (!unique.length) return map;
+  try {
+    const rows = await q<{ symbol: string; prev_close: string | null; latest_trading_day: unknown; asset_type: string | null }>(
+      `SELECT q.symbol, q.prev_close, q.latest_trading_day, u.asset_type
+       FROM quotes_latest q
+       LEFT JOIN symbol_universe u ON u.symbol = q.symbol
+       WHERE q.symbol = ANY($1)`,
+      [unique],
+    );
+    for (const row of rows) {
+      const n = Number(row.prev_close);
+      if (!row.symbol || !Number.isFinite(n) || !(n > 0)) continue;
+      map.set(String(row.symbol).toUpperCase(), {
+        prevClose: n,
+        assetType: row.asset_type == null ? null : String(row.asset_type),
+        tradingDay: toYmd(row.latest_trading_day),
+      });
+    }
+  } catch (e) {
+    console.error('[Market Movers] Stored previous close lookup failed (non-fatal):', e);
+    return null;
+  }
+  return map;
+}
+
+/** Our stored close when it is the same asset class and the session date is this trading day or the previous one. */
+function acceptedStoredClose(
+  mover: { asset_class?: 'equity' | 'crypto' },
+  stored: StoredClose | undefined,
+  nowMs: number,
+): number | null {
+  if (!stored?.tradingDay) return null;
+  const kind = String(stored.assetType ?? '').trim().toLowerCase();
+  const classOk = mover.asset_class === 'crypto' ? kind === 'crypto' : kind === 'equity' || kind === 'etf';
+  if (!classOk) return null;
+  const session = latestUsSessionDate(nowMs);
+  if (stored.tradingDay > session || usSessionsBetween(stored.tradingDay, session) > 1) return null;
+  return stored.prevClose;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -61,11 +115,38 @@ export async function GET(request: NextRequest) {
     // Filter out garbage tickers (non-ASCII, special chars like ^, warrants like +)
     // One server-side quality filter for every page (OV-9): equities drop warrants/rights/units and anything
     // under $1 or 100k shares; crypto keeps the market-cap floor (lib/analysis/moverQuality).
-    const eqGainers = equityMovers.gainers.map(normalizeAVMover).filter(m => VALID_EQ_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
-    const eqLosers = equityMovers.losers.map(normalizeAVMover).filter(m => VALID_EQ_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
-    const eqActive = equityMovers.active.map(normalizeAVMover).filter(m => VALID_EQ_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
-    const cryptoGainers = (topMovers?.top_gainers || []).map(coin => normalizeCryptoMover(coin, duration)).filter(m => VALID_CRYPTO_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
-    const cryptoLosers = (topMovers?.top_losers || []).map(coin => normalizeCryptoMover(coin, duration)).filter(m => VALID_CRYPTO_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
+    const passes = (m: { ticker: string; asset_class?: 'equity' | 'crypto' }) =>
+      (m.asset_class === 'crypto' ? VALID_CRYPTO_TICKER : VALID_EQ_TICKER).test(m.ticker) && passesServerMoverFilter(m);
+    const eqGainerPool = equityMovers.gainers.map(normalizeAVMover).filter(passes);
+    const eqLoserPool = equityMovers.losers.map(normalizeAVMover).filter(passes);
+    const eqActivePool = equityMovers.active.map(normalizeAVMover).filter(passes);
+    const cryptoGainerPool = (topMovers?.top_gainers || []).map(coin => normalizeCryptoMover(coin, duration)).filter(passes);
+    const cryptoLoserPool = (topMovers?.top_losers || []).map(coin => normalizeCryptoMover(coin, duration)).filter(passes);
+    // Most-active crypto keeps its existing floor (none). Only the extreme-move check is new.
+    const cryptoActivePool = (mostActive || []).map(normalizeMostActive);
+
+    const listed = [eqGainerPool, eqLoserPool, eqActivePool, cryptoGainerPool, cryptoLoserPool, cryptoActivePool].flat() as Array<{
+      ticker: string; asset_class?: 'equity' | 'crypto'; change_percentage?: string | number | null;
+    }>;
+    const storedCloses = await storedClosesFor(listed.filter((m) => isExtremeDailyMove(m)).map((m) => m.ticker));
+    const checkedAt = Date.now();
+    const extremeHidden = new Set<string>();
+    const withoutExtremes = <T extends { ticker: string; asset_class?: 'equity' | 'crypto' }>(rows: T[]) => rows.filter((row) => {
+      const ticker = String(row.ticker).toUpperCase();
+      const assetClass = row.asset_class === 'crypto' ? 'crypto' : 'equity';
+      const previous_close = storedCloses == null ? null : acceptedStoredClose(row, storedCloses.get(ticker), checkedAt);
+      const checked = { ...row, previous_close, previousClose: null };
+      if (!isUncheckedExtremeMove(checked)) return true;
+      extremeHidden.add(`${assetClass}:${ticker}`);
+      return false;
+    });
+
+    const eqGainers = withoutExtremes(eqGainerPool).slice(0, 10);
+    const eqLosers = withoutExtremes(eqLoserPool).slice(0, 10);
+    const eqActive = withoutExtremes(eqActivePool).slice(0, 10);
+    const cryptoGainers = withoutExtremes(cryptoGainerPool).slice(0, 10);
+    const cryptoLosers = withoutExtremes(cryptoLoserPool).slice(0, 10);
+    const cryptoActive = withoutExtremes(cryptoActivePool).slice(0, 10);
 
     // If both sources failed, try returning cached data
     if (eqGainers.length === 0 && cryptoGainers.length === 0) {
@@ -80,7 +161,7 @@ export async function GET(request: NextRequest) {
     const allMovers = [
       ...eqGainers, ...eqLosers, ...eqActive,
       ...cryptoGainers, ...cryptoLosers,
-      ...(mostActive || []).slice(0, 10).map(normalizeMostActive),
+      ...cryptoActive,
     ];
 
     /* ── Technical enrichment from indicators_latest + benchmarks ─── */
@@ -222,9 +303,10 @@ export async function GET(request: NextRequest) {
       // 'realtime', 'end_of_day' (fallback) or 'unavailable', with Alpha Vantage's reason (OV-14).
       equityFeed: equityMovers.feed,
       equityNote: equityMovers.note,
+      extremeHiddenCount: extremeHidden.size,
       topGainers: [...eqGainers, ...cryptoGainers].map(enrich),
       topLosers: [...eqLosers, ...cryptoLosers].map(enrich),
-      mostActive: [...eqActive, ...(mostActive || []).slice(0, 10).map(normalizeMostActive)].map(enrich),
+      mostActive: [...eqActive, ...cryptoActive].map(enrich),
     };
 
     // Cache successful response

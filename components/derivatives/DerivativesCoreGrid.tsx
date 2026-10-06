@@ -83,47 +83,9 @@ export default function DerivativesCoreGrid({ data, volRegime, liquidityState }:
       <div className="rounded-xl border border-white/10 bg-white/5">
         <div className="px-3 py-3 md:px-4">
           <div className="text-sm font-semibold text-white">Stress</div>
-          <div className="text-xs text-white/50">Liquidations + Volatility + Liquidity</div>
+          <div className="text-xs text-white/50">Volatility and liquidity</div>
         </div>
         <div className="grid gap-3 border-t border-white/10 p-3 md:p-4">
-          <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-            <div className="text-xs font-semibold text-white/80">Verified liquidations</div>
-            <div className="text-[11px] text-white/50">Complete window and notional coverage required</div>
-            {!data.liquidations && <p className="mt-2 text-xs text-white/50">Unavailable — the previous recent OKX sample did not establish a complete 24-hour USD total.</p>}
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-                <div className="text-[11px] text-white/50">Longs</div>
-                <div className="mt-1 text-sm font-semibold text-white">
-                  {data.liquidations?.summary?.totalLongValue == null
-                    ? 'Unavailable'
-                    : '$' + (data.liquidations.summary.totalLongValue / 1e6).toFixed(1) + 'M'}
-                </div>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-                <div className="text-[11px] text-white/50">Shorts</div>
-                <div className="mt-1 text-sm font-semibold text-white">
-                  {data.liquidations?.summary?.totalShortValue == null
-                    ? 'Unavailable'
-                    : '$' + (data.liquidations.summary.totalShortValue / 1e6).toFixed(1) + 'M'}
-                </div>
-              </div>
-            </div>
-            <div className="mt-3 grid gap-2">
-              {(data.liquidations?.coins || []).slice(0, 5).map((coin) => (
-                <div key={coin.symbol} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-white">{coin.symbol}</span>
-                    <span className="text-white/60">
-                      L {coin.longValue == null ? 'Unavailable' : '$' + (coin.longValue / 1e6).toFixed(1) + 'M'}
-                      {' • '}
-                      S {coin.shortValue == null ? 'Unavailable' : '$' + (coin.shortValue / 1e6).toFixed(1) + 'M'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-white/10 bg-black/10 p-3">
               <div className="text-xs font-semibold text-white/80">24h Price Move</div>

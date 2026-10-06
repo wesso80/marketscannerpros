@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/auth";
 import { getRecentSignals, getOverallStats } from "@/lib/signalRecorder";
 import { q } from "@/lib/db";
+import { ACCURACY_DISPLAY_HORIZONS, isAccuracyDisplayHorizon } from "@/lib/signals/accuracyHorizons";
+import { decisiveOutcomes, directionAdjustedMoves, finiteNumber, moveExpectancy } from "@/lib/signals/accuracyDisplay";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,16 +14,16 @@ const MIN_SAMPLE_SIZE = 30;
 /**
  * GET /api/ai/accuracy
  * 
- * Returns AI learning stats:
- * - Win rate by scanner type, direction, and horizon
- * - Recent signals with outcomes
+ * Returns learning stats for recorded setups:
+ * - Past-threshold share by scanner type, direction, and the 1d / 1w horizons
+ * - Recent setups with outcomes
  * - Overall statistics
  * 
  * Query params:
  * - scanner: Filter by scanner type (optional)
  * - horizon: Filter by horizon in minutes (optional)
- * - days: Lookback window - 30, 90 (default), or 'all'
- * - minSamples: Minimum sample size to show stats (default: 30)
+ * - minSamples: Minimum correct+wrong outcomes to show a past-threshold share (default: 30)
+ * The stored rows always cover the last 90 days (refresh_signal_accuracy(90)).
  */
 export async function GET(req: NextRequest) {
   try {
@@ -38,9 +40,6 @@ export async function GET(req: NextRequest) {
     const horizonMinutes = url.searchParams.get('horizon') 
       ? parseInt(url.searchParams.get('horizon')!) 
       : undefined;
-    const lookbackDays = url.searchParams.get('days') === 'all' 
-      ? null 
-      : parseInt(url.searchParams.get('days') || '90');
     const minSamples = parseInt(url.searchParams.get('minSamples') || String(MIN_SAMPLE_SIZE));
     
     // Build conditions
@@ -56,19 +55,20 @@ export async function GET(req: NextRequest) {
       conditions.push(`sas.horizon_minutes = $${paramIdx++}`);
       params.push(horizonMinutes);
     }
-    // Filter by minimum LABELED sample size (excludes unknown outcomes)
-    conditions.push(`sas.labeled_signals >= $${paramIdx++}`);
+    // Past-threshold share is correct/(correct+wrong). Neutrals are labelled but excluded,
+    // so the sample minimum counts only decisive outcomes. A missing column returns an empty list.
+    conditions.push(`(COALESCE(sas.correct_count, 0) + COALESCE(sas.wrong_count, 0)) >= $${paramIdx++}`);
     params.push(minSamples);
+    conditions.push(`sas.horizon_minutes IN (${ACCURACY_DISPLAY_HORIZONS.join(', ')})`);
     
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     
-    // Get accuracy stats with rolling windows.
-    // Some deployments still have the pre-versioning table (no scanner_version column) — fall back rather than 500.
-    const statsSql = (withVersion: boolean) => `
+    // 003 shape: scanner_version, labeled_signals, unknown_count, median_pct_move.
+    const statsSql = `
       SELECT 
         sas.signal_type,
         sas.direction,
-        ${withVersion ? 'sas.scanner_version' : "'unknown'::text AS scanner_version"},
+        sas.scanner_version,
         ot.horizon_label,
         sas.horizon_minutes,
         sas.total_signals,
@@ -92,19 +92,20 @@ export async function GET(req: NextRequest) {
       FROM signal_accuracy_stats sas
       LEFT JOIN outcome_thresholds ot ON sas.horizon_minutes = ot.horizon_minutes
       ${where}
-      ORDER BY ${withVersion ? 'sas.scanner_version DESC, ' : ''}sas.total_signals DESC, sas.signal_type, sas.horizon_minutes
+      ORDER BY sas.scanner_version DESC, sas.total_signals DESC, sas.signal_type, sas.horizon_minutes
     `;
     let stats: any[];
     let schemaNote: string | null = null;
     try {
-      stats = await q(statsSql(true), params);
+      stats = await q(statsSql, params);
     } catch (e: any) {
       // 42703 = undefined_column: the deployed table predates migration 003's extra columns. Return an honest
-      // empty result (page shows its empty state) instead of a 500; the real fix is applying the migration.
+      // empty result (page shows its empty state) instead of a 500; the real fix is applying migration 119.
       if (e?.code !== '42703' && !/does not exist/.test(String(e?.message))) throw e;
       stats = [];
       schemaNote = 'Accuracy statistics table is on an older schema; historical stats are unavailable until it is upgraded.';
     }
+    stats = stats.filter((row) => isAccuracyDisplayHorizon(row?.horizon_minutes) && decisiveOutcomes(row?.correct_count, row?.wrong_count) >= minSamples);
     
     // Normalise recent signal rows to the shape rendered by the page.
     // signalRecorder stores one signal with multiple horizon outcomes; display the
@@ -135,30 +136,32 @@ export async function GET(req: NextRequest) {
           correct: num(raw.correct_outcomes),
           wrong: num(raw.wrong_outcomes),
           neutral: num(raw.neutral_outcomes),
-          win_rate: decisive > 0 ? (num(raw.correct_outcomes) / decisive) * 100 : null,
+          // Withhold the share until correct+wrong reaches the sample minimum.
+          // One decisive outcome among many neutrals must not read as 100%.
+          win_rate: decisive >= minSamples ? (num(raw.correct_outcomes) / decisive) * 100 : null,
         }
       : null;
     
     // Get threshold configuration
-    const thresholds = await q(`
+    const thresholds = (await q(`
       SELECT horizon_minutes, horizon_label, correct_threshold, wrong_threshold
       FROM outcome_thresholds
+      WHERE horizon_minutes IN (${ACCURACY_DISPLAY_HORIZONS.join(', ')})
       ORDER BY horizon_minutes
-    `);
+    `)).filter((row: { horizon_minutes?: unknown }) => isAccuracyDisplayHorizon(row?.horizon_minutes));
     
-    // Compute expectancy for each stat row
-    // Expectancy = (Win% × AvgWin) + (Loss% × AvgLoss)
-    // Positive expectancy = edge
+    // Direction-adjusted moves: bearish raw price changes flip sign so favorable is positive.
+    // Expectancy uses those signed averages. A symmetric 50/50 pair is about 0.
     const statsWithExpectancy = stats.map((s: any) => {
-      let expectancy = null;
-      if (s.win_rate != null && s.avg_win != null && s.avg_loss != null) {
-        const winPct = parseFloat(s.win_rate) / 100;
-        const avgWin = parseFloat(s.avg_win);
-        const avgLoss = parseFloat(s.avg_loss); // Already negative for losses
-        expectancy = (winPct * avgWin - (1 - winPct) * Math.abs(avgLoss)).toFixed(2);
-      }
+      const { avgCorrect, avgWrong } = directionAdjustedMoves(s.direction, s.avg_win, s.avg_loss);
+      const winRate = finiteNumber(s.win_rate);
+      const expectancy = winRate != null && avgCorrect != null && avgWrong != null
+        ? moveExpectancy(winRate, avgCorrect, avgWrong).toFixed(2)
+        : null;
       return {
         ...s,
+        avg_win: avgCorrect == null ? null : avgCorrect.toFixed(4),
+        avg_loss: avgWrong == null ? null : avgWrong.toFixed(4),
         expectancy,
         // Quality indicator: % of signals with known outcomes
         data_quality: s.total_signals > 0 
@@ -184,19 +187,19 @@ export async function GET(req: NextRequest) {
       thresholds,
       metadata: {
         timestamp: new Date().toISOString(),
-        lookbackDays: lookbackDays || 'all',
+        lookbackDays: 90,
         horizonMinutes: horizonMinutes || 'all',
         scannerType: scannerType || 'all',
         minSamples,
         schemaNote,
-        note: `Past-threshold shares are shown for signal types with >= ${minSamples} labeled samples. A label means the price moved past the horizon threshold. Unknown outcomes are excluded. This is not a closed trade.`
+        note: `Past-threshold shares exclude neutral outcomes. They are shown when correct and wrong outcomes together reach at least ${minSamples}, on the 1d (±2%) and 1w (±4%) horizons only. The window is the last 90 days. Unknown outcomes are excluded. This is not a closed trade.`
       }
     });
     
   } catch (error: any) {
     console.error('[ai/accuracy] Error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch accuracy stats', details: error?.message },
+      { error: 'Failed to fetch accuracy stats' },
       { status: 500 }
     );
   }

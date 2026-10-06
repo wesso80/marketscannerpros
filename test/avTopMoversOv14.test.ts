@@ -13,7 +13,9 @@ vi.mock('@/lib/avRateGovernor', () => ({ avTakeToken: async () => undefined }));
 
 import { fetchAvTopMovers, parseAvTopMovers } from '@/lib/avTopMovers';
 import { equityMoversBasisLabel } from '@/lib/alphaVantageEntitlement';
+import { latestUsSessionDate } from '@/lib/time/usSession';
 
+// +309% is extreme. The feed row carries no previous close. The GET test keeps MSGY only when quotes_latest has a matching equity close. This test is the end-of-day fallback, not the extreme-move filter.
 const row = { ticker: 'MSGY', price: '8.07', change_amount: '6.1', change_percentage: '309.6447%', volume: '54900000' };
 const eod = { metadata: 'Top gainers', last_updated: '2026-09-25 16:15:57 US/Eastern', top_gainers: [row], top_losers: [], most_actively_traded: [] };
 const res = (body: unknown) => ({ ok: true, json: async () => body }) as unknown as Response;
@@ -82,6 +84,11 @@ describe('GET /api/market-movers returns equity rows, as-of and feed after a rea
   });
 
   it('shows the end-of-day list with its time instead of no equity data', async () => {
+    mocks.q.mockImplementation(async (sql: string) => (
+      String(sql).includes('prev_close')
+        ? [{ symbol: 'MSGY', prev_close: '1.97', latest_trading_day: latestUsSessionDate(Date.now()), asset_type: 'equity' }]
+        : []
+    ));
     const { GET } = await import('@/app/api/market-movers/route');
     const body = await (await GET(new NextRequest('https://example.test/api/market-movers'))).json();
     expect(body.topGainers.filter((m: any) => m.asset_class === 'equity').map((m: any) => m.ticker)).toEqual(['MSGY']);

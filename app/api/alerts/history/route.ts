@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { historyPriceSelect } from '@/lib/alerts/historyPrice';
 
 /**
  * Alert History API
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
 
     let query = `
       SELECT 
-        h.id, h.alert_id, h.triggered_at, h.trigger_price, h.condition_met,
+        h.id, h.alert_id, h.triggered_at, ${historyPriceSelect('h', 'trigger_price')}, h.condition_met,
         h.symbol, h.condition_type, h.condition_value,
         h.notification_sent, h.notification_channel, h.acknowledged_at, h.user_action,
         a.name as alert_name, a.is_active as alert_active

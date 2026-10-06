@@ -1,7 +1,8 @@
 // lib/auth.ts
 import crypto from "crypto";
 import { cookies } from "next/headers";
-import { isFreeForAllMode } from './entitlements';
+import { q } from './db';
+import { effectiveTierFromSubscription, isFreeForAllMode } from './entitlements';
 import { hashWorkspaceId } from './workspaceHash';
 
 const isProductionRuntime = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
@@ -78,7 +79,26 @@ export async function getSessionFromCookie(): Promise<SessionPayload | null> {
     }
     return null;
   }
-  return verify(c);
+  const session = verify(c);
+  if (!session) return null;
+  // trial_ cookies stay valid for 30 days, so a 7-day trial would keep Pro on
+  // cookie readers long after current_period_end. Read the workspace row directly.
+  // Do not call getVerifiedTier: apiMiddleware imports this module.
+  if (session.cid.startsWith('trial_') && session.workspaceId) {
+    try {
+      const rows = await q<{ tier: string; status: string; current_period_end: Date | string | null }>(
+        'SELECT tier, status, current_period_end FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1',
+        [session.workspaceId],
+      );
+      const row = rows[0];
+      // Same period rule as the entitlement helper. Only a lapsed trial is
+      // downgraded here; the cookie tier is left as signed otherwise.
+      if (row?.status === 'trialing' && effectiveTierFromSubscription(row) === 'free') session.tier = 'free';
+    } catch (err) {
+      console.error('[auth] trial subscription read failed:', err);
+    }
+  }
+  return session;
 }
 
 // hashWorkspaceId lives in lib/workspaceHash.ts (pure, no cookie/secret dependency) so access
