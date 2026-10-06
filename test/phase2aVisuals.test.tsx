@@ -124,5 +124,6 @@ it("tabs support keyboard selection without mounting inactive content", () => {
 it("a missing quote stamp never exposes unknown time, source or basis", () => {
   render(<SourceLine quote={{ source: "source unknown" }} />);
   expect(el.textContent).not.toMatch(/unknown/i);
-  expect(el.textContent).toContain("Not available right now");
+  expect(el.textContent).toContain("Observation time not supplied");
+  expect(el.textContent).not.toContain("Not available right now");
 });

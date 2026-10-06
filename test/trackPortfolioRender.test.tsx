@@ -28,7 +28,7 @@ it('renders saved exposure, one verdict, closed folds and a chart without changi
  await screen.findByRole('img',{name:'Allocation by recorded position value'});
  expect(container.querySelectorAll('[data-portfolio-verdict]')).toHaveLength(1);
  expect(container.querySelectorAll('details[open]')).toHaveLength(0);
- expect(screen.getByText('$250')).toBeTruthy();
+ expect(screen.getByText('$250.00')).toBeTruthy();
  expect(container.textContent).not.toMatch(/N\/A|NaN|undefined/);
  expect(state.positions[0].quantity).toBe(2);
 });

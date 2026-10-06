@@ -26,9 +26,9 @@ describe('TR-7: position limit', () => {
 });
 
 describe('TR-14: section tabs on phones', () => {
-  it('wrap below the sm breakpoint', () => {
+  it('use an internally scrolling row on phones', () => {
     expect(page).toContain('label="Portfolio views"');
-    expect(readFileSync(join(process.cwd(), 'components/visual/TabBar.tsx'), 'utf8')).toContain('flex flex-wrap gap-1');
+    expect(readFileSync(join(process.cwd(), 'components/visual/TabBar.tsx'), 'utf8')).toContain('flex flex-nowrap overflow-x-auto gap-1');
   });
 });
 

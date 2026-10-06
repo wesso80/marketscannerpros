@@ -19,14 +19,14 @@ Base: `batch/oct-wp` at `019956dc` (includes #424 and #425). #422 was open at st
 | My Pages | Dashboard disclaimer follows content; orphan Crypto Derivatives link and extra Track navigation on Dashboard removed. |
 | False source unavailability | Shared plain source line distinguishes absent observation time from absent data: Observation time not supplied. It does not fabricate timestamps. Applies to Earnings, My Pages, Saved Cases, Crypto and News without editing Patch's News/Earnings files. |
 | Remaining labels | Calendar Global / High impact; Symbol catalog badge SY; real GDP tile explicitly labelled US real GDP (trillion USD). Research News/Earnings copy left alone. |
-| Portfolio | Currency has exactly two decimals; compact KPIs use a single column below 420 to keep figures together. Clear All Data moves into a separate collapsed Data maintenance section. Existing confirmation/handler unchanged. |
+| Portfolio | Currency has exactly two decimals; compact KPIs use a single column below 420 to keep figures together. The proposed Clear All Data relocation is withdrawn to avoid Patch’s concurrent Portfolio save work; the page file matches the batch exactly. |
 | Alerts repetitions | Identical displayed condition/symbol/threshold grouped under a closed count disclosure; every saved ID and action remains inside. No records deleted or merged. Full threshold remains in a title attribute; XLM-style prices display four decimal places, very small prices retain enough precision. |
 | Alerts summaries | Simple price/percent/volume rules no longer count as Smart from a legacy flag. No-trigger history shows a sentence rather than a status in a symbol slot. Unlabelled proportion bar removed. Plain lock wording and no 999 sentinel in embedded plan/creation display. |
 | Alerts folds | Native toggle state updates Expand/Collapse. Capabilities no longer repeats the console filters/list: it hosts creation-only controls with Price rule / Market condition choices. Existing creation handlers unchanged. |
 | Journal | Review by setup requires both review summary and modules, so a null body has no fold. Journal settings already has the auto-log toggle, help and Export/Import/Clear actions on this batch; retained rather than hiding working controls. Verify the reported live empty state against this version. |
 | Backtest / Learning | Display helper removes option emoji and translates Brain Signal Replay / AIO / Bias thresholds / BBWP / DVE wording. Registry identifiers, thresholds, strategies and engine maths untouched. Uppercase CSS removed from Backtest fields. |
 | Signal Accuracy | Threshold explanation states movement in recorded versus opposite direction, matching the existing worker (not two overlapping positive thresholds). Australian dates, labelled, at least. One full disclaimer. Standalone Track navigation uses shared TabBar styling. |
-| Track disclaimers | Embedded Journal, Backtest, Learning and Alerts no longer repeat the host disclaimer. Portfolio's extra advice paragraph is reduced to a simulation-record description. |
+| Track disclaimers | Embedded Journal, Backtest, Learning and Alerts no longer repeat the host disclaimer. The full Portfolio disclaimer is retained unchanged, per review. |
 
 ## Verification
 
@@ -59,3 +59,24 @@ Pip: open both widths, check all affected tabs before/after expansion, test brow
 - 429 errors on commodities and news feeds.
 
 No changes to data providers, rate limits, scoring, workers, Stripe, admin, pricing, login, legal amounts, or Research News/Earnings page files. No merges/deployments performed.
+
+## Review follow-up: Portfolio ownership and intentional assertions
+
+- Restored `app/tools/portfolio/page.tsx` exactly to batch `79549d2c`: no page-file delta, no disclaimer edit, no overlap with Patch’s save fix. Clear All Data relocation is deferred. Currency/KPI fixes remain isolated in `formatMoney` and `PortfolioOverview`.
+- Updated stale assertions for scrolling tabs, two-decimal dollar amounts, missing observation time, reader-facing plan wording and classification of plain price rules. Enforced limits remain 3/999; a legacy Smart flag does not change a simple price rule’s displayed classification.
+- Alert pagination now pages condition groups. The render regression opens Show all for twelve distinct rules and verifies all twelve rows remain; repeated rules keep separate IDs/actions inside their group.
+- Exact 390 layout proof remains Pip’s check. Class assertions and jsdom rendering are not screenshot evidence.
+
+### Full-suite comparison after review fixes
+
+Ran `npx vitest run --reporter=json --outputFile=...` on the revised draft and unchanged batch `79549d2c`, in separate worktrees using the same installed dependencies. Both commands completed with exit 1 due to existing failures.
+
+| Result | Batch | Revised draft |
+| --- | ---: | ---: |
+| Total tests | 5,374 | 5,381 |
+| Passed | 5,311 | 5,318 |
+| Failed tests | 50 | 50 |
+| Skipped/pending | 13 | 13 |
+| Vitest failed-suite counter | 46 | 46 |
+
+**Zero new failure names; the failed-test sets match exactly.** The reported 46 failing-test baseline was not reproduced as a test count here: there are 50 failed assertions on both runs (the reporter's failed-suite count is 46). No claim of a green full suite. The exact matching names and counters are saved in `2026-10-06-display-full-test-comparison.json`. TypeScript and `git diff --check` also pass.

@@ -1858,7 +1858,16 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       >
         Model Allocation
       </button>
-
+      {/* TR-15: destructive action last, set apart from the primary buttons. */}
+      {(positions.length > 0 || closedPositions.length > 0) && (
+        <button
+          type="button"
+          onClick={clearAllData}
+          className="ml-2 rounded-md border border-slate-500/40 bg-transparent px-3 py-1.5 text-[12px] font-semibold text-red-500 sm:ml-6"
+        >
+          Clear All Data
+        </button>
+      )}
     </>
   );
 
@@ -1917,22 +1926,9 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       <div className={embeddedInWorkspace ? 'mt-2' : 'mx-4 mt-2'}>
         {!embeddedInWorkspace && <ComplianceDisclaimer compact />}
         <div className={`${embeddedInWorkspace ? '' : 'mt-2'} rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-[11px] leading-relaxed text-slate-400`}>
-          User-entered simulation records and descriptive analytics.
+          This page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.
         </div>
       </div>
-
-      <CollapsibleSection title="Data maintenance" summary="Remove saved simulation records">
-      {/* TR-15: destructive action last, set apart from the primary buttons. */}
-      {(positions.length > 0 || closedPositions.length > 0) && (
-        <button
-          type="button"
-          onClick={clearAllData}
-          className="ml-2 rounded-md border border-slate-500/40 bg-transparent px-3 py-1.5 text-[12px] font-semibold text-red-500 sm:ml-6"
-        >
-          Clear All Data
-        </button>
-      )}
-      </CollapsibleSection>
 
       {/* Stop / target editor (manual positions) */}
       {levelEditor && levelEditorPosition && levelEditorCheck && (
