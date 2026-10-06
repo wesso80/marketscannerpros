@@ -1,6 +1,7 @@
 /**
  * Terminal Crypto tab tiles from feeds the Crypto Derivatives desk already reads.
- * Missing readings stay off the tiles. Liquidations are not collected (WP3) and are never zero.
+ * Missing readings stay off the tiles. There is no liquidations tile: the public OKX
+ * history does not cover 24 hours, and a missing total is never shown as zero.
  */
 import { DERIVATIVE_FEED_BASIS } from '@/lib/crypto/derivativeDesk';
 
@@ -62,6 +63,5 @@ export function selectCryptoDeskTiles(
 
   if (tiles.length === 0) return { mode: 'gate' };
   const complete = tiles.length === 3;
-  tiles.push({ label: 'Liquidations', value: 'Not collected', warning: true });
   return { mode: 'tiles', tiles, basis: complete ? DERIVATIVE_FEED_BASIS : null };
 }

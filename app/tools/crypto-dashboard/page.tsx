@@ -46,7 +46,7 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
     setLoading(true);
     setFetchErrors([]);
     try {
-      // Liquidations stay off this page. /api/crypto/liquidations is a static 503 and must not enter fetchErrors.
+      // Liquidations stay off this page. OKX public history does not cover 24 hours, so that route is not called.
       const [fundingRes, lsRes, oiRes, heatmapRes] = await Promise.all([
         get('/api/funding-rates').catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
         get('/api/long-short-ratio').catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
@@ -126,7 +126,7 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
           openInterest: data.openInterest?.summary || null,
           prices: data.prices,
         },
-        summary: `Crypto Derivatives: funding ${data.fundingRates ? 'present' : 'missing'}, long/short ${data.longShort ? 'present' : 'missing'}, open interest ${data.openInterest?.summary ? 'present' : 'missing'}. Liquidations are not collected.`,
+        summary: `Crypto Derivatives: funding ${data.fundingRates ? 'present' : 'missing'}, long/short ${data.longShort ? 'present' : 'missing'}, open interest ${data.openInterest?.summary ? 'present' : 'missing'}.`,
       });
     }
   }, [data, setPageData]);
@@ -256,12 +256,6 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
   const partial = fetchErrors.length > 0 || !data.fundingRates || !data.longShort || !data.openInterest || (Boolean(oiReason) && !oiReasonVisible);
 
   const chips = [
-    {
-      id: 'liquidations',
-      label: 'Liquidations: not collected',
-      detail: 'Liquidation totals are not collected. This is not a zero reading.',
-      warning: true,
-    },
     ...(!data.fundingRates ? [{ id: 'funding', label: 'Funding: not in this response', detail: 'OKX funding did not return a fresh reading.', warning: true }] : []),
     ...(!data.longShort ? [{ id: 'long-short', label: 'Long/short: not in this response', detail: 'OKX account ratios did not return a fresh reading.', warning: true }] : []),
     ...(!data.openInterest ? [{ id: 'oi', label: 'Open interest: not in this response', detail: 'The CoinGecko open-interest snapshot did not return a fresh reading.', warning: true }] : []),
@@ -277,10 +271,16 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
   const oiTotal = (() => {
     const formatted = data.openInterest?.summary?.totalOpenInterestFormatted;
     const raw = data.openInterest?.summary?.totalOpenInterest;
-    if (typeof raw === 'number' && !(raw > 0)) return null;
+    if (raw == null || (typeof raw === 'number' && !(raw > 0))) return null;
     if (typeof formatted !== 'string' || !formatted || formatted === '$0.00') return null;
     return formatted;
   })();
+  const oiSource = typeof data.openInterest?.summary?.sourceLabel === 'string' && data.openInterest.summary.sourceLabel
+    ? data.openInterest.summary.sourceLabel
+    : 'CoinGecko derivatives';
+  const oiChangeLabel = typeof data.openInterest?.summary?.change24hLabel === 'string' && data.openInterest.summary.change24hLabel
+    ? data.openInterest.summary.change24hLabel
+    : '24h change on the fixed contract basket, not this total';
 
   return (
     <div className={`mx-auto w-full max-w-none ${embeddedInDashboard ? 'px-0 pb-6 pt-0' : 'px-4 pb-24 pt-6 md:px-6'}`}>
@@ -350,8 +350,9 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
         {primarySymbols.map((symbol) => (
           <StatTile key={symbol} label={symbol} value={money(data.prices[symbol]?.price)} change={data.prices[symbol]?.change24h} />
         ))}
-        <StatTile label="Total open interest" value={oiTotal} change={oiTrendAvailable ? data.openInterest?.summary?.change24h : null} />
+        <StatTile label="Total open interest" value={loading ? null : (oiTotal ?? 'unavailable')} change={oiTrendAvailable ? data.openInterest?.summary?.change24h : null} />
       </div>
+      <p className="mb-4 text-xs text-white/70">{oiSource}. {oiChangeLabel}.</p>
 
       {baselineClock && (
         <p className="mb-4 text-sm text-[var(--msp-warn)]">24h change: building, ready about {baselineClock}</p>
@@ -396,8 +397,8 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
       )}
 
       <SourceLine
-        source="Funding and long/short: OKX · OI: CoinGecko, top 3 exchanges"
-        basis={`8h funding equivalents · account ratios · pinned perpetual contracts · no shared provider observation time supplied${lastUpdate ? ` · Last response with data received ${formatMarketTime(lastUpdate.toISOString(), 'Australia/Sydney') ?? 'time not recorded'} (request completion, not a provider observation time)` : ''}`}
+        source={`Funding and long/short: OKX · OI: ${oiSource}`}
+        basis={`${oiChangeLabel} · 8h funding equivalents · account ratios · no shared provider observation time supplied${lastUpdate ? ` · Last response with data received ${formatMarketTime(lastUpdate.toISOString(), 'Australia/Sydney') ?? 'time not recorded'} (request completion, not a provider observation time)` : ''}`}
       />
       <CoinGeckoCredit className="mt-2 text-center" />
     </div>

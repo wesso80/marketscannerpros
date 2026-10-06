@@ -76,7 +76,7 @@ describe('Options Flow uses the loaded Terminal symbol', () => {
 });
 
 describe('Crypto Derivatives tab', () => {
-  it('shows funding, open interest, long/short and a not-collected liquidations tile', async () => {
+  it('shows funding, open interest and long/short without a liquidations tile', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       calls.push(url);
@@ -105,8 +105,8 @@ describe('Crypto Derivatives tab', () => {
     expect(screen.getByText('$30.00B')).toBeTruthy();
     expect(screen.getByText('Long/short')).toBeTruthy();
     expect(screen.getByText('55.0 / 45.0')).toBeTruthy();
-    expect(screen.getByText('Liquidations')).toBeTruthy();
-    expect(screen.getByText('Not collected')).toBeTruthy();
+    expect(screen.queryByText('Liquidations')).toBeNull();
+    expect(screen.getByText('Based on funding, long/short and open interest.')).toBeTruthy();
     expect(calls.some((url) => url.includes('/api/crypto/liquidations'))).toBe(false);
     expect(screen.queryByRole('link')).toBeNull();
   });
@@ -119,7 +119,8 @@ describe('Crypto Derivatives tab', () => {
     render(<TerminalCryptoDesk symbol="BTCUSD" />);
     expect(await screen.findByRole('heading', { name: 'Not collected for BTC' })).toBeTruthy();
     expect(screen.getAllByRole('heading')).toHaveLength(1);
-    expect(screen.getByText(/Liquidations are not collected/)).toBeTruthy();
+    expect(screen.queryByText(/Liquidations/)).toBeNull();
+    expect(document.body.textContent).not.toContain('3 of 4');
     expect(screen.queryByRole('link')).toBeNull();
     expect(calls.some((url) => url.includes('/api/crypto/liquidations'))).toBe(false);
     expect(document.body.textContent).not.toMatch(/Unavailable/);

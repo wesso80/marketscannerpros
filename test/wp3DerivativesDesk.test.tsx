@@ -82,13 +82,14 @@ beforeEach(() => { calls.length = 0; vi.stubGlobal('React', React); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe('crypto derivatives desk', () => {
-  it('empty fixtures and a liquidations 503 show one liquidations chip and no raw gap words', async () => {
+  it('empty fixtures do not show a liquidations chip or a market-wide liquidations claim', async () => {
     installFetch('empty');
     render(<CryptoDashboard />);
-    expect(await screen.findByRole('button', { name: /Liquidations: not collected/ })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Crypto Derivatives' })).toBeTruthy();
     await waitFor(() => expect(calls.some((url) => url.includes('/api/funding-rates'))).toBe(true));
     expect(calls.some((url) => url.includes('/api/crypto/liquidations'))).toBe(false);
-    expect(screen.getAllByRole('button', { name: /Liquidations: not collected/ })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /Liquidations/ })).toBeNull();
+    expect(document.body.textContent).not.toContain('3 of 4');
     expect(document.body.textContent).not.toMatch(/Unavailable/);
     expect(document.body.textContent).not.toContain('Wait for complete data');
     expect(document.body.textContent).not.toContain('Trade Ideas');
@@ -98,10 +99,10 @@ describe('crypto derivatives desk', () => {
     expect(document.querySelectorAll('details[open]')).toHaveLength(0);
   });
 
-  it('renders the conditions row from funding, long/short and open interest with the 3 of 4 label', async () => {
+  it('renders the conditions row from funding, long/short and open interest without a liquidations feed', async () => {
     installFetch('three');
     render(<CryptoDashboard />);
-    expect(await screen.findByText('Based on 3 of 4 feeds · liquidations not collected')).toBeTruthy();
+    expect(await screen.findByText('Based on funding, long/short and open interest.')).toBeTruthy();
     const conditions = screen.getByRole('region', { name: 'Conditions' });
     expect(conditions.textContent).toMatch(/Conditions/);
     expect(document.querySelectorAll('[data-derivatives-summary]')).toHaveLength(1);
@@ -115,7 +116,9 @@ describe('crypto derivatives desk', () => {
     expect(source.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
     expect(source.textContent).toMatch(/\b(AEDT|AEST)\b/);
     expect(source.textContent).toContain('no shared provider observation time supplied');
-    expect(screen.getAllByRole('button', { name: /Liquidations: not collected/ })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /Liquidations/ })).toBeNull();
+    expect(document.body.textContent).not.toContain('3 of 4');
+    expect(document.body.textContent).toContain('24h change on the fixed contract basket, not this total');
     expect(screen.getAllByText('Show all 4').length).toBeGreaterThan(0);
     expect(document.body.textContent).not.toMatch(/Unavailable/);
     expect(document.body.textContent).not.toContain('Wait for complete data');

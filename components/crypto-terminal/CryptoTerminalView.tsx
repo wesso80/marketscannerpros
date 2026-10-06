@@ -527,7 +527,7 @@ export default function CryptoTerminalView({
                     <div className="grid grid-cols-2 gap-2">
                       <MiniStat label="Avg Funding" value={fmtFunding(aggFunding.fundingRatePct)} sub="Unavailable: funding intervals not supplied" />
                       <MiniStat label="Sentiment" value={aggFunding.sentiment} />
-                      <MiniStat label="Total OI" value={fmtUsd(aggOI.totalOI)} sub={`${aggOI.exchangeCount} exchanges`} />
+                      <MiniStat label="Total OI" value={aggOI.totalOI == null ? 'unavailable' : fmtUsd(aggOI.totalOI)} sub={aggOI.sourceLabel ?? (aggOI.exchangeCount > 0 ? `${aggOI.exchangeCount} exchanges` : 'unavailable')} />
                       <MiniStat label="Perps Volume" value={fmtUsd(aggOI.totalVolume24h)} />
                     </div>
                   </div>
@@ -622,7 +622,7 @@ export default function CryptoTerminalView({
                   </div>
 
                   {/* OI share bar */}
-                  {aggOI && aggOI.totalOI > 0 && (
+                  {aggOI?.totalOI != null && aggOI.totalOI > 0 && (
                     <div className="border-t border-zinc-800/60 pt-3">
                       <div className="flex items-center justify-between text-[11px] text-zinc-500 mb-1">
                         <span>OI Share</span>
@@ -711,7 +711,7 @@ export default function CryptoTerminalView({
                         <div className={`text-[10px] font-mono ${fundingColor(c.aggregatedFunding.fundingRatePct)}`}>
                           F: {fmtFunding(c.aggregatedFunding.fundingRatePct)}
                         </div>
-                        <div className="text-[10px] text-zinc-500">OI: {fmtUsd(c.aggregatedOI.totalOI)}</div>
+                        <div className="max-w-[11rem] text-right text-[10px] text-zinc-500">OI: {c.aggregatedOI.totalOI == null ? 'unavailable' : fmtUsd(c.aggregatedOI.totalOI)}{c.aggregatedOI.sourceLabel ? ` · ${c.aggregatedOI.sourceLabel}` : ''}</div>
                       </div>
                     </button>
                   ))}
