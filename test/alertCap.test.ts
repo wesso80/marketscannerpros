@@ -30,8 +30,9 @@ import { POST as executeAction } from '@/app/api/actions/execute/route';
 
 type Row = {
   is_active: boolean;
-  is_smart_alert: boolean;
-  condition_value: number;
+  is_smart_alert?: boolean;
+  condition_type: string;
+  condition_value: number | null;
 };
 
 const state = {
@@ -41,7 +42,8 @@ const state = {
 };
 
 function isCapCount(sql: string) {
-  return /is_smart_alert IS TRUE AND condition_value = 0/i.test(sql);
+  return /condition_type IN \('price_above', 'price_below'\)/i.test(sql)
+    && /COALESCE\(condition_value, 0\) <= 0/i.test(sql);
 }
 
 beforeEach(() => {
@@ -75,20 +77,50 @@ function wroteAlert() {
 }
 
 describe('countActiveAlertsForCap', () => {
-  it('ignores empty zero-level smart orphans and still counts basic price alerts', () => {
+  it('counts smart alerts that store 0, and excludes only price alerts with no level', () => {
+    const scanner = {
+      is_active: true,
+      is_smart_alert: true,
+      condition_type: 'scanner_buy_signal',
+      condition_value: 0,
+    };
+    const priceWithLevel = {
+      is_active: true,
+      is_smart_alert: false,
+      condition_type: 'price_above',
+      condition_value: 190,
+    };
+    const priceAtZero = {
+      is_active: true,
+      is_smart_alert: true,
+      condition_type: 'price_below',
+      condition_value: 0,
+    };
+    const priceAtNull = {
+      is_active: true,
+      is_smart_alert: false,
+      condition_type: 'price_above',
+      condition_value: null,
+    };
     const rows: Row[] = [
-      { is_active: true, is_smart_alert: true, condition_value: 0 },
-      { is_active: true, is_smart_alert: true, condition_value: 0 },
-      { is_active: true, is_smart_alert: false, condition_value: 190 },
-      { is_active: true, is_smart_alert: false, condition_value: 0 },
-      { is_active: true, is_smart_alert: true, condition_value: 12 },
-      { is_active: false, is_smart_alert: false, condition_value: 50 },
+      scanner,
+      { is_active: true, is_smart_alert: true, condition_type: 'strategy_buy_signal', condition_value: 0 },
+      priceWithLevel,
+      { is_active: true, is_smart_alert: true, condition_type: 'price_above', condition_value: 12 },
+      priceAtZero,
+      priceAtNull,
+      { is_active: false, is_smart_alert: false, condition_type: 'price_above', condition_value: 50 },
     ];
-    expect(rows.filter(countsTowardAlertCap)).toHaveLength(3);
-    expect(countsTowardAlertCap({ is_active: true, is_smart_alert: true, condition_value: '0' })).toBe(false);
-    expect(countsTowardAlertCap({ is_active: true, is_smart_alert: true, condition_value: null })).toBe(true);
+    expect(countsTowardAlertCap(scanner)).toBe(true);
+    expect(countsTowardAlertCap(priceWithLevel)).toBe(true);
+    expect(countsTowardAlertCap(priceAtZero)).toBe(false);
+    expect(countsTowardAlertCap(priceAtNull)).toBe(false);
+    expect(countsTowardAlertCap({ ...priceAtZero, is_smart_alert: false, condition_value: '0' })).toBe(false);
+    expect(rows.filter(countsTowardAlertCap)).toHaveLength(4);
     expect(ACTIVE_ALERT_CAP_COUNT_SQL).toMatch(/is_active IS TRUE/);
-    expect(ACTIVE_ALERT_CAP_COUNT_SQL).toMatch(/NOT \(is_smart_alert IS TRUE AND condition_value = 0\)/);
+    expect(ACTIVE_ALERT_CAP_COUNT_SQL).toMatch(/condition_type IN \('price_above', 'price_below'\)/);
+    expect(ACTIVE_ALERT_CAP_COUNT_SQL).toMatch(/COALESCE\(condition_value, 0\) <= 0/);
+    expect(ACTIVE_ALERT_CAP_COUNT_SQL).not.toMatch(/is_smart_alert/);
     expect(ALERT_LIMITS).toEqual({ free: 3, pro: 100 });
   });
 
@@ -116,8 +148,8 @@ describe('alert create paths at the Pro cap', () => {
 
   it('GET quota.used uses the shared count, not the raw active list', async () => {
     state.rows = [
-      { is_active: true, is_smart_alert: true, condition_value: 0 },
-      { is_active: true, is_smart_alert: false, condition_value: 180 },
+      { is_active: true, is_smart_alert: true, condition_type: 'scanner_buy_signal', condition_value: 0 },
+      { is_active: true, is_smart_alert: false, condition_type: 'price_above', condition_value: 180 },
     ];
     state.capCount = 1;
     const body = await (await listAlerts(new NextRequest('https://example.test/api/alerts'))).json();

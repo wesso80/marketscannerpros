@@ -282,7 +282,7 @@ export async function POST(req: NextRequest) {
       assetType = assetCheck.assetType;
     }
 
-    // Check quota. Empty zero-level smart orphans do not count.
+    // Check quota. Price alerts with no level do not count. Smart alerts that store 0 do.
     const activeCount = await countActiveAlertsForCap(session.workspaceId);
 
     if (activeCount >= maxAlerts) {

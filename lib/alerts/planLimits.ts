@@ -1,8 +1,8 @@
 /**
  * Active alert limits per plan. Shared by the create paths and the Alerts page
  * "Plan & Limits" panel so the page shows the cap that is enforced.
- * Pro is 100 active alerts. Free stays at 3. Empty zero-level smart orphans
- * are excluded by countActiveAlertsForCap.
+ * Pro is 100 active alerts. Free stays at 3. Price alerts with no level are
+ * excluded by countActiveAlertsForCap. Smart alerts that store 0 still count.
  */
 export const ALERT_LIMITS = {
   free: 3,
