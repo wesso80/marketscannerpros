@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import { clearSharedMemory } from '@/lib/cache/sharedResponse';
 vi.mock('@/lib/auth', () => ({ getSessionFromCookie: vi.fn(async () => ({workspaceId:'audit-test'})) }));
 vi.mock('@/lib/avRateGovernor', () => ({ avTakeToken: vi.fn(async () => {}) }));
 vi.mock('@/lib/rateLimit', () => ({ getClientIP: () => 'audit-test', deepAnalysisLimiter: {check: () => ({allowed:true})} }));
 import { GET } from '../app/api/news-sentiment/route';
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { clearSharedMemory(); vi.unstubAllGlobals(); });
 describe('candidate news provider identity', () => {
   it.each([['ETH','CRYPTO:ETH'],['ETHUSD','CRYPTO:ETH'],['CRYPTO:ETH','CRYPTO:ETH'],['META','META']])('requests %s as %s without broad-topic replacement', async (symbol, expected) => {
     const fetcher=vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({feed:[{title:'Candidate source on '+expected.replace('CRYPTO:',''),url:'https://example.test/story',time_published:'20260922T040000',overall_sentiment_label:'Neutral',overall_sentiment_score:'0',ticker_sentiment:[{ticker:expected,relevance_score:'.8',ticker_sentiment_score:'0',ticker_sentiment_label:'Neutral'}]}]}),{status:200}));
