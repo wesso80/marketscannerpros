@@ -17,13 +17,15 @@ export default function StatTile({
     return null;
   const measuredChange =
     typeof change === "number" && Number.isFinite(change) ? change : null;
+  const detail = measuredChange == null ? undefined : formatChangePercent(measuredChange);
+  const tone = detail === "0.00%" ? sectorTone(0).color : sectorTone(measuredChange).color;
   return (
     <StatCard
       label={label}
       value={String(value)}
       large
-      color={warning ? "var(--msp-warn)" : sectorTone(measuredChange).color}
-      detail={measuredChange == null ? undefined : formatChangePercent(measuredChange)}
+      color={warning ? "var(--msp-warn)" : tone}
+      detail={detail}
     />
   );
 }

@@ -7,6 +7,14 @@ it('rounds a displayed percentage change to two decimals', () => {
   expect(formatChangePercent(-0.2397)).toBe('-0.24%');
   expect(formatChangePercent('1.234%')).toBe('+1.23%');
   expect(formatChangePercent(0)).toBe('0.00%');
+  expect(formatChangePercent(0.004)).toBe('0.00%');
+  expect(formatChangePercent(-0.004)).toBe('0.00%');
+  expect(formatChangePercent(0.0049)).toBe('0.00%');
+  expect(formatChangePercent(-0.0049)).toBe('0.00%');
+  expect(formatChangePercent('0.004%')).toBe('0.00%');
+  expect(formatChangePercent('-0.004%')).toBe('0.00%');
+  expect(formatChangePercent(0.005)).toBe('+0.01%');
+  expect(formatChangePercent(-0.005)).toBe('-0.01%');
   expect(formatChangePercent(null)).toBe('Not recorded');
   expect(formatChangePercent('')).toBe('Not recorded');
   expect(formatChangePercent('N/A')).toBe('Not recorded');

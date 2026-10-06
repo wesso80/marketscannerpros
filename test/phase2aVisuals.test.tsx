@@ -39,6 +39,20 @@ it("tiles hide missing values and derive positive/negative tones from measured c
   expect(el.innerHTML).toContain("var(--msp-bear)");
   expect(el.querySelector("[data-stamp-line]")).toBeNull();
 });
+it("shows a rounded-zero change as 0.00% with a flat tint", () => {
+  render(
+    <>
+      <StatTile label="Up dust" value={1} change={0.004} />
+      <StatTile label="Down dust" value={1} change={-0.004} />
+    </>,
+  );
+  expect(el.textContent).toContain("0.00%");
+  expect(el.textContent).not.toContain("+0.00%");
+  expect(el.textContent).not.toContain("-0.00%");
+  expect(el.innerHTML).toContain("var(--msp-flat)");
+  expect(el.innerHTML).not.toContain("var(--msp-bull)");
+  expect(el.innerHTML).not.toContain("var(--msp-bear)");
+});
 it("chips disclose one detail at a time and say Hide when open", () => {
   render(
     <ChipRow
