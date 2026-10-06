@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
-import { deepAnalysisLimiter, getClientIP } from '@/lib/rateLimit';
+import { readShared, writeShared } from '@/lib/cache/sharedResponse';
+import { commodityFromYahooQuote, YAHOO_FUTURES_SOURCE_LABEL, YAHOO_FUTURES_SYMBOLS, YAHOO_FUTURES_UNAVAILABLE, type PreciousMetal } from '@/lib/commodities/yahooFutures';
 import { isMonthlyObservationCurrent, monthlyAsOfLabel } from '@/lib/commodityFreshness';
+import { deepAnalysisLimiter, getClientIP } from '@/lib/rateLimit';
+import { getQuote } from '@/lib/yahoo-finance';
 
 // Alpha Vantage commodity endpoints
 // https://www.alphavantage.co/documentation/#commodities
@@ -37,8 +40,8 @@ const COMMODITIES = {
   WTI: { function: 'WTI', name: 'WTI Crude Oil', unit: '$/barrel', category: 'Energy', interval: 'daily' },
   BRENT: { function: 'BRENT', name: 'Brent Crude Oil', unit: '$/barrel', category: 'Energy', interval: 'daily' },
   NATURAL_GAS: { function: 'NATURAL_GAS', name: 'Natural Gas', unit: '$/MMBtu', category: 'Energy', interval: 'daily' },
-  GOLD: { function: 'GOLD_SILVER_SPOT', symbol: 'GOLD', name: 'Gold', unit: '$/oz', category: 'Metals', isPreciousMetal: true },
-  SILVER: { function: 'GOLD_SILVER_SPOT', symbol: 'SILVER', name: 'Silver', unit: '$/oz', category: 'Metals', isPreciousMetal: true },
+  GOLD: { function: 'GOLD', name: 'Gold', unit: '$/oz', category: 'Metals' },
+  SILVER: { function: 'SILVER', name: 'Silver', unit: '$/oz', category: 'Metals' },
   COPPER: { function: 'COPPER', name: 'Copper', unit: '$/metric ton', category: 'Metals', interval: 'monthly' },
   ALUMINUM: { function: 'ALUMINUM', name: 'Aluminum', unit: '$/metric ton', category: 'Metals', interval: 'monthly' },
   // Units as Alpha Vantage reports them in each series' `unit` field (World Bank monthly prices).
@@ -49,12 +52,12 @@ const COMMODITIES = {
   COFFEE: { function: 'COFFEE', name: 'Coffee', unit: 'cents/lb', category: 'Agriculture', interval: 'monthly' },
 };
 
-// Cache for commodity data (15 minute TTL - commodities update less frequently)
-const cache: Map<string, { data: any; timestamp: number }> = new Map();
-const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+/** One shared copy of each commodity row, about 15 minutes. */
+const COMMODITY_CACHE_TTL_SECONDS = 15 * 60;
+const commodityCacheKey = (symbol: string) => `commodities:v1:${symbol}`;
 
 type CommodityFreshness = 'LIVE' | 'DELAYED' | 'STALE';
-type CommoditySource = 'ETF_PROXY' | 'SPOT' | 'LEGACY_DAILY' | 'LEGACY_MONTHLY';
+type CommoditySource = 'ETF_PROXY' | 'SPOT' | 'LEGACY_DAILY' | 'LEGACY_MONTHLY' | 'YAHOO_FUTURES';
 
 interface CommodityData {
   symbol: string;
@@ -63,15 +66,19 @@ interface CommodityData {
   name: string;
   /** The commodity itself ("WTI Crude Oil"), for every row. */
   commodityName?: string;
-  price: number;
-  change: number;
-  changePercent: number;
+  price: number | null;
+  change: number | null;
+  changePercent: number | null;
   unit: string;
   category: string;
   date: string;
   history: { date: string; value: number }[];
   source: CommoditySource;
   sourceSymbol?: string;
+  /** User-visible source, set for Yahoo futures rows. */
+  sourceLabel?: string | null;
+  /** Plain reason when price and change are null. */
+  unavailableReason?: string | null;
   freshnessStatus: CommodityFreshness;
   dataAgeDays: number;
   eligibleForGate: boolean;
@@ -98,7 +105,7 @@ function withFreshness(
   const stale = monthly ? !isMonthlyObservationCurrent(data.date) : !Number.isFinite(age) || age > maxAgeDays;
   const freshnessStatus: CommodityFreshness = stale
     ? 'STALE'
-    : source === 'ETF_PROXY' || source === 'SPOT'
+    : source === 'ETF_PROXY' || source === 'SPOT' || source === 'YAHOO_FUTURES'
       ? 'LIVE'
       : 'DELAYED';
   return {
@@ -134,16 +141,63 @@ async function fetchETFQuote(etfSymbol: string): Promise<{ price: number; change
   }
 }
 
-async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<CommodityData | null> {
-  const cacheKey = `commodity_${symbol}`;
-  const cached = cache.get(cacheKey);
-  
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    console.log(`[Commodities] Cache hit for ${symbol}`);
-    return cached.data;
-  }
+function unavailableMetal(symbol: PreciousMetal): CommodityData {
+  const config = COMMODITIES[symbol];
+  return {
+    symbol,
+    name: config.name,
+    commodityName: config.name,
+    price: null,
+    change: null,
+    changePercent: null,
+    unit: config.unit,
+    category: config.category,
+    date: '',
+    history: [],
+    source: 'YAHOO_FUTURES',
+    sourceSymbol: YAHOO_FUTURES_SYMBOLS[symbol],
+    sourceLabel: YAHOO_FUTURES_SOURCE_LABEL,
+    unavailableReason: YAHOO_FUTURES_UNAVAILABLE,
+    freshnessStatus: 'STALE',
+    dataAgeDays: 0,
+    eligibleForGate: false,
+    cadence: 'live',
+    asOfLabel: null,
+  };
+}
 
+/** Gold and silver from Yahoo futures. A failed quote is an unavailable row, never a 0% change. */
+async function fetchYahooMetal(symbol: PreciousMetal): Promise<CommodityData> {
+  const config = COMMODITIES[symbol];
+  let quote = null;
   try {
+    quote = await getQuote(YAHOO_FUTURES_SYMBOLS[symbol]);
+  } catch (err) {
+    console.error(`[Commodities] Yahoo futures quote failed for ${symbol}:`, err);
+  }
+  const parsed = commodityFromYahooQuote(symbol, quote);
+  if (parsed.price == null || parsed.change == null || parsed.changePercent == null || parsed.unavailableReason) {
+    return unavailableMetal(symbol);
+  }
+  const row = withFreshness({
+    symbol,
+    name: config.name,
+    commodityName: config.name,
+    price: parsed.price,
+    change: parsed.change,
+    changePercent: parsed.changePercent,
+    unit: config.unit,
+    category: config.category,
+    date: parsed.date,
+    history: [{ date: parsed.date, value: parsed.price }],
+  }, 'YAHOO_FUTURES', 3, parsed.yahooSymbol);
+  return { ...row, sourceLabel: parsed.sourceLabel, asOfLabel: parsed.asOfLabel, unavailableReason: null };
+}
+
+async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<CommodityData | null> {
+  try {
+    if (symbol === 'GOLD' || symbol === 'SILVER') return await fetchYahooMetal(symbol);
+
     const config = COMMODITIES[symbol];
 
     // ── Strategy 1: ETF proxy via GLOBAL_QUOTE (real-time) ──
@@ -154,7 +208,7 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
       const proxyAge = etfQuote ? dataAgeDays(etfQuote.date) : Number.POSITIVE_INFINITY;
       if (etfQuote && etfQuote.price > 0 && proxyAge <= ETF_PROXY_MAX_AGE_DAYS) {
         console.log(`[Commodities] ✓ ETF proxy ${proxy.etf} → $${etfQuote.price} (${etfQuote.changePercent}%)`);
-        const result = withFreshness({
+        return withFreshness({
           symbol,
           name: `${proxy.etf} (${config.name} proxy)`,
           commodityName: config.name,
@@ -166,20 +220,13 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
           date: etfQuote.date,
           history: [{ date: etfQuote.date, value: etfQuote.price }],
         }, 'ETF_PROXY', 7, proxy.etf);
-        cache.set(cacheKey, { data: result, timestamp: Date.now() });
-        return result;
       }
       console.log(`[Commodities] ETF proxy ${proxy.etf} ${etfQuote ? `quote is ${etfQuote.date} (${proxyAge}d old)` : 'unavailable'}, falling back to legacy endpoint`);
     }
 
-    // ── Strategy 2: GOLD_SILVER_SPOT or legacy commodity endpoint ──
-    let url: string;
-    if ('isPreciousMetal' in config && config.isPreciousMetal) {
-      url = `https://www.alphavantage.co/query?function=GOLD_SILVER_SPOT&symbol=${config.symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    } else {
-      const interval = 'interval' in config ? config.interval : 'monthly';
-      url = `https://www.alphavantage.co/query?function=${config.function}&interval=${interval}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    }
+    // ── Strategy 2: legacy commodity endpoint (not used for gold or silver) ──
+    const interval = 'interval' in config ? config.interval : 'monthly';
+    const url = `https://www.alphavantage.co/query?function=${config.function}&interval=${interval}&apikey=${ALPHA_VANTAGE_API_KEY}`;
     
     console.log(`[Commodities] Fetching ${symbol} via legacy endpoint...`);
     
@@ -201,58 +248,29 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
       return null;
     }
 
-    let currentPrice: number;
-    let previousPrice: number;
-    let latestDate: string;
-    let history: { date: string; value: number }[] = [];
-
-    // Handle Gold/Silver spot price format (different from other commodities)
-    if ('isPreciousMetal' in config && config.isPreciousMetal) {
-      // GOLD_SILVER_SPOT returns: { "symbol": "GOLD", "price": "2853.12", ... }
-      if (!data.price) {
-        console.error(`No spot price data for ${symbol}:`, JSON.stringify(data));
-        return null;
-      }
-      currentPrice = parseFloat(data.price);
-      // Spot endpoint doesn't provide previous price, use 0 change
-      previousPrice = currentPrice;
-      latestDate = new Date().toISOString().split('T')[0];
-      // No history available from spot endpoint
-      history = [{ date: latestDate, value: currentPrice }];
-    } else {
-      // Regular commodities return historical data array
-      const dataPoints = data.data;
-      if (!dataPoints || !Array.isArray(dataPoints) || dataPoints.length < 2) {
-        console.error(`No data for ${symbol}:`, JSON.stringify(data));
-        return null;
-      }
-
-      // Get latest and previous values
-      const latest = dataPoints[0];
-      const previous = dataPoints[1];
-      
-      currentPrice = parseFloat(latest.value);
-      previousPrice = parseFloat(previous.value);
-      latestDate = latest.date;
-
-      // Get history (30 points for daily, 12 months for monthly)
-      const interval = 'interval' in config ? config.interval : 'monthly';
-      const historyLimit = interval === 'daily' ? 30 : 12;
-      history = dataPoints.slice(0, historyLimit).map((d: any) => ({
-        date: d.date,
-        value: parseFloat(d.value)
-      }));
+    const dataPoints = data.data;
+    if (!dataPoints || !Array.isArray(dataPoints) || dataPoints.length < 2) {
+      console.error(`No data for ${symbol}:`, JSON.stringify(data));
+      return null;
     }
+
+    const latest = dataPoints[0];
+    const previous = dataPoints[1];
+    const currentPrice = parseFloat(latest.value);
+    const previousPrice = parseFloat(previous.value);
+    const latestDate = latest.date;
+    const historyLimit = interval === 'daily' ? 30 : 12;
+    const history = dataPoints.slice(0, historyLimit).map((d: any) => ({
+      date: d.date,
+      value: parseFloat(d.value),
+    }));
 
     const change = currentPrice - previousPrice;
     const changePercent = previousPrice !== 0 ? (change / previousPrice) * 100 : 0;
-
-    const isSpot = 'isPreciousMetal' in config && config.isPreciousMetal;
-    const interval = !isSpot && 'interval' in config ? config.interval : 'monthly';
-    const source: CommoditySource = isSpot ? 'SPOT' : interval === 'daily' ? 'LEGACY_DAILY' : 'LEGACY_MONTHLY';
+    const source: CommoditySource = interval === 'daily' ? 'LEGACY_DAILY' : 'LEGACY_MONTHLY';
     // LEGACY_MONTHLY ignores maxAgeDays: it is judged by month (lib/commodityFreshness).
-    const maxAgeDays = source === 'SPOT' ? 2 : source === 'LEGACY_DAILY' ? 10 : 45;
-    const result = withFreshness({
+    const maxAgeDays = source === 'LEGACY_DAILY' ? 10 : 45;
+    return withFreshness({
       symbol,
       name: config.name,
       commodityName: config.name,
@@ -264,13 +282,49 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
       date: latestDate,
       history,
     }, source, maxAgeDays);
-
-    cache.set(cacheKey, { data: result, timestamp: Date.now() });
-    return result;
   } catch (err) {
     console.error(`Error fetching ${symbol}:`, err);
+    if (symbol === 'GOLD' || symbol === 'SILVER') return unavailableMetal(symbol);
     return null;
   }
+}
+
+/**
+ * Shared Redis first. The limiter runs only when at least one symbol still needs a vendor call.
+ * Returns 'limited' when that call is not allowed.
+ */
+async function loadCommodities(
+  symbols: (keyof typeof COMMODITIES)[],
+  ip: string,
+): Promise<(CommodityData | null)[] | 'limited'> {
+  const hits = new Map<string, CommodityData>();
+  for (const symbol of symbols) {
+    const row = await readShared<CommodityData>(commodityCacheKey(symbol));
+    if (row?.symbol === symbol) {
+      console.log(`[Commodities] Shared cache hit for ${symbol}`);
+      hits.set(symbol, row);
+    }
+  }
+  if (symbols.some((symbol) => !hits.has(symbol))) {
+    const rateCheck = deepAnalysisLimiter.check(ip);
+    if (!rateCheck.allowed) return 'limited';
+  }
+
+  const results: (CommodityData | null)[] = [];
+  for (let i = 0; i < symbols.length; i++) {
+    const symbol = symbols[i];
+    const hit = hits.get(symbol);
+    if (hit) {
+      results.push(hit);
+      continue;
+    }
+    const data = await fetchCommodity(symbol);
+    if (data) await writeShared(commodityCacheKey(symbol), data, COMMODITY_CACHE_TTL_SECONDS);
+    results.push(data);
+    const moreMisses = symbols.slice(i + 1).some((next) => !hits.has(next));
+    if (moreMisses) await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  return results;
 }
 
 export async function GET(req: NextRequest) {
@@ -280,42 +334,28 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Please log in to access commodity data' }, { status: 401 });
   }
 
-  // Rate limit: expensive endpoint (up to 6 AV calls)
-  const ip = getClientIP(req);
-  const rateCheck = deepAnalysisLimiter.check(ip);
-  if (!rateCheck.allowed) {
-    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
-  }
-
   try {
     const { searchParams } = new URL(req.url);
     const symbol = searchParams.get('symbol')?.toUpperCase();
+    const symbols = symbol && symbol in COMMODITIES
+      ? [symbol as keyof typeof COMMODITIES]
+      : (Object.keys(COMMODITIES) as (keyof typeof COMMODITIES)[]);
 
-    // If specific symbol requested
-    if (symbol && symbol in COMMODITIES) {
-      const data = await fetchCommodity(symbol as keyof typeof COMMODITIES);
+    console.log(`[Commodities] Starting fetch for ${symbols.length} commodities...`);
+    const loaded = await loadCommodities(symbols, getClientIP(req));
+    if (loaded === 'limited') {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
+
+    if (symbols.length === 1 && symbol) {
+      const data = loaded[0];
       if (!data) {
         return NextResponse.json({ error: `Failed to fetch ${symbol}` }, { status: 500 });
       }
       return NextResponse.json({ success: true, commodity: data });
     }
 
-    // Fetch commodities sequentially with longer delays
-    const symbols = Object.keys(COMMODITIES) as (keyof typeof COMMODITIES)[];
-    const results: (CommodityData | null)[] = [];
-    
-    console.log(`[Commodities] Starting fetch for ${symbols.length} commodities...`);
-    
-    for (let i = 0; i < symbols.length; i++) {
-      const s = symbols[i];
-      const data = await fetchCommodity(s);
-      results.push(data);
-      // Add 500ms delay between requests (except after last)
-      if (i < symbols.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-    }
-    
+    const results = loaded;
     const commodities = results.filter((r): r is CommodityData => r !== null);
     
     console.log(`[Commodities] Fetched ${commodities.length}/${symbols.length} successfully`);
@@ -335,8 +375,10 @@ export async function GET(req: NextRequest) {
       Metals: commodities.filter(c => c.category === 'Metals'),
       Agriculture: commodities.filter(c => c.category === 'Agriculture'),
     };
-    const gateCommodities = commodities.filter(c => c.eligibleForGate);
-    const staleSymbols = commodities.filter(c => !c.eligibleForGate).map(c => c.symbol);
+    const gateCommodities = commodities.filter(c => c.eligibleForGate).filter((c): c is CommodityData & { changePercent: number } =>
+      typeof c.changePercent === 'number' && Number.isFinite(c.changePercent));
+    // A missing gold/silver quote is unavailable, not a stale observation.
+    const staleSymbols = commodities.filter(c => !c.eligibleForGate && c.price != null).map(c => c.symbol);
     const gateCategories = new Set(gateCommodities.map(c => c.category));
     const gateReady = gateCommodities.length >= 6
       && gateCategories.has('Energy')

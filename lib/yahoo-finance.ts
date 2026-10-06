@@ -22,6 +22,65 @@ export interface YahooQuote {
   fiftyTwoWeekHigh?: number;
   fiftyTwoWeekLow?: number;
   averageVolume?: number;
+  /** ISO time from Yahoo `regularMarketTime`, when the chart payload includes it. */
+  quoteTime?: string | null;
+}
+
+/**
+ * Read a Yahoo v8 chart payload into a quote.
+ * Change is price minus Yahoo's previous close.
+ */
+export function parseYahooChartQuote(data: unknown): YahooQuote | null {
+  const result = (data as {
+    chart?: {
+      result?: Array<{
+        meta?: {
+          symbol?: string;
+          regularMarketPrice?: number;
+          previousClose?: number;
+          regularMarketTime?: number;
+          marketCap?: number;
+          fiftyTwoWeekHigh?: number;
+          fiftyTwoWeekLow?: number;
+        };
+        indicators?: {
+          quote?: Array<{
+            open?: Array<number | null>;
+            high?: Array<number | null>;
+            low?: Array<number | null>;
+            volume?: Array<number | null>;
+          }>;
+        };
+      }>;
+    };
+  })?.chart?.result?.[0];
+  if (!result?.meta) return null;
+
+  const meta = result.meta;
+  const bar = result.indicators?.quote?.[0];
+  const price = meta.regularMarketPrice;
+  const previousClose = meta.previousClose;
+  if (typeof price !== 'number' || typeof previousClose !== 'number') return null;
+
+  const quoteTime = typeof meta.regularMarketTime === 'number' && Number.isFinite(meta.regularMarketTime)
+    ? new Date(meta.regularMarketTime * 1000).toISOString()
+    : null;
+
+  return {
+    symbol: meta.symbol ?? '',
+    price,
+    change: price - previousClose,
+    changePercent: ((price - previousClose) / previousClose) * 100,
+    open: bar?.open?.[bar.open.length - 1] || price,
+    high: bar?.high?.[bar.high.length - 1] || price,
+    low: bar?.low?.[bar.low.length - 1] || price,
+    previousClose,
+    volume: bar?.volume?.[bar.volume.length - 1] || 0,
+    marketCap: meta.marketCap,
+    fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh,
+    fiftyTwoWeekLow: meta.fiftyTwoWeekLow,
+    quoteTime,
+  };
 }
 
 export interface YahooHistoricalBar {
@@ -69,28 +128,7 @@ export async function getQuote(symbol: string): Promise<YahooQuote | null> {
     });
     
     if (!response.ok) return null;
-    
-    const data = await response.json();
-    const result = data.chart?.result?.[0];
-    if (!result) return null;
-    
-    const meta = result.meta;
-    const quote = result.indicators?.quote?.[0];
-    
-    return {
-      symbol: meta.symbol,
-      price: meta.regularMarketPrice,
-      change: meta.regularMarketPrice - meta.previousClose,
-      changePercent: ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100,
-      open: quote?.open?.[quote.open.length - 1] || meta.regularMarketPrice,
-      high: quote?.high?.[quote.high.length - 1] || meta.regularMarketPrice,
-      low: quote?.low?.[quote.low.length - 1] || meta.regularMarketPrice,
-      previousClose: meta.previousClose,
-      volume: quote?.volume?.[quote.volume.length - 1] || 0,
-      marketCap: meta.marketCap,
-      fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh,
-      fiftyTwoWeekLow: meta.fiftyTwoWeekLow,
-    };
+    return parseYahooChartQuote(await response.json());
   } catch (err) {
     console.error('Yahoo Finance quote error:', err);
     return null;

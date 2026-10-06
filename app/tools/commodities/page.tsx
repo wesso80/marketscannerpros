@@ -8,19 +8,22 @@ import { useAIPageContext } from '@/lib/ai/pageContext';
 import UpgradeGate from '@/components/UpgradeGate';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { commodityFreshnessLabel } from '@/lib/commodities/quoteFreshnessLabel';
+import { YAHOO_FUTURES_SOURCE_LABEL } from '@/lib/commodities/yahooFutures';
 
 interface CommodityData {
   symbol: string;
   name: string;
-  price: number;
-  change: number;
-  changePercent: number;
+  price: number | null;
+  change: number | null;
+  changePercent: number | null;
   unit: string;
   category: string;
   date: string;
   history: { date: string; value: number }[];
-  source: 'ETF_PROXY' | 'SPOT' | 'LEGACY_DAILY' | 'LEGACY_MONTHLY';
+  source: 'ETF_PROXY' | 'SPOT' | 'LEGACY_DAILY' | 'LEGACY_MONTHLY' | 'YAHOO_FUTURES';
   sourceSymbol?: string;
+  sourceLabel?: string | null;
+  unavailableReason?: string | null;
   freshnessStatus: 'LIVE' | 'DELAYED' | 'STALE';
   dataAgeDays: number;
   eligibleForGate: boolean;
@@ -481,8 +484,9 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
     selectedCategory === 'all' || c.category === selectedCategory
   ) || [];
 
-  const formatPrice = (price: number, unit: string) => {
-    const numericPrice = safeNumber(price) ?? 0;
+  const formatPrice = (price: number | null, unit: string) => {
+    const numericPrice = safeNumber(price);
+    if (numericPrice === null) return 'unavailable';
     if (unit.includes('cents')) {
       return `${numericPrice.toFixed(2)}¢`;
     }
@@ -573,7 +577,8 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
   }
 
   const eligible = filteredCommodities.filter((item) => item.eligibleForGate);
-  const excluded = filteredCommodities.filter((item) => !item.eligibleForGate);
+  const shown = filteredCommodities.filter((item) => eligible.includes(item) || item.source === 'YAHOO_FUTURES');
+  const excluded = filteredCommodities.filter((item) => !item.eligibleForGate && item.source !== 'YAHOO_FUTURES');
   const plain = (value: string) => value.toLowerCase().replaceAll('_', ' ');
   const mainContent = (
     <div className="text-white">
@@ -591,29 +596,32 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
         </div>
         {derivedState && <p data-commodity-legend className="text-xs text-white/60">Evidence legend: Upside case = rising-price conditions; Downside case = falling-price conditions. Clear or limited describes observed alignment, not a recommendation.</p>}
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {eligible.map(commodity => {
-            const safeCommodityChangePercent = safeNumber(commodity.changePercent) ?? 0;
-            const longAllowed = derivedState && commodity.eligibleForGate && derivedState.longsAllowed && safeCommodityChangePercent > -1.5;
-            const shortAllowed = derivedState && commodity.eligibleForGate && derivedState.shortsAllowed && safeCommodityChangePercent < 1.5;
+          {shown.map(commodity => {
+            const safeCommodityChangePercent = safeNumber(commodity.changePercent);
+            const quoteMissing = commodity.price == null || safeCommodityChangePercent == null;
+            const longAllowed = derivedState && commodity.eligibleForGate && safeCommodityChangePercent != null && derivedState.longsAllowed && safeCommodityChangePercent > -1.5;
+            const shortAllowed = derivedState && commodity.eligibleForGate && safeCommodityChangePercent != null && derivedState.shortsAllowed && safeCommodityChangePercent < 1.5;
             const freshnessLabel = commodityFreshnessLabel(commodity);
             return <article data-commodity-card key={commodity.symbol} className="min-w-0 rounded-lg border border-white/10 bg-white/5 p-3">
-              <div className="flex items-start justify-between gap-2"><h3 className="min-w-0 text-sm font-semibold">{commodity.name}</h3><span className="shrink-0 text-sm">{formatPrice(commodity.price, commodity.unit)}</span></div>
-              <div className="mt-1 flex justify-between gap-2 text-xs text-white/60"><span>{commodity.category}</span><span>{signed(commodity.changePercent)}</span></div>
+              <div className="flex items-start justify-between gap-2"><h3 className="min-w-0 break-words text-sm font-semibold">{commodity.name}</h3><span className="shrink-0 text-sm">{quoteMissing ? 'unavailable' : formatPrice(commodity.price, commodity.unit)}</span></div>
+              <div className="mt-1 flex justify-between gap-2 text-xs text-white/60"><span>{commodity.category}</span><span>{safeCommodityChangePercent == null ? 'unavailable' : signed(safeCommodityChangePercent)}</span></div>
+              {commodity.sourceLabel ? <p className="mt-1 break-words text-[11px] leading-snug text-white/45">{commodity.sourceLabel}</p> : null}
+              {commodity.source === 'YAHOO_FUTURES' && commodity.asOfLabel ? <p className="break-words text-[11px] leading-snug text-white/40">{commodity.asOfLabel}</p> : null}
               <details className="mt-2 text-xs text-white/60"><summary className="cursor-pointer">Observation details</summary>
                 <p className="mt-2">{commodity.unit}</p>
-                {derivedState && <p className="mt-1">Upside case: {longAllowed ? 'Clear' : 'Limited'} · Downside case: {shortAllowed ? 'Clear' : 'Limited'}</p>}
+                {derivedState && !quoteMissing && <p className="mt-1">Upside case: {longAllowed ? 'Clear' : 'Limited'} · Downside case: {shortAllowed ? 'Clear' : 'Limited'}</p>}
                       <div className="mt-2 flex min-w-0 flex-wrap items-center justify-between gap-2 text-[11px] text-white/40">
                         <span className={`min-w-0 break-words ${freshnessTone(freshnessLabel)}`}>
-                          {freshnessLabel}{commodity.sourceSymbol ? ` · proxy ${commodity.sourceSymbol}` : ''}
+                          {quoteMissing ? 'unavailable' : freshnessLabel}{commodity.source === 'ETF_PROXY' && commodity.sourceSymbol ? ` · proxy ${commodity.sourceSymbol}` : ''}
                         </span>
-                        <span className="min-w-0 break-words">{commodity.asOfLabel ?? `Source date: ${commodity.date} · age ${commodity.dataAgeDays}d`}</span>
+                        <span className="min-w-0 break-words">{commodity.unavailableReason ?? commodity.asOfLabel ?? `Source date: ${commodity.date} · age ${commodity.dataAgeDays}d`}</span>
                       </div>
 
               </details>
             </article>;
           })}
         </div>
-        {!eligible.length && <p className="text-sm text-amber-200">No included observations in this category.</p>}
+        {!shown.length && <p className="text-sm text-amber-200">No included observations in this category.</p>}
         {excluded.length > 0 && <details data-excluded-commodities className="rounded-lg border border-amber-400/25 px-3 py-2 text-xs text-amber-100">
           <summary className="cursor-pointer">{excluded.length} excluded {excluded.length === 1 ? 'observation' : 'observations'} · date check failed</summary>
           <p className="mt-2">These rows are excluded from the assessment by the data feed.</p>
@@ -633,7 +641,7 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
             <dt>Copper vs gold</dt><dd>{signed(derivedState.relative.copperVsGold)}</dd>
           </dl>
         </details>}
-        <p data-commodity-source className="text-xs text-white/45">Source: Alpha Vantage · {data?.sourceAsOf ? `Latest included observation: ${new Date(`${data.sourceAsOf}T12:00:00Z`).toLocaleDateString('en-AU', {timeZone:'UTC',weekday:'short',day:'numeric',month:'short'}).replace(',', '')}` : 'Observation date not collected'}{data?.lastUpdate ? ` · Retrieved ${new Date(data.lastUpdate).toLocaleString('en-AU', {timeZone:'Australia/Sydney',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})}` : ''} · Individual dates and proxy units in observation details.</p>
+        <p data-commodity-source className="break-words text-xs text-white/45">Source: Alpha Vantage · Gold and silver: {YAHOO_FUTURES_SOURCE_LABEL} · {data?.sourceAsOf ? `Latest included observation: ${new Date(`${data.sourceAsOf}T12:00:00Z`).toLocaleDateString('en-AU', {timeZone:'UTC',weekday:'short',day:'numeric',month:'short'}).replace(',', '')}` : 'Observation date not collected'}{data?.lastUpdate ? ` · Retrieved ${new Date(data.lastUpdate).toLocaleString('en-AU', {timeZone:'Australia/Sydney',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})}` : ''} · Individual dates and proxy units in observation details.</p>
         <ComplianceDisclaimer compact />
       </main>
     </div>
