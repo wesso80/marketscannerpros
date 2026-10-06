@@ -83,6 +83,19 @@ it('labels from saved daily bars, closes a ticker with no series immediately, an
  expect(String(updates[3][0])).toContain("'no-bars'");
  expect(pgReadBars).toHaveBeenCalledTimes(5);
 });
+it('leaves headlines waiting when the bar read throws, and does not close them as no_price_data',async()=>{
+ const recent=new Date(now-3*86400000).toISOString();
+ q.mockImplementation(async(sql:string)=>String(sql).startsWith('SELECT event_id')?[{event_id:'x',ticker:'ERR',event_at:recent},{event_id:'y',ticker:'ERR',event_at:recent}]:[]);
+ pgReadBars.mockRejectedValue(new Error('db down'));
+ const spy=vi.spyOn(console,'error').mockImplementation(()=>{});
+ const out=await labelNewsOutcomes(now);
+ expect(out).toEqual({labelled:0,waiting:2,noBars:0});
+ expect(q.mock.calls.some(c=>String(c[0]).includes('no_price_data'))).toBe(false);
+ expect(q.mock.calls.some(c=>String(c[0]).startsWith('UPDATE'))).toBe(false);
+ expect(pgReadBars).toHaveBeenCalledTimes(1);
+ expect(spy).toHaveBeenCalledTimes(1);
+ spy.mockRestore();
+});
 it('scores only headlines whose ticker has a daily bar',async()=>{
  q.mockResolvedValue([]);
  const fetch=vi.fn();vi.stubGlobal('fetch',fetch);
@@ -124,6 +137,20 @@ it('does not mark the day done when scoring throws, and does mark it after a cle
  expect(ok.ok).toBe(true);
  expect(set.mock.calls.map(c=>c[0])).toContain(day);
  expect(del).not.toHaveBeenCalled();
+});
+it('keeps the hourly slot when only labelling fails',async()=>{
+ const set=vi.fn(async()=>'OK');
+ const del=vi.fn(async()=>1);
+ const slot=`admin:equity-news-jev:slot:${Math.floor(now/(60*60*1000))}`;
+ const day=`admin:equity-news-jev:day:${new Date(now).toISOString().slice(0,10)}`;
+ q.mockImplementation(async(sql:string)=>{if(String(sql).startsWith('SELECT event_id'))throw new Error('label read failed');return [];});
+ const out=await runNewsJevDailyOnce({set,del},now);
+ expect(out.ok).toBe(false);
+ expect(out.labelling).toMatchObject({error:'labelling failed'});
+ expect(out.scoring.skipped).toBe(null);
+ expect(del).not.toHaveBeenCalled();
+ expect(set.mock.calls.map(c=>c[0])).toEqual([slot]);
+ expect(set.mock.calls.map(c=>c[0])).not.toContain(day);
 });
 it('claims the hourly slot with SET NX EX and skips scoring when the claim loses',async()=>{
  const set=vi.fn(async()=>null);

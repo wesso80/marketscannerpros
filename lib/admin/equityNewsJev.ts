@@ -8,8 +8,9 @@ import {CAL_CORE,calibrateField,splitAt,type CalibrationFieldBase} from './calib
  * headline text alone: is it about this company, is it price-material, which direction, which event class. The regex
  * classifier's own subtype is deliberately NOT sent, so the two can be compared on the ledger.
  * Outcome: close of the first trading day after the event day over the close of the last trading day before it, from
- * the worker's daily bars. No provider call is made to label. A ticker with no daily bars is closed at once
- * (label_reason no_price_data). A ticker that has bars but not yet the next session still waits.
+ * the worker's daily bars. No provider call is made to label. A ticker is closed as no_price_data only when
+ * the daily-bar read succeeds and returns no rows. A failed read leaves those headlines pending. A ticker
+ * that has bars but not yet the next session still waits.
  * Admin only. Evidence only: nothing here changes a classification, a packet, or a rule.
  */
 export const NEWS_JEV_RULE='jev-news-v1' as const;
@@ -153,18 +154,31 @@ export function returnAroundEvent(bars:Array<{ts:number;close:number}>,eventDate
 }
 /**
  * Labels scored stamps older than labelAfterDays from the worker's daily bars.
- * label_reason is unconstrained text (status is only scored|unavailable). A ticker with no daily
- * series is closed on this pass as no_price_data, so oldest-first ordering does not keep rereading it.
- * A series that does not yet span the event waits, then closes as no-bars after giveUpAfterDays.
+ * label_reason is unconstrained text (status is only scored|unavailable). A successful read with no
+ * daily rows closes the ticker as no_price_data. A read error is cached as its own state, logged once,
+ * and left unlabelled so the next run retries it. A series that does not yet span the event waits,
+ * then closes as no-bars after giveUpAfterDays.
  */
+type DailyBarRead={ok:true;series:Array<{ts:number;close:number}>|null}|{ok:false};
+async function readDailyBars(ticker:string):Promise<DailyBarRead>{
+ try{
+  const r=await pgReadBars(ticker,'daily',NEWS_JEV.barsPerSymbol);
+  return {ok:true,series:r?.bars?.length?r.bars.map(b=>({ts:b.ts,close:b.close})):null};
+ }catch(err){
+  console.error(`[news-jev] daily bars read failed for ${ticker}`,err instanceof Error?err.message:err);
+  return {ok:false};
+ }
+}
 export async function labelNewsOutcomes(now=Date.now(),limit=400){
  await ensureNewsJevTable();
  const rows=await q<{event_id:string;ticker:string;event_at:Date|string}>(`SELECT event_id,ticker,event_at FROM news_jev_stamps WHERE labelled_at IS NULL AND status='scored' AND event_at<=$1 ORDER BY event_at ASC LIMIT $2`,[new Date(now-NEWS_JEV.labelAfterDays*86400000).toISOString(),limit]);
  let labelled=0,waiting=0,noBars=0;
- const bars=new Map<string,Promise<Array<{ts:number;close:number}>|null>>();
+ const bars=new Map<string,Promise<DailyBarRead>>();
  for(const row of rows){
-  if(!bars.has(row.ticker))bars.set(row.ticker,pgReadBars(row.ticker,'daily',NEWS_JEV.barsPerSymbol).then(r=>r?.bars?.length?r.bars.map(b=>({ts:b.ts,close:b.close})):null).catch(()=>null));
-  const series=await bars.get(row.ticker)!;
+  if(!bars.has(row.ticker))bars.set(row.ticker,readDailyBars(row.ticker));
+  const read=await bars.get(row.ticker)!;
+  if(!read.ok){waiting++;continue;}
+  const series=read.series;
   if(!series){
    await q(`UPDATE news_jev_stamps SET labelled_at=$2,label_reason='no_price_data' WHERE event_id=$1`,[row.event_id,new Date(now).toISOString()]);
    noBars++;
@@ -228,7 +242,8 @@ const newsSlotKey=(now:number)=>`admin:equity-news-jev:slot:${Math.floor(now/NEW
  * Labelling runs every call. Scoring runs at most once per hour, in a small batch,
  * and only while the daily cap has room. The hourly slot key is the gate: it is
  * claimed with SET NX EX before scoring. The day key is only a marker, written
- * after a clean pass. A throw releases the slot so the next tick can retry.
+ * after a clean pass. The slot is released only when scoring fails, so the next
+ * tick can retry scoring. A labelling failure leaves the slot claimed.
  */
 export async function runNewsJevDailyOnce(redis:NewsRedis,now=Date.now(),opts:NewsScoreOpts={}){
  let labelling:{labelled:number;waiting:number;noBars:number;error?:string};
@@ -242,8 +257,8 @@ export async function runNewsJevDailyOnce(redis:NewsRedis,now=Date.now(),opts:Ne
  let scoreFailed=false;
  try{scoring=await scorePendingNews(now,NEWS_JEV.scoreBatch,opts);}
  catch(e){scoreFailed=true;console.error('[news-jev] scoring failed',e);scoring={scored:0,unavailable:0,skipped:'error'};}
- const succeeded=!labelFailed&&!scoreFailed&&scoring.skipped!=='error'&&scoring.skipped!=='no-key';
- if(!succeeded)await redis.del?.(slot);
- else await redis.set(newsDayKey(now),'done',{nx:true,ex:36*3600});
- return {ok:succeeded,skipped:false as const,scoring,labelling};
+ const scoringFailed=scoreFailed||scoring.skipped==='error'||scoring.skipped==='no-key';
+ if(scoringFailed)await redis.del?.(slot);
+ else if(!labelFailed)await redis.set(newsDayKey(now),'done',{nx:true,ex:36*3600});
+ return {ok:!labelFailed&&!scoringFailed,skipped:false as const,scoring,labelling};
 }
