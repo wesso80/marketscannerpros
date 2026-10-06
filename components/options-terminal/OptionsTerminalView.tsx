@@ -518,21 +518,21 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
               <MobileOptionsChain rows={rows} selected={selected} onSelect={setSelected}/>
               {/* Chain Table */}
               <div className="mt-3 hidden rounded border border-zinc-800 sm:block">
-                <div ref={tableContainer} className="relative max-h-64 overflow-auto">
+                <div ref={tableContainer} className="relative max-h-64 min-w-0 max-w-full overflow-auto">
                   <table className="w-full border-collapse"><caption className="py-2 text-left text-xs text-zinc-400">{cp==='BOTH'?'Calls left · Puts right':cp==='CALLS'?'Calls':'Puts'}</caption>
                     <thead className="sticky top-0 z-10 bg-zinc-900">
                       <tr className="text-left">
                         {cp !== 'PUTS' && (
                           <>
-                            <Th>Bid</Th><Th>Ask</Th><Th>Vol</Th><Th>OI</Th><Th>IV</Th><Th>Delta</Th>
+                            <Th>Bid</Th><Th>Ask</Th><Th>Vol</Th><Th>OI</Th><Th>IV</Th><Th className="whitespace-nowrap">Delta</Th>
                             {mode === 'institutional' && <><Th>Γ</Th><Th>Θ</Th><Th>Vega</Th></>}
                           </>
                         )}
-                        <Th className="sticky-strike text-center">Strike</Th>
+                        <Th className="sticky-strike whitespace-nowrap text-center">Strike</Th>
                         {cp !== 'CALLS' && (
                           <>
                             {mode === 'institutional' && <><Th>Vega</Th><Th>Θ</Th><Th>Γ</Th></>}
-                            <Th>Delta</Th><Th>IV</Th><Th>OI</Th><Th>Vol</Th><Th>Bid</Th><Th>Ask</Th>
+                            <Th className="whitespace-nowrap">Delta</Th><Th>IV</Th><Th>OI</Th><Th>Vol</Th><Th>Bid</Th><Th>Ask</Th>
                           </>
                         )}
                       </tr>
@@ -918,7 +918,7 @@ function NumberField({ label, value, setValue, min, max }: { label: string; valu
 }
 
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <th scope="col" className={`px-3 py-3 text-[11px] uppercase tracking-wide text-zinc-400 ${className}`}>{children}</th>;
+  return <th scope="col" className={`whitespace-nowrap px-2 py-3 text-[11px] uppercase tracking-normal text-zinc-400 ${className}`}>{children}</th>;
 }
 
 function Td({ children, clickable, selected, onClick }: { children: React.ReactNode; clickable?: boolean; selected?: boolean; onClick?: () => void }) {
@@ -938,7 +938,7 @@ function TdStrike({ strike, underlying, isATM }: { strike: number; underlying: n
   const dist = strike - underlying;
   const distPct = underlying > 0 ? (dist / underlying) * 100 : 0;
   return (
-    <td className="sticky-strike sticky left-1/2 z-10 bg-zinc-950 px-3 py-3 text-center">
+    <td className="sticky-strike z-10 whitespace-nowrap bg-zinc-950 px-2 py-3 text-center">
       <div className="inline-flex flex-col items-center">
         <div className="text-sm font-semibold text-zinc-100">
           {strike.toFixed(2)} {isATM && <span className="ml-1 text-[11px] text-emerald-300">ATM</span>}
