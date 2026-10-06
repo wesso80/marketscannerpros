@@ -24,6 +24,19 @@ function alertPlan(session: Parameters<typeof hasPaidSessionAccess>[0]): { tier:
   return { tier, maxAlerts: ALERT_LIMITS[tier] };
 }
 
+/** One boolean for the cap check and the write. Anything else is rejected. */
+function activeFlagFromUpdates(updates: Record<string, unknown>): boolean | undefined | null {
+  const camel = Object.prototype.hasOwnProperty.call(updates, 'isActive');
+  const snake = Object.prototype.hasOwnProperty.call(updates, 'is_active');
+  if (!camel && !snake) return undefined;
+  const camelValue = updates.isActive;
+  const snakeValue = updates.is_active;
+  if (camel && typeof camelValue !== 'boolean') return null;
+  if (snake && typeof snakeValue !== 'boolean') return null;
+  if (camel && snake && camelValue !== snakeValue) return null;
+  return (camel ? camelValue : snakeValue) as boolean;
+}
+
 // Multi-condition alert condition types
 const MULTI_CONDITION_TYPES = [
   'price_above', 'price_below', 
@@ -418,8 +431,11 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Alert not found' }, { status: 404 });
     }
     const row = existing[0];
-    const incomingActive = updates.isActive !== undefined ? updates.isActive : updates.is_active;
-    const nextActive = incomingActive === undefined ? row.is_active === true : incomingActive === true;
+    const activeFlag = activeFlagFromUpdates(updates);
+    if (activeFlag === null) {
+      return NextResponse.json({ error: 'isActive must be a boolean' }, { status: 400 });
+    }
+    const nextActive = activeFlag === undefined ? row.is_active === true : activeFlag;
     const nextValue = updates.conditionValue !== undefined
       ? updates.conditionValue
       : updates.condition_value !== undefined
@@ -463,7 +479,12 @@ export async function PUT(req: NextRequest) {
       expiresAt: 'expires_at',
     };
 
-    for (const [key, value] of Object.entries(updates)) {
+    const writeUpdates: Record<string, unknown> = { ...updates };
+    delete writeUpdates.isActive;
+    delete writeUpdates.is_active;
+    if (typeof activeFlag === 'boolean') writeUpdates.is_active = activeFlag;
+
+    for (const [key, value] of Object.entries(writeUpdates)) {
       const dbField = fieldMap[key] || key;
       if (allowedFields.includes(dbField)) {
         setClauses.push(`${dbField} = $${paramIndex}`);

@@ -284,7 +284,12 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setEditError(data.error || 'Failed to save changes');
+        const message = typeof data?.message === 'string' && data.message
+          ? data.message
+          : typeof data?.error === 'string' && data.error
+            ? data.error
+            : 'Failed to save changes';
+        setEditError(message);
         return;
       }
       setEditingId(null);
@@ -313,13 +318,25 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
 
   const cleanupOrphaned = async () => {
     setCleanupStatus('cleaning');
+    setActionError(null);
     try {
       const res = await fetch('/api/alerts?bulk=auto-orphaned', { method: 'DELETE' });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const message = typeof data?.message === 'string' && data.message
+          ? data.message
+          : typeof data?.error === 'string' && data.error
+            ? data.error
+            : 'Could not switch off empty auto alerts.';
+        setActionError(message);
+        setCleanupStatus('idle');
+        return;
+      }
       setCleanupCount(data.deletedCount ?? 0);
       setCleanupStatus('done');
       await fetchAll();
     } catch {
+      setActionError('Could not switch off empty auto alerts.');
       setCleanupStatus('idle');
     }
   };

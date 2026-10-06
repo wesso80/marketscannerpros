@@ -959,36 +959,27 @@ export async function POST(req: NextRequest) {
       { guardEnabled }
     );
 
-    const skippedAtCap = result?.kind === 'alert_draft' && 'created' in result && result.created === false;
-    if (skippedAtCap) {
-      await q(
-        `DELETE FROM operator_action_executions
-         WHERE workspace_id = $1 AND idempotency_key = $2`,
-        [session.workspaceId, idempotencyKey]
-      );
-    } else {
-      await q(
-        `UPDATE operator_action_executions
-         SET status = 'completed',
-           mode = $3,
-           result = $4::jsonb,
-           updated_at = NOW()
-         WHERE workspace_id = $1 AND idempotency_key = $2`,
-        [
-          session.workspaceId,
-          idempotencyKey,
+    await q(
+      `UPDATE operator_action_executions
+       SET status = 'completed',
+         mode = $3,
+         result = $4::jsonb,
+         updated_at = NOW()
+       WHERE workspace_id = $1 AND idempotency_key = $2`,
+      [
+        session.workspaceId,
+        idempotencyKey,
+        effectiveMode,
+        JSON.stringify({
+          actionType: parsedActionType,
+          legacyActionType: mapToLegacyActionType(parsedActionType),
+          requestedMode,
           effectiveMode,
-          JSON.stringify({
-            actionType: parsedActionType,
-            legacyActionType: mapToLegacyActionType(parsedActionType),
-            requestedMode,
-            effectiveMode,
-            downgradeReason,
-            output: result,
-          }),
-        ]
-      );
-    }
+          downgradeReason,
+          output: result,
+        }),
+      ]
+    );
 
     const auditEvent = {
       event_id: `evt_action_executed_${Date.now()}_${randomUUID().slice(0, 8)}`,

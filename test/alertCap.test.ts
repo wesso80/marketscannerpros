@@ -228,7 +228,10 @@ describe('alert create paths at the Pro cap', () => {
     const blocked = await postAlert({ symbol: 'MSFT', assetType: 'equity', conditionType: 'price_below', conditionValue: 400 });
     expect(blocked.status).toBe(403);
     expect((await blocked.json()).message).toBe(
-      `You have ${ALERT_LIMITS.pro} active alerts, the most Pro allows. Pause or delete one to add a new one.`,
+      `You have 100 active alerts. Pro allows ${ALERT_LIMITS.pro}. Pause or delete one to add a new one.`,
+    );
+    expect(alertLimitReachedPayload('pro', 105).message).toBe(
+      'You have 105 active alerts. Pro allows 100. Pause or delete one to add a new one.',
     );
     expect(alertLimitReachedPayload('free', 3).message).toBe(
       'Your free plan allows 3 active alerts. Upgrade to create more.',
@@ -343,7 +346,7 @@ describe('alert create paths at the Pro cap', () => {
 
     expect(alertCapSkipReason('free', 3)).toBe("Alert not created: you're at your plan's limit of 3 active alerts.");
     expect(focusAlertCreateFeedback(false, alertLimitReachedPayload('pro', 100), 'AAPL')).toEqual({
-      message: 'You have 100 active alerts, the most Pro allows. Pause or delete one to add a new one.',
+      message: 'You have 100 active alerts. Pro allows 100. Pause or delete one to add a new one.',
       proceed: false,
     });
     expect(skippedAlertDraftReason({ kind: 'alert_draft', created: false, reason: alertCapSkipReason('pro', 100) })).toBe(alertCapSkipReason('pro', 100));
@@ -435,7 +438,9 @@ describe('alert create paths at the Pro cap', () => {
     expect(second.status).toBe(200);
     expect((await second.json()).replay).toBe(true);
     expect(alertInserts).toBe(1);
-    expect(readFileSync(resolve(__dirname, '../app/api/actions/execute/route.ts'), 'utf8')).toContain('DELETE FROM operator_action_executions');
+    const executeSrc = readFileSync(resolve(__dirname, '../app/api/actions/execute/route.ts'), 'utf8');
+    expect(executeSrc).not.toContain('skippedAtCap');
+    expect(executeSrc).not.toContain('DELETE FROM operator_action_executions');
   });
 
   it('bulk cleanup switches off only active smart workflow.auto rows with value 0', async () => {
@@ -492,5 +497,52 @@ describe('alert create paths at the Pro cap', () => {
     const toggle = page.slice(page.indexOf('const toggleAlert'), page.indexOf('const deleteAlert'));
     expect(toggle).toContain('setActionError');
     expect(toggle).not.toContain('status === 403');
+    const save = page.slice(page.indexOf('const saveEdit'), page.indexOf('const orphanedCount'));
+    expect(save).toContain('data?.message');
+    expect(save).not.toContain('data.error ||');
+    const cleanupStart = page.indexOf('const cleanupOrphaned');
+    const cleanupFn = page.slice(cleanupStart, page.indexOf('setPageData({', cleanupStart));
+    expect(cleanupFn).toContain('!res.ok');
+    expect(cleanupFn).toContain('setActionError');
+
+    for (const file of ['app/account/page.tsx', 'app/tools/workspace/AccountSection.tsx']) {
+      const src = readFileSync(resolve(__dirname, '..', file), 'utf8');
+      expect(src, file).toContain('quota?.used');
+      expect(src, file).not.toContain('.filter((alert:');
+    }
+  });
+
+  it('rejects non-boolean isActive so a string or number cannot switch an alert on at the cap', async () => {
+    state.capCount = 100;
+    state.rows = [{ is_active: false, condition_type: 'price_above', condition_value: 180 }];
+    for (const body of [
+      { id: 'paused', isActive: 'true' },
+      { id: 'paused', isActive: 1 },
+      { id: 'paused', isActive: 'on' },
+      { id: 'paused', is_active: 't' },
+      { id: 'paused', isActive: false, is_active: 'true' },
+    ]) {
+      state.queries = [];
+      const res = await putAlert(body);
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: 'isActive must be a boolean' });
+      expect(state.queries.some((sql) => /UPDATE alerts/i.test(sql))).toBe(false);
+    }
+
+    state.capCount = 99;
+    state.queries = [];
+    const written: unknown[][] = [];
+    mocks.q.mockImplementation(async (sql: string, params: unknown[] = []) => {
+      state.queries.push(sql);
+      written.push(params);
+      if (isCapCount(sql)) return [{ count: state.capCount }];
+      if (/UPDATE alerts/i.test(sql)) return [{ id: 'kept', is_active: true }];
+      if (/FROM alerts/i.test(sql) && /SELECT/i.test(sql)) return state.rows;
+      return [];
+    });
+    const allowed = await putAlert({ id: 'paused', isActive: true });
+    expect(allowed.status).toBe(200);
+    const updateAt = state.queries.findIndex((sql) => /UPDATE alerts/i.test(sql));
+    expect(written[updateAt][0]).toBe(true);
   });
 });
