@@ -42,7 +42,7 @@ import {
   type SyncGate,
 } from '@/lib/portfolio/clientSync';
 import { mergeLocalLevels, openRiskMetrics, validLevel, validateLevels } from '@/lib/portfolio/positionLevels';
-import { chronologicalCloses, closedLinkLabel, dropServerOwnedRows, realizedByLink, splitClosedBook, type ClosedJournalLink } from '@/lib/portfolio/closedReconcile';
+import { chronologicalCloses, closedLinkLabel, realizedByLink, splitClosedBook, type ClosedJournalLink } from '@/lib/portfolio/closedReconcile';
 import { closedTradeR, formatR as formatStopRValue, formatRiskUnits, RISK_UNITS_NEED_EQUITY, riskUnitBase, riskUnitDollars, summarize, toRiskUnits } from '@/lib/portfolio/rMeasures';
 
 const formatStopR = (value: number | null | undefined) => value == null ? 'Not measured' : formatStopRValue(value);
@@ -649,6 +649,10 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const cashNotSavedShownRef = useRef(false);
   // Set by "Clear all data": the next sync may replace the saved copy with an empty one.
   const clearRequestedRef = useRef(false);
+  // Set only by an explicit edit (add, close, delete, cash, clear). Marks and today's snapshot must not set this.
+  const saveRequestedRef = useRef(false);
+  // True after a successful GET. localStorage is not a portfolio source on load.
+  const loadedFromServerRef = useRef(false);
 
   // Auto-dismiss sync error after 8s
   useEffect(() => {
@@ -929,18 +933,30 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     };
   }, [dataLoaded]);
 
-  // Load positions from database (with localStorage fallback for migration)
+  // Load the server book. A device copy is never the book on load, and a null baseline never uploads one.
   useEffect(() => {
     setMounted(true);
 
     const loadData = async () => {
-      let loadedPositions: Position[] = [];
-      let serverWasEmpty = false;
-
       const readLocal = <T,>(key: string): T | null => {
         const raw = localStorage.getItem(key);
         if (!raw) return null;
         try { return JSON.parse(raw) as T; } catch { console.error(`Failed to load ${key}`); return null; }
+      };
+
+      const baseline = (
+        loadedPositions: Position[],
+        loadedClosed: ClosedPosition[],
+        loadedPerformance: PerformanceSnapshot[],
+        loadedStartingCapital: string,
+        loadedCashLedger: CashLedgerEntry[],
+      ) => {
+        loadedFromServerRef.current = true;
+        if (!syncGateRef.current.enabled) return;
+        syncGateRef.current = {
+          ...syncGateRef.current,
+          lastSyncedJson: JSON.stringify(buildPortfolioSyncPayload(loadedPositions, loadedClosed, loadedPerformance, loadedStartingCapital, loadedCashLedger)),
+        };
       };
 
       try {
@@ -949,21 +965,25 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         const gate = gateFromLoad({ ok: res.ok, data });
         syncGateRef.current = gate;
         setSyncBlocked(gate.blockedMessage);
-        if (res.ok && serverHasPortfolioData(data)) {
+        if (!res.ok || !data) {
+          setDataLoaded(true);
+          return;
+        }
+        if (serverHasPortfolioData(data)) {
           // Stops/targets of manual positions live only on this device: re-attach them to the server rows.
-          loadedPositions = mergeLocalLevels<Position>(data.positions || [], readLocal<Position[]>('portfolio_positions'));
+          // That does not import a device book — rows still come from the server.
+          const loadedPositions = mergeLocalLevels<Position>(data.positions || [], readLocal<Position[]>('portfolio_positions'));
           // Only rows the Journal still agrees with (or Portfolio-only closes) count toward the book (TR-38).
           const { counted: loadedClosed, excluded: loadedUncounted } = splitClosedBook<ClosedPosition>(data.closedPositions || []);
           setUncountedClosed(loadedUncounted);
           const loadedPerformance = data.performanceHistory || [];
-          // Cash state is kept on this device when the server has none (it may never have been saved there);
-          // otherwise loading server positions would reset the local cash ledger to empty.
+          // Missing server cash stays empty here. A device cash ledger is not pulled in, and is not posted on load.
           const loadedStartingCapital = data.cashState
             ? String(Number(data.cashState.startingCapital ?? 10000))
-            : (localStorage.getItem('portfolio_starting_capital') || '10000');
-          const loadedCashLedger: CashLedgerEntry[] = data.cashState
-            ? (Array.isArray(data.cashState.cashLedger) ? data.cashState.cashLedger : [])
-            : (readLocal<CashLedgerEntry[]>('portfolio_cash_ledger') || []);
+            : '10000';
+          const loadedCashLedger: CashLedgerEntry[] = data.cashState && Array.isArray(data.cashState.cashLedger)
+            ? data.cashState.cashLedger
+            : [];
           setPositions(loadedPositions);
           setClosedPositions(loadedClosed);
           setPerformanceHistory(loadedPerformance);
@@ -971,54 +991,36 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
           setRiskAnalyticsMeta(data.riskAnalyticsMeta || null);
           setStartingCapitalInput(loadedStartingCapital);
           setCashLedger(loadedCashLedger);
-          if (data.cashState) {
-            // Exactly what the server holds: no POST until something changes.
-            syncGateRef.current = {
-              ...syncGateRef.current,
-              lastSyncedJson: JSON.stringify(buildPortfolioSyncPayload(loadedPositions, loadedClosed, loadedPerformance, loadedStartingCapital, loadedCashLedger)),
-            };
-          }
+          baseline(loadedPositions, loadedClosed, loadedPerformance, loadedStartingCapital, loadedCashLedger);
           setDataLoaded(true);
-          // Auto-refresh prices after loading
+          // Marks are display-only. Refreshing them must not schedule a save.
           if (loadedPositions.length > 0) {
             refreshAllPrices(loadedPositions);
           }
           return;
         }
-        serverWasEmpty = res.ok;
+        // Server answered with an empty book. Do not import localStorage positions, closes, snapshots, or cash.
+        const loadedPositions: Position[] = [];
+        const loadedClosed: ClosedPosition[] = [];
+        const loadedPerformance: PerformanceSnapshot[] = [];
+        const loadedStartingCapital = '10000';
+        const loadedCashLedger: CashLedgerEntry[] = [];
+        setPositions(loadedPositions);
+        setClosedPositions(loadedClosed);
+        setPerformanceHistory(loadedPerformance);
+        setRiskAnalytics(data.riskAnalytics || null);
+        setRiskAnalyticsMeta(data.riskAnalyticsMeta || null);
+        setStartingCapitalInput(loadedStartingCapital);
+        setCashLedger(loadedCashLedger);
+        setUncountedClosed([]);
+        baseline(loadedPositions, loadedClosed, loadedPerformance, loadedStartingCapital, loadedCashLedger);
+        setDataLoaded(true);
       } catch (e) {
-        console.error('Failed to load from server, falling back to localStorage');
+        console.error('Failed to load portfolio from server');
         syncGateRef.current = gateFromLoad({ ok: false });
         setSyncBlocked(syncGateRef.current.blockedMessage);
-      }
-
-      // Fallback to localStorage (server empty, server unavailable, or not logged in).
-      // Syncing stays off unless the server answered and was empty (nothing there to overwrite).
-      // Journal-linked rows are owned by the server; when it answered with none, local copies are stale (TR-38).
-      const localPositionsRaw = readLocal<Position[]>('portfolio_positions') || [];
-      const localClosedRaw = readLocal<ClosedPosition[]>('portfolio_closed') || [];
-      const localPositions = serverWasEmpty ? dropServerOwnedRows(localPositionsRaw) : localPositionsRaw;
-      const localClosed = serverWasEmpty ? dropServerOwnedRows(localClosedRaw) : localClosedRaw;
-      const localPerformance = readLocal<PerformanceSnapshot[]>('portfolio_performance') || [];
-      const localStartingCapital = localStorage.getItem('portfolio_starting_capital');
-      const localCashLedger = readLocal<CashLedgerEntry[]>('portfolio_cash_ledger') || [];
-      loadedPositions = localPositions;
-      setPositions(localPositions);
-      setClosedPositions(localClosed);
-      setPerformanceHistory(localPerformance);
-      if (localStartingCapital) {
-        setStartingCapitalInput(localStartingCapital);
-      }
-      setCashLedger(localCashLedger);
-      const localPayload = buildPortfolioSyncPayload(localPositions, localClosed, localPerformance, localStartingCapital || startingCapitalInput, localCashLedger);
-      if (serverWasEmpty && isEmptySyncPayload(localPayload)) {
-        // Nothing locally and nothing on the server: no need to POST.
-        syncGateRef.current = { ...syncGateRef.current, lastSyncedJson: JSON.stringify(localPayload) };
-      }
-      setDataLoaded(true);
-      // Auto-refresh prices after loading from localStorage
-      if (loadedPositions.length > 0) {
-        refreshAllPrices(loadedPositions);
+        loadedFromServerRef.current = false;
+        setDataLoaded(true);
       }
     };
 
@@ -1088,28 +1090,33 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     }).catch(() => { /* keep the queue alive */ });
   };
 
-  // Save positions to database (and localStorage as backup)
+  // Keep device-only stop/target fields, and POST only after an explicit user edit.
+  // Price refresh and today's snapshot update this state too; they must not schedule a save.
   useEffect(() => {
-    if (!mounted || !dataLoaded) return;
+    if (!mounted || !dataLoaded || !loadedFromServerRef.current) return;
 
-    // Save to localStorage as backup
     localStorage.setItem('portfolio_positions', JSON.stringify(positions));
     localStorage.setItem('portfolio_closed', JSON.stringify(closedPositions));
     localStorage.setItem('portfolio_performance', JSON.stringify(performanceHistory));
     localStorage.setItem('portfolio_starting_capital', startingCapitalInput);
     localStorage.setItem('portfolio_cash_ledger', JSON.stringify(cashLedger));
 
-    // Sync to database: only on top of the server copy we loaded, and only when something changed.
     const payload = buildPortfolioSyncPayload(positions, closedPositions, performanceHistory, startingCapitalInput, cashLedger);
     latestSyncPayloadRef.current = payload;
-    if (!shouldPostPortfolio(syncGateRef.current, JSON.stringify(payload))) return;
+    if (!saveRequestedRef.current) return;
+    if (!shouldPostPortfolio(syncGateRef.current, JSON.stringify(payload))) {
+      saveRequestedRef.current = false;
+      return;
+    }
 
-    // Debounce the sync
-    const timeoutId = setTimeout(() => enqueuePortfolioSync(), 1000);
+    const timeoutId = setTimeout(() => {
+      saveRequestedRef.current = false;
+      enqueuePortfolioSync();
+    }, 1000);
     return () => clearTimeout(timeoutId);
   }, [positions, closedPositions, performanceHistory, startingCapitalInput, cashLedger, mounted, dataLoaded]);
 
-  // Refresh today's observation when marks or cash change. Missing prior days stay missing.
+  // Refresh today's observation when marks or cash change. Display only — never a save. Missing prior days stay missing.
   useEffect(() => {
     if (!dataLoaded || (positions.length === 0 && closedPositions.length === 0)) return;
     const startingCapital = Number(startingCapitalInput);
@@ -1192,6 +1199,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     void emitWorkflowEvents([tradeExecutionEvent]);
 
     setPositions([...positions, position]);
+    saveRequestedRef.current = true;
     setNewPosition({ symbol: '', side: 'LONG', quantity: '', entryPrice: '', currentPrice: '', strategy: '' });
     setShowAddForm(false);
     setActiveTab('active-positions');
@@ -1257,6 +1265,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     void emitWorkflowEvents([tradeExecutionEvent]);
 
     setPositions((prev) => [...prev, position]);
+    saveRequestedRef.current = true;
     setDeployDraft({
       symbol: '',
       side: 'LONG',
@@ -1325,6 +1334,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
     setClosedPositions([...closedPositions, closedPos]);
     setPositions(positions.filter(p => p.id !== id));
+    saveRequestedRef.current = true;
   };
 
   const updatePrice = (id: number, newPrice: number) => {
@@ -1362,6 +1372,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       const result = splitPosition(position, 0.5, price, closeDateIso, Date.now(), positionMultiplier(position));
       setPositions(prev => prev.map(p => p.id === id ? result.remaining! : p));
       setClosedPositions(prev => [...prev, result.closed]);
+      saveRequestedRef.current = true;
     } catch { setSyncError('Enter a valid non-negative close price.'); }
   };
 
@@ -1435,6 +1446,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const deletePosition = (id: number) => {
     if (!confirm('Delete this position? This cannot be undone.')) return;
     setPositions((prev) => prev.filter((p) => p.id !== id));
+    saveRequestedRef.current = true;
     // Hard-delete on the server too — the POST wipe-and-replace path skips
     // journal-linked rows, so without this they'd reappear on next GET.
     enqueuePortfolioDelete(id, 'active');
@@ -1443,6 +1455,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const deleteClosedTrade = (id: number) => {
     if (!confirm('Delete this closed trade? This cannot be undone.')) return;
     setClosedPositions((prev) => prev.filter((p) => p.id !== id));
+    saveRequestedRef.current = true;
     enqueuePortfolioDelete(id, 'closed');
   };
 
@@ -1466,6 +1479,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       note: cashFlowDraft.note.trim() || undefined,
     };
     setCashLedger((prev) => [...prev, entry]);
+    saveRequestedRef.current = true;
     setCashFlowDraft({ type: cashFlowDraft.type, amount: '', note: '' });
   };
 
@@ -1482,10 +1496,9 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       localStorage.removeItem('portfolio_starting_capital');
 
       // Also clear from server. This is the only path allowed to send an empty portfolio over a saved one.
-      latestSyncPayloadRef.current = buildPortfolioSyncPayload([], [], [], startingCapitalInput, []);
       if (syncGateRef.current.enabled) {
         clearRequestedRef.current = true;
-        enqueuePortfolioSync();
+        saveRequestedRef.current = true;
       } else {
         setSyncError('Cleared on this device only. The saved server copy was not changed because server sync is off for this page.');
       }
@@ -2098,7 +2111,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
               min="0"
               step="100"
               value={startingCapitalInput}
-              onChange={(e) => setStartingCapitalInput(e.target.value)}
+              onChange={(e) => { setStartingCapitalInput(e.target.value); saveRequestedRef.current = true; }}
               className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
             />
           </label>
