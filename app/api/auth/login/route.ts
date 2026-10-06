@@ -78,11 +78,13 @@ async function trackSubscription(
     if (isNewUser) {
       sendNewSignupNotification(email, tier).catch(() => {});
     }
+    return isNewUser;
   } catch (error: any) {
     // Table might not exist yet - that's OK
     if (!error?.message?.includes('does not exist')) {
       console.error("Track subscription error:", error);
     }
+    return false;
   }
 }
 
@@ -215,7 +217,7 @@ export async function POST(req: NextRequest) {
       const daysLeft = Math.ceil((trial.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
       
       // Track trial user in database
-      await trackSubscription(
+      const accountCreated = await trackSubscription(
         workspaceId,
         normalizedEmail,
         trial.tier,
@@ -232,7 +234,8 @@ export async function POST(req: NextRequest) {
         workspaceId, 
         message: `Trial activated! ${daysLeft} days remaining.`,
         isTrial: true,
-        trialExpiresAt: trial.expiresAt.toISOString()
+        trialExpiresAt: trial.expiresAt.toISOString(),
+        ...(accountCreated ? { accountCreated: true } : {}),
       };
       
       const res = NextResponse.json(body);
@@ -257,10 +260,10 @@ export async function POST(req: NextRequest) {
       const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * sessionDays;
       const token = signSessionToken({ cid: `free_${normalizedEmail}`, tier: 'free', workspaceId, exp, ...(admin ? { is_admin: true } : {}) });
       
-      await trackSubscription(workspaceId, normalizedEmail, 'free', 'active', null, null, null, false);
+      const accountCreated = await trackSubscription(workspaceId, normalizedEmail, 'free', 'active', null, null, null, false);
       
       loginLimiter.reset(ip);
-      const body = { ok: true, tier: 'free', workspaceId, message: 'Welcome! Explore free tools or upgrade for full access.' };
+      const body = { ok: true, tier: 'free', workspaceId, message: 'Welcome! Explore free tools or upgrade for full access.', ...(accountCreated ? { accountCreated: true } : {}) };
       const res = NextResponse.json(body);
       res.cookies.set("ms_auth", token, getAuthCookieOptions(req, admin));
       const originHeader = req.headers.get("origin");
@@ -297,7 +300,7 @@ export async function POST(req: NextRequest) {
     const periodEnd = new Date((primarySub as any).current_period_end * 1000);
     
     // Track subscription in database
-    await trackSubscription(
+    const accountCreated = await trackSubscription(
       workspaceId,
       normalizedEmail,
       tier,
@@ -316,7 +319,7 @@ export async function POST(req: NextRequest) {
     const url = new URL(req.url);
     const debug = url.searchParams.get("debug") === "1";
     const isAdminDebug = debug && isValidAdminSecret(req.headers.get("x-admin-secret"), process.env.ADMIN_SECRET);
-    const body: any = { ok: true, tier, workspaceId, message: "Subscription activated successfully!" };
+    const body: any = { ok: true, tier, workspaceId, message: "Subscription activated successfully!", ...(accountCreated ? { accountCreated: true } : {}) };
     if (isAdminDebug) {
       body.debug = {
         priceIds,

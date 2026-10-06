@@ -12,7 +12,7 @@ export default function LockedPreview({ tool, description }: { tool: string; des
       <p className="text-xs">{FREE_COPY.exampleBasis}</p>
     </div>
     <p>{description || FREE_COPY.lockedDescription}</p>
-    <Link href="/pricing" onClick={() => trackFreeEvent('upgrade_click', tool)} className="inline-flex min-h-11 items-center rounded-lg border border-white/20 px-4">{FREE_COPY.upgrade}</Link>
+    <Link href="/pricing" data-funnel-upgrade="handled" onClick={() => trackFreeEvent('upgrade_click', tool)} className="inline-flex min-h-11 items-center rounded-lg border border-white/20 px-4">{FREE_COPY.upgrade}</Link>
     <p className="text-xs text-[var(--msp-text-muted)]">{FREE_COPY.guarantee}</p>
   </section>;
 }

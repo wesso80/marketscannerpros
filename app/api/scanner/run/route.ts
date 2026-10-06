@@ -1,4 +1,4 @@
-import { quotaKey, reserveScan } from '@/lib/free/scanQuota';
+import { earlierScanCount, isFirstEverScan, quotaDay, quotaKey, reserveScan } from '@/lib/free/scanQuota';
 import { FREE_DAILY_SCAN_LIMIT } from '@/lib/free/limits';
 import { computeTechnicalProxy, type TechnicalProxyResult } from '@/lib/scanner/technicalProxy';
 import { buildScannerScore, compareScannerScores, dollarVolume, scoreFreshness, synchronizeScannerScenario } from '@/lib/scanner/scoreContract';
@@ -580,13 +580,22 @@ export async function POST(req: NextRequest) {
 
     // Reserve one request atomically, before any provider work. Paid/cron behavior is unchanged.
     const scanDailyLimit = session.tier === 'pro' || session.tier === 'pro_trader' ? null : FREE_DAILY_SCAN_LIMIT;
+    let firstScan = false;
     if (scanDailyLimit !== null && !isCronBypass) {
       try {
-        const used = await reserveScan(quotaKey(req, session.workspaceId));
+        const scanKey = quotaKey(req, session.workspaceId);
+        const used = await reserveScan(scanKey);
         if (used === null) return NextResponse.json({
           error: `Daily scan limit reached (${scanDailyLimit}/day). Upgrade to Pro for unlimited scanning.`,
           limitReached: true, dailyLimit: scanDailyLimit, usageCount: scanDailyLimit,
         }, { status: 429 });
+        if (used === 1) {
+          try {
+            firstScan = isFirstEverScan(used, await earlierScanCount(scanKey, quotaDay().date));
+          } catch {
+            firstScan = false;
+          }
+        }
       } catch {
         return NextResponse.json({ error: 'Scan allowance is unavailable. Please try again.' }, { status: 503 });
       }
@@ -2953,6 +2962,7 @@ export async function POST(req: NextRequest) {
     const isStale = results.some((result) => result.scoreQuality?.freshnessStatus === 'stale' || result.scoreQuality?.freshnessStatus === 'missing');
     return NextResponse.json({
       success: true,
+      ...(firstScan ? { firstScan: true } : {}),
       message: results.length ? "OK" : "No symbols matched the minimum score (showing first for debug)",
       redirect: null,
       results,

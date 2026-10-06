@@ -403,6 +403,7 @@ function PlanCard({
         <button
           type="button"
           onClick={onCheckout}
+          data-placement={plan.id === 'pro' ? `pricing_pro_${cycle}` : undefined}
           disabled={loading || isCurrentPlan}
           className={[
             "w-full rounded-lg px-4 py-3 text-sm font-semibold transition-colors",

@@ -24,7 +24,7 @@ beforeEach(() => {
   vi.stubGlobal('React', React); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.stubGlobal('fetch', fetcher);
   used=0; tracked.mockReset(); localStorage.clear(); sessionStorage.clear();
   fetcher.mockReset().mockImplementation(async (url: string, opts?: RequestInit) => {
-    if(url === '/api/scanner/run') { used++; return {ok:true,status:200,json:async()=>({results:[result]})}; }
+    if(url === '/api/scanner/run') { used++; return {ok:true,status:200,json:async()=>({results:[result], firstScan:true})}; }
     if(url === '/api/scanner/usage') return {ok:true,status:200,json:async()=>({used,limit:5,resetsAt:'2026-10-05T00:00:00Z'})};
     if(url === '/api/msp-radar/preview') return {ok:true,json:async()=>({preview:{sessionDate:'2026-10-02',status:'COMPLETE',candidateCount:10,previous:{sessionDate:'2026-10-01',symbols:['SPY']}}})};
     if(url.startsWith('/api/scanner/daily-picks')) return {ok:true,json:async()=>({topPicks:{equity:[{...result,scan_date:'2026-10-02'}],crypto:[]},dataQuality:{computedAt:'2026-10-02',source:'database',stale:false,coverageScore:90,warnings:[]}})};
@@ -68,6 +68,31 @@ it('free analytics respect consent and deduplicate daily first scan',()=>{
   localStorage.setItem('msp-consent','accepted');
   trackFreeEvent('first_scan','demo','date');trackFreeEvent('first_scan','demo','date');expect(tracked).toHaveBeenCalledTimes(1);
   expect(tracked).toHaveBeenCalledWith('first_scan',{where:'demo'});
+});
+it('does not treat a later scan as the first scan', async () => {
+  localStorage.setItem('msp-consent','accepted');
+  const defaultFetch=fetcher.getMockImplementation()!;
+  fetcher.mockImplementation(async(url:string,opts?:RequestInit)=>{
+    if(url==='/api/scanner/run'){ used++; return {ok:true,status:200,json:async()=>({results:[result], firstScan:false})}; }
+    return defaultFetch(url,opts);
+  });
+  await render(<FreeScanner/>);
+  await act(async()=>[...container.querySelectorAll('button')].find(b=>b.textContent===FREE_COPY.scanAapl)!.click());
+  expect(tracked.mock.calls.filter(([name])=>name==='first_scan')).toHaveLength(0);
+});
+it('records one scan limit_hit with the limit name when analytics is allowed', async () => {
+  localStorage.setItem('msp-consent','accepted');
+  fetcher.mockImplementation(async(url:string)=>url==='/api/scanner/run'?{ok:false,status:429,json:async()=>({limitReached:true})}:{ok:true,json:async()=>url.includes('usage')?{used:0,limit:5,resetsAt:'2026-10-05T00:00:00Z'}:{topPicks:{equity:[],crypto:[]}}});
+  await render(<FreeScanner/>);
+  await act(async()=>[...container.querySelectorAll('button')].find(b=>b.textContent===FREE_COPY.scanAapl)!.click());
+  expect(tracked.mock.calls.filter(([name])=>name==='limit_hit')).toHaveLength(1);
+  expect(tracked).toHaveBeenCalledWith('limit_hit', expect.objectContaining({ limit: 'scans', placement: 'demo' }));
+});
+it('upgrade click records the placement when analytics is allowed', async () => {
+  localStorage.setItem('msp-consent','accepted');
+  await render(<LockedPreview tool="Options"/>);
+  await act(async()=>(container.querySelector('a[href="/pricing"]') as HTMLAnchorElement).click());
+  expect(tracked).toHaveBeenCalledWith('upgrade_click', { where: 'Options', placement: 'Options' });
 });
 it('429 shows one upgrade moment; Not now survives another attempt',async()=>{
   fetcher.mockImplementation(async(url:string)=>url==='/api/scanner/run'?{ok:false,status:429,json:async()=>({limitReached:true})}:{ok:true,json:async()=>url.includes('usage')?{used:0,limit:5,resetsAt:'2026-10-05T00:00:00Z'}:{topPicks:{equity:[],crypto:[]}}});

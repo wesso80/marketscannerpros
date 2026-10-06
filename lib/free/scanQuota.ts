@@ -30,6 +30,21 @@ export async function readScanQuota(key: string, now = new Date()) {
   const rows = await q<{ scan_count: number }>('SELECT scan_count FROM scan_usage WHERE workspace_id = $1 AND scan_date = $2', [key, date]);
   return { used: Number(rows[0]?.scan_count ?? 0), limit: FREE_DAILY_SCAN_LIMIT, resetsAt };
 }
+/** True only for the reservation that creates a user's first stored scan. */
+export function isFirstEverScan(reservedCount: number | null, earlierCount: number): boolean {
+  return reservedCount === 1 && earlierCount === 0;
+}
+
+/** Days before today that already have a scan. A failed read must not look like a first scan. */
+export async function earlierScanCount(key: string, today: string): Promise<number> {
+  const rows = await q<{ n: number | string }>(
+    'SELECT COUNT(*)::int AS n FROM scan_usage WHERE workspace_id = $1 AND scan_date <> $2 AND scan_count > 0',
+    [key, today],
+  );
+  const count = Number(rows[0]?.n ?? 0);
+  return Number.isFinite(count) ? count : 0;
+}
+
 /** One atomic reservation per explicit scan request; no check/increment race. */
 export async function reserveScan(key: string, now = new Date()) {
   const { date } = quotaDay(now);

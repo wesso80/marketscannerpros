@@ -21,6 +21,6 @@ export default function RadarPreview() {
       <p className="text-xs text-slate-400">{FREE_COPY.session} · {localStamp(preview.sessionDate)}</p>
       {!!preview.previous?.symbols.length && <div><p className="text-xs">{FREE_COPY.fromReport(preview.previous.sessionDate)}</p><p>{preview.previous.symbols.join(' · ')}</p></div>}
     </>}
-    <Link href="/pricing" onClick={() => trackFreeEvent('upgrade_click', 'radar')} className="inline-flex min-h-10 items-center underline">{FREE_COPY.unlockReport}</Link>
+    <Link href="/pricing" data-funnel-upgrade="handled" onClick={() => trackFreeEvent('upgrade_click', 'radar')} className="inline-flex min-h-10 items-center underline">{FREE_COPY.unlockReport}</Link>
   </section>;
 }

@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { captureMarketingAttribution, trackEvent, trackPageView } from "@/lib/analytics";
+import { flushPendingFunnelEvents, noteFunnelResponse, trackFunnelEvent, upgradePlacementFromClick } from "@/lib/free/funnel";
 import { initializePostHog } from "@/lib/posthog-browser";
 
 const CONSENT_KEY = "msp-consent";
@@ -20,6 +21,11 @@ type CheckoutContext = {
 
 const loadPlausible = () => {
   if (!PLAUSIBLE_DOMAIN) return;
+  window.plausible = window.plausible || function plausibleQueue() {
+    const queued = (window.plausible as { q?: unknown[] } | undefined)?.q || [];
+    queued.push(arguments);
+    (window.plausible as { q?: unknown[] }).q = queued;
+  };
   if (document.querySelector('script[data-msa="plausible"]')) return;
   const script = document.createElement("script");
   script.src = "https://plausible.io/js/script.js";
@@ -167,6 +173,7 @@ export default function AnalyticsLoader() {
       loadClarity();
       initializePostHog();
       captureMarketingAttribution();
+      flushPendingFunnelEvents();
       setEnabled(true);
     };
 
@@ -248,6 +255,7 @@ export default function AnalyticsLoader() {
           }
         }
 
+        void noteFunnelResponse(requestUrl, requestMethod, response);
         return response;
       } catch (error) {
         if (isCheckout) {
@@ -261,8 +269,16 @@ export default function AnalyticsLoader() {
       }
     }) as typeof window.fetch;
 
+    const onClick = (event: MouseEvent) => {
+      const placement = upgradePlacementFromClick(event.target, window.location.pathname);
+      if (!placement) return;
+      trackFunnelEvent("upgrade_click", { placement, where: placement });
+    };
+    document.addEventListener("click", onClick, true);
+
     return () => {
       window.fetch = originalFetch;
+      document.removeEventListener("click", onClick, true);
     };
   }, [enabled]);
 

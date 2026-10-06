@@ -4,6 +4,7 @@ import { q } from '@/lib/db';
 import { hashWorkspaceId } from '@/lib/auth';
 import { sendWelcomeEmail } from '@/lib/email';
 import { checkContestEntry } from '@/lib/referralContest';
+import { checkoutRef, recordPaidCheckout, shouldSendPaidCheckout } from '@/lib/analytics/serverFunnel';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-09-30.clover',
@@ -222,7 +223,7 @@ export async function POST(req: NextRequest) {
           const priceId = subscription.items.data[0]?.price.id || '';
           const tier = getTierFromPriceId(priceId);
           const workspaceId = hashWorkspaceId((customer.email || '').toLowerCase().trim());
-          
+
           await upsertSubscription(
             customer.id,
             customer.email || '',
@@ -263,6 +264,24 @@ export async function POST(req: NextRequest) {
           // Coupon was applied at checkout, so refereeCouponApplied = true
           if (subscription.status === 'active') {
             await processReferralReward(workspaceId, customer.email || '', customer.id, true, tier);
+          }
+
+          if (shouldSendPaidCheckout({ paymentStatus: session.payment_status, tier })) {
+            const interval = subscription.items.data[0]?.price?.recurring?.interval;
+            try {
+              await recordPaidCheckout({
+                tier,
+                payment_status: 'paid',
+                billing: interval === 'year' ? 'yearly' : interval === 'month' ? 'monthly' : 'unknown',
+                currency: session.currency || 'usd',
+                amount_cents: session.amount_total ?? 0,
+                checkout_ref: checkoutRef(session.id),
+                checkout_session_id: session.id,
+                livemode: session.livemode === true,
+              });
+            } catch (funnelError) {
+              console.error('[funnel] paid checkout not recorded', funnelError);
+            }
           }
 
           // Send welcome email to new paid subscribers

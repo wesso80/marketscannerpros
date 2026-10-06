@@ -3,7 +3,8 @@
 import { capturePostHogEvent, capturePostHogPageView } from "@/lib/posthog-browser";
 
 type AnalyticsEvent =
-  | "free_signup" | "first_scan" | "scan_limit_hit" | "upgrade_click" | "locked_preview_view"
+  | "free_signup" | "sign_up" | "first_scan" | "scan_limit_hit" | "limit_hit" | "upgrade_click" | "locked_preview_view"
+  | "purchase" | "paid"
   | "cta_get_started"
   | "open_pricing"
   | "pricing_viewed"
