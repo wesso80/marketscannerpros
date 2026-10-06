@@ -1,9 +1,9 @@
 /**
  * Crypto Derivatives decision inputs.
- * Approved 5 Oct 2026: funding, long/short and open interest. Liquidations are not collected
- * and are never treated as zero.
+ * Funding, long/short and open interest. OKX public liquidation history does not cover a full
+ * 24 hours, so there is no liquidations total and it is never treated as zero.
  */
-export const DERIVATIVE_FEED_BASIS = 'Based on 3 of 4 feeds · liquidations not collected';
+export const DERIVATIVE_FEED_BASIS = 'Based on funding, long/short and open interest.';
 
 export function derivativeDecisionReady(
   feeds: { funding: boolean; longShort: boolean; openInterest: boolean },

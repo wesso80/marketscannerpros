@@ -40,7 +40,7 @@ export default function MethodologyPage() {
                   ["Volatility", "BBWP, ATR, DVE phase"],
                   ["Relative strength", "vs a benchmark (SPY for equities, BTC for crypto)"],
                   ["Market structure", "levels, breakout proximity, EMA stack"],
-                  ["Positioning", "funding, open interest, liquidations (crypto)"],
+                  ["Positioning", "funding, open interest (crypto)"],
                   ["Regime", "trend / range / risk-on / risk-off context"],
                   ["Macro / cross-asset", "DXY, rates, VIX regime"],
                   ["Catalyst", "earnings and scheduled events"],

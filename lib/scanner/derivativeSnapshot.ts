@@ -1,4 +1,5 @@
 import type { DerivativeTicker } from '@/lib/coingecko';
+import { sumOpenInterestTotals } from '@/lib/crypto/openInterestTotal';
 
 /**
  * Is there a live, comparable crypto funding-rate feed? Not today: the CoinGecko derivatives snapshot does not state
@@ -29,9 +30,13 @@ export function summarizeDerivativeSnapshot(symbol: string, snapshot: Derivative
   }
   const rows = [...contracts.values()];
   if (!rows.length) return null;
+  const shared = sumOpenInterestTotals(snapshot, [base])[0];
   return {
     openInterest: rows.reduce((sum, t) => sum + t.open_interest, 0),
     openInterestCoin: rows.reduce((sum, t) => sum + t.open_interest / Number(t.price), 0),
+    // Display-only. Scoring still reads openInterest above. This total uses the shared helper.
+    sharedOpenInterest: shared?.totalUsd ?? null,
+    openInterestSource: shared?.sourceLabel ?? null,
     // This feed does not specify each contract's funding period. Comparing or
     // averaging these rates would combine potentially different horizons.
     fundingRate: undefined,
