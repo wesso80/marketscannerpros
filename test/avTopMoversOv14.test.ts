@@ -14,7 +14,8 @@ vi.mock('@/lib/avRateGovernor', () => ({ avTakeToken: async () => undefined }));
 import { fetchAvTopMovers, parseAvTopMovers } from '@/lib/avTopMovers';
 import { equityMoversBasisLabel } from '@/lib/alphaVantageEntitlement';
 
-const row = { ticker: 'MSGY', price: '8.07', change_amount: '6.1', change_percentage: '309.6447%', volume: '54900000' };
+// +309% is extreme. The change amount implies a $1.97 previous close, which agrees within 2%, and size is above both floors, so the row stays. This test is the end-of-day fallback, not the extreme-move filter.
+const row = { ticker: 'MSGY', price: '8.07', change_amount: '6.1', change_percentage: '309.6447%', volume: '54900000', previous_close: '1.97' };
 const eod = { metadata: 'Top gainers', last_updated: '2026-09-25 16:15:57 US/Eastern', top_gainers: [row], top_losers: [], most_actively_traded: [] };
 const res = (body: unknown) => ({ ok: true, json: async () => body }) as unknown as Response;
 const entitlementOf = (url: unknown) => new URL(String(url)).searchParams.get('entitlement');
