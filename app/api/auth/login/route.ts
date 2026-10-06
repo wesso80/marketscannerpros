@@ -1,6 +1,8 @@
 // app/api/auth/login/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
+import { subscriptionPeriodDate } from "@/lib/stripe/subscriptionPeriod";
 import { hashWorkspaceId, signSessionToken, verifySessionToken } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { loginLimiter, getClientIP } from "@/lib/rateLimit";
@@ -109,6 +111,104 @@ async function checkTrialAccess(email: string): Promise<{ tier: "pro" | "pro_tra
     }
   }
   return null;
+}
+
+const CUSTOMER_LIST_LIMIT = 100;
+
+async function listCustomersForEmail(email: string): Promise<Stripe.Customer[]> {
+  const listed = await stripe.customers.list({ email, limit: CUSTOMER_LIST_LIMIT });
+  return listed.data ?? [];
+}
+
+function betterPaidSubscription(candidate: Stripe.Subscription, current: Stripe.Subscription): boolean {
+  const rank = (status: string) => (status === "active" ? 1 : 0);
+  const byStatus = rank(candidate.status) - rank(current.status);
+  if (byStatus !== 0) return byStatus > 0;
+  const candidateEnd = subscriptionPeriodDate(candidate, "current_period_end")?.getTime() ?? -1;
+  const currentEnd = subscriptionPeriodDate(current, "current_period_end")?.getTime() ?? -1;
+  if (candidateEnd !== currentEnd) return candidateEnd > currentEnd;
+  const candidateCreated = candidate.created ?? -1;
+  const currentCreated = current.created ?? -1;
+  if (candidateCreated !== currentCreated) return candidateCreated > currentCreated;
+  return candidate.id > current.id;
+}
+
+async function choosePaidSubscription(customers: Stripe.Customer[]): Promise<{
+  customer: Stripe.Customer;
+  subscription: Stripe.Subscription;
+  valid: Stripe.Subscription[];
+} | null> {
+  const listed = await Promise.all(customers.map(async (customer) => {
+    const subs = await stripe.subscriptions.list({ customer: customer.id, limit: CUSTOMER_LIST_LIMIT });
+    const valid = (subs.data ?? []).filter((sub) => sub.status === "active" || sub.status === "trialing");
+    return { customer, valid };
+  }));
+  let best: { customer: Stripe.Customer; subscription: Stripe.Subscription } | null = null;
+  for (const entry of listed) {
+    for (const subscription of entry.valid) {
+      if (!best || betterPaidSubscription(subscription, best.subscription)) {
+        best = { customer: entry.customer, subscription };
+      }
+    }
+  }
+  if (!best) return null;
+  const chosen = best;
+  const valid = listed.find((entry) => entry.customer.id === chosen.customer.id)?.valid ?? [chosen.subscription];
+  return { customer: chosen.customer, subscription: chosen.subscription, valid };
+}
+
+function preferredCustomer(customers: Stripe.Customer[]): Stripe.Customer {
+  return [...customers].sort((a, b) => {
+    const byCreated = (b.created ?? 0) - (a.created ?? 0);
+    if (byCreated !== 0) return byCreated;
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  })[0];
+}
+
+async function readManualGrant(workspaceId: string): Promise<"pro" | "pro_trader" | null> {
+  const rows = await q<{
+    tier: string;
+    status: string;
+    stripe_customer_id: string | null;
+    stripe_subscription_id: string | null;
+  }>(
+    `SELECT tier, status, stripe_customer_id, stripe_subscription_id
+     FROM user_subscriptions
+     WHERE workspace_id = $1
+     LIMIT 1`,
+    [workspaceId],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  if (row.status !== "active") return null;
+  if (row.tier !== "pro" && row.tier !== "pro_trader") return null;
+  if (row.stripe_customer_id != null || row.stripe_subscription_id != null) return null;
+  return row.tier;
+}
+
+async function readEmailHashTier(workspaceId: string): Promise<string | null> {
+  const rows = await q<{ tier: string | null }>(
+    `SELECT tier FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1`,
+    [workspaceId],
+  );
+  const tier = rows[0]?.tier;
+  return tier ? tier : null;
+}
+
+async function cancelStaleStripeRows(email: string): Promise<void> {
+  try {
+    await q(
+      `UPDATE user_subscriptions
+       SET status = 'canceled', updated_at = NOW()
+       WHERE LOWER(email) = LOWER($1)
+         AND stripe_subscription_id IS NOT NULL`,
+      [email],
+    );
+  } catch (error: any) {
+    if (!error?.message?.includes("does not exist")) {
+      console.error("Cancel stale subscription error:", error);
+    }
+  }
 }
 
 const ALLOWED_ORIGINS = new Set([
@@ -247,20 +347,27 @@ export async function POST(req: NextRequest) {
     // ========================================
     // STEP 2: No trial found - check Stripe
     // ========================================
-    const customers = await stripe.customers.list({
-      email: normalizedEmail,
-      limit: 1,
-    });
-    if (!customers.data?.length) {
-      // No Stripe customer — grant free tier access so user can explore and upgrade
+    const customers = await listCustomersForEmail(normalizedEmail);
+    if (!customers.length) {
+      // No Stripe customer — keep a manual Pro grant on this email's workspace row.
+      // Any other row for the same email is ignored.
       const workspaceId = hashWorkspaceId(normalizedEmail);
+      const manualTier = await readManualGrant(workspaceId);
+      const tier = manualTier ?? "free";
       const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * sessionDays;
-      const token = signSessionToken({ cid: `free_${normalizedEmail}`, tier: 'free', workspaceId, exp, ...(admin ? { is_admin: true } : {}) });
-      
-      await trackSubscription(workspaceId, normalizedEmail, 'free', 'active', null, null, null, false);
-      
+      const token = signSessionToken({ cid: `free_${normalizedEmail}`, tier, workspaceId, exp, ...(admin ? { is_admin: true } : {}) });
+
+      if (!manualTier) {
+        await trackSubscription(workspaceId, normalizedEmail, "free", "active", null, null, null, false);
+      }
+
       loginLimiter.reset(ip);
-      const body = { ok: true, tier: 'free', workspaceId, message: 'Welcome! Explore free tools or upgrade for full access.' };
+      const body = {
+        ok: true,
+        tier,
+        workspaceId,
+        message: manualTier ? "Welcome back." : "Welcome! Explore free tools or upgrade for full access.",
+      };
       const res = NextResponse.json(body);
       res.cookies.set("ms_auth", token, getAuthCookieOptions(req, admin));
       const originHeader = req.headers.get("origin");
@@ -268,33 +375,52 @@ export async function POST(req: NextRequest) {
       for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);
       return res;
     }
-    const customer = customers.data[0];
+    const paid = await choosePaidSubscription(customers);
+    if (!paid) {
+      // Stripe customer exists but no active subscription — grant free tier.
+      // Cancel rows that still point at a Stripe subscription so an email
+      // fallback cannot treat a lapsed row as paid. Null subscription ids stay.
+      const workspaceId = hashWorkspaceId(normalizedEmail);
+      const customerId = preferredCustomer(customers).id;
+      const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * sessionDays;
+      const token = signSessionToken({ cid: customerId, tier: "free", workspaceId, exp, ...(admin ? { is_admin: true } : {}) });
+      await cancelStaleStripeRows(normalizedEmail);
+
+      loginLimiter.reset(ip);
+      const body = { ok: true, tier: "free", workspaceId, message: "Welcome back! Your subscription is inactive. Upgrade to restore full access." };
+      const res = NextResponse.json(body);
+      res.cookies.set("ms_auth", token, getAuthCookieOptions(req, admin));
+      const originHeader = req.headers.get("origin");
+      const headers = corsHeaders(originHeader);
+      for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);
+      return res;
+    }
+    const { customer, subscription: primarySub, valid } = paid;
     const customerId = customer.id;
-    const subs = await stripe.subscriptions.list({ customer: customerId, limit: 10 });
-    const valid = subs.data.filter(s => s.status === "active" || s.status === "trialing");
-    if (!valid.length) {
-      // Stripe customer exists but no active subscription — grant free tier
-      const workspaceId = hashWorkspaceId(normalizedEmail);
-      const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * sessionDays;
-      const token = signSessionToken({ cid: customerId, tier: 'free', workspaceId, exp, ...(admin ? { is_admin: true } : {}) });
-      
-      loginLimiter.reset(ip);
-      const body = { ok: true, tier: 'free', workspaceId, message: 'Welcome back! Your subscription is inactive. Upgrade to restore full access.' };
-      const res = NextResponse.json(body);
-      res.cookies.set("ms_auth", token, getAuthCookieOptions(req, admin));
-      const originHeader = req.headers.get("origin");
-      const headers = corsHeaders(originHeader);
-      for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);
-      return res;
-    }
     const priceIds = valid.flatMap(s => s.items.data.map(it => it.price.id));
-    const tier = detectTierFromPrices(priceIds);
+    const detectedTier = detectTierFromPrices(priceIds);
     const workspaceId = hashWorkspaceId(normalizedEmail);
-    
-    // Get subscription details for tracking
-    const primarySub = valid[0];
-    const isStripeTrial = primarySub.status === 'trialing';
-    const periodEnd = new Date((primarySub as any).current_period_end * 1000);
+    let tier = detectedTier;
+
+    if (detectedTier === "free") {
+      console.error("[login] Active subscription price did not match a configured price id", { priceIds });
+      const existingTier = await readEmailHashTier(workspaceId);
+      if (existingTier) {
+        const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * sessionDays;
+        const token = signSessionToken({ cid: customerId, tier: existingTier, workspaceId, exp, ...(admin ? { is_admin: true } : {}) });
+        loginLimiter.reset(ip);
+        const body: any = { ok: true, tier: existingTier, workspaceId, message: "Subscription activated successfully!" };
+        const res = NextResponse.json(body);
+        res.cookies.set("ms_auth", token, getAuthCookieOptions(req, admin));
+        const originHeader = req.headers.get("origin");
+        const headers = corsHeaders(originHeader);
+        for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);
+        return res;
+      }
+    }
+
+    const isStripeTrial = primarySub.status === "trialing";
+    const periodEnd = subscriptionPeriodDate(primarySub, "current_period_end");
     
     // Track subscription in database
     await trackSubscription(
