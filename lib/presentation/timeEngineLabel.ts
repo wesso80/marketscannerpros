@@ -37,28 +37,6 @@ const LABELS: Record<string, string> = {
   AOI: 'Area of interest',
 };
 
-/** Phrases safe to replace inside a sentence. Short status words stay on the whole-value helper. */
-const PROSE_PHRASES = [
-  'AOI TARGET ZONES',
-  'TARGET OVERSHOT',
-  'MOMENTUM OVERRIDE',
-  'TARGET ACTIVE',
-  'LOW PRIORITY',
-  'TARGET HIT',
-  'NO TARGET',
-  'PRE WINDOW',
-  'POST WINDOW',
-  'IN WINDOW',
-  'RANGE SPIKE',
-  'BREAK HOLD',
-  'RECOMPUTING',
-  'OVERSHOT',
-  'EXPANSION',
-  'COMPRESSION',
-  'TAGGED',
-  'MAGNET',
-];
-
 const ENGINE_TOKEN = /^[A-Z0-9]+(?:[_\s,]+[A-Z0-9]+)*$/;
 
 function engineKey(value: string): string {
@@ -70,10 +48,6 @@ function plainEngineFallback(value: string): string {
   if (!words) return 'Not recorded';
   const plain = words.charAt(0).toUpperCase() + words.slice(1);
   return ENGINE_TOKEN.test(plain) ? 'Not recorded' : plain;
-}
-
-function escapeReg(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /** One engine code or status. Mixed prose is returned unchanged so notes stay intact. */
@@ -106,24 +80,21 @@ export function targetStatusLine(status: unknown, price: string | null, overshot
   return timeEngineLabel(status);
 }
 
-/** Replace known codes inside an existing sentence. Unknown snake-case tokens use the same fallback. */
+/**
+ * Free text. A value that is only an engine code is mapped. Inside a sentence, only
+ * underscore tokens are mapped. Single capital words (LONG, SHORT, PASS, EXPANSION)
+ * stay, and camelCase is not split.
+ */
 export function timeEngineProse(value: unknown): string {
   if (value == null) return 'Not recorded';
-  let text = String(value);
-  if (!text.trim()) return 'Not recorded';
-  for (const phrase of PROSE_PHRASES) {
-    const label = LABELS[phrase];
-    if (!label) continue;
-    text = text.replace(new RegExp(escapeReg(phrase), 'g'), label);
-    if (phrase.includes(' ')) {
-      text = text.replace(new RegExp(`\\b${escapeReg(phrase.replace(/ /g, '_'))}\\b`, 'g'), label);
-    }
-  }
-  text = text.replace(/\b[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+\b/g, (token) => {
+  const text = String(value);
+  const trimmed = text.trim();
+  if (!trimmed) return 'Not recorded';
+  if (LABELS[engineKey(trimmed)] || ENGINE_TOKEN.test(trimmed)) return timeEngineLabel(trimmed);
+  return text.replace(/\b[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+\b/g, (token) => {
     const mapped = LABELS[engineKey(token)];
     if (mapped) return mapped;
     if (/[a-z]/.test(token)) return token;
     return plainEngineFallback(token);
   });
-  return text;
 }

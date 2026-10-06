@@ -79,10 +79,15 @@ it('keeps banner facts and replaces only the engine code', () => {
   expect(targetStatusLine('ACTIVE', '253.00', 0)).not.toMatch(/TARGET ACTIVE/);
 });
 
-it('replaces codes inside existing sentences and leaves ordinary words', () => {
-  expect(timeEngineProse('TARGET ACTIVE: 253.00')).toBe('Active target: 253.00');
-  expect(timeEngineProse('✅ TARGET HIT — All 2 midpoint(s) tagged this cycle.')).toBe('✅ Target reached — All 2 midpoint(s) tagged this cycle.');
-  expect(timeEngineProse('⚡ MOMENTUM OVERRIDE: range_spike(2.10x) + break_hold | Mode: EXPANSION')).toBe('⚡ Momentum leading: Range spike(2.10x) + Break and hold | Mode: Expansion');
+it('maps a whole-string code or an underscore token, and leaves single caps words inside a sentence', () => {
+  expect(timeEngineProse('TARGET ACTIVE')).toBe('Active target');
+  expect(timeEngineProse('MOMENTUM_OVERRIDE')).toBe('Momentum leading');
+  expect(timeEngineProse('EXPANSION')).toBe('Expansion');
+  expect(timeEngineProse('TARGET ACTIVE: 253.00')).toBe('TARGET ACTIVE: 253.00');
+  expect(timeEngineProse('✅ TARGET HIT — All 2 midpoint(s) tagged this cycle.')).toBe('✅ TARGET HIT — All 2 midpoint(s) tagged this cycle.');
+  expect(timeEngineProse('⚡ MOMENTUM OVERRIDE: range_spike(2.10x) + break_hold | Mode: EXPANSION')).toBe('⚡ MOMENTUM OVERRIDE: Range spike(2.10x) + Break and hold | Mode: EXPANSION');
+  expect(timeEngineProse('Direction is LONG or SHORT until PASS.')).toBe('Direction is LONG or SHORT until PASS.');
+  expect(timeEngineProse('signalType and breakHold stay')).toBe('signalType and breakHold stay');
   expect(timeEngineProse('Gravity dampened. ZZZ_NEW_STATE still recorded. NYSE close stays.')).toBe('Gravity dampened. Zzz new state still recorded. NYSE close stays.');
   expect(timeEngineProse('ordinary_note stays')).toBe('ordinary_note stays');
   expect(timeEngineProse(null)).toBe('Not recorded');
