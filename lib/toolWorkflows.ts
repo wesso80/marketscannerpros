@@ -10,7 +10,8 @@ export const areaLinks: Record<WorkflowArea, NavigationLink[]> = {
   scan: [link('/tools/scanner','Scanner'),link('/tools/golden-egg','Symbol'),link('/tools/options','Options'),link('/tools/terminal','Terminal'),link('/tools/liquidity-sweep','Liquidity Sweep'),{...link('/tools/scalper','Scalper'), comingSoon: true},link('/tools/volatility-engine','Volatility'),link('/tools/terminal?tab=time-confluence','Time Confluence'),link('/tools/terminal?tab=crypto-terminal','Crypto Terminal')],
   markets: [link('/tools/explorer','Explorer'),link('/tools/research','Research'),link('/tools/dashboard?tab=macro','Macro'),link('/tools/crypto-dashboard','Crypto Derivatives'),link('/tools/explorer?tab=movers','Market Movers'),link('/tools/explorer?tab=heatmap','Heatmap'),link('/tools/explorer?tab=commodities','Commodities'),link('/tools/explorer?tab=crypto-command','Crypto Overview'),link('/tools/explorer?tab=crypto-command&section=heatmap','Crypto Heatmap'),link('/tools/explorer?tab=crypto-intel','Crypto Intelligence'),link('/tools/research?tab=earnings','Earnings'),link('/tools/research?tab=calendar','Economic Calendar')],
   intelligence: [link('/intelligence','Overview'),link('/intelligence/global-m2','Global M2'),link('/intelligence/fragility','Fragility'),link('/intelligence/liquidity','Liquidity')],
-  track: [link('/tools/workspace?tab=journal','Journal'),link('/tools/workspace?tab=portfolio','Portfolio'),link('/tools/workspace?tab=watchlists','Watchlists'),link('/tools/workspace?tab=alerts','Alerts'),link('/tools/workspace?tab=backtest','Backtest'),link('/tools/workspace?tab=learning','Learning'),link('/tools/workspace?tab=settings','Settings'),link('/tools/signal-accuracy','Signal Accuracy'),link('/tools/dashboard?tab=pages','My Pages')],
+  // Accuracy page stays off this menu until labelled results exist. The URL still opens it.
+  track: [link('/tools/workspace?tab=journal','Journal'),link('/tools/workspace?tab=portfolio','Portfolio'),link('/tools/workspace?tab=watchlists','Watchlists'),link('/tools/workspace?tab=alerts','Alerts'),link('/tools/workspace?tab=backtest','Backtest'),link('/tools/workspace?tab=learning','Learning'),link('/tools/workspace?tab=settings','Settings'),link('/tools/dashboard?tab=pages','My Pages')],
   learn: [link('/guide','Guide'),link('/methodology','Methodology'),link('/blog','Blog'),link('/about','About'),link('/contact','Contact'),link('/partners','Partners'),link('/guide/open-interest','Open Interest Guide'),link('/','Home')],
   account: [link('/account','Account'),link('/auth','Sign In'),link('/pricing','Pricing'),link('/tools/referrals','Referrals'),link('/compliance-hub','Compliance Hub'),link('/privacy','Privacy'),link('/terms','Terms'),link('/cookie-policy','Cookies'),link('/refund-policy','Refund policy'),link('/disclaimer','Disclaimer')],
 };
@@ -74,7 +75,7 @@ export const toolWorkflows: ToolWorkflow[] = [
   ] },
   { id: 'test', title: '4. Backtest', subtitle: 'Test assumptions against reproducible historical data.', outcome: 'Cost-aware results with sample size and validation limits.', tools: [
     tool('/tools/workspace?tab=backtest', 'Strategy & scanner tests', 'Historical simulation with explicit assumptions.', 'pro', 'primary'),
-    tool('/tools/signal-accuracy', 'Recorded outcomes', 'Labelled outcomes and pending observations.'),
+    // Recorded outcomes stays off this menu until labelled results exist. The page URL still works.
   ] },
   { id: 'track', title: '5. Track', subtitle: 'Review decisions, positions and outcomes.', outcome: 'A reconciled record for learning and risk review.', tools: [
     tool('/tools/workspace?tab=journal', 'Journal', 'Open and closed records with consistent totals.', 'free', 'primary'),

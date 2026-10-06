@@ -59,7 +59,8 @@ it.each(['/tools/command-center','/tools/msp-radar','/tools/scanner','/tools/gol
 it('Track owns its tab bar without repeating the legacy tool rail',()=>{
  state.pathname='/tools/workspace';state.params=new URLSearchParams('tab=Settings');render(<WorkflowNavigation/>);
  expect(container.innerHTML).toBe('');
- expect(areaLinks.track.some(link=>link.label==='Signal Accuracy')).toBe(true);
+ expect(areaLinks.track.some(link=>link.label==='Signal Accuracy')).toBe(false);
+ expect(workflowArea('/tools/signal-accuracy')).toBe('track');
 });
 it('routes Intelligence, Macro, Explorer and My Pages into the correct groups',()=>{
  expect(primaryNavTools).toHaveLength(7);expect(workflowArea('/intelligence/global-m2')).toBe('intelligence');expect(workflowArea('/tools/explorer')).toBe('markets');expect(workflowArea('/tools/dashboard','macro')).toBe('markets');expect(workflowArea('/tools/dashboard','pages')).toBe('track');

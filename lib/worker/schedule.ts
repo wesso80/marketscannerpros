@@ -53,6 +53,8 @@ export const SCHEDULE:ScheduledJob[]=[
  {name:'journal-auto-close',schedule:'2-59/5 * * * *',kind:'http',path:'/api/jobs/journal-auto-close?limit=200',timeoutMs:120_000,retries:3,retryDelayMs:15_000},
  // Scripts that used their own cron container; they need only DATABASE_URL, which this worker has
  {name:'stale-auto-draft-cleanup',schedule:'15 0 * * *',kind:'script',script:'worker:cleanup:stale-auto-drafts',timeoutMs:600_000},
+ // Once per run, not the watch loop. Fills signal_outcomes from the per-horizon bands.
+ {name:'label-signal-accuracy-outcomes',schedule:'25 */2 * * *',kind:'script',script:'worker:outcomes',timeoutMs:600_000},
  {name:'upe-global-open',schedule:'35 14 * * 1-5',kind:'script',script:'worker:upe:global:open',timeoutMs:600_000},
  {name:'upe-global-close',schedule:'5 21 * * 1-5',kind:'script',script:'worker:upe:global:close',timeoutMs:600_000},
  {name:'upe-crcs-hourly',schedule:'8 * * * *',kind:'script',script:'worker:upe:crcs:hourly',timeoutMs:600_000},
