@@ -30,7 +30,7 @@ export default function EquityNewsJev(){
   try{const r=await fetch('/api/admin/equity-news-jev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action})});const b=await r.json();
    if(b.ledger)setLedger(b.ledger);
    if(!r.ok)throw Error(b.error);
-   setLast(action==='score'?`Scored ${b.result.scored}, unavailable ${b.result.unavailable}${b.result.skipped?` (skipped: ${b.result.skipped})`:''}.`:`Labelled ${b.result.labelled}, waiting for bars ${b.result.waiting}, closed as no-bars ${b.result.noBars}.`);
+   setLast(action==='score'?`Scored ${b.result.scored}, unavailable ${b.result.unavailable}${b.result.skipped?` (skipped: ${b.result.skipped})`:''}.`:`Labelled ${b.result.labelled}, waiting for the next bar ${b.result.waiting}, closed with no price series ${b.result.noBars}.`);
   }catch(e){setError(e instanceof Error?e.message:'Step failed');}finally{setBusy('');}
  }
  const s=ledger?.source,reasons=s?Object.entries(s.reasons).map(([k,v])=>`${k} ${v}`).join(', '):'';
