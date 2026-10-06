@@ -7,6 +7,7 @@ import { ToolsPageHeader } from '@/components/ToolsPageHeader';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import UpgradeGate from '@/components/UpgradeGate';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import { goldAssessment } from '@/lib/commodities/goldAssessment';
 import { commodityFreshnessLabel } from '@/lib/commodities/quoteFreshnessLabel';
 import { YAHOO_FUTURES_SOURCE_LABEL } from '@/lib/commodities/yahooFutures';
 
@@ -100,15 +101,15 @@ interface DerivedState {
   impulseStability: 'STABLE' | 'CHOPPY';
   usdTrend: TrendDirection;
   realRatesTrend: TrendDirection;
-  growthTrend: TrendDirection;
-  growthSupport: 'SUPPORTIVE' | 'NEUTRAL' | 'FADING';
+  growthTrend: TrendDirection | null;
+  growthSupport: 'SUPPORTIVE' | 'NEUTRAL' | 'FADING' | null;
   macroRiskState: 'RISK_ON' | 'NEUTRAL' | 'RISK_OFF';
   topGainer: CommodityData | null;
   topLoser: CommodityData | null;
   relative: {
     energyVsMetals: number;
     metalsVsAg: number;
-    copperVsGold: number;
+    copperVsGold: number | null;
   };
   categoryAvg: Record<CategoryKey, number>;
 }
@@ -313,7 +314,7 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
 
     const getBySymbol = (symbol: string) => commodities.find((item) => item.symbol === symbol);
     const copperChange = safeNumber(getBySymbol('COPPER')?.changePercent) ?? 0;
-    const goldChange = safeNumber(getBySymbol('GOLD')?.changePercent) ?? 0;
+    const goldChange = safeNumber(getBySymbol('GOLD')?.changePercent);
     const energyLead = categoryAvg.Energy > 0.2;
     const metalsLead = categoryAvg.Metals > 0.2;
     const agLead = categoryAvg.Agriculture > 0.2;
@@ -336,18 +337,17 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
     const realRatesImpact: RateState =
       realRatesTrend === 'UP' ? 'RESTRICTIVE' : realRatesTrend === 'DOWN' ? 'SUPPORTIVE' : 'NEUTRAL';
 
-    const growthProxyRaw = copperChange + categoryAvg.Energy - goldChange;
-    const growthTrend: TrendDirection = growthProxyRaw > 0.8 ? 'UP' : growthProxyRaw < -0.8 ? 'DOWN' : 'FLAT';
-    const growthSupport = growthTrend === 'UP' ? 'SUPPORTIVE' : growthTrend === 'DOWN' ? 'FADING' : 'NEUTRAL';
-
-    let impulseType: ImpulseType = 'MIXED';
-    if (energyLead && copperChange > 0 && usdTrend !== 'UP' && realRatesTrend !== 'UP') {
-      impulseType = 'GROWTH';
-    } else if (goldChange > 0.25 && usdTrend === 'DOWN' && realRatesTrend === 'DOWN') {
-      impulseType = 'INFLATION';
-    } else if (!energyLead && !metalsLead && !agLead && usdTrend === 'UP' && realRatesTrend === 'UP') {
-      impulseType = 'DEFLATION';
-    }
+    const assessed = goldAssessment({
+      copperChange,
+      energyChange: categoryAvg.Energy,
+      goldChange,
+      usdTrend,
+      realRatesTrend,
+      energyLead,
+      metalsLead,
+      agLead,
+    });
+    const { impulseType, growthTrend, growthSupport } = assessed;
 
     const usdAlignment =
       impulseType === 'DEFLATION'
@@ -439,7 +439,7 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
       relative: {
         energyVsMetals: categoryAvg.Energy - categoryAvg.Metals,
         metalsVsAg: categoryAvg.Metals - categoryAvg.Agriculture,
-        copperVsGold: copperChange - goldChange,
+        copperVsGold: assessed.copperVsGold,
       },
       categoryAvg,
     };
@@ -452,7 +452,8 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
   // Push data to AI context
   useEffect(() => {
     if (data) {
-      const commoditySymbols = data.commodities.map(c => c.symbol);
+      const contextCommodities = data.commodities.filter((item) => item.symbol !== 'GOLD' || safeNumber(item.changePercent) != null);
+      const commoditySymbols = contextCommodities.map(c => c.symbol);
       const topGainerName = data.summary?.topGainer?.name || 'N/A';
       const topLoserName = data.summary?.topLoser?.name || 'N/A';
       const topGainerPct = safeFixed(data.summary?.topGainer?.changePercent, 2);
@@ -468,7 +469,7 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
         skill: 'commodities' as any,
         symbols: commoditySymbols,
         data: {
-          commodities: data.commodities,
+          commodities: contextCommodities,
           summary: data.summary,
           selectedCategory,
           lastUpdate: data.lastUpdate,
@@ -598,21 +599,23 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {shown.map(commodity => {
             const safeCommodityChangePercent = safeNumber(commodity.changePercent);
-            const quoteMissing = commodity.price == null || safeCommodityChangePercent == null;
+            const priceMissing = safeNumber(commodity.price) == null;
+            const quoteMissing = priceMissing || safeCommodityChangePercent == null;
             const longAllowed = derivedState && commodity.eligibleForGate && safeCommodityChangePercent != null && derivedState.longsAllowed && safeCommodityChangePercent > -1.5;
             const shortAllowed = derivedState && commodity.eligibleForGate && safeCommodityChangePercent != null && derivedState.shortsAllowed && safeCommodityChangePercent < 1.5;
             const freshnessLabel = commodityFreshnessLabel(commodity);
+            const futuresStatus = commodity.source === 'YAHOO_FUTURES' && commodity.asOfLabel ? `Delayed · ${commodity.asOfLabel}` : null;
             return <article data-commodity-card key={commodity.symbol} className="min-w-0 rounded-lg border border-white/10 bg-white/5 p-3">
-              <div className="flex items-start justify-between gap-2"><h3 className="min-w-0 break-words text-sm font-semibold">{commodity.name}</h3><span className="shrink-0 text-sm">{quoteMissing ? 'unavailable' : formatPrice(commodity.price, commodity.unit)}</span></div>
+              <div className="flex items-start justify-between gap-2"><h3 className="min-w-0 break-words text-sm font-semibold">{commodity.name}</h3><span className="shrink-0 text-sm">{priceMissing ? 'unavailable' : formatPrice(commodity.price, commodity.unit)}</span></div>
               <div className="mt-1 flex justify-between gap-2 text-xs text-white/60"><span>{commodity.category}</span><span>{safeCommodityChangePercent == null ? 'unavailable' : signed(safeCommodityChangePercent)}</span></div>
               {commodity.sourceLabel ? <p className="mt-1 break-words text-[11px] leading-snug text-white/45">{commodity.sourceLabel}</p> : null}
-              {commodity.source === 'YAHOO_FUTURES' && commodity.asOfLabel ? <p className="break-words text-[11px] leading-snug text-white/40">{commodity.asOfLabel}</p> : null}
+              {futuresStatus ? <p className="break-words text-[11px] leading-snug text-white/40">{futuresStatus}</p> : null}
               <details className="mt-2 text-xs text-white/60"><summary className="cursor-pointer">Observation details</summary>
                 <p className="mt-2">{commodity.unit}</p>
                 {derivedState && !quoteMissing && <p className="mt-1">Upside case: {longAllowed ? 'Clear' : 'Limited'} · Downside case: {shortAllowed ? 'Clear' : 'Limited'}</p>}
                       <div className="mt-2 flex min-w-0 flex-wrap items-center justify-between gap-2 text-[11px] text-white/40">
-                        <span className={`min-w-0 break-words ${freshnessTone(freshnessLabel)}`}>
-                          {quoteMissing ? 'unavailable' : freshnessLabel}{commodity.source === 'ETF_PROXY' && commodity.sourceSymbol ? ` · proxy ${commodity.sourceSymbol}` : ''}
+                        <span className={`min-w-0 break-words ${freshnessTone(priceMissing ? 'unavailable' : freshnessLabel)}`}>
+                          {priceMissing ? 'unavailable' : freshnessLabel}{commodity.source === 'ETF_PROXY' && commodity.sourceSymbol ? ` · proxy ${commodity.sourceSymbol}` : ''}
                         </span>
                         <span className="min-w-0 break-words">{commodity.unavailableReason ?? commodity.asOfLabel ?? `Source date: ${commodity.date} · age ${commodity.dataAgeDays}d`}</span>
                       </div>
@@ -633,12 +636,12 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
             <dt>Assessment score</dt><dd>{derivedState.score}/100</dd>
             <dt>US dollar proxy</dt><dd>{plain(derivedState.usdTrend)} · {plain(derivedState.usdImpact)}</dd>
             <dt>Real rates</dt><dd>{plain(derivedState.realRatesTrend)} · {plain(derivedState.realRatesImpact)}</dd>
-            <dt>Growth proxy</dt><dd>{plain(derivedState.growthTrend)} · {plain(derivedState.growthSupport)}</dd>
+            <dt>Growth proxy</dt><dd data-growth-proxy>{derivedState.growthTrend == null || derivedState.growthSupport == null ? 'unavailable' : `${plain(derivedState.growthTrend)} · ${plain(derivedState.growthSupport)}`}</dd>
             <dt>Market context</dt><dd>{plain(derivedState.macroRiskState)}</dd>
             <dt>Price range</dt><dd>{plain(derivedState.volRegime)}</dd>
             <dt>Energy vs metals</dt><dd>{signed(derivedState.relative.energyVsMetals)}</dd>
             <dt>Metals vs agriculture</dt><dd>{signed(derivedState.relative.metalsVsAg)}</dd>
-            <dt>Copper vs gold</dt><dd>{signed(derivedState.relative.copperVsGold)}</dd>
+            <dt>Copper vs gold</dt><dd data-copper-vs-gold>{derivedState.relative.copperVsGold == null ? 'unavailable' : signed(derivedState.relative.copperVsGold)}</dd>
           </dl>
         </details>}
         <p data-commodity-source className="break-words text-xs text-white/45">Source: Alpha Vantage · Gold and silver: {YAHOO_FUTURES_SOURCE_LABEL} · {data?.sourceAsOf ? `Latest included observation: ${new Date(`${data.sourceAsOf}T12:00:00Z`).toLocaleDateString('en-AU', {timeZone:'UTC',weekday:'short',day:'numeric',month:'short'}).replace(',', '')}` : 'Observation date not collected'}{data?.lastUpdate ? ` · Retrieved ${new Date(data.lastUpdate).toLocaleString('en-AU', {timeZone:'Australia/Sydney',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})}` : ''} · Individual dates and proxy units in observation details.</p>

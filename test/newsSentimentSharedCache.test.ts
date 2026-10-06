@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server';
 const state = vi.hoisted(() => ({
   limiterCheck: vi.fn(() => ({ allowed: true, remaining: 4, resetTime: Date.now() + 60_000 })),
   ip: '203.0.113.20',
+  writes: [] as { key: string; ttl: number }[],
   store: new Map<string, unknown>(),
 }));
 
@@ -15,7 +16,8 @@ vi.mock('@/lib/rateLimit', () => ({
 }));
 vi.mock('@/lib/redis', () => ({
   getCached: async (key: string) => state.store.get(key) ?? null,
-  setCached: async (key: string, value: object) => {
+  setCached: async (key: string, value: object, ttl: number) => {
+    state.writes.push({ key, ttl });
     state.store.set(key, { ...value, _ts: 1 });
     return true;
   },
@@ -35,6 +37,7 @@ const article = {
 describe('shared news cache skips the limiter on a hit', () => {
   beforeEach(() => {
     state.store.clear();
+    state.writes.length = 0;
     state.limiterCheck.mockReset();
     state.limiterCheck.mockReturnValue({ allowed: true, remaining: 4, resetTime: Date.now() + 60_000 });
     state.ip = '203.0.113.20';
@@ -53,6 +56,7 @@ describe('shared news cache skips the limiter on a hit', () => {
     expect(await second.json()).toEqual(await first.json());
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(state.limiterCheck).toHaveBeenCalledTimes(1);
+    expect(state.writes.some((write) => write.ttl === 15 * 60 && write.key.includes(':ignored:'))).toBe(true);
     console.log('NEWS_AFTER ' + JSON.stringify({
       limiterChecks: state.limiterCheck.mock.calls.length,
       vendorCalls: fetcher.mock.calls.length,
@@ -80,5 +84,25 @@ describe('shared news cache skips the limiter on a hit', () => {
     expect((await GET(new NextRequest(url))).status).toBe(503);
     expect(fetcher).toHaveBeenCalledTimes(2);
     expect(state.limiterCheck).toHaveBeenCalledTimes(2);
+  });
+
+  it('caches a partial ticker set for about two minutes and keys ignored tickers', async () => {
+    const fetcher = vi.fn(async (url: string) => {
+      if (String(url).includes('MSFT')) return new Response(JSON.stringify({ Information: 'provider unavailable' }), { status: 200 });
+      return new Response(JSON.stringify({ feed: [article] }), { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetcher);
+    const url = 'https://example.test/api/news-sentiment?tickers=AAPL,MSFT,GOOGL,NVDA,AMZN,TSLA&limit=5';
+    const first = await GET(new NextRequest(url));
+    expect(first.status).toBe(200);
+    const body = await first.json();
+    expect(body.filter.ignoredTickers).toEqual(['TSLA']);
+    expect(body.tickerSummaries.some((row: { ticker: string; status?: string }) => row.ticker === 'MSFT' && row.status === 'unavailable')).toBe(true);
+    expect(state.writes.some((write) => write.ttl === 2 * 60 && write.key.includes(':ignored:TSLA'))).toBe(true);
+    state.ip = '203.0.113.22';
+    const second = await GET(new NextRequest(url));
+    expect(second.status).toBe(200);
+    expect(fetcher).toHaveBeenCalledTimes(5);
+    expect(state.limiterCheck).toHaveBeenCalledTimes(1);
   });
 });

@@ -65,7 +65,8 @@ function finitePrice(value: unknown): number | null {
 
 /**
  * Gold/silver row from a Yahoo futures quote.
- * Change comes from Yahoo's previous close. A missing or unusable quote is null, never 0.
+ * Change comes from the previous close. A price without that close is kept, with change left null.
+ * A missing quote or timestamp is null, never 0.
  */
 export function commodityFromYahooQuote(symbol: PreciousMetal, quote: YahooQuote | null): YahooFuturesCommodity {
   const yahooSymbol = YAHOO_FUTURES_SYMBOLS[symbol];
@@ -85,20 +86,23 @@ export function commodityFromYahooQuote(symbol: PreciousMetal, quote: YahooQuote
   const previousClose = finitePrice(quote?.previousClose);
   const quoteTime = typeof quote?.quoteTime === 'string' ? quote.quoteTime : null;
   const date = sessionDateFromQuoteTime(quoteTime);
-  if (price == null || price <= 0 || previousClose == null || previousClose <= 0 || !date) return blank;
-  const change = price - previousClose;
-  const changePercent = (change / previousClose) * 100;
-  if (!Number.isFinite(change) || !Number.isFinite(changePercent)) return blank;
-  return {
+  if (price == null || price <= 0 || !date) return blank;
+  const base = {
     symbol,
     yahooSymbol,
     price,
-    change,
-    changePercent,
     date,
     quoteTime,
     asOfLabel: formatFuturesAsOf(quoteTime),
-    sourceLabel: YAHOO_FUTURES_SOURCE_LABEL,
-    unavailableReason: null,
+    sourceLabel: YAHOO_FUTURES_SOURCE_LABEL as typeof YAHOO_FUTURES_SOURCE_LABEL,
   };
+  if (previousClose == null || previousClose <= 0) {
+    return { ...base, change: null, changePercent: null, unavailableReason: null };
+  }
+  const change = price - previousClose;
+  const changePercent = (change / previousClose) * 100;
+  if (!Number.isFinite(change) || !Number.isFinite(changePercent)) {
+    return { ...base, change: null, changePercent: null, unavailableReason: null };
+  }
+  return { ...base, change, changePercent, unavailableReason: null };
 }

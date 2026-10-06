@@ -11,12 +11,15 @@ import { validateYahooBars } from './dataQuality';
 export interface YahooQuote {
   symbol: string;
   price: number;
-  change: number;
-  changePercent: number;
+  /** Null when Yahoo did not send a usable previous close. */
+  change: number | null;
+  /** Null when Yahoo did not send a usable previous close. */
+  changePercent: number | null;
   open: number;
   high: number;
   low: number;
-  previousClose: number;
+  /** `previousClose`, or `chartPreviousClose` when that is all Yahoo sent. Null if neither is usable. */
+  previousClose: number | null;
   volume: number;
   marketCap?: number;
   fiftyTwoWeekHigh?: number;
@@ -26,9 +29,20 @@ export interface YahooQuote {
   quoteTime?: string | null;
 }
 
+function finiteNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+/** A close of 0 cannot be a percent base. Skip it and try the next field. */
+function usableClose(value: unknown): number | null {
+  const close = finiteNumber(value);
+  return close != null && close > 0 ? close : null;
+}
+
 /**
  * Read a Yahoo v8 chart payload into a quote.
- * Change is price minus Yahoo's previous close.
+ * Change is price minus Yahoo's previous close, or chartPreviousClose when previousClose is absent.
+ * A price is still returned when neither close exists. Change is null in that case.
  */
 export function parseYahooChartQuote(data: unknown): YahooQuote | null {
   const result = (data as {
@@ -38,6 +52,7 @@ export function parseYahooChartQuote(data: unknown): YahooQuote | null {
           symbol?: string;
           regularMarketPrice?: number;
           previousClose?: number;
+          chartPreviousClose?: number;
           regularMarketTime?: number;
           marketCap?: number;
           fiftyTwoWeekHigh?: number;
@@ -58,9 +73,11 @@ export function parseYahooChartQuote(data: unknown): YahooQuote | null {
 
   const meta = result.meta;
   const bar = result.indicators?.quote?.[0];
-  const price = meta.regularMarketPrice;
-  const previousClose = meta.previousClose;
-  if (typeof price !== 'number' || typeof previousClose !== 'number') return null;
+  const price = finiteNumber(meta.regularMarketPrice);
+  if (price == null) return null;
+  const previousClose = usableClose(meta.previousClose) ?? usableClose(meta.chartPreviousClose);
+  const change = previousClose == null ? null : price - previousClose;
+  const changePercent = previousClose == null || change == null ? null : (change / previousClose) * 100;
 
   const quoteTime = typeof meta.regularMarketTime === 'number' && Number.isFinite(meta.regularMarketTime)
     ? new Date(meta.regularMarketTime * 1000).toISOString()
@@ -69,8 +86,8 @@ export function parseYahooChartQuote(data: unknown): YahooQuote | null {
   return {
     symbol: meta.symbol ?? '',
     price,
-    change: price - previousClose,
-    changePercent: ((price - previousClose) / previousClose) * 100,
+    change: change != null && Number.isFinite(change) ? change : null,
+    changePercent: changePercent != null && Number.isFinite(changePercent) ? changePercent : null,
     open: bar?.open?.[bar.open.length - 1] || price,
     high: bar?.high?.[bar.high.length - 1] || price,
     low: bar?.low?.[bar.low.length - 1] || price,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
-import { readShared, writeShared } from '@/lib/cache/sharedResponse';
+import { readShared, readSharedMulti, writeShared } from '@/lib/cache/sharedResponse';
 import { commodityFromYahooQuote, YAHOO_FUTURES_SOURCE_LABEL, YAHOO_FUTURES_SYMBOLS, YAHOO_FUTURES_UNAVAILABLE, type PreciousMetal } from '@/lib/commodities/yahooFutures';
 import { isMonthlyObservationCurrent, monthlyAsOfLabel } from '@/lib/commodityFreshness';
 import { deepAnalysisLimiter, getClientIP } from '@/lib/rateLimit';
@@ -54,7 +54,12 @@ const COMMODITIES = {
 
 /** One shared copy of each commodity row, about 15 minutes. */
 const COMMODITY_CACHE_TTL_SECONDS = 15 * 60;
+/** A failed gold or silver quote is remembered briefly, then tried again. */
+const COMMODITY_FAIL_CACHE_TTL_SECONDS = 90;
+/** Last priced gold or silver row. Shown with its own as-of time when the latest fetch fails. */
+const COMMODITY_LAST_GOOD_TTL_SECONDS = 6 * 60 * 60;
 const commodityCacheKey = (symbol: string) => `commodities:v1:${symbol}`;
+const lastGoodKey = (symbol: string) => `commodities:v1:lastgood:${symbol}`;
 
 type CommodityFreshness = 'LIVE' | 'DELAYED' | 'STALE';
 type CommoditySource = 'ETF_PROXY' | 'SPOT' | 'LEGACY_DAILY' | 'LEGACY_MONTHLY' | 'YAHOO_FUTURES';
@@ -105,9 +110,11 @@ function withFreshness(
   const stale = monthly ? !isMonthlyObservationCurrent(data.date) : !Number.isFinite(age) || age > maxAgeDays;
   const freshnessStatus: CommodityFreshness = stale
     ? 'STALE'
-    : source === 'ETF_PROXY' || source === 'SPOT' || source === 'YAHOO_FUTURES'
-      ? 'LIVE'
-      : 'DELAYED';
+    : source === 'YAHOO_FUTURES'
+      ? 'DELAYED'
+      : source === 'ETF_PROXY' || source === 'SPOT'
+        ? 'LIVE'
+        : 'DELAYED';
   return {
     ...data,
     source,
@@ -176,22 +183,29 @@ async function fetchYahooMetal(symbol: PreciousMetal): Promise<CommodityData> {
     console.error(`[Commodities] Yahoo futures quote failed for ${symbol}:`, err);
   }
   const parsed = commodityFromYahooQuote(symbol, quote);
-  if (parsed.price == null || parsed.change == null || parsed.changePercent == null || parsed.unavailableReason) {
+  if (parsed.price == null || parsed.unavailableReason) {
     return unavailableMetal(symbol);
   }
+  const changeReady = parsed.change != null && parsed.changePercent != null;
   const row = withFreshness({
     symbol,
     name: config.name,
     commodityName: config.name,
     price: parsed.price,
-    change: parsed.change,
-    changePercent: parsed.changePercent,
+    change: changeReady ? parsed.change : null,
+    changePercent: changeReady ? parsed.changePercent : null,
     unit: config.unit,
     category: config.category,
     date: parsed.date,
     history: [{ date: parsed.date, value: parsed.price }],
   }, 'YAHOO_FUTURES', 3, parsed.yahooSymbol);
-  return { ...row, sourceLabel: parsed.sourceLabel, asOfLabel: parsed.asOfLabel, unavailableReason: null };
+  return {
+    ...row,
+    eligibleForGate: changeReady && row.eligibleForGate,
+    sourceLabel: parsed.sourceLabel,
+    asOfLabel: parsed.asOfLabel,
+    unavailableReason: null,
+  };
 }
 
 async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<CommodityData | null> {
@@ -289,6 +303,30 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
   }
 }
 
+function isPreciousQuote(symbol: string): symbol is PreciousMetal {
+  return symbol === 'GOLD' || symbol === 'SILVER';
+}
+
+/** A failed metal row can be replaced by the last priced quote. That quote keeps its own as-of time and is never 0. */
+async function preferLastGood(symbol: keyof typeof COMMODITIES, row: CommodityData): Promise<CommodityData> {
+  if (!isPreciousQuote(symbol) || row.price != null) return row;
+  const last = await readShared<CommodityData>(lastGoodKey(symbol));
+  if (last?.symbol === symbol && typeof last.price === 'number' && Number.isFinite(last.price) && last.price > 0) return last;
+  return row;
+}
+
+async function storeCommodity(symbol: keyof typeof COMMODITIES, data: CommodityData): Promise<CommodityData> {
+  if (isPreciousQuote(symbol) && data.price == null) {
+    await writeShared(commodityCacheKey(symbol), data, COMMODITY_FAIL_CACHE_TTL_SECONDS);
+    return preferLastGood(symbol, data);
+  }
+  if (isPreciousQuote(symbol) && data.price != null) {
+    await writeShared(lastGoodKey(symbol), data, COMMODITY_LAST_GOOD_TTL_SECONDS);
+  }
+  await writeShared(commodityCacheKey(symbol), data, COMMODITY_CACHE_TTL_SECONDS);
+  return data;
+}
+
 /**
  * Shared Redis first. The limiter runs only when at least one symbol still needs a vendor call.
  * Returns 'limited' when that call is not allowed.
@@ -297,13 +335,14 @@ async function loadCommodities(
   symbols: (keyof typeof COMMODITIES)[],
   ip: string,
 ): Promise<(CommodityData | null)[] | 'limited'> {
+  const cachedRows = await readSharedMulti<CommodityData>(symbols.map((symbol) => commodityCacheKey(symbol)));
   const hits = new Map<string, CommodityData>();
-  for (const symbol of symbols) {
-    const row = await readShared<CommodityData>(commodityCacheKey(symbol));
-    if (row?.symbol === symbol) {
-      console.log(`[Commodities] Shared cache hit for ${symbol}`);
-      hits.set(symbol, row);
-    }
+  for (let i = 0; i < symbols.length; i++) {
+    const symbol = symbols[i];
+    const row = cachedRows[i];
+    if (row?.symbol !== symbol) continue;
+    console.log(`[Commodities] Shared cache hit for ${symbol}`);
+    hits.set(symbol, await preferLastGood(symbol, row));
   }
   if (symbols.some((symbol) => !hits.has(symbol))) {
     const rateCheck = deepAnalysisLimiter.check(ip);
@@ -319,8 +358,7 @@ async function loadCommodities(
       continue;
     }
     const data = await fetchCommodity(symbol);
-    if (data) await writeShared(commodityCacheKey(symbol), data, COMMODITY_CACHE_TTL_SECONDS);
-    results.push(data);
+    results.push(data ? await storeCommodity(symbol, data) : data);
     const moreMisses = symbols.slice(i + 1).some((next) => !hits.has(next));
     if (moreMisses) await new Promise((resolve) => setTimeout(resolve, 500));
   }

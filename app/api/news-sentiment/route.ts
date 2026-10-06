@@ -7,9 +7,11 @@ import { buildNewsBriefPrompt, NEWS_BRIEF_SYSTEM_PROMPT, stripAdviceSentences } 
 import { avNewsFeedError, buildTickerNews, NEWS_MAX_TICKERS, NEWS_RELEVANCE_RULE, type RequestedNewsTicker, type TickerFeedResult } from '@/lib/news/tickerNewsFeed';
 import { cryptoNewsName } from '@/lib/crypto/newsRelevance';
 
-/** Shared news responses. About 15 minutes. AI briefs are not stored here. */
+/** Shared news responses. About 15 minutes. A partial ticker set is kept for about 2 minutes. AI briefs are not stored here. */
 const NEWS_CACHE_TTL_SECONDS = 15 * 60;
-const newsCacheKey = (providerKeys: string[], limit: string) => `news-sentiment:v1:${providerKeys.join(',')}:limit:${limit}`;
+const NEWS_PARTIAL_CACHE_TTL_SECONDS = 2 * 60;
+const newsCacheKey = (providerKeys: string[], limit: string, ignoredTickers: string[]) =>
+  `news-sentiment:v1:${providerKeys.join(',')}:limit:${limit}:ignored:${ignoredTickers.join(',')}`;
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -84,7 +86,7 @@ export async function GET(request: NextRequest) {
     return { ticker: sym, providerKey: `CRYPTO:${sym}`, name: cryptoNewsName(sym) };
   });
   const ignoredTickers = tickerList.slice(NEWS_MAX_TICKERS);
-  const cacheKey = newsCacheKey(requested.map((item) => item.providerKey), limit);
+  const cacheKey = newsCacheKey(requested.map((item) => item.providerKey), limit, ignoredTickers);
 
   // Shared ticker sets are the same for every user. AI briefs stay uncached and still count.
   if (!includeAI) {
@@ -139,7 +141,10 @@ export async function GET(request: NextRequest) {
       filter,
       aiAnalysis,
     };
-    if (!includeAI) await writeShared(cacheKey, body, NEWS_CACHE_TTL_SECONDS);
+    if (!includeAI) {
+      const partial = failed.length > 0;
+      await writeShared(cacheKey, body, partial ? NEWS_PARTIAL_CACHE_TTL_SECONDS : NEWS_CACHE_TTL_SECONDS);
+    }
     return NextResponse.json(body);
   } catch (error) {
     console.error('News sentiment error:', error);
