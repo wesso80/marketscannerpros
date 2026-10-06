@@ -1,81 +1,35 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
 /**
  * HomePreviewStrip
  * --------------------------------------------------------------
- * Two layout-only cards under the hero showing what the Scanner and
- * Symbol tools look like. They carry no tickers, scores or other
- * numbers, so nothing here can be read as a live result. Each card
- * is labelled "Illustrative layout · not live results".
+ * Dated production screenshots of the Scanner and Symbol pages,
+ * captured signed-out. Captions use the Sydney capture date.
  */
 
-const scannerColumns = ['Symbol', 'Market', 'Score'];
-const SCANNER_PLACEHOLDER_ROWS = 3;
+const CAPTION = "Real screenshot, taken 7 Oct 2026. Open the tool for today's market.";
 
-const symbolRows = ['Verdict', 'Reasons', 'Data quality', 'Invalidation'];
-
-function PreviewLabel() {
-  return (
-    <span className="mb-2 self-end rounded-full border border-white/10 bg-slate-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-      Illustrative layout · not live results
-    </span>
-  );
-}
-
-/** Grey bar standing in for a value, so the layout reads without inventing data. */
-function Placeholder({ className = '' }: { className?: string }) {
-  return <div aria-hidden="true" className={`h-2.5 rounded-full bg-slate-700/60 ${className}`} />;
-}
-
-function ScannerPreview() {
-  return (
-    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-emerald-500/20 bg-slate-950/60 p-4">
-      <PreviewLabel />
-      <div className="mb-3 flex items-center gap-2">
-        <span className="h-2 w-2 rounded-full bg-emerald-400" />
-        <span className="text-xs font-semibold uppercase tracking-wider text-emerald-300">Scanner</span>
-      </div>
-        <div className="grid grid-cols-[2fr_1fr_1fr] items-center gap-x-3 gap-y-1.5 text-xs">
-        {scannerColumns.map((col) => (
-          <div key={col} className="text-slate-500">{col}</div>
-        ))}
-        {Array.from({ length: SCANNER_PLACEHOLDER_ROWS }, (_, i) => (
-          <div key={i} className="contents">
-            <Placeholder className="w-3/4" />
-            <Placeholder className="w-1/2" />
-            <Placeholder className="w-2/3" />
-          </div>
-        ))}
-      </div>
-      <div className="mt-auto pt-3 text-[11px] text-slate-500">
-        Filter equities and crypto by structured technical conditions.
-      </div>
-    </div>
-  );
-}
-
-function SymbolPreview() {
-  return (
-    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-amber-500/20 bg-slate-950/60 p-4">
-      <PreviewLabel />
-      <div className="mb-3 flex items-center gap-2">
-        <span className="h-2 w-2 rounded-full bg-amber-400" />
-        <span className="text-xs font-semibold uppercase tracking-wider text-amber-300">Symbol</span>
-      </div>
-      <div className="space-y-1.5">
-        {symbolRows.map((label) => (
-          <div key={label} className="grid grid-cols-[7rem_1fr] items-center gap-3 text-xs">
-            <span className="text-slate-400">{label}</span>
-            <Placeholder />
-          </div>
-        ))}
-      </div>
-      <div className="mt-auto pt-3 text-[11px] text-slate-500">
-        One symbol: a verdict, the reasons behind it, and what would change it.
-      </div>
-    </div>
-  );
-}
+const previews = [
+  {
+    href: '/tools/scanner',
+    src: '/home/scanner-2026-10-07.webp',
+    width: 1200,
+    height: 1263,
+    alt: 'The Scanner page: preset choices, a one-symbol scan, and the latest saved research list with BAC, META, XRP, MSFT and JPM.',
+    ring: 'focus-visible:ring-emerald-400/60',
+    border: 'border-emerald-500/20',
+  },
+  {
+    href: '/tools/golden-egg',
+    src: '/home/golden-egg-2026-10-07.webp',
+    width: 1200,
+    height: 477,
+    alt: 'The Symbol page for AAPL as a signed-out visitor: the research snapshot line and the public panel covering regime, indicators, scenario levels and volatility context.',
+    ring: 'focus-visible:ring-amber-400/60',
+    border: 'border-amber-500/20',
+  },
+] as const;
 
 export default function HomePreviewStrip() {
   return (
@@ -88,12 +42,25 @@ export default function HomePreviewStrip() {
           </p>
         </div>
         <div className="grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-4">
-          <Link href="/tools/scanner" className="block h-full transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 rounded-xl">
-            <ScannerPreview />
-          </Link>
-          <Link href="/tools/golden-egg" className="block h-full transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 rounded-xl">
-            <SymbolPreview />
-          </Link>
+          {previews.map((preview) => (
+            <Link
+              key={preview.href}
+              href={preview.href}
+              className={`block h-full min-w-0 rounded-xl transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 ${preview.ring}`}
+            >
+              <Image
+                src={preview.src}
+                alt={preview.alt}
+                width={preview.width}
+                height={preview.height}
+                sizes="(min-width: 768px) 50vw, 100vw"
+                loading="lazy"
+                className={`h-auto w-full max-w-full rounded-xl border ${preview.border}`}
+                style={{ width: '100%', height: 'auto' }}
+              />
+              <p className="mt-2 text-xs leading-5 text-slate-300">{CAPTION}</p>
+            </Link>
+          ))}
         </div>
       </div>
     </section>

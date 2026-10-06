@@ -6,21 +6,42 @@ import HomePreviewStrip from '@/components/home/HomePreviewStrip';
 const hero = readFileSync('components/home/Hero.tsx', 'utf8');
 const hub = readFileSync('components/home/CommandHub.tsx', 'utf8');
 
-const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+const text = (html: string) => html
+  .replace(/<[^>]+>/g, ' ')
+  .replace(/&#x27;|&apos;/g, "'")
+  .replace(/&amp;/g, '&')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const CAPTION = "Real screenshot, taken 7 Oct 2026. Open the tool for today's market.";
+const BANNED = /signal|edge|win rate|guaranteed|\barca\b|arcxa|active sigs|confluence/i;
 
 describe('Homepage PR 2: honest preview and new headline', () => {
-  it('preview cards render no digits, no live-sounding claims and only two cards', () => {
+  it('preview cards show dated screenshots, keep the tool links, and avoid live-sounding claims', () => {
     const html = renderToStaticMarkup(<HomePreviewStrip />);
     const shown = text(html);
-    expect(shown).not.toMatch(/\d/);
+    const withoutCaptions = shown.split(CAPTION).join(' ');
+    // Digits are allowed in the dated caption and in image attributes. The rest of the strip stays number-free.
+    expect(withoutCaptions).not.toMatch(/\d/);
     expect(shown).not.toMatch(/Active sigs/i);
     expect(shown).not.toMatch(/Command Center|Live regime|confluence|VIX|RSI|breadth/i);
+    expect(shown).not.toMatch(BANNED);
     expect(shown).not.toContain('Open workflow map');
     expect(shown).toContain('What the two main tools look like. Open them for real markets.');
-    expect(shown.match(/Illustrative layout · not live results/g)).toHaveLength(2);
+    expect(shown).not.toContain('Illustrative layout · not live results');
+    expect(shown.match(new RegExp(CAPTION.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))).toHaveLength(2);
     expect(html).not.toMatch(/aria-label/i);
-    expect(html).not.toMatch(/\balt=/i);
-    for (const label of ['Symbol', 'Market', 'Score', 'Verdict', 'Reasons', 'Data quality', 'Invalidation']) expect(shown).toContain(label);
+    expect(html).toContain('href="/tools/scanner"');
+    expect(html).toContain('href="/tools/golden-egg"');
+    expect(html).toContain('scanner-2026-10-07.webp');
+    expect(html).toContain('golden-egg-2026-10-07.webp');
+    expect(html).toContain('loading="lazy"');
+    const alts = [...html.matchAll(/\balt="([^"]*)"/g)].map((match) => match[1]);
+    expect(alts).toHaveLength(2);
+    for (const alt of alts) {
+      expect(alt.trim().length).toBeGreaterThan(0);
+      expect(alt).not.toMatch(BANNED);
+    }
   });
 
   it('uses the approved headline, sub-line and badge', () => {
