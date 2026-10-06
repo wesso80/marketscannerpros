@@ -35,7 +35,7 @@ describe('TR-14: section tabs on phones', () => {
 describe('TR-15: one Add Position, Clear All Data set apart', () => {
   it('hides the duplicate add button when embedded and puts Clear All Data last', () => {
     const start = page.indexOf('const portfolioHeaderActions = (');
-    const block = page.slice(start, page.indexOf('if (tier === \'anonymous\')', start));
+    const block = page.slice(start, page.indexOf('if (tier === \'anonymous\' && !tierLoading)', start));
     expect(block).not.toContain('Add Position');
     expect(page.match(/>Add Position<\/button>/g)).toHaveLength(1);
     expect(block.indexOf('Clear All Data')).toBeGreaterThan(block.indexOf('Model Allocation'));
