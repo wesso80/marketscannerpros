@@ -4,16 +4,43 @@ import { q, tx } from "@/lib/db";
 import { requireAdmin } from '@/lib/adminAuth';
 
 /**
- * Move current_period_end on this email's non-Stripe trial subscription rows.
- * A row with a Stripe subscription id is left alone. Active paid rows, including
- * manual grants, are not trialing, so they are left alone too.
+ * Move current_period_end for this email's admin trial.
+ * A trialing row with no Stripe subscription id always moves.
+ * A trialing row that still has an old Stripe subscription id also moves when
+ * its current_period_end is the admin trial's previous expires_at (login keeps
+ * that id via COALESCE, and the cancel webhook writes it). A live Stripe trial
+ * has a different period end, so it does not match.
+ * $3 is that previous expires_at as ISO text. current_period_end is timestamp
+ * without time zone, so compare it to the UTC wall time of those instants.
  */
-const SYNC_NON_STRIPE_TRIAL_PERIOD_END = `
+const SYNC_ADMIN_TRIAL_PERIOD_END = `
   UPDATE user_subscriptions
   SET current_period_end = $2, updated_at = NOW()
   WHERE LOWER(email) = LOWER($1)
     AND status = 'trialing'
-    AND stripe_subscription_id IS NULL
+    AND (
+      stripe_subscription_id IS NULL
+      OR current_period_end = ANY (
+        SELECT (unnest($3::text[])::timestamptz AT TIME ZONE 'UTC')
+      )
+    )
+`;
+
+/** A brand-new grant only advances trials that have already ended. */
+const SYNC_EXPIRED_TRIAL_PERIOD_END = `
+  UPDATE user_subscriptions
+  SET current_period_end = $2, updated_at = NOW()
+  WHERE LOWER(email) = LOWER($1)
+    AND status = 'trialing'
+    AND current_period_end IS NOT NULL
+    AND (current_period_end AT TIME ZONE 'UTC') < NOW()
+`;
+
+const LOCK_ACTIVE_TRIALS = `
+  SELECT expires_at
+  FROM user_trials
+  WHERE email = $1 AND expires_at > NOW()
+  FOR UPDATE
 `;
 
 function latestExpiry(rows: { expires_at?: Date | string | null }[]): Date | string | null {
@@ -28,6 +55,22 @@ function latestExpiry(rows: { expires_at?: Date | string | null }[]): Date | str
     }
   }
   return best;
+}
+
+/** ISO instants for the trial ends locked before the update. */
+function expiryKeys(rows: { expires_at?: Date | string | null }[]): string[] {
+  const keys: string[] = [];
+  const seen = new Set<string>();
+  for (const row of rows) {
+    if (row.expires_at == null) continue;
+    const ms = new Date(row.expires_at).getTime();
+    if (!Number.isFinite(ms)) continue;
+    const key = new Date(ms).toISOString();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    keys.push(key);
+  }
+  return keys;
 }
 
 // GET - List all trials (active and expired)
@@ -90,12 +133,13 @@ export async function POST(req: NextRequest) {
     );
 
     if (existing.length > 0) {
-      // Extend the existing trial, and the matching non-Stripe subscription
-      // period, in one transaction. Login is the only other writer of
-      // current_period_end, so without this the entitlement helper would
-      // drop the user to Free at the old end.
+      // Extend the trial and the matching subscription period in one transaction.
+      // The previous expires_at is locked first so a former subscriber, whose
+      // row still carries an old Stripe subscription id, can be matched on it.
       const normalizedEmail = email.toLowerCase().trim();
       const result = await tx(async (client) => {
+        const locked = await client.query(LOCK_ACTIVE_TRIALS, [normalizedEmail]);
+        const previousEnds = expiryKeys(locked.rows);
         const updated = await client.query(
           `UPDATE user_trials 
            SET expires_at = expires_at + ($4 || ' days')::INTERVAL,
@@ -107,7 +151,7 @@ export async function POST(req: NextRequest) {
         );
         const periodEnd = latestExpiry(updated.rows);
         if (periodEnd) {
-          await client.query(SYNC_NON_STRIPE_TRIAL_PERIOD_END, [normalizedEmail, periodEnd]);
+          await client.query(SYNC_ADMIN_TRIAL_PERIOD_END, [normalizedEmail, periodEnd, previousEnds]);
         }
         return updated.rows;
       });
@@ -123,13 +167,22 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Create new trial
-    const result = await q(
-      `INSERT INTO user_trials (email, tier, expires_at, granted_by, notes)
-       VALUES ($1, $2, NOW() + ($4 || ' days')::INTERVAL, 'admin', $3)
-       RETURNING *`,
-      [email.toLowerCase().trim(), tier, notes, String(safeDays)]
-    );
+    // Create new trial. If this email already has a trialing subscription whose
+    // period end is in the past, move that end forward in the same transaction.
+    const normalizedEmail = email.toLowerCase().trim();
+    const result = await tx(async (client) => {
+      const inserted = await client.query(
+        `INSERT INTO user_trials (email, tier, expires_at, granted_by, notes)
+         VALUES ($1, $2, NOW() + ($4 || ' days')::INTERVAL, 'admin', $3)
+         RETURNING *`,
+        [normalizedEmail, tier, notes, String(safeDays)]
+      );
+      const periodEnd = latestExpiry(inserted.rows);
+      if (periodEnd) {
+        await client.query(SYNC_EXPIRED_TRIAL_PERIOD_END, [normalizedEmail, periodEnd]);
+      }
+      return inserted.rows;
+    });
 
     return NextResponse.json({ 
       ok: true, 
@@ -160,6 +213,8 @@ export async function DELETE(req: NextRequest) {
     // treats the trial as Free without waiting for the old end.
     const normalizedEmail = email.toLowerCase().trim();
     const result = await tx(async (client) => {
+      const locked = await client.query(LOCK_ACTIVE_TRIALS, [normalizedEmail]);
+      const previousEnds = expiryKeys(locked.rows);
       const updated = await client.query(
         `UPDATE user_trials 
          SET expires_at = NOW(), notes = COALESCE(notes, '') || ' | Revoked by admin'
@@ -169,7 +224,7 @@ export async function DELETE(req: NextRequest) {
       );
       const periodEnd = latestExpiry(updated.rows);
       if (periodEnd) {
-        await client.query(SYNC_NON_STRIPE_TRIAL_PERIOD_END, [normalizedEmail, periodEnd]);
+        await client.query(SYNC_ADMIN_TRIAL_PERIOD_END, [normalizedEmail, periodEnd, previousEnds]);
       }
       return updated.rows;
     });
