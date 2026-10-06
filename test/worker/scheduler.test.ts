@@ -1,7 +1,7 @@
 import {describe,expect,it,vi} from 'vitest';
 import {readFileSync} from 'node:fs';
 import {SCHEDULE,cronField,cronMatches,dueJobs,runsPerMonth,type HttpJob,type ScheduledJob} from '@/lib/worker/schedule';
-import {runHttpJob,startScheduler,type JobOutcome} from '../../worker/scheduler';
+import {httpSkipReason,runHttpJob,startScheduler,type JobOutcome} from '../../worker/scheduler';
 const at=(iso:string)=>new Date(iso);
 const renderYaml=()=>readFileSync('render.yaml','utf8').replace(/\r\n/g,'\n'); // Windows checkouts are CRLF
 describe('cron matcher (UTC)',()=>{
@@ -61,6 +61,8 @@ describe('schedule table',()=>{
   expect(byName['refresh-fundamentals']).toMatchObject({schedule:'0 22 * * 1-5',body:{maxAgeHours:20}});
   expect(byName['journal-auto-close']).toMatchObject({schedule:'2-59/5 * * * *',path:'/api/jobs/journal-auto-close?limit=200'});
   expect(byName['upe-crcs-hourly']).toMatchObject({kind:'script',script:'worker:upe:crcs:hourly'});
+  expect(byName['label-signal-accuracy-outcomes']).toMatchObject({kind:'script',script:'worker:outcomes',schedule:'25 */2 * * *',timeoutMs:600_000});
+  expect(SCHEDULE.some(j=>j.kind==='script'&&j.script==='worker:outcomes:loop')).toBe(false);
  });
  it('the worker has WEB_URL and CRON_SECRET in render.yaml, and the web service still owns the secret',()=>{
   const yaml=renderYaml();
@@ -81,6 +83,29 @@ describe('runner',()=>{
   const out=await runHttpJob(job,{webUrl:'https://w',cronSecret:'s3',fetch:fetch as never,now:Date.now});
   expect(out).toMatchObject({ok:true,status:200,attempts:1});
   expect(fetch).toHaveBeenCalledWith('https://w/api/x?limit=5',expect.objectContaining({method:'POST',headers:{'x-cron-secret':'s3','Content-Type':'application/json'},body:'{"a":1}'}));
+ });
+ it('treats a 2xx skip body as skipped and does not retry it',async()=>{
+  const body=JSON.stringify({ok:true,skipped:true,reason:'admin_discovery_only'});
+  const fetch=vi.fn(async()=>({ok:true,status:200,text:async()=>body}));
+  const out=await runHttpJob({...job,retries:3},{webUrl:'https://w',cronSecret:'s3',fetch:fetch as never,now:()=>1_000});
+  expect(out).toMatchObject({ok:true,skipped:true,status:200,attempts:1,error:'admin_discovery_only'});
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(await httpSkipReason({text:async()=>JSON.stringify({skipped:true,reason:'crypto_markets_paused'})})).toBe('crypto_markets_paused');
+  expect(await httpSkipReason({text:async()=>'{"ok":true}'})).toBeUndefined();
+ });
+ it('logs skipped, not ok, when the response body says the job was paused',async()=>{
+  vi.useFakeTimers();
+  const t0=Date.UTC(2026,9,2,9,4,50);vi.setSystemTime(t0);
+  const fetch=vi.fn(async()=>({ok:true,status:200,text:async()=>JSON.stringify({skipped:true,reason:'admin_discovery_only'})}));
+  const log:string[]=[];
+  const jobs:ScheduledJob[]=[{name:'admin-evening-packet',schedule:'* * * * *',kind:'http',path:'/api/cron/evening-packet',timeoutMs:1000,retries:2,retryDelayMs:0}];
+  const stop=startScheduler({webUrl:'https://w',cronSecret:'s',fetch:fetch as never,jobs,log:l=>log.push(l)});
+  await vi.advanceTimersByTimeAsync(11_000);
+  const line=log.find(l=>l.includes('admin-evening-packet')&&l.includes('http 200'));
+  expect(line).toMatch(/^\[scheduler\] skipped admin-evening-packet \d+ms http 200 · admin_discovery_only$/);
+  expect(log.some(l=>l.includes('[scheduler] ok admin-evening-packet'))).toBe(false);
+  expect(fetch).toHaveBeenCalledTimes(1);
+  stop();vi.useRealTimers();
  });
  it('retries like curl --retry and reports the last failure',async()=>{
   const fetch=vi.fn().mockResolvedValueOnce({ok:false,status:503}).mockRejectedValueOnce(Object.assign(new Error('x'),{name:'TimeoutError'})).mockResolvedValueOnce({ok:false,status:401});

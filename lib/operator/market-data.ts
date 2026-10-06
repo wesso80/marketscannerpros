@@ -509,8 +509,8 @@ export function vixStateFromLevel(level: number | null | undefined): string {
 }
 
 /**
- * VIX via the shared regime reader (Alpha Vantage INDEX_DATA through avRateGovernor, cached 15 min per
- * instance, FRED as fallback). When no recent VIX is available the state is 'unknown' — it used to default
+ * VIX via the shared regime reader (Cboe daily close first, cached 15 min, FRED VIXCLS as fallback).
+ * When no recent VIX is available the state is 'unknown' — it used to default
  * to a made-up 20 ("normal"), which added +0.2 cross-market confidence to every symbol.
  */
 async function fetchCrossMarketState(nowMs = Date.now()): Promise<CrossMarketState> {

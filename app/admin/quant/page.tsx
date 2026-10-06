@@ -10,7 +10,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { useAdmin } from '../layout';
+import { useAdmin } from '../admin-client-layout';
 
 // ─── Types (client-side mirrors) ────────────────────────────────────────────
 

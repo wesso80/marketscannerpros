@@ -1,6 +1,7 @@
 'use client';
 
 import { alertConditionLabel, alertHistoryLabel } from '@/lib/alertPresentation';
+import { publishAlertCapNotice } from '@/lib/alerts/planLimits';
 import { validateBasicAlertAssetType } from '@/lib/alerts/assetTypes';
 import { useState, useEffect, useCallback } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
@@ -210,11 +211,17 @@ export default function AlertsWidget({
 
   const toggleAlert = async (id: string, currentActive: boolean) => {
     try {
-      await fetch('/api/alerts', {
+      const res = await fetch('/api/alerts', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, isActive: !currentActive }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const message = typeof data?.message === 'string' ? data.message : 'Failed to update alert';
+        setError(message);
+        if (res.status === 403) publishAlertCapNotice(message);
+      }
       fetchAlerts();
     } catch (err) {
       console.error('Failed to toggle alert:', err);

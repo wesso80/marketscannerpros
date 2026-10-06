@@ -71,7 +71,7 @@ export default function AccountPage() {
         return null;
       })(),
       fetch("/api/alerts", { credentials: "include" }).then(async (res) => {
-        if (res.ok) { const d = await res.json(); return Array.isArray(d?.alerts) ? d.alerts.filter((alert: { is_active?: boolean }) => alert.is_active).length : null; }
+        if (res.ok) { const d = await res.json(); return typeof d?.quota?.used === "number" ? d.quota.used : null; }
         return null;
       }).catch(() => null),
       fetch("/api/watchlists", { credentials: "include" }).then(async (res) => {

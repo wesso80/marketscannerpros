@@ -9,6 +9,7 @@ import {
   buildSignals,
 } from '@/hooks/useCryptoDerivatives';
 import type { DerivativeRow, DerivedSignal, FundingHeatmapCell } from '@/types/cryptoTerminal';
+import { freshContractOpenInterest, openInterestSourceLabel } from '@/lib/crypto/openInterestTotal';
 import { formatCryptoNumber as fmt, formatCryptoUsd as fmtUsd, formatCryptoPercent as fmtPct, formatCryptoFunding as fmtFunding } from '@/lib/cryptoTerminalFormatting';
 
 /* ═══ TYPES FOR NEW FEATURES ═══ */
@@ -527,7 +528,7 @@ export default function CryptoTerminalView({
                     <div className="grid grid-cols-2 gap-2">
                       <MiniStat label="Avg Funding" value={fmtFunding(aggFunding.fundingRatePct)} sub="Unavailable: funding intervals not supplied" />
                       <MiniStat label="Sentiment" value={aggFunding.sentiment} />
-                      <MiniStat label="Total OI" value={fmtUsd(aggOI.totalOI)} sub={`${aggOI.exchangeCount} exchanges`} />
+                      <MiniStat label="Total OI" value={aggOI.totalOI == null ? 'unavailable' : fmtUsd(aggOI.totalOI)} sub={aggOI.sourceLabel ?? (aggOI.exchangeCount > 0 ? openInterestSourceLabel(aggOI.exchangeCount) : 'unavailable')} />
                       <MiniStat label="Perps Volume" value={fmtUsd(aggOI.totalVolume24h)} />
                     </div>
                   </div>
@@ -621,18 +622,23 @@ export default function CryptoTerminalView({
                     <MiniStat label="Index Price" value={`$${fmt(selectedRow.index, selectedRow.index < 1 ? 6 : 2)}`} />
                   </div>
 
-                  {/* OI share bar */}
-                  {aggOI && aggOI.totalOI > 0 && (
+                  {/* OI share uses the same fresh quote window as the summed total. A stale row is not a share of that total. */}
+                  {(() => {
+                    const freshOi = freshContractOpenInterest(selectedRow.openInterest, selectedRow.lastTradedAt);
+                    const share = freshOi != null && aggOI?.totalOI != null && aggOI.totalOI > 0 ? (freshOi / aggOI.totalOI) * 100 : null;
+                    if (share == null || !(share <= 100)) return null;
+                    return (
                     <div className="border-t border-zinc-800/60 pt-3">
                       <div className="flex items-center justify-between text-[11px] text-zinc-500 mb-1">
                         <span>OI Share</span>
-                        <span>{((selectedRow.openInterest / aggOI.totalOI) * 100).toFixed(1)}%</span>
+                        <span>{share.toFixed(1)}%</span>
                       </div>
                       <div className="h-2 rounded-full bg-zinc-800 overflow-hidden">
-                        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min((selectedRow.openInterest / aggOI.totalOI) * 100, 100)}%` }} />
+                        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${share}%` }} />
                       </div>
                     </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Funding vs Average */}
                   {aggFunding && (
@@ -711,7 +717,7 @@ export default function CryptoTerminalView({
                         <div className={`text-[10px] font-mono ${fundingColor(c.aggregatedFunding.fundingRatePct)}`}>
                           F: {fmtFunding(c.aggregatedFunding.fundingRatePct)}
                         </div>
-                        <div className="text-[10px] text-zinc-500">OI: {fmtUsd(c.aggregatedOI.totalOI)}</div>
+                        <div className="max-w-[11rem] text-right text-[10px] text-zinc-500">OI: {c.aggregatedOI.totalOI == null ? 'unavailable' : fmtUsd(c.aggregatedOI.totalOI)}{c.aggregatedOI.sourceLabel ? ` · ${c.aggregatedOI.sourceLabel}` : ''}</div>
                       </div>
                     </button>
                   ))}

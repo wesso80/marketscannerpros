@@ -2,17 +2,19 @@
 import { NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
-import { isFreeForAllMode } from "@/lib/entitlements";
+import { effectiveTierFromSubscription, isFreeForAllMode } from "@/lib/entitlements";
 
 // Admin emails — hardcoded + env var for guaranteed access
 const HARDCODED_ADMINS = ['xxneutronxx@yahoo.com', 'bradleywessling@yahoo.com.au'];
 const ENV_ADMINS = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
 const ADMIN_EMAILS = [...new Set([...HARDCODED_ADMINS, ...ENV_ADMINS])];
 
-async function getSubscriptionFromDB(workspaceId: string): Promise<{ email: string; tier: string; status: string } | null> {
+type SubRow = { email: string; tier: string; status: string; current_period_end: Date | string | null };
+
+async function getSubscriptionFromDB(workspaceId: string): Promise<SubRow | null> {
   try {
-    const rows = await q<{ email: string; tier: string; status: string }>(
-      'SELECT email, tier, status FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1',
+    const rows = await q<SubRow>(
+      'SELECT email, tier, status, current_period_end FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1',
       [workspaceId]
     );
     return rows.length > 0 ? rows[0] : null;
@@ -55,8 +57,8 @@ export async function GET() {
   // Fallback: look up by Stripe customer ID if workspace_id miss
   if (!dbSub && session.cid && session.cid.startsWith('cus_')) {
     try {
-      const rows = await q<{ email: string; tier: string; status: string }>(
-        'SELECT email, tier, status FROM user_subscriptions WHERE stripe_customer_id = $1 LIMIT 1',
+      const rows = await q<SubRow>(
+        'SELECT email, tier, status, current_period_end FROM user_subscriptions WHERE stripe_customer_id = $1 LIMIT 1',
         [session.cid]
       );
       dbSub = rows.length > 0 ? rows[0] : null;
@@ -76,14 +78,9 @@ export async function GET() {
   // Determine effective tier:
   // 1) FREE_FOR_ALL_MODE → everyone gets pro_trader
   // 2) Admin users always get pro_trader
-  // 3) DB tier is source of truth (reflects Stripe webhook updates / cancellations)
+  // 3) DB row via effectiveTierFromSubscription (status + trial period end)
   // 4) Fall back to cookie tier only if no DB record exists
-  let effectiveTier = dbSub?.tier ?? session.tier;
-  
-  // If subscription is cancelled/inactive in DB, downgrade to free
-  if (dbSub && dbSub.status !== 'active' && dbSub.status !== 'trialing') {
-    effectiveTier = 'free';
-  }
+  let effectiveTier = dbSub ? effectiveTierFromSubscription(dbSub) : session.tier;
   
   if (isFreeForAllMode()) {
     effectiveTier = "pro_trader";

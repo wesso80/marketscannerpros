@@ -10,7 +10,7 @@ vi.mock('@/lib/useUserTier',()=>({useUserTier:()=>({tier:state.tier,isLoading:fa
 vi.mock('next/navigation',()=>({redirect:(url:string)=>{throw Error(`redirect:${url}`);}}));
 import AccountPage from '@/app/account/page';
 import ReferralsPage from '@/app/tools/referrals/page';
-beforeEach(()=>{vi.stubGlobal('React',React);state.tier='pro';state.missing=false;state.failed=false;state.requests=[];vi.stubGlobal('fetch',vi.fn(async(url,init)=>{state.requests.push(init?.method??'GET');return {ok:!state.failed,status:state.failed?503:200,json:async()=>String(url)==='/api/entitlements'?(state.missing?{tier:'pro'}:{aiUsedToday:7}):String(url)==='/api/alerts'?{alerts:[{is_active:true},{is_active:false}]}:String(url)==='/api/watchlists'?{watchlists:[{id:'1'},{id:'2'}]}:String(url)==='/api/referral/dashboard'?{referralUrl:'https://example.test/ref',stats:{conversions:0,creditsEarned:0,nextEntryProgress:0},contest:{period:'October 2026',drawDate:'2026-11-01',yourEntries:0,totalEntries:0},leaderboard:[],history:[]}:{email:'fixture@example.test',prefs:{}}};}));});
+beforeEach(()=>{vi.stubGlobal('React',React);state.tier='pro';state.missing=false;state.failed=false;state.requests=[];vi.stubGlobal('fetch',vi.fn(async(url,init)=>{state.requests.push(init?.method??'GET');return {ok:!state.failed,status:state.failed?503:200,json:async()=>String(url)==='/api/entitlements'?(state.missing?{tier:'pro'}:{aiUsedToday:7}):String(url)==='/api/alerts'?{alerts:[{is_active:true},{is_active:true},{is_active:false}],quota:{used:1,max:100}}:String(url)==='/api/watchlists'?{watchlists:[{id:'1'},{id:'2'}]}:String(url)==='/api/referral/dashboard'?{referralUrl:'https://example.test/ref',stats:{conversions:0,creditsEarned:0,nextEntryProgress:0},contest:{period:'October 2026',drawDate:'2026-11-01',yourEntries:0,totalEntries:0},leaderboard:[],history:[]}:{email:'fixture@example.test',prefs:{}}};}));});
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 it.each(['pro','pro_trader','free'])('uses existing limits and closed folds for %s',async tier=>{
  state.tier=tier;
@@ -30,7 +30,7 @@ it.each(['pro','pro_trader','free'])('uses existing limits and closed folds for 
 it('does not turn absent AI usage into zero usage',async()=>{
  state.missing=true;
  const {container}=render(<AccountPage/>);
- await screen.findByText('1 / 999');
+ await screen.findByText(`1 / ${ALERT_LIMITS.pro}`);
  expect(container.querySelector('[data-usage-ring]')?.textContent).toContain('Not collected');
  expect(container.querySelector('[data-usage-ring]')?.textContent).not.toContain('0 /');
 });

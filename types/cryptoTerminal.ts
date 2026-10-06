@@ -54,9 +54,10 @@ export interface AggregatedFunding {
 /** Aggregated open interest for one coin */
 export interface AggregatedOI {
   symbol: string;
-  totalOI: number;
+  totalOI: number | null;
   totalVolume24h: number;
   exchangeCount: number;
+  sourceLabel?: string;
 }
 
 /** Funding heatmap row — one coin × one exchange */

@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { apiLimiter, scannerLimiter, aiLimiter, loginLimiter, getClientIP, createRateLimiter } from '@/lib/rateLimit';
 import { getSessionFromCookie, SessionPayload } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { effectiveTierFromSubscription } from '@/lib/entitlements';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { registerMemoryGauge } from '@/lib/memory/debugLog';
 
@@ -45,14 +46,14 @@ export async function getVerifiedTier(session: SessionPayload): Promise<string> 
   }
 
   try {
-    const rows = await q<{ tier: string; status: string }>(
-      `SELECT tier, status FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1`,
+    const rows = await q<{ tier: string; status: string; current_period_end: Date | string | null }>(
+      `SELECT tier, status, current_period_end FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1`,
       [wid],
     );
     if (rows.length > 0) {
-      const { tier, status } = rows[0];
-      // If subscription is cancelled / past_due / unpaid, treat as free
-      const effectiveTier = (status === 'active' || status === 'trialing') ? tier : 'free';
+      const { status } = rows[0];
+      // Cancelled / past_due / unpaid, and trials past current_period_end, are free.
+      const effectiveTier = effectiveTierFromSubscription(rows[0], now);
       tierCache.set(wid, { tier: effectiveTier, status, ts: now });
       return effectiveTier;
     }

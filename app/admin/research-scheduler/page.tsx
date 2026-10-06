@@ -4,6 +4,8 @@ import { startVisiblePolling } from "@/lib/client/visiblePolling";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useAdmin } from "../admin-client-layout";
+import ReadOnlyPauseNote from "@/components/admin/ReadOnlyPauseNote";
 import type { RunSummary } from "@/lib/admin/sharedScanStore";
 type SharedStatus = { market: string; timeframe: string; available: boolean; lastRun: RunSummary | null; running: RunSummary | null };
 
@@ -51,6 +53,7 @@ function badge(val: number, warn: number, err: number, label: string) {
 }
 
 export default function ResearchSchedulerPage() {
+  const { discoveryPaused } = useAdmin();
   const [sharedScans, setSharedScans] = useState<SharedStatus[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [runs, setRuns] = useState<SchedulerRun[]>([]);
@@ -132,11 +135,16 @@ export default function ResearchSchedulerPage() {
             </>}
           </div>;
         })}
-        <Link href="/admin/opportunity-board" className="text-emerald-300 underline">Open shared results and rescan controls</Link>
+        {discoveryPaused ? (
+          <p className="text-sm text-slate-400">Shared results stay paused.</p>
+        ) : (
+          <Link href="/admin/opportunity-board" className="text-emerald-300 underline">Open shared results and rescan controls</Link>
+        )}
       </section>
       <h2 className="mb-2 text-lg font-bold">Manual packet checks</h2>
       <p className="mb-4 text-sm text-slate-400">This separate legacy workflow evaluates research packets and alert eligibility. It has no automatic schedule and does not send notifications. Modes label the requested run; they do not configure a recurring job.</p>
       {/* Manual Trigger */}
+      {discoveryPaused ? <ReadOnlyPauseNote /> : (
       <div
         style={{
           background: "#1E293B",
@@ -207,6 +215,7 @@ export default function ResearchSchedulerPage() {
           </span>
         )}
       </div>
+      )}
 
       {/* Run History Table */}
       {loading ? (

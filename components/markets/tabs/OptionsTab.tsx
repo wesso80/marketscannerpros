@@ -5,7 +5,7 @@ import type { TickerContext } from '../types';
 /**
  * Options / Derivatives Tab
  * Equities: IV, IV Rank, expected move, GEX, put/call ratio, top strikes.
- * Crypto: Funding rate, OI, L/S ratio, liquidations, top perpetual contracts.
+ * Crypto: Funding rate, OI, L/S ratio, top perpetual contracts.
  */
 export default function OptionsTab({ ctx }: { ctx: TickerContext }) {
   const { symbol, assetClass, options, cryptoDerivatives, loading } = ctx;
@@ -36,7 +36,7 @@ export default function OptionsTab({ ctx }: { ctx: TickerContext }) {
       <div className="grid gap-3">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Derivatives Intelligence</p>
-          <h3 className="text-xs font-bold text-[var(--msp-text)]">{symbol} — Funding, OI, Leverage & Liquidations</h3>
+          <h3 className="text-xs font-bold text-[var(--msp-text)]">{symbol} — Funding, OI and Leverage</h3>
         </div>
 
         {/* Top metrics row */}
@@ -90,37 +90,6 @@ export default function OptionsTab({ ctx }: { ctx: TickerContext }) {
             <p className="text-[9px] text-[var(--msp-text-faint)]">Reporting sources</p>
           </div>
         </div>
-
-        {/* Liquidations */}
-        {cryptoDerivatives.liquidations && cryptoDerivatives.liquidations.total24h > 0 && (
-          <div className="rounded-md border border-rose-500/20 bg-rose-500/5 p-2">
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-rose-400">24h Liquidations</p>
-            <div className="grid grid-cols-1 gap-2 text-center sm:grid-cols-3">
-              <div>
-                <p className="text-[10px] text-[var(--msp-text-faint)]">Longs</p>
-                <p className="text-sm font-black text-rose-400">{formatLargeNumber(cryptoDerivatives.liquidations.long24h)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-[var(--msp-text-faint)]">Shorts</p>
-                <p className="text-sm font-black text-emerald-400">{formatLargeNumber(cryptoDerivatives.liquidations.short24h)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-[var(--msp-text-faint)]">Total</p>
-                <p className="text-sm font-black text-amber-400">{formatLargeNumber(cryptoDerivatives.liquidations.total24h)}</p>
-              </div>
-            </div>
-            <div className="mt-2 flex h-2.5 w-full overflow-hidden rounded-full">
-              <div
-                className="bg-rose-500 transition-all"
-                style={{ width: `${(cryptoDerivatives.liquidations.long24h / cryptoDerivatives.liquidations.total24h) * 100}%` }}
-              />
-              <div
-                className="bg-emerald-500 transition-all"
-                style={{ width: `${(cryptoDerivatives.liquidations.short24h / cryptoDerivatives.liquidations.total24h) * 100}%` }}
-              />
-            </div>
-          </div>
-        )}
 
         {/* Top perpetual contracts */}
         {cryptoDerivatives.topContracts && cryptoDerivatives.topContracts.length > 0 && (

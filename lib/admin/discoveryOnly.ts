@@ -27,11 +27,60 @@ const jevEquityScope = new Set([
   '/admin/equity-research', '/api/admin/equity-research', '/api/admin/equity-news-jev',
   '/admin/transcripts', '/api/admin/transcripts',
 ]);
-export function discoveryOnlyAction(path: string): 'allow' | 'pause_api' | 'skip_job' | 'pause_page' {
+/**
+ * Read-only business scope. Pages are open. Matching APIs allow GET only;
+ * POST, PUT, PATCH, and DELETE stay paused (trial grant/revoke,
+ * delete-request updates, research-scheduler trigger). Stripe sync posts to
+ * /api/admin/sync-stripe, which is not on this list, so it stays paused too.
+ */
+export const businessScope = {
+  pages: [
+    '/admin/usage-analytics',
+    '/admin/income',
+    '/admin/subscriptions',
+    '/admin/trials',
+    '/admin/ai-usage',
+    '/admin/costs',
+    '/admin/delete-requests',
+    '/admin/data-health',
+    '/admin/health',
+    '/admin/research-scheduler',
+  ],
+  getApis: [
+    '/api/admin/usage-analytics',
+    '/api/admin/income',
+    '/api/admin/subscriptions',
+    '/api/admin/trials',
+    '/api/admin/ai-usage',
+    '/api/admin/costs',
+    '/api/admin/delete-requests',
+    '/api/admin/data-health',
+    '/api/admin/health',
+    '/api/admin/research-scheduler',
+  ],
+} as const;
+const businessPages = new Set<string>(businessScope.pages);
+const businessGetApis = new Set<string>(businessScope.getApis);
+
+/** Sidebar and command-palette targets that still work while discovery-only is on. */
+export function adminNavVisibleWhilePaused(href: string): boolean {
+  const path = href.split(/[?#]/)[0].replace(/\/+$/, '') || '/';
+  if (path === '/admin/crypto-markets' || path.startsWith('/admin/crypto-markets/')) return true;
+  if (path === '/admin/equity-research' || path === '/admin/transcripts') return true;
+  return businessPages.has(path);
+}
+
+function readMethod(method: string | undefined): boolean {
+  return (method ?? 'GET').trim().toUpperCase() === 'GET';
+}
+
+export function discoveryOnlyAction(path: string, method?: string): 'allow' | 'pause_api' | 'skip_job' | 'pause_page' {
   if (!adminDiscoveryOnly()) return 'allow';
   path = path.replace(/\/+$/, '') || '/';
   if (background.has(path)) return 'skip_job';
   if (cryptoScope.has(path) || jevEquityScope.has(path)) return 'allow';
+  if (businessPages.has(path)) return 'allow';
+  if (businessGetApis.has(path)) return readMethod(method) ? 'allow' : 'pause_api';
   if (path === '/api/admin' || path.startsWith('/api/admin/') || path.startsWith('/api/operator/engine/')) return 'pause_api';
   if (path === '/admin/crypto-markets' || path === '/admin/crypto-discovery' || path === '/admin/paused') return 'allow';
   if (path === '/admin' || path.startsWith('/admin/')) return 'pause_page';

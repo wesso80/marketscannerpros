@@ -1,0 +1,38 @@
+{
+  "chart": {
+    "result": [
+      {
+        "meta": {
+          "currency": "USD",
+          "symbol": "GC=F",
+          "exchangeName": "CMX",
+          "fullExchangeName": "COMEX",
+          "instrumentType": "FUTURE",
+          "regularMarketTime": 1791281702,
+          "regularMarketPrice": 4178.8,
+          "fiftyTwoWeekHigh": 5586.2,
+          "fiftyTwoWeekLow": 3901.3,
+          "regularMarketDayHigh": 4185.9,
+          "regularMarketDayLow": 4130.7,
+          "regularMarketVolume": 49067,
+          "shortName": "Gold Dec 26",
+          "chartPreviousClose": 4156.8,
+          "priceHint": 2
+        },
+        "timestamp": [1791281702],
+        "indicators": {
+          "quote": [
+            {
+              "close": [4178.7998046875],
+              "low": [4130.7001953125],
+              "volume": [49067],
+              "high": [4185.89990234375],
+              "open": [4169.2001953125]
+            }
+          ]
+        }
+      }
+    ],
+    "error": null
+  }
+}

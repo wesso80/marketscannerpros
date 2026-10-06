@@ -9,6 +9,7 @@ vi.mock('@/lib/useUserTier', () => ({
 }));
 
 import CryptoDashboard from '@/app/tools/crypto-dashboard/page';
+import { derivativesOiSourceLine } from '@/lib/crypto/openInterestTotal';
 
 const calls: string[] = [];
 const json = (status: number, body: unknown) => ({
@@ -56,13 +57,19 @@ function installFetch(mode: 'empty' | 'three') {
         summary: {
           totalOpenInterest: 50_000_000_000,
           totalOpenInterestFormatted: '$50.00B',
+          sourceLabel: 'CoinGecko derivatives · up to 3 of the top 3 derivatives exchanges per coin',
           change24h: 1.2,
+          change24hLabel: '24h change on the fixed contract basket, not this total',
           marketSignal: 'stable',
           comparisonReason: null,
           coverage: 'Fixed contracts',
           baselineReadyAt: null,
         },
-        coins: [{ symbol: 'BTC', openInterestValue: 30_000_000_000, change24h: 1.1 }],
+        coins: [
+          { symbol: 'BTC', openInterest: 30_000_000_000, openInterestValue: 30_000_000_000, openInterestFormatted: '$30.00B', sourceLabel: 'CoinGecko derivatives · 3 of the top 3 derivatives exchanges', observedAt: '2026-10-06T00:00:00.000Z', change24h: 1.1 },
+          { symbol: 'ETH', openInterest: 20_000_000_000, openInterestValue: 20_000_000_000, openInterestFormatted: '$20.00B', sourceLabel: 'CoinGecko derivatives · 2 of the top 3 derivatives exchanges', change24h: 0.4 },
+          { symbol: 'SOL', openInterest: null, openInterestValue: null, openInterestFormatted: null, change24h: null },
+        ],
       });
     }
     if (url.includes('/api/crypto/heatmap')) {
@@ -82,13 +89,14 @@ beforeEach(() => { calls.length = 0; vi.stubGlobal('React', React); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe('crypto derivatives desk', () => {
-  it('empty fixtures and a liquidations 503 show one liquidations chip and no raw gap words', async () => {
+  it('empty fixtures do not show a liquidations chip or a market-wide liquidations claim', async () => {
     installFetch('empty');
     render(<CryptoDashboard />);
-    expect(await screen.findByRole('button', { name: /Liquidations: not collected/ })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Crypto Derivatives' })).toBeTruthy();
     await waitFor(() => expect(calls.some((url) => url.includes('/api/funding-rates'))).toBe(true));
     expect(calls.some((url) => url.includes('/api/crypto/liquidations'))).toBe(false);
-    expect(screen.getAllByRole('button', { name: /Liquidations: not collected/ })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /Liquidations/ })).toBeNull();
+    expect(document.body.textContent).not.toContain('3 of 4');
     expect(document.body.textContent).not.toMatch(/Unavailable/);
     expect(document.body.textContent).not.toContain('Wait for complete data');
     expect(document.body.textContent).not.toContain('Trade Ideas');
@@ -98,10 +106,10 @@ describe('crypto derivatives desk', () => {
     expect(document.querySelectorAll('details[open]')).toHaveLength(0);
   });
 
-  it('renders the conditions row from funding, long/short and open interest with the 3 of 4 label', async () => {
+  it('renders the conditions row from funding, long/short and open interest without a liquidations feed', async () => {
     installFetch('three');
     render(<CryptoDashboard />);
-    expect(await screen.findByText('Based on 3 of 4 feeds · liquidations not collected')).toBeTruthy();
+    expect(await screen.findByText('Based on funding, long/short and open interest.')).toBeTruthy();
     const conditions = screen.getByRole('region', { name: 'Conditions' });
     expect(conditions.textContent).toMatch(/Conditions/);
     expect(document.querySelectorAll('[data-derivatives-summary]')).toHaveLength(1);
@@ -115,7 +123,19 @@ describe('crypto derivatives desk', () => {
     expect(source.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
     expect(source.textContent).toMatch(/\b(AEDT|AEST)\b/);
     expect(source.textContent).toContain('no shared provider observation time supplied');
-    expect(screen.getAllByRole('button', { name: /Liquidations: not collected/ })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /Liquidations/ })).toBeNull();
+    expect(document.body.textContent).not.toContain('3 of 4');
+    expect(document.body.textContent).toContain('BTC open interest');
+    expect(document.body.textContent).toContain('$30.00B');
+    const btcSource = 'CoinGecko derivatives · 3 of the top 3 derivatives exchanges';
+    expect(document.body.textContent).toContain(btcSource);
+    expect(document.querySelector('[data-source-line]')?.textContent).toContain(derivativesOiSourceLine(btcSource));
+    expect(document.body.textContent).toContain('As of');
+    expect(document.body.textContent).toContain('Open interest across 2 coins:');
+    expect(document.body.textContent).toContain('Basket 24h: +1.20%');
+    expect(document.body.textContent).toContain('Open interest across 2 coins: $50.00B');
+    expect(document.body.textContent).toContain('24h change on the fixed contract basket, not this total');
+    expect(document.body.textContent).not.toContain('Total open interest');
     expect(screen.getAllByText('Show all 4').length).toBeGreaterThan(0);
     expect(document.body.textContent).not.toMatch(/Unavailable/);
     expect(document.body.textContent).not.toContain('Wait for complete data');

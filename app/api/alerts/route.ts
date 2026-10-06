@@ -3,7 +3,9 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { validateBasicAlertAssetType } from '@/lib/alerts/assetTypes';
-import { ALERT_LIMITS } from '@/lib/alerts/planLimits';
+import { ALERT_LIMITS, alertLimitReachedPayload } from '@/lib/alerts/planLimits';
+import { countActiveAlertsForCap, countsTowardAlertCap } from '@/lib/alerts/activeCount';
+import { ACTIVE_WORKFLOW_AUTO_ORPHAN_SQL } from '@/lib/alerts/priceOrphan';
 import { newAlertCooldownMinutes } from '@/lib/alerts/alertTiming';
 
 /**
@@ -15,11 +17,24 @@ import { newAlertCooldownMinutes } from '@/lib/alerts/alertTiming';
  * DELETE - Delete alert
  */
 
-// Alert limits: two plans only. Pro (incl. legacy pro_trader) and admins get 999
+// Alert limits: two plans only. Pro (incl. legacy pro_trader) and admins get 100
 // active alerts; Free stays at 3. Shared with the Alerts page (lib/alerts/planLimits).
 function alertPlan(session: Parameters<typeof hasPaidSessionAccess>[0]): { tier: 'free' | 'pro'; maxAlerts: number } {
   const tier = hasPaidSessionAccess(session) ? 'pro' : 'free';
   return { tier, maxAlerts: ALERT_LIMITS[tier] };
+}
+
+/** One boolean for the cap check and the write. Anything else is rejected. */
+function activeFlagFromUpdates(updates: Record<string, unknown>): boolean | undefined | null {
+  const camel = Object.prototype.hasOwnProperty.call(updates, 'isActive');
+  const snake = Object.prototype.hasOwnProperty.call(updates, 'is_active');
+  if (!camel && !snake) return undefined;
+  const camelValue = updates.isActive;
+  const snakeValue = updates.is_active;
+  if (camel && typeof camelValue !== 'boolean') return null;
+  if (snake && typeof snakeValue !== 'boolean') return null;
+  if (camel && snake && camelValue !== snakeValue) return null;
+  return (camel ? camelValue : snakeValue) as boolean;
 }
 
 // Multi-condition alert condition types
@@ -165,7 +180,7 @@ export async function GET(req: NextRequest) {
     );
 
     const { tier, maxAlerts } = alertPlan(session);
-    const activeCount = alerts.filter((a: any) => a.is_active).length;
+    const activeCount = await countActiveAlertsForCap(session.workspaceId);
 
     return NextResponse.json({
       alerts,
@@ -281,24 +296,11 @@ export async function POST(req: NextRequest) {
       assetType = assetCheck.assetType;
     }
 
-    // Check quota
-    
-    const activeResult = await q(
-      `SELECT COUNT(*) as count FROM alerts WHERE workspace_id = $1 AND is_active = true`,
-      [session.workspaceId]
-    );
-    const activeCount = parseInt(activeResult[0]?.count || '0');
+    // Check quota. Price alerts with no level do not count. Smart alerts that store 0 do.
+    const activeCount = await countActiveAlertsForCap(session.workspaceId);
 
     if (activeCount >= maxAlerts) {
-      return NextResponse.json(
-        { 
-          error: 'Alert limit reached',
-          message: `Your ${tier} plan allows ${maxAlerts} active alerts. Upgrade to create more.`,
-          limit: maxAlerts,
-          current: activeCount,
-        },
-        { status: 403 }
-      );
+      return NextResponse.json(alertLimitReachedPayload(tier, activeCount), { status: 403 });
     }
 
     // Generate alert name
@@ -414,6 +416,49 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Alert ID required' }, { status: 400 });
     }
 
+    const existing = await q<{
+      is_active: boolean | null;
+      condition_type: string | null;
+      condition_value: number | string | null;
+    }>(
+      `SELECT is_active, condition_type, condition_value
+       FROM alerts
+       WHERE id = $1 AND workspace_id = $2
+       LIMIT 1`,
+      [id, session.workspaceId]
+    );
+    if (!existing.length) {
+      return NextResponse.json({ error: 'Alert not found' }, { status: 404 });
+    }
+    const row = existing[0];
+    const activeFlag = activeFlagFromUpdates(updates);
+    if (activeFlag === null) {
+      return NextResponse.json({ error: 'isActive must be a boolean' }, { status: 400 });
+    }
+    const nextActive = activeFlag === undefined ? row.is_active === true : activeFlag;
+    const nextValue = updates.conditionValue !== undefined
+      ? updates.conditionValue
+      : updates.condition_value !== undefined
+        ? updates.condition_value
+        : row.condition_value;
+    const countedBefore = countsTowardAlertCap({
+      is_active: row.is_active === true,
+      condition_type: row.condition_type,
+      condition_value: row.condition_value,
+    });
+    const countedAfter = countsTowardAlertCap({
+      is_active: nextActive,
+      condition_type: row.condition_type,
+      condition_value: nextValue,
+    });
+    if (!countedBefore && countedAfter) {
+      const { tier, maxAlerts } = alertPlan(session);
+      const activeCount = await countActiveAlertsForCap(session.workspaceId);
+      if (activeCount >= maxAlerts) {
+        return NextResponse.json(alertLimitReachedPayload(tier, activeCount), { status: 403 });
+      }
+    }
+
     // Build dynamic update query
     const setClauses: string[] = [];
     const values: any[] = [];
@@ -434,7 +479,12 @@ export async function PUT(req: NextRequest) {
       expiresAt: 'expires_at',
     };
 
-    for (const [key, value] of Object.entries(updates)) {
+    const writeUpdates: Record<string, unknown> = { ...updates };
+    delete writeUpdates.isActive;
+    delete writeUpdates.is_active;
+    if (typeof activeFlag === 'boolean') writeUpdates.is_active = activeFlag;
+
+    for (const [key, value] of Object.entries(writeUpdates)) {
       const dbField = fieldMap[key] || key;
       if (allowedFields.includes(dbField)) {
         setClauses.push(`${dbField} = $${paramIndex}`);
@@ -480,25 +530,24 @@ export async function DELETE(req: NextRequest) {
     const id = url.searchParams.get('id');
     const bulk = url.searchParams.get('bulk');
 
-    // Bulk cleanup: remove auto-generated orphaned alerts (condition_value = 0, workflow.auto source)
+    // Switch off active smart auto-plan rows with no level. Do not delete them.
     if (bulk === 'auto-orphaned') {
-      const deleted = await q(
-        `DELETE FROM alerts
+      const switched = await q<{ id: string }>(
+        `UPDATE alerts
+         SET is_active = false
          WHERE workspace_id = $1
-           AND is_smart_alert = true
-           AND condition_value = 0
-           AND smart_alert_context->>'source' = 'workflow.auto'
+           AND ${ACTIVE_WORKFLOW_AUTO_ORPHAN_SQL}
          RETURNING id`,
         [session.workspaceId]
       );
-      const count = deleted.length;
+      const count = switched.length;
       if (count > 0) {
         await q(
           `UPDATE alert_quotas SET active_alerts = GREATEST(0, active_alerts - $2) WHERE workspace_id = $1`,
           [session.workspaceId, count]
         );
       }
-      return NextResponse.json({ success: true, deletedCount: count });
+      return NextResponse.json({ success: true, deletedCount: count, switchedOffCount: count });
     }
 
     if (!id) {
