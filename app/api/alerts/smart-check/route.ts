@@ -9,6 +9,7 @@ import { buildTriggeredAlertContent } from '@/lib/email';
 import { sendPushToUser } from '@/lib/pushServer';
 import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
 import { fetchMPE } from '@/lib/goldenEggFetchers';
+import { historyPriceInsert } from '@/lib/alerts/historyPrice';
 
 /**
  * Smart Alerts Checker
@@ -605,12 +606,14 @@ async function triggerSmartAlert(alert: SmartAlert, result: CheckResult) {
     userEmail = userResult[0]?.email || null;
   }
 
-  // Record in history
+  // result.value is a metric (Fear & Greed, funding, ratio), not a quote.
+  // trigger_price stays NULL. The metric stays in triggered_price because that column is NOT NULL.
+  const historyPrice = historyPriceInsert('NULL', '$3');
   await q(
     `INSERT INTO alert_history (
-      alert_id, workspace_id, triggered_at, triggered_price,
+      alert_id, workspace_id, triggered_at, ${historyPrice.columns},
       symbol, condition_type, condition_value, notification_sent, notification_type
-    ) VALUES ($1, $2, NOW(), $3, $4, $5, $6, $7, $8)`,
+    ) VALUES ($1, $2, NOW(), ${historyPrice.values}, $4, $5, $6, $7, $8)`,
     [
       alert.id,
       alert.workspace_id,
