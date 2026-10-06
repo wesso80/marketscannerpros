@@ -213,10 +213,41 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
     expectUnixDate(storedPeriodEnd(), ITEM_PERIOD_END);
     assertNoInvalidDates();
     expect(mocks.subscriptionsRetrieve).toHaveBeenCalledWith('sub_test_period');
+    const insert = mocks.q.mock.calls.find((call) => String(call[0]).includes('INSERT INTO user_subscriptions'));
+    expect((insert![1] as unknown[])[2]).toBe('pro');
+    expect((insert![1] as unknown[])[3]).toBe('active');
+  });
+
+  it('checkout.session.completed still writes tier and status when the period is missing', async () => {
+    const subscription = cloverSubscription({
+      items: {
+        object: 'list',
+        data: [cloverItem({ end: undefined, start: undefined })],
+      },
+    });
+    delete (subscription.items.data[0] as { current_period_end?: unknown }).current_period_end;
+    mocks.subscriptionsRetrieve.mockResolvedValue(subscription);
+
+    const res = await postEvent(stripeEvent('checkout.session.completed', {
+      id: 'cs_test_no_period',
+      object: 'checkout.session',
+      mode: 'subscription',
+      customer: 'cus_test_period',
+      subscription: 'sub_test_period',
+      status: 'complete',
+    }, '2025-09-30.clover'));
+
+    expect(res.status).toBe(200);
+    expect(storedPeriodEnd()).toBeNull();
+    const insert = mocks.q.mock.calls.find((call) => String(call[0]).includes('INSERT INTO user_subscriptions'));
+    expect((insert![1] as unknown[])[2]).toBe('pro');
+    expect((insert![1] as unknown[])[3]).toBe('active');
+    assertNoInvalidDates();
   });
 
   it('customer.subscription.created reads the item period when the top-level field is absent', async () => {
     const subscription = cloverSubscription({ status: 'trialing' });
+    mocks.subscriptionsRetrieve.mockResolvedValue(subscription);
     const res = await postEvent(stripeEvent(
       'customer.subscription.created',
       subscription,
@@ -235,6 +266,7 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
       current_period_end: LEGACY_PERIOD_END,
       current_period_start: LEGACY_PERIOD_START,
     });
+    mocks.subscriptionsRetrieve.mockResolvedValue(subscription);
     const res = await postEvent(stripeEvent(
       'customer.subscription.updated',
       subscription,
@@ -264,6 +296,7 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
   it('legacy subscription payloads still use the top-level period fields', async () => {
     const subscription = legacySubscription();
     expect(subscription.items.data[0]).not.toHaveProperty('current_period_end');
+    mocks.subscriptionsRetrieve.mockResolvedValue(subscription);
     const res = await postEvent(stripeEvent(
       'customer.subscription.updated',
       subscription,
@@ -284,6 +317,7 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
         data: [cloverItem({ end: 'not-a-timestamp', start: { bad: true } })],
       },
     });
+    mocks.subscriptionsRetrieve.mockResolvedValue(subscription);
     const res = await postEvent(stripeEvent(
       'customer.subscription.updated',
       subscription,
@@ -304,6 +338,7 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
         data: [cloverItem({ end: null, start: '' })],
       },
     });
+    mocks.subscriptionsRetrieve.mockResolvedValue(subscription);
     const res = await postEvent(stripeEvent(
       'customer.subscription.created',
       subscription,
@@ -322,6 +357,7 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
         data: [cloverItem({ end: String(ITEM_PERIOD_END), start: String(ITEM_PERIOD_START) })],
       },
     });
+    mocks.subscriptionsRetrieve.mockResolvedValue(subscription);
     const res = await postEvent(stripeEvent(
       'customer.subscription.updated',
       subscription,
@@ -340,6 +376,7 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
       customer: 'cus_test_period',
       status: 'active',
     };
+    mocks.subscriptionsRetrieve.mockResolvedValue(subscription);
     const res = await postEvent(stripeEvent(
       'customer.subscription.updated',
       subscription,
@@ -350,6 +387,7 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
   });
 
   it('returns 500 when the customer lookup fails', async () => {
+    mocks.subscriptionsRetrieve.mockResolvedValue(cloverSubscription());
     mocks.customersRetrieve.mockRejectedValue(invalidRequest('resource_missing'));
     const res = await postEvent(stripeEvent(
       'customer.subscription.updated',
@@ -387,6 +425,7 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
     delete (subscription.items.data[0] as { current_period_start?: unknown }).current_period_start;
     expect(subscription).not.toHaveProperty('current_period_end');
     expect(subscription.items.data[0]).not.toHaveProperty('current_period_end');
+    mocks.subscriptionsRetrieve.mockResolvedValue(subscription);
 
     const res = await postEvent(stripeEvent(
       'customer.subscription.updated',
@@ -403,6 +442,7 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
   });
 
   it('returns 500 when the upsert throws a TypeError', async () => {
+    mocks.subscriptionsRetrieve.mockResolvedValue(cloverSubscription());
     mocks.q.mockRejectedValue(new TypeError('cannot read period column'));
     const res = await postEvent(stripeEvent(
       'customer.subscription.updated',
@@ -438,7 +478,7 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
   });
 
   it('invoice.payment_failed reads the subscription id from parent.subscription_details', async () => {
-    mocks.subscriptionsRetrieve.mockResolvedValue(cloverSubscription());
+    mocks.subscriptionsRetrieve.mockResolvedValue(cloverSubscription({ status: 'past_due' }));
     const res = await postEvent(stripeEvent('invoice.payment_failed', {
       id: 'in_test_clover',
       object: 'invoice',
@@ -458,7 +498,7 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
   });
 
   it('invoice.payment_failed falls back to the legacy invoice.subscription field', async () => {
-    mocks.subscriptionsRetrieve.mockResolvedValue(cloverSubscription());
+    mocks.subscriptionsRetrieve.mockResolvedValue(cloverSubscription({ status: 'unpaid' }));
     const res = await postEvent(stripeEvent('invoice.payment_failed', {
       id: 'in_test_legacy',
       object: 'invoice',
@@ -473,6 +513,7 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
   });
 
   it('still returns 500 when the database write fails', async () => {
+    mocks.subscriptionsRetrieve.mockResolvedValue(cloverSubscription());
     mocks.q.mockRejectedValue(new Error('connection terminated'));
     const res = await postEvent(stripeEvent(
       'customer.subscription.updated',
@@ -499,6 +540,107 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
     ));
 
     expect(res.status).toBe(500);
+  });
+
+  it('a replayed active event upserts the live canceled subscription', async () => {
+    const stale = cloverSubscription({ id: 'sub_old', status: 'active' });
+    const live = cloverSubscription({ id: 'sub_old', status: 'canceled' });
+    mocks.subscriptionsRetrieve.mockResolvedValue(live);
+
+    const res = await postEvent(stripeEvent(
+      'customer.subscription.updated',
+      stale,
+      '2025-09-30.clover',
+    ));
+
+    expect(res.status).toBe(200);
+    expect(mocks.subscriptionsRetrieve).toHaveBeenCalledWith('sub_old');
+    const insert = mocks.q.mock.calls.find((call) => String(call[0]).includes('INSERT INTO user_subscriptions'));
+    expect(String(insert![0])).toContain("status NOT IN ('active', 'trialing')");
+    expect((insert![1] as unknown[])[3]).toBe('canceled');
+    expect((insert![1] as unknown[])[4]).toBe('sub_old');
+  });
+
+  it('does not overwrite an active row with a different subscription id', async () => {
+    mocks.q.mockImplementation(async (sql: unknown) => {
+      if (String(sql).includes('SELECT stripe_subscription_id')) {
+        return [{ stripe_subscription_id: 'sub_current', status: 'active' }];
+      }
+      return [];
+    });
+    const stale = cloverSubscription({ id: 'sub_old', status: 'canceled' });
+    mocks.subscriptionsRetrieve.mockResolvedValue(stale);
+
+    const res = await postEvent(stripeEvent(
+      'customer.subscription.updated',
+      { ...stale, status: 'active' },
+      '2025-09-30.clover',
+    ));
+
+    expect(res.status).toBe(200);
+    const insert = mocks.q.mock.calls.find((call) => String(call[0]).includes('INSERT INTO user_subscriptions'));
+    expect(insert).toBeUndefined();
+  });
+
+  it('invoice.payment_failed writes nothing when the live subscription is active', async () => {
+    mocks.subscriptionsRetrieve.mockResolvedValue(cloverSubscription({ status: 'active' }));
+    const res = await postEvent(stripeEvent('invoice.payment_failed', {
+      id: 'in_test_active',
+      object: 'invoice',
+      customer: 'cus_test_period',
+      parent: {
+        type: 'subscription_details',
+        subscription_details: { subscription: 'sub_test_period' },
+      },
+    }, '2025-09-30.clover'));
+
+    expect(res.status).toBe(200);
+    const update = mocks.q.mock.calls.find((call) => String(call[0]).includes("status = 'past_due'"));
+    expect(update).toBeUndefined();
+  });
+
+  it('a deleted customer writes nothing and returns 200', async () => {
+    mocks.subscriptionsRetrieve.mockResolvedValue(cloverSubscription());
+    mocks.customersRetrieve.mockResolvedValue({ id: 'cus_gone', object: 'customer', deleted: true });
+    const res = await postEvent(stripeEvent(
+      'customer.subscription.updated',
+      cloverSubscription({ status: 'active' }),
+      '2025-09-30.clover',
+    ));
+
+    expect(res.status).toBe(200);
+    const insert = mocks.q.mock.calls.find((call) => String(call[0]).includes('INSERT INTO user_subscriptions'));
+    expect(insert).toBeUndefined();
+  });
+
+  it('a duplicate event id runs the welcome email once', async () => {
+    let claims = 0;
+    mocks.q.mockImplementation(async (sql: unknown) => {
+      if (String(sql).includes('stripe_processed_events')) {
+        claims += 1;
+        return claims === 1 ? [{ event_id: 'evt_test_checkout_session_completed' }] : [];
+      }
+      return [];
+    });
+    const subscription = cloverSubscription();
+    mocks.subscriptionsRetrieve.mockResolvedValue(subscription);
+    const event = stripeEvent('checkout.session.completed', {
+      id: 'cs_test_once',
+      object: 'checkout.session',
+      mode: 'subscription',
+      customer: 'cus_test_period',
+      subscription: 'sub_test_period',
+      status: 'complete',
+    }, '2025-09-30.clover');
+
+    const first = await postEvent(event);
+    const second = await postEvent(event);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(mocks.sendWelcomeEmail).toHaveBeenCalledTimes(1);
+    const inserts = mocks.q.mock.calls.filter((call) => String(call[0]).includes('INSERT INTO user_subscriptions'));
+    expect(inserts).toHaveLength(2);
   });
 
   it('rejects a bad signature with 400 and does not write', async () => {

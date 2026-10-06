@@ -51,6 +51,7 @@ export async function GET(req: NextRequest) {
     const email = (checkoutSession.customer_details?.email || checkoutSession.customer_email || "").toLowerCase().trim();
     const workspaceId = email ? hashWorkspaceId(email) : hashWorkspaceId(customerId);
     const periodEnd = sub ? subscriptionPeriodDate(sub, "current_period_end") : null;
+    const subscriptionStatus = sub?.status || "active";
     if (sub && !periodEnd) {
       console.error(`[stripe/confirm] subscription ${sub.id}: current_period_end missing or unusable on items.data[0] and on the subscription; storing null`);
     }
@@ -61,12 +62,12 @@ export async function GET(req: NextRequest) {
         await q(`
           INSERT INTO user_subscriptions 
             (workspace_id, email, tier, status, stripe_customer_id, stripe_subscription_id, current_period_end, updated_at, created_at)
-          VALUES ($1, $2, $3, 'active', $4, $5, $6, NOW(), NOW())
+          VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
           ON CONFLICT (workspace_id) 
           DO UPDATE SET 
             email = EXCLUDED.email,
             tier = EXCLUDED.tier,
-            status = 'active',
+            status = EXCLUDED.status,
             stripe_customer_id = EXCLUDED.stripe_customer_id,
             stripe_subscription_id = EXCLUDED.stripe_subscription_id,
             current_period_end = EXCLUDED.current_period_end,
@@ -75,12 +76,14 @@ export async function GET(req: NextRequest) {
           workspaceId,
           email,
           tier,
+          subscriptionStatus,
           customerId,
           sub?.id || null,
           periodEnd,
         ]);
       } catch (dbErr) {
         console.error("[stripe/confirm] DB error:", dbErr);
+        return NextResponse.json({ error: "Failed to save subscription" }, { status: 500 });
       }
     }
 

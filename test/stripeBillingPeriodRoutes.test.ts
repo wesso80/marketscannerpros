@@ -98,9 +98,10 @@ describe('clover period fields on the paid signup paths', () => {
     expect(insert).toBeTruthy();
     const params = insert![1] as unknown[];
     expect(params[2]).toBe('pro');
-    expect(params[5]).toBeInstanceOf(Date);
-    expect(Number.isNaN((params[5] as Date).getTime())).toBe(false);
-    expect((params[5] as Date).toISOString()).toBe(new Date(ITEM_PERIOD_END * 1000).toISOString());
+    expect(params[3]).toBe('active');
+    expect(params[6]).toBeInstanceOf(Date);
+    expect(Number.isNaN((params[6] as Date).getTime())).toBe(false);
+    expect((params[6] as Date).toISOString()).toBe(new Date(ITEM_PERIOD_END * 1000).toISOString());
   });
 
   it('confirm stores null and still writes the paid tier when the period is absent', async () => {
@@ -117,7 +118,43 @@ describe('clover period fields on the paid signup paths', () => {
     expect(res.status).toBe(200);
     const insert = insertCall();
     expect((insert![1] as unknown[])[2]).toBe('pro');
-    expect((insert![1] as unknown[])[5]).toBeNull();
+    expect((insert![1] as unknown[])[3]).toBe('active');
+    expect((insert![1] as unknown[])[6]).toBeNull();
+  });
+
+  it('confirm stores a trialing subscription as trialing', async () => {
+    const subscription = cloverSubscription();
+    subscription.status = 'trialing';
+    mocks.sessionsRetrieve.mockResolvedValue({
+      id: 'cs_test_trial',
+      status: 'complete',
+      payment_status: 'no_payment_required',
+      customer: 'cus_confirm',
+      customer_details: { email: 'confirm-trial@example.com' },
+      subscription,
+    });
+
+    const res = await confirmGET(new NextRequest('https://example.test/api/stripe/confirm?session_id=cs_test_trial'));
+    expect(res.status).toBe(200);
+    expect((insertCall()![1] as unknown[])[3]).toBe('trialing');
+  });
+
+  it('confirm returns 500 when the subscription write fails', async () => {
+    mocks.q.mockRejectedValue(new Error('connection terminated'));
+    mocks.sessionsRetrieve.mockResolvedValue({
+      id: 'cs_test_db',
+      status: 'complete',
+      payment_status: 'paid',
+      customer: 'cus_confirm',
+      customer_details: { email: 'confirm-db@example.com' },
+      subscription: cloverSubscription(),
+    });
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const res = await confirmGET(new NextRequest('https://example.test/api/stripe/confirm?session_id=cs_test_db'));
+    expect(res.status).toBe(500);
+    expect(errSpy.mock.calls.some((call) => String(call[0]).includes('[stripe/confirm] DB error:'))).toBe(true);
+    errSpy.mockRestore();
   });
 
   it('login stores the item period without failing the sign-in', async () => {
