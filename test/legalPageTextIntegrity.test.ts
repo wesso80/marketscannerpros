@@ -59,7 +59,7 @@ describe("legal page text matches the pre-change pages", () => {
 
 describe("legal page navigation chrome", () => {
   for (const { slug, Page } of LEGAL_PAGES) {
-    it(`${slug} exposes an On this page menu and a back-to-top link`, () => {
+    it(`${slug} exposes an On this page menu and no page-local back-to-top`, () => {
       const html = renderToStaticMarkup(createElement(Page));
       const { document } = new JSDOM(html).window;
       const details = document.querySelector("details");
@@ -67,9 +67,10 @@ describe("legal page navigation chrome", () => {
       expect(details?.hasAttribute("open")).toBe(false);
       expect(details?.querySelector("summary")?.textContent).toBe("On this page");
 
-      const back = document.querySelector("a[data-legal-chrome='back-to-top']");
-      expect(back?.getAttribute("href")).toBe("#legal-top");
-      expect(back?.textContent).toBe("Back to top");
+      expect(document.getElementById("legal-top")).toBeNull();
+      expect(document.querySelector("[data-legal-chrome='back-to-top']")).toBeNull();
+      expect(document.body.textContent).not.toContain("Back to top");
+      expect(document.body.textContent).not.toContain("↑ Top");
 
       const h2s = Array.from(document.querySelectorAll("[data-legal-prose] h2"));
       const ids = h2s.map((heading) => heading.getAttribute("id"));

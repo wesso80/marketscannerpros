@@ -29,7 +29,8 @@ export function normalizeLegalText(value: string): string {
 
 /**
  * Visible legal copy and in-body links.
- * Drops the "On this page" menu and the back-to-top control only.
+ * Drops the "On this page" menu only. The site-wide back-to-top control
+ * lives outside these pages.
  */
 export function snapshotLegalHtml(html: string): LegalSnapshot {
   const { document } = new JSDOM(html).window;

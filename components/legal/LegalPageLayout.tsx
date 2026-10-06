@@ -106,10 +106,7 @@ export default function LegalPageLayout({ children }: { children: ReactNode }) {
   const { content, headings } = prepareLegalContent(children);
 
   return (
-    <main
-      id="legal-top"
-      className="min-h-screen bg-[var(--msp-bg)] px-[8px] py-16 text-slate-200 min-[1280px]:px-[24px]"
-    >
+    <main className="min-h-screen bg-[var(--msp-bg)] px-[8px] py-16 text-slate-200 min-[1280px]:px-[24px]">
       <div className="mx-auto w-full min-w-0 min-[1280px]:grid min-[1280px]:max-w-[1048px] min-[1280px]:grid-cols-[220px_minmax(0,800px)] min-[1280px]:items-start min-[1280px]:gap-[28px]">
         <aside
           data-legal-chrome="toc"
@@ -137,14 +134,6 @@ export default function LegalPageLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
       </div>
-
-      <a
-        href="#legal-top"
-        data-legal-chrome="back-to-top"
-        className="fixed bottom-4 left-4 z-[60] inline-flex min-h-11 max-w-[calc(100vw-32px)] items-center rounded-full border border-emerald-500/30 bg-[var(--msp-card)] px-4 text-sm font-medium text-slate-100 shadow-lg"
-      >
-        Back to top
-      </a>
     </main>
   );
 }
