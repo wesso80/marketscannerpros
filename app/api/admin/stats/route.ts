@@ -121,7 +121,8 @@ export async function GET(req: NextRequest) {
     ));
     const monthlyRevenue = stripePaidRows.reduce((sum: number, r: any) => sum + (parseInt(r.count) * (PRICES[r.tier] || 0)), 0);
     const yearlyRevenue = monthlyRevenue * 12;
-    const MONTHLY_COSTS = 677.50;
+    // Sum of FIXED_COSTS in app/api/admin/income/route.ts (approved 7 Oct 2026).
+    const MONTHLY_COSTS = 1365.08;
     const yearlyCosts = MONTHLY_COSTS * 12;
     const monthlyProfit = monthlyRevenue - MONTHLY_COSTS;
     const yearlyProfit = yearlyRevenue - yearlyCosts;
