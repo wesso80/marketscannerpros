@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { hashWorkspaceId, signSessionToken } from "@/lib/auth";
 import { q } from "@/lib/db";
+import { subscriptionPeriodDate } from "@/lib/stripeSubscriptionPeriod";
 
 const PRO_PRICE_IDS = [
   process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
@@ -49,6 +50,10 @@ export async function GET(req: NextRequest) {
     const tier = detectTier(priceIds);
     const email = (checkoutSession.customer_details?.email || checkoutSession.customer_email || "").toLowerCase().trim();
     const workspaceId = email ? hashWorkspaceId(email) : hashWorkspaceId(customerId);
+    const periodEnd = sub ? subscriptionPeriodDate(sub, "current_period_end") : null;
+    if (sub && !periodEnd) {
+      console.error(`[stripe/confirm] subscription ${sub.id}: current_period_end missing or unusable on items.data[0] and on the subscription; storing null`);
+    }
 
     // Update subscription in database
     if (email) {
@@ -72,7 +77,7 @@ export async function GET(req: NextRequest) {
           tier,
           customerId,
           sub?.id || null,
-          sub ? new Date((sub as any).current_period_end * 1000) : null,
+          periodEnd,
         ]);
       } catch (dbErr) {
         console.error("[stripe/confirm] DB error:", dbErr);

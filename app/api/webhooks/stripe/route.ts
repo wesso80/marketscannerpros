@@ -4,6 +4,7 @@ import { q } from '@/lib/db';
 import { hashWorkspaceId } from '@/lib/auth';
 import { sendWelcomeEmail } from '@/lib/email';
 import { checkContestEntry } from '@/lib/referralContest';
+import { invoiceSubscriptionId, subscriptionPeriodDate } from '@/lib/stripeSubscriptionPeriod';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-09-30.clover',
@@ -55,44 +56,6 @@ function getReferralCreditCents(tier: string): number {
   return REFERRAL_CREDIT_BY_TIER[tier] || 500;
 }
 
-// API 2025-03-31.basil removed current_period_start / current_period_end from
-// Subscription. The pinned version (2025-09-30.clover) puts them on each
-// subscription item. Older webhook endpoints may still send the top-level fields.
-const SUBSCRIPTION_LIFECYCLE_EVENTS = new Set([
-  'checkout.session.completed',
-  'customer.subscription.created',
-  'customer.subscription.updated',
-  'customer.subscription.deleted',
-]);
-
-function unixSecondsToDate(value: unknown): Date | null {
-  let seconds: number;
-  if (typeof value === 'number') {
-    seconds = value;
-  } else if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    seconds = Number(trimmed);
-  } else {
-    return null;
-  }
-  if (!Number.isFinite(seconds)) return null;
-  const date = new Date(seconds * 1000);
-  if (Number.isNaN(date.getTime())) return null;
-  return date;
-}
-
-function subscriptionPeriodDate(
-  subscription: Stripe.Subscription,
-  field: 'current_period_end' | 'current_period_start',
-): Date | null {
-  const item = subscription.items?.data?.[0];
-  const fromItem = unixSecondsToDate(item?.[field]);
-  if (fromItem !== null) return fromItem;
-  const legacy = (subscription as Stripe.Subscription & Record<string, unknown>)[field];
-  return unixSecondsToDate(legacy);
-}
-
 function safePeriodEnd(periodEnd: Date | null): Date | null {
   if (periodEnd == null) return null;
   if (!(periodEnd instanceof Date) || Number.isNaN(periodEnd.getTime())) {
@@ -100,15 +63,6 @@ function safePeriodEnd(periodEnd: Date | null): Date | null {
     return null;
   }
   return periodEnd;
-}
-
-function isNonRetryableFieldProblem(error: unknown): boolean {
-  if (error instanceof TypeError || error instanceof RangeError) return true;
-  return (
-    error !== null &&
-    typeof error === 'object' &&
-    (error as { type?: unknown }).type === 'StripeInvalidRequestError'
-  );
 }
 
 async function processReferralReward(
@@ -389,9 +343,9 @@ export async function POST(req: NextRequest) {
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
-        const subscriptionId = (invoice as any).subscription;
+        const subscriptionId = invoiceSubscriptionId(invoice);
         if (subscriptionId) {
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId as string);
+          await stripe.subscriptions.retrieve(subscriptionId);
           const customer = await stripe.customers.retrieve((invoice as any).customer as string) as Stripe.Customer;
           const workspaceId = hashWorkspaceId((customer.email || '').toLowerCase().trim());
           
@@ -410,8 +364,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error('[Webhook] Error processing event:', error);
-    if (SUBSCRIPTION_LIFECYCLE_EVENTS.has(event.type) && isNonRetryableFieldProblem(error)) {
-      console.error(`[Webhook] ${event.type}: missing or invalid field; acknowledging so Stripe will not retry a payload that cannot succeed`);
+    // Only a deleted-subscription event whose customer is already gone can be
+    // acknowledged. Retrying resource_missing never succeeds. Every other failure
+    // stays 500 so Stripe retries.
+    if (
+      event.type === 'customer.subscription.deleted' &&
+      error !== null &&
+      typeof error === 'object' &&
+      (error as { code?: unknown }).code === 'resource_missing'
+    ) {
+      console.error('[Webhook] customer.subscription.deleted: Stripe resource_missing; acknowledging without retry');
       return NextResponse.json({ received: true });
     }
     return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 });

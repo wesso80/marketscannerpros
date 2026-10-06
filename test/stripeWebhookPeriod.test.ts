@@ -49,6 +49,7 @@ vi.mock('stripe', async () => {
 type Post = (req: NextRequest) => Promise<Response>;
 let POST: Post;
 let sign: (payload: string) => string;
+let invalidRequest: (code?: string) => Error;
 
 function customer() {
   return { id: 'cus_test_period', object: 'customer', email: 'webhook-test@example.com' };
@@ -172,6 +173,11 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
     sign = (payload: string) => stripe.webhooks.generateTestHeaderString({
       payload,
       secret: WEBHOOK_SECRET,
+    });
+    invalidRequest = (code?: string) => new Stripe.errors.StripeInvalidRequestError({
+      message: 'No such customer',
+      code,
+      type: 'invalid_request_error',
     });
   });
 
@@ -327,7 +333,7 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
     assertNoInvalidDates();
   });
 
-  it('returns 200 when items are missing instead of 500', async () => {
+  it('returns 500 when items are missing', async () => {
     const subscription = {
       id: 'sub_test_no_items',
       object: 'subscription',
@@ -340,24 +346,130 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
       '2025-09-30.clover',
     ));
 
-    expect(res.status).toBe(200);
-    expect(res.status).not.toBe(500);
-    assertNoInvalidDates();
+    expect(res.status).toBe(500);
   });
 
-  it('acknowledges a missing customer instead of returning 500', async () => {
-    mocks.customersRetrieve.mockRejectedValue(Object.assign(new Error('No such customer: cus_missing'), {
-      type: 'StripeInvalidRequestError',
-      statusCode: 404,
-    }));
+  it('returns 500 when the customer lookup fails', async () => {
+    mocks.customersRetrieve.mockRejectedValue(invalidRequest('resource_missing'));
     const res = await postEvent(stripeEvent(
       'customer.subscription.updated',
       cloverSubscription(),
       '2025-09-30.clover',
     ));
 
+    expect(res.status).toBe(500);
+    expect(mocks.q).not.toHaveBeenCalled();
+  });
+
+  it('returns 500 when checkout subscription retrieve fails', async () => {
+    mocks.subscriptionsRetrieve.mockRejectedValue(invalidRequest('resource_missing'));
+    const res = await postEvent(stripeEvent('checkout.session.completed', {
+      id: 'cs_test_mismatch',
+      object: 'checkout.session',
+      mode: 'subscription',
+      customer: 'cus_test_period',
+      subscription: 'sub_test_period',
+      status: 'complete',
+    }, '2025-09-30.clover'));
+
+    expect(res.status).toBe(500);
+    expect(mocks.q).not.toHaveBeenCalled();
+  });
+
+  it('still upserts tier and status when the period fields are absent', async () => {
+    const subscription = cloverSubscription({
+      items: {
+        object: 'list',
+        data: [cloverItem({ end: undefined, start: undefined })],
+      },
+    });
+    delete (subscription.items.data[0] as { current_period_end?: unknown }).current_period_end;
+    delete (subscription.items.data[0] as { current_period_start?: unknown }).current_period_start;
+    expect(subscription).not.toHaveProperty('current_period_end');
+    expect(subscription.items.data[0]).not.toHaveProperty('current_period_end');
+
+    const res = await postEvent(stripeEvent(
+      'customer.subscription.updated',
+      subscription,
+      '2025-09-30.clover',
+    ));
+
     expect(res.status).toBe(200);
+    expect(storedPeriodEnd()).toBeNull();
+    const insert = mocks.q.mock.calls.find((call) => String(call[0]).includes('INSERT INTO user_subscriptions'));
+    expect((insert![1] as unknown[])[2]).toBe('pro');
+    expect((insert![1] as unknown[])[3]).toBe('active');
     assertNoInvalidDates();
+  });
+
+  it('returns 500 when the upsert throws a TypeError', async () => {
+    mocks.q.mockRejectedValue(new TypeError('cannot read period column'));
+    const res = await postEvent(stripeEvent(
+      'customer.subscription.updated',
+      cloverSubscription(),
+      '2025-09-30.clover',
+    ));
+
+    expect(res.status).toBe(500);
+  });
+
+  it('acknowledges customer.subscription.deleted only when Stripe says resource_missing', async () => {
+    mocks.customersRetrieve.mockRejectedValue(invalidRequest('resource_missing'));
+    const res = await postEvent(stripeEvent(
+      'customer.subscription.deleted',
+      cloverSubscription({ status: 'canceled' }),
+      '2025-09-30.clover',
+    ));
+
+    expect(res.status).toBe(200);
+    expect(mocks.q).not.toHaveBeenCalled();
+  });
+
+  it('returns 500 when customer.subscription.deleted fails for another Stripe error', async () => {
+    mocks.customersRetrieve.mockRejectedValue(invalidRequest('lock_timeout'));
+    const res = await postEvent(stripeEvent(
+      'customer.subscription.deleted',
+      cloverSubscription({ status: 'canceled' }),
+      '2025-09-30.clover',
+    ));
+
+    expect(res.status).toBe(500);
+    expect(mocks.q).not.toHaveBeenCalled();
+  });
+
+  it('invoice.payment_failed reads the subscription id from parent.subscription_details', async () => {
+    mocks.subscriptionsRetrieve.mockResolvedValue(cloverSubscription());
+    const res = await postEvent(stripeEvent('invoice.payment_failed', {
+      id: 'in_test_clover',
+      object: 'invoice',
+      customer: 'cus_test_period',
+      parent: {
+        type: 'subscription_details',
+        quote_details: null,
+        subscription_details: { subscription: 'sub_from_parent', metadata: null },
+      },
+      subscription: 'sub_legacy_should_not_win',
+    }, '2025-09-30.clover'));
+
+    expect(res.status).toBe(200);
+    expect(mocks.subscriptionsRetrieve).toHaveBeenCalledWith('sub_from_parent');
+    const update = mocks.q.mock.calls.find((call) => String(call[0]).includes("status = 'past_due'"));
+    expect(update).toBeTruthy();
+  });
+
+  it('invoice.payment_failed falls back to the legacy invoice.subscription field', async () => {
+    mocks.subscriptionsRetrieve.mockResolvedValue(cloverSubscription());
+    const res = await postEvent(stripeEvent('invoice.payment_failed', {
+      id: 'in_test_legacy',
+      object: 'invoice',
+      customer: 'cus_test_period',
+      subscription: 'sub_legacy',
+    }, '2024-06-20'));
+
+    expect(res.status).toBe(200);
+    expect(mocks.subscriptionsRetrieve).toHaveBeenCalledWith('sub_legacy');
+    const update = mocks.q.mock.calls.find((call) => String(call[0]).includes("status = 'past_due'"));
+    expect(update).toBeTruthy();
   });
 
   it('still returns 500 when the database write fails', async () => {
