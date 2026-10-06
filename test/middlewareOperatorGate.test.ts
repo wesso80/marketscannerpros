@@ -72,4 +72,12 @@ describe('middleware operator route gate', () => {
     expect(paused.status).toBe(503);
     expect(await paused.json()).toMatchObject({ reason: 'admin_discovery_only' });
   });
+
+  it('answers a discovery-paused cron with 200 and a skipped body so the worker does not retry', async () => {
+    process.env.ADMIN_DISCOVERY_ONLY = 'true';
+    const { middleware } = await import('../middleware');
+    const response = await middleware(new NextRequest('http://localhost/api/cron/evening-packet', { method: 'POST' }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ skipped: true, reason: 'admin_discovery_only' });
+  });
 });
