@@ -1,3 +1,4 @@
+import LegalPageLayout from "@/components/legal/LegalPageLayout";
 import { PLAN_PRICES } from "@/lib/planPrices";
 import type { Metadata } from "next";
 
@@ -12,10 +13,7 @@ const effective = "13 December 2025";
 
 export default function TermsPage() {
   return (
-    <main className="min-h-screen bg-[var(--msp-bg)] px-4 py-16 text-slate-200">
-      <div className="mx-auto max-w-[800px]">
-        <div className="rounded-3xl border border-emerald-500/20 bg-[var(--msp-card)] p-8 shadow-2xl md:p-12">
-          <div className="prose prose-invert prose-emerald max-w-none prose-headings:text-slate-100 prose-a:text-emerald-400 prose-strong:text-slate-200">
+    <LegalPageLayout>
       <h1 className="text-emerald-400">Terms of Service</h1>
       <p><strong>Effective Date:</strong> {effective}</p>
 
@@ -23,13 +21,6 @@ export default function TermsPage() {
         Welcome to MarketScanner Pros (&ldquo;the App&rdquo;, &ldquo;we&rdquo;, &ldquo;our&rdquo;, &ldquo;us&rdquo;). By accessing or using the
         App, you agree to these Terms of Service. Please read them carefully.
       </p>
-
-      <nav className="my-6 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-6 py-4">
-        <strong className="mb-2 block text-emerald-500">On this page</strong>
-        <div className="text-slate-400 leading-relaxed">
-          <a href="#eligibility">Eligibility</a> · <a href="#use">Use</a> · <a href="#paper">Paper Trade System</a> · <a href="#ai">AI Content</a> · <a href="#billing">Subscriptions</a> · <a href="#ip">IP</a> · <a href="#warranty">Warranties</a> · <a href="#liability">Liability</a> · <a href="#privacy">Privacy &amp; Cookies</a> · <a href="#termination">Termination</a> · <a href="#governing">Governing Law</a> · <a href="#disputes">Disputes</a> · <a href="#changes">Changes</a> · <a href="#contact">Contact</a>
-        </div>
-      </nav>
 
       <h2 id="eligibility">1. Eligibility</h2>
       <p>You must be at least 16 years old to use the App. By using it, you confirm that you meet this requirement.</p>
@@ -133,10 +124,6 @@ export default function TermsPage() {
         For questions, please email us at:<br />
         📧 <a href="mailto:support@marketscannerpros.app">support@marketscannerpros.app</a>
       </p>
-
-          </div>
-        </div>
-      </div>
-    </main>
+    </LegalPageLayout>
   );
 }
