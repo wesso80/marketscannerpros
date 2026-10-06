@@ -21,7 +21,7 @@ dotenv.config({ path: '.env.local' });
 
 import { Pool } from 'pg';
 import { alertWorkerError } from '../lib/opsAlerting';
-import { classifyMove, horizonsWithFallback } from '../lib/signals/outcomeRule';
+import { bandForHorizon, bandsFromRows, classifyMove, horizonsWithFallback } from '../lib/signals/outcomeRule';
 
 // Lazy database connection
 let pool: Pool | null = null;
@@ -87,11 +87,11 @@ async function getPriceAtTime(
   const tolerance = TOLERANCE_WINDOWS[horizonMinutes] || { bars: 2, minutes: 240 };
   const maxTime = new Date(targetTime.getTime() + tolerance.minutes * 60 * 1000);
   
-  // STRICT: First bar AFTER target time (avoids label leakage). Symbol is
-  // matched case-insensitively; stored bars are uppercased on write.
+  // STRICT: First bar AFTER target time (avoids label leakage). Symbols are
+  // stored uppercased, so compare to UPPER($1) and leave the symbol index usable.
   const firstBarAfter = await q<{ close: string, ts: string }>(
     `SELECT close, ts FROM ohlcv_bars 
-     WHERE UPPER(symbol) = UPPER($1)
+     WHERE symbol = UPPER($1)
        AND timeframe IN ('daily', '1h', '60min')
        AND ts >= $2
        AND ts <= $3
@@ -111,7 +111,7 @@ async function getPriceAtTime(
   // Only use current quote if we're within tolerance window of target
   if (hoursSinceTarget >= 0 && hoursSinceTarget * 60 < tolerance.minutes) {
     const quote = await q<{ price: string }>(
-      'SELECT price FROM quotes_latest WHERE UPPER(symbol) = UPPER($1)',
+      'SELECT price FROM quotes_latest WHERE symbol = UPPER($1)',
       [symbol]
     );
     if (quote.length > 0) {
@@ -128,15 +128,23 @@ async function labelOutcomes() {
   console.log('🎯 Signal Outcome Labeler');
   console.log('='.repeat(60));
   
-  // Per-horizon bands from outcome_thresholds. The constant map is the fallback
-  // when the table has no usable rows. The band itself is applied by classifyMove.
-  const thresholdRows = await q<ThresholdConfig>(
-    'SELECT horizon_minutes, horizon_label, correct_threshold::float, wrong_threshold::float FROM outcome_thresholds ORDER BY horizon_minutes'
-  );
-  const thresholds = horizonsWithFallback(thresholdRows);
-  if (thresholdRows.length === 0) {
-    console.log('⚠️ No outcome_thresholds rows. Using the default per-horizon bands.');
+  // Per-horizon bands from outcome_thresholds, read once. Empty table or a failed
+  // read → DEFAULT_OUTCOME_BANDS via bandsFromRows. classifyMove applies the band
+  // from bandForHorizon so a horizon uses the same map the session labeler uses.
+  let thresholdRows: ThresholdConfig[] = [];
+  try {
+    thresholdRows = await q<ThresholdConfig>(
+      'SELECT horizon_minutes, horizon_label, correct_threshold::float, wrong_threshold::float FROM outcome_thresholds ORDER BY horizon_minutes'
+    );
+    if (thresholdRows.length === 0) {
+      console.log('⚠️ No outcome_thresholds rows. Using the default per-horizon bands.');
+    }
+  } catch (err) {
+    thresholdRows = [];
+    console.error('⚠️ outcome_thresholds read failed. Using the default per-horizon bands.', err instanceof Error ? err.message : err);
   }
+  const thresholds = horizonsWithFallback(thresholdRows);
+  const bandMap = bandsFromRows(thresholdRows);
   
   console.log(`📊 Processing ${thresholds.length} horizons: ${thresholds.map(t => t.horizon_label).join(', ')}\n`);
   
@@ -145,7 +153,7 @@ async function labelOutcomes() {
   let totalUnknown = 0;
   
   for (const threshold of thresholds) {
-    const { horizon_minutes, horizon_label, bandPct } = threshold;
+    const { horizon_minutes, horizon_label } = threshold;
     
     console.log(`\n⏱️ Processing ${horizon_label} horizon (${horizon_minutes} min)...`);
     
@@ -212,8 +220,8 @@ async function labelOutcomes() {
       // Calculate % move
       const pctMove = ((priceLater - priceAtSignal) / priceAtSignal) * 100;
       
-      // Shared per-horizon band. Table value when present, else the default map.
-      const outcome = classifyMove(direction, pctMove, bandPct);
+      // Shared per-horizon band from this run's table map (default map if that was empty).
+      const outcome = classifyMove(direction, pctMove, bandForHorizon(horizon_minutes, bandMap));
       
       // Insert outcome
       try {

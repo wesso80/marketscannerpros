@@ -3,9 +3,9 @@
  *
  * Bands match the outcome_thresholds seed in migrations/003_signals_learning.sql:
  *   1h 60min ±0.5%, 4h 240min ±1%, 1d 1440min ±2%, 1w 10080min ±4%.
- * The worker still prefers the live table. This map is only the fallback when that
- * table has no usable rows, and the band for a horizon the session labeler uses
- * that is not in the map.
+ * Both labellers read outcome_thresholds and pass that map to bandForHorizon.
+ * This constant is the fallback when the table is empty or the read fails, and
+ * the band for a horizon that is not in the map.
  *
  * Within ±band is neutral. At or beyond +band in the call's direction is correct.
  * At or beyond the band against it is wrong. The boundary is inclusive, and it is
@@ -66,6 +66,21 @@ export function bandForHorizon(
     if (rowDist < bestDist || (rowDist === bestDist && row.minutes < best.minutes)) best = row;
   }
   return best.band;
+}
+
+/**
+ * Minutes → band from outcome_thresholds rows. Non-numeric minutes or thresholds
+ * are dropped. No usable rows → a copy of the default map.
+ */
+export function bandsFromRows(rows: readonly { horizon_minutes: number; correct_threshold: number }[]): Record<number, number> {
+  const map: Record<number, number> = {};
+  for (const row of rows) {
+    const minutes = Number(row.horizon_minutes);
+    const band = Number(row.correct_threshold);
+    if (Number.isFinite(minutes) && Number.isFinite(band)) map[minutes] = band;
+  }
+  if (Object.keys(map).length === 0) return { ...DEFAULT_OUTCOME_BANDS };
+  return map;
 }
 
 /**

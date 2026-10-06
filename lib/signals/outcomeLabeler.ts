@@ -17,7 +17,7 @@
 
 import { q, tx } from '@/lib/db';
 import type { PoolClient } from 'pg';
-import { bandForHorizon, classifyMove } from './outcomeRule';
+import { bandForHorizon, bandsFromRows, classifyMove, DEFAULT_OUTCOME_BANDS } from './outcomeRule';
 
 export interface OutcomeLabel {
   signalId: number;
@@ -28,16 +28,19 @@ export interface OutcomeLabel {
 }
 
 /**
- * Label one move with the shared per-horizon band (outcome_thresholds / outcomeRule).
- * Horizons this labeler stores that are not in the seed (5, 30, 960 minutes) use the
- * nearest seeded band. See bandForHorizon.
+ * Label one move with the shared per-horizon band.
+ * `bands` is the outcome_thresholds map for this run. Horizons this labeler stores
+ * that are not in that map (5, 30, 960 minutes) use the nearest band. See bandForHorizon.
+ * Callers that omit the map get DEFAULT_OUTCOME_BANDS, which is also the fallback
+ * when the table is empty or the read fails.
  */
 export function labelOutcome(
   direction: 'bullish' | 'bearish',
   pctMove: number,
   horizonMinutes: number,
+  bands: Readonly<Record<number, number>> = DEFAULT_OUTCOME_BANDS,
 ): 'correct' | 'wrong' | 'neutral' {
-  return classifyMove(direction, pctMove, bandForHorizon(horizonMinutes));
+  return classifyMove(direction, pctMove, bandForHorizon(horizonMinutes, bands));
 }
 
 /**
@@ -47,6 +50,18 @@ export function labelOutcome(
 export async function labelSignalOutcomes(workspaceId: string): Promise<{ labeled: number; errors: number }> {
   let labeled = 0;
   let errors = 0;
+
+  // One read per run. Empty table or a failed read → the default bands.
+  let bands: Record<number, number> = { ...DEFAULT_OUTCOME_BANDS };
+  try {
+    const thresholdRows = await q<{ horizon_minutes: number; correct_threshold: number }>(
+      `SELECT horizon_minutes, correct_threshold::float AS correct_threshold FROM outcome_thresholds`
+    );
+    bands = bandsFromRows(thresholdRows);
+  } catch (err) {
+    console.warn('[outcomeLabeler] outcome_thresholds read failed, using default bands:', err instanceof Error ? err.message : err);
+    bands = { ...DEFAULT_OUTCOME_BANDS };
+  }
 
   try {
     // 1. Get un-labeled signals (no outcome row, fired within last 30 days)
@@ -126,7 +141,7 @@ export async function labelSignalOutcomes(workspaceId: string): Promise<{ labele
           const pctMove = ((exitPrice - signal.price_at_signal) / signal.price_at_signal) * 100;
           // Horizon stored on the row, then the band for that horizon.
           const horizonMinutes = timeframeToHorizonMinutes(signal.timeframe);
-          const outcome = labelOutcome(signal.direction, pctMove, horizonMinutes);
+          const outcome = labelOutcome(signal.direction, pctMove, horizonMinutes, bands);
 
           await q(`
             INSERT INTO signal_outcomes (signal_id, horizon_minutes, pct_move, outcome)

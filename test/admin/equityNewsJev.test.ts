@@ -86,16 +86,36 @@ it('the ledger grades Jev answers and the regex classifier side by side on the s
 const jevOk=()=>({ok:true,json:async()=>({model:'jev-1.13.0',answers:{aboutCompany:{probability:.95},priceMaterial:{probability:.7},direction:{choice:'positive',probabilities:{positive:.8,negative:.1,neutral:.1},confidence:.7},eventType:{choice:'earnings',probabilities:{earnings:.9},confidence:.85}},usage:{input_tokens:410}})});
 it('does not mark the day done when scoring throws, and does mark it after a clean pass',async()=>{
  const set=vi.fn(async()=>'OK');
- const redis={get:async()=>null,set};
+ const del=vi.fn(async()=>1);
+ const redis={set,del};
+ const day=`admin:equity-news-jev:day:${new Date(now).toISOString().slice(0,10)}`;
+ const slot=`admin:equity-news-jev:slot:${Math.floor(now/(60*60*1000))}`;
  q.mockRejectedValue(new Error('db down'));
  const failed=await runNewsJevDailyOnce(redis,now);
  expect(failed.ok).toBe(false);
  expect(failed.scoring.skipped).toBe('error');
- expect(set).not.toHaveBeenCalled();
+ expect(set.mock.calls.map(c=>c[0])).toEqual([slot]);
+ expect(set.mock.calls[0][2]).toEqual({nx:true,ex:expect.any(Number)});
+ expect(del).toHaveBeenCalledWith(slot);
+ expect(set.mock.calls.map(c=>c[0])).not.toContain(day);
+ set.mockClear();del.mockClear();
  q.mockResolvedValue([]);
  const ok=await runNewsJevDailyOnce(redis,now);
  expect(ok.ok).toBe(true);
- expect(set.mock.calls.map(c=>c[0])).toContain(`admin:equity-news-jev:day:${new Date(now).toISOString().slice(0,10)}`);
+ expect(set.mock.calls.map(c=>c[0])).toContain(day);
+ expect(del).not.toHaveBeenCalled();
+});
+it('claims the hourly slot with SET NX EX and skips scoring when the claim loses',async()=>{
+ const set=vi.fn(async()=>null);
+ const fetch=vi.fn();
+ vi.stubGlobal('fetch',fetch);
+ q.mockResolvedValue([]);
+ const out=await runNewsJevDailyOnce({set},now);
+ expect(out.scoring).toMatchObject({scored:0,skipped:'slot'});
+ expect(fetch).not.toHaveBeenCalled();
+ expect(set).toHaveBeenCalledTimes(1);
+ expect(set.mock.calls[0][2]).toMatchObject({nx:true});
+ expect(set.mock.calls[0][2].ex).toEqual(expect.any(Number));
 });
 it('stops scoring at the daily cap and still labels',async()=>{
  const rows=Array.from({length:3},(_,i)=>event(`e${i}`,'AAPL',`headline ${i}`));
@@ -115,6 +135,18 @@ it('stops scoring at the daily cap and still labels',async()=>{
  expect(fetch).not.toHaveBeenCalled();
  expect(capped.scoring).toMatchObject({scored:0,skipped:'cap'});
  expect(capped.labelling).toMatchObject({labelled:1});
+});
+it('counts failed attempts toward the daily cap',async()=>{
+ const rows=Array.from({length:3},(_,i)=>event(`e${i}`,'AAPL',`headline ${i}`));
+ q.mockImplementation(async(sql:string)=>String(sql).startsWith('SELECT e.id')?rows:[]);
+ pgReadOverview.mockResolvedValue(null);
+ const fetch=vi.fn(async()=>({ok:false,status:500,json:async()=>({})}));
+ vi.stubGlobal('fetch',fetch);
+ let n=NEWS_JEV.maxCallsPerDay-2;
+ const out=await scorePendingNews(now,10,{reserveAttempt:async()=>{n+=1;return n;}});
+ expect(fetch).toHaveBeenCalledTimes(2);
+ expect(out).toMatchObject({scored:0,unavailable:2,skipped:null});
+ expect(n).toBe(NEWS_JEV.maxCallsPerDay+1);
 });
 it('the stamp never feeds the public catalyst routes, the classifier, or the ingest pipeline',()=>{
  for(const f of ['lib/catalyst/classifier.ts','lib/catalyst/newsProvider.ts','app/api/catalyst/events/route.ts','app/api/catalyst/study/route.ts','app/api/catalyst/ingest/route.ts','lib/equityNewsRelevance.ts'])expect(readFileSync(f,'utf8')).not.toMatch(/equityNewsJev|news_jev_stamps/);
