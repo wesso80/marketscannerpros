@@ -43,6 +43,29 @@ function detectTierFromPrices(ids: string[]): "free" | "pro" | "pro_trader" {
   return "free";
 }
 
+const PROTECTED_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing', 'past_due', 'unpaid']);
+
+/**
+ * A protected row stays put unless the incoming write is a live subscription:
+ * trialing (login trial or Stripe trial), or active with a Stripe subscription id.
+ * A free/active write with no subscription id may only refresh another active
+ * row that also has no subscription id. A stale or different subscription does
+ * not replace active, trialing, past_due, or unpaid.
+ */
+export function incomingMayReplaceSubscriptionRow(
+  existing: { status: string; stripe_subscription_id: string | null } | null | undefined,
+  incomingStatus: string,
+  incomingSubscriptionId: string | null,
+): boolean {
+  if (!existing || !PROTECTED_SUBSCRIPTION_STATUSES.has(existing.status)) return true;
+  if ((incomingStatus === 'active' || incomingStatus === 'trialing') && incomingSubscriptionId != null) return true;
+  if (incomingStatus === 'trialing') return true;
+  return incomingStatus === 'active'
+    && incomingSubscriptionId == null
+    && existing.status === 'active'
+    && existing.stripe_subscription_id == null;
+}
+
 // Track user subscription in database
 async function trackSubscription(
   workspaceId: string,
@@ -56,8 +79,12 @@ async function trackSubscription(
 ) {
   try {
     // Check if user already exists before upserting
-    const existing = await q('SELECT 1 FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1', [workspaceId]);
+    const existing = await q<{ status: string; stripe_subscription_id: string | null }>(
+      'SELECT status, stripe_subscription_id FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1',
+      [workspaceId],
+    );
     const isNewUser = existing.length === 0;
+    if (!incomingMayReplaceSubscriptionRow(existing[0], status, stripeSubscriptionId)) return;
 
     await q(`
       INSERT INTO user_subscriptions 
@@ -74,6 +101,18 @@ async function trackSubscription(
         current_period_end = COALESCE(EXCLUDED.current_period_end, user_subscriptions.current_period_end),
         is_trial = EXCLUDED.is_trial,
         updated_at = NOW()
+      WHERE user_subscriptions.status NOT IN ('active', 'trialing', 'past_due', 'unpaid')
+         OR (
+           EXCLUDED.stripe_subscription_id IS NOT NULL
+           AND EXCLUDED.status IN ('active', 'trialing')
+         )
+         OR EXCLUDED.status = 'trialing'
+         OR (
+           EXCLUDED.status = 'active'
+           AND EXCLUDED.stripe_subscription_id IS NULL
+           AND user_subscriptions.status = 'active'
+           AND user_subscriptions.stripe_subscription_id IS NULL
+         )
     `, [workspaceId, email, tier, status, stripeCustomerId, stripeSubscriptionId, periodEnd, isTrial]);
 
     // Notify admin of new signups (fire-and-forget)
@@ -397,7 +436,7 @@ export async function POST(req: NextRequest) {
     }
     const { customer, subscription: primarySub, valid } = paid;
     const customerId = customer.id;
-    const priceIds = valid.flatMap(s => s.items.data.map(it => it.price.id));
+    const priceIds = valid.flatMap((sub) => (sub.items?.data ?? []).map((item) => item.price?.id).filter((id): id is string => Boolean(id)));
     const detectedTier = detectTierFromPrices(priceIds);
     const workspaceId = hashWorkspaceId(normalizedEmail);
     let tier = detectedTier;

@@ -39,7 +39,7 @@ vi.mock('@/lib/email', () => ({
   sendNewSignupNotification: vi.fn(async () => undefined),
 }));
 
-import { POST } from '@/app/api/auth/login/route';
+import { POST, incomingMayReplaceSubscriptionRow } from '@/app/api/auth/login/route';
 import { hashWorkspaceId } from '@/lib/workspaceHash';
 import { signSessionToken, verifySessionToken } from '@/lib/auth';
 
@@ -66,8 +66,9 @@ function installDb(rows: Row[]) {
     const text = sql.replace(/\s+/g, ' ').trim();
     db.calls.push({ sql: text, params });
     if (text.includes('FROM user_trials')) return [];
-    if (text.includes('SELECT 1 FROM user_subscriptions')) {
-      return db.rows.some((row) => row.workspace_id === params[0]) ? [{ exists: 1 }] : [];
+    if (text.includes('SELECT status, stripe_subscription_id FROM user_subscriptions')) {
+      const row = db.rows.find((item) => item.workspace_id === params[0]);
+      return row ? [{ status: row.status, stripe_subscription_id: row.stripe_subscription_id }] : [];
     }
     if (text.includes('SELECT') && text.includes('stripe_customer_id')) {
       const row = db.rows.find((item) => item.workspace_id === params[0]);
@@ -125,15 +126,17 @@ function customer(id: string, created: number) {
 function subscription(opts: {
   id: string;
   status: 'active' | 'trialing' | 'canceled';
-  priceId: string;
+  priceId?: string;
+  priceIds?: string[];
   periodEnd: number;
   created: number;
 }) {
+  const priceIds = opts.priceIds ?? [opts.priceId ?? ''];
   return {
     id: opts.id,
     status: opts.status,
     created: opts.created,
-    items: { data: [{ price: { id: opts.priceId }, current_period_end: opts.periodEnd }] },
+    items: { data: priceIds.map((id) => ({ price: { id }, current_period_end: opts.periodEnd })) },
   };
 }
 
@@ -421,5 +424,82 @@ describe('login subscription resolution', () => {
     expect(inserts()[0].params[4]).toBe('cus_active');
     expect(inserts()[0].params[5]).toBe('sub_active');
     expect(inserts()[0].params[3]).toBe('active');
+    expect(inserts()[0].sql).toContain("NOT IN ('active', 'trialing', 'past_due', 'unpaid')");
+  });
+
+  it('maps the tier from every subscription item, not only the first', async () => {
+    const email = 'items@example.com';
+    const workspaceId = hashWorkspaceId(email);
+    installDb([]);
+    mockStripe(
+      [{ id: 'cus_items', created: 10 }],
+      {
+        cus_items: [subscription({
+          id: 'sub_items',
+          status: 'active',
+          priceIds: ['price_unmapped', 'price_pro_trader_monthly'],
+          periodEnd: 1_900_000_000,
+          created: 20,
+        })],
+      },
+    );
+
+    const res = await POST(loginRequest(email));
+    expect(res.status).toBe(200);
+    expect(cookiePayload(res)).toMatchObject({ tier: 'pro_trader', cid: 'cus_items', workspaceId });
+    expect(inserts()[0].params.slice(0, 4)).toEqual([workspaceId, email, 'pro_trader', 'active']);
+  });
+
+  it('does not let a free login overwrite a past_due or active Stripe subscription row', async () => {
+    const email = 'guard@example.com';
+    const workspaceId = hashWorkspaceId(email);
+    installDb([
+      {
+        workspace_id: workspaceId,
+        email,
+        tier: 'pro',
+        status: 'past_due',
+        stripe_customer_id: 'cus_guard',
+        stripe_subscription_id: 'sub_guard',
+      },
+    ]);
+    mockStripe([], {});
+
+    const pastDue = await POST(loginRequest(email));
+    expect(pastDue.status).toBe(200);
+    expect(cookiePayload(pastDue).tier).toBe('free');
+    expect(inserts()).toHaveLength(0);
+    expect(db.rows[0]).toMatchObject({ tier: 'pro', status: 'past_due', stripe_subscription_id: 'sub_guard' });
+
+    db.rows[0].status = 'active';
+    const active = await POST(loginRequest(email));
+    expect(cookiePayload(active).tier).toBe('free');
+    expect(inserts()).toHaveLength(0);
+    expect(db.rows[0]).toMatchObject({ tier: 'pro', status: 'active', stripe_subscription_id: 'sub_guard' });
+  });
+});
+
+describe('incomingMayReplaceSubscriptionRow', () => {
+  const row = (status: string, stripe_subscription_id: string | null = 'sub_old') => ({ status, stripe_subscription_id });
+
+  it('blocks a stale or different subscription from replacing a protected row', () => {
+    for (const status of ['active', 'trialing', 'past_due', 'unpaid']) {
+      expect(incomingMayReplaceSubscriptionRow(row(status), 'canceled', 'sub_other')).toBe(false);
+      expect(incomingMayReplaceSubscriptionRow(row(status, 'sub_old'), 'incomplete', null)).toBe(false);
+    }
+    expect(incomingMayReplaceSubscriptionRow(row('past_due'), 'active', null)).toBe(false);
+    expect(incomingMayReplaceSubscriptionRow(row('active', 'sub_old'), 'active', null)).toBe(false);
+  });
+
+  it('lets a live active or trialing subscription replace a protected row', () => {
+    expect(incomingMayReplaceSubscriptionRow(row('past_due', 'sub_old'), 'active', 'sub_new')).toBe(true);
+    expect(incomingMayReplaceSubscriptionRow(row('active', 'sub_old'), 'trialing', 'sub_other')).toBe(true);
+    expect(incomingMayReplaceSubscriptionRow(row('unpaid'), 'trialing', null)).toBe(true);
+    expect(incomingMayReplaceSubscriptionRow(row('active', null), 'active', null)).toBe(true);
+  });
+
+  it('still replaces a row whose status is not protected', () => {
+    expect(incomingMayReplaceSubscriptionRow(row('canceled'), 'active', null)).toBe(true);
+    expect(incomingMayReplaceSubscriptionRow(null, 'canceled', 'sub_x')).toBe(true);
   });
 });
