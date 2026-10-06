@@ -17,16 +17,17 @@ import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import StatCard from '@/components/visual/StatCard';
 import SourceLine from '@/components/visual/SourceLine';
 import { volatilityText } from './displayText';
+import { volatilityBadgeLabel, volatilityHeadingLabel } from '@/lib/presentation/volatilityLayerLabel';
 import { type RiskFlag } from '@/components/market/RiskFlagPanel';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
 
 const QUICK_SYMBOLS = ['BTC', 'ETH', 'AAPL', 'TSLA', 'NVDA', 'SPX', 'GOLD'];
 
-function SectionTitle({ code, title }: { code: string; title: string }) {
+function SectionTitle({ code }: { code: string }) {
   return (
-    <div className="mb-4 flex items-center gap-2">
-      <span className="rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.62rem] font-bold uppercase tracking-wide text-amber-300">{code}</span>
-      <h2 className="text-xs font-semibold uppercase tracking-widest text-amber-400">{title}</h2>
+    <div className="mb-4 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+      <span className="shrink-0 whitespace-nowrap rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.62rem] font-semibold text-amber-300">{volatilityBadgeLabel(code)}</span>
+      <h2 className="min-w-0 text-xs font-semibold text-amber-300">{volatilityHeadingLabel(code)}</h2>
     </div>
   );
 }
@@ -265,7 +266,7 @@ export default function VolatilityEnginePage() {
 
             {/* LAYER 1: Volatility State */}
             <CollapsibleSection title="Breakout evidence" summary={`${reading.breakout.score.toFixed(0)}/100 · ${volatilityText(reading.breakout.label)}`}>
-              <SectionTitle code="VOL" title="Layer 1 — Volatility State" />
+              <SectionTitle code="VOL" />
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <VEBreakoutPanel breakout={reading.breakout} missingInputs={reading.dataQuality.missing} />
               </div>
@@ -273,19 +274,19 @@ export default function VolatilityEnginePage() {
 
             {/* LAYER 2: Directional Bias */}
             <CollapsibleSection title="Directional pressure" summary={`${volatilityText(reading.direction.bias)} · ${reading.direction.confidence.toFixed(0)}% confluence`}>
-              <SectionTitle code="DIR" title="Layer 2 — Directional Bias" />
+              <SectionTitle code="DIR" />
               <VEDirectionalCompass dir={reading.direction} missingInputs={reading.dataQuality.missing} />
             </CollapsibleSection>
 
             {/* LAYER 3: Phase Persistence */}
             <CollapsibleSection title="Phase persistence" summary={`${reading.phasePersistence.contraction.active ? 'Contraction' : reading.phasePersistence.expansion.active ? 'Expansion' : 'No active phase'}`}>
-              <SectionTitle code="PH" title="Layer 3 — Phase Persistence" />
+              <SectionTitle code="PH" />
               <VEPhasePanel phase={reading.phasePersistence} />
             </CollapsibleSection>
 
             {/* LAYER 4: Signal + Invalidation */}
             <CollapsibleSection title="Signal and invalidation" summary={reading.signal.type === 'none' ? 'No active signal' : `${volatilityText(reading.signal.state)} · ${reading.signal.strength.toFixed(0)}/100`}>
-              <SectionTitle code="SIG" title="Layer 4 — Signal &amp; Invalidation" />
+              <SectionTitle code="SIG" />
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <VESignalCard
                 signal={reading.signal}
@@ -299,7 +300,7 @@ export default function VolatilityEnginePage() {
 
             {/* LAYER 5: Outcome Projection */}
             <CollapsibleSection title="Projection" summary={reading.projection.signalType === 'none' ? 'Volatility range · no active signal' : `${reading.projection.projectionQualityScore == null ? 'Quality not collected' : `${Math.round(reading.projection.projectionQualityScore)}/100 quality`}`}>
-              <SectionTitle code="PROJ" title="Layer 5 — Outcome Projection" />
+              <SectionTitle code="PROJ" />
               <VEProjectionCard
                 proj={reading.projection}
                 volatility={reading.volatility}
@@ -310,7 +311,7 @@ export default function VolatilityEnginePage() {
 
             {/* Supporting: Regime Outlook */}
             <CollapsibleSection title="Regime context" summary={`${volatilityText(reading.transition.from)} → ${volatilityText(reading.transition.to)}`}>
-              <SectionTitle code="SUP" title="Supporting Analysis" />
+              <SectionTitle code="SUP" />
               <VERegimeTimeline
                 transition={reading.transition}
                 exhaustion={reading.exhaustion}

@@ -2,6 +2,7 @@
 
 import GravityResearchView from '@/components/terminal/GravityResearchView';
 import React, { useState, useEffect, useCallback } from 'react';
+import { decompressionStatusLabel, targetStatusLine, timeEngineLabel, timeEngineProse } from '@/lib/presentation/timeEngineLabel';
 import { computeTimeGravityMap, type TimeGravityMap, type GravityZone, type GravityPoint, type TargetStatus, type CloseConfluence, type CoverageDiagnostics } from '@/lib/time/timeGravityMap';
 import type { MidpointRecord } from '@/lib/time/midpointDebt';
 import type { MomentumOverrideState, ExpansionTarget } from '@/lib/time/momentumOverride';
@@ -87,47 +88,42 @@ function TargetStatusBanner({ tgm }: { tgm: TimeGravityMap }) {
   const status = tgm.targetStatus;
   const stats = tgm.taggingStats;
 
-  const statusConfig: Record<TargetStatus, { bg: string; border: string; icon: string; text: string; textColor: string }> = {
+  const statusText = targetStatusLine(status, tgm.targetPrice?.toFixed(2) ?? null, stats.overshotTagged);
+  const statusConfig: Record<TargetStatus, { bg: string; border: string; icon: string; textColor: string }> = {
     ACTIVE: {
       bg: 'bg-green-950/30',
       border: 'border-green-500/50',
       icon: '🎯',
-      text: `TARGET ACTIVE: ${tgm.targetPrice?.toFixed(2) || '—'}`,
       textColor: 'text-green-400',
     },
     TARGET_HIT: {
       bg: 'bg-emerald-950/40',
       border: 'border-emerald-400',
       icon: '✅',
-      text: 'TARGET HIT — All midpoints tagged',
       textColor: 'text-emerald-400',
     },
     OVERSHOT: {
       bg: 'bg-amber-950/40',
       border: 'border-amber-400',
       icon: '🚀',
-      text: `TARGET OVERSHOT — Price blew past ${stats.overshotTagged} midpoint(s)`,
       textColor: 'text-amber-400',
     },
     EXPANSION: {
       bg: 'bg-purple-950/40',
       border: 'border-purple-400',
       icon: '⚡',
-      text: 'MOMENTUM OVERRIDE — Expansion targets active',
       textColor: 'text-purple-400',
     },
     RECOMPUTING: {
       bg: 'bg-blue-950/30',
       border: 'border-blue-500/50',
       icon: '🔄',
-      text: 'RECOMPUTING — Finding next target...',
       textColor: 'text-blue-400',
     },
     NO_TARGET: {
       bg: 'bg-gray-900/40',
       border: 'border-gray-700',
       icon: '⏳',
-      text: 'No active gravity targets',
       textColor: 'text-gray-400',
     },
   };
@@ -139,7 +135,7 @@ function TargetStatusBanner({ tgm }: { tgm: TimeGravityMap }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span aria-hidden="true" className="text-lg">{cfg.icon}</span>
-          <span className={`text-sm font-bold ${cfg.textColor}`}>{cfg.text}</span>
+          <span className={`text-sm font-bold ${cfg.textColor}`}>{statusText}</span>
         </div>
         {tgm.targetPrice && status === 'ACTIVE' && (
           <span className="text-xs text-gray-400">
@@ -181,7 +177,7 @@ function TargetStatusBanner({ tgm }: { tgm: TimeGravityMap }) {
             <div key={i} className="flex items-center gap-2 text-xs">
               <span className="text-purple-400">{target.label}</span>
               <span className="text-white font-mono">{target.price.toFixed(2)}</span>
-              <span className="text-gray-600 text-[10px]">{target.type}</span>
+              <span className="text-gray-600 text-[10px]">{timeEngineLabel(target.type)}</span>
             </div>
           ))}
         </div>
@@ -201,15 +197,15 @@ function MomentumOverrideBanner({ override }: { override: MomentumOverrideState 
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           <span aria-hidden="true" className="text-lg">⚡</span>
-          <span className="text-sm font-bold text-purple-300">MOMENTUM OVERRIDE: ON</span>
+          <span className="text-sm font-bold text-purple-300">{timeEngineLabel('MOMENTUM OVERRIDE')}</span>
         </div>
         <span className="text-xs text-purple-400 font-mono">
-          Mode: {override.mode}
+          Mode: {timeEngineLabel(override.mode)}
         </span>
       </div>
 
       <div className="text-xs text-gray-300 mb-2">
-        Reason: {override.reasons.join(' + ')}
+        Reason: {timeEngineProse(override.reasons.join(' + '))}
       </div>
 
       {/* Severity bar */}
@@ -227,7 +223,7 @@ function MomentumOverrideBanner({ override }: { override: MomentumOverrideState 
       </div>
 
       <div className="mt-2 text-[10px] text-gray-500">
-        Gravity dampened to {Math.round(override.gravityMultiplier * 100)}% — midpoints are LOW PRIORITY
+        Gravity dampened to {Math.round(override.gravityMultiplier * 100)}% — midpoints are {timeEngineLabel('LOW PRIORITY').toLowerCase()}
       </div>
     </div>
   );
@@ -242,7 +238,7 @@ function AOITargetBox({ zones }: { zones: GravityZone[] }) {
   if (topZones.length === 0) {
     return (
       <div className="space-y-1">
-        <div className="text-xs text-gray-400">AOI TARGET ZONES</div>
+        <div className="text-xs text-gray-400">{timeEngineLabel('AOI TARGET ZONES')}</div>
         <div className="bg-black/40 border border-gray-800 rounded p-3 text-center text-gray-500 text-xs">
           No target zones detected
         </div>
@@ -252,7 +248,7 @@ function AOITargetBox({ zones }: { zones: GravityZone[] }) {
   
   return (
     <div className="space-y-1">
-      <div className="text-xs text-gray-400">AOI TARGET ZONES</div>
+      <div className="text-xs text-gray-400">{timeEngineLabel('AOI TARGET ZONES')}</div>
       
       <div className="space-y-2">
         {topZones.map((zone, index) => {
@@ -436,7 +432,7 @@ function DecompressionTimers({ points }: { points: GravityPoint[] }) {
             <div key={tf}>
               <div className="flex items-center justify-between text-xs mb-1">
                 <span className="text-gray-300">{tf}</span>
-                <span className={statusColor}>{state.status}</span>
+                <span className={statusColor}>{decompressionStatusLabel(state.status)}</span>
               </div>
               <div className="bg-gray-900/50 h-2 rounded-full overflow-hidden">
                 <div
@@ -515,12 +511,12 @@ function AIAnalystCommentary({ tgm }: { tgm: TimeGravityMap }) {
       <div className="bg-gradient-to-r from-purple-950/40 to-blue-950/40 border border-purple-500/30 rounded p-3">
         {tgm.alert && (
           <div className="text-xs font-mono text-white mb-2 bg-black/40 p-2 rounded">
-            {tgm.alert}
+            {timeEngineProse(tgm.alert)}
           </div>
         )}
         
         <div className="text-xs text-gray-300">
-          {tgm.summary}
+          {timeEngineProse(tgm.summary)}
         </div>
         
         {tgm.topZone && tgm.topZone.confidence >= 60 && (
@@ -1119,19 +1115,19 @@ export default function TimeGravityMapWidget({
               tgm.targetStatus === 'EXPANSION' ? 'text-purple-400' :
               'text-white'
             }`}>
-              {tgm.targetStatus === 'TARGET_HIT' ? <><span aria-hidden="true">✅ </span>HIT</> :
-               tgm.targetStatus === 'OVERSHOT' ? <><span aria-hidden="true">🚀 </span>OVERSHOT</> :
+              {tgm.targetStatus === 'TARGET_HIT' ? <><span aria-hidden="true">✅ </span>{timeEngineLabel('HIT')}</> :
+               tgm.targetStatus === 'OVERSHOT' ? <><span aria-hidden="true">🚀 </span>{timeEngineLabel('OVERSHOT')}</> :
                tgm.targetPrice?.toFixed(2) || '—'}
             </div>
             <div className="text-xs text-gray-400">
-              {tgm.targetStatus === 'ACTIVE' ? 'Target' : tgm.targetStatus}
+              {tgm.targetStatus === 'ACTIVE' ? 'Target' : timeEngineLabel(tgm.targetStatus)}
             </div>
           </div>
         </div>
         
         {tgm.alert && (
           <div className="bg-purple-950/40 border border-purple-500/30 rounded p-2 text-xs text-white mb-3">
-            {tgm.alert}
+            {timeEngineProse(tgm.alert)}
           </div>
         )}
         
@@ -1165,7 +1161,7 @@ export default function TimeGravityMapWidget({
             {tgm.targetStatus === 'ACTIVE' || (tgm.targetStatus !== 'TARGET_HIT' && tgm.targetStatus !== 'OVERSHOT' && tgm.targetStatus !== 'EXPANSION') ? `${tgm.confidence}%` : null}
           </div>
           <div className="text-xs text-gray-400">
-            {tgm.targetStatus === 'ACTIVE' ? 'Confidence' : tgm.targetStatus}
+            {tgm.targetStatus === 'ACTIVE' ? 'Confidence' : timeEngineLabel(tgm.targetStatus)}
           </div>
         </div>
       </div>
@@ -1243,7 +1239,7 @@ export default function TimeGravityMapWidget({
       {/* Alert Banner (non-override alerts only) */}
       {tgm.alert && !tgm.momentumOverride?.isOverride && (
         <div className="bg-gradient-to-r from-purple-950/60 to-blue-950/60 border border-purple-500 rounded-lg p-3 mb-4">
-          <div className="text-sm font-mono text-white">{tgm.alert}</div>
+          <div className="text-sm font-mono text-white">{timeEngineProse(tgm.alert)}</div>
         </div>
       )}
       
