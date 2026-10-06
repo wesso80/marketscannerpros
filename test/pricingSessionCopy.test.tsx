@@ -95,6 +95,8 @@ it('monthly view takes the yearly price from PLAN_PRICES and the page has no roa
   expect(page).not.toMatch(moduleNames);
   expect(layout).not.toMatch(moduleNames);
   expect(page).toContain('7-day money-back guarantee');
+  expect(page).toContain('Unlimited Market Scanner with full filters, and up to 100 active alerts');
+  expect(page).not.toContain('Unlimited Market Scanner with full filters and alerts');
   expect(page).toContain('PLAN_PRICES.pro.monthly');
   expect(page).not.toContain('Number.isInteger(monthsFree) ? String(monthsFree) : String(monthsFree)');
   expect(page).toContain('const shown = String(monthsFree)');

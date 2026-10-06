@@ -154,7 +154,7 @@ export default function PricingPage() {
         {
           group: "Scan",
           lines: [
-            "Unlimited Market Scanner with full filters and alerts",
+            "Unlimited Market Scanner with full filters, and up to 100 active alerts",
             "Golden Egg symbol validation workflow",
           ],
         },
