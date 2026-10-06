@@ -65,7 +65,17 @@ function priceFromReaderSql(sql: string, stored: { trigger_price: number | null;
   if (new RegExp(String.raw`CASE WHEN (?:h\.)?condition_type IN \([^)]*\) THEN COALESCE\(\s*(?:h\.)?trigger_price\s*,\s*NULLIF\(\s*(?:h\.)?triggered_price\s*,\s*0\s*\)\s*\) ELSE (?:h\.)?trigger_price END\)${cast} triggered_price`, 'i').test(sql)) {
     row.triggered_price = shown;
   }
+  row.target_price = targetPriceFromSql(sql, stored.condition_type, 80);
   return row;
+}
+
+/** Recent toasts: price conditions keep condition_value; every other type is null. */
+function targetPriceFromSql(sql: string, conditionType: string, conditionValue: number): number | null {
+  const compact = sql.replace(/\s+/g, ' ');
+  const match = compact.match(/CASE WHEN (?:\w+\.)?condition_type IN \(([^)]+)\) THEN (?:\w+\.)?condition_value ELSE NULL END\s*\)?\s+AS target_price/i);
+  if (!match) return conditionValue;
+  const types = [...match[1].matchAll(/'([^']+)'/g)].map((found) => found[1]);
+  return types.includes(conditionType) ? conditionValue : null;
 }
 
 function historyInsert(calls: unknown[][]) {
@@ -278,6 +288,7 @@ describe('alert_history price columns', () => {
     const recent = await (await recentGet(new NextRequest('https://example.test/api/alerts/recent'))).json();
     expect(recent.alerts[0].trigger_price).toBe(91);
     expect(recent.alerts[0].triggered_price).toBe(91);
+    expect(recent.alerts[0].target_price).toBe(80);
 
     const unread = await (await unreadGet(new NextRequest('https://example.test/api/alerts/unread'))).json();
     expect(unread.alerts[0].trigger_price).toBe(91);
@@ -301,7 +312,19 @@ describe('alert_history price columns', () => {
     const recent = await (await recentGet(new NextRequest('https://example.test/api/alerts/recent'))).json();
     expect(recent.alerts[0].trigger_price).toBeNull();
     expect(recent.alerts[0].triggered_price).toBeNull();
+    expect(recent.alerts[0].target_price).toBeNull();
     const unread = await (await unreadGet(new NextRequest('https://example.test/api/alerts/unread'))).json();
     expect(unread.alerts[0].trigger_price).toBeNull();
+  });
+
+  it('recent target_price is null for a percent_change_up alert', async () => {
+    const stored = { trigger_price: 80, triggered_price: 91, condition_type: 'percent_change_up' };
+    mocks.q.mockImplementation(async (sql: string) => {
+      if (sql.includes('alert_history')) return [priceFromReaderSql(sql, stored)];
+      return [];
+    });
+    const recent = await (await recentGet(new NextRequest('https://example.test/api/alerts/recent'))).json();
+    expect(recent.alerts[0].condition).toBe('percent_change_up');
+    expect(recent.alerts[0].target_price).toBeNull();
   });
 });
