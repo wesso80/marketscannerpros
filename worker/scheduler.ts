@@ -16,8 +16,20 @@ export type SchedulerDeps={
  record?:(name:string,outcome:JobOutcome)=>Promise<void>;
  jobs?:ScheduledJob[];
 };
-export type JobOutcome={name:string;kind:'http'|'script';startedAt:string;ms:number;ok:boolean;status?:number;attempts:number;error?:string};
+export type JobOutcome={name:string;kind:'http'|'script';startedAt:string;ms:number;ok:boolean;skipped?:boolean;status?:number;attempts:number;error?:string};
 const sleep=(ms:number)=>new Promise(r=>setTimeout(r,ms));
+/** A deliberate pause answers 2xx with `{skipped:true, reason}` so the cron is not retried. Anything else, including a body we cannot read, stays a normal success. */
+export async function httpSkipReason(r:{text?:()=>Promise<string>}):Promise<string|undefined>{
+ const read=r.text;
+ if(typeof read!=='function')return;
+ try{
+  const text=await read.call(r);
+  if(!text)return;
+  const body=JSON.parse(text) as {skipped?:unknown;reason?:unknown};
+  if(!body||typeof body!=='object'||body.skipped!==true)return;
+  return typeof body.reason==='string'&&body.reason.trim()?body.reason:'skipped';
+ }catch{return;}
+}
 export async function runHttpJob(job:HttpJob,deps:Required<Pick<SchedulerDeps,'webUrl'|'cronSecret'|'fetch'|'now'>>):Promise<JobOutcome>{
  const startedAt=new Date(deps.now()).toISOString(),t0=deps.now();
  let attempts=0,status:number|undefined,error:string|undefined;
@@ -26,7 +38,11 @@ export async function runHttpJob(job:HttpJob,deps:Required<Pick<SchedulerDeps,'w
   try{
    const r=await deps.fetch(`${deps.webUrl}${job.path}`,{method:'POST',headers:{'x-cron-secret':deps.cronSecret,'Content-Type':'application/json'},...(job.body?{body:JSON.stringify(job.body)}:{}),signal:AbortSignal.timeout(job.timeoutMs),redirect:'error'});
    status=r.status;
-   if(r.ok)return {name:job.name,kind:'http',startedAt,ms:deps.now()-t0,ok:true,status,attempts};
+   if(r.ok){
+    const reason=await httpSkipReason(r);
+    if(reason)return {name:job.name,kind:'http',startedAt,ms:deps.now()-t0,ok:true,skipped:true,status,attempts,error:reason};
+    return {name:job.name,kind:'http',startedAt,ms:deps.now()-t0,ok:true,status,attempts};
+   }
    error=`HTTP ${r.status}`;
   }catch(e){error=e instanceof Error&&e.name==='TimeoutError'?`timeout after ${job.timeoutMs}ms`:e instanceof Error?e.message:'request failed';}
   if(attempt<job.retries)await sleep(job.retryDelayMs);
@@ -52,7 +68,8 @@ export function startScheduler(deps:SchedulerDeps){
   inFlight.add(job.name);
   const run=job.kind==='http'?runHttpJob(job,{webUrl:deps.webUrl,cronSecret:deps.cronSecret,fetch:fetchFn,now}):runScriptJob(job,{spawn:spawnFn,now});
   void run.then(async outcome=>{
-   log(`[scheduler] ${outcome.ok?'ok':'FAILED'} ${job.name} ${outcome.ms}ms${outcome.status?` http ${outcome.status}`:''}${outcome.attempts>1?` attempts ${outcome.attempts}`:''}${outcome.error?` · ${outcome.error}`:''}`);
+   const label=outcome.skipped?'skipped':outcome.ok?'ok':'FAILED';
+   log(`[scheduler] ${label} ${job.name} ${outcome.ms}ms${outcome.status?` http ${outcome.status}`:''}${outcome.attempts>1?` attempts ${outcome.attempts}`:''}${outcome.error?` · ${outcome.error}`:''}`);
    try{await deps.record?.(job.name,outcome);}catch{}
   }).finally(()=>inFlight.delete(job.name));
  };
