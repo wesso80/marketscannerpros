@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Market Scanner for Stocks, Crypto & Options | MarketScanner Pros',
     description:
-      'Scan equities, crypto, and options flow with multi-timeframe confluence, AI research context, and a structured 5-step research workflow.',
+      'Scan equities, crypto, and options flow with multi-timeframe confluence, AI research context, and a structured research workflow.',
     url: 'https://marketscannerpros.app/',
   },
 };
