@@ -11,6 +11,7 @@ import {
 } from '@/components/intelligence/primitives';
 import { orientationToSemantic, riskToSemantic } from '@/lib/intelligence/states';
 import type { SemanticState } from '@/lib/intelligence/types';
+import { m2BlocCoverage, m2BlocName, notCollectedText } from '@/lib/intelligence/m2Coverage';
 import type {
   LiquidityTransmissionPageDto,
   LiquidityStageDto,
@@ -29,7 +30,7 @@ const STAGE_COLUMNS: IntelColumn[] = [
   { key: 'score', label: 'Score', align: 'right' },
   { key: 'state', label: 'State' },
   { key: 'gate', label: 'Gate' },
-  { key: 'active', label: 'Active' },
+  { key: 'active', label: 'Clock position' },
 ];
 
 const SOURCE_COLUMNS: IntelColumn[] = [
@@ -77,7 +78,7 @@ function PageBody({ data, updatedAt }: { data: LiquidityTransmissionPageDto; upd
       ]} />
       <EvidenceBars title="Eight-stage rotation · score / 100" rows={data.stages.map(s => ({ label: `${s.stage}. ${shortStageName(s.name, s.stage)}`, value: s.score }))} maximum={100} />
     </>}
-    <EvidenceWarning>{data.quality.missingInputCount} inputs not collected · {evidenceLabel(data.parityStatus)}{data.m2Upstream.missingBlocs.length ? ` · M2 blocs not collected: ${data.m2Upstream.missingBlocs.map(b => b === 'IN' || b === 'india' ? 'India' : b === 'KR' || b === 'south-korea' ? 'South Korea' : evidenceLabel(b)).join(', ')}` : ''}{data.quality.staleInputCount ? ` · ${data.quality.staleInputCount} inputs use older observations` : ''}{data.reason ? ` · ${evidenceLabel(data.reason)}` : ''}</EvidenceWarning>
+    <EvidenceWarning>{data.quality.missingInputCount ? `${data.quality.missingInputCount} daily inputs not collected · ` : ''}{notCollectedText('M2 blocs', data.m2Upstream.missingBlocs.map(b => m2BlocName(b, evidenceLabel)))} · {evidenceLabel(data.parityStatus)}{data.quality.staleInputCount ? ` · ${data.quality.staleInputCount} inputs use older observations` : ''}{data.reason ? ` · ${evidenceLabel(data.reason)}` : ''}</EvidenceWarning>
     <CollapsibleSection title="Transmission evidence" summary={`${data.stages.length} stages · ${data.quality.coveragePercent.toFixed(1)}% input coverage`}>
       {data.available && h && <>
         <HeadlinePanel data={data} updatedAt={updatedAt} />
@@ -267,14 +268,14 @@ function StageClockPanel({ data }: { data: LiquidityTransmissionPageDto }) {
       <ScoreCell key="sc" value={s.score.toFixed(1)} semantic={stageSemantic(s)} suffix="/100" />,
       <StateCell key="sta" label={evidenceLabel(s.state)} semantic={stageSemantic(s)} />,
       <StateCell key="ga" label={evidenceLabel(s.gate)} semantic={gateSemantic(s.gate)} />,
-      <MetricCell key="ac" align="center" muted>{s.active ? 'Active' : 'Inactive'}</MetricCell>,
+      <MetricCell key="ac" align="center" muted>{s.active ? 'Current' : '—'}</MetricCell>,
     ],
   }));
   return (
     <>
       <SectionHeader
         title="Eight-Stage Rotation Clock"
-        subtitle="Furthest confirmed stage determines the clock position."
+        subtitle="The clock sits at the furthest stage whose gate passes, so only one stage is current. An earlier stage can score higher without being current; Stage 8 overrides when its four conditions hold."
       />
       <IntelligenceTable columns={STAGE_COLUMNS} rows={rows} stickyFirst minWidth={840} />
     </>
@@ -328,13 +329,13 @@ function M2UpstreamPanel({ data }: { data: LiquidityTransmissionPageDto }) {
       />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 8 }}>
         <Metric
-          label="Bloc availability"
-          value={`${m.blocsAvailable} / ${m.blocsTotal}`}
-          hint={`${m.blocAvailabilityPercent.toFixed(1)}% bloc count`}
+          label="Bloc coverage"
+          value={m2BlocCoverage(m.blocsAvailable, m.blocsTotal).label}
+          hint="Blocs with a valid observation · same figure as Global M2"
           tone="neutral"
         />
         <Metric
-          label="Estimated weighted coverage"
+          label="Weighted coverage of included blocs"
           value={weighted == null ? 'Not collected' : `${weighted.toFixed(1)}%`}
           hint={`Threshold ${m.interpretationThreshold}% for interpretation${m.coverageExcludedBlocs?.length ? ` · excl. ${m.coverageExcludedBlocs.join(', ')} (sources unavailable)` : ''}`}
           tone={weighted != null && weighted >= m.interpretationThreshold ? 'positive' : 'warning'}
@@ -347,7 +348,7 @@ function M2UpstreamPanel({ data }: { data: LiquidityTransmissionPageDto }) {
           {m.missingBlocs.length > 0 && (
             <div>
               <strong style={{ color: 'var(--msp-text)' }}>Blocs not collected:</strong>{' '}
-              {m.missingBlocs.join(', ')}
+              {m.missingBlocs.map(b => m2BlocName(b, evidenceLabel)).join(', ')}
             </div>
           )}
           {m.providersUsed.length > 0 && (

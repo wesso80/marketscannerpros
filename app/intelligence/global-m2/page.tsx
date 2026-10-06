@@ -7,6 +7,7 @@ import type { GlobalM2Dto } from '@/app/api/intelligence/global-m2/route';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import { EvidenceBars, EvidenceMetrics, EvidenceVerdict, EvidenceWarning, evidenceLabel } from '@/components/intelligence/CompactEvidence';
+import { m2BlocCoverage, m2BlocName, notCollectedText } from '@/lib/intelligence/m2Coverage';
 
 const T = (n: number) => `$${(n / 1e12).toFixed(2)}T`;
 const pct = (n: number | null) => (n == null ? 'Not collected' : `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`);
@@ -62,17 +63,18 @@ export default function GlobalM2Page() {
         <EvidenceVerdict>{data.interpretationEligible ? evidenceLabel(data.liquidityCycle) : 'Coverage is below the threshold for a Global M2 assessment.'}</EvidenceVerdict>
         <EvidenceMetrics items={[
           { label: 'Total M2 (USD)', value: T(data.totalUsd) },
-          { label: 'Included-bloc coverage', value: `${data.estimatedWeightedCoveragePercent.toFixed(1)}%` },
+          { label: 'Bloc coverage', value: m2BlocCoverage(data.validBlocCount, data.validBlocCount + data.missingBlocCount).label },
           { label: '1 month', value: pct(data.oneMonthPct) },
           { label: 'Year over year', value: pct(data.yoyPct) },
         ]} />
         <EvidenceBars title="M2 by economic bloc · USD" rows={data.blocs.map(b => ({ label: b.name, value: b.usdM2 }))} money />
-        <EvidenceWarning>{data.missingBlocCount} blocs not collected · {evidenceLabel(data.parityStatus)}{data.excludedBlocs?.length ? ` · ${data.excludedBlocs.map(b => b.name).join(', ')} excluded from weighted coverage` : ''}{data.blocs.some(b => b.stale) ? ' · Some observations use older saved data' : ''}</EvidenceWarning>
+        <EvidenceWarning>{notCollectedText('blocs', data.missing.map(m => m2BlocName(m.id, evidenceLabel)))} · {evidenceLabel(data.parityStatus)}{data.excludedBlocs?.length ? ` · ${data.excludedBlocs.map(b => b.name).join(', ')} excluded from weighted coverage` : ''}{data.blocs.some(b => b.stale) ? ' · Some observations use older saved data' : ''}</EvidenceWarning>
         <CollapsibleSection title="Show blocs" summary={`${data.validBlocCount} observations · ${data.weightedCoverageThreshold}% coverage required`}>
           <IntelligenceTable columns={COLUMNS} rows={data.blocs.map(blocRow)} />
           <EvidenceMetrics items={[
             { label: '3 month annualised', value: pct(data.threeMonthAnnualizedPct) },
             { label: 'Acceleration', value: evidenceLabel(data.accelerationState) },
+            { label: 'Weighted coverage of included blocs', value: `${data.estimatedWeightedCoveragePercent.toFixed(1)}%` },
           ]} />
           {data.missing.length > 0 && <ul className="text-xs space-y-2">{data.missing.map(m => <li key={m.id}>{m.id}: {evidenceLabel(m.reason)}</li>)}</ul>}
         </CollapsibleSection>
