@@ -1,4 +1,5 @@
 /** Symbol presentation only. Never pass these labels back to scoring or persistence. */
+import { sentenceCaseEngineCode } from '@/lib/presentation/engineLabel';
 const reasons: Record<string, string> = {
   NO_SETUP: 'No qualifying setup',
   NO_STRUCTURAL_STOP: 'No clear stop level in the chart',
@@ -95,9 +96,8 @@ function verdictKey(value: string): string {
 }
 
 function plainEngineFallback(value: string): string {
-  const words = value.trim().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').toLowerCase();
-  if (!words) return 'Not recorded';
-  const plain = words.charAt(0).toUpperCase() + words.slice(1);
+  const plain = sentenceCaseEngineCode(value);
+  if (!plain) return 'Not recorded';
   return ENGINE_TOKEN.test(plain) ? 'Not recorded' : plain;
 }
 

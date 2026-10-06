@@ -12,6 +12,7 @@
 
 import { useState } from 'react';
 import type { ScanResult } from '@/app/v2/_lib/api';
+import { ordinal } from '@/lib/utils/ordinal';
 
 type CompositeV2 = NonNullable<ScanResult['compositeV2']>;
 
@@ -34,15 +35,6 @@ const REGIME_LABEL: Record<string, string> = {
   high_volatility: 'High volatility',
   neutral: 'Neutral',
 };
-
-function pctSuffix(n: number): string {
-  const j = n % 10;
-  const k = n % 100;
-  if (j === 1 && k !== 11) return `${n}st`;
-  if (j === 2 && k !== 12) return `${n}nd`;
-  if (j === 3 && k !== 13) return `${n}rd`;
-  return `${n}th`;
-}
 
 export default function CompositeBreakdown({ v2, compact = false, expanded = false }: { v2: CompositeV2; compact?: boolean; expanded?: boolean }) {
   const [open, setOpen] = useState(false);
@@ -69,7 +61,7 @@ export default function CompositeBreakdown({ v2, compact = false, expanded = fal
           className="rounded border border-slate-600/40 bg-slate-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400"
           title="Percentile of the composite score across the scanned universe"
         >
-          {pctSuffix(v2.percentileRank)} pct
+          {ordinal(v2.percentileRank)} pct
         </span>
         {v2.liquidityMultiplier < 1 ? (
           <span
