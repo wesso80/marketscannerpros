@@ -13,7 +13,7 @@
  * returns a number instead of a numeric string.
  */
 
-const PRICE_CONDITION_TYPES = ['price_above', 'price_below', 'percent_change_up', 'percent_change_down'] as const;
+export const PRICE_CONDITION_TYPES = ['price_above', 'price_below', 'percent_change_up', 'percent_change_down'] as const;
 
 export function historyPriceInsert(triggerSql: string, triggeredSql = triggerSql): { columns: string; values: string } {
   return {

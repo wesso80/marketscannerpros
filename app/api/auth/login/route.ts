@@ -120,9 +120,19 @@ async function trackSubscription(
       sendNewSignupNotification(email, tier).catch(() => {});
     }
   } catch (error: unknown) {
-    // Login still succeeds. The write failure has to be visible in the logs.
-    console.error("[login] Track subscription failed:", error);
+    // Login still succeeds. Log the failure without the error object, query, or email.
+    const { message, code } = subscriptionFailureFields(error);
+    console.error("[login] Track subscription failed:", { message, code });
   }
+}
+
+function subscriptionFailureFields(error: unknown): { message?: string; code?: string | number } {
+  if (typeof error === 'string') return { message: error };
+  if (!error || typeof error !== 'object') return {};
+  const record = error as { message?: unknown; code?: unknown };
+  const message = typeof record.message === 'string' ? record.message : undefined;
+  const code = typeof record.code === 'string' || typeof record.code === 'number' ? record.code : undefined;
+  return { message, code };
 }
 
 // Check if user has an active trial

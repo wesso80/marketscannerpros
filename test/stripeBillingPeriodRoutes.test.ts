@@ -301,9 +301,13 @@ describe('clover period fields on the paid signup paths', () => {
   });
 
   it('login still signs the user in and logs when the subscription upsert fails', async () => {
+    const failure = Object.assign(new Error('invalid input syntax for type timestamp'), {
+      code: '22007',
+      email: 'paid-fail@example.com',
+    });
     mocks.q.mockImplementation(async (sql: unknown) => {
       if (String(sql).includes('INSERT INTO user_subscriptions')) {
-        throw new Error('invalid input syntax for type timestamp');
+        throw failure;
       }
       return [];
     });
@@ -324,7 +328,11 @@ describe('clover period fields on the paid signup paths', () => {
 
     expect(res.status).toBe(200);
     expect((await res.json()).tier).toBe('pro');
-    expect(errSpy.mock.calls.some((call) => String(call[0]).includes('[login] Track subscription failed:'))).toBe(true);
+    const trackLogs = errSpy.mock.calls.filter((call) => String(call[0]).includes('[login] Track subscription failed:'));
+    expect(trackLogs).toHaveLength(1);
+    expect(trackLogs[0][1]).toEqual({ message: 'invalid input syntax for type timestamp', code: '22007' });
+    expect(JSON.stringify(trackLogs[0])).not.toContain('paid-fail@example.com');
+    expect(JSON.stringify(trackLogs[0])).not.toContain('stack');
     errSpy.mockRestore();
   });
 });
