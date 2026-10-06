@@ -6,6 +6,7 @@ import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import { NEWS_BRIEF_LABEL } from '@/lib/news/newsBrief';
 import { marketText } from '@/lib/marketsPresentation';
+import { sentimentReaderLabel } from '@/lib/presentation/sentimentLabel';
 import { formatMarketTime } from '@/lib/market/priceStamp';
 
 export type NewsIntelArticle = {
@@ -167,7 +168,7 @@ export default function NewsIntelligenceCompact(props: NewsIntelligenceCompactPr
                 <a href={article.url} target="_blank" rel="noopener noreferrer" className="block break-words text-sm text-white hover:text-emerald-300">
                   {clean(article.title)}
                 </a>
-                <CollapsibleSection title="Article context" summary={clean(article.sentiment)}>
+                <CollapsibleSection title="Article context" summary={sentimentReaderLabel(article.sentiment)}>
                   <p className="break-words text-xs text-slate-300">{clean(article.summary) || 'Summary not supplied'}</p>
                   <p className="mt-1 break-words text-xs text-slate-400">{clean(article.narrative)} · {clean(article.impact)} impact · {article.tags.map(clean).join(', ') || 'No tags'}</p>
                 </CollapsibleSection>

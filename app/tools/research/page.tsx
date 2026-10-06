@@ -7,6 +7,7 @@ import SourceLine from '@/components/visual/SourceLine';
 import TabBar from '@/components/visual/TabBar';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { marketText } from '@/lib/marketsPresentation';
+import { sentimentReaderLabel, sentimentToneClass } from '@/lib/presentation/sentimentLabel';
 import { formatMarketTime } from '@/lib/market/priceStamp';
 import PaidPreviewGate from '@/components/free/PaidPreviewGate';
 
@@ -288,11 +289,11 @@ function ResearchPagePaid() {
                       <a href={n.url} target="_blank" rel="noopener noreferrer" className="text-sm text-white hover:text-emerald-400 transition-colors leading-snug">
                         {n.title}
                       </a>
-                      <CollapsibleSection title="Article context" summary={marketText(n.sentiment.label)}><p className="text-xs text-slate-400">{n.summary}</p></CollapsibleSection>
+                      <CollapsibleSection title="Article context" summary={sentimentReaderLabel(n.sentiment.label)}><p className="text-xs text-slate-400">{n.summary}</p></CollapsibleSection>
                       <div className="flex flex-wrap items-center gap-2 mt-1">
                         <span data-news-source className="rounded-full border border-white/10 px-2 py-1 text-[10px] text-slate-400">{marketText(n.source)} · {formatMarketTime(publicationTime(n.timePublished), viewerZone) || 'Publication time not supplied'}</span>
-                        <span className={`text-[10px] ${n.sentiment.score > 0 ? 'text-emerald-400' : n.sentiment.score < 0 ? 'text-red-400' : 'text-slate-500'}`}>
-                          {marketText(n.sentiment.label)}
+                        <span className={`text-[10px] ${sentimentToneClass(n.sentiment.label)}`}>
+                          {sentimentReaderLabel(n.sentiment.label)}
                         </span>
                         {n.tickerSentiments?.slice(0, 4).map(ts => (
                           <button key={ts.ticker} type="button" className="text-[10px] text-emerald-400 cursor-pointer hover:underline focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(ts.ticker)} aria-label={`Open ${ts.ticker} in Symbol`}>
