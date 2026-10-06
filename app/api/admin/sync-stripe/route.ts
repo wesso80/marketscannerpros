@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
 import { stripe } from '@/lib/stripe';
+import { subscriptionPeriodDate } from '@/lib/stripe/subscriptionPeriod';
 import { hashWorkspaceId } from '@/lib/auth';
 import { q } from '@/lib/db';
 import type Stripe from 'stripe';
@@ -79,9 +80,7 @@ export async function POST(req: NextRequest) {
           }
 
           const workspaceId = hashWorkspaceId(email);
-          const periodEnd = (sub as any).current_period_end
-            ? new Date((sub as any).current_period_end * 1000)
-            : null;
+          const periodEnd = subscriptionPeriodDate(sub, 'current_period_end');
 
           await q(`
             INSERT INTO user_subscriptions

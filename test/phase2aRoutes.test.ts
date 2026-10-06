@@ -116,7 +116,8 @@ it('accounts for every current public static content route in the seven-group ma
   const { readdirSync } = await import('node:fs');
   const paths = new Set(Object.values(areaLinks).flat().map(link => link.href.split('?')[0]));
   const redirects = new Set((await config.redirects()).map(rule => rule.source));
-  const intentionallyUnlisted = new Set(['/reviews', '/partners/demo', '/after-checkout', '/auth/verify', '/intelligence/lead-lag', '/intelligence/nq-pressure', '/intelligence/auction', '/intelligence/master', '/intelligence/history']);
+  // /tools/signal-accuracy stays reachable by URL and off the menus until labelled results exist.
+  const intentionallyUnlisted = new Set(['/reviews', '/partners/demo', '/after-checkout', '/auth/verify', '/intelligence/lead-lag', '/intelligence/nq-pressure', '/intelligence/auction', '/intelligence/master', '/intelligence/history', '/tools/signal-accuracy']);
   const pages: string[] = [];
   const walk = (dir: string) => { for (const item of readdirSync(dir, {withFileTypes:true})) { const file=path.join(dir,item.name);if(item.isDirectory()) walk(file);else if(item.name==='page.tsx') pages.push(file); } };
   walk('app');

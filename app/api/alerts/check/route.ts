@@ -232,13 +232,17 @@ async function triggerAlert(alert: Alert, quote: AlertQuote) {
     }
   }
   
-  // Record in history (optional - don't fail if table doesn't exist)
+  // alert_history has both price columns. migrations/010 names it trigger_price NOT NULL;
+  // migrations/000 and COMPLETE_ALERTS_FIX name it triggered_price NOT NULL.
+  // Production has triggered_price NOT NULL (inserts were rejected for omitting it)
+  // and also accepts trigger_price (that column name is what the failing INSERT used).
+  // Write the same price to both so the NOT NULL column is filled and the older name stays populated.
   try {
     await q(
       `INSERT INTO alert_history (
-        alert_id, workspace_id, triggered_at, trigger_price, condition_met,
+        alert_id, workspace_id, triggered_at, trigger_price, triggered_price, condition_met,
         symbol, condition_type, condition_value, notification_sent, notification_channel
-      ) VALUES ($1, $2, NOW(), $3, $4, $5, $6, $7, $8, $9)`,
+      ) VALUES ($1, $2, NOW(), $3, $3, $4, $5, $6, $7, $8, $9)`,
       [
         alert.id,
         alert.workspace_id,
@@ -252,7 +256,7 @@ async function triggerAlert(alert: Alert, quote: AlertQuote) {
       ]
     );
   } catch (historyError) {
-    console.error(`[Alert] Failed to record history (non-fatal):`, historyError);
+    console.error(`[Alert] Failed to insert alert_history for ${alert.symbol} (${alert.id}). The trigger was not recorded:`, historyError);
   }
 
   // Update alert status - THIS IS CRITICAL
