@@ -2,9 +2,11 @@
  * Client-side rules for syncing the Portfolio page to /api/portfolio (pure helpers, no React).
  *
  * The server copy is authoritative. The page may only POST when:
- *  - the initial GET succeeded and returned a `syncRevision` (so we know what we are replacing), and
- *  - the local state actually differs from what was last loaded from / saved to the server.
- * A conflict (409) or a failed load stops syncing for the rest of the session; changes stay on this device.
+ *  - the initial GET succeeded and returned a `syncRevision` (so we know what we are replacing),
+ *  - that load stored a baseline (`lastSyncedJson`) of the server book, and
+ *  - an explicit user action changed the book (add, close, delete, cash edit, clear).
+ * A null baseline must never upload a device copy. Price marks and today's equity snapshot are display-only.
+ * A conflict (409) or a failed load stops syncing for the rest of the session.
  */
 
 export type PortfolioSyncPayload = {
@@ -48,11 +50,11 @@ export type SyncGate = {
 };
 
 export const LOAD_FAILED_MESSAGE =
-  "Couldn't load your saved portfolio from the server, so this page is showing the copy stored on this device. Changes are kept on this device only and won't be sent to the server until you reload.";
+  "Couldn't load your saved portfolio from the server. This page is not showing a copy stored on this device. Reload to try again.";
 export const SYNC_UNAVAILABLE_MESSAGE =
-  "Server sync is unavailable for this page, so changes are kept on this device only and won't be sent to the server until you reload.";
+  "Server sync is unavailable for this page, so changes here are not sent to the server. Reload to try again.";
 export const CONFLICT_MESSAGE =
-  'Your saved portfolio changed since this page loaded (another tab or device). To avoid overwriting it, changes here are kept on this device only. Reload to get the latest.';
+  'Your saved portfolio changed since this page loaded (another tab or device). Reloading shows the saved server copy and drops unsynced changes on this device.';
 export const EMPTY_OVERWRITE_MESSAGE =
   'Not sending an empty portfolio over your saved one. Nothing on the server was changed. Reload to get the saved copy.';
 export const SYNC_FAILED_MESSAGE = 'Portfolio sync failed — changes saved locally only';
@@ -76,7 +78,8 @@ export function serverHasPortfolioData(data: any): boolean {
 }
 
 export function shouldPostPortfolio(gate: SyncGate, payloadJson: string): boolean {
-  return gate.enabled && gate.revision != null && payloadJson !== gate.lastSyncedJson;
+  // A missing baseline is not "everything changed". Never upload a device copy that was not loaded from the server.
+  return gate.enabled && gate.revision != null && gate.lastSyncedJson != null && payloadJson !== gate.lastSyncedJson;
 }
 
 export type SyncOutcome =

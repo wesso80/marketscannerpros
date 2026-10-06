@@ -44,6 +44,12 @@ describe('Portfolio page sync gate', () => {
     expect(shouldPostPortfolio({ ...enabled(), enabled: false }, changed)).toBe(false);
   });
 
+  it('a null baseline never counts as a change, so a device copy is not uploaded', () => {
+    const json = JSON.stringify(buildPortfolioSyncPayload([{ symbol: 'DEVICE' }], [], [], '10000', []));
+    expect(shouldPostPortfolio(enabled({ lastSyncedJson: null }), json)).toBe(false);
+    expect(CONFLICT_MESSAGE).toMatch(/Reloading shows the saved server copy and drops unsynced changes on this device/);
+  });
+
   it('builds the same payload shape the server validates', () => {
     expect(buildPortfolioSyncPayload([], [], [], '', [])).toEqual({ positions: [], closedPositions: [], performanceHistory: [], cashState: { startingCapital: 0, cashLedger: [] } });
     expect(buildPortfolioSyncPayload([], [], [], '2500', []).cashState.startingCapital).toBe(2500);
