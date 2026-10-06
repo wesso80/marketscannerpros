@@ -8,7 +8,8 @@ import {CAL_CORE,calibrateField,splitAt,type CalibrationFieldBase} from './calib
  * headline text alone: is it about this company, is it price-material, which direction, which event class. The regex
  * classifier's own subtype is deliberately NOT sent, so the two can be compared on the ledger.
  * Outcome: close of the first trading day after the event day over the close of the last trading day before it, from
- * the worker's daily bars. No provider call is made to label; rows without bars wait.
+ * the worker's daily bars. No provider call is made to label. A ticker with no daily bars is closed at once
+ * (label_reason no_price_data). A ticker that has bars but not yet the next session still waits.
  * Admin only. Evidence only: nothing here changes a classification, a packet, or a rule.
  */
 export const NEWS_JEV_RULE='jev-news-v1' as const;
@@ -112,11 +113,11 @@ export async function equityNewsCallsToday(now=Date.now(),read?:(now:number)=>Pr
  }catch{/* stamp count below */}
  return stampedNewsAttempts(now);
 }
-/** Stamps up to `limit` unscored headlines from the last lookbackDays. Each attempt is reserved before askJev, including ones that fail. Never throws per row; a missing gateway key stamps nothing. */
+/** Stamps up to `limit` unscored headlines from the last lookbackDays whose ticker has daily bars. Each attempt is reserved before askJev, including ones that fail. Never throws per row; a missing gateway key stamps nothing. */
 export async function scorePendingNews(now=Date.now(),limit:number=NEWS_JEV.perRun,opts:NewsScoreOpts={}){
  await ensureNewsJevTable();
  if(!jevConfigured())return {scored:0,unavailable:0,skipped:'no-key' as const};
- const rows=await q<PendingEvent>(`SELECT e.id,e.ticker,e.headline,e.source,e.event_timestamp_utc,e.event_timestamp_et,e.raw_payload FROM catalyst_events e LEFT JOIN news_jev_stamps s ON s.event_id=e.id WHERE s.event_id IS NULL AND e.event_timestamp_utc>=$1 AND e.event_timestamp_utc<=$2 AND e.headline IS NOT NULL ORDER BY e.event_timestamp_utc DESC LIMIT $3`,[new Date(now-NEWS_JEV.lookbackDays*86400000).toISOString(),new Date(now).toISOString(),limit]);
+ const rows=await q<PendingEvent>(`SELECT e.id,e.ticker,e.headline,e.source,e.event_timestamp_utc,e.event_timestamp_et,e.raw_payload FROM catalyst_events e LEFT JOIN news_jev_stamps s ON s.event_id=e.id WHERE s.event_id IS NULL AND e.event_timestamp_utc>=$1 AND e.event_timestamp_utc<=$2 AND e.headline IS NOT NULL AND EXISTS (SELECT 1 FROM ohlcv_bars b WHERE b.symbol = UPPER(e.ticker) AND b.timeframe = 'daily') ORDER BY e.event_timestamp_utc DESC LIMIT $3`,[new Date(now-NEWS_JEV.lookbackDays*86400000).toISOString(),new Date(now).toISOString(),limit]);
  let scored=0,unavailable=0,capped=false;
  const names=new Map<string,Promise<string|null>>();
  for(const e of rows){
@@ -150,16 +151,26 @@ export function returnAroundEvent(bars:Array<{ts:number;close:number}>,eventDate
  if(!prior||!next)return null;
  return {priorClose:prior.close,nextClose:next.close,returnPct:(next.close/prior.close-1)*100};
 }
-/** Labels scored stamps older than labelAfterDays from the worker's daily bars. Rows without bars after giveUpAfterDays are closed as no-bars. */
+/**
+ * Labels scored stamps older than labelAfterDays from the worker's daily bars.
+ * label_reason is unconstrained text (status is only scored|unavailable). A ticker with no daily
+ * series is closed on this pass as no_price_data, so oldest-first ordering does not keep rereading it.
+ * A series that does not yet span the event waits, then closes as no-bars after giveUpAfterDays.
+ */
 export async function labelNewsOutcomes(now=Date.now(),limit=400){
  await ensureNewsJevTable();
  const rows=await q<{event_id:string;ticker:string;event_at:Date|string}>(`SELECT event_id,ticker,event_at FROM news_jev_stamps WHERE labelled_at IS NULL AND status='scored' AND event_at<=$1 ORDER BY event_at ASC LIMIT $2`,[new Date(now-NEWS_JEV.labelAfterDays*86400000).toISOString(),limit]);
  let labelled=0,waiting=0,noBars=0;
  const bars=new Map<string,Promise<Array<{ts:number;close:number}>|null>>();
  for(const row of rows){
-  if(!bars.has(row.ticker))bars.set(row.ticker,pgReadBars(row.ticker,'daily',NEWS_JEV.barsPerSymbol).then(r=>r?.bars.map(b=>({ts:b.ts,close:b.close}))??null).catch(()=>null));
+  if(!bars.has(row.ticker))bars.set(row.ticker,pgReadBars(row.ticker,'daily',NEWS_JEV.barsPerSymbol).then(r=>r?.bars?.length?r.bars.map(b=>({ts:b.ts,close:b.close})):null).catch(()=>null));
   const series=await bars.get(row.ticker)!;
-  const result=series?returnAroundEvent(series,eventDateET(row)):null;
+  if(!series){
+   await q(`UPDATE news_jev_stamps SET labelled_at=$2,label_reason='no_price_data' WHERE event_id=$1`,[row.event_id,new Date(now).toISOString()]);
+   noBars++;
+   continue;
+  }
+  const result=returnAroundEvent(series,eventDateET(row));
   if(result){
    await q(`UPDATE news_jev_stamps SET prior_close=$2,next_close=$3,return_pct=$4,labelled_at=$5,label_reason='bars' WHERE event_id=$1`,[row.event_id,result.priorClose,result.nextClose,result.returnPct,new Date(now).toISOString()]);
    labelled++;
@@ -192,7 +203,7 @@ export function buildNewsLedger(obs:NewsObs[],source:Omit<NewsLedger['source'],'
 }
 export async function newsLedger(now=Date.now()):Promise<NewsLedger>{
  await ensureNewsJevTable();
- const [counts]=await q<{stamped:string;scored:string;unavailable:string;labelled:string;no_bars:string;waiting:string}>(`SELECT COUNT(*) AS stamped,COUNT(*) FILTER (WHERE status='scored') AS scored,COUNT(*) FILTER (WHERE status='unavailable') AS unavailable,COUNT(*) FILTER (WHERE return_pct IS NOT NULL) AS labelled,COUNT(*) FILTER (WHERE label_reason='no-bars') AS no_bars,COUNT(*) FILTER (WHERE status='scored' AND labelled_at IS NULL) AS waiting FROM news_jev_stamps`);
+ const [counts]=await q<{stamped:string;scored:string;unavailable:string;labelled:string;no_bars:string;waiting:string}>(`SELECT COUNT(*) AS stamped,COUNT(*) FILTER (WHERE status='scored') AS scored,COUNT(*) FILTER (WHERE status='unavailable') AS unavailable,COUNT(*) FILTER (WHERE return_pct IS NOT NULL) AS labelled,COUNT(*) FILTER (WHERE label_reason IN ('no-bars','no_price_data')) AS no_bars,COUNT(*) FILTER (WHERE status='scored' AND labelled_at IS NULL) AS waiting FROM news_jev_stamps`);
  const reasonRows=await q<{reason:string;n:string}>(`SELECT COALESCE(reason,'not recorded') AS reason,COUNT(*) AS n FROM news_jev_stamps WHERE status='unavailable' GROUP BY 1`);
  const rows=await q<{event_at:Date|string;return_pct:string|number;about_company:string|number|null;price_material:string|number|null;direction:string|null;event_type:string|null;catalyst_subtype:string|null;severity:string|null;confidence:string|number|null}>(`SELECT s.event_at,s.return_pct,s.about_company,s.price_material,s.direction,s.event_type,e.catalyst_subtype,e.severity,e.confidence FROM news_jev_stamps s JOIN catalyst_events e ON e.id=s.event_id WHERE s.return_pct IS NOT NULL AND s.status='scored' ORDER BY s.event_at ASC LIMIT 5000`);
  const num=(v:string|number|null)=>v==null?null:Number.isFinite(Number(v))?Number(v):null;

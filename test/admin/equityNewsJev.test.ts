@@ -58,18 +58,38 @@ it('without a gateway key nothing is scored and nothing is written',async()=>{
  expect(fetch).not.toHaveBeenCalled();
  expect(q.mock.calls.some(c=>String(c[0]).startsWith('INSERT'))).toBe(false);
 });
-it('labels from saved daily bars only, waits when the next bar is missing, and gives up as no-bars after the window',async()=>{
+it('labels from saved daily bars, closes a ticker with no series immediately, and still waits when the next bar is missing',async()=>{
  const old=new Date(now-20*86400000).toISOString(),recent=new Date(now-3*86400000).toISOString();
- q.mockImplementation(async(sql:string)=>sql.startsWith('SELECT event_id')?[{event_id:'a',ticker:'AAPL',event_at:recent},{event_id:'b',ticker:'NOPE',event_at:recent},{event_id:'c',ticker:'GONE',event_at:old}]:[]);
+ q.mockImplementation(async(sql:string)=>sql.startsWith('SELECT event_id')?[
+  {event_id:'a',ticker:'AAPL',event_at:recent},
+  {event_id:'b',ticker:'NOPE',event_at:recent},
+  {event_id:'c',ticker:'GONE',event_at:old},
+  {event_id:'d',ticker:'WAIT',event_at:recent},
+  {event_id:'e',ticker:'OLDW',event_at:old},
+ ]:[]);
  const d=(day:string,close:number)=>({ts:Date.parse(`${day}T00:00:00Z`),open:0,high:0,low:0,close,volume:0});
- pgReadBars.mockImplementation(async(t:string)=>t==='AAPL'?{bars:[d('2026-09-26',100),d('2026-09-29',104),d('2026-09-30',103)],fetchedAt:''}:null);
+ pgReadBars.mockImplementation(async(t:string)=>{
+  if(t==='AAPL')return {bars:[d('2026-09-26',100),d('2026-09-29',104),d('2026-09-30',103)],fetchedAt:''};
+  if(t==='WAIT'||t==='OLDW')return {bars:[d('2026-09-01',50)],fetchedAt:''};
+  return null;
+ });
  const out=await labelNewsOutcomes(now);
- expect(out).toEqual({labelled:1,waiting:1,noBars:1});
+ expect(out).toEqual({labelled:1,waiting:1,noBars:3});
  const updates=q.mock.calls.filter(c=>String(c[0]).startsWith('UPDATE news_jev_stamps'));
- expect(updates).toHaveLength(2);
- expect(updates[0][1][0]).toBe('a');expect(updates[0][1][1]).toBe(100);expect(updates[0][1][2]).toBe(104);
- expect(String(updates[1][0])).toContain("'no-bars'");expect(updates[1][1][0]).toBe('c');
- expect(pgReadBars).toHaveBeenCalledTimes(3);
+ expect(updates.map(c=>c[1][0])).toEqual(['a','b','c','e']);
+ expect(updates[0][1][1]).toBe(100);expect(updates[0][1][2]).toBe(104);
+ expect(String(updates[1][0])).toContain("'no_price_data'");
+ expect(String(updates[2][0])).toContain("'no_price_data'");
+ expect(String(updates[3][0])).toContain("'no-bars'");
+ expect(pgReadBars).toHaveBeenCalledTimes(5);
+});
+it('scores only headlines whose ticker has a daily bar',async()=>{
+ q.mockResolvedValue([]);
+ const fetch=vi.fn();vi.stubGlobal('fetch',fetch);
+ await scorePendingNews(now);
+ const select=q.mock.calls.map(c=>String(c[0])).find(s=>s.startsWith('SELECT e.id'));
+ expect(select).toMatch(/EXISTS \(SELECT 1 FROM ohlcv_bars b WHERE b\.symbol = UPPER\(e\.ticker\) AND b\.timeframe = 'daily'\)/);
+ expect(fetch).not.toHaveBeenCalled();
 });
 it('the ledger grades Jev answers and the regex classifier side by side on the same next-day returns',()=>{
  const obs:NewsObs[]=Array.from({length:80},(_,i)=>({at:now-(80-i)*3600000,ret:i%2?2:-2,aboutCompany:.9,priceMaterial:i%2?.8:.2,direction:i%2?'positive':'negative',eventType:i%2?'earnings':'analyst',subtype:i%2?'EARNINGS_BEAT':'ANALYST_NOTE',severity:'MED',classifierConfidence:.6}));
