@@ -55,6 +55,62 @@ function getReferralCreditCents(tier: string): number {
   return REFERRAL_CREDIT_BY_TIER[tier] || 500;
 }
 
+// API 2025-03-31.basil removed current_period_start / current_period_end from
+// Subscription. The pinned version (2025-09-30.clover) puts them on each
+// subscription item. Older webhook endpoints may still send the top-level fields.
+const SUBSCRIPTION_LIFECYCLE_EVENTS = new Set([
+  'checkout.session.completed',
+  'customer.subscription.created',
+  'customer.subscription.updated',
+  'customer.subscription.deleted',
+]);
+
+function unixSecondsToDate(value: unknown): Date | null {
+  let seconds: number;
+  if (typeof value === 'number') {
+    seconds = value;
+  } else if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    seconds = Number(trimmed);
+  } else {
+    return null;
+  }
+  if (!Number.isFinite(seconds)) return null;
+  const date = new Date(seconds * 1000);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+}
+
+function subscriptionPeriodDate(
+  subscription: Stripe.Subscription,
+  field: 'current_period_end' | 'current_period_start',
+): Date | null {
+  const item = subscription.items?.data?.[0];
+  const fromItem = unixSecondsToDate(item?.[field]);
+  if (fromItem !== null) return fromItem;
+  const legacy = (subscription as Stripe.Subscription & Record<string, unknown>)[field];
+  return unixSecondsToDate(legacy);
+}
+
+function safePeriodEnd(periodEnd: Date | null): Date | null {
+  if (periodEnd == null) return null;
+  if (!(periodEnd instanceof Date) || Number.isNaN(periodEnd.getTime())) {
+    console.error('[Webhook] Refusing invalid current_period_end; storing null');
+    return null;
+  }
+  return periodEnd;
+}
+
+function isNonRetryableFieldProblem(error: unknown): boolean {
+  if (error instanceof TypeError || error instanceof RangeError) return true;
+  return (
+    error !== null &&
+    typeof error === 'object' &&
+    (error as { type?: unknown }).type === 'StripeInvalidRequestError'
+  );
+}
+
 async function processReferralReward(
   workspaceId: string,
   email: string,
@@ -162,6 +218,7 @@ async function upsertSubscription(
   isTrial: boolean = false
 ) {
   const workspaceId = hashWorkspaceId(email.toLowerCase().trim());
+  const periodEndValue = safePeriodEnd(periodEnd);
   
   try {
     await q(`
@@ -178,7 +235,7 @@ async function upsertSubscription(
         current_period_end = EXCLUDED.current_period_end,
         is_trial = EXCLUDED.is_trial,
         updated_at = NOW()
-    `, [workspaceId, email, tier, status, stripeSubscriptionId, customerId, periodEnd, isTrial]);
+    `, [workspaceId, email, tier, status, stripeSubscriptionId, customerId, periodEndValue, isTrial]);
     
     console.log(`[Webhook] Upserted subscription: ${email} - ${tier} (${status})`);
   } catch (error) {
@@ -222,6 +279,10 @@ export async function POST(req: NextRequest) {
           const priceId = subscription.items.data[0]?.price.id || '';
           const tier = getTierFromPriceId(priceId);
           const workspaceId = hashWorkspaceId((customer.email || '').toLowerCase().trim());
+          const periodEnd = subscriptionPeriodDate(subscription, 'current_period_end');
+          if (!periodEnd) {
+            console.error(`[Webhook] checkout.session.completed subscription ${subscription.id}: current_period_end missing or unusable on items.data[0] and on the subscription; storing null`);
+          }
           
           await upsertSubscription(
             customer.id,
@@ -229,7 +290,7 @@ export async function POST(req: NextRequest) {
             tier,
             subscription.status,
             subscription.id,
-            new Date((subscription as any).current_period_end * 1000),
+            periodEnd,
             subscription.status === 'trialing'
           );
 
@@ -285,6 +346,10 @@ export async function POST(req: NextRequest) {
         const priceId = subscription.items.data[0]?.price.id || '';
         const tier = getTierFromPriceId(priceId);
         const workspaceId = hashWorkspaceId((customer.email || '').toLowerCase().trim());
+        const periodEnd = subscriptionPeriodDate(subscription, 'current_period_end');
+        if (!periodEnd) {
+          console.error(`[Webhook] ${event.type} subscription ${subscription.id}: current_period_end missing or unusable on items.data[0] and on the subscription; storing null`);
+        }
         
         await upsertSubscription(
           customer.id,
@@ -292,7 +357,7 @@ export async function POST(req: NextRequest) {
           tier,
           subscription.status,
           subscription.id,
-          new Date((subscription as any).current_period_end * 1000),
+          periodEnd,
           subscription.status === 'trialing'
         );
 
@@ -345,6 +410,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error('[Webhook] Error processing event:', error);
+    if (SUBSCRIPTION_LIFECYCLE_EVENTS.has(event.type) && isNonRetryableFieldProblem(error)) {
+      console.error(`[Webhook] ${event.type}: missing or invalid field; acknowledging so Stripe will not retry a payload that cannot succeed`);
+      return NextResponse.json({ received: true });
+    }
     return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 });
   }
 }
