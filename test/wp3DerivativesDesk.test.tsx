@@ -9,6 +9,7 @@ vi.mock('@/lib/useUserTier', () => ({
 }));
 
 import CryptoDashboard from '@/app/tools/crypto-dashboard/page';
+import { derivativesOiSourceLine } from '@/lib/crypto/openInterestTotal';
 
 const calls: string[] = [];
 const json = (status: number, body: unknown) => ({
@@ -56,7 +57,7 @@ function installFetch(mode: 'empty' | 'three') {
         summary: {
           totalOpenInterest: 50_000_000_000,
           totalOpenInterestFormatted: '$50.00B',
-          sourceLabel: 'CoinGecko derivatives · top 3 exchanges per coin',
+          sourceLabel: 'CoinGecko derivatives · up to 3 of the top 3 derivatives exchanges per coin',
           change24h: 1.2,
           change24hLabel: '24h change on the fixed contract basket, not this total',
           marketSignal: 'stable',
@@ -65,8 +66,9 @@ function installFetch(mode: 'empty' | 'three') {
           baselineReadyAt: null,
         },
         coins: [
-          { symbol: 'BTC', openInterest: 30_000_000_000, openInterestValue: 30_000_000_000, openInterestFormatted: '$30.00B', sourceLabel: 'CoinGecko derivatives · top 3 exchanges', change24h: 1.1 },
-          { symbol: 'ETH', openInterest: 20_000_000_000, openInterestValue: 20_000_000_000, openInterestFormatted: '$20.00B', sourceLabel: 'CoinGecko derivatives · top 2 exchanges', change24h: 0.4 },
+          { symbol: 'BTC', openInterest: 30_000_000_000, openInterestValue: 30_000_000_000, openInterestFormatted: '$30.00B', sourceLabel: 'CoinGecko derivatives · 3 of the top 3 derivatives exchanges', observedAt: '2026-10-06T00:00:00.000Z', change24h: 1.1 },
+          { symbol: 'ETH', openInterest: 20_000_000_000, openInterestValue: 20_000_000_000, openInterestFormatted: '$20.00B', sourceLabel: 'CoinGecko derivatives · 2 of the top 3 derivatives exchanges', change24h: 0.4 },
+          { symbol: 'SOL', openInterest: null, openInterestValue: null, openInterestFormatted: null, change24h: null },
         ],
       });
     }
@@ -125,7 +127,11 @@ describe('crypto derivatives desk', () => {
     expect(document.body.textContent).not.toContain('3 of 4');
     expect(document.body.textContent).toContain('BTC open interest');
     expect(document.body.textContent).toContain('$30.00B');
-    expect(document.body.textContent).toContain('CoinGecko derivatives · top 3 exchanges');
+    const btcSource = 'CoinGecko derivatives · 3 of the top 3 derivatives exchanges';
+    expect(document.body.textContent).toContain(btcSource);
+    expect(document.querySelector('[data-source-line]')?.textContent).toContain(derivativesOiSourceLine(btcSource));
+    expect(document.body.textContent).toContain('As of');
+    expect(document.body.textContent).toContain('Open interest across 2 coins:');
     expect(document.body.textContent).toContain('Basket 24h: +1.20%');
     expect(document.body.textContent).toContain('Open interest across 2 coins: $50.00B');
     expect(document.body.textContent).toContain('24h change on the fixed contract basket, not this total');

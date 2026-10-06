@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import {
   FIXED_BASKET_CHANGE_LABEL,
+  freshContractOpenInterest,
   headlineOpenInterest,
   selectBtcOpenInterestTile,
   sumOpenInterestTotals,
@@ -28,12 +29,12 @@ vi.mock('@/lib/coingecko', () => ({
   getMarketChartFull: coingecko.getMarketChartFull,
   searchCoins: coingecko.searchCoins,
   COINGECKO_ID_MAP: { BTC: 'bitcoin', ETH: 'ethereum' },
-  buildCoinGeckoResponseMeta: () => ({
+  buildCoinGeckoResponseMeta: (options?: { lastUpdated?: string | null }) => ({
     provider: 'coingecko',
     sourceAttribution: 'CoinGecko API',
     planMode: 'pro',
     endpointFamily: 'DERIVATIVES',
-    lastUpdated: '2026-10-06T00:00:00.000Z',
+    lastUpdated: options?.lastUpdated ?? null,
     freshnessStatus: 'fresh',
     stale: false,
     fallbackUsed: false,
@@ -69,14 +70,16 @@ describe('shared open-interest total', () => {
       symbol: 'BTC',
       totalUsd: BTC_TOTAL,
       exchanges: 3,
-      sourceLabel: 'CoinGecko derivatives · top 3 exchanges',
+      sourceLabel: 'CoinGecko derivatives · 3 of the top 3 derivatives exchanges',
     });
     expect(btc.observedAt).toEqual(expect.any(String));
-    expect(eth).toMatchObject({ symbol: 'ETH', totalUsd: 2_000_000_000, exchanges: 1, sourceLabel: 'CoinGecko derivatives · top 1 exchange' });
+    expect(eth).toMatchObject({ symbol: 'ETH', totalUsd: 2_000_000_000, exchanges: 1, sourceLabel: 'CoinGecko derivatives · 1 of the top 3 derivatives exchanges' });
     const headline = headlineOpenInterest([btc, eth]);
     expect(headline.totalUsd).toBe(BTC_TOTAL + 2_000_000_000);
     expect(headline.exchanges).toBe(3);
-    expect(headline.sourceLabel).toBe('CoinGecko derivatives · top 3 exchanges per coin');
+    expect(headline.sourceLabel).toBe('CoinGecko derivatives · up to 3 of the top 3 derivatives exchanges per coin');
+    expect(freshContractOpenInterest(10, now / 1000 - 30, now)).toBe(10);
+    expect(freshContractOpenInterest(8_000_000_000, now / 1000 - 20 * 60, now)).toBeNull();
   });
 
   it('returns null, not 0, when the feed fails or a coin has no usable quote', () => {
@@ -90,7 +93,15 @@ describe('shared open-interest total', () => {
       { market: 'OKX', symbol: 'BTCUSDT', index_id: 'BTC', contract_type: 'perpetual', open_interest: -5, last_traded_at: tradedAt() },
     ], ['BTC'])[0].totalUsd).toBeNull();
     const blank: OpenInterestTotal = { symbol: 'SOL', totalUsd: null, exchanges: 0, observedAt: null, sourceLabel: 'CoinGecko derivatives' };
-    const present: OpenInterestTotal = { symbol: 'BTC', totalUsd: 5, exchanges: 1, observedAt: '2026-10-06T00:00:00.000Z', sourceLabel: 'CoinGecko derivatives · top 1 exchange' };
+    const present: OpenInterestTotal = { symbol: 'BTC', totalUsd: 5, exchanges: 1, observedAt: '2026-10-06T00:00:00.000Z', sourceLabel: 'CoinGecko derivatives · 1 of the top 3 derivatives exchanges' };
+    expect(selectBtcOpenInterestTile({
+      summary: { totalOpenInterest: 5, totalOpenInterestFormatted: '$5' },
+      coins: [
+        { symbol: 'BTC', openInterest: 5, openInterestFormatted: '$5' },
+        { symbol: 'ETH', openInterest: null, openInterestFormatted: null },
+        { symbol: 'SOL', openInterestValue: 0 },
+      ],
+    }).shownCoinCount).toBe(1);
     expect(headlineOpenInterest(null).totalUsd).toBeNull();
     expect(headlineOpenInterest([blank, present]).totalUsd).toBe(5);
   });
@@ -113,7 +124,7 @@ describe('three routes share one BTC total', () => {
       comparisonReason: null,
       coverage: 'Fixed contracts selected from the initial snapshot. Not the whole market.',
       baselineReadyAt: null,
-      observedAt: new Date().toISOString(),
+      observedAt: '2026-10-05T03:00:00.000Z',
       method: 'coingecko-major-perpetual-usd-v3',
     });
   });
@@ -127,22 +138,24 @@ describe('three routes share one BTC total', () => {
     const derivBody = await (await derivatives(new NextRequest('http://localhost/api/crypto-derivatives?symbol=BTC'))).json();
     const btc = oiBody.coins.find((coin: { symbol: string }) => coin.symbol === 'BTC');
     expect(detailBody.derivatives.open_interest).toBe(BTC_TOTAL);
-    expect(detailBody.derivatives.open_interest_source).toBe('CoinGecko derivatives · top 3 exchanges');
+    expect(detailBody.derivatives.open_interest_source).toBe('CoinGecko derivatives · 3 of the top 3 derivatives exchanges');
     expect(btc.openInterest).toBe(BTC_TOTAL);
-    expect(btc.sourceLabel).toBe('CoinGecko derivatives · top 3 exchanges');
+    expect(btc.sourceLabel).toBe('CoinGecko derivatives · 3 of the top 3 derivatives exchanges');
+    expect(oiBody.meta.lastUpdated).toBe('2026-10-05T03:00:00.000Z');
+    expect(oiBody.timestamp).toBe('2026-10-05T03:00:00.000Z');
     expect(oiBody.summary.totalOpenInterest).toBe(BTC_TOTAL);
     expect(oiBody.summary.totalOpenInterest).not.toBe(100);
     expect(oiBody.summary.change24h).toBe(2.5);
     expect(oiBody.summary.change24hLabel).toBe(FIXED_BASKET_CHANGE_LABEL);
     expect(derivBody.aggregatedOI.totalOI).toBe(BTC_TOTAL);
-    expect(derivBody.aggregatedOI.sourceLabel).toBe('CoinGecko derivatives · top 3 exchanges');
+    expect(derivBody.aggregatedOI.sourceLabel).toBe('CoinGecko derivatives · 3 of the top 3 derivatives exchanges');
     expect(derivBody.aggregatedOI.totalOI).toBe(detailBody.derivatives.open_interest);
     expect(derivBody.aggregatedOI.totalOI).toBe(btc.openInterest);
   });
 
   it('a failed derivatives read does not fall back to the basket or to 0', async () => {
     coingecko.getDerivativesTickers.mockResolvedValue(null);
-    const { getOpenInterestTotals } = await import('@/lib/crypto/openInterestTotal');
+    const { getOpenInterestTotals } = await import('@/lib/crypto/openInterestTotal.server');
     const { GET: openInterest } = await import('@/app/api/crypto/open-interest/route');
     const { GET: detail } = await import('@/app/api/crypto/detail/route');
     expect(await getOpenInterestTotals(['BTC', 'ETH'])).toBeNull();
@@ -161,13 +174,14 @@ describe('three routes share one BTC total', () => {
       coins: [
         { symbol: 'BTC', value: 100, change24h: 2.5, exchanges: 1, observedAt: Date.now(), comparisonAt: null },
         { symbol: 'ETH', value: 40, change24h: -1, exchanges: 1, observedAt: Date.now(), comparisonAt: null },
+        { symbol: 'SOL', value: 10, change24h: null, exchanges: 1, observedAt: Date.now(), comparisonAt: null },
       ],
       totalOpenInterest: 140,
       change24h: 2.5,
       comparisonReason: null,
       coverage: 'Fixed contracts selected from the initial snapshot. Not the whole market.',
       baselineReadyAt: null,
-      observedAt: new Date().toISOString(),
+      observedAt: '2026-10-05T03:00:00.000Z',
       method: 'coingecko-major-perpetual-usd-v3',
     });
     const { GET: detail } = await import('@/app/api/crypto/detail/route');
@@ -181,10 +195,11 @@ describe('three routes share one BTC total', () => {
     expect(tile.usd).toBe(BTC_TOTAL);
     expect(tile.usd).not.toBe(oiBody.summary.totalOpenInterest);
     expect(tile.value).toBe('$14.35B');
-    expect(tile.sourceLabel).toBe('CoinGecko derivatives · top 3 exchanges');
+    expect(tile.sourceLabel).toBe('CoinGecko derivatives · 3 of the top 3 derivatives exchanges');
     expect(tile.shownCoinCount).toBe(2);
+    expect(tile.shownCoinCount).not.toBe(oiBody.coins.length);
     expect(tile.shownSumFormatted).toBe('$16.35B');
-    expect(tile.shownSourceLabel).toBe('CoinGecko derivatives · top 3 exchanges per coin');
+    expect(tile.shownSourceLabel).toBe('CoinGecko derivatives · up to 3 of the top 3 derivatives exchanges per coin');
     expect(tile.usd).toBe(detailBody.derivatives.open_interest);
     expect(tile.usd).toBe(derivBody.aggregatedOI.totalOI);
     expect(tile.sourceLabel).toBe(detailBody.derivatives.open_interest_source);

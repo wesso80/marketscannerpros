@@ -98,7 +98,7 @@ describe('Crypto Derivatives tab', () => {
             openInterestFormatted: '$30.00B',
             openInterestValue: 30_000_000_000,
             observedAt: new Date().toISOString(),
-            sourceLabel: 'CoinGecko derivatives · top 3 exchanges',
+            sourceLabel: 'CoinGecko derivatives · 3 of the top 3 derivatives exchanges',
           }],
         });
       }
@@ -109,7 +109,7 @@ describe('Crypto Derivatives tab', () => {
     expect(screen.getByText('+0.0125%')).toBeTruthy();
     expect(screen.getByText('Open interest')).toBeTruthy();
     expect(screen.getByText('$30.00B')).toBeTruthy();
-    expect(screen.getByText('CoinGecko derivatives · top 3 exchanges')).toBeTruthy();
+    expect(screen.getByText('CoinGecko derivatives · 3 of the top 3 derivatives exchanges')).toBeTruthy();
     expect(screen.getByText('Long/short')).toBeTruthy();
     expect(screen.getByText('55.0 / 45.0')).toBeTruthy();
     expect(screen.queryByText('Liquidations')).toBeNull();
@@ -143,14 +143,14 @@ describe('Crypto Derivatives tab', () => {
           openInterestFormatted: '$14.35B',
           openInterestValue: 14_350_000_000,
           observedAt: new Date(now - 60_000).toISOString(),
-          sourceLabel: 'CoinGecko derivatives · top 3 exchanges',
+          sourceLabel: 'CoinGecko derivatives · 3 of the top 3 derivatives exchanges',
         },
         {
           symbol: 'ETH',
           openInterestFormatted: '$2.00B',
           openInterestValue: 2_000_000_000,
           observedAt: new Date(now - 2 * 60 * 60_000).toISOString(),
-          sourceLabel: 'CoinGecko derivatives · top 1 exchange',
+          sourceLabel: 'CoinGecko derivatives · 1 of the top 3 derivatives exchanges',
         },
       ],
     };
@@ -158,7 +158,7 @@ describe('Crypto Derivatives tab', () => {
     expect(btc.mode).toBe('tiles');
     if (btc.mode !== 'tiles') return;
     const tile = btc.tiles.find((item) => item.label === 'Open interest');
-    expect(tile).toMatchObject({ value: '$14.35B', source: 'CoinGecko derivatives · top 3 exchanges' });
+    expect(tile).toMatchObject({ value: '$14.35B', source: 'CoinGecko derivatives · 3 of the top 3 derivatives exchanges' });
     const eth = selectCryptoDeskTiles('ETHUSD', { funding: null, longShort: null, openInterest }, now);
     expect(eth.mode).toBe('gate');
     const undated = selectCryptoDeskTiles('BTCUSD', {

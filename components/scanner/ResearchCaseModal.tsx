@@ -2,6 +2,7 @@
 
 import React, { useCallback, useMemo, useState } from 'react';
 import { saveResearchCase } from '@/lib/clientResearchCases';
+import { OPEN_INTEREST_VENUE_CAP, openInterestSourceLabel } from '@/lib/crypto/openInterestTotal';
 
 /* ─── Types ─── */
 
@@ -55,7 +56,7 @@ function researchOpenInterest(derivatives: ScanPick['derivatives']): { text: str
     return { text: 'unavailable', source: derivatives.openInterestSource || 'CoinGecko derivatives' };
   }
   if (typeof derivatives.openInterest === 'number' && Number.isFinite(derivatives.openInterest) && derivatives.openInterest > 0) {
-    return { text: formatResearchOi(derivatives.openInterest), source: 'CoinGecko derivatives · top 3 exchanges' };
+    return { text: formatResearchOi(derivatives.openInterest), source: openInterestSourceLabel(OPEN_INTEREST_VENUE_CAP) };
   }
   return null;
 }

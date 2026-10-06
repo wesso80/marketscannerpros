@@ -9,7 +9,7 @@ import {
   searchCoins,
   getMarketChartFull,
 } from '@/lib/coingecko';
-import { getOpenInterestTotals } from '@/lib/crypto/openInterestTotal';
+import { getOpenInterestTotals } from '@/lib/crypto/openInterestTotal.server';
 
 interface CoinDetail {
   id: string;

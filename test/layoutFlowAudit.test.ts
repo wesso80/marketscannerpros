@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { areaLinks, primaryNavTools, toolWorkflows } from '@/lib/toolWorkflows';
+import { derivativesOiSourceLine } from '@/lib/crypto/openInterestTotal';
 
 const root = process.cwd();
 const read = (file: string) => readFileSync(join(root, file), 'utf8');
@@ -1294,7 +1295,10 @@ describe('layout and flow audit regressions', () => {
     expect(cryptoDashboard).toContain('selectBtcOpenInterestTile');
     expect(cryptoDashboard).toContain('Basket 24h:');
     expect(cryptoDashboard).toContain('Open interest across {oiTile.shownCoinCount} coins:');
-    expect(cryptoDashboard).toContain('Funding and long/short: OKX · OI:');
+    const fixtureSource = 'CoinGecko derivatives · 3 of the top 3 derivatives exchanges';
+    expect(derivativesOiSourceLine(fixtureSource)).toBe('Funding and long/short: OKX · OI: CoinGecko derivatives · 3 of the top 3 derivatives exchanges');
+    expect(cryptoDashboard).toContain('derivativesOiSourceLine(oiSource)');
+    expect(cryptoDashboard).toContain("oiRes?.meta?.freshnessStatus === 'fresh'");
     expect(cryptoDashboard).toContain('24h change on the fixed contract basket, not this total');
     expect(cryptoDashboard).not.toContain('Total open interest');
     expect(cryptoDashboard).not.toContain('Liquidations: not collected');

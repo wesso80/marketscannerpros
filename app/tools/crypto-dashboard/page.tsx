@@ -18,7 +18,7 @@ import ChipRow from '@/components/visual/ChipRow';
 import SourceLine from '@/components/visual/SourceLine';
 import StatTile from '@/components/visual/StatTile';
 import { DERIVATIVE_FEED_BASIS, conditionsPhrase, derivativeDecisionReady, pressurePhrase, sydneyClock } from '@/lib/crypto/derivativeDesk';
-import { selectBtcOpenInterestTile } from '@/lib/crypto/openInterestTotal';
+import { derivativesOiSourceLine, selectBtcOpenInterestTile } from '@/lib/crypto/openInterestTotal';
 import { formatMarketTime } from '@/lib/market/priceStamp';
 
 export default function CryptoDashboard(props: { embeddedInDashboard?: boolean } = {}) {
@@ -76,7 +76,7 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
           avgLong: parseFloat(lsRes.average?.longPercent || '50'),
           avgShort: parseFloat(lsRes.average?.shortPercent || '50'),
         } : null,
-        openInterest: oiRes?.summary || oiRes?.coins?.length ? oiRes : null,
+        openInterest: oiRes?.meta?.freshnessStatus === 'fresh' && oiRes?.summary ? oiRes : null,
         liquidations: null,
         prices,
       };
@@ -276,6 +276,7 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
     : '24h change on the fixed contract basket, not this total';
   const basketChange = oiTrendAvailable ? data.openInterest?.summary?.change24h : null;
   const basketText = typeof basketChange === 'number' ? `${basketChange >= 0 ? '+' : ''}${basketChange.toFixed(2)}%` : null;
+  const oiAsOf = oiTile.observedAt ? formatMarketTime(oiTile.observedAt, 'Australia/Sydney') : null;
 
   return (
     <div className={`mx-auto w-full max-w-none ${embeddedInDashboard ? 'px-0 pb-6 pt-0' : 'px-4 pb-24 pt-6 md:px-6'}`}>
@@ -345,7 +346,10 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
         {primarySymbols.map((symbol) => (
           <StatTile key={symbol} label={symbol} value={money(data.prices[symbol]?.price)} change={data.prices[symbol]?.change24h} />
         ))}
-        <StatTile label="BTC open interest" value={loading ? null : (oiTile.value ?? 'unavailable')} />
+        <div className="min-w-0">
+          <StatTile label="BTC open interest" value={loading ? null : (oiTile.value ?? 'unavailable')} />
+          {!loading && oiAsOf ? <p className="mt-1 text-[11px] text-white/70">As of {oiAsOf}</p> : null}
+        </div>
       </div>
       <p className="mb-1 text-xs text-white/70">{oiSource}.</p>
       <p className="mb-1 text-xs text-white/70">Basket 24h: {basketText ?? 'unavailable'}. {oiChangeLabel}.</p>
@@ -396,7 +400,7 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
       )}
 
       <SourceLine
-        source={`Funding and long/short: OKX · OI: ${oiSource}`}
+        source={derivativesOiSourceLine(oiSource)}
         basis={`${oiChangeLabel} · 8h funding equivalents · account ratios · no shared provider observation time supplied${lastUpdate ? ` · Last response with data received ${formatMarketTime(lastUpdate.toISOString(), 'Australia/Sydney') ?? 'time not recorded'} (request completion, not a provider observation time)` : ''}`}
       />
       <CoinGeckoCredit className="mt-2 text-center" />

@@ -5,10 +5,10 @@ import { getOiEvidence } from '@/lib/crypto/oiHistory';
 import {
   FIXED_BASKET_CHANGE_LABEL,
   SHOWN_DERIVATIVE_COINS,
-  getOpenInterestTotals,
   headlineOpenInterest,
   type OpenInterestTotal,
 } from '@/lib/crypto/openInterestTotal';
+import { getOpenInterestTotals } from '@/lib/crypto/openInterestTotal.server';
 
 export async function GET(_req: NextRequest) {
   const session = await getSessionFromCookie();
@@ -30,7 +30,8 @@ export async function GET(_req: NextRequest) {
   const marketSignal = change == null ? 'unavailable' : change > 2 ? 'expanding' : change < -2 ? 'contracting' : 'stable';
   const meta = buildCoinGeckoResponseMeta({
     endpointFamily: 'DERIVATIVES',
-    lastUpdated: headline.observedAt ?? evidence?.observedAt ?? null,
+    // The basket percent is only fresh when the basket itself was observed recently.
+    lastUpdated: evidence?.observedAt ?? headline.observedAt ?? null,
     maxAgeMs: 900_000,
   });
   const basketCoins = evidence?.coins ?? symbols.map((symbol) => ({

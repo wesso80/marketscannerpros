@@ -1,4 +1,4 @@
-import { getDerivativesTickers, type DerivativeTicker } from '@/lib/coingecko';
+import type { DerivativeTicker } from '@/lib/coingecko';
 
 /** Matches the derivatives client's quote window. A quote older than this is left out, not treated as zero. */
 export const OI_QUOTE_MAX_AGE_MS = 15 * 60_000;
@@ -37,13 +37,27 @@ type TickerLike = Pick<DerivativeTicker, 'market' | 'symbol' | 'index_id' | 'con
 
 export function openInterestSourceLabel(exchanges: number): string {
   if (!(exchanges > 0)) return OPEN_INTEREST_FEED;
-  const noun = exchanges === 1 ? 'exchange' : 'exchanges';
-  return `${OPEN_INTEREST_FEED} · top ${exchanges} ${noun}`;
+  return `${OPEN_INTEREST_FEED} · ${exchanges} of the top ${OPEN_INTEREST_VENUE_CAP} derivatives exchanges`;
 }
 
 /** Used when the coins in one headline were summed from different venue counts. */
 export function openInterestPerCoinSourceLabel(): string {
-  return `${OPEN_INTEREST_FEED} · top ${OPEN_INTEREST_VENUE_CAP} exchanges per coin`;
+  return `${OPEN_INTEREST_FEED} · up to ${OPEN_INTEREST_VENUE_CAP} of the top ${OPEN_INTEREST_VENUE_CAP} derivatives exchanges per coin`;
+}
+
+/** Source line on the Crypto Derivatives page. The open-interest part is the BTC total's label. */
+export function derivativesOiSourceLine(oiSource: string): string {
+  const source = oiSource.trim() || OPEN_INTEREST_FEED;
+  return `Funding and long/short: OKX · OI: ${source}`;
+}
+
+/** A contract quote counts toward a share only inside the same window as the summed total. */
+export function freshContractOpenInterest(openInterest: number, lastTradedAt: number, now = Date.now()): number | null {
+  if (typeof openInterest !== 'number' || !Number.isFinite(openInterest) || !(openInterest > 0)) return null;
+  if (typeof lastTradedAt !== 'number' || !Number.isFinite(lastTradedAt) || !(lastTradedAt > 0)) return null;
+  const ageMs = now - lastTradedAt * 1000;
+  if (ageMs < -60_000 || ageMs > OI_QUOTE_MAX_AGE_MS) return null;
+  return openInterest;
 }
 
 function coinCode(symbol: string): string {
@@ -135,6 +149,7 @@ export type BtcOpenInterestTile = {
   usd: number | null;
   value: string | null;
   sourceLabel: string;
+  observedAt: string | null;
   shownCoinCount: number;
   shownSum: number | null;
   shownSumFormatted: string | null;
@@ -147,6 +162,7 @@ type DashboardOiCoin = {
   openInterestValue?: number | null;
   openInterestFormatted?: string | null;
   sourceLabel?: string | null;
+  observedAt?: string | null;
 };
 
 /** Headline figure for the Crypto Derivatives page: the BTC total, not the sum of every shown coin. */
@@ -159,6 +175,10 @@ export function selectBtcOpenInterestTile(body: {
   coins?: readonly DashboardOiCoin[] | null;
 } | null): BtcOpenInterestTile {
   const coins = body?.coins ?? [];
+  const summed = coins.filter((coin) => {
+    const amount = coin.openInterest ?? coin.openInterestValue;
+    return typeof amount === 'number' && Number.isFinite(amount) && amount > 0;
+  });
   const btc = coins.find((coin) => String(coin.symbol || '').toUpperCase() === 'BTC');
   const raw = btc?.openInterest ?? btc?.openInterestValue;
   const usd = typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? raw : null;
@@ -171,23 +191,10 @@ export function selectBtcOpenInterestTile(body: {
     usd,
     value: usd != null && formatted && formatted !== '$0.00' ? formatted : null,
     sourceLabel: btc?.sourceLabel?.trim() || OPEN_INTEREST_FEED,
-    shownCoinCount: coins.length,
+    observedAt: typeof btc?.observedAt === 'string' && btc.observedAt.trim() ? btc.observedAt : null,
+    shownCoinCount: summed.length,
     shownSum: typeof shownRaw === 'number' && Number.isFinite(shownRaw) && shownRaw > 0 ? shownRaw : null,
     shownSumFormatted: shownFormatted && shownFormatted !== '$0.00' ? shownFormatted : null,
     shownSourceLabel: body?.summary?.sourceLabel?.trim() || openInterestPerCoinSourceLabel(),
   };
-}
-
-/**
- * Perpetual total from the existing CoinGecko derivatives client (top venues by open interest).
- * Returns null when that client fails. It does not substitute 0 or the fixed basket.
- */
-export async function getOpenInterestTotals(symbols: readonly string[], now = Date.now()): Promise<OpenInterestTotal[] | null> {
-  try {
-    const tickers = await getDerivativesTickers();
-    if (tickers == null) return null;
-    return sumOpenInterestTotals(tickers, symbols, now);
-  } catch {
-    return null;
-  }
 }

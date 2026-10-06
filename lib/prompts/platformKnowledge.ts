@@ -62,11 +62,10 @@ MARKETS & DATA (Research & Monitoring)
 
 9. /tools/explorer?tab=crypto-command — Crypto Command Center
    Crypto market overview: trending coins, top movers, category heatmap, DeFi stats.
-   Funding rates, liquidations, market cap data via CoinGecko API.
+   Funding rates, open interest, and market cap data via CoinGecko API.
 
 10. /tools/crypto-dashboard — Crypto Derivatives
-    Real-time crypto derivatives: funding rates, long/short ratios, open interest, liquidations.
-    Binance Futures data for derivatives analysis.
+    Real-time crypto derivatives: funding rates, long/short ratios, and open interest.
 
 11. /tools/explorer?tab=macro — Macro Monitor
     Macroeconomic data: treasury yields, Fed funds rate, inflation (CPI), employment, GDP.
