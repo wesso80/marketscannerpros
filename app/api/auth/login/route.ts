@@ -6,6 +6,7 @@ import { q } from "@/lib/db";
 import { loginLimiter, getClientIP } from "@/lib/rateLimit";
 import { isValidAdminSecret } from "@/lib/adminAuth";
 import { sendNewSignupNotification } from "@/lib/email";
+import { subscriptionPeriodDate } from "@/lib/stripeSubscriptionPeriod";
 
 // Admin emails from ADMIN_EMAILS env var (comma-separated)
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
@@ -78,11 +79,9 @@ async function trackSubscription(
     if (isNewUser) {
       sendNewSignupNotification(email, tier).catch(() => {});
     }
-  } catch (error: any) {
-    // Table might not exist yet - that's OK
-    if (!error?.message?.includes('does not exist')) {
-      console.error("Track subscription error:", error);
-    }
+  } catch (error: unknown) {
+    // Login still succeeds. The write failure has to be visible in the logs.
+    console.error("[login] Track subscription failed:", error);
   }
 }
 
@@ -294,7 +293,10 @@ export async function POST(req: NextRequest) {
     // Get subscription details for tracking
     const primarySub = valid[0];
     const isStripeTrial = primarySub.status === 'trialing';
-    const periodEnd = new Date((primarySub as any).current_period_end * 1000);
+    const periodEnd = subscriptionPeriodDate(primarySub, 'current_period_end');
+    if (!periodEnd) {
+      console.error(`[login] subscription ${primarySub.id}: current_period_end missing or unusable on items.data[0] and on the subscription; storing null`);
+    }
     
     // Track subscription in database
     await trackSubscription(
