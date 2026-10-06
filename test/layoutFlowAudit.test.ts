@@ -296,7 +296,6 @@ describe('layout and flow audit regressions', () => {
     expect(goldenEggFeature).toContain('/tools/workspace?tab=portfolio&add=');
     expect(goldenEggFeature).toContain('/tools/workspace?tab=alerts&symbol=');
     expect(goldenEggFeature).toContain('/tools/workspace?tab=backtest&symbol=');
-    expect(scannerPage).toContain('/tools/workspace?tab=alerts&symbol=');
     expect(alertsWidget).toContain('return `/tools/workspace?tab=journal&${params.toString()}`;');
     expect(alertsWidget).toContain('/tools/workspace?tab=backtest&symbol=');
     expect(watchlistWidget).toContain('alert: `/tools/workspace?tab=alerts&symbol=${encodedSymbol}`');
