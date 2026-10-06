@@ -56,3 +56,58 @@ export function symbolNumber(value: number, unit?: string): string {
 export function symbolMetric(value: unknown, unit?: string): string {
   return typeof value === 'number' ? symbolNumber(value, unit) : typeof value === 'boolean' ? value ? 'Yes' : 'No' : symbolText(value);
 }
+
+/**
+ * Reader label for the Symbol verdict pill. Presentation only.
+ *
+ * Daily Picks `readerVerdict` (app/daily-pick/wording.ts) maps canonical permission
+ * (PASS / WATCH / BLOCK) and turns setup NONE into "No qualifying setup". That is a
+ * different surface: this pill already says "No setup" for an equity NONE row, and
+ * crypto base stages are not those permissions. Sharing that helper would relabel
+ * AAPL or call NEAR's missing base a canonical no-setup. Same pattern here — an
+ * explicit table plus a plain fallback — so a raw ALL_CAPS engine token never stays
+ * in the pill. Keys are matched after underscores become spaces.
+ */
+const VERDICT_PILL: Record<string, string> = {
+  'NO BASE': 'No base yet',
+  'NOT ENOUGH DATA': 'Not enough data',
+  'WATCH': 'Base in place',
+  'BASE FORMING': 'Base forming',
+  'BROKE OUT, RULE NOT MET': 'Broke out, rule not met',
+  BREAKOUT: 'Breakout',
+  'MEETS V1 RULES': 'Meets the rules',
+  EXTENDED: 'Extended',
+  'FELL BACK': 'Fell back',
+  NONE: 'No setup',
+  'NO SETUP': 'No setup',
+  BLOCK: 'Blocked',
+  BLOCKED: 'Blocked',
+  'TREND CONTINUATION': 'Trend continuation',
+  PULLBACK: 'Pullback',
+  SQUEEZE: 'Squeeze',
+  'EXHAUSTION FADE': 'Exhaustion fade',
+};
+
+const ENGINE_TOKEN = /^[A-Z0-9]+(?:[_\s,]+[A-Z0-9]+)*$/;
+
+function verdictKey(value: string): string {
+  return value.trim().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').toUpperCase();
+}
+
+function plainEngineFallback(value: string): string {
+  const words = value.trim().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').toLowerCase();
+  if (!words) return 'Not recorded';
+  const plain = words.charAt(0).toUpperCase() + words.slice(1);
+  return ENGINE_TOKEN.test(plain) ? 'Not recorded' : plain;
+}
+
+/** Pill text only. Does not change the stored stage, setup type, or score. */
+export function symbolVerdictLabel(value: unknown): string {
+  if (value == null) return 'Not recorded';
+  const raw = String(value).trim();
+  if (!raw) return 'Not recorded';
+  const mapped = VERDICT_PILL[verdictKey(raw)];
+  if (mapped) return mapped;
+  if (/[a-z]/.test(raw)) return raw;
+  return plainEngineFallback(raw);
+}

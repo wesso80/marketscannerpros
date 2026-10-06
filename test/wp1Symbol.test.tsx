@@ -28,11 +28,11 @@ it.each(['AAPL','NVDA'])('uses the shared chart, rule chips and stat tiles for %
 });
 it('preserves BTC rule stage and verdict inputs, with shared parts and no per-card source stamps',()=>{
  const d=crypto(),before=JSON.stringify(d);const {container}=render(<CryptoTop data={d} showSource={false}/>);
- expect(container.querySelector('[data-symbol-summary]')).toBeTruthy();expect(container.querySelector('[data-stage-badge]')?.textContent).toBe(d.top!.stage);expect(container.querySelectorAll('[data-rule-chip]')).toHaveLength(4);expect(container.querySelectorAll('[data-top-source]')).toHaveLength(0);expect(container.querySelector('[data-stage-badge]')?.getAttribute('style')).not.toContain('var(--msp-bull)');expect(JSON.stringify(d)).toBe(before);
+ expect(container.querySelector('[data-symbol-summary]')).toBeTruthy();expect(d.top!.stage).toBe('WATCH');expect(container.querySelector('[data-stage-badge]')?.textContent).toBe('Base in place');expect(container.querySelector('[data-stage-badge]')?.getAttribute('data-engine-stage')).toBe('WATCH');expect(container.querySelectorAll('[data-rule-chip]')).toHaveLength(4);expect(container.querySelectorAll('[data-top-source]')).toHaveLength(0);expect(container.querySelector('[data-stage-badge]')?.getAttribute('style')).not.toContain('var(--msp-bull)');expect(JSON.stringify(d)).toBe(before);
 });
 it('compact crypto uses closed native folds and one source line, evidence opens on demand',async()=>{
  const d=crypto();vi.mocked(fetch).mockResolvedValue({ok:true,json:async()=>d} as Response);
- const {container}=render(<CryptoBreakdown compact symbol="BTC" timeframe="daily"/>);await screen.findByText(d.top!.stage);
+ const {container}=render(<CryptoBreakdown compact symbol="BTC" timeframe="daily"/>);await screen.findByText('Base in place');expect(d.top!.stage).toBe('WATCH');
  expect(container.querySelectorAll('details')).toHaveLength(4);expect([...container.querySelectorAll('details')].every(d=>!d.open)).toBe(true);expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);expect(container.querySelectorAll('[data-top-source]')).toHaveLength(0);
  const button=screen.getByRole('button',{name:/Evidence and data checks/});expect(button.getAttribute('aria-expanded')).toBe('false');fireEvent.click(button);expect(button.getAttribute('aria-expanded')).toBe('true');
  expect(container.textContent).not.toMatch(/UNKNOWN|Unknown|Unavailable|Awaiting data|N\/A|n\/a|DEGRADED|undefined|NaN|—/);
