@@ -55,17 +55,22 @@ type Row = {
 const db = {
   rows: [] as Row[],
   calls: [] as { sql: string; params: unknown[] }[],
+  trials: [] as { email: string; tier: string; expires_at: string }[],
 };
 
 let ipSeq = 0;
 
-function installDb(rows: Row[]) {
+function installDb(rows: Row[], trials: { email: string; tier: string; expires_at: string }[] = []) {
   db.rows = rows.map((row) => ({ ...row }));
+  db.trials = trials.map((trial) => ({ ...trial }));
   db.calls = [];
   mocks.q.mockImplementation(async (sql: string, params: unknown[] = []) => {
     const text = sql.replace(/\s+/g, ' ').trim();
     db.calls.push({ sql: text, params });
-    if (text.includes('FROM user_trials')) return [];
+    if (text.includes('FROM user_trials')) {
+      const email = String(params[0] ?? '').toLowerCase();
+      return db.trials.filter((trial) => trial.email.toLowerCase() === email);
+    }
     if (text.includes('SELECT status, stripe_subscription_id FROM user_subscriptions')) {
       const row = db.rows.find((item) => item.workspace_id === params[0]);
       return row ? [{ status: row.status, stripe_subscription_id: row.stripe_subscription_id }] : [];
@@ -108,9 +113,13 @@ function installDb(rows: Row[]) {
     }
     if (text.includes('UPDATE user_subscriptions')) {
       const email = String(params[0]).toLowerCase();
+      const listedIds = new Set((Array.isArray(params[1]) ? params[1] : []).map(String));
+      const scopedToListedCustomers = text.includes('stripe_customer_id = ANY');
       if (text.includes('stripe_subscription_id IS NOT NULL')) {
         for (const row of db.rows) {
-          if (row.email.toLowerCase() === email && row.stripe_subscription_id != null) row.status = 'canceled';
+          if (row.email.toLowerCase() !== email || row.stripe_subscription_id == null) continue;
+          if (scopedToListedCustomers && (row.stripe_customer_id == null || !listedIds.has(row.stripe_customer_id))) continue;
+          row.status = 'canceled';
         }
       }
       return [];
@@ -184,6 +193,7 @@ describe('login subscription resolution', () => {
     mocks.customersUpdate.mockReset();
     db.rows = [];
     db.calls = [];
+    db.trials = [];
   });
 
   it('upgrades an older free email-hash row when Stripe has an active subscription', async () => {
@@ -258,11 +268,54 @@ describe('login subscription resolution', () => {
     const update = db.calls.find((call) => call.sql.includes('UPDATE user_subscriptions'));
     expect(update?.sql).toContain("status = 'canceled'");
     expect(update?.sql).toContain('stripe_subscription_id IS NOT NULL');
+    expect(update?.sql).toContain('stripe_customer_id = ANY($2::text[])');
     expect(update?.sql.toLowerCase()).toContain('lower(email)');
-    expect(update?.params).toEqual([email]);
+    expect(update?.params).toEqual([email, ['cus_ralph']]);
     expect(db.rows.find((row) => row.workspace_id === workspaceId)?.status).toBe('canceled');
     expect(db.rows.find((row) => row.workspace_id === 'sibling-free')).toMatchObject({ tier: 'free', status: 'active', stripe_subscription_id: null });
     expect(db.rows.find((row) => row.workspace_id === 'sibling-grant')).toMatchObject({ tier: 'pro', status: 'active', stripe_subscription_id: null });
+  });
+
+  it('cancels only listed customers when a mixed-case Stripe customer was not returned', async () => {
+    const email = 'ada@example.com';
+    const workspaceId = hashWorkspaceId(email);
+    installDb([
+      {
+        workspace_id: workspaceId,
+        email,
+        tier: 'pro',
+        status: 'active',
+        stripe_customer_id: 'cus_lower',
+        stripe_subscription_id: 'sub_lower',
+      },
+      {
+        workspace_id: 'mixed-case-row',
+        email: 'Ada@example.com',
+        tier: 'pro',
+        status: 'active',
+        stripe_customer_id: 'cus_mixed',
+        stripe_subscription_id: 'sub_mixed',
+      },
+    ]);
+    mockStripe(
+      [{ id: 'cus_lower', created: 10 }],
+      { cus_lower: [subscription({ id: 'sub_lower', status: 'canceled', priceId: 'price_pro_monthly', periodEnd: 1_700_000_000, created: 5 })] },
+    );
+
+    const res = await POST(loginRequest(email));
+    expect(res.status).toBe(200);
+    expect((await res.json()).tier).toBe('free');
+    expect(cookiePayload(res)).toMatchObject({ tier: 'free', cid: 'cus_lower' });
+    expect(mocks.customersList).toHaveBeenCalledWith({ email, limit: 100 });
+    const update = db.calls.find((call) => call.sql.includes('UPDATE user_subscriptions'));
+    expect(update?.sql).toContain('stripe_customer_id = ANY($2::text[])');
+    expect(update?.params).toEqual([email, ['cus_lower']]);
+    expect(db.rows.find((row) => row.stripe_customer_id === 'cus_lower')?.status).toBe('canceled');
+    expect(db.rows.find((row) => row.stripe_customer_id === 'cus_mixed')).toMatchObject({
+      tier: 'pro',
+      status: 'active',
+      stripe_subscription_id: 'sub_mixed',
+    });
   });
 
   it('keeps a manual pro_trader grant on the email-hash row when Stripe has no customer', async () => {
@@ -427,7 +480,125 @@ describe('login subscription resolution', () => {
     expect(inserts()[0].sql).toContain("NOT IN ('active', 'trialing', 'past_due', 'unpaid')");
   });
 
-  it('maps the tier from every subscription item, not only the first', async () => {
+  it('does not write trialing over a live paid Stripe row when an admin trial is active', async () => {
+    const email = 'trial-paid@example.com';
+    const workspaceId = hashWorkspaceId(email);
+    const expires = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
+    installDb(
+      [{
+        workspace_id: workspaceId,
+        email,
+        tier: 'pro',
+        status: 'active',
+        stripe_customer_id: 'cus_paid',
+        stripe_subscription_id: 'sub_paid',
+      }],
+      [{ email, tier: 'pro', expires_at: expires }],
+    );
+    mockStripe([], {});
+
+    const res = await POST(loginRequest(email));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ tier: 'pro', isTrial: true });
+    expect(cookiePayload(res)).toMatchObject({ tier: 'pro', cid: `trial_${email}` });
+    expect(inserts()).toHaveLength(0);
+    expect(mocks.customersList).not.toHaveBeenCalled();
+    expect(db.rows[0]).toMatchObject({
+      tier: 'pro',
+      status: 'active',
+      stripe_customer_id: 'cus_paid',
+      stripe_subscription_id: 'sub_paid',
+    });
+
+    db.rows[0].status = 'trialing';
+    const stripeTrial = await POST(loginRequest(email));
+    expect(cookiePayload(stripeTrial)).toMatchObject({ tier: 'pro', cid: `trial_${email}` });
+    expect(inserts()).toHaveLength(0);
+    expect(db.rows[0]).toMatchObject({
+      tier: 'pro',
+      status: 'trialing',
+      stripe_subscription_id: 'sub_paid',
+    });
+  });
+
+  it('still writes the admin trial onto a free row that has no Stripe subscription', async () => {
+    const email = 'trial-free@example.com';
+    const workspaceId = hashWorkspaceId(email);
+    const expires = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
+    installDb(
+      [{
+        workspace_id: workspaceId,
+        email,
+        tier: 'free',
+        status: 'active',
+        stripe_customer_id: null,
+        stripe_subscription_id: null,
+      }],
+      [{ email, tier: 'pro', expires_at: expires }],
+    );
+    mockStripe([], {});
+
+    const res = await POST(loginRequest(email));
+    expect(res.status).toBe(200);
+    expect(cookiePayload(res)).toMatchObject({ tier: 'pro', cid: `trial_${email}` });
+    expect(inserts()).toHaveLength(1);
+    expect(inserts()[0].params.slice(0, 6)).toEqual([workspaceId, email, 'pro', 'trialing', null, null]);
+    expect(db.rows[0]).toMatchObject({ tier: 'pro', status: 'trialing', stripe_subscription_id: null });
+  });
+
+  it('writes free/active when the chosen trialing subscription has an unknown price and no row exists', async () => {
+    const email = 'trial-unknown@example.com';
+    const workspaceId = hashWorkspaceId(email);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    installDb([]);
+    mockStripe(
+      [{ id: 'cus_trial_unknown', created: 10 }],
+      { cus_trial_unknown: [subscription({ id: 'sub_trial_unknown', status: 'trialing', priceId: 'price_unmapped', periodEnd: 1_900_000_000, created: 30 })] },
+    );
+
+    try {
+      const res = await POST(loginRequest(email));
+      expect(res.status).toBe(200);
+      expect(cookiePayload(res).tier).toBe('free');
+      expect(inserts()).toHaveLength(1);
+      expect(inserts()[0].params.slice(0, 4)).toEqual([workspaceId, email, 'free', 'active']);
+      expect(inserts()[0].params[7]).toBe(false);
+      expect(db.rows[0]).toMatchObject({ tier: 'free', status: 'active' });
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('builds the tier from the chosen primary subscription only', async () => {
+    const email = 'primary-only@example.com';
+    const workspaceId = hashWorkspaceId(email);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    installDb([]);
+    mockStripe(
+      [{ id: 'cus_primary', created: 10 }],
+      {
+        cus_primary: [
+          subscription({ id: 'sub_primary', status: 'active', priceId: 'price_unmapped', periodEnd: 1_800_000_000, created: 20 }),
+          subscription({ id: 'sub_other', status: 'trialing', priceId: 'price_pro_trader_monthly', periodEnd: 2_200_000_000, created: 90 }),
+        ],
+      },
+    );
+
+    try {
+      const res = await POST(loginRequest(email));
+      expect(res.status).toBe(200);
+      expect(cookiePayload(res)).toMatchObject({ tier: 'free', cid: 'cus_primary', workspaceId });
+      expect(inserts()[0].params.slice(0, 6)).toEqual([workspaceId, email, 'free', 'active', 'cus_primary', 'sub_primary']);
+      expect(inserts()[0].params[7]).toBe(false);
+      const logged = JSON.stringify(errorSpy.mock.calls);
+      expect(logged).toContain('price_unmapped');
+      expect(logged).not.toContain('price_pro_trader_monthly');
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('maps the tier from every item on the chosen subscription, not only the first', async () => {
     const email = 'items@example.com';
     const workspaceId = hashWorkspaceId(email);
     installDb([]);

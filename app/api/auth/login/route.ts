@@ -234,14 +234,18 @@ async function readEmailHashTier(workspaceId: string): Promise<string | null> {
   return tier ? tier : null;
 }
 
-async function cancelStaleStripeRows(email: string): Promise<void> {
+async function cancelStaleStripeRows(email: string, customerIds: string[]): Promise<void> {
+  if (!customerIds.length) return;
   try {
+    // customers.list({ email }) is case-sensitive, while this table matches
+    // email case-insensitively. Only cancel customers this login actually listed.
     await q(
       `UPDATE user_subscriptions
        SET status = 'canceled', updated_at = NOW()
        WHERE LOWER(email) = LOWER($1)
-         AND stripe_subscription_id IS NOT NULL`,
-      [email],
+         AND stripe_subscription_id IS NOT NULL
+         AND stripe_customer_id = ANY($2::text[])`,
+      [email, customerIds],
     );
   } catch (error: any) {
     if (!error?.message?.includes("does not exist")) {
@@ -352,18 +356,27 @@ export async function POST(req: NextRequest) {
       const token = signSessionToken({ cid: `trial_${normalizedEmail}`, tier: trial.tier, workspaceId, exp, ...(admin ? { is_admin: true } : {}) });
       
       const daysLeft = Math.ceil((trial.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-      
-      // Track trial user in database
-      await trackSubscription(
-        workspaceId,
-        normalizedEmail,
-        trial.tier,
-        'trialing',
-        null,
-        null,
-        trial.expiresAt,
-        true
+
+      // A live Stripe subscription on this workspace must keep its own period.
+      // Writing trialing over it would turn the paid row free when the trial ends.
+      const paidRow = await q<{ status: string; stripe_subscription_id: string | null }>(
+        'SELECT status, stripe_subscription_id FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1',
+        [workspaceId],
       );
+      const liveStripeSub = paidRow[0]?.stripe_subscription_id != null
+        && (paidRow[0].status === 'active' || paidRow[0].status === 'trialing');
+      if (!liveStripeSub) {
+        await trackSubscription(
+          workspaceId,
+          normalizedEmail,
+          trial.tier,
+          'trialing',
+          null,
+          null,
+          trial.expiresAt,
+          true
+        );
+      }
       
       const body = { 
         ok: true, 
@@ -423,7 +436,7 @@ export async function POST(req: NextRequest) {
       const customerId = preferredCustomer(customers).id;
       const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * sessionDays;
       const token = signSessionToken({ cid: customerId, tier: "free", workspaceId, exp, ...(admin ? { is_admin: true } : {}) });
-      await cancelStaleStripeRows(normalizedEmail);
+      await cancelStaleStripeRows(normalizedEmail, customers.map((listed) => listed.id));
 
       loginLimiter.reset(ip);
       const body = { ok: true, tier: "free", workspaceId, message: "Welcome back! Your subscription is inactive. Upgrade to restore full access." };
@@ -434,12 +447,14 @@ export async function POST(req: NextRequest) {
       for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);
       return res;
     }
-    const { customer, subscription: primarySub, valid } = paid;
+    const { customer, subscription: primarySub } = paid;
     const customerId = customer.id;
-    const priceIds = valid.flatMap((sub) => (sub.items?.data ?? []).map((item) => item.price?.id).filter((id): id is string => Boolean(id)));
+    const priceIds = (primarySub.items?.data ?? []).map((item) => item.price?.id).filter((id): id is string => Boolean(id));
     const detectedTier = detectTierFromPrices(priceIds);
     const workspaceId = hashWorkspaceId(normalizedEmail);
     let tier = detectedTier;
+    let writeStatus = primarySub.status;
+    let writeTrial = primarySub.status === "trialing";
 
     if (detectedTier === "free") {
       console.error("[login] Active subscription price did not match a configured price id", { priceIds });
@@ -456,21 +471,23 @@ export async function POST(req: NextRequest) {
         for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);
         return res;
       }
+      tier = "free";
+      writeStatus = "active";
+      writeTrial = false;
     }
 
-    const isStripeTrial = primarySub.status === "trialing";
     const periodEnd = subscriptionPeriodDate(primarySub, "current_period_end");
-    
+
     // Track subscription in database
     await trackSubscription(
       workspaceId,
       normalizedEmail,
       tier,
-      primarySub.status,
+      writeStatus,
       customerId,
       primarySub.id,
       periodEnd,
-      isStripeTrial
+      writeTrial
     );
     
     await stripe.customers.update(customerId, {
