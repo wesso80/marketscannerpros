@@ -109,7 +109,8 @@ describe('TR-38: API and close-trade', () => {
     expect(page).toContain('splitClosedBook<ClosedPosition>(data.closedPositions || [])');
     expect(page).toContain('setUncountedClosed(loadedUncounted)');
     expect(page).toContain('data-testid="ledger-uncounted"');
-    expect(page).toContain("serverWasEmpty ? dropServerOwnedRows(localClosedRaw) : localClosedRaw");
+    expect(page).not.toContain('dropServerOwnedRows');
+    expect(page).toContain('Do not import localStorage positions, closes, snapshots, or cash.');
   });
 });
 

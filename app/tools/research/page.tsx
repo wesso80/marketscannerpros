@@ -7,6 +7,7 @@ import SourceLine from '@/components/visual/SourceLine';
 import TabBar from '@/components/visual/TabBar';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { marketText } from '@/lib/marketsPresentation';
+import { sentimentReaderLabel, sentimentToneClass } from '@/lib/presentation/sentimentLabel';
 import { formatMarketTime } from '@/lib/market/priceStamp';
 import PaidPreviewGate from '@/components/free/PaidPreviewGate';
 
@@ -288,11 +289,11 @@ function ResearchPagePaid() {
                       <a href={n.url} target="_blank" rel="noopener noreferrer" className="text-sm text-white hover:text-emerald-400 transition-colors leading-snug">
                         {n.title}
                       </a>
-                      <CollapsibleSection title="Article context" summary={marketText(n.sentiment.label)}><p className="text-xs text-slate-400">{n.summary}</p></CollapsibleSection>
+                      <CollapsibleSection title="Article context" summary={sentimentReaderLabel(n.sentiment.label)}><p className="text-xs text-slate-400">{n.summary}</p></CollapsibleSection>
                       <div className="flex flex-wrap items-center gap-2 mt-1">
                         <span data-news-source className="rounded-full border border-white/10 px-2 py-1 text-[10px] text-slate-400">{marketText(n.source)} · {formatMarketTime(publicationTime(n.timePublished), viewerZone) || 'Publication time not supplied'}</span>
-                        <span className={`text-[10px] ${n.sentiment.score > 0 ? 'text-emerald-400' : n.sentiment.score < 0 ? 'text-red-400' : 'text-slate-500'}`}>
-                          {marketText(n.sentiment.label)}
+                        <span className={`text-[10px] ${sentimentToneClass(n.sentiment.label)}`}>
+                          {sentimentReaderLabel(n.sentiment.label)}
                         </span>
                         {n.tickerSentiments?.slice(0, 4).map(ts => (
                           <button key={ts.ticker} type="button" className="text-[10px] text-emerald-400 cursor-pointer hover:underline focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(ts.ticker)} aria-label={`Open ${ts.ticker} in Symbol`}>
@@ -351,7 +352,7 @@ function ResearchPagePaid() {
         <Card>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <p data-research-verdict role="status" className="text-lg font-semibold">{savedLoading ? 'Loading saved research…' : savedError ? 'The last request did not complete.' : savedCases.length ? `${savedCases.length} saved research cases loaded` : 'No saved research cases yet.'}</p>
+              <p data-research-verdict role="status" className="text-lg font-semibold">{savedLoading ? 'Loading saved research…' : savedError ? 'The last request did not complete.' : savedCases.length ? `${savedCases.length} saved research cases loaded` : 'No saved research cases yet. Save a case from Scanner or Symbol to build a research archive.'}</p>
               <div className="text-[10px] text-slate-500">Educational scenario records saved from Scanner and Symbol.</div>
             </div>
             <button
@@ -366,9 +367,7 @@ function ResearchPagePaid() {
 
           {savedError && <div className="mb-3 rounded border border-red-500/30 bg-red-950/30 px-3 py-2 text-xs text-red-300">The request could not be completed. {savedCases.length > 0 ? 'Previously loaded cases remain below.' : 'Use Refresh to try again.'}</div>}
 
-          {savedLoading && savedCases.length === 0 ? <SkeletonRows n={6} /> : savedCases.length === 0 && !savedError ? (
-            <div className="py-8 text-center text-xs text-slate-500">No saved research cases yet. Save a case from Scanner or Symbol to build a research archive.</div>
-          ) : (
+          {savedLoading && savedCases.length === 0 ? <SkeletonRows n={6} /> : savedCases.length === 0 && !savedError ? null : (
             <div className="space-y-2">
               {(showAllSavedCases ? savedCases : savedCases.slice(0, 5)).map((item) => (
                 <div key={item.id} data-saved-case className="rounded-lg border border-slate-800/70 bg-slate-950/40 p-3">

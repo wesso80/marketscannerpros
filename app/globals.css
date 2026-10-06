@@ -657,7 +657,8 @@ a:hover {
   .msp-options-side-toggle { display: flex; }
   .msp-options-side-desktop { display: none !important; }
 }
-.sticky-strike { position: sticky; left: 50%; z-index: 1; }
+/* Strike stays in its own column. left:50% painted the header across the neighbouring Delta header. */
+.sticky-strike { position: static; left: auto; z-index: 1; }
 .msp-scanner-mobile { display: block !important; }
 .msp-scanner-mobile-cards { display: grid !important; }
 .msp-scanner-desktop, .msp-scanner-desktop-tabs { display: none !important; }

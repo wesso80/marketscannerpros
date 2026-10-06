@@ -27,10 +27,10 @@ export default function MobileOptionsChain({ rows, selected, onSelect }: {
     <div className="mb-2 flex gap-2" aria-label="Contract side" role="group">
       {(['CALL', 'PUT'] as const).map(value => <button key={value} type="button" aria-pressed={side === value} onClick={() => setSide(value)} className="min-h-10 rounded border border-zinc-700 px-4 text-sm">{value === 'CALL' ? 'Calls' : 'Puts'}</button>)}
     </div>
-    <div ref={box} className="relative max-h-64 overflow-y-auto rounded border border-zinc-800" data-chain-scroll>
+    <div ref={box} className="relative max-h-64 max-w-full overflow-x-hidden overflow-y-auto rounded border border-zinc-800" data-chain-scroll>
       <table className="w-full table-fixed border-collapse text-[10px] tabular-nums" aria-label={`${side === 'CALL' ? 'Calls' : 'Puts'} option chain`}>
         <colgroup>{[18,14,14,10,15,15,14].map((width,i)=><col key={i} style={{width:`${width}%`}}/>)}</colgroup>
-        <thead className="sticky top-0 z-20 bg-zinc-900"><tr>{['Strike','Bid','Ask','Vol','OI','IV','Delta'].map((label,i)=><th key={label} scope="col" className={`h-10 px-0.5 text-center font-medium ${i===0?'sticky left-0 z-30 bg-zinc-900':''}`}>{label}</th>)}</tr></thead>
+        <thead className="sticky top-0 z-20 bg-zinc-900"><tr>{['Strike','Bid','Ask','Vol','OI','IV','Delta'].map((label,i)=><th key={label} scope="col" className={`h-10 overflow-hidden whitespace-nowrap px-0.5 text-center font-medium ${i===0?'sticky left-0 z-30 bg-zinc-900':''}`}>{label}</th>)}</tr></thead>
         <tbody>{rows.map(row => {
           const contract = side === 'CALL' ? row.call : row.put;
           const active = selected?.side === side && selected.strike === row.strike;

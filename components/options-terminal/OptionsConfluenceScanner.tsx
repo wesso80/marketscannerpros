@@ -257,6 +257,8 @@ interface DataQuality {
   contractsCount: { calls: number; puts: number };
   availableStrikes: number[];
   lastUpdated: string;
+  /** Expiry the scan actually loaded. Display only; selection still comes from the expiry control. */
+  chainExpiryUsed?: string | null;
 }
 
 // AI Market State from backend
@@ -2276,7 +2278,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
   }
 
   if (embeddedInTerminal) {
-    return <OptionsResearchView symbol={symbol} result={result?.symbol === symbol ? result : null} blocked={optionsAnalysisBlocked} alignment={unifiedPermission} loading={loading} error={error} onScan={handleScan} controls={<>
+    return <OptionsResearchView symbol={symbol} selectedExpiry={selectedExpiry} result={result?.symbol === symbol ? result : null} blocked={optionsAnalysisBlocked} alignment={unifiedPermission} loading={loading} error={error} onScan={handleScan} controls={<>
       <label className="min-w-0 text-xs text-slate-400">Analysis timeframe<select aria-label="Analysis timeframe" value={selectedTF} onChange={e => setSelectedTF(e.target.value as ScanModeType)} className="mt-1 block max-w-full rounded border border-slate-700 bg-slate-950 p-2 text-sm text-slate-200">{TIMEFRAME_OPTIONS.map(tf => <option key={tf.value} value={tf.value}>{tf.label}</option>)}</select></label>
       <label className="min-w-0 text-xs text-slate-400">Expiry<select aria-label="Analysis expiry" value={selectedExpiry} disabled={loadingExpirations || expirations.length === 0} onChange={e => { setSelectedExpiry(e.target.value); router.replace(`${pathname}?${withOptionsExpiry(new URLSearchParams(params.toString()),e.target.value)}`, {scroll:false}); }} className="mt-1 block max-w-full rounded border border-slate-700 bg-slate-950 p-2 text-sm text-slate-200"><option value="">Shared default</option>{expirations.map(exp => <option key={exp.date} value={exp.date}>{researchDate(exp.date)}</option>)}</select></label>
       {expirationsError && <p role="alert" className="w-full text-xs text-amber-300">Expiry feed failed: {expirationsError}</p>}

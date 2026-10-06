@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { EarningsEntry } from '@/app/v2/_lib/api';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
+import { researchDate } from '@/components/terminal/researchPresentation';
 
 type SaveState = 'adding' | 'added' | 'exists' | 'signin' | 'error';
 export interface EarningsViewProps {
@@ -43,7 +44,7 @@ export default function EarningsView(props: EarningsViewProps) {
         return <li key={`${entry.symbol}/${entry.reportDate}/${index}`} data-earnings-row className="min-w-0 rounded-lg border border-slate-700 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <button type="button" className="min-h-10 break-all text-left text-sm font-semibold" aria-label={`Open ${entry.symbol} earnings in Symbol`} onClick={() => props.onOpenSymbol(entry.symbol)}>{entry.symbol}</button>
-            <span className="text-xs text-slate-400">{entry.reportDate || 'Date not supplied'}</span>
+            <span className="text-xs text-slate-400">{entry.reportDate ? researchDate(entry.reportDate) : 'Date not supplied'}</span>
           </div>
           <CollapsibleSection title="Report details" summary="Company and estimate">
             <p className="break-words text-sm">{entry.name || 'Company not supplied'}</p>

@@ -13,6 +13,8 @@ import { calendarDataWarning, upcomingConfirmedEvents } from '@/lib/calendarPres
 
 import { useEffect, useMemo, useState } from 'react';
 import {
+  DAILY_PICKS_CURRENT_PATH,
+  useDailyPicksBundle,
   useRegime,
   useSectorsHeatmap,
   useCryptoOverview,
@@ -40,7 +42,7 @@ import { COPY } from '@/components/visual/copy';
 import {OverviewPicks} from '@/components/market/OverviewPicks';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import {usePublicMarketFeed} from '@/hooks/usePublicMarketFeed';
-import {diffPicks,previousScanDate,topPicks,type PicksResponse} from '@/lib/market/overview';
+import {diffPicks,previousScanDate,topPicks,type MarketPick,type PicksResponse} from '@/lib/market/overview';
 import {quoteStamp,type DisplayQuote} from '@/lib/market/quotePresentation';
 import {formatMarketTime} from '@/lib/market/priceStamp';
 import {symbolHref} from '@/lib/market/links';
@@ -135,10 +137,25 @@ export default function CommandCenterPage() {
   const [asset,setAsset]=useState<'crypto'|'equity'>('crypto');
   const quotes=usePublicMarketFeed<{quotes:Record<string,DisplayQuote>}>('/api/cached/bulk-quotes?symbols=BTC,ETH,SOL,SPY,QQQ,IWM,DIA');
   const funding=usePublicMarketFeed<{coins:Array<{symbol:string;fundingRatePercent:number}>;timestamp?:string;freshnessStatus?:string;source?:string}>('/api/funding-rates');
-  const picks=usePublicMarketFeed<PicksResponse>('/api/scanner/daily-picks?limit=5&type=top');
+  // Same current-day limit=20 read as DeskFolds (one in-flight GET). The server re-sorts that
+  // window by verdict, so this shell takes the first 5 of the shared result rather than a separate limit=5.
+  const dailyPicks=useDailyPicksBundle();
+  const picks: { data: PicksResponse | null; loading: boolean; error: string | null } = {
+    data: dailyPicks.data ? {
+      success: dailyPicks.data.success,
+      topPicks: {
+        equity: dailyPicks.data.equity as MarketPick[],
+        crypto: dailyPicks.data.crypto as MarketPick[],
+      },
+    } : null,
+    loading: dailyPicks.loading,
+    error: dailyPicks.error || (dailyPicks.data?.success === false ? 'Data unavailable' : null),
+  };
   const rows=topPicks(picks.data,asset);
   const previousDate=previousScanDate(rows[0]?.scan_date,asset);
-  const previous=usePublicMarketFeed<PicksResponse>(previousDate?`/api/scanner/daily-picks?limit=5&type=top&date=${previousDate}`:null);
+  // Same query as the current-day read, plus the date, then the same top-5 slice. A limit=5
+  // previous day is a different verdict window and would report adds and drops that did not happen.
+  const previous=usePublicMarketFeed<PicksResponse>(previousDate?`${DAILY_PICKS_CURRENT_PATH}&date=${previousDate}`:null);
   const changes=diffPicks(rows,topPicks(previous.data,asset));
 
   // Snapshot the market environment on each visit so we can show the user what

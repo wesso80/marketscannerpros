@@ -38,3 +38,9 @@ export function researchDate(value: unknown): string {
  const date = new Date(`${value}T12:00:00Z`);
  return Number.isNaN(date.getTime()) ? 'Not supplied' : date.toLocaleDateString('en-AU', {timeZone:'UTC',weekday:'short',day:'numeric',month:'short'}).replace(',', '');
 }
+
+/** Display label for the expiry the operator actually selected. Does not choose which expiry is fetched. */
+export function selectedExpirySummary(input: { selectedExpiry?: string | null; analyzedExpiry?: string | null }): string {
+  const chosen = [input.selectedExpiry, input.analyzedExpiry].find((value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value));
+  return chosen ? researchDate(chosen) : 'Not selected';
+}

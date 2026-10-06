@@ -14,7 +14,6 @@ import UpgradeGate from '@/components/UpgradeGate';
 import PaidPreviewGate from '@/components/free/PaidPreviewGate';
 import IntelligenceGate from '@/components/free/IntelligenceGate';
 import { FREE_COPY } from '@/components/free/copy';
-import { useScannerResults } from '@/app/v2/_lib/api';
 import { trackFreeEvent } from '@/lib/free/funnel';
 let container: HTMLDivElement, root: Root, used: number;
 const fetcher = vi.fn();
@@ -34,10 +33,9 @@ beforeEach(() => {
 });
 afterEach(()=>{ act(()=>root.unmount()); container.remove(); vi.unstubAllGlobals(); });
 async function render(node: React.ReactNode) { await act(async()=>root.render(node)); }
-function QueueHarness(){ useScannerResults('equity');useScannerResults('crypto');return null; }
 it.each(['free','anonymous'])('%s Scanner and Today loads never spend scans',async tier=>{
   state.tier=tier;
-  await render(<><FreeScanner/><StartToday/><QueueHarness/></>);
+  await render(<><FreeScanner/><StartToday/></>);
   expect(fetcher.mock.calls.some(([url,opts])=>url==='/api/scanner/run' || opts?.method==='POST')).toBe(false);
   expect(fetcher.mock.calls.some(([url])=>url==='/api/msp-radar/daily')).toBe(false);
   expect(container.textContent).not.toMatch(/UNKNOWN|MISSING|DEGRADED|Awaiting data|Pending/);
@@ -60,7 +58,7 @@ it('locked examples cannot leak paid fixture values or mount paid children',asyn
   expect(container.textContent).toContain('Example');expect(container.innerHTML).not.toMatch(/SECRET|987654/);
 });
 it('waits for the tier without showing a locked wall',async()=>{
-  state.isLoading=true;await render(<><UpgradeGate requiredTier="pro" feature="Options"/><QueueHarness/></>);
+  state.isLoading=true;await render(<UpgradeGate requiredTier="pro" feature="Options"/>);
   expect(container.textContent).toContain('Loading');expect(container.textContent).not.toContain('Upgrade');expect(fetcher).not.toHaveBeenCalled();
 });
 it('free analytics respect consent and deduplicate daily first scan',()=>{

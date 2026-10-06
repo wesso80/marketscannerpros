@@ -1,5 +1,3 @@
-import { useUserTier } from '@/lib/useUserTier';
-import { isPaidTier } from '@/lib/tiers';
 import type { CanonicalResult } from '@/lib/scoring/canonical/types';
 import type { ScannerScorePayload } from '@/lib/scanner/scoreContract';
 import type { BacktestStatisticsBasis } from '@/lib/backtest/balanceStatistics';
@@ -981,20 +979,47 @@ export function useRegime() {
   return useApi(fetchRegime);
 }
 
-export function useScannerResults(type: 'crypto' | 'equity' = 'equity', timeframe: ScanTimeframe = 'daily') {
-  const { tier, isLoading, isAdmin } = useUserTier();
-  const live = isAdmin || isPaidTier(tier);
-  return useApi(() => isLoading ? Promise.resolve(null as unknown as ScannerResponse)
-    : live ? fetchScannerResults(type, timeframe) : fetchSavedScannerResults(type), [type, timeframe, live, isLoading]);
+/** One GET of the stored daily snapshot for Today. Does not POST /api/scanner/run. */
+export interface DailyPicksBundle {
+  success: boolean;
+  equity: unknown[];
+  crypto: unknown[];
+  dataQuality?: ScannerResponse['metadata']['dataQuality'];
 }
 
-/** Public database snapshot, deliberately no POST and no fabricated live/composite score. */
-export async function fetchSavedScannerResults(type: 'crypto' | 'equity'): Promise<ScannerResponse> {
-  const data = await apiFetch<{ topPicks: Record<string, Array<ScanResult & { indicators?: Record<string, unknown> }>>; dataQuality: ScannerResponse['metadata']['dataQuality'] }>('/api/scanner/daily-picks?limit=20');
-  const results = (data.topPicks?.[type] ?? []).map(row => ({ ...row, type, timeframe: 'daily',
-    score: Number(row.score), price: row.price == null ? undefined : Number(row.price),
-  }));
-  return { success: true, results, metadata: { count: results.length, timestamp: data.dataQuality?.computedAt ?? '', dataQuality: data.dataQuality } };
+/** Current-day daily picks. Today shell and DeskFolds share this exact query. */
+export const DAILY_PICKS_CURRENT_PATH = '/api/scanner/daily-picks?limit=20';
+
+/**
+ * One in-flight request is shared by the Today shell and DeskFolds so a page load
+ * does not issue a second GET for the same snapshot.
+ */
+let dailyPicksInflight: Promise<DailyPicksBundle> | null = null;
+
+export function fetchDailyPicksBundle(): Promise<DailyPicksBundle> {
+  if (dailyPicksInflight) return dailyPicksInflight;
+  const promise = apiFetch<{
+    success?: boolean;
+    topPicks?: { equity?: unknown[]; crypto?: unknown[] };
+    dataQuality?: ScannerResponse['metadata']['dataQuality'];
+  } | null>(DAILY_PICKS_CURRENT_PATH).then((data) => {
+    if (!data || typeof data !== 'object') return { success: false, equity: [], crypto: [] };
+    return {
+      success: data.success !== false,
+      equity: Array.isArray(data.topPicks?.equity) ? data.topPicks.equity : [],
+      crypto: Array.isArray(data.topPicks?.crypto) ? data.topPicks.crypto : [],
+      dataQuality: data.dataQuality,
+    };
+  }).finally(() => {
+    if (dailyPicksInflight === promise) dailyPicksInflight = null;
+  });
+  dailyPicksInflight = promise;
+  return promise;
+}
+
+/** Shared current-day daily-picks read for the Today shell and the research queue. */
+export function useDailyPicksBundle() {
+  return useApi(fetchDailyPicksBundle, ['daily-picks']);
 }
 
 export function useGoldenEgg(symbol: string | null, timeframe: ScanTimeframe = 'daily', assetType?: string) {

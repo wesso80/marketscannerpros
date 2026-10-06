@@ -3,6 +3,7 @@ import React from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import EarningsView, { earningsEstimate, type EarningsViewProps } from '@/components/research/EarningsView';
+import { researchDate } from '@/components/terminal/researchPresentation';
 
 const entries = Array.from({length: 8}, (_, index) => ({symbol: `TEST${index}`, name: `Fixture company ${index}`, reportDate: '2026-10-08', fiscalDateEnding: '2026-09-30', estimate: 1.234567, currency: 'USD'}));
 const base: EarningsViewProps = {thisWeek: entries, nextWeek: entries.slice(0, 2), majorEarnings: [], loading: false, error: null, watchlistStatus: {}, onOpenSymbol: vi.fn(), onAddToWatchlist: vi.fn()};
@@ -13,6 +14,9 @@ it('shows five reports and one source, preserves API order, and resets expansion
   const original = JSON.stringify(entries);
   const {container} = render(<EarningsView {...base}/>);
   expect(container.querySelectorAll('[data-earnings-row]')).toHaveLength(5);
+  expect(container.textContent).toContain(researchDate('2026-10-08'));
+  expect(container.textContent).not.toContain('2026-10-08');
+  expect(researchDate('2026-10-07')).toBe('Wed 7 Oct');
   expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);
   expect(container.querySelectorAll('[data-research-verdict]')).toHaveLength(1);
   expect(container.querySelectorAll('details[open]')).toHaveLength(0);

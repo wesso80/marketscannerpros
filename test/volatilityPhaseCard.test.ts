@@ -27,7 +27,7 @@ describe('volatility phase card', () => {
 
     expect(page).toContain('VEVolatilityPhaseCard');
     expect(page.indexOf('<VEVolatilityPhaseCard')).toBeGreaterThan(page.indexOf('<VETrapAlert'));
-    expect(page.indexOf('<VEVolatilityPhaseCard')).toBeLessThan(page.indexOf('Layer 1'));
+    expect(page.indexOf('<VEVolatilityPhaseCard')).toBeLessThan(page.indexOf('code="VOL"'));
     expect(page).toContain('volatility={reading.volatility}');
     expect(page).toContain('phase={reading.phasePersistence}');
     expect(page).toContain('invalidation={reading.invalidation}');

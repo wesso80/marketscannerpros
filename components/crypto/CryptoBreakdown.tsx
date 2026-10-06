@@ -3,7 +3,7 @@ import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import ChipRow from '@/components/visual/ChipRow';
 import type {StampLineProps} from '@/components/visual/StampLine';
 import PageSourceLine from '@/components/visual/SourceLine';
-import {symbolText,symbolMetric} from '@/lib/presentation/symbolDisplay';
+import {readerLabel,readerSourceLabel,symbolText,symbolMetric} from '@/lib/presentation/symbolDisplay';
 import {useEffect,useState} from 'react';
 import {normalizeCryptoSymbol} from '@/lib/crypto/breakdown/symbol';
 import type {Breakdown} from '@/lib/crypto/breakdown/types';
@@ -30,7 +30,7 @@ export default function CryptoBreakdown({symbol,timeframe:_,coinId,compact=false
  },[base,coinId,refresh,onStamp]);
  if(compact){
   const metrics=(section:Breakdown['sections'][keyof Breakdown['sections']])=>(section.value?.metrics??[]).filter(m=>m.value!=null&&(typeof m.value!=='number'||Number.isFinite(m.value)));
-  const detail=(key:keyof Breakdown['sections'])=>data&&<div className="space-y-2">{metrics(data.sections[key]).length===0&&<p className="text-xs text-amber-300">No observations returned for this section.</p>}<dl className="grid grid-cols-2 gap-3">{metrics(data.sections[key]).map((m,i)=><div key={i}><dt className="text-xs text-[var(--msp-text-muted)]">{symbolText(m.label)}</dt><dd className="break-words text-sm">{symbolMetric(m.value,m.unit)}</dd></div>)}</dl>{data.sections[key].value?.notes.map((n,i)=><p key={i} className="text-xs">{symbolText(n.replace(/Locked rule sha256 prefix [a-f0-9]+\.\s*/i,''))}</p>)}</div>;
+  const detail=(key:keyof Breakdown['sections'])=>data&&<div className="space-y-2">{metrics(data.sections[key]).length===0&&<p className="text-xs text-amber-300">No observations returned for this section.</p>}<dl className="grid grid-cols-2 gap-3">{metrics(data.sections[key]).map((m,i)=><div key={i}><dt className="text-xs text-[var(--msp-text-muted)]">{symbolText(readerLabel(m.label))}</dt><dd className="break-words text-sm">{symbolMetric(m.value,m.unit)}</dd></div>)}</dl>{data.sections[key].value?.notes.map((n,i)=><p key={i} className="text-xs">{symbolText(readerLabel(n.replace(/Locked rule sha256 prefix [a-f0-9]+\.\s*/i,'')))}</p>)}</div>;
   const groups=[['Scenario map','levels'],['Derivatives','derivatives'],['Volatility and range','earlyContext'],['Market and supply','marketContext']] as const;
   return <div aria-label="Crypto breakdown" className="space-y-3">
    {loading&&<p role="status">Loading daily observations…</p>}{error&&<p role="alert" className="text-sm text-amber-300">Crypto data feed failed. <button className="min-h-10 underline" onClick={()=>setRefresh(v=>v+1)}>Retry</button></p>}
@@ -39,7 +39,7 @@ export default function CryptoBreakdown({symbol,timeframe:_,coinId,compact=false
      {detail(key)}{key==='derivatives'&&<a className="inline-flex min-h-10 items-center underline" href={`/tools/crypto-dashboard?symbol=${encodeURIComponent(base)}`}>Open Crypto Derivatives</a>}
     </CollapsibleSection>)}
     <ChipRow items={[{id:'evidence',label:`${Object.values(data.sections).some(s=>['Unknown','Degraded'].includes(s.status))?'Some data checks failed':'Evidence and data checks'} · ${Object.keys(data.sections).length} sections`,warning:Object.values(data.sections).some(s=>['Unknown','Degraded'].includes(s.status)),detail:<div className="space-y-3">{(['price','ruleCheck','liquidity','supply','risks','sourcesCheck'] as const).map(key=><div key={key}><h3 className="font-semibold">{COPY.titles[key]}</h3>{detail(key)}</div>)}</div>}]}/>
-    {showSource&&<PageSourceLine source={[...new Set([data.top?.daily.source,data.top?.derivatives.source].filter(Boolean))].join(' · ')} asOf={data.top?.daily.asOf} basis={data.top?.daily.basis}/>}
+    {showSource&&<PageSourceLine source={readerSourceLabel([...new Set([data.top?.daily.source,data.top?.derivatives.source].filter(Boolean))].join(' · '))} asOf={data.top?.daily.asOf} basis={data.top?.daily.basis}/>}
    </>}
    <p className="text-xs text-[var(--msp-text-muted)]">{COPY.footer}</p>
   </div>;

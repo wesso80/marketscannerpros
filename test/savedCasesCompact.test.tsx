@@ -45,6 +45,13 @@ it('preserves Symbol navigation, explicit suggestion apply, outcome values and d
  await screen.findByText('7 saved research cases loaded');
 });
 
+it('states an empty archive once', async () => {
+  mocks.list.mockResolvedValueOnce([]);
+  const {container} = render(<Research/>);
+  await screen.findByText('No saved research cases yet. Save a case from Scanner or Symbol to build a research archive.');
+  expect(container.textContent?.split('No saved research cases yet').length).toBe(2);
+});
+
 it('distinguishes failed refresh from an empty archive and hides backend error codes',async()=>{
  mocks.list.mockRejectedValueOnce(new Error('DATABASE_UNKNOWN secret detail'));
  const {container}=render(<Research/>);await screen.findByText('The last request did not complete.');

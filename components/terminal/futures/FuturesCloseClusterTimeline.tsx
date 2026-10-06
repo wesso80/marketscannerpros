@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { FuturesAnchorMode, FuturesCloseCalendarResponse, FuturesCloseCalendarRow } from '@/lib/terminal/futures/futuresCloseCalendar';
+import { horizonChipLabel } from '@/lib/terminal/horizonChip';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 
 type FuturesCloseClusterTimelineProps = {
@@ -61,6 +62,7 @@ export default function FuturesCloseClusterTimeline({ closeCalendar }: FuturesCl
   const showAll = expandedKey === scheduleKey;
   const visible = showAll ? schedule : schedule.slice(0, PREVIEW_COUNT);
   const anchor = closeCalendar?.anchorMode ? ANCHOR_LABEL[closeCalendar.anchorMode] : 'Schedule basis not supplied';
+  const horizonLabel = horizonChipLabel(closeCalendar?.horizonDays);
   const detailSummary = [
     timeline.length ? `${timeline.length} markers` : '',
     clusters.length ? `${clusters.length} groups` : '',
@@ -70,6 +72,7 @@ export default function FuturesCloseClusterTimeline({ closeCalendar }: FuturesCl
     <section className="min-w-0 rounded-lg border border-emerald-500/25 bg-slate-950/50 p-3" aria-label="Futures close calendar timeline">
       <div className="mb-2 flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <span className="rounded border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em] text-emerald-200">Close Calendar</span>
+        {horizonLabel ? <span data-horizon-chip className="rounded border border-slate-700 px-2 py-0.5 text-[11px] text-slate-200">{horizonLabel}</span> : null}
         <span className="min-w-0 break-words text-xs text-slate-400">{anchor} · {schedule.length} upcoming</span>
       </div>
 

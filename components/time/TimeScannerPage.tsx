@@ -18,6 +18,7 @@ import UpgradeGate from '@/components/UpgradeGate';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import TimeConfluenceWidget from '@/components/TimeConfluenceWidget';
+import { timeEngineLabel, timeEngineProse } from '@/lib/presentation/timeEngineLabel';
 
 type ScanModeType = 'scalping' | 'intraday_30m' | 'intraday_1h' | 'intraday_4h' | 'swing_1d' | 'swing_3d' | 'swing_1w' | 'macro_monthly' | 'macro_yearly';
 
@@ -725,7 +726,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
               <div className="space-y-3">
                 <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2.5">
                   <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Analysis</div>
-                  <div className="text-xs leading-relaxed text-slate-300">{scanData.reasoning || 'Run scan for analysis.'}</div>
+                  <div className="text-xs leading-relaxed text-slate-300">{timeEngineProse(scanData.reasoning || 'Run scan for analysis.')}</div>
                 </div>
 
                 {(() => {
@@ -803,7 +804,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
         {scanData && scanData.direction === 'neutral' && (
           <section className="w-full rounded-2xl border border-slate-700/50 bg-slate-900/30 px-4 py-3">
             <div className="flex items-center gap-3">
-              <div className="rounded-xl border border-slate-700 bg-slate-800/30 px-3 py-1.5 text-sm font-bold text-slate-400">↔ NEUTRAL</div>
+              <div className="rounded-xl border border-slate-700 bg-slate-800/30 px-3 py-1.5 text-sm font-bold text-slate-400">↔ Mixed evidence</div>
               <div className="text-xs text-slate-400">
                 No directional bias detected — {scanData.reasoning || 'mixed signals across timeframes'}
               </div>
@@ -1056,7 +1057,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
                   )}
                 </div>
                 <div className="mt-3 text-xs text-slate-500">
-                  Alignment {input.setup.window.alignmentCount}/{input.setup.window.tfCount} • Window {input.setup.window.status.toLowerCase().replaceAll('_', ' ')}
+                  Alignment {input.setup.window.alignmentCount}/{input.setup.window.tfCount} • Window {timeEngineLabel(input.setup.window.status)}
                 </div>
               </div>
             </div>
@@ -1069,7 +1070,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
 
               <div className="rounded-2xl border border-slate-700 bg-slate-950/35 p-3 shadow-sm">
                 <div className="space-y-2">
-                  <TimingField label="Close" value={input.execution.closeConfirmation.toLowerCase().replaceAll('_', ' ')} />
+                  <TimingField label="Close" value={timeEngineLabel(input.execution.closeConfirmation)} />
                   <TimingField label="Risk" value={input.execution.riskState} />
                   <TimingField label="Liquidity" value={input.execution.liquidityOK ? 'Adequate' : 'Thin'} />
 
@@ -1080,7 +1081,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
                   </div>
 
                   <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2 text-xs text-slate-400">
-                    {input.execution.notes?.[0] || 'No timing notes'}
+                    {timeEngineProse(input.execution.notes?.[0] || 'No timing notes')}
                   </div>
                 </div>
               </div>

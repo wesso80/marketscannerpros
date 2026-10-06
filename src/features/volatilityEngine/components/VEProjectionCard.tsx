@@ -1,6 +1,7 @@
 'use client';
 
 import type { SignalProjection, VolatilityState, PhasePersistence } from '@/src/features/volatilityEngine/types';
+import { volatilityBadgeLabel } from '@/lib/presentation/volatilityLayerLabel';
 
 interface ProjectionCardProps {
   proj: SignalProjection;
@@ -50,8 +51,8 @@ export default function VEProjectionCard({ proj, volatility, phase, currentPrice
 
     return (
       <div className="rounded-xl border border-white/10 bg-white/5 p-5">
-        <div className="mb-3 flex items-center gap-2">
-          <span className="rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.62rem] font-bold text-amber-300">PROJ</span>
+        <div className="mb-3 flex min-w-0 flex-wrap items-center gap-2">
+          <span className="shrink-0 whitespace-nowrap rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.62rem] font-semibold text-amber-300">{volatilityBadgeLabel('PROJ')}</span>
           <h3 className="text-xs font-semibold tracking-widest text-amber-400">
             Outcome Projection
           </h3>
@@ -117,8 +118,8 @@ export default function VEProjectionCard({ proj, volatility, phase, currentPrice
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.62rem] font-bold text-amber-300">PROJ</span>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className="shrink-0 whitespace-nowrap rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.62rem] font-semibold text-amber-300">{volatilityBadgeLabel('PROJ')}</span>
           <h3 className="text-xs font-semibold tracking-widest text-amber-400">
             Outcome Projection
           </h3>

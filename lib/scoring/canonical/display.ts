@@ -6,8 +6,11 @@
  * the target printing before the invalidation and the expected R after costs, with horizon and sample size;
  * everything else is labelled uncalibrated. Results stored before Phase 3 (no scoreBasis) render as before.
  */
+import { ordinal } from '@/lib/utils/ordinal';
 import { CANONICAL_MIN_RR } from './thresholds';
 import type { CanonicalLevels, CanonicalResult } from './types';
+
+export { ordinal };
 
 type C = Pick<CanonicalResult, 'score' | 'permission'> & Partial<Pick<CanonicalResult, 'scoreBasis' | 'calibration' | 'factorScore'>>;
 
@@ -71,12 +74,6 @@ export function calibrationSummary(c: CS | null | undefined): string | null {
   return `P(target before invalidation) ${Math.round(k.pTargetFirst * 100)}% · expected ${r}R after ${k.costsBps} bps costs · `
     + `${k.horizonBars}-bar horizon · n=${k.sample.toLocaleString('en-US')} historical setups`
     + (k.validatedEdge ? '' : ' · no validated edge');
-}
-
-export function ordinal(n: number): string {
-  const v = Math.round(n), m100 = v % 100, m10 = v % 10;
-  const suf = m100 >= 11 && m100 <= 13 ? 'th' : m10 === 1 ? 'st' : m10 === 2 ? 'nd' : m10 === 3 ? 'rd' : 'th';
-  return `${v}${suf}`;
 }
 
 /** Short tags for the cautions on a verdict (the AT_OPPOSING_LEVEL / MOMENTUM_DISAGREES watch reasons), e.g.

@@ -18,6 +18,7 @@ import ChipRow from '@/components/visual/ChipRow';
 import SourceLine from '@/components/visual/SourceLine';
 import StatTile from '@/components/visual/StatTile';
 import { DERIVATIVE_FEED_BASIS, conditionsPhrase, derivativeDecisionReady, pressurePhrase, sydneyClock } from '@/lib/crypto/derivativeDesk';
+import { formatMarketTime } from '@/lib/market/priceStamp';
 
 export default function CryptoDashboard(props: { embeddedInDashboard?: boolean } = {}) {
   return <PaidPreviewGate tool="Crypto Derivatives"><CryptoDashboardPaid {...props} /></PaidPreviewGate>;
@@ -396,7 +397,7 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
 
       <SourceLine
         source="Funding and long/short: OKX · OI: CoinGecko, top 3 exchanges"
-        basis={`8h funding equivalents · account ratios · pinned perpetual contracts · no shared provider observation time supplied${lastUpdate ? ` · Last response with data received ${lastUpdate.toISOString()} (request completion, not a provider observation time)` : ''}`}
+        basis={`8h funding equivalents · account ratios · pinned perpetual contracts · no shared provider observation time supplied${lastUpdate ? ` · Last response with data received ${formatMarketTime(lastUpdate.toISOString(), 'Australia/Sydney') ?? 'time not recorded'} (request completion, not a provider observation time)` : ''}`}
       />
       <CoinGeckoCredit className="mt-2 text-center" />
     </div>

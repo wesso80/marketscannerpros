@@ -5,6 +5,7 @@ import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import { MarketMetrics, MarketSparkline } from '@/components/explorer/MarketsSummary';
 import { marketText } from '@/lib/marketsPresentation';
+import { assetExplorerLabel } from '@/lib/presentation/assetExplorerLabel';
 
 import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -580,7 +581,7 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
               <div className="grid gap-2 lg:grid-cols-[1fr_420px]">
                 <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                   <div className="mb-2 flex items-center justify-between">
-                    <p className="text-[11px] font-medium text-[var(--msp-text-muted)]">Zone 1 · Equity analysis gate</p>
+                    <p className="text-[11px] font-medium text-[var(--msp-text-muted)]">{assetExplorerLabel('Zone 1')}</p>
                     <span className="text-[11px] text-slate-500">US session anchor</span>
                   </div>
                   <div className="mb-2 flex flex-wrap gap-1">
@@ -612,8 +613,8 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
                 ['Price', formatPrice(data.quote.price)],
                 ['24h', `${(data.quote.changePercent ?? 0) >= 0 ? '+' : ''}${(data.quote.changePercent ?? 0).toFixed(2)}%`],
                 ['Permission', upeSignal ? (upeSignal.eligibilityUser === 'eligible' ? 'Aligned' : upeSignal.eligibilityUser === 'conditional' ? 'Conditional' : 'Not aligned') : 'Pending'],
-                ['CRCS', upeSignal && Number.isFinite(upeSignal.crcsUser) ? upeSignal.crcsUser.toFixed(1) : '—'],
-                ['ΔHr', upeSignal && Number.isFinite(upeSignal.microAdjustment) ? `${upeSignal.microAdjustment >= 0 ? '+' : ''}${upeSignal.microAdjustment.toFixed(2)}` : '—'],
+                [assetExplorerLabel('CRCS'), upeSignal && Number.isFinite(upeSignal.crcsUser) ? upeSignal.crcsUser.toFixed(1) : '—'],
+                [assetExplorerLabel('ΔHr'), upeSignal && Number.isFinite(upeSignal.microAdjustment) ? `${upeSignal.microAdjustment >= 0 ? '+' : ''}${upeSignal.microAdjustment.toFixed(2)}` : '—'],
                 ['Trend', getQuickSignals(data).trend.label],
                 ['Momentum', getQuickSignals(data).momentum.label],
                 ['Volatility', getQuickSignals(data).volatility.label],
@@ -630,8 +631,7 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="mb-1 flex items-center justify-between">
                   <div>
-                    <p className="text-[11px] font-medium text-[var(--msp-text-muted)]">Zone 2 · Action</p>
-                    <h2 className="text-xs font-bold">Price and alignment</h2>
+                    <h2 className="text-xs font-bold">{assetExplorerLabel('Zone 2 · Action')}</h2>
                   </div>
                   <button
                     type="button"
@@ -740,7 +740,7 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
                             href={`/tools/terminal?tab=time-confluence&symbol=${data.company.symbol}&eligibility=${upeSignal.eligibilityUser}&crcs=${upeSignal.crcsUser.toFixed(1)}`}
                             className="rounded border border-emerald-500/50 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-200"
                           >
-                            Open Scanner
+                            Open Time Confluence
                           </Link>
                         )}
                       </div>
@@ -758,8 +758,8 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
 
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="mb-1">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Context</p>
-                  <h2 className="text-xs font-bold">Trend / RS / Volatility Context</h2>
+                  <p className="text-[11px] font-medium text-[var(--msp-text-muted)]">{assetExplorerLabel('Zone 2 • Context')}</p>
+                  <h2 className="text-xs font-bold">Trend, relative strength, and volatility</h2>
                 </div>
                 <div className="grid gap-2">
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
@@ -788,7 +788,7 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
             {/* Open by default; the user can still collapse it. Native <details> keeps the content mounted either way. */}
             <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
               <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
-                <span>Zone 3 • Informational</span>
+                <span>{assetExplorerLabel('Zone 3')}</span>
                 <span className="text-[11px] text-slate-500 group-open:hidden">Expand</span>
                 <span className="hidden text-[11px] text-slate-500 group-open:inline">Collapse</span>
               </summary>

@@ -22,6 +22,7 @@ import TabBar from '@/components/visual/TabBar';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import { marketText } from '@/lib/marketsPresentation';
+import { assetExplorerLabel } from '@/lib/presentation/assetExplorerLabel';
 import { FREE_COPY } from '@/components/free/copy';
 import FreeLoading from '@/components/free/Loading';
 import { useUserTier } from '@/lib/useUserTier';
@@ -532,13 +533,13 @@ export default function ExplorerPage() {
       {tab === 'Crypto Intel' && (
         <div className="space-y-2">
           <section className="rounded-lg border border-slate-700 bg-slate-900 p-2">
-            <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • News &amp; Guides</p>
-            <CryptoNewsWidget title="Crypto News &amp; Guides" compact />
+            <p className="mb-1 text-[11px] font-medium text-slate-400">{assetExplorerLabel('Zone 2 • News & Guides')}</p>
+            <CryptoNewsWidget title="Crypto news and guides" compact />
           </section>
 
           <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
             <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
-              <span>Zone 3 • Institutional Treasury Holdings</span>
+              <span>{assetExplorerLabel('Zone 3 • Institutional Treasury Holdings')}</span>
               <span className="text-[11px] text-slate-500 group-open:hidden">Expand</span>
               <span className="hidden text-[11px] text-slate-500 group-open:inline">Collapse</span>
             </summary>

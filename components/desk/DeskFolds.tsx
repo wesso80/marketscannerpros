@@ -202,11 +202,11 @@ export default function DeskFolds() {
   const movers = useMarketMovers();
   const news = useNews();
   const calendar = useEconomicCalendar();
-  // Canonical research queue — identical source, score and order to Scanner's ranked mode.
+  // Today's research queue from the shared current-day daily-picks read.
   const ranked = useRankedQueue('daily');
   // Adapter kept so the existing panels below read the same shape they always did.
-type CachedSymbol = { symbol: string; score: number; direction: string; price: number; changePct: number | null; rsi: number | null; adx: number | null; type: string };
-const toCached = (r: RankedQueueRow): CachedSymbol => ({ symbol: r.symbol, score: r.mspScore, direction: r.direction, price: r.price ?? 0, changePct: r.changePct, rsi: r.rsi, adx: r.adx, type: r.assetClass });
+type CachedSymbol = { symbol: string; score: number; direction: string; price: number | null; changePct: number | null; rsi: number | null; adx: number | null; type: string };
+const toCached = (r: RankedQueueRow): CachedSymbol => ({ symbol: r.symbol, score: r.mspScore, direction: r.direction, price: r.price, changePct: r.changePct, rsi: r.rsi, adx: r.adx, type: r.assetClass });
 const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`);
   const cached = useMemo(() => ({
     equity: ranked.equity.map(toCached),
@@ -219,58 +219,64 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
   }), [ranked.equity, ranked.crypto, ranked.rows, ranked.loading, ranked.error, ranked.stale, ranked.ageMinutes]);
   const { stale: cacheStale, ageMinutes: cacheAgeMinutes } = cached;
 
-  /* -- Magnificent 7 live quotes ---------------------------------------- */
+  /* -- Magnificent 7 + index ETF quotes (one request, under the 20-symbol cap) -- */
   const [mag7, setMag7] = useState<Mag7Quote[]>([]);
   const [mag7Loading, setMag7Loading] = useState(true);
-  useEffect(() => {
-    let cancelled = false;
-    async function loadMag7() {
-      try {
-        const res = await fetch('/api/scanner/quotes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ symbols: [...MAG7_SYMBOLS] }),
-        });
-        if (!res.ok) throw new Error('quotes fetch failed');
-        const data = await res.json();
-        if (cancelled) return;
-        const bySymbol = new Map<string, Mag7Quote>((data.quotes || []).map((q: Mag7Quote) => [q.symbol, q]));
-        setMag7(MAG7_SYMBOLS.map(sym => bySymbol.get(sym) || { symbol: sym, price: null, change: null, changePercent: null, error: 'No data' }));
-      } catch {
-        if (!cancelled) setMag7(MAG7_SYMBOLS.map(sym => ({ symbol: sym, price: null, change: null, changePercent: null, error: 'No data' })));
-      } finally {
-        if (!cancelled) setMag7Loading(false);
-      }
-    }
-    loadMag7();
-    return () => { cancelled = true; };
-  }, []);
-
-  /* -- Major Indices live quotes ---------------------------------------- */
   const [indices, setIndices] = useState<IndexQuote[]>([]);
   const [indicesLoading, setIndicesLoading] = useState(true);
   useEffect(() => {
-    let cancelled = false;
-    async function loadIndices() {
+    const controller = new AbortController();
+    let timedOut = false;
+    // Same 30s AbortController bound as the daily-picks client fetch.
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 30_000);
+    const blank = (sym: string): Mag7Quote => ({ symbol: sym, price: null, change: null, changePercent: null, error: 'No data' });
+    const showNoReading = () => {
+      setMag7(MAG7_SYMBOLS.map(blank));
+      setIndices(INDEX_SYMBOLS.map(blank));
+      setMag7Loading(false);
+      setIndicesLoading(false);
+    };
+    async function loadQuotes() {
       try {
         const res = await fetch('/api/scanner/quotes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ symbols: [...INDEX_SYMBOLS] }),
+          body: JSON.stringify({ symbols: [...MAG7_SYMBOLS, ...INDEX_SYMBOLS] }),
+          signal: controller.signal,
         });
         if (!res.ok) throw new Error('quotes fetch failed');
         const data = await res.json();
-        if (cancelled) return;
-        const bySymbol = new Map<string, IndexQuote>((data.quotes || []).map((q: IndexQuote) => [q.symbol, q]));
-        setIndices(INDEX_SYMBOLS.map((sym) => bySymbol.get(sym) || { symbol: sym, price: null, change: null, changePercent: null, error: 'No data' }));
-      } catch {
-        if (!cancelled) setIndices(INDEX_SYMBOLS.map((sym) => ({ symbol: sym, price: null, change: null, changePercent: null, error: 'No data' })));
+        if (timedOut) {
+          showNoReading();
+          return;
+        }
+        if (controller.signal.aborted) return;
+        const bySymbol = new Map<string, Mag7Quote>((data.quotes || []).map((q: Mag7Quote) => [q.symbol, q]));
+        setMag7(MAG7_SYMBOLS.map(sym => bySymbol.get(sym) || blank(sym)));
+        setIndices(INDEX_SYMBOLS.map(sym => bySymbol.get(sym) || blank(sym)));
+      } catch (err) {
+        if (timedOut) {
+          showNoReading();
+          return;
+        }
+        if (controller.signal.aborted || (err instanceof DOMException && err.name === 'AbortError')) return;
+        showNoReading();
       } finally {
-        if (!cancelled) setIndicesLoading(false);
+        clearTimeout(timer);
+        if (!controller.signal.aborted) {
+          setMag7Loading(false);
+          setIndicesLoading(false);
+        }
       }
     }
-    loadIndices();
-    return () => { cancelled = true; };
+    loadQuotes();
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, []);
 
   /* -- Derived data ----------------------------------------------------- */
@@ -285,7 +291,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
   const crGainers = allGainers.filter((m: Mover) => m.asset_class === 'crypto').slice(0, 5);
   const crLosers = allLosers.filter((m: Mover) => m.asset_class === 'crypto').slice(0, 5);
   const articles = (news.data?.articles || []).slice(0, 3);
-  // Top 5 of the canonical ranked queue — same order a user sees on Scanner. Movers are context, not the queue.
+  // Top 5 of today's daily picks, in the order the daily-picks feed already returned. Movers are context, not this list.
   const scannerQueue = cached.all.slice(0, 5);
   const moverQueue: Mover[] = [];
   // Same degraded-feed rule and wording as the Session overview (lib/analysis/sessionDataHealth.ts).
@@ -396,7 +402,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
           <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
             <div>
               <SectionEyebrow>Today&apos;s research queue · Ranked queue (not yet validated)</SectionEyebrow>
-              <h2 style={{ fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>Top of the Scanner&apos;s ranked queue.</h2>
+              <h2 style={{ fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>Top of today&apos;s daily picks.</h2>
               <p className="mt-1" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', lineHeight: 1.5 }}>Click a symbol to open Symbol. Review context only; no trade instructions.</p>
             </div>
             <DSButton variant="ghost" size="sm" onClick={() => navigateTo('scanner')}>Open scanner</DSButton>
@@ -445,7 +451,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
                         </div>
                         <div className="grid grid-cols-3 gap-2">
                           <MetricCol label="Score" value={row.score} />
-                          <MetricCol label="Price" value={fmtPrice(row.price)} align="right" />
+                          <MetricCol label="Price" value={row.price == null ? 'No reading' : fmtPrice(row.price)} align="right" />
                           <MetricCol label="Last bar" value={fmtMove(row.changePct)} tone={moveColor} align="right" />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

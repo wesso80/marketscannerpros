@@ -63,6 +63,27 @@ export function zoneAbbreviation(utcMs: number, timeZone: string): string {
   return fallback || timeZone;
 }
 
+const BARE_CLOCK = /^(\d{1,2}):(\d{2})$/;
+
+/**
+ * Zone label for a clock that is already a bare HH:mm (optional leading ~).
+ * Sentences and clocks that already name a zone are left unchanged.
+ */
+export function labelReaderClock(clock: string, utcMs: number, timeZone: string): string {
+  const trimmed = clock.trim();
+  const approximate = trimmed.startsWith('~');
+  const time = (approximate ? trimmed.slice(1) : trimmed).trim();
+  if (!BARE_CLOCK.test(time) || !Number.isFinite(utcMs) || !timeZone.trim()) return clock;
+  let zone = '';
+  try {
+    zone = zoneAbbreviation(utcMs, timeZone);
+  } catch {
+    return clock;
+  }
+  if (!zone) return clock;
+  return `${approximate ? '~' : ''}${time} ${zone}`;
+}
+
 export function formatEventTime(event: EventTimeSource, timeZone: string = viewerTimeZone()): EventTimeDisplay {
   const ms = Date.parse(event.releaseTimeUtc ?? '');
   if (Number.isFinite(ms)) {

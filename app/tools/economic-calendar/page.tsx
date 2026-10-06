@@ -10,6 +10,7 @@ import { COUNTRIES, PRIMARY_COUNTRIES, SECONDARY_COUNTRIES, countryFlag } from '
 import { HIGH_IMPACT_DANGER_WINDOW } from '@/lib/macro/calendar/normalize';
 import { ALL_FOCUS_ASSETS, DEFAULT_FOCUS_ASSETS, selectNextRelevantEvent } from '@/lib/macro/calendar/relevance';
 import { ET_ZONE, formatCountdown, zonedClock, zonedDateKey } from '@/lib/macro/calendar/time';
+import { labelReaderClock } from '@/lib/eventTimeDisplay';
 import type {
   AssetTag,
   BojContext,
@@ -129,9 +130,14 @@ function isInflationOrJobsEvent(event: CalendarEvent) {
   return event.category === 'inflation' || event.category === 'employment';
 }
 
-function displayTime(event: EnrichedEvent, mode: TimeMode): string {
-  const base = mode === 'local' ? event.releaseTimeLocal : mode === 'et' ? formatEt(event.time) : event.userClock;
-  return event.timingConfirmed ? base : `~${base}`;
+function displayTime(event: EnrichedEvent, mode: TimeMode, timeZone: string): string {
+  if (mode === 'local') return event.timingConfirmed ? event.releaseTimeLocal : `~${event.releaseTimeLocal}`;
+  if (mode === 'et') {
+    const base = formatEt(event.time);
+    return event.timingConfirmed ? base : `~${base}`;
+  }
+  const clock = event.timingConfirmed ? event.userClock : `~${event.userClock}`;
+  return labelReaderClock(clock, event.releaseMs, timeZone);
 }
 
 export default function EconomicCalendarPage({ embeddedInResearch = false }: { embeddedInResearch?: boolean } = {}) {
@@ -337,7 +343,7 @@ export default function EconomicCalendarPage({ embeddedInResearch = false }: { e
           countryCode: event.countryCode,
           impact: event.impact,
           releaseMs: event.releaseMs,
-          when: displayTime(event, timeMode),
+          when: displayTime(event, timeMode, userTz),
           actual: event.display.actual,
           forecast: event.display.consensus,
           previous: event.display.previous,
@@ -492,7 +498,7 @@ export default function EconomicCalendarPage({ embeddedInResearch = false }: { e
                       {gate.nextMajorEvent.referencePeriod ? <span className="text-white/55"> ({gate.nextMajorEvent.referencePeriod})</span> : null}
                     </p>
                     <p className="mt-1 text-xs text-white/65">
-                      {gate.nextMajorEvent.country} • {displayTime(gate.nextMajorEvent, 'local')} • {gate.nextMajorEvent.userClock} your time
+                      {gate.nextMajorEvent.country} • {displayTime(gate.nextMajorEvent, 'local', userTz)} • {labelReaderClock(gate.nextMajorEvent.userClock, gate.nextMajorEvent.releaseMs, userTz)} your time
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-xs text-rose-300">High Impact</span>
@@ -516,7 +522,7 @@ export default function EconomicCalendarPage({ embeddedInResearch = false }: { e
                       <span aria-hidden="true">{countryFlag(gate.nextRelevantEvent.countryCode)}</span> {CATEGORY_ICONS[gate.nextRelevantEvent.category]} {gate.nextRelevantEvent.eventName}
                       {gate.nextRelevantEvent.referencePeriod ? <span className="text-white/55"> ({gate.nextRelevantEvent.referencePeriod})</span> : null}
                     </p>
-                    <p className="mt-1 text-xs text-white/65">{gate.nextRelevantEvent.country} • {displayTime(gate.nextRelevantEvent, 'local')} • {gate.relevantCountdown}</p>
+                    <p className="mt-1 text-xs text-white/65">{gate.nextRelevantEvent.country} • {displayTime(gate.nextRelevantEvent, 'local', userTz)} • {gate.relevantCountdown}</p>
                     <p className="mt-1 text-[10px] text-white/45">Relevance {gate.nextRelevantScore?.score ?? '--'}/100 — catalyst attention only, not a directional view.</p>
                   </div>
                 ) : gate.nextMajorEvent && gate.nextRelevantScore ? (
@@ -780,7 +786,7 @@ export default function EconomicCalendarPage({ embeddedInResearch = false }: { e
                               <span aria-hidden="true" className="text-base leading-none">{countryFlag(event.countryCode)}</span>
                               <span className="text-[10px] font-bold tracking-wide text-white/60">{event.countryCode}</span>
                             </div>
-                            <div className="mt-0.5 font-medium text-white/85" title={`UTC ${event.releaseTimeUtc}`}>{displayTime(event, timeMode)}</div>
+                            <div className="mt-0.5 font-medium text-white/85" title={`UTC ${event.releaseTimeUtc}`}>{displayTime(event, timeMode, userTz)}</div>
                             {timeMode !== 'local' ? <div className="text-[10px] text-white/45">{event.releaseTimeLocal} local</div> : null}
                             <span className="rounded bg-black/20 px-1.5 py-0.5 text-[10px] text-white/60">{event.session}</span>
                           </div>
