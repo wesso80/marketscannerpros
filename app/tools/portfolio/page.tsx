@@ -1176,7 +1176,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         trade_id: `trade_${position.id}`,
         symbol: position.symbol,
         asset_class: 'mixed',
-        direction: position.side === 'LONG' ? 'long' : 'short',
+        direction: isLongSide(position.side) ? 'long' : 'short',
         status: 'open',
         execution: {
           side: position.side,
@@ -1186,8 +1186,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         },
         risk_runtime: {
           current_price: position.currentPrice,
-          unrealized_pnl: position.pl,
-          unrealized_pnl_percent: position.plPercent,
+          unrealized_pnl: openPositionPL(position) ?? 0,
+          unrealized_pnl_percent: openPositionPLPercent(position) ?? 0,
         },
       },
     });
@@ -1242,7 +1242,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         trade_id: `trade_${position.id}`,
         symbol: position.symbol,
         asset_class: 'mixed',
-        direction: position.side === 'LONG' ? 'long' : 'short',
+        direction: isLongSide(position.side) ? 'long' : 'short',
         status: 'open',
         execution: {
           side: position.side,
@@ -1252,8 +1252,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         },
         risk_runtime: {
           current_price: position.currentPrice,
-          unrealized_pnl: position.pl,
-          unrealized_pnl_percent: position.plPercent,
+          unrealized_pnl: openPositionPL(position) ?? 0,
+          unrealized_pnl_percent: openPositionPLPercent(position) ?? 0,
         },
       },
     });
@@ -1311,7 +1311,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         trade_id: `trade_${position.id}`,
         symbol: position.symbol,
         asset_class: 'mixed',
-        direction: position.side === 'LONG' ? 'long' : 'short',
+        direction: isLongSide(position.side) ? 'long' : 'short',
         status: 'closed',
         closed_at: closedPos.closeDate,
         realized_pnl: closedPos.realizedPL,
@@ -1743,7 +1743,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       const value = position.currentPrice * positionUnits(position);
       const concentrationPct = totalValue > 0 ? (value / totalValue) * 100 : 0;
       const stopPrice = validLevel(position.stopPrice);
-      const riskPerUnit = stopPrice == null ? null : position.side === 'LONG'
+      const riskPerUnit = stopPrice == null ? null : isLongSide(position.side)
         ? Math.max(0, position.currentPrice - stopPrice)
         : Math.max(0, stopPrice - position.currentPrice);
       const dollarRisk = riskPerUnit == null ? null : riskPerUnit * positionUnits(position);

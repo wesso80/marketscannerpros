@@ -359,12 +359,18 @@ export async function POST(req: NextRequest) {
 
       // A live Stripe subscription on this workspace must keep its own period.
       // Writing trialing over it would turn the paid row free when the trial ends.
-      const paidRow = await q<{ status: string; stripe_subscription_id: string | null }>(
-        'SELECT status, stripe_subscription_id FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1',
-        [workspaceId],
-      );
-      const liveStripeSub = paidRow[0]?.stripe_subscription_id != null
-        && (paidRow[0].status === 'active' || paidRow[0].status === 'trialing');
+      // If that read fails, keep the pre-check path: record the trial and sign the trial cookie.
+      let liveStripeSub = false;
+      try {
+        const paidRow = await q<{ status: string; stripe_subscription_id: string | null }>(
+          'SELECT status, stripe_subscription_id FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1',
+          [workspaceId],
+        );
+        liveStripeSub = paidRow[0]?.stripe_subscription_id != null
+          && (paidRow[0].status === 'active' || paidRow[0].status === 'trialing');
+      } catch {
+        console.error("[login] trial subscription lookup failed");
+      }
       if (!liveStripeSub) {
         await trackSubscription(
           workspaceId,
@@ -404,7 +410,12 @@ export async function POST(req: NextRequest) {
       // No Stripe customer — keep a manual Pro grant on this email's workspace row.
       // Any other row for the same email is ignored.
       const workspaceId = hashWorkspaceId(normalizedEmail);
-      const manualTier = await readManualGrant(workspaceId);
+      let manualTier: "pro" | "pro_trader" | null = null;
+      try {
+        manualTier = await readManualGrant(workspaceId);
+      } catch {
+        console.error("[login] manual grant lookup failed");
+      }
       const tier = manualTier ?? "free";
       const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * sessionDays;
       const token = signSessionToken({ cid: `free_${normalizedEmail}`, tier, workspaceId, exp, ...(admin ? { is_admin: true } : {}) });
@@ -458,8 +469,15 @@ export async function POST(req: NextRequest) {
 
     if (detectedTier === "free") {
       console.error("[login] Active subscription price did not match a configured price id", { priceIds });
-      const existingTier = await readEmailHashTier(workspaceId);
-      if (existingTier) {
+      let existingTier: string | null = null;
+      let tierLookupFailed = false;
+      try {
+        existingTier = await readEmailHashTier(workspaceId);
+      } catch {
+        tierLookupFailed = true;
+        console.error("[login] stored tier lookup failed");
+      }
+      if (!tierLookupFailed && existingTier) {
         const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * sessionDays;
         const token = signSessionToken({ cid: customerId, tier: existingTier, workspaceId, exp, ...(admin ? { is_admin: true } : {}) });
         loginLimiter.reset(ip);
@@ -471,9 +489,11 @@ export async function POST(req: NextRequest) {
         for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);
         return res;
       }
-      tier = "free";
-      writeStatus = "active";
-      writeTrial = false;
+      if (!tierLookupFailed) {
+        tier = "free";
+        writeStatus = "active";
+        writeTrial = false;
+      }
     }
 
     const periodEnd = subscriptionPeriodDate(primarySub, "current_period_end");

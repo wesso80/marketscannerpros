@@ -9,7 +9,7 @@ import SourceLine from '@/components/visual/SourceLine';
 import StatTile from '@/components/visual/StatTile';
 import { marketText } from '@/lib/marketsPresentation';
 import { isAccuracyDisplayHorizon } from '@/lib/signals/accuracyHorizons';
-import { formatSignedPercent, pastThresholdLabel } from '@/lib/signals/accuracyDisplay';
+import { formatSignedPercent, pastThresholdLabel, signedPctMove } from '@/lib/signals/accuracyDisplay';
 import { collectionStatus, thresholdChip, THRESHOLD_RULE_NOTE } from '@/lib/signals/thresholdLabels';
 
 type Stat = {
@@ -298,7 +298,7 @@ export default function SignalAccuracyPage() {
               <div className="px-4 py-3 border-b border-slate-700/50">
                 <h3 className="text-sm font-bold text-white">Recent Observations</h3>
               </div>
-              <div className="divide-y divide-white/10 p-3 sm:hidden">{shownRecent.map((row,i) => <div data-recent-card key={i} className="py-2 text-xs"><p className="font-semibold">{row.symbol} · {marketText(row.score)}</p><p>{marketText(row.direction)} context · {observationLabel(row.outcome)}</p>{row.pct_move != null && <p>{row.pct_move.toFixed(2)}% recorded move</p>}<p className="text-slate-400">{new Date(row.created_at).toLocaleDateString()}</p></div>)}</div>
+              <div className="divide-y divide-white/10 p-3 sm:hidden">{shownRecent.map((row,i) => <div data-recent-card key={i} className="py-2 text-xs"><p className="font-semibold">{row.symbol} · {marketText(row.score)}</p><p>{marketText(row.direction)} context · {observationLabel(row.outcome)}</p>{row.pct_move != null && <p>{formatSignedPercent(signedPctMove(row.direction, row.pct_move))} recorded move</p>}<p className="text-slate-400">{new Date(row.created_at).toLocaleDateString()}</p></div>)}</div>
               <div className="hidden overflow-x-auto sm:block">
                 <table className="w-full text-xs">
                   <thead>
@@ -313,7 +313,9 @@ export default function SignalAccuracyPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {shownRecent.map((s, i) => (
+                    {shownRecent.map((s, i) => {
+                      const move = s.pct_move == null ? null : signedPctMove(s.direction, s.pct_move);
+                      return (
                       <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20">
                         <td className="px-4 py-2 font-medium text-white">{s.symbol}</td>
                         <td className="px-3 py-2">
@@ -323,8 +325,8 @@ export default function SignalAccuracyPage() {
                         </td>
                         <td className="px-3 py-2 text-slate-400">{marketText(s.scanner_type)}</td>
                         <td className="px-3 py-2 text-right text-slate-300">{marketText(s.score)}</td>
-                        <td className={`px-3 py-2 text-right font-medium ${s.pct_move != null && s.pct_move >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {s.pct_move != null ? `${s.pct_move >= 0 ? '+' : ''}${s.pct_move.toFixed(2)}%` : 'Not collected'}
+                        <td className={`px-3 py-2 text-right font-medium ${move != null && move >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {formatSignedPercent(move)}
                         </td>
                         <td className="px-3 py-2 text-center">
                           <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold ${
@@ -336,7 +338,8 @@ export default function SignalAccuracyPage() {
                         </td>
                         <td className="px-3 py-2 text-right text-slate-500">{new Date(s.created_at).toLocaleDateString()}</td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

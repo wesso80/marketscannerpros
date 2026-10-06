@@ -22,13 +22,21 @@ it('shows five ordered observations, expands without dropping exclusions, and re
   expect(JSON.stringify(base.rows)).toBe(snapshot);
 });
 it('has one summary and source, starts all folds closed and preserves the equity observation time', () => {
-  const {container} = render(<MoversView {...base}/>);
-  expect(container.querySelectorAll('[data-movers-verdict]')).toHaveLength(1);
-  expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);
-  expect(container.querySelectorAll('details[open]')).toHaveLength(0);
-  expect(container.querySelector('[data-source-line]')?.textContent).toContain('Fri 2 Oct');
-  expect(container.textContent).toContain('separate feed basis');
-  expect(container.textContent).not.toMatch(/Bullish|PROFILE_BLOCK_MICROCAPS|2\.3456|1\.23456/);
+  const resolved = Intl.DateTimeFormat.prototype.resolvedOptions;
+  const zone = vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (this: Intl.DateTimeFormat) {
+    return { ...resolved.call(this), timeZone: 'UTC' };
+  });
+  try {
+    const {container} = render(<MoversView {...base}/>);
+    expect(container.querySelectorAll('[data-movers-verdict]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);
+    expect(container.querySelectorAll('details[open]')).toHaveLength(0);
+    expect(container.querySelector('[data-source-line]')?.textContent).toContain('Fri 2 Oct');
+    expect(container.textContent).toContain('separate feed basis');
+    expect(container.textContent).not.toMatch(/Bullish|PROFILE_BLOCK_MICROCAPS|2\.3456|1\.23456/);
+  } finally {
+    zone.mockRestore();
+  }
 });
 it('does not present a computed assessment or zero scores as observations when the feed is empty', () => {
   const empty = {...base.data!, topGainers: [], topLosers: [], mostActive: []};
