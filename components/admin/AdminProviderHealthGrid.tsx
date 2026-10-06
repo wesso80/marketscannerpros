@@ -39,12 +39,21 @@ function tone(status: ProviderRow["status"]): { color: string; bg: string; borde
   }
 }
 
-export default function AdminProviderHealthGrid() {
+export default function AdminProviderHealthGrid(props?: {
+  rows?: ProviderRow[];
+  loading?: boolean;
+  error?: string;
+}) {
+  const controlled = !!props && Object.prototype.hasOwnProperty.call(props, "rows");
   const [rows, setRows] = useState<ProviderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
+  const viewRows = controlled ? props?.rows ?? [] : rows;
+  const viewLoading = controlled ? !!props?.loading : loading;
+  const viewError = controlled ? props?.error ?? "" : error;
 
   useEffect(() => {
+    if (controlled) return;
     let cancelled = false;
     const load = async () => {
       try {
@@ -68,7 +77,7 @@ export default function AdminProviderHealthGrid() {
       cancelled = true;
       stop();
     };
-  }, []);
+  }, [controlled]);
 
   return (
     <section style={{ marginBottom: "1.5rem" }}>
@@ -76,11 +85,11 @@ export default function AdminProviderHealthGrid() {
         <div style={{ color: "#E5E7EB", fontWeight: 700 }}>Provider Health</div>
         <div style={{ color: "#64748B", fontSize: 11 }}>Auto-refreshes every 30s</div>
       </div>
-      {loading && rows.length === 0 ? (
+      {viewLoading && viewRows.length === 0 ? (
         <div style={{ color: "#94A3B8", fontSize: 13 }}>Loading provider feeds…</div>
-      ) : error ? (
-        <div style={{ color: "#F87171", fontSize: 13 }}>{error}</div>
-      ) : rows.length === 0 ? (
+      ) : viewError ? (
+        <div style={{ color: "#F87171", fontSize: 13 }}>{viewError}</div>
+      ) : viewRows.length === 0 ? (
         <div style={{ color: "#94A3B8", fontSize: 13 }}>No providers reported.</div>
       ) : (
         <div
@@ -90,7 +99,7 @@ export default function AdminProviderHealthGrid() {
             gap: "0.75rem",
           }}
         >
-          {rows.map((row) => {
+          {viewRows.map((row) => {
             const t = tone(row.status);
             return (
               <div

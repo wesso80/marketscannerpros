@@ -114,7 +114,7 @@ describe("admin boundary language guard", () => {
   });
 
   it("renders the AdminBoundaryBanner in the admin layout", () => {
-    const layoutPath = path.join(REPO_ROOT, "app/admin/layout.tsx");
+    const layoutPath = path.join(REPO_ROOT, "app/admin/admin-client-layout.tsx");
     const content = readFileSync(layoutPath, "utf8");
     expect(content).toContain("AdminBoundaryBanner");
     expect(content).toMatch(/import\s+AdminBoundaryBanner\s+from\s+["']@\/components\/admin\/AdminBoundaryBanner["']/);

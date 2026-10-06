@@ -26,7 +26,7 @@ describe("Nasdaq Reporting removed", () => {
     expect(fs.existsSync(path.join(root, "app/api/admin/reporting/route.ts"))).toBe(false);
   });
   it("no sidebar / command palette link points at it", () => {
-    expect(read("app/admin/layout.tsx")).not.toMatch(/\/admin\/reporting/);
+    expect(read("app/admin/admin-client-layout.tsx")).not.toMatch(/\/admin\/reporting/);
     expect(read("components/admin/layout/AdminSidebar.tsx")).not.toMatch(/\/admin\/reporting/);
     expect(ADMIN_COMMANDS.some((c) => c.href.startsWith("/admin/reporting"))).toBe(false);
   });
