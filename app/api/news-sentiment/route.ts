@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { readShared, writeShared } from '@/lib/cache/sharedResponse';
 import { deepAnalysisLimiter, getClientIP } from '@/lib/rateLimit';
 import { buildNewsBriefPrompt, NEWS_BRIEF_SYSTEM_PROMPT, stripAdviceSentences } from '@/lib/news/newsBrief';
 import { avNewsFeedError, buildTickerNews, NEWS_MAX_TICKERS, NEWS_RELEVANCE_RULE, type RequestedNewsTicker, type TickerFeedResult } from '@/lib/news/tickerNewsFeed';
 import { cryptoNewsName } from '@/lib/crypto/newsRelevance';
+
+/** Shared news responses. About 15 minutes. A partial ticker set is kept for about 2 minutes. AI briefs are not stored here. */
+const NEWS_CACHE_TTL_SECONDS = 15 * 60;
+const NEWS_PARTIAL_CACHE_TTL_SECONDS = 2 * 60;
+const newsCacheKey = (providerKeys: string[], limit: string, ignoredTickers: string[]) =>
+  `news-sentiment:v1:${providerKeys.join(',')}:limit:${limit}:ignored:${ignoredTickers.join(',')}`;
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -67,27 +74,34 @@ export async function GET(request: NextRequest) {
   // Allow anonymous access for dashboard headlines (default tickers)
   const session = await getSessionFromCookie();
 
-  // Rate limit: expensive endpoint (AV + OpenAI)
+  const { searchParams } = new URL(request.url);
+  const tickers = searchParams.get('tickers') || 'AAPL,MSFT,GOOGL';
+  const limit = String(Math.min(100, Math.max(1, Number.parseInt(searchParams.get('limit') || '50', 10) || 50)));
+  const includeAI = searchParams.get('includeAI') === 'true';
+  const tickerList = [...new Set(tickers.split(',').map(t => t.trim().toUpperCase()).filter(Boolean))];
+  // One provider ticker identity per requested symbol; topic-only news is not candidate evidence.
+  const requested: RequestedNewsTicker[] = tickerList.slice(0, NEWS_MAX_TICKERS).map((t) => {
+    if (!isCryptoTicker(t)) return { ticker: t, providerKey: t, name: null };
+    const sym = t.replace(/^CRYPTO:/, '').replace(/[-/]?USDT?$/, '');
+    return { ticker: sym, providerKey: `CRYPTO:${sym}`, name: cryptoNewsName(sym) };
+  });
+  const ignoredTickers = tickerList.slice(NEWS_MAX_TICKERS);
+  const cacheKey = newsCacheKey(requested.map((item) => item.providerKey), limit, ignoredTickers);
+
+  // Shared ticker sets are the same for every user. AI briefs stay uncached and still count.
+  if (!includeAI) {
+    const cached = await readShared<Record<string, unknown>>(cacheKey);
+    if (cached) return NextResponse.json(cached);
+  }
+
+  // Rate limit only when this request will call the vendor (or the AI brief).
   const ip = getClientIP(request);
   const rateCheck = deepAnalysisLimiter.check(ip);
   if (!rateCheck.allowed) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
   }
 
-  const { searchParams } = new URL(request.url);
-  const tickers = searchParams.get('tickers') || 'AAPL,MSFT,GOOGL';
-  const limit = String(Math.min(100, Math.max(1, Number.parseInt(searchParams.get('limit') || '50', 10) || 50)));
-  const includeAI = searchParams.get('includeAI') === 'true';
-  
   try {
-    const tickerList = [...new Set(tickers.split(',').map(t => t.trim().toUpperCase()).filter(Boolean))];
-    // One provider ticker identity per requested symbol; topic-only news is not candidate evidence.
-    const requested: RequestedNewsTicker[] = tickerList.slice(0, NEWS_MAX_TICKERS).map((t) => {
-      if (!isCryptoTicker(t)) return { ticker: t, providerKey: t, name: null };
-      const sym = t.replace(/^CRYPTO:/, '').replace(/[-/]?USDT?$/, '');
-      return { ticker: sym, providerKey: `CRYPTO:${sym}`, name: cryptoNewsName(sym) };
-    });
-    const ignoredTickers = tickerList.slice(NEWS_MAX_TICKERS);
 
     // AV ANDs comma-separated tickers (articles mentioning ALL of them), so each ticker gets its own call (MV-2).
     const results: Record<string, TickerFeedResult> = {};
@@ -113,20 +127,25 @@ export async function GET(request: NextRequest) {
     }
     const allArticles = relevantArticles;
 
-    // Generate AI analysis if requested
+    // Generate AI analysis if requested. This stays per request and is not cached.
     let aiAnalysis = null;
     if (includeAI && allArticles.length > 0) {
       aiAnalysis = await generateAINewsAnalysis(allArticles, tickers);
     }
-    
-    return NextResponse.json({
+
+    const body = {
       success: true,
       articlesCount: allArticles.length,
       articles: allArticles,
       tickerSummaries,
       filter,
       aiAnalysis,
-    });
+    };
+    if (!includeAI) {
+      const partial = failed.length > 0;
+      await writeShared(cacheKey, body, partial ? NEWS_PARTIAL_CACHE_TTL_SECONDS : NEWS_CACHE_TTL_SECONDS);
+    }
+    return NextResponse.json(body);
   } catch (error) {
     console.error('News sentiment error:', error);
     return NextResponse.json(
