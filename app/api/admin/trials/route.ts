@@ -1,7 +1,34 @@
 // Admin API for managing user trials
 import { NextRequest, NextResponse } from "next/server";
-import { q } from "@/lib/db";
+import { q, tx } from "@/lib/db";
 import { requireAdmin } from '@/lib/adminAuth';
+
+/**
+ * Move current_period_end on this email's non-Stripe trial subscription rows.
+ * A row with a Stripe subscription id is left alone. Active paid rows, including
+ * manual grants, are not trialing, so they are left alone too.
+ */
+const SYNC_NON_STRIPE_TRIAL_PERIOD_END = `
+  UPDATE user_subscriptions
+  SET current_period_end = $2, updated_at = NOW()
+  WHERE LOWER(email) = LOWER($1)
+    AND status = 'trialing'
+    AND stripe_subscription_id IS NULL
+`;
+
+function latestExpiry(rows: { expires_at?: Date | string | null }[]): Date | string | null {
+  let best: Date | string | null = null;
+  let bestMs = Number.NEGATIVE_INFINITY;
+  for (const row of rows) {
+    if (row.expires_at == null) continue;
+    const ms = new Date(row.expires_at).getTime();
+    if (Number.isFinite(ms) && ms >= bestMs) {
+      best = row.expires_at;
+      bestMs = ms;
+    }
+  }
+  return best;
+}
 
 // GET - List all trials (active and expired)
 export async function GET(req: NextRequest) {
@@ -63,16 +90,31 @@ export async function POST(req: NextRequest) {
     );
 
     if (existing.length > 0) {
-      // Extend the existing trial instead of creating a new one
-      const result = await q(
-        `UPDATE user_trials 
-         SET expires_at = expires_at + ($4 || ' days')::INTERVAL,
-             tier = $2,
-             notes = COALESCE(notes, '') || ' | Extended: ' || $3
-         WHERE email = $1 AND expires_at > NOW()
-         RETURNING *`,
-        [email.toLowerCase().trim(), tier, notes || `+${safeDays} days`, String(safeDays)]
-      );
+      // Extend the existing trial, and the matching non-Stripe subscription
+      // period, in one transaction. Login is the only other writer of
+      // current_period_end, so without this the entitlement helper would
+      // drop the user to Free at the old end.
+      const normalizedEmail = email.toLowerCase().trim();
+      const result = await tx(async (client) => {
+        const updated = await client.query(
+          `UPDATE user_trials 
+           SET expires_at = expires_at + ($4 || ' days')::INTERVAL,
+               tier = $2,
+               notes = COALESCE(notes, '') || ' | Extended: ' || $3
+           WHERE email = $1 AND expires_at > NOW()
+           RETURNING *`,
+          [normalizedEmail, tier, notes || `+${safeDays} days`, String(safeDays)]
+        );
+        const periodEnd = latestExpiry(updated.rows);
+        if (periodEnd) {
+          await client.query(SYNC_NON_STRIPE_TRIAL_PERIOD_END, [normalizedEmail, periodEnd]);
+        }
+        return updated.rows;
+      });
+
+      if (result.length === 0) {
+        return NextResponse.json({ error: "No active trial found" }, { status: 404 });
+      }
       
       return NextResponse.json({ 
         ok: true, 
@@ -113,14 +155,24 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Email required" }, { status: 400 });
     }
 
-    // Set expires_at to now (keeps record but deactivates)
-    const result = await q(
-      `UPDATE user_trials 
-       SET expires_at = NOW(), notes = COALESCE(notes, '') || ' | Revoked by admin'
-       WHERE email = $1 AND expires_at > NOW()
-       RETURNING *`,
-      [email.toLowerCase().trim()]
-    );
+    // Set expires_at to now (keeps record but deactivates). The subscription
+    // period end moves to that same revoke time so the entitlement helper
+    // treats the trial as Free without waiting for the old end.
+    const normalizedEmail = email.toLowerCase().trim();
+    const result = await tx(async (client) => {
+      const updated = await client.query(
+        `UPDATE user_trials 
+         SET expires_at = NOW(), notes = COALESCE(notes, '') || ' | Revoked by admin'
+         WHERE email = $1 AND expires_at > NOW()
+         RETURNING *`,
+        [normalizedEmail]
+      );
+      const periodEnd = latestExpiry(updated.rows);
+      if (periodEnd) {
+        await client.query(SYNC_NON_STRIPE_TRIAL_PERIOD_END, [normalizedEmail, periodEnd]);
+      }
+      return updated.rows;
+    });
 
     if (result.length === 0) {
       return NextResponse.json({ error: "No active trial found" }, { status: 404 });
