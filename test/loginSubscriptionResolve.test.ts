@@ -185,6 +185,16 @@ function inserts() {
   return db.calls.filter((call) => call.sql.includes('INSERT INTO user_subscriptions'));
 }
 
+function throwOnSql(match: (sql: string) => boolean) {
+  const previous = mocks.q.getMockImplementation();
+  mocks.q.mockImplementation(async (sql: string, params: unknown[] = []) => {
+    const text = sql.replace(/\s+/g, ' ').trim();
+    if (match(text)) throw new Error('db down');
+    if (!previous) throw new Error('missing db mock');
+    return previous(sql, params);
+  });
+}
+
 describe('login subscription resolution', () => {
   beforeEach(() => {
     mocks.q.mockReset();
@@ -647,6 +657,102 @@ describe('login subscription resolution', () => {
     expect(cookiePayload(active).tier).toBe('free');
     expect(inserts()).toHaveLength(0);
     expect(db.rows[0]).toMatchObject({ tier: 'pro', status: 'active', stripe_subscription_id: 'sub_guard' });
+  });
+
+  it('signs the trial cookie when the paid-row lookup throws', async () => {
+    const email = 'hiccup-trial@example.com';
+    const expires = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    installDb(
+      [{
+        workspace_id: hashWorkspaceId(email),
+        email,
+        tier: 'pro',
+        status: 'active',
+        stripe_customer_id: 'cus_hiccup_trial',
+        stripe_subscription_id: 'sub_hiccup_trial',
+      }],
+      [{ email, tier: 'pro', expires_at: expires }],
+    );
+    throwOnSql((sql) => sql.includes('SELECT status, stripe_subscription_id FROM user_subscriptions'));
+    mockStripe([], {});
+
+    try {
+      const res = await POST(loginRequest(email));
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ ok: true, tier: 'pro', isTrial: true });
+      expect(cookiePayload(res)).toMatchObject({ tier: 'pro', cid: `trial_${email}` });
+      const logged = JSON.stringify(errorSpy.mock.calls);
+      expect(logged).toContain('[login] trial subscription lookup failed');
+      expect(logged).not.toContain(email);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('signs the free cookie when the manual grant lookup throws', async () => {
+    const email = 'hiccup-grant@example.com';
+    const workspaceId = hashWorkspaceId(email);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    installDb([{
+      workspace_id: workspaceId,
+      email,
+      tier: 'pro_trader',
+      status: 'active',
+      stripe_customer_id: null,
+      stripe_subscription_id: null,
+    }]);
+    throwOnSql((sql) => sql.includes('SELECT') && sql.includes('stripe_customer_id'));
+    mockStripe([], {});
+
+    try {
+      const res = await POST(loginRequest(email));
+      expect(res.status).toBe(200);
+      expect((await res.json()).tier).toBe('free');
+      expect(cookiePayload(res)).toMatchObject({ tier: 'free', cid: `free_${email}`, workspaceId });
+      expect(inserts()).toHaveLength(1);
+      expect(inserts()[0].params.slice(0, 4)).toEqual([workspaceId, email, 'free', 'active']);
+      const logged = JSON.stringify(errorSpy.mock.calls);
+      expect(logged).toContain('[login] manual grant lookup failed');
+      expect(logged).not.toContain(email);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('signs the pre-check free cookie when the stored tier lookup throws', async () => {
+    const email = 'hiccup-tier@example.com';
+    const workspaceId = hashWorkspaceId(email);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    installDb([{
+      workspace_id: workspaceId,
+      email,
+      tier: 'pro_trader',
+      status: 'active',
+      stripe_customer_id: 'cus_hiccup_tier',
+      stripe_subscription_id: 'sub_hiccup_tier',
+    }]);
+    throwOnSql((sql) => sql.includes('SELECT tier FROM user_subscriptions'));
+    mockStripe(
+      [{ id: 'cus_hiccup_tier', created: 10 }],
+      { cus_hiccup_tier: [subscription({ id: 'sub_hiccup_tier', status: 'trialing', priceId: 'price_unmapped', periodEnd: 1_900_000_000, created: 30 })] },
+    );
+
+    try {
+      const res = await POST(loginRequest(email));
+      expect(res.status).toBe(200);
+      expect((await res.json()).tier).toBe('free');
+      expect(cookiePayload(res)).toMatchObject({ tier: 'free', cid: 'cus_hiccup_tier', workspaceId });
+      expect(mocks.customersUpdate).toHaveBeenCalled();
+      expect(inserts()).toHaveLength(1);
+      expect(inserts()[0].params.slice(0, 4)).toEqual([workspaceId, email, 'free', 'trialing']);
+      expect(inserts()[0].params[7]).toBe(true);
+      const logged = JSON.stringify(errorSpy.mock.calls);
+      expect(logged).toContain('[login] stored tier lookup failed');
+      expect(logged).not.toContain(email);
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 });
 
