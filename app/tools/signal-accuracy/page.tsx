@@ -8,7 +8,7 @@ import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import StatTile from '@/components/visual/StatTile';
 import { marketText } from '@/lib/marketsPresentation';
-import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import { isAccuracyDisplayHorizon } from '@/lib/signals/accuracyHorizons';
 import { collectionStatus, thresholdChip, THRESHOLD_RULE_NOTE } from '@/lib/signals/thresholdLabels';
 
 type Stat = {
@@ -83,16 +83,16 @@ export default function SignalAccuracyPage() {
       setData(json);
       setError(null);
     } catch {
-      setError('Failed to load signal accuracy data');
+      setError('Failed to load setup accuracy');
     } finally {
       setLoading(false);
     }
   }
 
   const overall = data?.overall;
-  const stats = data?.stats ?? [];
+  const stats = (data?.stats ?? []).filter((row) => isAccuracyDisplayHorizon(row.horizon_minutes));
   const recentSignals = data?.recentSignals ?? [];
-  const thresholds = data?.thresholds ?? [];
+  const thresholds = (data?.thresholds ?? []).filter((row) => isAccuracyDisplayHorizon(row.horizon_minutes));
 
   // Group stats by scanner type (declared before any early return so hook order is stable)
   const grouped = useMemo(() => {
@@ -147,7 +147,7 @@ export default function SignalAccuracyPage() {
 
   return (
     <div className="bg-[#0F172A] text-white p-3 max-w-7xl mx-auto space-y-3">
-      <h1 className="text-2xl font-semibold">Signal Accuracy</h1>
+      <h1 className="text-2xl font-semibold">Setup accuracy</h1>
       <p data-research-verdict className={`text-lg font-semibold ${error || !labeledCount ? 'text-amber-200' : 'text-white'}`}>{verdict}</p>
       <SourceLine source="Stored scanner outcomes" asOf={data?.metadata?.timestamp} basis="Historical labelled observations" />
       <CollapsibleSection title="Review filters" summary={`${lookback === 'all' ? 'All history' : lookback + ' days'} · minimum ${minSamples} samples`}>
@@ -203,17 +203,18 @@ export default function SignalAccuracyPage() {
 
           {overall && overall.labeled > 0 && <figure data-research-chart className="rounded-lg border border-white/10 p-3"><figcaption className="mb-2 text-sm">Recorded outcome counts</figcaption>{[['Correct',overall.correct],['Wrong',overall.wrong],['Neutral',overall.neutral]].map(([label,count]) => <div key={label} className="grid grid-cols-[5rem_1fr_3rem] items-center gap-2 py-1 text-xs"><span>{label}</span><span className="h-2 bg-white/5"><span className="block h-2 bg-slate-400" style={{width: `${Number(count) / overall.labeled * 100}%`}} /></span><span>{Number(count).toLocaleString()}</span></div>)}</figure>}
           <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-100">
-            This page reviews historical scanner observations for educational pattern analysis only. It does not validate future performance, does not provide trading signals, and does not recommend buying, selling, holding, shorting, or trading any asset.
+            This page reviews historical scanner observations for educational pattern analysis only. It does not validate future performance, does not provide trading alerts, and does not recommend buying, selling, holding, shorting, or trading any asset.
           </div>
-          <ComplianceDisclaimer compact />
+          <p className="text-xs text-slate-400">General information only, not financial advice.</p>
+          <p className="text-xs text-slate-400">Only 1d (±2%) and 1w (±4%) are shown. Price history is daily bars.</p>
 
           <CollapsibleSection title="Outcome evidence" summary={`${measuredStats.length} measured groups · ${recentSignals.length} recent observations`}>
           <div className="space-y-4">
           {/* Outcome Thresholds Reference */}
-          {thresholds.length > 0 && (
-            <div className="bg-slate-800/30 rounded-xl border border-slate-700/50 p-4">
-              <h3 className="text-xs font-semibold text-slate-300 mb-2">Price-move thresholds</h3>
-              <p className="text-[11px] text-slate-400 mb-2">A labeled observation means the price moved past this percent by the horizon. Sample minimum is {minSamples}. This is not a closed trade, a stop, or a fee.</p>
+          <div className="bg-slate-800/30 rounded-xl border border-slate-700/50 p-4">
+            <h3 className="text-xs font-semibold text-slate-300 mb-2">Price-move thresholds</h3>
+            <p className="text-[11px] text-slate-400 mb-2">A labeled observation means the price moved past this percent by the horizon. Sample minimum is {minSamples}. This is not a closed trade, a stop, or a fee.</p>
+            {thresholds.length > 0 && (
               <div className="flex flex-wrap gap-3">
                 {thresholds.map(t => (
                   <div key={t.horizon_minutes} className="bg-slate-900/50 rounded-lg px-3 py-1.5 text-[11px]">
@@ -221,9 +222,9 @@ export default function SignalAccuracyPage() {
                   </div>
                 ))}
               </div>
-              <p className="mt-2 text-[11px] text-slate-500">{THRESHOLD_RULE_NOTE}</p>
-            </div>
-          )}
+            )}
+            <p className="mt-2 text-[11px] text-slate-500">{THRESHOLD_RULE_NOTE}</p>
+          </div>
 
           {/* Stats by Scanner Type */}
           {visibleGrouped.length > 0 ? (

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/auth";
 import { getRecentSignals, getOverallStats } from "@/lib/signalRecorder";
 import { q } from "@/lib/db";
+import { ACCURACY_DISPLAY_HORIZONS, isAccuracyDisplayHorizon } from "@/lib/signals/accuracyHorizons";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,9 +13,9 @@ const MIN_SAMPLE_SIZE = 30;
 /**
  * GET /api/ai/accuracy
  * 
- * Returns AI learning stats:
- * - Win rate by scanner type, direction, and horizon
- * - Recent signals with outcomes
+ * Returns learning stats for recorded setups:
+ * - Past-threshold share by scanner type, direction, and the 1d / 1w horizons
+ * - Recent setups with outcomes
  * - Overall statistics
  * 
  * Query params:
@@ -56,19 +57,20 @@ export async function GET(req: NextRequest) {
       conditions.push(`sas.horizon_minutes = $${paramIdx++}`);
       params.push(horizonMinutes);
     }
-    // Filter by minimum LABELED sample size (excludes unknown outcomes)
+    // Filter by minimum labelled sample size (excludes unknown outcomes).
+    // There is one query, for the 003 columns. A missing column returns an empty list.
     conditions.push(`sas.labeled_signals >= $${paramIdx++}`);
     params.push(minSamples);
+    conditions.push(`sas.horizon_minutes IN (${ACCURACY_DISPLAY_HORIZONS.join(', ')})`);
     
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     
-    // Get accuracy stats with rolling windows.
-    // Some deployments still have the pre-versioning table (no scanner_version column) — fall back rather than 500.
-    const statsSql = (withVersion: boolean) => `
+    // 003 shape: scanner_version, labeled_signals, unknown_count, median_pct_move.
+    const statsSql = `
       SELECT 
         sas.signal_type,
         sas.direction,
-        ${withVersion ? 'sas.scanner_version' : "'unknown'::text AS scanner_version"},
+        sas.scanner_version,
         ot.horizon_label,
         sas.horizon_minutes,
         sas.total_signals,
@@ -92,19 +94,20 @@ export async function GET(req: NextRequest) {
       FROM signal_accuracy_stats sas
       LEFT JOIN outcome_thresholds ot ON sas.horizon_minutes = ot.horizon_minutes
       ${where}
-      ORDER BY ${withVersion ? 'sas.scanner_version DESC, ' : ''}sas.total_signals DESC, sas.signal_type, sas.horizon_minutes
+      ORDER BY sas.scanner_version DESC, sas.total_signals DESC, sas.signal_type, sas.horizon_minutes
     `;
     let stats: any[];
     let schemaNote: string | null = null;
     try {
-      stats = await q(statsSql(true), params);
+      stats = await q(statsSql, params);
     } catch (e: any) {
       // 42703 = undefined_column: the deployed table predates migration 003's extra columns. Return an honest
-      // empty result (page shows its empty state) instead of a 500; the real fix is applying the migration.
+      // empty result (page shows its empty state) instead of a 500; the real fix is applying migration 119.
       if (e?.code !== '42703' && !/does not exist/.test(String(e?.message))) throw e;
       stats = [];
       schemaNote = 'Accuracy statistics table is on an older schema; historical stats are unavailable until it is upgraded.';
     }
+    stats = stats.filter((row) => isAccuracyDisplayHorizon(row?.horizon_minutes));
     
     // Normalise recent signal rows to the shape rendered by the page.
     // signalRecorder stores one signal with multiple horizon outcomes; display the
@@ -140,15 +143,14 @@ export async function GET(req: NextRequest) {
       : null;
     
     // Get threshold configuration
-    const thresholds = await q(`
+    const thresholds = (await q(`
       SELECT horizon_minutes, horizon_label, correct_threshold, wrong_threshold
       FROM outcome_thresholds
+      WHERE horizon_minutes IN (${ACCURACY_DISPLAY_HORIZONS.join(', ')})
       ORDER BY horizon_minutes
-    `);
+    `)).filter((row: { horizon_minutes?: unknown }) => isAccuracyDisplayHorizon(row?.horizon_minutes));
     
-    // Compute expectancy for each stat row
-    // Expectancy = (Win% × AvgWin) + (Loss% × AvgLoss)
-    // Positive expectancy = edge
+    // Expectancy = (past-threshold share × average up move) − (the rest × average down move)
     const statsWithExpectancy = stats.map((s: any) => {
       let expectancy = null;
       if (s.win_rate != null && s.avg_win != null && s.avg_loss != null) {
@@ -189,7 +191,7 @@ export async function GET(req: NextRequest) {
         scannerType: scannerType || 'all',
         minSamples,
         schemaNote,
-        note: `Past-threshold shares are shown for signal types with >= ${minSamples} labeled samples. A label means the price moved past the horizon threshold. Unknown outcomes are excluded. This is not a closed trade.`
+        note: `Past-threshold shares are shown for setup types with at least ${minSamples} labelled samples, on the 1d (±2%) and 1w (±4%) horizons only. A label means the price moved past the horizon threshold. Unknown outcomes are excluded. This is not a closed trade.`
       }
     });
     
