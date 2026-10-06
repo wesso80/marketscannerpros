@@ -211,8 +211,7 @@ describe('mapLiquidityTransmissionToPageDto — Stage 8', () => {
     expect(s8.headline).toContain('Downstream risk assets are running materially ahead');
     const labels = s8.conditions.map((c) => c.label);
     expect(labels).toContain('Downstream extended');
-    expect(labels).toContain('Risk–liquidity gap elevated');
-    expect(labels).toContain('M2 cycle slowing');
+    expect(labels).toContain('Risk–liquidity gap elevated or M2 cycle slowing');
     expect(labels).toContain('Validated liquidity below threshold');
     for (const c of s8.conditions) expect(c.triggered).toBe(true);
     expect(s8.guidance).toMatch(/research signal/i);
@@ -228,7 +227,8 @@ describe('mapLiquidityTransmissionToPageDto — Stage 8', () => {
     });
     const s8 = buildStage8Explanation(r);
     expect(s8.active).toBe(false);
-    expect(s8.conditions.filter((c) => c.triggered).length).toBe(0);
+    // Only the Master Link dominance gate holds (base result is risk-on dominant).
+    expect(s8.conditions.filter((c) => c.triggered).map((c) => c.label)).toEqual(['Master Link risk-on dominant']);
     expect(s8.headline).toContain('balance');
   });
 
@@ -444,5 +444,22 @@ describe('mapLiquidityTransmissionToPageDto — unavailable + stale', () => {
     expect(vgk.missing).toBe(true);
     expect(dto.quality.staleInputCount).toBe(1);
     expect(dto.quality.missingInputCount).toBe(1);
+  });
+});
+
+describe('Stage 8 explanation mirrors the engine rule', () => {
+  it('never shows every condition triggered while Stage 8 is inactive (the old four-of-four but INACTIVE case)', () => {
+    // Late-cycle numbers, but Master Link below 50: the engine keeps Stage 8 inactive.
+    const r = baseResult({ stage8Active: false, dominantRiskOn: false, masterLink: 45, transmissionRiskOn: 45, downstream: 75, riskLiquidityGap: 30, liquidityCycle: 'DECELERATION', validated: 55 });
+    const s8 = buildStage8Explanation(r);
+    expect(s8.active).toBe(false);
+    expect(s8.conditions.every((c) => c.triggered)).toBe(false);
+  });
+  it('active exactly when all four branch conditions hold, for both branches', () => {
+    const late = buildStage8Explanation(baseResult());
+    expect(late.active).toBe(true);expect(late.conditions.every((c) => c.triggered)).toBe(true);
+    const cap = buildStage8Explanation(baseResult({ stage8Active: true, dominantRiskOn: false, masterLink: 40, transmissionRiskOn: 40, downstream: 25, riskLiquidityGap: -20, liquidityCycle: 'BOTTOMING', validated: 45 }));
+    expect(cap.active).toBe(true);expect(cap.conditions.every((c) => c.triggered)).toBe(true);
+    expect(cap.headline).toContain('washed out');
   });
 });
