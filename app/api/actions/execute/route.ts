@@ -973,7 +973,7 @@ export async function POST(req: NextRequest) {
       { guardEnabled, alertTier }
     );
 
-    const skippedAtCap = result?.kind === 'alert_draft' && result?.created === false;
+    const skippedAtCap = result?.kind === 'alert_draft' && 'created' in result && result.created === false;
     if (skippedAtCap) {
       await q(
         `DELETE FROM operator_action_executions
