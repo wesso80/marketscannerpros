@@ -112,6 +112,8 @@ describe('crypto derivatives desk', () => {
     const source=document.querySelector('[data-source-line]')!;
     expect(source.textContent).toContain('Last response with data received');
     expect(source.textContent).toContain('request completion, not a provider observation time');
+    expect(source.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+    expect(source.textContent).toMatch(/\b(AEDT|AEST)\b/);
     expect(source.textContent).toContain('no shared provider observation time supplied');
     expect(screen.getAllByRole('button', { name: /Liquidations: not collected/ })).toHaveLength(1);
     expect(screen.getAllByText('Show all 4').length).toBeGreaterThan(0);

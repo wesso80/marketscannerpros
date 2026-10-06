@@ -1,5 +1,6 @@
 import StatCard from "./StatCard";
 import { sectorTone } from "@/lib/overview/today";
+import { formatChangePercent } from "@/lib/presentation/formatChangePercent";
 /** Display only; callers supply measured values, never placeholder zeroes. */
 export default function StatTile({
   label,
@@ -22,11 +23,7 @@ export default function StatTile({
       value={String(value)}
       large
       color={warning ? "var(--msp-warn)" : sectorTone(measuredChange).color}
-      detail={
-        measuredChange == null
-          ? undefined
-          : `${measuredChange > 0 ? "+" : ""}${measuredChange}%`
-      }
+      detail={measuredChange == null ? undefined : formatChangePercent(measuredChange)}
     />
   );
 }
