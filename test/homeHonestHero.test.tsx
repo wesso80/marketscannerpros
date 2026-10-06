@@ -18,6 +18,8 @@ describe('Homepage PR 2: honest preview and new headline', () => {
     expect(shown).not.toContain('Open workflow map');
     expect(shown).toContain('What the two main tools look like. Open them for real markets.');
     expect(shown.match(/Illustrative layout · not live results/g)).toHaveLength(2);
+    expect(html).not.toMatch(/aria-label/i);
+    expect(html).not.toMatch(/\balt=/i);
     for (const label of ['Symbol', 'Market', 'Score', 'Verdict', 'Reasons', 'Data quality', 'Invalidation']) expect(shown).toContain(label);
   });
 

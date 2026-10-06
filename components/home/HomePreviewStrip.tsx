@@ -91,7 +91,7 @@ export default function HomePreviewStrip() {
           <Link href="/tools/scanner" className="block h-full transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 rounded-xl">
             <ScannerPreview />
           </Link>
-          <Link href="/tools/golden-egg" aria-label="Open Symbol" className="block h-full transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 rounded-xl">
+          <Link href="/tools/golden-egg" className="block h-full transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 rounded-xl">
             <SymbolPreview />
           </Link>
         </div>
