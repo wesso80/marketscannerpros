@@ -13,7 +13,7 @@ const text = (html: string) => html
   .replace(/\s+/g, ' ')
   .trim();
 
-const CAPTION = "Real screenshot, taken 7 Oct 2026. Open the tool for today's market.";
+const CAPTION = "Real screenshot of the Pro view, taken 7 Oct 2026. Open the tool for today's market.";
 const BANNED = /signal|edge|win rate|guaranteed|\barca\b|arcxa|active sigs|confluence/i;
 
 describe('Homepage PR 2: honest preview and new headline', () => {
@@ -36,6 +36,13 @@ describe('Homepage PR 2: honest preview and new headline', () => {
     expect(html).toContain('scanner-2026-10-07.webp');
     expect(html).toContain('golden-egg-2026-10-07.webp');
     expect(html).toContain('loading="lazy"');
+    expect(html).toContain('width="994"');
+    expect(html).toContain('height="452"');
+    expect(html).toContain('width="626"');
+    expect(html).toContain('height="282"');
+    expect(html).toContain('max-width:min(100%, 626px)');
+    expect(html).toContain('Pro scanner results for stocks: a list of candidates such as LMT, FDX, BA with prices and scores');
+    expect(html).toContain('Symbol page for AAPL: price, setup status, 90-day price chart, 20-day average, max pain and expected move');
     const alts = [...html.matchAll(/\balt="([^"]*)"/g)].map((match) => match[1]);
     expect(alts).toHaveLength(2);
     for (const alt of alts) {

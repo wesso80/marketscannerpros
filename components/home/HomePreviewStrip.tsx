@@ -4,30 +4,36 @@ import Link from 'next/link';
 /**
  * HomePreviewStrip
  * --------------------------------------------------------------
- * Dated production screenshots of the Scanner and Symbol pages,
- * captured signed-out. Captions use the Sydney capture date.
+ * Dated production screenshots of the signed-in Pro Scanner and
+ * Symbol pages. Captions use the Sydney capture date.
  */
 
-const CAPTION = "Real screenshot, taken 7 Oct 2026. Open the tool for today's market.";
+const CAPTION = "Real screenshot of the Pro view, taken 7 Oct 2026. Open the tool for today's market.";
 
 const previews = [
   {
     href: '/tools/scanner',
     src: '/home/scanner-2026-10-07.webp',
-    width: 1200,
-    height: 563,
-    alt: 'The Scanner page: preset choices, Quick scan and Pro scanner, and a one-symbol scan for AAPL, SPY, BTC and NVDA.',
+    width: 994,
+    height: 452,
+    alt: 'Pro scanner results for stocks: a list of candidates such as LMT, FDX, BA with prices and scores',
+    sizes: '(max-width: 768px) 100vw, 994px',
+    unoptimized: false,
     ring: 'focus-visible:ring-emerald-400/60',
-    border: 'border-emerald-500/20',
+    imageClassName: 'h-auto w-full max-w-full rounded-xl border border-emerald-500/20',
+    imageStyle: { width: '100%', height: 'auto' } as const,
   },
   {
     href: '/tools/golden-egg',
     src: '/home/golden-egg-2026-10-07.webp',
-    width: 1200,
-    height: 477,
-    alt: 'The Symbol page for AAPL as a signed-out visitor: the research snapshot line and the public panel covering regime, indicators, scenario levels and volatility context.',
+    width: 626,
+    height: 282,
+    alt: 'Symbol page for AAPL: price, setup status, 90-day price chart, 20-day average, max pain and expected move',
+    sizes: '(max-width: 768px) 100vw, 626px',
+    unoptimized: true,
     ring: 'focus-visible:ring-amber-400/60',
-    border: 'border-amber-500/20',
+    imageClassName: 'h-auto w-auto max-w-full rounded-xl border border-amber-500/20',
+    imageStyle: { width: 'auto', maxWidth: 'min(100%, 626px)', height: 'auto' } as const,
   },
 ] as const;
 
@@ -53,10 +59,11 @@ export default function HomePreviewStrip() {
                 alt={preview.alt}
                 width={preview.width}
                 height={preview.height}
-                sizes="(min-width: 768px) 50vw, 100vw"
+                sizes={preview.sizes}
                 loading="lazy"
-                className={`h-auto w-full max-w-full rounded-xl border ${preview.border}`}
-                style={{ width: '100%', height: 'auto' }}
+                unoptimized={preview.unoptimized}
+                className={preview.imageClassName}
+                style={preview.imageStyle}
               />
               <p className="mt-1.5 text-xs leading-5 text-slate-300">{CAPTION}</p>
             </Link>
