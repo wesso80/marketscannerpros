@@ -45,6 +45,12 @@ interface IncomeStats {
   }[];
 }
 
+/** Display names that are not a plain reading of the cost key. */
+const FIXED_COST_LABELS: Record<string, string> = {
+  upstash: "Upstash (Redis)",
+  cursor_team: "Assistant team (Cursor Ultra)",
+};
+
 export default function AdminIncomePage() {
   const [stats, setStats] = useState<IncomeStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -110,9 +116,12 @@ export default function AdminIncomePage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
-      <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB", marginBottom: "1.5rem" }}>
+      <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB", marginBottom: "0.35rem" }}>
         Income & Expenses
       </h1>
+      <p style={{ color: "#6B7280", fontSize: "0.75rem", marginTop: 0, marginBottom: "1.5rem" }}>
+        Costs updated 7 Oct 2026
+      </p>
 
       {/* Profit Summary */}
       <div style={{ ...cardStyle, marginBottom: "1.5rem" }}>
@@ -254,8 +263,8 @@ export default function AdminIncomePage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
               {Object.entries(stats.costs.fixed).map(([name, cost]) => (
                 <div key={name} style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 0" }}>
-                  <span style={{ color: "#9CA3AF", textTransform: "capitalize" }}>
-                    {name.replace(/_/g, " ")}
+                  <span style={{ color: "#9CA3AF", textTransform: FIXED_COST_LABELS[name] ? "none" : "capitalize" }}>
+                    {FIXED_COST_LABELS[name] ?? name.replace(/_/g, " ")}
                   </span>
                   <span style={{ color: cost > 0 ? "#E5E7EB" : "#6B7280" }}>
                     {formatCurrency(cost)}

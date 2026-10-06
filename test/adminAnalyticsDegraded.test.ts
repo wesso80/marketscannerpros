@@ -39,6 +39,8 @@ describe('admin analytics degraded metadata', () => {
     expect(payload.meta.failedQueries).toContain('stripe_paid_subscriptions');
     expect(payload.meta.warnings.some((warning: string) => warning.includes('stats table missing'))).toBe(true);
     expect(payload.overview.totalWorkspaces).toBe(0);
+    expect(payload.overview.financials.monthlyCosts).toBeCloseTo(1365.08, 2);
+    expect(payload.overview.financials.yearlyCosts).toBeCloseTo(1365.08 * 12, 2);
   });
 
   it('reports failed usage analytics queries instead of silently returning empty analytics', async () => {
