@@ -1,0 +1,125 @@
+{
+  "refund-policy": {
+    "text": "Refund PolicyEffective Date: 20 December 2025OverviewThis Refund Policy explains our policy regarding refunds, cancellations, and subscription management for MarketScanner Pros (\"the App\", \"we\", \"our\", \"us\").Free Trial PeriodPro Plan: 7-day free trialTrial eligibility and duration are confirmed at checkout.You will not be charged during the trial period.Cancel anytime during the trial to avoid charges.One trial per email address per plan (see Trial Abuse Prevention below).Subscription BillingAfter your trial ends, you will be charged the subscription fee for your selected monthly or annual billing interval automatically.Subscriptions renew at your selected monthly or annual interval until cancelled.Cancellations take effect at the end of the current billing period.Refund Policy7-Day Money-Back Guarantee:If you are not satisfied with your subscription, you may request a full refund within 7 days of your first payment.To request a refund, email support@marketscannerpros.app with your account email and reason for cancellation.Refunds are processed within 5-10 business days to your original payment method.This guarantee applies to first-time subscribers only.After 7 Days - No Pro-Rated Refunds:After the 7-day guarantee period, we do not provide refunds or credits for partial billing periods of service.When you cancel, you retain access until the end of your current billing period.No refunds are given for unused time after cancellation.Exceptions:Billing Errors: If you were charged incorrectly due to a system error, contact us immediately at support@marketscannerpros.app with proof of the error.Unauthorized Charges: If you believe you were charged without authorization, contact us within 48 hours of the charge.Technical Issues: If the App was unavailable for 3+ consecutive days during your billing period, you may be eligible for a pro-rated credit.Trial Abuse PreventionEach email address is eligible for one free trial per plan.Attempting to circumvent trial limitations (using multiple emails, accounts, or devices) is prohibited.Violations may result in immediate subscription termination without refund.We track trial usage by email address and device to enforce this policy.How to CancelWeb/Android Users (Stripe):Log in to your account at marketscannerpros.app/accountGo to Settings → Subscription ManagementClick \"Manage Subscription\" to open Stripe Customer PortalClick \"Cancel Subscription\"Your access continues until the end of the current billing periodiOS Users (Apple In-App Purchase):Open Settings on your iPhone/iPadTap your name at the topTap \"Subscriptions\"Select \"MarketScanner Pros\"Tap \"Cancel Subscription\"Platform-Specific PoliciesStripe (Web/Android): Managed through Stripe Customer Portal. Refunds handled per this policy.Apple (iOS): Managed through Apple App Store. Apple's refund policy applies. Request refunds through Apple, not us.Contact for Billing IssuesFor billing questions, errors, or refund requests (subject to this policy), contact us:📧 support@marketscannerpros.appPlease include:Your email address used for subscriptionTransaction date and amountDescription of the issueScreenshots if applicableChanges to This PolicyWe may update this Refund Policy from time to time. Changes will be posted on this page with a revised effective date. Continued use of the App after changes constitutes acceptance.AgreementBy subscribing to MarketScanner Pros, you acknowledge that you have read, understood, and agree to this Refund Policy.",
+    "links": [
+      {
+        "href": "mailto:support@marketscannerpros.app",
+        "target": null,
+        "rel": null,
+        "text": "support@marketscannerpros.app"
+      },
+      {
+        "href": "mailto:support@marketscannerpros.app",
+        "target": null,
+        "rel": null,
+        "text": "support@marketscannerpros.app"
+      },
+      {
+        "href": "https://marketscannerpros.app/account",
+        "target": null,
+        "rel": null,
+        "text": "marketscannerpros.app/account"
+      },
+      {
+        "href": "mailto:support@marketscannerpros.app",
+        "target": null,
+        "rel": null,
+        "text": "support@marketscannerpros.app"
+      }
+    ]
+  },
+  "cookie-policy": {
+    "text": "Cookie PolicyEffective Date: 7 October 2025OverviewMarketScanner Pros (\"we\", \"us\", \"our\") uses cookies and similar tracking technologies to provide, secure, and improve our services. This Cookie Policy explains what these technologies are, how we use them, and your choices.What Are Cookies?Cookies are small text files stored on your device (computer, phone, or tablet) when you visit a website. They help websites remember your preferences, authenticate your identity, and track usage patterns.Cookies We Use1. Essential Cookies (Required)These cookies are necessary for the App to function. They cannot be disabled.Workspace ID Cookie: Tracks your unique device/session identifier to maintain your subscription, settings, and data across visits.Authentication Cookies: Keeps you logged in and secures access to your account.Session Cookies: Manages your active session and temporary preferences.Security Tokens: CSRF protection and request validation for security.2. Fraud Prevention & Trial TrackingThese cookies help prevent abuse and trial fraud:Trial Usage Tracking: Records trial usage by device to enforce \"one trial per email\" policy.Device Fingerprinting: Creates anonymous device signatures to detect repeat trial attempts.Rate Limiting Tokens: Prevents API abuse and protects server resources.3. Analytics & Performance (Optional)These help us understand how users interact with the App:Error Tracking (Sentry): Captures errors and performance metrics to improve reliability.Usage Analytics: Tracks feature usage to prioritize improvements (anonymized).Third-Party CookiesSome features require third-party services that may set their own cookies:Stripe: Payment processing and subscription management (required for checkout).Apple: In-App Purchase processing on iOS devices (required for iOS subscriptions).Sentry: Error monitoring and performance tracking.These third parties have their own cookie policies. We recommend reviewing:Stripe Privacy PolicyApple Privacy PolicySentry Privacy PolicyLocal Storage & Similar TechnologiesIn addition to cookies, we use browser storage technologies:Local Storage: Saves user preferences (theme, chart settings, watchlists).Session Storage: Temporary data that clears when you close your browser.IndexedDB: Stores larger datasets for offline functionality and performance.Why We Use CookiesWe use cookies and tracking technologies to:Authenticate your account and maintain secure sessionsRemember your preferences and settingsTrack your subscription tier and workspace across devicesPrevent trial abuse and fraud (one trial per email enforcement)Protect against unauthorized access and API abuseMonitor performance and fix errorsImprove user experience and develop new featuresComply with legal and security requirementsCookie DurationSession Cookies: Deleted when you close your browser.Workspace ID: Persistent (7 days), refreshed on each visit to maintain account continuity.Trial Tracking: Persistent (indefinite) to prevent trial abuse.Authentication: Persistent (7-30 days) unless you log out.Analytics: Typically 1-2 years for trend analysis.Your ChoicesBrowser ControlsMost browsers let you control cookies through settings. You can:Block all cookies (may break essential App functionality)Delete existing cookiesBlock third-party cookies onlySet cookies to delete when you close your browserWarning: Blocking essential cookies will prevent the App from working properly, including authentication, subscription access, and data persistence.Do Not Track (DNT)We currently do not respond to \"Do Not Track\" browser signals because there is no universal standard for how to interpret them. However, you can control tracking through your browser settings.Opt-Out OptionsAnalytics: You can disable analytics cookies in your browser settings (essential cookies remain).Third-Party Cookies: Configure your browser to block third-party cookies from Stripe, Sentry, etc.Mobile AppsOur iOS and Android apps use similar tracking technologies through device identifiers and local storage. You can manage these through your device settings:iOS: Settings → Privacy & Security → TrackingAndroid: Settings → Privacy → Ads → Delete advertising IDInternational UsersIf you're located in the EU/EEA, UK, or California, you have additional rights under GDPR and CCPA. See our Privacy Policy for details on data rights.Updates to This PolicyWe may update this Cookie Policy to reflect changes in technology or legal requirements. Changes will be posted with a new effective date. Continued use constitutes acceptance.Contact UsFor questions about cookies or to exercise your data rights:📧 support@marketscannerpros.appRelated PoliciesPrivacy PolicyTerms of ServiceRefund Policy",
+    "links": [
+      {
+        "href": "https://stripe.com/privacy",
+        "target": "_blank",
+        "rel": "noopener",
+        "text": "Stripe Privacy Policy"
+      },
+      {
+        "href": "https://www.apple.com/legal/privacy/",
+        "target": "_blank",
+        "rel": "noopener",
+        "text": "Apple Privacy Policy"
+      },
+      {
+        "href": "https://sentry.io/privacy/",
+        "target": "_blank",
+        "rel": "noopener",
+        "text": "Sentry Privacy Policy"
+      },
+      {
+        "href": "/privacy",
+        "target": null,
+        "rel": null,
+        "text": "Privacy Policy"
+      },
+      {
+        "href": "mailto:support@marketscannerpros.app",
+        "target": null,
+        "rel": null,
+        "text": "support@marketscannerpros.app"
+      },
+      {
+        "href": "/privacy",
+        "target": null,
+        "rel": null,
+        "text": "Privacy Policy"
+      },
+      {
+        "href": "/terms",
+        "target": null,
+        "rel": null,
+        "text": "Terms of Service"
+      },
+      {
+        "href": "/refund-policy",
+        "target": null,
+        "rel": null,
+        "text": "Refund Policy"
+      }
+    ]
+  },
+  "terms": {
+    "text": "Terms of ServiceEffective Date: 13 December 2025Welcome to MarketScanner Pros (“the App”, “we”, “our”, “us”). By accessing or using the App, you agree to these Terms of Service. Please read them carefully.1. EligibilityYou must be at least 16 years old to use the App. By using it, you confirm that you meet this requirement.2. Use of the AppThe App is provided for educational purposes only.We do not provide financial, investment, or trading advice.MSP AI chatbot (powered by OpenAI GPT-4) provides educational insights only, not financial advice.AI responses may contain errors or inaccuracies. Always verify information independently.AI usage is subject to daily limits based on your subscription tier (5/50/unlimited questions per day).You are solely responsible for your trading and investment decisions.2A. Paper Trade & Simulation SystemThe App is an educational paper trade simulation system. No feature of the App executes real trades, connects to live brokerage accounts, or places orders on any exchange.The portfolio tracker, trade journal, risk analysis engine, scenario plans, and all analysis outputs are for educational and simulated paper trading purposes only.Scores, alignment readings, confluence percentages, and scenario analyses reflect indicator agreement and technical pattern recognition — they do not represent profit probability, guaranteed outcomes, or trading instructions.Edge Profile insights are derived from your own journal data and reflect historical patterns only. Past performance does not guarantee future results.MarketScanner Pros does not hold an Australian Financial Services Licence (AFSL) and is not authorised to provide personal or general financial product advice under the Corporations Act 2001 (Cth).2B. AI-Generated ContentMSP AI (powered by OpenAI GPT-4) generates educational insights only. Outputs are not financial advice and may contain errors, inaccuracies, or outdated information.AI responses are generated by large language models using statistical pattern matching — they are not predictions and should not be relied upon for any financial decisions.We do not warrant the accuracy, completeness, or reliability of any AI-generated content. You must independently verify all information before acting on it.Personalisation features (Edge Profile, Adaptive Personality, scenario analysis) use your historical data to surface analytical patterns, not to recommend specific trades or strategies.AI usage is subject to daily limits based on your subscription tier.3. Subscriptions & BillingThe App offers Free and Pro ($24.99/month or $249/year) plans. Pro Trader is a legacy plan identifier mapped to Pro.Payments are processed securely via Stripe (web/Android) or Apple In-App Purchase (iOS).Plan features: See the pricing page for current features and usage limits. Checkout confirms your selected billing interval and any trial eligibility.Email Required: You must provide a valid email address to verify trial eligibility.One Trial Per Email: Each email address is eligible for one free trial per plan. Using multiple emails or accounts to access repeated trials is prohibited and may result in account termination.After your trial period ends, you will be automatically charged the subscription fee for your selected monthly or annual billing interval unless you cancel before the trial expires.Subscriptions renew automatically until cancelled through your account, Stripe Customer Portal, or app store settings.Refunds: We offer a 7-day money-back guarantee. See our Refund Policy for details.Trial Abuse Prevention: We track trial usage by email address and device to prevent abuse. Attempting to circumvent trial limitations may result in immediate subscription termination without refund.4. Intellectual PropertyAll content, features, and code within the App are owned by MarketScanner Pros. You may not copy, modify, distribute, or resell without prior written permission.5. Disclaimer of WarrantiesThe App is provided “as is” without warranties of any kind. We do not guarantee accuracy, completeness, or uninterrupted access.6. Limitation of LiabilityTo the maximum extent permitted by law, MarketScanner Pros shall not be liable for any losses or damages arising from use of the App, including but not limited to trading losses.7. Privacy & CookiesOur use of your data is governed by our Privacy Policy.Our use of cookies and tracking technologies is explained in our Cookie Policy.8. TerminationWe may suspend or terminate your access if you violate these Terms. You may stop using the App at any time.9. Governing LawThese Terms shall be governed by and construed in accordance with the laws of New South Wales, Australia, without regard to its conflict of law provisions. You agree to submit to the personal and exclusive jurisdiction of the courts located in New South Wales, Australia for resolution of any disputes.Nothing in these Terms excludes, restricts or modifies any consumer rights under the Australian Consumer Law (Schedule 2 of the Competition and Consumer Act 2010 (Cth)) or equivalent legislation that cannot be excluded.10. Dispute ResolutionAny dispute arising from these Terms or your use of the App shall first be attempted to be resolved through informal negotiation by contacting us at support@marketscannerpros.app.If informal resolution is unsuccessful within 30 days, either party may pursue mediation administered by the Australian Disputes Centre (ADC) in Sydney, NSW. If mediation is unsuccessful, disputes may be resolved by binding arbitration or in the courts of New South Wales.Class Action Waiver: To the extent permitted by law, you agree to resolve disputes only on an individual basis and waive any right to participate in class actions or representative proceedings.11. IndemnificationYou agree to indemnify, defend, and hold harmless MarketScanner Pros, its officers, directors, employees, and agents from any claims, damages, losses, liabilities, or expenses (including legal fees) arising from your use of the App, violation of these Terms, or infringement of any third-party rights.12. ChangesWe may update these Terms occasionally. Changes will be posted on this page with a revised effective date.13. ContactFor questions, please email us at:📧 support@marketscannerpros.app",
+    "links": [
+      {
+        "href": "/pricing",
+        "target": null,
+        "rel": null,
+        "text": "pricing page"
+      },
+      {
+        "href": "/refund-policy",
+        "target": null,
+        "rel": null,
+        "text": "Refund Policy"
+      },
+      {
+        "href": "/privacy",
+        "target": null,
+        "rel": null,
+        "text": "Privacy Policy"
+      },
+      {
+        "href": "/cookie-policy",
+        "target": null,
+        "rel": null,
+        "text": "Cookie Policy"
+      },
+      {
+        "href": "mailto:support@marketscannerpros.app",
+        "target": null,
+        "rel": null,
+        "text": "support@marketscannerpros.app"
+      },
+      {
+        "href": "mailto:support@marketscannerpros.app",
+        "target": null,
+        "rel": null,
+        "text": "support@marketscannerpros.app"
+      }
+    ]
+  }
+}
