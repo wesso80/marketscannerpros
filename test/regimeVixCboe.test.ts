@@ -1,6 +1,7 @@
 /**
  * VIX comes from Cboe's free daily CSV first. FRED (stored VIXCLS, then its keyless CSV) is the fallback
- * when Cboe errors, times out, or parses to nothing. Alpha Vantage INDEX_DATA is not called for VIX.
+ * when Cboe errors, times out, parses to nothing, or is stale and older than FRED.
+ * Alpha Vantage INDEX_DATA is not called for VIX.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -26,6 +27,17 @@ const CBOE_CSV = [
   '',
   ',',
   '10/06/2026,1,2,3,xx',
+].join('\n');
+
+const FRED_NOTE_UNAVAILABLE = 'VIX from FRED, which lags 1–3 days: Cboe daily VIX unavailable';
+
+/** Cboe file whose last valid close is 09/30/2026, stale against the 6 Oct clock. */
+const STALE_CBOE_CSV = [
+  'DATE,OPEN,HIGH,LOW,CLOSE',
+  '09/29/2026,18.000000,18.500000,17.800000,18.200000',
+  '09/30/2026,18.200000,19.000000,18.000000,19.500000',
+  '',
+  '10/01/2026,1,2,3,bad',
 ].join('\n');
 
 const FRED_CSV = [
@@ -126,7 +138,7 @@ describe('regime VIX: Cboe first, FRED fallback', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
     const inputs = await (await freshLoader())();
-    expect(inputs.vix).toMatchObject({ level: 16.11, asOf: '2026-10-02', source: 'fred-csv' });
+    expect(inputs.vix).toMatchObject({ level: 16.11, asOf: '2026-10-02', source: 'fred-csv', note: FRED_NOTE_UNAVAILABLE });
     expect(fetchMock.mock.calls.some(([u]) => String(u).includes('VIX_History.csv'))).toBe(true);
     expect(fetchMock.mock.calls.some(([u]) => String(u).includes('id=VIXCLS'))).toBe(true);
     expect(fetchMock.mock.calls.some(([u]) => String(u).includes('INDEX_DATA'))).toBe(false);
@@ -144,7 +156,7 @@ describe('regime VIX: Cboe first, FRED fallback', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
     const inputs = await (await freshLoader())();
-    expect(inputs.vix).toMatchObject({ level: 16.11, asOf: '2026-10-02', source: 'fred-csv' });
+    expect(inputs.vix).toMatchObject({ level: 16.11, asOf: '2026-10-02', source: 'fred-csv', note: FRED_NOTE_UNAVAILABLE });
     expect(fetchMock.mock.calls.some(([u]) => String(u).includes('INDEX_DATA'))).toBe(false);
   });
 
@@ -156,7 +168,26 @@ describe('regime VIX: Cboe first, FRED fallback', () => {
       return new Response('', { status: 404 });
     }));
     const inputs = await (await freshLoader())();
-    expect(inputs.vix).toMatchObject({ level: 16.11, asOf: '2026-10-02', source: 'fred-csv' });
+    expect(inputs.vix).toMatchObject({ level: 16.11, asOf: '2026-10-02', source: 'fred-csv', note: FRED_NOTE_UNAVAILABLE });
+  });
+
+  it('uses FRED when the Cboe file is stale and older than FRED', async () => {
+    mockDb(macroRows(6, '2026-09-01', 18));
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (String(url).includes('VIX_History.csv')) return new Response(STALE_CBOE_CSV);
+      if (String(url).includes('id=VIXCLS')) return new Response(FRED_CSV);
+      return new Response('', { status: 404 });
+    }));
+    const inputs = await (await freshLoader())();
+    expect(inputs.vix).toMatchObject({
+      level: 16.11,
+      asOf: '2026-10-02',
+      source: 'fred-csv',
+      note: "VIX from FRED: the Cboe daily VIX (latest 2026-09-30) is older than FRED's",
+    });
+    const regime = classifyMarketRegime(inputs, NOW);
+    expect(regime.available).toBe(true);
+    if (regime.available) expect(regime.reasons).toContain(inputs.vix!.note);
   });
 
   it('does not call Alpha Vantage INDEX_DATA for VIX', async () => {
@@ -177,7 +208,7 @@ describe('regime VIX: Cboe first, FRED fallback', () => {
       return new Response(JSON.stringify({ Note: 'You are not yet entitled to index data access.' }), { status: 200 });
     }));
     const second = await (await freshLoader())();
-    expect(second.vix).toMatchObject({ source: 'fred-csv', level: 16.11 });
+    expect(second.vix).toMatchObject({ source: 'fred-csv', level: 16.11, note: FRED_NOTE_UNAVAILABLE });
     expect(urls.some((u) => u.includes('INDEX_DATA') || u.includes('alphavantage.co'))).toBe(false);
   });
 });

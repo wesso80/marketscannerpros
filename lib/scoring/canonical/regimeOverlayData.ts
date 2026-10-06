@@ -7,7 +7,7 @@
  * Every part fails soft: a missing input is just not counted by evaluateRegimeOverlay. Cached 15 minutes.
  *
  * Stale-input fallbacks (OV-1), used only when the stored rows are older than the regime's stale limit:
- *   - VIX: Cboe is tried first. When it fails, stored VIXCLS is kept, or FRED's keyless CSV when that is stale.
+ *   - VIX: Cboe when it is current, or at least as new as FRED. Otherwise stored VIXCLS, or FRED's keyless CSV when that is stale.
  *   - HY OAS: FRED's keyless CSV (lib/macro/fredCsv.ts), cached 6 hours per instance.
  *   - SPY / QQQ: one Alpha Vantage TIME_SERIES_DAILY_ADJUSTED (full) call per symbol through
  *     lib/marketData/client.ts, cached 6 hours per instance. Not written back to ohlcv_bars: that
@@ -102,16 +102,23 @@ export async function macroWithFallback(key: keyof typeof FRED_SERIES, limit: nu
 }
 
 /**
- * Shared VIX chain. Cboe daily close first (newest valid row is the level). FRED — stored VIXCLS, then
- * its CSV — is the fallback when Cboe fails, times out, or parses to nothing.
+ * Shared VIX chain. Cboe daily close is used when it is not past the stale limit, or when its date is at
+ * least as new as FRED's latest observation. A stale Cboe file (CDN cache, holiday gap) does not hide a
+ * fresher FRED print. FRED — stored VIXCLS, then its CSV — is the fallback when Cboe fails, times out,
+ * parses to nothing, or is older. The note says why the reading is FRED's.
  * Alpha Vantage INDEX_DATA is not called: this plan is not entitled, and the refusal was logged every cycle.
  * The historical name is kept so existing callers (operator market-data, tests) share this one function.
  */
 export async function vixWithAlphaVantagePrimary(limit: number, now: number): Promise<Sourced<{ rows: Obs[]; note?: string }> | null> {
   const cboe = await getCboeVixDailyCached({ now }).catch(() => null);
-  if (cboe?.length) return { rows: cboe.slice(0, limit), source: 'cboe' };
+  const fromCboe = cboe?.length ? { rows: cboe.slice(0, limit), source: 'cboe' as const } : null;
+  if (fromCboe && !isOlderThanStaleLimit(fromCboe.rows[0].on, now)) return fromCboe;
   const fred = await macroWithFallback('VIX', limit, now).catch(() => null);
-  return fred;
+  if (fromCboe && (!fred?.rows.length || fromCboe.rows[0].on >= fred.rows[0].on)) return fromCboe;
+  const note = fromCboe
+    ? `VIX from FRED: the Cboe daily VIX (latest ${fromCboe.rows[0].on}) is older than FRED's`
+    : 'VIX from FRED, which lags 1–3 days: Cboe daily VIX unavailable';
+  return fred ? { ...fred, note } : null;
 }
 
 export async function loadRegimeOverlayInputs(opts: { macroRiskState?: RegimeOverlayInputs['macroRiskState'] } = {}): Promise<RegimeOverlayInputs> {
