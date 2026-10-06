@@ -42,7 +42,7 @@ import ChipRow from '@/components/visual/ChipRow';
 import type {StampLineProps} from '@/components/visual/StampLine';
 import SourceLine from '@/components/visual/SourceLine';
 import {friendlyStatus} from '@/lib/free/friendlyStatus';
-import {symbolText,symbolDate} from '@/lib/presentation/symbolDisplay';
+import {readerSourceLabel,symbolText,symbolDate} from '@/lib/presentation/symbolDisplay';
 import EquityTop from '@/components/crypto/top/EquityTop';
 import CryptoBreakdown from '@/components/crypto/CryptoBreakdown';
 import {SymbolOptionsContext} from '@/components/market/SymbolMarketContext';
@@ -1577,7 +1577,7 @@ export default function GoldenEggPage() {
       </>}
       </CollapsibleSection>}
       {!isAuthBlocked&&geCanonical?.historyBars!=null&&geCanonical.historyBars>0&&<CollapsibleSection deferMount title="Backtest" summary={`${geCanonical.historyBars} recorded ${geCanonical.barInterval??timeframe} bars`}><a className="inline-flex min-h-10 items-center underline" href={`/tools/workspace?tab=backtest&symbol=${encodeURIComponent(sym)}&type=${snapshotAsset}&timeframe=${timeframe}`}>Open Backtest with {symbolText(sym)}</a></CollapsibleSection>}
-      {(quoteType==='crypto'?Boolean(cryptoStamp?.source&&cryptoStamp?.asOf):Boolean((geCanonical?.source??quote.data?.source)&&(geCanonical?.priceTs??quote.data?.observedAt)))&&<SourceLine {...(quoteType==='crypto'?cryptoStamp??{}:{source:geCanonical?.source??quote.data?.source,asOf:geCanonical?.priceTs??quote.data?.observedAt,basis:geCanonical?.barInterval??'Last session close'})}/>}
+      {(quoteType==='crypto'?Boolean(cryptoStamp?.source&&cryptoStamp?.asOf):Boolean((geCanonical?.source??quote.data?.source)&&(geCanonical?.priceTs??quote.data?.observedAt)))&&<SourceLine {...(quoteType==='crypto'?{...cryptoStamp,source:readerSourceLabel(cryptoStamp?.source)}:{source:readerSourceLabel(geCanonical?.source??quote.data?.source),asOf:geCanonical?.priceTs??quote.data?.observedAt,basis:geCanonical?.barInterval??'Last session close'})}/>}
       <ComplianceDisclaimer compact />
     </div>
   );

@@ -2,6 +2,7 @@
 
 import GECard from '@/src/features/goldenEgg/components/shared/GECard';
 import type { GoldenEggPayload } from '@/src/features/goldenEgg/types';
+import { ordinal } from '@/lib/utils/ordinal';
 
 type Props = {
   volatility: GoldenEggPayload['layer3']['structure']['volatility'];
@@ -42,7 +43,7 @@ export default function GEDVEConditions({ volatility }: Props) {
     const ageColor = volatility.phaseAgePercentile > 80 ? 'var(--msp-warn)' : 'var(--msp-text-muted)';
     conditions.push({
       label: 'Phase Age',
-      value: `${volatility.phaseAge} bars (${volatility.phaseAgePercentile.toFixed(0)}th pctl)`,
+      value: `${volatility.phaseAge} bars (${ordinal(Number(volatility.phaseAgePercentile.toFixed(0)))} pctl)`,
       color: ageColor,
     });
   }

@@ -13,6 +13,7 @@ import DecisionCockpit from "@/components/terminal/DecisionCockpit";
 import SignalRail from "@/components/terminal/SignalRail";
 import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
 import { calibrationSummary, cautionTags, gradeRelativeNote, noSetupDisplay, priceChangeBasisLabel, scoreLabel } from "@/lib/scoring/canonical/display";
+import { readerLabel } from "@/lib/presentation/symbolDisplay";
 
 interface PriceData {
   price: number;
@@ -941,22 +942,22 @@ export default function DeepAnalysisPage({
               const noSetup = ge ? noSetupDisplay(ge.canonicalVerdict) : null;
               const noQualifyingSetup = noSetup?.kind === 'no_setup';
               const cards: Array<[string, string, string]> = ge ? [
-                ['Symbol verdict', noQualifyingSetup ? 'No qualifying setup' : `${ge.verdict.assessment === 'ALIGNED' ? 'Scenario Aligned' : ge.verdict.assessment === 'NOT_ALIGNED' ? 'Not Aligned' : 'Watch'} · ${ge.verdict.direction}`, noQualifyingSetup ? 'var(--msp-text-muted)' : geColor],
+                ['Symbol verdict', noQualifyingSetup ? 'No qualifying setup' : `${ge.verdict.assessment === 'ALIGNED' ? 'Scenario Aligned' : ge.verdict.assessment === 'NOT_ALIGNED' ? 'Not Aligned' : 'Watch'} · ${readerLabel(ge.verdict.direction)}`, noQualifyingSetup ? 'var(--msp-text-muted)' : geColor],
                 ...(ge.canonicalVerdict
                   ? [
                       noSetup
-                        ? ['Canonical setup', `${noSetup.headline}${noSetup.detail ? ` — ${noSetup.detail}` : ''}`, noQualifyingSetup ? 'var(--msp-text-muted)' : geColor] as [string, string, string]
-                        : ['Canonical grade', `${ge.canonicalVerdict.grade} · ${ge.canonicalVerdict.setupType.replace(/_/g, ' ').toLowerCase()} · ${scoreLabel(ge.canonicalVerdict)}${cautionTags(ge.canonicalVerdict).map((t) => ` · ${t}`).join('')}`, geColor] as [string, string, string],
-                      ...(calibrationSummary(ge.canonicalVerdict) ? [['Calibration (factors only, no validated edge)', calibrationSummary(ge.canonicalVerdict)!, 'var(--msp-text-muted)'] as [string, string, string]] : []),
-                      ...(gradeRelativeNote(ge.canonicalVerdict) ? [['How to read the grade', gradeRelativeNote(ge.canonicalVerdict)!, 'var(--msp-text-muted)'] as [string, string, string]] : []),
-                      ['Indicator composite (secondary)', `${ge.verdict.confluence}% evidence alignment · legacy grade ${ge.legacyConfluence?.grade ?? 'n/a'}`, 'var(--msp-text-muted)'] as [string, string, string],
+                        ? ['Canonical setup', readerLabel(`${noSetup.headline}${noSetup.detail ? ` — ${noSetup.detail}` : ''}`), noQualifyingSetup ? 'var(--msp-text-muted)' : geColor] as [string, string, string]
+                        : ['Canonical grade', `${ge.canonicalVerdict.grade} · ${readerLabel(ge.canonicalVerdict.setupType)} · ${scoreLabel(ge.canonicalVerdict)}${cautionTags(ge.canonicalVerdict).map((t) => ` · ${t}`).join('')}`, geColor] as [string, string, string],
+                      ...(calibrationSummary(ge.canonicalVerdict) ? [['Calibration (factors only, no validated edge)', readerLabel(calibrationSummary(ge.canonicalVerdict)!), 'var(--msp-text-muted)'] as [string, string, string]] : []),
+                      ...(gradeRelativeNote(ge.canonicalVerdict) ? [['How to read the grade', readerLabel(gradeRelativeNote(ge.canonicalVerdict)!), 'var(--msp-text-muted)'] as [string, string, string]] : []),
+                      ['Indicator composite (secondary)', `${ge.verdict.confluence}% evidence alignment · ${readerLabel('legacy grade')} ${ge.legacyConfluence?.grade ?? readerLabel('n/a')}`, 'var(--msp-text-muted)'] as [string, string, string],
                     ]
                   : [['Indicator composite (evidence alignment)', `${ge.verdict.confluence}% · grade ${ge.verdict.grade}`, geColor] as [string, string, string]]),
-                ['Bias & setup', `${ge.verdict.direction === 'LONG' ? 'Bullish' : ge.verdict.direction === 'SHORT' ? 'Bearish' : 'Neutral'} · ${ge.verdict.setupType.replace('_', ' ')}`, geDirColor],
+                ['Bias & setup', `${ge.verdict.direction === 'LONG' ? 'Bullish' : ge.verdict.direction === 'SHORT' ? 'Bearish' : 'Neutral'} · ${readerLabel(ge.verdict.setupType)}`, geDirColor],
                 noQualifyingSetup
                   ? ['Primary blocker', 'None — no setup to block (see Canonical setup)', 'var(--msp-text-muted)']
-                  : ['Primary blocker', ge.verdict.primaryBlocker ?? 'None flagged', ge.verdict.primaryBlocker ? 'var(--msp-warn)' : 'var(--msp-bull)'],
-                ['What confirms next', ge.confirmation[0] ?? 'n/a', 'var(--msp-info)'],
+                  : ['Primary blocker', readerLabel(ge.verdict.primaryBlocker ?? 'None flagged'), ge.verdict.primaryBlocker ? 'var(--msp-warn)' : 'var(--msp-bull)'],
+                ['What confirms next', readerLabel(ge.confirmation[0] ?? 'n/a'), 'var(--msp-info)'],
               ] : [
                 ['Scenario', weightedScenarioLabel(weighted!.bias), geColor],
                 ['Scenario Confidence', `${weighted!.confidence.toFixed(0)}%`, geColor],
@@ -988,8 +989,8 @@ export default function DeepAnalysisPage({
                         {ge && <span className="text-[11px] font-normal text-slate-500" title={`Price as of ${ge.priceTs}`}>last completed bar {ge.lastCompletedBarAt ? String(ge.lastCompletedBarAt).slice(0, 16).replace('T', ' ') : 'n/a'}</span>}
                       </div>
                     </div>
-                    <span title={ge ? `${ge.dataTrust.label}${ge.dataTrust.reasons.length ? ': ' + ge.dataTrust.reasons.join('; ') : ''}` : dataQuality.detail} className="rounded border px-2 py-1 text-[11px] font-bold" style={{ color: trustColor, borderColor: `${trustColor}66`, background: `${trustColor}15` }}>
-                      Data {ge ? ge.dataTrust.label : dataQuality.label}
+                    <span title={ge ? `${readerLabel(ge.dataTrust.label)}${ge.dataTrust.reasons.length ? ': ' + ge.dataTrust.reasons.map((reason) => readerLabel(reason)).join('; ') : ''}` : dataQuality.detail} className="rounded border px-2 py-1 text-[11px] font-bold" style={{ color: trustColor, borderColor: `${trustColor}66`, background: `${trustColor}15` }}>
+                      {readerLabel(ge ? ge.dataTrust.label : dataQuality.label)}
                     </span>
                   </div>
                   <div className="grid gap-2 md:grid-cols-5">
@@ -1364,13 +1365,13 @@ export default function DeepAnalysisPage({
                           </div>
                           <div style={{ height: 4, background: 'rgba(148,163,184,0.15)', borderRadius: 2, marginTop: 6 }}><div style={{ width: `${Math.max(0, Math.min(100, score))}%`, height: 4, borderRadius: 2, background: score >= 65 ? '#10B981' : score >= 45 ? '#F59E0B' : '#EF4444' }} /></div>
                           <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: 4 }}>{desc}</div>
-                          {notes.slice(0, 3).map((n) => <div key={n} style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: 2 }}>• {n}</div>)}
+                          {notes.slice(0, 3).map((n) => <div key={n} style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: 2 }}>• {readerLabel(n)}</div>)}
                         </div>
                       ))}
                       <div style={{ padding: '0.75rem', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 10, fontSize: '0.8rem', color: '#FCD34D' }}>
-                        Time confluence: <strong>{ge.timing.relation}</strong> ({ge.timing.direction}, {ge.timing.signalStrength}{ge.timing.confidence != null ? `, ${ge.timing.confidence}%` : ''}; session {ge.timing.sessionState}; display only; never gates the verdict). {ge.timing.reasons.join(' · ')}
+                        Time confluence: <strong>{readerLabel(ge.timing.relation)}</strong> ({readerLabel(ge.timing.direction)}, {readerLabel(ge.timing.signalStrength)}{ge.timing.confidence != null ? `, ${ge.timing.confidence}%` : ''}; session {readerLabel(ge.timing.sessionState)}; display only; never gates the verdict). {ge.timing.reasons.map((reason) => readerLabel(reason)).join(' · ')}
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Extension: {ge.extension.label}{ge.extension.dveExhaustion != null ? ` · DVE exhaustion ${Math.round(ge.extension.dveExhaustion)}/100` : ''} · Cross-market: {ge.crossMarket.alignment} — {ge.crossMarket.summary}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Extension: {readerLabel(ge.extension.label)}{ge.extension.dveExhaustion != null ? ` · DVE exhaustion ${Math.round(ge.extension.dveExhaustion)}/100` : ''} · Cross-market: {readerLabel(ge.crossMarket.alignment)} — {readerLabel(ge.crossMarket.summary)}</div>
                     </div>
                   );
                 })()}
@@ -1504,7 +1505,7 @@ export default function DeepAnalysisPage({
                         return (
                           <div key={idx} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.4rem 0.6rem", background: "rgba(30,41,59,0.3)", borderRadius: "6px", fontSize: "0.8rem" }}>
                             <span style={{ color, minWidth: 48 }}>{tag}</span>
-                            <span style={{ color: "#CBD5E1" }}>{isPlus || isMinus ? reason.slice(2) : reason}</span>
+                            <span style={{ color: "#CBD5E1" }}>{readerLabel(isPlus || isMinus ? reason.slice(2) : reason)}</span>
                           </div>
                         );
                       })}
@@ -2082,7 +2083,7 @@ export default function DeepAnalysisPage({
                           {/* Catalyst class (rule-based) or legacy impact tag */}
                           {item.catalyst ? (
                             <span title={item.catalystReason} style={{ padding: "0.25rem 0.6rem", borderRadius: "6px", fontSize: "0.65rem", fontWeight: "700", background: item.catalyst === 'POSITIVE' ? 'rgba(16,185,129,0.15)' : item.catalyst === 'NEGATIVE' ? 'rgba(239,68,68,0.15)' : item.catalyst === 'EVENT_RISK' ? 'rgba(245,158,11,0.18)' : 'rgba(148,163,184,0.15)', color: item.catalyst === 'POSITIVE' ? '#10B981' : item.catalyst === 'NEGATIVE' ? '#EF4444' : item.catalyst === 'EVENT_RISK' ? '#F59E0B' : '#94A3B8' }}>
-                              {item.catalyst.replace('_', ' ')}{item.catalystReason && item.catalystReason !== 'no material catalyst pattern' ? ` · ${item.catalystReason}` : ''}
+                              {readerLabel(item.catalyst)}{item.catalystReason && item.catalystReason !== 'no material catalyst pattern' ? ` · ${readerLabel(item.catalystReason)}` : ''}
                             </span>
                           ) : (() => {
                             const impact = getNewsImpact(item.title, item.summary || '');
@@ -2157,10 +2158,10 @@ export default function DeepAnalysisPage({
                   ] as Array<[string, string[]]>).map(([title, lines]) => (
                     <div key={title} style={{ padding: "0.6rem 0.75rem", background: "rgba(30,41,59,0.35)", borderRadius: 8 }}>
                       <div style={{ fontSize: "0.7rem", color: "#F59E0B", textTransform: "uppercase", fontWeight: 700, marginBottom: 4 }}>{title}</div>
-                      {lines.length === 0 ? <div style={{ fontSize: "0.8rem", color: "#94A3B8" }}>Nothing recorded.</div> : lines.map((l, i) => <div key={i} style={{ fontSize: "0.82rem", color: "#E2E8F0", lineHeight: 1.5 }}>{lines.length > 1 ? '• ' : ''}{l}</div>)}
+                      {lines.length === 0 ? <div style={{ fontSize: "0.8rem", color: "#94A3B8" }}>Nothing recorded.</div> : lines.map((l, i) => <div key={i} style={{ fontSize: "0.82rem", color: "#E2E8F0", lineHeight: 1.5 }}>{lines.length > 1 ? '• ' : ''}{readerLabel(l)}</div>)}
                     </div>
                   ))}
-                  <div style={{ fontSize: "0.8rem", color: "#CBD5E1", fontStyle: "italic" }}>{result.analyst.sections.reading}</div>
+                  <div style={{ fontSize: "0.8rem", color: "#CBD5E1", fontStyle: "italic" }}>{readerLabel(result.analyst.sections.reading)}</div>
                 </div>
               </div>
             )}
@@ -2184,7 +2185,7 @@ export default function DeepAnalysisPage({
                   lineHeight: "1.8",
                   whiteSpace: "pre-wrap"
                 }}>
-                  {result.aiAnalysis}
+                  {readerLabel(result.aiAnalysis)}
                 </div>
               </div>
             )}
