@@ -9,6 +9,7 @@ import SourceLine from '@/components/visual/SourceLine';
 import StatTile from '@/components/visual/StatTile';
 import { marketText } from '@/lib/marketsPresentation';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import { collectionStatus, thresholdChip, THRESHOLD_RULE_NOTE } from '@/lib/signals/thresholdLabels';
 
 type Stat = {
   signal_type: string;
@@ -113,7 +114,8 @@ export default function SignalAccuracyPage() {
   const shownStats = showStats ? measuredStats : measuredStats.slice(0, 5);
   const visibleGrouped = grouped.map(([name, rows]) => [name, rows.filter(row => shownStats.includes(row))] as const).filter(([, rows]) => rows.length);
   const shownRecent = showRecent ? recentSignals : recentSignals.slice(0, 5);
-  const verdict = loading ? 'Loading observations…' : error ? 'Observations could not be loaded' : labeledCount === 0 ? 'Outcomes pending' : `${labeledCount.toLocaleString()} labelled outcomes collected`;
+  const collecting = overall ? collectionStatus(overall.total, overall.labeled) : null;
+  const verdict = loading ? 'Loading observations…' : error ? 'Observations could not be loaded' : collecting ?? (labeledCount === 0 ? 'Outcomes pending' : `${labeledCount.toLocaleString()} labelled outcomes collected`);
   const observationLabel = (value: string | null | undefined) => value === 'unknown' || value === 'pending' || !value ? 'Outcome pending' : marketText(value);
 
   // Gate: Pro (legacy pro_trader and admins included)
@@ -187,7 +189,7 @@ export default function SignalAccuracyPage() {
       ) : (
         <>
           {/* Overall Summary Cards */}
-          {overall && (
+          {overall && overall.labeled > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <SummaryCard label="Total Observations" value={overall.total.toLocaleString()} />
               <SummaryCard label="Labeled" value={overall.labeled.toLocaleString()} sub={overall.total > 0 ? `${((overall.labeled / overall.total) * 100).toFixed(0)}% resolved` : undefined} />
@@ -215,12 +217,11 @@ export default function SignalAccuracyPage() {
               <div className="flex flex-wrap gap-3">
                 {thresholds.map(t => (
                   <div key={t.horizon_minutes} className="bg-slate-900/50 rounded-lg px-3 py-1.5 text-[11px]">
-                    <span className="text-white font-medium">{t.horizon_label}</span>
-                    <span className="text-slate-500 ml-2">OK &ge;{t.correct_threshold}%</span>
-                    <span className="text-slate-500 ml-2">NO &le;{t.wrong_threshold}%</span>
+                    <span className="text-slate-400">{thresholdChip(t)}</span>
                   </div>
                 ))}
               </div>
+              <p className="mt-2 text-[11px] text-slate-500">{THRESHOLD_RULE_NOTE}</p>
             </div>
           )}
 

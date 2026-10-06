@@ -38,6 +38,22 @@ export function isSmartConsoleAlert(alert: { is_smart_alert?: boolean; condition
   return Boolean(alert.is_smart_alert || ct.startsWith('strategy_') || ct.startsWith('scanner_'));
 }
 
+/** Row badge in the console. Smart/strategy grouping comes from isSmartConsoleAlert so the badge and tabs agree. */
+export function consoleAlertType(alert: { is_multi_condition?: boolean; is_smart_alert?: boolean; condition_type?: string | null }): 'Basic' | 'Strategy' | 'Multi' {
+  if (alert.is_multi_condition) return 'Multi';
+  return isSmartConsoleAlert(alert) ? 'Strategy' : 'Basic';
+}
+
+/** Open the Smart tab first only when there are no basic and no multi alerts (an empty Basic default would contradict the header). */
+export function opensSmartTabFirst(
+  activeAlerts: Array<{ is_multi_condition?: boolean; is_smart_alert?: boolean; condition_type?: string | null }>,
+  multiCount: number,
+): boolean {
+  if (activeAlerts.length === 0) return false;
+  const hasBasic = activeAlerts.some((a) => !a.is_multi_condition && !isSmartConsoleAlert(a));
+  return !hasBasic && multiCount === 0;
+}
+
 /**
  * "Smart %": smart/strategy alerts as a share of checked active alerts. Multi-condition
  * alerts are left out of both counts because no checker evaluates them. 0 when none.

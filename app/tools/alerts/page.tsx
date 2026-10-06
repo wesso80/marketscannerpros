@@ -14,7 +14,7 @@ import { useAIPageContext } from "@/lib/ai/pageContext";
 import { useRiskPermission } from "@/components/risk/RiskPermissionContext";
 import { alertConditionLabel, alertHistoryLabel } from '@/lib/alertPresentation';
 import { isDiscordWebhookUrl } from '@/lib/notifications/discordWebhook';
-import { checkedActiveAlerts, deriveStatus, legacyMultiAlerts, smartAlertShare } from '@/lib/alerts/consoleStatus';
+import { checkedActiveAlerts, consoleAlertType, deriveStatus, legacyMultiAlerts, opensSmartTabFirst, smartAlertShare } from '@/lib/alerts/consoleStatus';
 import { ALERT_LIMITS } from '@/lib/alerts/planLimits';
 import RegimeBanner from '@/components/RegimeBanner';
 import StatTile from '@/components/visual/StatTile';
@@ -67,14 +67,6 @@ function StatusBadge({ label, state }: { label: string; state: string }) {
   );
 }
 
-function classifyAlertType(alert: AlertItem): 'Basic' | 'Strategy' | 'Multi' {
-  if (alert.is_multi_condition) return 'Multi';
-  const ct = alert.condition_type ?? '';
-  if (alert.is_smart_alert || ct.startsWith('strategy_') || ct.startsWith('scanner_')) {
-    return 'Strategy';
-  }
-  return 'Basic';
-}
 
 
 function fmtDateTime(value?: string) {
@@ -238,8 +230,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   useEffect(() => {
     if (autoTabbedRef.current || activeAlerts.length === 0) return;
     autoTabbedRef.current = true;
-    const hasBasic = activeAlerts.some((a) => !a.is_smart_alert && !a.is_multi_condition && !(a.condition_type ?? '').startsWith('strategy_') && !(a.condition_type ?? '').startsWith('scanner_'));
-    if (!hasBasic && multiAlerts.length === 0) setConsoleTab('smart');
+    if (opensSmartTabFirst(activeAlerts, multiAlerts.length)) setConsoleTab('smart');
   }, [activeAlerts, multiAlerts]);
 
   const toggleAlert = async (alert: AlertItem) => {
@@ -399,7 +390,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
               <div className="min-w-0">
                 {visibleAlertRows.map((alert) => {
                   const status = consoleRowLabel(alert, deriveStatus(alert));
-                  const type = classifyAlertType(alert);
+                  const type = consoleAlertType(alert);
                   const isEditing = editingId === alert.id;
                   return (
                     <div data-alert-row key={alert.id} className="group border-b border-slate-800 px-3 py-2 sm:py-0">
