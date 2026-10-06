@@ -111,3 +111,173 @@ export function symbolVerdictLabel(value: unknown): string {
   if (/[a-z]/.test(raw)) return raw;
   return plainEngineFallback(raw);
 }
+
+/**
+ * Reader labels for Symbol deep views. Presentation only — never feed these
+ * strings back into scores, fetches, or stored payloads.
+ *
+ * Same shape as `symbolVerdictLabel`: an explicit table, then a sentence-case
+ * fallback for an unknown ALL_CAPS, snake_case, or camelCase token. This table
+ * is not the verdict pill. WATCH stays "Watch" here; the pill's "Base in place"
+ * belongs only to the crypto stage badge.
+ */
+const READER: Record<string, string> = {
+  'TREND CONTINUATION': 'Trend continuation',
+  PULLBACK: 'Pullback',
+  SQUEEZE: 'Squeeze',
+  'EXHAUSTION FADE': 'Exhaustion fade',
+  'MEAN REVERSION': 'Mean reversion',
+  BREAKOUT: 'Breakout',
+  RANGE: 'Range',
+  TREND: 'Trend',
+  NONE: 'No setup',
+  'NO SETUP': 'No setup',
+  LONG: 'Upward',
+  SHORT: 'Downward',
+  NEUTRAL: 'Neutral',
+  ALIGNED: 'Aligned',
+  'NOT ALIGNED': 'Not aligned',
+  PASS: 'Checks passed',
+  WATCH: 'Watch',
+  BLOCK: 'Blocked',
+  BLOCKED: 'Blocked',
+  GOOD: 'Checks passed',
+  DEGRADED: 'Some checks failed',
+  MISSING: 'Not recorded',
+  STALE: 'Older data',
+  'INSUFFICIENT DATA': 'Not enough data',
+  'NO STRUCTURAL STOP': 'No clear stop level in the chart',
+  'NO VALIDATED EDGE': 'No validated research edge',
+  'RR BELOW MIN': 'Reward-to-risk below the minimum',
+  'STALE DATA': 'Older data',
+  'EARNINGS IN WINDOW': 'Earnings inside the holding window',
+  'DATA TRUST DEGRADED': 'Data checks failed',
+  'INSUFFICIENT HISTORY': 'Not enough history',
+  'AT OPPOSING LEVEL': 'At an opposing level',
+  'MOMENTUM DISAGREES': 'Momentum disagrees',
+  'DIRECTION UNRESOLVED': 'Direction not resolved',
+  'PROJECTED TARGET': 'Projected target',
+  'UNCALIBRATED TIMEFRAME': 'Uncalibrated timeframe',
+  UNCALIBRATED: 'Uncalibrated',
+  'NO SIGNAL': 'No signal',
+  'ALWAYS OPEN': 'Always open',
+  'LONG CROWDED': 'Crowded long',
+  'SHORT CROWDED': 'Crowded short',
+  'EVENT RISK': 'Event risk',
+  'ALPHA VANTAGE': 'Alpha Vantage',
+  'TIME SERIES DAILY ADJUSTED': 'Daily (adjusted)',
+  'TIME SERIES WEEKLY ADJUSTED': 'Weekly (adjusted)',
+  'TIME SERIES DAILY': 'Daily',
+  'TIME SERIES INTRADAY': 'Intraday',
+  COINGECKO: 'CoinGecko',
+  BINANCE: 'Binance',
+  'LOCAL DEMO': 'Example data',
+  'EARLY CONTEXT': 'Early context',
+  'MARKET CONTEXT': 'Market context',
+  'SOURCES CHECK': 'Sources check',
+  'RULE CHECK': 'Rule check',
+};
+
+/** Whole-string section keys. Not applied inside a sentence. */
+const SECTION_EXACT: Record<string, string> = {
+  price: 'Price',
+  ruleCheck: 'Rule check',
+  earlyContext: 'Early context',
+  marketContext: 'Market context',
+  derivatives: 'Derivatives',
+  liquidity: 'Liquidity',
+  supply: 'Supply',
+  levels: 'Levels',
+  risks: 'Risks',
+  sourcesCheck: 'Sources check',
+  notes: 'Notes',
+};
+
+const LEGACY_EXACT: Record<string, string> = {
+  'legacy grade': 'Indicator grade',
+  'legacy confluence': 'Earlier indicator read',
+  'legacy engine': 'Earlier read',
+};
+
+function labelKey(value: string): string {
+  return value.trim().replace(/[_-]+/g, ' ').replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/\s+/g, ' ').toUpperCase();
+}
+
+function readerFallback(value: string): string {
+  const words = value.trim().replace(/[_-]+/g, ' ').replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/\s+/g, ' ').toLowerCase();
+  if (!words) return 'Not recorded';
+  const plain = words.charAt(0).toUpperCase() + words.slice(1);
+  return ENGINE_TOKEN.test(plain) ? 'Not recorded' : plain;
+}
+
+function isEngineForm(value: string): boolean {
+  return /_/.test(value) || /[a-z][A-Z]/.test(value) || ENGINE_TOKEN.test(value);
+}
+
+function needsTokenPass(value: string): boolean {
+  return /[A-Z]{2,}(?:_[A-Z0-9]+)+/.test(value)
+    || /[a-z][a-z0-9]*_[a-z0-9]/.test(value)
+    || /[a-z][A-Z]/.test(value)
+    || /\b[A-Z][A-Z0-9]{1,}\b/.test(value)
+    || /legacy grade|legacy confluence|legacy engine/i.test(value);
+}
+
+function mappedToken(token: string): string | null {
+  return READER[labelKey(token)] ?? null;
+}
+
+function applyLegacyPhrases(text: string): string {
+  return text
+    .replace(/\blegacy grade\b/gi, 'Indicator grade')
+    .replace(/\blegacy confluence\b/gi, 'Earlier indicator read')
+    .replace(/\blegacy engine\b/gi, 'Earlier read');
+}
+
+function replaceReaderTokens(text: string): string {
+  let out = text.replace(/\b[A-Z][A-Z0-9]*(?:[ _-][A-Z0-9]+)+\b/g, (token) => {
+    const mapped = mappedToken(token);
+    if (mapped) return mapped;
+    return /_|[A-Z]{6,}/.test(token) ? readerFallback(token) : token;
+  });
+  out = out.replace(/\b(?:[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+|[a-z][a-z0-9]*(?:_[a-z0-9]+)+|[a-z]+(?:[A-Z][a-z0-9]*)+)\b/g, (token) => mappedToken(token) ?? readerFallback(token));
+  out = out.replace(/\b[A-Z][A-Z0-9]*\b/g, (token) => READER[token] ?? (/^[A-Z]{6,}$/.test(token) ? readerFallback(token) : token));
+  return applyLegacyPhrases(out);
+}
+
+/** Plain reader text. Stored codes stay stored; this only changes what is shown. */
+export function readerLabel(value: unknown): string {
+  if (value == null) return 'Not recorded';
+  const raw = String(value).trim().replace(/\s+/g, ' ');
+  if (!raw) return 'Not recorded';
+  if (/^n\/a$/i.test(raw)) return 'Not recorded';
+  const legacy = LEGACY_EXACT[raw.toLowerCase()];
+  if (legacy) return legacy;
+  if (SECTION_EXACT[raw]) return SECTION_EXACT[raw];
+  const key = labelKey(raw);
+  if (READER[key] && isEngineForm(raw)) return READER[key];
+  if (isEngineForm(raw) && !/[a-z]/.test(raw) && /[\s_-]/.test(raw)) return readerFallback(raw);
+  if (!needsTokenPass(raw)) return raw;
+  return replaceReaderTokens(raw);
+}
+
+/**
+ * The page source line. A known provider call becomes one short name.
+ * Anything else still goes through `readerLabel`, so a new snake_case or
+ * ALL_CAPS function name cannot stay raw.
+ */
+export function readerSourceLabel(value: unknown): string {
+  if (value == null) return 'Not recorded';
+  const raw = String(value).trim();
+  if (!raw) return 'Not recorded';
+  const av = /alpha[-_ ]?vantage/i.test(raw);
+  if (av && /TIME_SERIES_WEEKLY_ADJUSTED/i.test(raw)) return 'Alpha Vantage weekly (adjusted)';
+  if (av && /TIME_SERIES_DAILY_ADJUSTED/i.test(raw)) return 'Alpha Vantage daily (adjusted)';
+  if (av && /TIME_SERIES_INTRADAY/i.test(raw)) return 'Alpha Vantage intraday';
+  if (av && /TIME_SERIES_DAILY/i.test(raw)) return 'Alpha Vantage daily';
+  if (av && /REALTIME_OPTIONS/i.test(raw)) return 'Alpha Vantage options';
+  if (av && /quote/i.test(raw)) return 'Alpha Vantage quote';
+  if (av && raw.length < 80) return 'Alpha Vantage';
+  if (/^coingecko$/i.test(raw)) return 'CoinGecko';
+  if (/^binance$/i.test(raw)) return 'Binance';
+  return readerLabel(raw);
+}

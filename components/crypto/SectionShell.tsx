@@ -3,6 +3,7 @@ import React,{useEffect,useState} from 'react';
 import PriceStamp from '@/components/market/PriceStamp';
 import TrustBadge from '@/components/market/TrustBadge';
 import {formatMarketTime} from '@/lib/market/priceStamp';
+import {readerLabel} from '@/lib/presentation/symbolDisplay';
 import type {Metric,Section} from '@/lib/crypto/breakdown/types';
 import {COPY} from './copy';
 function display(m:Metric){
@@ -14,7 +15,7 @@ function display(m:Metric){
 export function MetricRow({metric:m,zone}:{metric:Metric;zone:string}){
  const t=formatMarketTime(m.asOf,zone),warn=m.status==='Unknown'||m.status==='Stale'||m.status==='Degraded';
  return <div className="rounded border border-white/10 p-3" data-metric="true">
-  <dt className="text-xs text-slate-400">{m.label}</dt>
+  <dt className="text-xs text-slate-400">{readerLabel(m.label)}</dt>
   <dd className="mt-1 text-sm">{m.unit==='price'?<PriceStamp assetType="crypto" price={typeof m.value==='number'?m.value:null} priceBasis={/OHLC|daily|UTC day/i.test(m.basis)?'daily_bar_close':'spot'} priceBasisLabel={m.basis} observedAt={m.asOf} source={m.source} stale={m.status==='Stale'}/>:display(m)}</dd>
   <p className={`mt-1 text-xs ${warn||!t?'text-amber-300':'text-slate-400'}`}>{m.source} · {t??COPY.unknown} · {m.basis}{m.reason?` · ${m.reason}`:''}</p>
  </div>;
