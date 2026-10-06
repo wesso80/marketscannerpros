@@ -26,6 +26,6 @@ describe('RS-23 catalyst labels', () => {
   });
   it('the news tag shows a neutral reason such as "insider filing" but not the default one', () => {
     const src = readFileSync('app/tools/deep-analysis/page.tsx', 'utf8');
-    expect(src).toContain("item.catalystReason && item.catalystReason !== 'no material catalyst pattern' ? ` · ${item.catalystReason}` : ''");
+    expect(src).toContain("item.catalystReason && item.catalystReason !== 'no material catalyst pattern' ? ` · ${readerLabel(item.catalystReason)}` : ''");
   });
 });
