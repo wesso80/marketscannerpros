@@ -172,57 +172,13 @@ export async function labelSignalOutcomes(workspaceId: string): Promise<{ labele
 }
 
 /**
- * Refresh the signal_accuracy_stats table (materialized view pattern).
+ * Rebuild signal_accuracy_stats. refresh_signal_accuracy is the only writer.
+ * It keeps migration 003's definitions: accuracy_pct = correct / (correct + wrong),
+ * precision_pct = correct / labelled. This path used to upsert the swapped pair.
  */
 async function refreshAccuracyStats(): Promise<void> {
   try {
-    await q(`
-      INSERT INTO signal_accuracy_stats (
-        signal_type, direction, horizon_minutes,
-        total_signals, correct_count, wrong_count,
-        accuracy_pct, precision_pct,
-        avg_pct_when_correct, avg_pct_when_wrong,
-        accuracy_score_76_100, computed_at
-      )
-      SELECT
-        sf.signal_type,
-        sf.direction,
-        so.horizon_minutes,
-        COUNT(*)::int AS total_signals,
-        COUNT(*) FILTER (WHERE so.outcome = 'correct')::int AS correct_count,
-        COUNT(*) FILTER (WHERE so.outcome = 'wrong')::int AS wrong_count,
-        ROUND(
-          COUNT(*) FILTER (WHERE so.outcome = 'correct')::numeric * 100.0 / NULLIF(COUNT(*), 0),
-          2
-        ) AS accuracy_pct,
-        ROUND(
-          COUNT(*) FILTER (WHERE so.outcome = 'correct')::numeric * 100.0 /
-          NULLIF(COUNT(*) FILTER (WHERE so.outcome IN ('correct', 'wrong')), 0),
-          2
-        ) AS precision_pct,
-        ROUND(AVG(so.pct_move) FILTER (WHERE so.outcome = 'correct'), 4) AS avg_pct_when_correct,
-        ROUND(AVG(so.pct_move) FILTER (WHERE so.outcome = 'wrong'), 4) AS avg_pct_when_wrong,
-        ROUND(
-          COUNT(*) FILTER (WHERE so.outcome = 'correct' AND sf.score >= 76)::numeric * 100.0 /
-          NULLIF(COUNT(*) FILTER (WHERE sf.score >= 76), 0),
-          2
-        ) AS accuracy_score_76_100,
-        NOW() AS computed_at
-      FROM signal_outcomes so
-      JOIN signals_fired sf ON sf.id = so.signal_id
-      WHERE sf.signal_at > NOW() - INTERVAL '90 days'
-      GROUP BY sf.signal_type, sf.direction, so.horizon_minutes
-      ON CONFLICT (signal_type, direction, horizon_minutes) DO UPDATE SET
-        total_signals = EXCLUDED.total_signals,
-        correct_count = EXCLUDED.correct_count,
-        wrong_count = EXCLUDED.wrong_count,
-        accuracy_pct = EXCLUDED.accuracy_pct,
-        precision_pct = EXCLUDED.precision_pct,
-        avg_pct_when_correct = EXCLUDED.avg_pct_when_correct,
-        avg_pct_when_wrong = EXCLUDED.avg_pct_when_wrong,
-        accuracy_score_76_100 = EXCLUDED.accuracy_score_76_100,
-        computed_at = EXCLUDED.computed_at
-    `);
+    await q(`SELECT refresh_signal_accuracy(90)`);
     console.info('[outcomeLabeler] Accuracy stats refreshed');
   } catch (err) {
     console.warn('[outcomeLabeler] Failed to refresh accuracy stats:', err instanceof Error ? err.message : err);
