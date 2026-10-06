@@ -205,8 +205,8 @@ export default function DeskFolds() {
   // Canonical research queue — identical source, score and order to Scanner's ranked mode.
   const ranked = useRankedQueue('daily');
   // Adapter kept so the existing panels below read the same shape they always did.
-type CachedSymbol = { symbol: string; score: number; direction: string; price: number; changePct: number | null; rsi: number | null; adx: number | null; type: string };
-const toCached = (r: RankedQueueRow): CachedSymbol => ({ symbol: r.symbol, score: r.mspScore, direction: r.direction, price: r.price ?? 0, changePct: r.changePct, rsi: r.rsi, adx: r.adx, type: r.assetClass });
+type CachedSymbol = { symbol: string; score: number; direction: string; price: number | null; changePct: number | null; rsi: number | null; adx: number | null; type: string };
+const toCached = (r: RankedQueueRow): CachedSymbol => ({ symbol: r.symbol, score: r.mspScore, direction: r.direction, price: r.price, changePct: r.changePct, rsi: r.rsi, adx: r.adx, type: r.assetClass });
 const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`);
   const cached = useMemo(() => ({
     equity: ranked.equity.map(toCached),
@@ -219,58 +219,41 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
   }), [ranked.equity, ranked.crypto, ranked.rows, ranked.loading, ranked.error, ranked.stale, ranked.ageMinutes]);
   const { stale: cacheStale, ageMinutes: cacheAgeMinutes } = cached;
 
-  /* -- Magnificent 7 live quotes ---------------------------------------- */
+  /* -- Magnificent 7 + index ETF quotes (one request, under the 20-symbol cap) -- */
   const [mag7, setMag7] = useState<Mag7Quote[]>([]);
   const [mag7Loading, setMag7Loading] = useState(true);
-  useEffect(() => {
-    let cancelled = false;
-    async function loadMag7() {
-      try {
-        const res = await fetch('/api/scanner/quotes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ symbols: [...MAG7_SYMBOLS] }),
-        });
-        if (!res.ok) throw new Error('quotes fetch failed');
-        const data = await res.json();
-        if (cancelled) return;
-        const bySymbol = new Map<string, Mag7Quote>((data.quotes || []).map((q: Mag7Quote) => [q.symbol, q]));
-        setMag7(MAG7_SYMBOLS.map(sym => bySymbol.get(sym) || { symbol: sym, price: null, change: null, changePercent: null, error: 'No data' }));
-      } catch {
-        if (!cancelled) setMag7(MAG7_SYMBOLS.map(sym => ({ symbol: sym, price: null, change: null, changePercent: null, error: 'No data' })));
-      } finally {
-        if (!cancelled) setMag7Loading(false);
-      }
-    }
-    loadMag7();
-    return () => { cancelled = true; };
-  }, []);
-
-  /* -- Major Indices live quotes ---------------------------------------- */
   const [indices, setIndices] = useState<IndexQuote[]>([]);
   const [indicesLoading, setIndicesLoading] = useState(true);
   useEffect(() => {
-    let cancelled = false;
-    async function loadIndices() {
+    const controller = new AbortController();
+    const blank = (sym: string): Mag7Quote => ({ symbol: sym, price: null, change: null, changePercent: null, error: 'No data' });
+    async function loadQuotes() {
       try {
         const res = await fetch('/api/scanner/quotes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ symbols: [...INDEX_SYMBOLS] }),
+          body: JSON.stringify({ symbols: [...MAG7_SYMBOLS, ...INDEX_SYMBOLS] }),
+          signal: controller.signal,
         });
         if (!res.ok) throw new Error('quotes fetch failed');
         const data = await res.json();
-        if (cancelled) return;
-        const bySymbol = new Map<string, IndexQuote>((data.quotes || []).map((q: IndexQuote) => [q.symbol, q]));
-        setIndices(INDEX_SYMBOLS.map((sym) => bySymbol.get(sym) || { symbol: sym, price: null, change: null, changePercent: null, error: 'No data' }));
-      } catch {
-        if (!cancelled) setIndices(INDEX_SYMBOLS.map((sym) => ({ symbol: sym, price: null, change: null, changePercent: null, error: 'No data' })));
+        if (controller.signal.aborted) return;
+        const bySymbol = new Map<string, Mag7Quote>((data.quotes || []).map((q: Mag7Quote) => [q.symbol, q]));
+        setMag7(MAG7_SYMBOLS.map(sym => bySymbol.get(sym) || blank(sym)));
+        setIndices(INDEX_SYMBOLS.map(sym => bySymbol.get(sym) || blank(sym)));
+      } catch (err) {
+        if (controller.signal.aborted || (err instanceof DOMException && err.name === 'AbortError')) return;
+        setMag7(MAG7_SYMBOLS.map(blank));
+        setIndices(INDEX_SYMBOLS.map(blank));
       } finally {
-        if (!cancelled) setIndicesLoading(false);
+        if (!controller.signal.aborted) {
+          setMag7Loading(false);
+          setIndicesLoading(false);
+        }
       }
     }
-    loadIndices();
-    return () => { cancelled = true; };
+    loadQuotes();
+    return () => controller.abort();
   }, []);
 
   /* -- Derived data ----------------------------------------------------- */
@@ -445,7 +428,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
                         </div>
                         <div className="grid grid-cols-3 gap-2">
                           <MetricCol label="Score" value={row.score} />
-                          <MetricCol label="Price" value={fmtPrice(row.price)} align="right" />
+                          <MetricCol label="Price" value={row.price == null ? 'No reading' : fmtPrice(row.price)} align="right" />
                           <MetricCol label="Last bar" value={fmtMove(row.changePct)} tone={moveColor} align="right" />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
