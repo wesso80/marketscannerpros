@@ -1,6 +1,7 @@
 'use client';
 
 import { describeGammaInput } from '@/lib/options/dealerGammaInput';
+import { capitalLevelLabel } from '@/lib/presentation/capitalLevelLabel';
 import { ResearchFold, ResearchMetric, researchLabel, researchNumber, researchPrice, researchTime, researchReason } from './researchPresentation';
 
 export default function CapitalPressureView({ symbol, data, loading, error, onRefresh }: {symbol:string; data:any; loading:boolean; error:string|null; onRefresh:()=>void}) {
@@ -26,7 +27,7 @@ export default function CapitalPressureView({ symbol, data, loading, error, onRe
       {perm?.blocked && <p className="text-amber-300">{researchReason(perm.noTradeMode?.reason)}</p>}
       {rg?.hardBlocked && <div className="text-amber-300"><p>A risk limit blocks this observation.</p>{rg.hardBlockReasons?.length > 0 && <ul className="mt-1 space-y-1">{rg.hardBlockReasons.map((reason:string,i:number)=><li key={i}>{researchReason(reason)}</li>)}</ul>}</div>}
       </ResearchFold>
-      <ResearchFold title="Reference levels"><ul className="space-y-2">{fd.liquidity_levels?.map((lv:any,i:number)=><li key={i} className="flex flex-wrap justify-between gap-2"><span>{researchLabel(lv.label)}</span><span>{researchPrice(lv.level)} · {typeof lv.prob === 'number' ? researchNumber(lv.prob * 100) : 'Not measured'}/100 weight</span></li>)}</ul>{!fd.liquidity_levels?.length && <p>No measured liquidity levels.</p>}<div className="flex flex-wrap gap-2">{fd.key_strikes?.map((s:any,i:number)=><span key={i}>Strike {researchPrice(s.strike)}</span>)}</div><div className="flex flex-wrap gap-2">{fd.flip_zones?.map((s:any,i:number)=><span key={i}>Gamma flip {researchPrice(s.level)}</span>)}</div></ResearchFold>
+      <ResearchFold title="Reference levels"><ul className="space-y-2">{fd.liquidity_levels?.map((lv:any,i:number)=><li key={i} className="flex flex-wrap justify-between gap-2"><span className="min-w-0 break-words">{capitalLevelLabel(lv.label)}</span><span>{researchPrice(lv.level)} · {typeof lv.prob === 'number' ? researchNumber(lv.prob * 100) : 'Not measured'}/100 weight</span></li>)}</ul>{!fd.liquidity_levels?.length && <p>No measured liquidity levels.</p>}<div className="flex flex-wrap gap-2">{fd.key_strikes?.map((s:any,i:number)=><span key={i}>Strike {researchPrice(s.strike)}</span>)}</div><div className="flex flex-wrap gap-2">{fd.flip_zones?.map((s:any,i:number)=><span key={i}>Gamma flip {researchPrice(s.level)}</span>)}</div></ResearchFold>
       <p data-research-source className="break-words text-xs text-slate-500">Source: Capital flow analysis · {researchTime(fd.asof)}</p>
     </>}
   </section>;
