@@ -1,5 +1,3 @@
-import { useUserTier } from '@/lib/useUserTier';
-import { isPaidTier } from '@/lib/tiers';
 import type { CanonicalResult } from '@/lib/scoring/canonical/types';
 import type { ScannerScorePayload } from '@/lib/scanner/scoreContract';
 import type { BacktestStatisticsBasis } from '@/lib/backtest/balanceStatistics';
@@ -981,22 +979,6 @@ export function useRegime() {
   return useApi(fetchRegime);
 }
 
-export function useScannerResults(type: 'crypto' | 'equity' = 'equity', timeframe: ScanTimeframe = 'daily') {
-  const { tier, isLoading, isAdmin } = useUserTier();
-  const live = isAdmin || isPaidTier(tier);
-  return useApi(() => isLoading ? Promise.resolve(null as unknown as ScannerResponse)
-    : live ? fetchScannerResults(type, timeframe) : fetchSavedScannerResults(type), [type, timeframe, live, isLoading]);
-}
-
-/** Public database snapshot, deliberately no POST and no fabricated live/composite score. */
-export async function fetchSavedScannerResults(type: 'crypto' | 'equity'): Promise<ScannerResponse> {
-  const data = await apiFetch<{ topPicks: Record<string, Array<ScanResult & { indicators?: Record<string, unknown> }>>; dataQuality: ScannerResponse['metadata']['dataQuality'] }>('/api/scanner/daily-picks?limit=20');
-  const results = (data.topPicks?.[type] ?? []).map(row => ({ ...row, type, timeframe: 'daily',
-    score: Number(row.score), price: row.price == null ? undefined : Number(row.price),
-  }));
-  return { success: true, results, metadata: { count: results.length, timestamp: data.dataQuality?.computedAt ?? '', dataQuality: data.dataQuality } };
-}
-
 /** One GET of the stored daily snapshot for Today. Does not POST /api/scanner/run. */
 export interface DailyPicksBundle {
   success: boolean;
@@ -1005,22 +987,34 @@ export interface DailyPicksBundle {
   dataQuality?: ScannerResponse['metadata']['dataQuality'];
 }
 
-export async function fetchDailyPicksBundle(): Promise<DailyPicksBundle> {
-  const data = await apiFetch<{
+/**
+ * Current-day daily picks (limit=20). One in-flight request is shared by the Today shell
+ * and DeskFolds so a page load does not issue a second GET for the same snapshot.
+ */
+let dailyPicksInflight: Promise<DailyPicksBundle> | null = null;
+
+export function fetchDailyPicksBundle(): Promise<DailyPicksBundle> {
+  if (dailyPicksInflight) return dailyPicksInflight;
+  const promise = apiFetch<{
     success?: boolean;
     topPicks?: { equity?: unknown[]; crypto?: unknown[] };
     dataQuality?: ScannerResponse['metadata']['dataQuality'];
-  } | null>('/api/scanner/daily-picks?limit=20');
-  if (!data || typeof data !== 'object') return { success: false, equity: [], crypto: [] };
-  return {
-    success: data.success !== false,
-    equity: Array.isArray(data.topPicks?.equity) ? data.topPicks.equity : [],
-    crypto: Array.isArray(data.topPicks?.crypto) ? data.topPicks.crypto : [],
-    dataQuality: data.dataQuality,
-  };
+  } | null>('/api/scanner/daily-picks?limit=20').then((data) => {
+    if (!data || typeof data !== 'object') return { success: false, equity: [], crypto: [] };
+    return {
+      success: data.success !== false,
+      equity: Array.isArray(data.topPicks?.equity) ? data.topPicks.equity : [],
+      crypto: Array.isArray(data.topPicks?.crypto) ? data.topPicks.crypto : [],
+      dataQuality: data.dataQuality,
+    };
+  }).finally(() => {
+    if (dailyPicksInflight === promise) dailyPicksInflight = null;
+  });
+  dailyPicksInflight = promise;
+  return promise;
 }
 
-/** Shared by the Today ranked queue so equity and crypto come from a single daily-picks read. */
+/** Shared current-day daily-picks read for the Today shell and the research queue. */
 export function useDailyPicksBundle() {
   return useApi(fetchDailyPicksBundle, ['daily-picks']);
 }

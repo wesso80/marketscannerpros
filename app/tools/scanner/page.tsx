@@ -934,7 +934,6 @@ function ScannerContent() {
   // offer the re-run instead of leaving an empty area (SC-11).
   const proResultsOutdated = Boolean(proResponse) && !proScanResults;
   const proAbortRef = useRef<AbortController | null>(null);
-  const detailRequestRef = useRef(0);
   useEffect(() => {
     proAbortRef.current?.abort();
     setProScanLoading(false);
@@ -956,7 +955,7 @@ function ScannerContent() {
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
   const [selectedAssetClass, setSelectedAssetClass] = useState<'equity' | 'crypto' | 'forex' | null>(null);
   const [symbolDetail, setSymbolDetail] = useState<SymbolDetail | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailLoading] = useState(false);
 
   const currentRegimeRaw = regime.data?.regime || 'RANGE_NEUTRAL'; // unavailable regime → neutral weights (what /api/regime used to return with no signals)
   const currentRegime = normalizeRegimeKey(currentRegimeRaw);
@@ -1107,33 +1106,6 @@ function ScannerContent() {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortKey(key); setSortDir('desc'); }
   }
-
-  /* ─── Fetch single symbol detail ─── */
-  const loadSymbolDetail = useCallback(async (symbol: string, tf: string, asset: string, context?: { queueRank?: SymbolDetail['queueRank']; lifecycle?: string }) => {
-    const requestId = ++detailRequestRef.current;
-    setSelectedSymbol(symbol);
-    setSelectedAssetClass(asset === 'crypto' ? 'crypto' : 'equity');
-    setDetailLoading(true);
-    setSymbolDetail(null);
-    try {
-      const { response: res, body: data } = await boundedJsonFetch<any>('/api/scanner/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: asset, timeframe: tf, minScore: 0, symbols: [symbol] }),
-      });
-      if (requestId !== detailRequestRef.current) return;
-      if (res.ok && data.success && data.results?.length > 0) {
-        setSymbolDetail({ ...data.results[0], providerStatus: data.metadata?.dataQuality?.providerStatus ?? null, queueRank: context?.queueRank ?? null, lifecycle: context?.lifecycle });
-      } else {
-        setProScanError(data?.error || `Analysis unavailable for ${symbol}. Retry manually.`);
-      }
-    } catch (error) {
-      if (requestId !== detailRequestRef.current) return;
-      setProScanError(error instanceof Error ? error.message : 'Analysis unavailable. Retry manually.');
-    } finally {
-      if (requestId === detailRequestRef.current) setDetailLoading(false);
-    }
-  }, []);
 
   /* ─── V2 row click ─── */
   const handleV2RowClick = useCallback((r: ScanResult) => {

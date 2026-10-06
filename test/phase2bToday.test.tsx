@@ -33,6 +33,7 @@ vi.mock('@/app/v2/_lib/api', () => ({
   useMarketMovers: () => ({ data: { topGainers: [], topLosers: [], mostActive: [] }, loading: false }),
   useEconomicCalendar: () => ({ data: { events: [] }, loading: false }),
   useNews: () => ({ data: { articles: newsArticles }, loading: false, error: null }),
+  useDailyPicksBundle: () => ({ data: null, loading: false, error: null, isAuthError: false, isUpgradeRequired: false, refetch: () => {} }),
 }));
 
 import CommandCenterPage from '@/app/tools/command-center/page';

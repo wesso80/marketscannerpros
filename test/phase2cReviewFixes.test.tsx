@@ -45,8 +45,7 @@ vi.mock('@/app/v2/_lib/V2Context', () => ({
 }));
 vi.mock('@/app/v2/_lib/api', async () => {
   const actual = await vi.importActual<typeof import('@/app/v2/_lib/api')>('@/app/v2/_lib/api');
-  const idle = { data: { results: [], metadata: { count: 0, timestamp: '', dataQuality: null } }, error: null, loading: false, isAuthError: false, isUpgradeRequired: false, refetch: () => {} };
-  return { ...actual, useScannerResults: () => idle, useRegime: () => ({ data: null, loading: false, error: null, refetch: () => {} }) };
+  return { ...actual, useRegime: () => ({ data: null, loading: false, error: null, refetch: () => {} }) };
 });
 vi.mock('@/hooks/useOptionsChain', async () => {
   const actual = await vi.importActual<typeof import('@/hooks/useOptionsChain')>('@/hooks/useOptionsChain');
