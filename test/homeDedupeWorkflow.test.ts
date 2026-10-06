@@ -17,10 +17,11 @@ describe('Homepage: workflow once, tidy MSP AI section', () => {
     expect(hub).not.toContain('Open workflow map');
   });
 
-  it('renames the value-stack item and keeps the other three', () => {
-    expect(hub).toContain("{ label: 'Review loops', detail: 'Journal, watchlists, alerts and paper tests so you can review your process.' }");
+  it('drops the value stack, which repeated the four steps', () => {
+    expect(hub).not.toContain('30-second value stack');
+    expect(hub).not.toContain('What MSP helps you do');
+    expect(hub).not.toContain('valueStack');
     expect(hub).not.toContain('Track your edge');
-    for (const label of ['Scan faster', 'Verify context', 'Test safely']) expect(hub).toContain(`label: '${label}'`);
   });
 
   it('MSP AI section has no image, an accuracy caveat and an Open the Scanner button', () => {
