@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { historyPriceSelect } from '@/lib/alerts/historyPrice';
 
 // GET /api/alerts/recent - Get recently triggered alerts for toast notifications
 export async function GET(req: NextRequest) {
@@ -25,7 +26,8 @@ export async function GET(req: NextRequest) {
         a.symbol,
         a.condition_type AS condition,
         a.condition_value AS target_price,
-        h.trigger_price AS triggered_price,
+        ${historyPriceSelect('h', 'trigger_price')},
+        ${historyPriceSelect('h', 'triggered_price')},
         h.triggered_at
       FROM alert_history h
       JOIN alerts a ON h.alert_id = a.id

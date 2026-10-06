@@ -6,6 +6,7 @@ import { buildTriggeredAlertContent } from '@/lib/email';
 import { sendPushToUser } from '@/lib/pushServer';
 import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
 import { DEFAULT_BACKTEST_STRATEGY, isBacktestStrategy } from '@/lib/strategies/registry';
+import { historyPriceInsert } from '@/lib/alerts/historyPrice';
 
 /**
  * Backtest Strategy Alerts Checker
@@ -249,10 +250,11 @@ async function checkStrategyAlerts(req: NextRequest) {
                 WHERE id = $1
               `, [alert.id, signal.price]);
 
-              // Record in alert history
+              // Record in alert history. Same fill price in both price columns.
+              const historyPrice = historyPriceInsert('$6');
               await q(`
-                INSERT INTO alert_history (workspace_id, alert_id, symbol, condition_type, condition_value, triggered_price, notification_sent, notification_type)
-                VALUES ($1, $2, $3, $4, $5, $6, true, 'strategy')
+                INSERT INTO alert_history (workspace_id, alert_id, symbol, condition_type, condition_value, ${historyPrice.columns}, notification_sent, notification_type)
+                VALUES ($1, $2, $3, $4, $5, ${historyPrice.values}, true, 'strategy')
               `, [alert.workspace_id, alert.id, symbol, alert.condition_type, alert.condition_value, signal.price]);
 
               // Send notifications
