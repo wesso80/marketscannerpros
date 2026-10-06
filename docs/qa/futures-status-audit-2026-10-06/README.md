@@ -10,15 +10,15 @@ Validation: seven tests passed (futuresStatusCopy and futuresSessionEngine), Typ
 
 | Hard layout gate | Status |
 |---|---|
-| One verdict above first fold | One panel summary tested; parent Terminal context for Pip |
-| About two screens closed | Not claimed by this copy patch; Pip to measure |
-| No sideways scroll at 390 | Pending Pip |
-| No fake/empty tool | Failure/missing states explicit; estimates labelled |
-| No banned/engine words | Error/dataState/issue strings removed; other module copy for Pip |
-| Readable numbers + one source line | Existing score rounding preserved; one panel source |
-| Screenshots 1280 and 390 | Pending Pip; no screenshots claimed |
-| Symbol / Overview / Track chrome | No shared chrome changes |
+| One verdict above first fold | Pass on loaded states except Close Calendar provider-error at 390, where the summary ends 16px below the fold. See [evidence.md](evidence.md) |
+| About two screens closed | Pass the 2.3 hard max for Session, Cash Bridge, Commodity Session Map, and Liquidity. Close Calendar loaded states are 2.812–2.928 |
+| No sideways scroll at 390 | Page width stays 390. Close Calendar table scrolls inside the page: 620px in a 340px region |
+| No fake/empty tool | Failed, absent, partial, and provider-error copy captured |
+| No banned/engine words | Raw error, NO_SETUP, PROVIDER_DEGRADED, and Data State are not visible |
+| Readable numbers + one source line | One SourceLine on loaded states. Estimator scores unchanged. Failed and absent have no source line |
+| Screenshots 1280 and 390 | Captured, mocked. [evidence.md](evidence.md) |
+| Symbol / Overview / Track chrome | Terminal chrome included. No second Terminal verdict |
 
 **Pip to check:** Terminal Futures using a mocked /ES response at 1280×800 and 390×844: ready, partial coverage, failed request, absent response and provider-error states. Verify the context summary is above the first fold and does not duplicate parent Terminal verdict/source. Check all Futures subviews, closed Data coverage, the explicit estimate caveat, screen counts and overflow. Capture before/after with parent chrome. No need to run a live provider request for this copy review.
 
-User assigned visual checks to Pip. Draft/HOLD pending evidence; no merge/deploy.
+Layout-gate screenshots are attached in [evidence.md](evidence.md). Calculations were not changed. No merge from this evidence commit.
