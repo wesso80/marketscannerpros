@@ -32,6 +32,13 @@ it.each(mapped)('maps %s to the reader label %s', (raw, label) => {
   expect(capitalLevelLabel(raw)).not.toMatch(ENGINE_TOKEN);
 });
 
+it('leaves prose and camelCase alone', () => {
+  const prose = 'The UTC_00_09_LOW sits under spot, and PDL is separate.';
+  expect(capitalLevelLabel(prose)).toBe(prose);
+  expect(capitalLevelLabel('see PDL in the note')).toBe('see PDL in the note');
+  expect(capitalLevelLabel('levelAtUtc00')).toBe('levelAtUtc00');
+});
+
 it('falls back to plain words for an unknown level key', () => {
   expect(capitalLevelLabel('ZZZ_NEW_LEVEL')).toBe('Zzz new level');
   expect(capitalLevelLabel('FUTURE STAGE')).toBe('Future stage');

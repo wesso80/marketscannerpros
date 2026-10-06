@@ -6,7 +6,7 @@ const read = (p: string) => readFileSync(resolve(__dirname, '..', p), 'utf8');
 
 describe('Deep-Dive informational block stays collapsible without an inner scroll box', () => {
   it.each([
-    ['app/tools/equity-explorer/page.tsx', "equityExplorerLabel('Zone 3')"],
+    ['app/tools/equity-explorer/page.tsx', "assetExplorerLabel('Zone 3')"],
     ['app/tools/crypto-explorer/page.tsx', 'Zone 3 • Informational'],
   ])('%s', (file, label) => {
     const src = read(file);

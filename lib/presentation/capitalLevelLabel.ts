@@ -3,7 +3,9 @@
  * and weight stay as measured.
  *
  * Same pattern as `symbolVerdictLabel`: an explicit table, then a sentence-case
- * fallback so a raw key does not stay on the row.
+ * fallback. The lookup is the whole string only. Underscores may separate a
+ * token. A sentence is left alone, including a single capitalised word inside
+ * it, and camelCase is not split.
  *
  * `UTC_00_09_LOW` / `UTC00_09LOW` is the low of today's UTC hourly candles whose
  * hour is before 09:00 (`app/api/flow/route.ts`). That is the 00:00–09:00 UTC
@@ -26,11 +28,11 @@ const CAPITAL_LEVEL_LABELS: Record<string, string> = {
 const ENGINE_TOKEN = /^[A-Z0-9]+(?:[_\s,]+[A-Z0-9]+)*$/;
 
 function levelKey(value: string): string {
-  return value.trim().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').toUpperCase();
+  return value.trim().replace(/_+/g, ' ').replace(/\s+/g, ' ').toUpperCase();
 }
 
 function plainFallback(value: string): string {
-  const words = value.trim().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').toLowerCase();
+  const words = value.trim().replace(/_+/g, ' ').replace(/\s+/g, ' ').toLowerCase();
   if (!words) return 'Not recorded';
   const plain = words.charAt(0).toUpperCase() + words.slice(1);
   return ENGINE_TOKEN.test(plain) ? 'Not recorded' : plain;

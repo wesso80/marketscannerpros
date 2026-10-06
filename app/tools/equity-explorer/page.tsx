@@ -5,7 +5,7 @@ import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import { MarketMetrics, MarketSparkline } from '@/components/explorer/MarketsSummary';
 import { marketText } from '@/lib/marketsPresentation';
-import { equityExplorerLabel } from '@/lib/presentation/equityExplorerLabel';
+import { assetExplorerLabel } from '@/lib/presentation/assetExplorerLabel';
 
 import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -581,7 +581,7 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
               <div className="grid gap-2 lg:grid-cols-[1fr_420px]">
                 <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                   <div className="mb-2 flex items-center justify-between">
-                    <p className="text-[11px] font-medium text-[var(--msp-text-muted)]">{equityExplorerLabel('Zone 1')}</p>
+                    <p className="text-[11px] font-medium text-[var(--msp-text-muted)]">{assetExplorerLabel('Zone 1')}</p>
                     <span className="text-[11px] text-slate-500">US session anchor</span>
                   </div>
                   <div className="mb-2 flex flex-wrap gap-1">
@@ -613,8 +613,8 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
                 ['Price', formatPrice(data.quote.price)],
                 ['24h', `${(data.quote.changePercent ?? 0) >= 0 ? '+' : ''}${(data.quote.changePercent ?? 0).toFixed(2)}%`],
                 ['Permission', upeSignal ? (upeSignal.eligibilityUser === 'eligible' ? 'Aligned' : upeSignal.eligibilityUser === 'conditional' ? 'Conditional' : 'Not aligned') : 'Pending'],
-                [equityExplorerLabel('CRCS'), upeSignal && Number.isFinite(upeSignal.crcsUser) ? upeSignal.crcsUser.toFixed(1) : '—'],
-                [equityExplorerLabel('ΔHr'), upeSignal && Number.isFinite(upeSignal.microAdjustment) ? `${upeSignal.microAdjustment >= 0 ? '+' : ''}${upeSignal.microAdjustment.toFixed(2)}` : '—'],
+                [assetExplorerLabel('CRCS'), upeSignal && Number.isFinite(upeSignal.crcsUser) ? upeSignal.crcsUser.toFixed(1) : '—'],
+                [assetExplorerLabel('ΔHr'), upeSignal && Number.isFinite(upeSignal.microAdjustment) ? `${upeSignal.microAdjustment >= 0 ? '+' : ''}${upeSignal.microAdjustment.toFixed(2)}` : '—'],
                 ['Trend', getQuickSignals(data).trend.label],
                 ['Momentum', getQuickSignals(data).momentum.label],
                 ['Volatility', getQuickSignals(data).volatility.label],
@@ -631,7 +631,7 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="mb-1 flex items-center justify-between">
                   <div>
-                    <h2 className="text-xs font-bold">{equityExplorerLabel('Zone 2 · Action')}</h2>
+                    <h2 className="text-xs font-bold">{assetExplorerLabel('Zone 2 · Action')}</h2>
                   </div>
                   <button
                     type="button"
@@ -758,7 +758,7 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
 
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="mb-1">
-                  <p className="text-[11px] font-medium text-[var(--msp-text-muted)]">{equityExplorerLabel('Zone 2 • Context')}</p>
+                  <p className="text-[11px] font-medium text-[var(--msp-text-muted)]">{assetExplorerLabel('Zone 2 • Context')}</p>
                   <h2 className="text-xs font-bold">Trend, relative strength, and volatility</h2>
                 </div>
                 <div className="grid gap-2">
@@ -788,7 +788,7 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
             {/* Open by default; the user can still collapse it. Native <details> keeps the content mounted either way. */}
             <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
               <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
-                <span>{equityExplorerLabel('Zone 3')}</span>
+                <span>{assetExplorerLabel('Zone 3')}</span>
                 <span className="text-[11px] text-slate-500 group-open:hidden">Expand</span>
                 <span className="hidden text-[11px] text-slate-500 group-open:inline">Collapse</span>
               </summary>
