@@ -15,6 +15,21 @@ it('says Live only for a timed quote inside the live window', () => {
   }, NOW)).toBe('Live');
 });
 
+it('labels a Yahoo futures quote as Delayed, not the UTC session close', () => {
+  expect(commodityFreshnessLabel({
+    date: '2026-10-06',
+    cadence: 'live',
+    source: 'YAHOO_FUTURES',
+    freshnessStatus: 'LIVE',
+  }, NOW)).toBe('Delayed');
+  expect(commodityFreshnessLabel({
+    date: '2026-10-05',
+    cadence: 'live',
+    source: 'YAHOO_FUTURES',
+    freshnessStatus: 'DELAYED',
+  }, Date.parse('2026-10-05T23:00:00Z'))).toBe('Delayed');
+});
+
 it('labels a same-day daily close as the session date, not Live', () => {
   expect(commodityFreshnessLabel({
     date: '2026-10-06',

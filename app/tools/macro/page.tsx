@@ -697,9 +697,9 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                         <span className={c.freshnessStatus === 'STALE' ? 'text-rose-300' : c.freshnessStatus === 'DELAYED' ? 'text-amber-300' : 'text-emerald-300'}>{macroLabel(c.freshnessStatus)}</span>
                       </div>
                       <div className="mt-1 flex items-center justify-between">
-                        <span className="text-sm font-semibold text-white">{typeof c.price === 'number' ? `${c.price.toFixed(2)}` : 'Not collected'}</span>
-                        <span className={`text-xs font-semibold ${(c.changePercent ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {typeof c.changePercent === 'number' && Number.isFinite(c.changePercent) ? `${c.changePercent >= 0 ? '+' : ''}${c.changePercent.toFixed(1)}%` : 'Not collected'}
+                        <span className="text-sm font-semibold text-white">{typeof c.price === 'number' ? `${c.price.toFixed(2)}` : 'unavailable'}</span>
+                        <span className={`text-xs font-semibold ${typeof c.changePercent === 'number' && Number.isFinite(c.changePercent) ? (c.changePercent >= 0 ? 'text-emerald-400' : 'text-rose-400') : 'text-white/50'}`}>
+                          {typeof c.changePercent === 'number' && Number.isFinite(c.changePercent) ? `${c.changePercent >= 0 ? '+' : ''}${c.changePercent.toFixed(1)}%` : 'unavailable'}
                         </span>
                       </div>
                       <div className="text-[11px] text-white/40">{macroLabel(c.category)} · {c.unit || 'Unit not supplied'}</div>
