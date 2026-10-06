@@ -76,6 +76,19 @@ it.each(mapped)('maps %s to %s', (raw, label) => {
   expect(readerLabel(readerLabel(raw))).toBe(label);
 });
 
+it('leaves prose intact and only rewrites underscore tokens inside a sentence', () => {
+  const products = 'Apple sells the iPhone and iPad; iShares ETF on eBay.';
+  const interest = 'SHORT interest is high; LONG term trend PASS.';
+  expect(readerLabel(products)).toBe(products);
+  expect(readerLabel(interest)).toBe(interest);
+  expect(readerLabel('Setup is TREND_CONTINUATION into the close.')).toBe('Setup is Trend continuation into the close.');
+  expect(readerLabel('LONG term TREND_CONTINUATION still PASS.')).toBe('LONG term Trend continuation still PASS.');
+  expect(readerLabel('The legacy grade was revised.')).toBe('The Indicator grade was revised.');
+  expect(readerLabel('LONG')).toBe('Upward');
+  expect(readerLabel('PASS')).toBe('Checks passed');
+  expect(readerLabel('GOOD')).toBe('Checks passed');
+});
+
 it('falls back to sentence case and leaves tickers, grades, and plain words', () => {
   expect(readerLabel('ZZZ_NEW_STATE')).toBe('Zzz new state');
   expect(readerLabel('FUTURE STAGE')).toBe('Future stage');

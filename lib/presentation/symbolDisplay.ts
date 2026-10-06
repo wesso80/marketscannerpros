@@ -117,9 +117,11 @@ export function symbolVerdictLabel(value: unknown): string {
  * strings back into scores, fetches, or stored payloads.
  *
  * Same shape as `symbolVerdictLabel`: an explicit table, then a sentence-case
- * fallback for an unknown ALL_CAPS, snake_case, or camelCase token. This table
- * is not the verdict pill. WATCH stays "Watch" here; the pill's "Base in place"
- * belongs only to the crypto stage badge.
+ * fallback, when the whole value is a code or label. Inside a sentence only an
+ * underscore token or a legacy phrase is rewritten — camelCase names and words
+ * such as LONG, SHORT, and PASS stay. This table is not the verdict pill.
+ * WATCH stays "Watch" here; the pill's "Base in place" belongs only to the
+ * crypto stage badge.
  */
 const READER: Record<string, string> = {
   'TREND CONTINUATION': 'Trend continuation',
@@ -210,22 +212,6 @@ function readerFallback(value: string): string {
   return ENGINE_TOKEN.test(plain) ? 'Not recorded' : plain;
 }
 
-function isEngineForm(value: string): boolean {
-  return /_/.test(value) || /[a-z][A-Z]/.test(value) || ENGINE_TOKEN.test(value);
-}
-
-function needsTokenPass(value: string): boolean {
-  return /[A-Z]{2,}(?:_[A-Z0-9]+)+/.test(value)
-    || /[a-z][a-z0-9]*_[a-z0-9]/.test(value)
-    || /[a-z][A-Z]/.test(value)
-    || /\b[A-Z][A-Z0-9]{1,}\b/.test(value)
-    || /legacy grade|legacy confluence|legacy engine/i.test(value);
-}
-
-function mappedToken(token: string): string | null {
-  return READER[labelKey(token)] ?? null;
-}
-
 function applyLegacyPhrases(text: string): string {
   return text
     .replace(/\blegacy grade\b/gi, 'Indicator grade')
@@ -233,14 +219,29 @@ function applyLegacyPhrases(text: string): string {
     .replace(/\blegacy engine\b/gi, 'Earlier read');
 }
 
-function replaceReaderTokens(text: string): string {
-  let out = text.replace(/\b[A-Z][A-Z0-9]*(?:[ _-][A-Z0-9]+)+\b/g, (token) => {
-    const mapped = mappedToken(token);
-    if (mapped) return mapped;
-    return /_|[A-Z]{6,}/.test(token) ? readerFallback(token) : token;
-  });
-  out = out.replace(/\b(?:[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+|[a-z][a-z0-9]*(?:_[a-z0-9]+)+|[a-z]+(?:[A-Z][a-z0-9]*)+)\b/g, (token) => mappedToken(token) ?? readerFallback(token));
-  out = out.replace(/\b[A-Z][A-Z0-9]*\b/g, (token) => READER[token] ?? (/^[A-Z]{6,}$/.test(token) ? readerFallback(token) : token));
+/** The entire value is one code or label, not a sentence that happens to contain one. */
+function isWholeLabel(raw: string): boolean {
+  if (/^[A-Za-z][A-Za-z0-9]*$/.test(raw) && /[a-z][A-Z]/.test(raw)) return true;
+  if (/^[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+$/.test(raw)) return true;
+  if (/^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+$/.test(raw)) return true;
+  return ENGINE_TOKEN.test(raw);
+}
+
+function wholeLabel(raw: string): string {
+  const mapped = READER[labelKey(raw)];
+  if (mapped) return mapped;
+  if (/[a-z][A-Z]/.test(raw) || /_/.test(raw) || (/[\s-]/.test(raw) && !/[a-z]/.test(raw))) return readerFallback(raw);
+  if (/^[A-Z]{6,}$/.test(raw)) return readerFallback(raw);
+  return raw;
+}
+
+/**
+ * Inside a sentence, only an underscore token (TREND_CONTINUATION) or an
+ * explicit legacy phrase is rewritten. CamelCase product names and ordinary
+ * capital words (LONG, SHORT, PASS) stay as written.
+ */
+function replaceProseTokens(text: string): string {
+  const out = text.replace(/\b[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+\b/g, (token) => READER[labelKey(token)] ?? readerFallback(token));
   return applyLegacyPhrases(out);
 }
 
@@ -253,11 +254,8 @@ export function readerLabel(value: unknown): string {
   const legacy = LEGACY_EXACT[raw.toLowerCase()];
   if (legacy) return legacy;
   if (SECTION_EXACT[raw]) return SECTION_EXACT[raw];
-  const key = labelKey(raw);
-  if (READER[key] && isEngineForm(raw)) return READER[key];
-  if (isEngineForm(raw) && !/[a-z]/.test(raw) && /[\s_-]/.test(raw)) return readerFallback(raw);
-  if (!needsTokenPass(raw)) return raw;
-  return replaceReaderTokens(raw);
+  if (isWholeLabel(raw)) return wholeLabel(raw);
+  return replaceProseTokens(raw);
 }
 
 /**
