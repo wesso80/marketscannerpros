@@ -8,6 +8,7 @@ import ToolIdentityHeader from '@/components/tools/ToolIdentityHeader';
 import { useUserTier, canAccessOptionsTerminal } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import { flowSideLabel } from '@/lib/options/flowSideLabel';
 
 /* ── Types matching API response ── */
 
@@ -382,24 +383,24 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                   )}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '11px' }}>
                     <div style={{ padding: '4px 8px', borderRadius: '6px', background: inferred ? 'rgba(16,185,129,0.08)' : 'rgba(100,116,139,0.08)' }}>
-                      <span style={{ color: 'var(--msp-text-faint)' }}>Calls bought{inferred ? '' : ' (est.)'}</span>
+                      <span style={{ color: 'var(--msp-text-faint)' }}>Calls {flowSideLabel('bought').toLowerCase()}{inferred ? '' : ' (est.)'}</span>
                       <div style={{ fontWeight: 700, color: inferred ? 'var(--msp-bull)' : 'var(--msp-text)' }}>{fmtUSD(data.aggregate.callPremiumBought)}</div>
                     </div>
                     <div style={{ padding: '4px 8px', borderRadius: '6px', background: inferred ? 'rgba(239,68,68,0.08)' : 'rgba(100,116,139,0.08)' }}>
-                      <span style={{ color: 'var(--msp-text-faint)' }}>Calls sold{inferred ? '' : ' (est.)'}</span>
+                      <span style={{ color: 'var(--msp-text-faint)' }}>Calls {flowSideLabel('sold').toLowerCase()}{inferred ? '' : ' (est.)'}</span>
                       <div style={{ fontWeight: 700, color: inferred ? 'var(--msp-bear)' : 'var(--msp-text)' }}>{fmtUSD(data.aggregate.callPremiumSold)}</div>
                     </div>
                     <div style={{ padding: '4px 8px', borderRadius: '6px', background: inferred ? 'rgba(239,68,68,0.08)' : 'rgba(100,116,139,0.08)' }}>
-                      <span style={{ color: 'var(--msp-text-faint)' }}>Puts bought{inferred ? '' : ' (est.)'}</span>
+                      <span style={{ color: 'var(--msp-text-faint)' }}>Puts {flowSideLabel('bought').toLowerCase()}{inferred ? '' : ' (est.)'}</span>
                       <div style={{ fontWeight: 700, color: inferred ? 'var(--msp-bear)' : 'var(--msp-text)' }}>{fmtUSD(data.aggregate.putPremiumBought)}</div>
                     </div>
                     <div style={{ padding: '4px 8px', borderRadius: '6px', background: inferred ? 'rgba(16,185,129,0.08)' : 'rgba(100,116,139,0.08)' }}>
-                      <span style={{ color: 'var(--msp-text-faint)' }}>Puts sold{inferred ? '' : ' (est.)'}</span>
+                      <span style={{ color: 'var(--msp-text-faint)' }}>Puts {flowSideLabel('sold').toLowerCase()}{inferred ? '' : ' (est.)'}</span>
                       <div style={{ fontWeight: 700, color: inferred ? 'var(--msp-bull)' : 'var(--msp-text)' }}>{fmtUSD(data.aggregate.putPremiumSold)}</div>
                     </div>
                   </div>
                   <div style={{ marginTop: '8px', fontSize: '10px', color: 'var(--msp-text-faint)' }}>
-                    {data.aggregate.boughtCount} bought • {data.aggregate.soldCount} sold • {data.aggregate.neutralCount} neutral{inferred ? '' : ' (contracts, bid/ask estimate)'}
+                    {data.aggregate.boughtCount} {flowSideLabel('bought').toLowerCase()} • {data.aggregate.soldCount} {flowSideLabel('sold').toLowerCase()} • {data.aggregate.neutralCount} {flowSideLabel('neutral').toLowerCase()}{inferred ? '' : ' (contracts, bid/ask estimate)'}
                   </div>
                 </div>
 
@@ -520,9 +521,9 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                                 <span style={{
                                   padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 700,
                                   background: !inferred ? 'rgba(100,116,139,0.1)' : f.direction === 'bought' ? 'rgba(16,185,129,0.1)' : f.direction === 'sold' ? 'rgba(239,68,68,0.1)' : 'rgba(100,116,139,0.1)',
-                                  color: inferred ? dirColor(f.direction) : 'var(--msp-text-muted)', textTransform: 'uppercase',
+                                  color: inferred ? dirColor(f.direction) : 'var(--msp-text-muted)',
                                 }}>
-                                  {f.direction}
+                                  {flowSideLabel(f.direction)}
                                 </span>
                               </td>
                               <td style={{ padding: '6px 8px', color: 'var(--msp-text)' }}>{f.volume.toLocaleString()}</td>
