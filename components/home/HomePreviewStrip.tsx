@@ -88,7 +88,7 @@ export default function HomePreviewStrip() {
           </p>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Link href="/tools/scanner" aria-label="Open the Scanner" className="block h-full transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 rounded-xl">
+          <Link href="/tools/scanner" className="block h-full transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 rounded-xl">
             <ScannerPreview />
           </Link>
           <Link href="/tools/golden-egg" aria-label="Open Symbol" className="block h-full transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 rounded-xl">
