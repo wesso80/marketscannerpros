@@ -119,11 +119,9 @@ async function trackSubscription(
     if (isNewUser) {
       sendNewSignupNotification(email, tier).catch(() => {});
     }
-  } catch (error: any) {
-    // Table might not exist yet - that's OK
-    if (!error?.message?.includes('does not exist')) {
-      console.error("Track subscription error:", error);
-    }
+  } catch (error: unknown) {
+    // Login still succeeds. The write failure has to be visible in the logs.
+    console.error("[login] Track subscription failed:", error);
   }
 }
 
@@ -359,8 +357,11 @@ export async function POST(req: NextRequest) {
 
       // A live Stripe subscription on this workspace must keep its own period.
       // Writing trialing over it would turn the paid row free when the trial ends.
-      // If that read fails, keep the pre-check path: record the trial and sign the trial cookie.
+      // If that read fails, skip the trial write. A later SELECT inside
+      // trackSubscription can recover, and incomingMayReplaceSubscriptionRow
+      // lets status 'trialing' replace a live paid row.
       let liveStripeSub = false;
+      let paidRowLookupFailed = false;
       try {
         const paidRow = await q<{ status: string; stripe_subscription_id: string | null }>(
           'SELECT status, stripe_subscription_id FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1',
@@ -369,9 +370,10 @@ export async function POST(req: NextRequest) {
         liveStripeSub = paidRow[0]?.stripe_subscription_id != null
           && (paidRow[0].status === 'active' || paidRow[0].status === 'trialing');
       } catch {
+        paidRowLookupFailed = true;
         console.error("[login] trial subscription lookup failed");
       }
-      if (!liveStripeSub) {
+      if (!paidRowLookupFailed && !liveStripeSub) {
         await trackSubscription(
           workspaceId,
           normalizedEmail,
@@ -497,6 +499,9 @@ export async function POST(req: NextRequest) {
     }
 
     const periodEnd = subscriptionPeriodDate(primarySub, "current_period_end");
+    if (!periodEnd) {
+      console.error(`[login] subscription ${primarySub.id}: current_period_end missing or unusable on items.data[0] and on the subscription; storing null`);
+    }
 
     // Track subscription in database
     await trackSubscription(

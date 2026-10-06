@@ -659,6 +659,54 @@ describe('login subscription resolution', () => {
     expect(db.rows[0]).toMatchObject({ tier: 'pro', status: 'active', stripe_subscription_id: 'sub_guard' });
   });
 
+  it('skips trackSubscription when the paid-row lookup throws and still signs the trial cookie', async () => {
+    const email = 'trial-lookup-skip@example.com';
+    const expires = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    installDb(
+      [{
+        workspace_id: hashWorkspaceId(email),
+        email,
+        tier: 'pro',
+        status: 'active',
+        stripe_customer_id: 'cus_live_trial',
+        stripe_subscription_id: 'sub_live_trial',
+      }],
+      [{ email, tier: 'pro', expires_at: expires }],
+    );
+    let paidRowLooks = 0;
+    const previous = mocks.q.getMockImplementation();
+    mocks.q.mockImplementation(async (sql: string, params: unknown[] = []) => {
+      const text = sql.replace(/\s+/g, ' ').trim();
+      if (text.includes('SELECT status, stripe_subscription_id FROM user_subscriptions')) {
+        paidRowLooks += 1;
+        if (paidRowLooks === 1) throw new Error('db down');
+      }
+      if (!previous) throw new Error('missing db mock');
+      return previous(sql, params);
+    });
+    mockStripe([], {});
+
+    try {
+      const res = await POST(loginRequest(email));
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ ok: true, tier: 'pro', isTrial: true });
+      expect(cookiePayload(res)).toMatchObject({ tier: 'pro', cid: `trial_${email}` });
+      expect(paidRowLooks).toBe(1);
+      expect(inserts()).toHaveLength(0);
+      expect(db.rows[0]).toMatchObject({
+        tier: 'pro',
+        status: 'active',
+        stripe_subscription_id: 'sub_live_trial',
+      });
+      const logged = JSON.stringify(errorSpy.mock.calls);
+      expect(logged).toContain('[login] trial subscription lookup failed');
+      expect(logged).not.toContain('[login] Track subscription failed:');
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   it('signs the trial cookie when the paid-row lookup throws', async () => {
     const email = 'hiccup-trial@example.com';
     const expires = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
