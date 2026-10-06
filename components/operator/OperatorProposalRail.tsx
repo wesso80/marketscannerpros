@@ -161,6 +161,12 @@ export default function OperatorProposalRail({
         return;
       }
 
+      const alertResult = executePayload?.result;
+      if (alertResult?.kind === 'alert_draft' && alertResult.created === false && alertResult.reason) {
+        setFeedback(alertResult.reason);
+        return;
+      }
+
       await fetch('/api/operator/attention', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

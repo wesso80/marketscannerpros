@@ -1,3 +1,4 @@
+import { publishAlertCapNotice } from '@/lib/alerts/planLimits';
 import type { MSPEvent, WorkflowEventType } from './types';
 
 const APP_NAME = 'MarketScannerPros';
@@ -69,15 +70,26 @@ export function createWorkflowEvent<TPayload>(input: EventInput<TPayload>): MSPE
   };
 }
 
-export async function emitWorkflowEvents(events: MSPEvent[]) {
-  if (!events.length) return;
+export type WorkflowEventsResult = {
+  autoAlertsCreated?: number;
+  autoAlertsSkippedForCap?: number;
+  autoAlertSkipReasons?: string[];
+};
+
+export async function emitWorkflowEvents(events: MSPEvent[]): Promise<WorkflowEventsResult | null> {
+  if (!events.length) return null;
 
   try {
-    await fetch('/api/workflow/events', {
+    const response = await fetch('/api/workflow/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ events }),
     });
+    const body = await response.json().catch(() => null) as WorkflowEventsResult | null;
+    const reason = body?.autoAlertSkipReasons?.find((item) => typeof item === 'string' && item.trim());
+    if (reason) publishAlertCapNotice(reason);
+    return body;
   } catch {
+    return null;
   }
 }

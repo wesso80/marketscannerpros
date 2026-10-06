@@ -5,6 +5,7 @@ import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { validateBasicAlertAssetType } from '@/lib/alerts/assetTypes';
 import { ALERT_LIMITS, alertLimitReachedPayload } from '@/lib/alerts/planLimits';
 import { countActiveAlertsForCap } from '@/lib/alerts/activeCount';
+import { PRICE_ALERT_WITHOUT_LEVEL_SQL } from '@/lib/alerts/priceOrphan';
 import { newAlertCooldownMinutes } from '@/lib/alerts/alertTiming';
 
 /**
@@ -468,14 +469,12 @@ export async function DELETE(req: NextRequest) {
     const id = url.searchParams.get('id');
     const bulk = url.searchParams.get('bulk');
 
-    // Bulk cleanup: remove auto-generated orphaned alerts (condition_value = 0, workflow.auto source)
+    // Price alerts with no level never fire. That covers auto-plan and focus orphans.
     if (bulk === 'auto-orphaned') {
       const deleted = await q(
         `DELETE FROM alerts
          WHERE workspace_id = $1
-           AND is_smart_alert = true
-           AND condition_value = 0
-           AND smart_alert_context->>'source' = 'workflow.auto'
+           AND ${PRICE_ALERT_WITHOUT_LEVEL_SQL}
          RETURNING id`,
         [session.workspaceId]
       );

@@ -7,6 +7,7 @@ import AdaptivePersonalityCard from '@/components/AdaptivePersonalityCard';
 import UpgradeGate from '@/components/UpgradeGate';
 import { writeOperatorState } from '@/lib/operatorState';
 import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
+import AlertCapNotice from '@/components/alerts/AlertCapNotice';
 import { useUserTier, canAccessBrain, canAccessBacktest } from '@/lib/useUserTier';
 import type { CandidateEvaluation, OperatorContext, UnifiedSignal } from '@/lib/workflow/types';
 import CapitalControlStrip from '@/components/risk/CapitalControlStrip';
@@ -798,6 +799,12 @@ function OperatorDashboard() {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         setProposalFeedback(data?.error || 'Failed to execute proposal action.');
+        return;
+      }
+
+      const alertResult = data?.result;
+      if (alertResult?.kind === 'alert_draft' && alertResult.created === false && alertResult.reason) {
+        setProposalFeedback(alertResult.reason);
         return;
       }
 
@@ -1815,6 +1822,12 @@ function OperatorDashboard() {
           <button onClick={() => setLoadError(null)} className="ml-3 text-amber-400 hover:text-white">Dismiss</button>
         </div>
       )}
+      {proposalFeedback ? (
+        <div data-proposal-feedback className="mx-4 mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-100">
+          {proposalFeedback}
+        </div>
+      ) : null}
+      <AlertCapNotice className="mx-4 mt-2" />
       <ToolsNavBar />
       <div className="sticky top-0 z-40 border-b border-[var(--msp-border)] bg-[var(--msp-bg)] px-4 py-2 overflow-hidden">
         <div className={deploymentBlocked ? 'border-t-2 border-[var(--msp-bear)] pt-2' : ''}>

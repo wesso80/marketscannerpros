@@ -1,6 +1,7 @@
 import { q } from '@/lib/db';
+import { isPriceAlertWithoutLevel, PRICE_ALERT_WITHOUT_LEVEL_SQL } from '@/lib/alerts/priceOrphan';
 
-const PRICE_CONDITION_TYPES = new Set(['price_above', 'price_below']);
+export { isPriceAlertWithoutLevel, PRICE_ALERT_WITHOUT_LEVEL_SQL };
 
 /**
  * Whether one alert row counts toward the plan cap.
@@ -21,21 +22,6 @@ export function countsTowardAlertCap(row: {
   return true;
 }
 
-function isPriceAlertWithoutLevel(
-  conditionType: string | null | undefined,
-  conditionValue: number | string | null | undefined,
-): boolean {
-  if (!conditionType || !PRICE_CONDITION_TYPES.has(conditionType)) return false;
-  return missingPriceLevel(conditionValue);
-}
-
-/** Mirrors `COALESCE(condition_value, 0) <= 0`. Null and non-numeric values count as 0. */
-function missingPriceLevel(value: number | string | null | undefined): boolean {
-  if (value == null || value === '') return true;
-  const parsed = typeof value === 'number' ? value : Number(String(value).trim());
-  return !Number.isFinite(parsed) || parsed <= 0;
-}
-
 /** Shared cap count: active alerts, excluding price alerts that have no level. */
 export const ACTIVE_ALERT_CAP_COUNT_SQL = `
   SELECT COUNT(*)::int AS count
@@ -43,8 +29,7 @@ export const ACTIVE_ALERT_CAP_COUNT_SQL = `
   WHERE workspace_id = $1
     AND is_active IS TRUE
     AND NOT (
-      condition_type IN ('price_above', 'price_below')
-      AND COALESCE(condition_value, 0) <= 0
+      ${PRICE_ALERT_WITHOUT_LEVEL_SQL}
     )
 `.trim();
 

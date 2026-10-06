@@ -16,6 +16,8 @@ import { alertConditionLabel, alertHistoryLabel } from '@/lib/alertPresentation'
 import { isDiscordWebhookUrl } from '@/lib/notifications/discordWebhook';
 import { checkedActiveAlerts, consoleAlertType, deriveStatus, legacyMultiAlerts, opensSmartTabFirst, smartAlertShare } from '@/lib/alerts/consoleStatus';
 import { ALERT_LIMITS } from '@/lib/alerts/planLimits';
+import { isPriceAlertWithoutLevel } from '@/lib/alerts/priceOrphan';
+import AlertCapNotice from '@/components/alerts/AlertCapNotice';
 import RegimeBanner from '@/components/RegimeBanner';
 import StatTile from '@/components/visual/StatTile';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
@@ -279,7 +281,10 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
     }
   };
 
-  const orphanedCount = useMemo(() => alerts.filter((a) => a.is_smart_alert && Number(a.condition_value) === 0).length, [alerts]);
+  const orphanedCount = useMemo(
+    () => alerts.filter((a) => isPriceAlertWithoutLevel(a.condition_type, a.condition_value)).length,
+    [alerts],
+  );
 
   useEffect(() => {
     // Opened from the Watchlist "Alert" button: show the new-alert form with the symbol filled in.
@@ -327,6 +332,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   return (
     <div className={`mx-auto w-full max-w-none space-y-4 ${embeddedInWorkspace ? 'px-0 py-0' : 'px-4 py-6 md:px-6'}`}>
       {upgrade.moment && <UpgradeMoment kind={upgrade.moment} dismiss={upgrade.dismiss} />}
+      <AlertCapNotice />
       <header className="rounded-lg border border-slate-700 p-3">
         <div className="flex items-center justify-between gap-2"><h2 className="!text-base font-semibold">Alerts</h2><button type="button" onClick={() => { if (tier === 'free' && alerts.filter(alert => alert.is_active).length >= ALERT_LIMITS.free) { upgrade.show('alerts'); return; } setActiveZone4Tab('basic'); setZone4Open(true); }} disabled={riskLocked} className="min-h-10 rounded border border-slate-600 px-3 text-sm disabled:opacity-50">New alert</button></div>
         <p data-alerts-verdict className="mt-1 text-sm text-slate-300">{loadWarning ? 'Alert data could not be fully loaded.' : `${activeAlerts.length} active user-defined notification${activeAlerts.length === 1 ? '' : 's'}.`}</p>
@@ -357,7 +363,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
         )}
         {orphanedCount > 0 && cleanupStatus !== 'done' && (
           <div className="mt-2 flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-            <span>{orphanedCount} auto-generated plan alerts with no entry price detected (will never trigger).</span>
+            <span>{orphanedCount} price alerts have no level and will not trigger.</span>
             <button type="button" onClick={cleanupOrphaned} disabled={cleanupStatus === 'cleaning'} className="ml-3 shrink-0 rounded-lg bg-amber-500/20 px-3 py-1 text-xs font-semibold text-amber-100 hover:bg-amber-500/30 disabled:opacity-50">
               {cleanupStatus === 'cleaning' ? 'Cleaning…' : 'Clean Up'}
             </button>

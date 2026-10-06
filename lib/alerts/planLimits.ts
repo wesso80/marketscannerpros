@@ -22,8 +22,16 @@ export function alertLimitReachedPayload(tier: AlertPlanTier, current: number) {
   };
 }
 
-/** Reason returned when an automatic create path skips instead of throwing. */
-export function alertCapSkipReason(tier: AlertPlanTier, current: number): string {
+/** Plain sentence shown when an automatic create path skips at the cap. */
+export function alertCapSkipReason(tier: AlertPlanTier, _current?: number): string {
   const maxAlerts = ALERT_LIMITS[tier];
-  return `Active alert limit reached (${current} of ${maxAlerts}). No new alert was created.`;
+  return `Alert not created: you're at your plan's limit of ${maxAlerts} active alerts.`;
+}
+
+/** Window event so the page that posted the create can show `alertCapSkipReason`. */
+export const ALERT_CAP_NOTICE_EVENT = 'msp-alert-cap-notice';
+
+export function publishAlertCapNotice(message: string) {
+  if (typeof window === 'undefined' || !message.trim()) return;
+  window.dispatchEvent(new CustomEvent(ALERT_CAP_NOTICE_EVENT, { detail: message }));
 }

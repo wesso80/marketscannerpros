@@ -23,7 +23,7 @@ vi.mock('@/lib/proTraderAccess', async (importOriginal) => {
 vi.mock('@/lib/engine/jobQueue', () => ({ enqueueEngineJob: async () => ({ enqueued: false }) }));
 vi.mock('@/lib/execution/runPipeline', () => ({ runExecutionPipeline: async () => ({ ok: false }) }));
 
-import { GET as listAlerts, POST as createAlert, PUT as updateAlert } from '@/app/api/alerts/route';
+import { DELETE as deleteAlerts, GET as listAlerts, POST as createAlert, PUT as updateAlert } from '@/app/api/alerts/route';
 import { POST as createFromFocus } from '@/app/api/alerts/create-from-focus/route';
 import { POST as postWorkflowEvent } from '@/app/api/workflow/events/route';
 import { POST as executeAction } from '@/app/api/actions/execute/route';
@@ -246,7 +246,30 @@ describe('alert create paths at the Pro cap', () => {
     expect(draftBody.success).toBe(true);
     expect(draftBody.result.created).toBe(false);
     expect(draftBody.result.reason).toBe(alertCapSkipReason('pro', 100));
+    expect(draftBody.result.reason).toBe("Alert not created: you're at your plan's limit of 100 active alerts.");
+    expect(alertCapSkipReason('free', 3)).toBe("Alert not created: you're at your plan's limit of 3 active alerts.");
     expect(wroteAlert()).toBe(false);
     expect(draftBody.error).toBeUndefined();
+  });
+
+  it('bulk cleanup deletes price alerts with no level, including focus orphans', async () => {
+    mocks.q.mockImplementation(async (sql: string) => {
+      state.queries.push(sql);
+      if (/DELETE FROM alerts/i.test(sql)) return [{ id: 'focus-orphan' }, { id: 'auto-orphan' }];
+      return [];
+    });
+
+    const res = await deleteAlerts(new NextRequest('https://example.test/api/alerts?bulk=auto-orphaned', { method: 'DELETE' }));
+    expect(res.status).toBe(200);
+    expect((await res.json()).deletedCount).toBe(2);
+
+    const cleanup = state.queries.find((sql) => /DELETE FROM alerts/i.test(sql));
+    expect(cleanup).toBeTruthy();
+    expect(cleanup).toMatch(/condition_type IN \('price_above', 'price_below'\)/);
+    expect(cleanup).toMatch(/COALESCE\(condition_value, 0\) <= 0/);
+    expect(cleanup).not.toMatch(/is_smart_alert/);
+    expect(cleanup).not.toMatch(/workflow\.auto/);
+    expect(cleanup).not.toMatch(/focus\.creator/);
+    expect(state.queries.some((sql) => /UPDATE alert_quotas/i.test(sql))).toBe(true);
   });
 });
