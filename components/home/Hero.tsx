@@ -10,14 +10,14 @@ export default function Hero() {
   // Render the signed-out version until the session check finishes.
   const signedIn = !isLoading && isLoggedIn;
   return (
-    <section className="relative overflow-hidden border-b border-white/5">
+    <section className="relative flex min-h-[calc(100svh-3.5rem)] flex-col overflow-hidden border-b border-white/5">
       {/* Background layers */}
       <div className="absolute inset-0 bg-[var(--msp-bg)]" />
       <div className="absolute inset-x-0 top-0 h-40 bg-emerald-950/10" />
       {/* Top accent line */}
       <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent" />
 
-      <div className="relative mx-auto flex max-w-6xl flex-col items-center px-4 pb-8 pt-8 text-center md:pb-16 md:pt-20">
+      <div className="relative mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center px-4 py-8 text-center md:py-16">
         {/* Badge */}
         <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-1.5 text-xs font-medium text-emerald-400">
           <span className="relative flex h-2 w-2">

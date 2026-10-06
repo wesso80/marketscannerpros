@@ -14,7 +14,7 @@ const workflowSteps = [
 
 function WorkflowStepCard({ step, href, title, detail }: { step: string; href: string; title: string; detail: string }) {
   return (
-    <Link href={href} className="group rounded-lg border border-white/10 bg-white/[0.035] p-3 transition sm:p-4 hover:-translate-y-0.5 hover:border-emerald-400/35 hover:bg-emerald-400/[0.06]">
+    <Link href={href} className="group rounded-lg border border-white/10 bg-white/[0.035] p-2.5 transition sm:p-4 hover:-translate-y-0.5 hover:border-emerald-400/35 hover:bg-emerald-400/[0.06]">
       <div className="flex items-start justify-between gap-3">
         <div className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-200">
           Step {step}
@@ -22,7 +22,7 @@ function WorkflowStepCard({ step, href, title, detail }: { step: string; href: s
         <span className="text-xs font-bold text-emerald-300/80 transition group-hover:text-emerald-200">Open</span>
       </div>
       <h3 className="mt-2 text-base font-black text-white group-hover:text-emerald-200 sm:mt-3">{title}</h3>
-      <p className="mt-1 text-xs leading-5 text-slate-400 sm:mt-2 sm:text-sm sm:leading-6">{detail}</p>
+      <p className="mt-1 text-xs leading-4 text-slate-400 sm:mt-2 sm:text-sm sm:leading-6">{detail}</p>
     </Link>
   );
 }
@@ -42,8 +42,8 @@ export default function CommandHub() {
 
       {/* ─── Core workflow tools ─── */}
       <section className="border-b border-white/5 bg-slate-950/45">
-        <div className="mx-auto max-w-7xl px-4 py-8 md:px-6">
-          <div className="mb-5">
+        <div className="mx-auto max-w-7xl px-4 py-2 md:px-6 md:py-8">
+          <div className="mb-2">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-400">Core workflow tools</p>
             <h2 className="mt-1 text-2xl font-bold text-white">One research path, four steps.</h2>
           </div>
@@ -52,13 +52,13 @@ export default function CommandHub() {
               <WorkflowStepCard key={step.href} {...step} />
             ))}
           </div>
-          <p className="mt-4 text-sm text-slate-400">Terminal, options and crypto derivatives add deeper context when you need it.</p>
+          <p className="mt-3 text-sm text-slate-400">Terminal, options and crypto derivatives add deeper context when you need it.</p>
         </div>
       </section>
 
       {/* ─── MSP AI ─── */}
       <section className="relative overflow-hidden border-b border-white/5">
-        <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 py-10 text-center md:py-14">
+        <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 py-4 text-center md:py-10">
           <h2 className="text-2xl font-bold tracking-tight text-white md:text-3xl">
             Powered by <span className="text-emerald-400">MSP AI</span>
           </h2>
@@ -71,7 +71,7 @@ export default function CommandHub() {
             AI summaries can be incomplete or wrong. Check them against the source data and timestamps.
           </p>
 
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-500">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-500">
             <span>Works across</span>
             <span className="rounded-md border border-slate-700/60 bg-slate-900/40 px-2.5 py-1 font-medium text-slate-300">Equities</span>
             <span className="rounded-md border border-slate-700/60 bg-slate-900/40 px-2.5 py-1 font-medium text-slate-300">Crypto</span>
@@ -81,7 +81,7 @@ export default function CommandHub() {
 
           <Link
             href="/tools/scanner"
-            className="mt-6 inline-flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-5 py-2.5 text-sm font-semibold text-emerald-400 transition hover:bg-emerald-500/20 hover:text-emerald-300"
+            className="mt-4 inline-flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-5 py-2.5 text-sm font-semibold text-emerald-400 transition hover:bg-emerald-500/20 hover:text-emerald-300"
           >
             Open the Scanner <span>→</span>
           </Link>
@@ -90,14 +90,14 @@ export default function CommandHub() {
 
       {/* ─── Bottom CTA (signed-out only) ─── */}
       {!signedIn && <section className="border-t border-white/5 bg-slate-950/80">
-        <div className="mx-auto flex max-w-2xl flex-col items-center px-4 py-10 text-center md:py-16">
+        <div className="mx-auto flex max-w-2xl flex-col items-center px-4 py-4 text-center md:py-12">
           <h2 className="text-2xl font-bold text-white md:text-3xl">
             Ready to explore the markets?
           </h2>
           <p className="mt-3 text-sm text-slate-400 md:text-base">
             Start with the free plan and see the market in one path.
           </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
           <Link
             href="/auth"
             className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-8 py-3.5 text-base font-bold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:bg-emerald-400 active:bg-emerald-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
