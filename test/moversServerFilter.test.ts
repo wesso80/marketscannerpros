@@ -54,5 +54,30 @@ describe('GET /api/market-movers filters equities server-side', () => {
     expect(body.metadata.equityFilter).toMatch(/warrants/);
     // OV-7: the provider's own time for the equity lists, not just the response time.
     expect(body.equityAsOf).toBe('2026-09-25T20:15:59.000Z');
+    expect(body.extremeHiddenCount).toBe(0);
+  });
+
+  it('hides an unchecked +900% print, keeps a checked +200.1% print, and reports the count', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      json: async () => ({
+        last_updated: '2026-09-25 16:15:59 US/Eastern',
+        top_gainers: [
+          row('APUS', '5.03', '2500000', '60%'),
+          row('FAKE', '10', '5000000', '900%'),
+          { ...row('REAL', '30.01', '1000000', '200.10%'), previous_close: '10' },
+        ],
+        top_losers: [row('BENF', '3.1', '400000', '-30%')],
+        most_actively_traded: [row('INTC', '31', '90000000', '2%')],
+      }),
+    })));
+    const { GET } = await import('@/app/api/market-movers/route');
+    const body = await (await GET(new NextRequest('https://example.test/api/market-movers'))).json();
+    const tickers = (list: any[]) => list.map((m: any) => m.ticker);
+    expect(tickers(body.topGainers)).toEqual(expect.arrayContaining(['APUS', 'REAL']));
+    expect(tickers(body.topGainers)).not.toContain('FAKE');
+    expect(tickers(body.topLosers)).not.toContain('FAKE');
+    expect(tickers(body.mostActive)).not.toContain('FAKE');
+    expect(body.extremeHiddenCount).toBe(1);
+    expect(JSON.stringify(body)).not.toContain('FAKE');
   });
 });

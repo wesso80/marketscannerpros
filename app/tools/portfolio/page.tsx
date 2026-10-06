@@ -18,7 +18,7 @@ import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { splitPosition } from '@/lib/portfolio/closePosition';
 import { localDateInput, paperCloseDateIso, positionLimitWhenReady, profitFactorWhenReady } from '@/lib/portfolio/trackDisplay';
-import { positionMultiplier, positionOptionContract, positionUnits } from '@/lib/portfolio/positionValue';
+import { positionMultiplier, positionOptionContract, positionUnits, sumOpenPositionPL } from '@/lib/portfolio/positionValue';
 import { accountEquityValues, updateTodaySnapshot } from '@/lib/portfolio/equitySnapshot';
 import { formatMoney, formatSignedMoney } from '@/lib/portfolio/formatMoney';
 import { measuredDrawdownPct, portfolioReturns, portfolioStateLabels } from '@/lib/portfolio/returnSummary';
@@ -667,7 +667,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   useEffect(() => {
     if (positions.length > 0 || closedPositions.length > 0) {
       const totalValue = positions.reduce((sum, p) => sum + (p.currentPrice * positionUnits(p)), 0);
-      const totalPL = positions.reduce((sum, p) => sum + p.pl, 0);
+      const totalPL = sumOpenPositionPL(positions);
       const topPositions = [...positions]
         .sort((a, b) => Math.abs(b.pl) - Math.abs(a.pl))
         .slice(0, 5)
@@ -1568,7 +1568,9 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   // Calculate metrics
   const totalValue = positions.reduce((sum, p) => sum + (p.currentPrice * positionUnits(p)), 0);
   const totalCost = positions.reduce((sum, p) => sum + (p.entryPrice * positionUnits(p)), 0);
-  const unrealizedPL = positions.reduce((sum, p) => sum + p.pl, 0);
+  // Stored p.pl is not this figure. Add-position writes (current − entry) × quantity with no contract
+  // multiplier, and a refresh can leave pl on an older mark. Value and cost already use positionUnits.
+  const unrealizedPL = sumOpenPositionPL(positions);
   const realizedPL = closedPositions.reduce((sum, p) => sum + p.realizedPL, 0);
   const totalPL = unrealizedPL + realizedPL;
   const startingCapital = Number(startingCapitalInput || 0);
@@ -2169,7 +2171,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         </CollapsibleSection>)}
         <div className={`mt-4 rounded-xl border border-slate-700/60 bg-[var(--msp-panel)] ${embeddedInWorkspace ? 'p-3' : 'p-4'}`}>
           {activeTab === 'overview' && (dataLoaded ? positions.length > 0 ? (
-            <PortfolioOverview value={totalValue} openPL={unrealizedPL} allocation={allocationData} limit={riskSettings.maxPositionSize} />
+            <PortfolioOverview value={totalValue} totalCost={totalCost} openPL={unrealizedPL} allocation={allocationData} limit={riskSettings.maxPositionSize} />
           ) : <EmptyState title="Add your first position" action="Add Position" href="/tools/workspace?tab=portfolio&view=add" /> : <p role="status">Loading saved records…</p>)}
 
           {activeTab === 'risk-model' && (

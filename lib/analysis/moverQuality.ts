@@ -113,3 +113,55 @@ export function passesServerMoverFilter(
   const volume = parseMoverNumber(m.volume);
   return Number.isFinite(volume) && volume >= (options.minEquityVolume ?? EQUITY_MOVER_MIN_VOLUME);
 }
+
+/** A daily move strictly above this percent is extreme (exactly +200% is kept). */
+export const EXTREME_GAIN_PCT = 200;
+/** A daily move strictly below this percent is extreme (exactly -90% is kept). */
+export const EXTREME_LOSS_PCT = -90;
+/** Implied previous close must sit within this fraction of a previous close we already have. */
+export const EXTREME_PREV_CLOSE_TOLERANCE = 0.02;
+/** Equity share floor for an extreme print to stay visible. */
+export const EXTREME_MIN_SHARES = 1_000_000;
+/** Dollar floor. Equities: price × shares. Crypto: the row's 24h dollar volume. */
+export const EXTREME_MIN_DOLLAR_VOLUME = 10_000_000;
+
+export interface ExtremeMoveItem {
+  price?: string | number | null;
+  change_percentage?: string | number | null;
+  volume?: string | number | null;
+  asset_class?: 'equity' | 'crypto';
+  previous_close?: string | number | null;
+  previousClose?: string | number | null;
+}
+
+/** True when the daily percent is above +200% or below -90%. */
+export function isExtremeDailyMove(m: Pick<ExtremeMoveItem, 'change_percentage'>): boolean {
+  const pct = parseMoverNumber(m.change_percentage);
+  return Number.isFinite(pct) && (pct > EXTREME_GAIN_PCT || pct < EXTREME_LOSS_PCT);
+}
+
+/**
+ * Previous close implied by price ÷ (1 + daily %). NaN when the percent is at or below -100
+ * or the price is missing.
+ */
+export function impliedPreviousClose(price: number, changePct: number): number {
+  const factor = 1 + changePct / 100;
+  if (!(price > 0) || !(factor > 0)) return NaN;
+  return price / factor;
+}
+
+/** True when an extreme move has not been confirmed, so the row should be hidden. */
+export function isUncheckedExtremeMove(m: ExtremeMoveItem): boolean {
+  if (!isExtremeDailyMove(m)) return false;
+  const pct = parseMoverNumber(m.change_percentage);
+  const price = parseMoverNumber(m.price);
+  const volume = parseMoverNumber(m.volume);
+  const previousClose = parseMoverNumber(m.previous_close ?? m.previousClose);
+  const implied = impliedPreviousClose(price, pct);
+  const priceAgrees = Number.isFinite(implied) && previousClose > 0
+    && Math.abs(implied - previousClose) / previousClose <= EXTREME_PREV_CLOSE_TOLERANCE;
+  const dollars = m.asset_class === 'crypto' ? volume : price * volume;
+  const sizeAgrees = Number.isFinite(dollars) && dollars >= EXTREME_MIN_DOLLAR_VOLUME
+    && (m.asset_class === 'crypto' || (Number.isFinite(volume) && volume >= EXTREME_MIN_SHARES));
+  return !(priceAgrees && sizeAgrees);
+}

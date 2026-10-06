@@ -19,6 +19,27 @@ export function positionUnits(position: Pick<PositionLike, 'quantity' | 'tradeTy
   return position.quantity * positionMultiplier(position);
 }
 
+type OpenBookPosition = Pick<PositionLike, 'quantity' | 'tradeType'> & {
+  side?: string;
+  entryPrice: number;
+  currentPrice: number;
+};
+
+/** One open position: long gains when price rises, short gains when price falls. Uses the same units as value and cost. */
+export function openPositionPL(position: OpenBookPosition): number {
+  const units = positionUnits(position);
+  const move = position.side === 'SHORT'
+    ? position.entryPrice - position.currentPrice
+    : position.currentPrice - position.entryPrice;
+  const pl = move * units;
+  return Number.isFinite(pl) ? pl : 0;
+}
+
+/** Open P&L for the book. Stored per-row `pl` is not an input. */
+export function sumOpenPositionPL(positions: readonly OpenBookPosition[]): number {
+  return positions.reduce((sum, position) => sum + openPositionPL(position), 0);
+}
+
 /** The recorded contract of an option position, or null (not an option / strike, expiry or right missing). */
 export function positionOptionContract(position: PositionLike): OptionContractSpec | null {
   if (position.tradeType !== 'Options') return null;

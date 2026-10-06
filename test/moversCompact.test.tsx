@@ -43,6 +43,14 @@ it('does not leak backend errors or retained rows into an error view', () => {
   expect(container.textContent).not.toMatch(/PROVIDER_UNKNOWN|HOOD/);
   expect(container.querySelectorAll('[data-source-line]')).toHaveLength(0);
 });
+it('shows a plain count when extreme moves were hidden', () => {
+  const { container, rerender } = render(<MoversView {...base} data={{ ...base.data!, extremeHiddenCount: 1 }} />);
+  expect(screen.getByText('1 extreme move hidden')).toBeTruthy();
+  rerender(<MoversView {...base} data={{ ...base.data!, extremeHiddenCount: 2 }} />);
+  expect(screen.getByText('2 extreme moves hidden')).toBeTruthy();
+  rerender(<MoversView {...base} />);
+  expect(container.textContent).not.toContain('extreme move');
+});
 it('retains list and filter controls without launching a scan', () => {
   render(<MoversView {...base}/>);
   fireEvent.click(screen.getByRole('button', {name:'Decliners'}));

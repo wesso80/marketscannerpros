@@ -3,7 +3,7 @@ import { getTopGainersLosers, getMarketData } from '@/lib/coingecko';
 import { q } from '@/lib/db';
 import { normalizeCryptoMover } from '@/lib/analysis/publicMover';
 import { fetchAvTopMovers } from '@/lib/avTopMovers';
-import { EQUITY_MOVER_MIN_VOLUME, passesServerMoverFilter } from '@/lib/analysis/moverQuality';
+import { EQUITY_MOVER_MIN_VOLUME, isExtremeDailyMove, isUncheckedExtremeMove, passesServerMoverFilter } from '@/lib/analysis/moverQuality';
 import { isWarmupStatus, momentumAccelFromWarmup, type MomentumBar } from '@/lib/movers/momentumAccel';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
@@ -35,7 +35,30 @@ function normalizeAVMover(item: any) {
     market_cap: '',
     market_cap_rank: '',
     asset_class: 'equity' as const,
+    ...(item.previous_close != null || item.previousClose != null
+      ? { previous_close: item.previous_close ?? item.previousClose }
+      : {}),
   };
+}
+
+/** Stored previous closes only. No vendor call. Missing quotes leave an extreme print unchecked. */
+async function previousClosesFor(symbols: string[]): Promise<Map<string, number>> {
+  const unique = [...new Set(symbols.map((s) => String(s || '').toUpperCase()).filter(Boolean))];
+  const map = new Map<string, number>();
+  if (!unique.length) return map;
+  try {
+    const rows = await q<{ symbol: string; prev_close: string | null }>(
+      `SELECT symbol, prev_close FROM quotes_latest WHERE symbol = ANY($1)`,
+      [unique],
+    );
+    for (const row of rows) {
+      const n = Number(row.prev_close);
+      if (row.symbol && Number.isFinite(n) && n > 0) map.set(String(row.symbol).toUpperCase(), n);
+    }
+  } catch (e) {
+    console.error('[Market Movers] Stored previous close lookup failed (non-fatal):', e);
+  }
+  return map;
 }
 
 export async function GET(request: NextRequest) {
@@ -61,11 +84,37 @@ export async function GET(request: NextRequest) {
     // Filter out garbage tickers (non-ASCII, special chars like ^, warrants like +)
     // One server-side quality filter for every page (OV-9): equities drop warrants/rights/units and anything
     // under $1 or 100k shares; crypto keeps the market-cap floor (lib/analysis/moverQuality).
-    const eqGainers = equityMovers.gainers.map(normalizeAVMover).filter(m => VALID_EQ_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
-    const eqLosers = equityMovers.losers.map(normalizeAVMover).filter(m => VALID_EQ_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
-    const eqActive = equityMovers.active.map(normalizeAVMover).filter(m => VALID_EQ_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
-    const cryptoGainers = (topMovers?.top_gainers || []).map(coin => normalizeCryptoMover(coin, duration)).filter(m => VALID_CRYPTO_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
-    const cryptoLosers = (topMovers?.top_losers || []).map(coin => normalizeCryptoMover(coin, duration)).filter(m => VALID_CRYPTO_TICKER.test(m.ticker) && passesServerMoverFilter(m)).slice(0, 10);
+    const passes = (m: { ticker: string; asset_class?: 'equity' | 'crypto' }) =>
+      (m.asset_class === 'crypto' ? VALID_CRYPTO_TICKER : VALID_EQ_TICKER).test(m.ticker) && passesServerMoverFilter(m);
+    const eqGainerPool = equityMovers.gainers.map(normalizeAVMover).filter(passes);
+    const eqLoserPool = equityMovers.losers.map(normalizeAVMover).filter(passes);
+    const eqActivePool = equityMovers.active.map(normalizeAVMover).filter(passes);
+    const cryptoGainerPool = (topMovers?.top_gainers || []).map(coin => normalizeCryptoMover(coin, duration)).filter(passes);
+    const cryptoLoserPool = (topMovers?.top_losers || []).map(coin => normalizeCryptoMover(coin, duration)).filter(passes);
+    // Most-active crypto keeps its existing floor (none). Only the extreme-move check is new.
+    const cryptoActivePool = (mostActive || []).map(normalizeMostActive);
+
+    const listed = [eqGainerPool, eqLoserPool, eqActivePool, cryptoGainerPool, cryptoLoserPool, cryptoActivePool].flat() as Array<{
+      ticker: string; change_percentage?: string | number | null; previous_close?: string | number | null;
+    }>;
+    const prevClose = await previousClosesFor(
+      listed.filter((m) => isExtremeDailyMove(m) && m.previous_close == null).map((m) => m.ticker),
+    );
+    const extremeHidden = new Set<string>();
+    const withoutExtremes = <T extends { ticker: string; previous_close?: string | number | null }>(rows: T[]) => rows.filter((row) => {
+      const previous_close = row.previous_close ?? prevClose.get(String(row.ticker).toUpperCase());
+      const checked = previous_close == null ? row : { ...row, previous_close };
+      if (!isUncheckedExtremeMove(checked)) return true;
+      extremeHidden.add(String(row.ticker).toUpperCase());
+      return false;
+    });
+
+    const eqGainers = withoutExtremes(eqGainerPool).slice(0, 10);
+    const eqLosers = withoutExtremes(eqLoserPool).slice(0, 10);
+    const eqActive = withoutExtremes(eqActivePool).slice(0, 10);
+    const cryptoGainers = withoutExtremes(cryptoGainerPool).slice(0, 10);
+    const cryptoLosers = withoutExtremes(cryptoLoserPool).slice(0, 10);
+    const cryptoActive = withoutExtremes(cryptoActivePool).slice(0, 10);
 
     // If both sources failed, try returning cached data
     if (eqGainers.length === 0 && cryptoGainers.length === 0) {
@@ -80,7 +129,7 @@ export async function GET(request: NextRequest) {
     const allMovers = [
       ...eqGainers, ...eqLosers, ...eqActive,
       ...cryptoGainers, ...cryptoLosers,
-      ...(mostActive || []).slice(0, 10).map(normalizeMostActive),
+      ...cryptoActive,
     ];
 
     /* ── Technical enrichment from indicators_latest + benchmarks ─── */
@@ -222,9 +271,10 @@ export async function GET(request: NextRequest) {
       // 'realtime', 'end_of_day' (fallback) or 'unavailable', with Alpha Vantage's reason (OV-14).
       equityFeed: equityMovers.feed,
       equityNote: equityMovers.note,
+      extremeHiddenCount: extremeHidden.size,
       topGainers: [...eqGainers, ...cryptoGainers].map(enrich),
       topLosers: [...eqLosers, ...cryptoLosers].map(enrich),
-      mostActive: [...eqActive, ...(mostActive || []).slice(0, 10).map(normalizeMostActive)].map(enrich),
+      mostActive: [...eqActive, ...cryptoActive].map(enrich),
     };
 
     // Cache successful response

@@ -4,8 +4,8 @@ import { formatMoney, formatSignedMoney } from '@/lib/portfolio/formatMoney';
 
 type Allocation = { symbol: string; value: number; percentage: number };
 /** Presentation only. An open P&L value is never passed off as today's movement. */
-export default function PortfolioOverview({ value, openPL, allocation, limit }: {
-  value: number; openPL: number; allocation: Allocation[]; limit: number;
+export default function PortfolioOverview({ value, totalCost, openPL, allocation, limit }: {
+  value: number; totalCost: number; openPL: number; allocation: Allocation[]; limit: number;
 }) {
   const largest = allocation[0];
   const shades = ['#e2e8f0', '#94a3b8', '#64748b', '#475569', '#334155'];
@@ -13,6 +13,7 @@ export default function PortfolioOverview({ value, openPL, allocation, limit }: 
   return <section className="min-w-0 space-y-3" aria-label="Portfolio overview">
     <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
       <StatTile label="Value simulated" value={formatMoney(value)} />
+      <StatTile label="Total cost" value={formatMoney(totalCost)} />
       <div className="[&_[data-stat-card]]:h-full [&_[data-stat-card]>p:first-child]:text-base"><StatTile label="Today" value="Not measured" /></div>
       <StatTile label="Open P&L" value={formatSignedMoney(openPL)} />
       <StatTile label="Largest position" value={largest ? `${largest.percentage.toFixed(1)}%` : null} warning={Boolean(largest && largest.percentage > limit)} />
