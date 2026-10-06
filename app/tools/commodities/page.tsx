@@ -7,6 +7,7 @@ import { ToolsPageHeader } from '@/components/ToolsPageHeader';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import UpgradeGate from '@/components/UpgradeGate';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import { commodityFreshnessLabel } from '@/lib/commodities/quoteFreshnessLabel';
 
 interface CommodityData {
   symbol: string;
@@ -144,6 +145,12 @@ const trendIcon: Record<TrendDirection, string> = {
   FLAT: '→',
   DOWN: '↓',
 };
+
+function freshnessTone(label: string): string {
+  if (label === 'Live') return 'text-emerald-300';
+  if (label.startsWith('Stale')) return 'text-rose-300';
+  return 'text-amber-300';
+}
 
 function trendFromHistory(history?: { date: string; value: number }[], threshold = 0.08): TrendDirection {
   if (!history || history.length < 2) return 'FLAT';
@@ -588,17 +595,18 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
             const safeCommodityChangePercent = safeNumber(commodity.changePercent) ?? 0;
             const longAllowed = derivedState && commodity.eligibleForGate && derivedState.longsAllowed && safeCommodityChangePercent > -1.5;
             const shortAllowed = derivedState && commodity.eligibleForGate && derivedState.shortsAllowed && safeCommodityChangePercent < 1.5;
+            const freshnessLabel = commodityFreshnessLabel(commodity);
             return <article data-commodity-card key={commodity.symbol} className="min-w-0 rounded-lg border border-white/10 bg-white/5 p-3">
               <div className="flex items-start justify-between gap-2"><h3 className="min-w-0 text-sm font-semibold">{commodity.name}</h3><span className="shrink-0 text-sm">{formatPrice(commodity.price, commodity.unit)}</span></div>
               <div className="mt-1 flex justify-between gap-2 text-xs text-white/60"><span>{commodity.category}</span><span>{signed(commodity.changePercent)}</span></div>
               <details className="mt-2 text-xs text-white/60"><summary className="cursor-pointer">Observation details</summary>
                 <p className="mt-2">{commodity.unit}</p>
                 {derivedState && <p className="mt-1">Upside case: {longAllowed ? 'Clear' : 'Limited'} · Downside case: {shortAllowed ? 'Clear' : 'Limited'}</p>}
-                      <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-white/40">
-                        <span className={commodity.freshnessStatus === 'STALE' ? 'text-rose-300' : commodity.freshnessStatus === 'DELAYED' ? 'text-amber-300' : 'text-emerald-300'}>
-                          {commodity.cadence === 'monthly' && commodity.freshnessStatus !== 'STALE' ? 'MONTHLY' : commodity.freshnessStatus}{commodity.sourceSymbol ? ` · proxy ${commodity.sourceSymbol}` : ''}
+                      <div className="mt-2 flex min-w-0 flex-wrap items-center justify-between gap-2 text-[11px] text-white/40">
+                        <span className={`min-w-0 break-words ${freshnessTone(freshnessLabel)}`}>
+                          {freshnessLabel}{commodity.sourceSymbol ? ` · proxy ${commodity.sourceSymbol}` : ''}
                         </span>
-                        <span>{commodity.asOfLabel ?? `Source date: ${commodity.date} · age ${commodity.dataAgeDays}d`}</span>
+                        <span className="min-w-0 break-words">{commodity.asOfLabel ?? `Source date: ${commodity.date} · age ${commodity.dataAgeDays}d`}</span>
                       </div>
 
               </details>
