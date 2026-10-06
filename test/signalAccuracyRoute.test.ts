@@ -11,6 +11,7 @@ vi.mock('@/lib/auth', () => ({ getSessionFromCookie: vi.fn(async () => ({ worksp
 vi.mock('@/lib/signalRecorder', () => ({ getRecentSignals, getOverallStats }));
 
 import { GET } from '@/app/api/ai/accuracy/route';
+import { formatSignedPercent, moveExpectancy, signedPctMove } from '@/lib/signals/accuracyDisplay';
 
 const routeSource = readFileSync('app/api/ai/accuracy/route.ts', 'utf8');
 
@@ -84,6 +85,85 @@ it('queries the 003 columns and returns only the 1d and 1w horizons', async () =
   expect(thresholdSql).toContain('horizon_minutes IN (1440, 10080)');
   expect(routeSource).not.toContain('statsSql(false)');
   expect(routeSource).not.toContain('withVersion');
+});
+
+it('gives about 0 expectancy for a symmetric 50/50 bullish and bearish group', async () => {
+  const symmetric = (direction: 'bullish' | 'bearish', rawCorrect: string, rawWrong: string) => ({
+    ...stat(1440, '1d'),
+    direction,
+    signal_type: direction === 'bullish' ? 'EQUITY_SCAN' : 'CRYPTO_SCAN',
+    win_rate: '50',
+    correct_count: 20,
+    wrong_count: 20,
+    labeled_signals: 49,
+    neutral_count: 9,
+    avg_win: rawCorrect,
+    avg_loss: rawWrong,
+  });
+  q.mockImplementation(async (sql: string) => {
+    if (String(sql).includes('FROM signal_accuracy_stats')) {
+      return [symmetric('bullish', '2.60', '-2.60'), symmetric('bearish', '-2.60', '2.60')];
+    }
+    if (String(sql).includes('FROM outcome_thresholds')) return thresholds;
+    return [];
+  });
+
+  expect(moveExpectancy(50, signedPctMove('bullish', 2.6), signedPctMove('bullish', -2.6))).toBeCloseTo(0, 5);
+  expect(moveExpectancy(50, signedPctMove('bearish', -2.6), signedPctMove('bearish', 2.6))).toBeCloseTo(0, 5);
+  expect(formatSignedPercent(-3)).toBe('-3.00%');
+  expect(formatSignedPercent(-3)).not.toContain('+-');
+
+  const body = await (await GET(request())).json();
+  expect(body.stats).toHaveLength(2);
+  for (const row of body.stats) {
+    expect(Number(row.expectancy)).toBeCloseTo(0, 5);
+    expect(Number(row.avg_win)).toBeCloseTo(2.6, 2);
+    expect(Number(row.avg_loss)).toBeCloseTo(-2.6, 2);
+  }
+  const statsSql = String(q.mock.calls.find((call) => String(call[0]).includes('FROM signal_accuracy_stats'))?.[0]);
+  expect(statsSql).toContain('(COALESCE(sas.correct_count, 0) + COALESCE(sas.wrong_count, 0)) >=');
+  expect(statsSql).not.toContain('sas.labeled_signals >=');
+});
+
+it('hides a past-threshold share when only one outcome is decisive', async () => {
+  q.mockImplementation(async (sql: string) => {
+    if (String(sql).includes('FROM signal_accuracy_stats')) {
+      return [{
+        ...stat(1440, '1d'),
+        labeled_signals: 10,
+        correct_count: 1,
+        wrong_count: 0,
+        neutral_count: 9,
+        win_rate: '100.00',
+        precision_pct: '10.00',
+      }];
+    }
+    if (String(sql).includes('FROM outcome_thresholds')) return thresholds;
+    return [];
+  });
+  getOverallStats.mockResolvedValue({
+    total_signals: 10,
+    signals_with_outcomes: 10,
+    correct_outcomes: 1,
+    wrong_outcomes: 0,
+    neutral_outcomes: 9,
+  });
+  const body = await (await GET(request('?minSamples=10'))).json();
+  expect(body.stats).toEqual([]);
+  expect(body.overall.win_rate).toBeNull();
+  expect(body.overall.labeled).toBe(10);
+  expect(body.metadata.note).toMatch(/exclude neutral outcomes/i);
+  const statsSql = String(q.mock.calls.find((call) => String(call[0]).includes('FROM signal_accuracy_stats'))?.[0]);
+  expect(statsSql).toContain('(COALESCE(sas.correct_count, 0) + COALESCE(sas.wrong_count, 0)) >=');
+});
+
+it('logs a database failure and does not return its text', async () => {
+  q.mockRejectedValue(new Error('password authentication failed for user secret'));
+  const res = await GET(request());
+  const body = await res.json();
+  expect(res.status).toBe(500);
+  expect(body).toEqual({ error: 'Failed to fetch accuracy stats' });
+  expect(JSON.stringify(body)).not.toMatch(/password authentication/);
 });
 
 it('returns an honest empty list when the stats table has no rows', async () => {

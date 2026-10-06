@@ -9,6 +9,7 @@ import SourceLine from '@/components/visual/SourceLine';
 import StatTile from '@/components/visual/StatTile';
 import { marketText } from '@/lib/marketsPresentation';
 import { isAccuracyDisplayHorizon } from '@/lib/signals/accuracyHorizons';
+import { formatSignedPercent, pastThresholdLabel } from '@/lib/signals/accuracyDisplay';
 import { collectionStatus, thresholdChip, THRESHOLD_RULE_NOTE } from '@/lib/signals/thresholdLabels';
 
 type Stat = {
@@ -64,7 +65,6 @@ export default function SignalAccuracyPage() {
   const [data, setData] = useState<AccuracyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lookback, setLookback] = useState<'30' | '90' | 'all'>('90');
   const [minSamples, setMinSamples] = useState(10);
   const [showStats, setShowStats] = useState(false);
   const [showRecent, setShowRecent] = useState(false);
@@ -72,12 +72,12 @@ export default function SignalAccuracyPage() {
   useEffect(() => {
     if (tierLoading || !isLoggedIn) return;
     fetchData();
-  }, [tierLoading, isLoggedIn, lookback, minSamples]);
+  }, [tierLoading, isLoggedIn, minSamples]);
 
   async function fetchData() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/ai/accuracy?days=${lookback}&minSamples=${minSamples}`);
+      const res = await fetch(`/api/ai/accuracy?minSamples=${minSamples}`);
       if (!res.ok) throw new Error('Failed to fetch');
       const json = await res.json();
       setData(json);
@@ -150,22 +150,13 @@ export default function SignalAccuracyPage() {
       <h1 className="text-2xl font-semibold">Setup accuracy</h1>
       <p data-research-verdict className={`text-lg font-semibold ${error || !labeledCount ? 'text-amber-200' : 'text-white'}`}>{verdict}</p>
       <SourceLine source="Stored scanner outcomes" asOf={data?.metadata?.timestamp} basis="Historical labelled observations" />
-      <CollapsibleSection title="Review filters" summary={`${lookback === 'all' ? 'All history' : lookback + ' days'} · minimum ${minSamples} samples`}>
-      {/* Header controls */}
+      <CollapsibleSection title="Review filters" summary={`Last 90 days · minimum ${minSamples} samples`}>
+      {/* Header controls. The stored rows are the 90-day refresh, so there is no lookback switch. */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div className="sr-only">
           <h2>Historical Research Accuracy controls</h2>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <label className="text-[11px] text-slate-500 uppercase">Lookback</label>
-            {(['30', '90', 'all'] as const).map(v => (
-              <button key={v} onClick={() => { setLookback(v); setShowRecent(false); setShowStats(false); }}
-                className={`min-h-10 px-2 py-1 rounded text-[11px] font-bold transition-colors ${lookback === v ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500 hover:text-slate-300'}`}>
-                {v === 'all' ? 'All' : `${v}d`}
-              </button>
-            ))}
-          </div>
           <div className="flex items-center gap-1.5">
             <label className="text-[11px] text-slate-500 uppercase">Min Samples</label>
             {[5, 10, 30].map(v => (
@@ -193,9 +184,13 @@ export default function SignalAccuracyPage() {
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <SummaryCard label="Total Observations" value={overall.total.toLocaleString()} />
               <SummaryCard label="Labeled" value={overall.labeled.toLocaleString()} sub={overall.total > 0 ? `${((overall.labeled / overall.total) * 100).toFixed(0)}% resolved` : undefined} />
-              <SummaryCard label="Past threshold" value={overall.win_rate != null ? `${overall.win_rate.toFixed(1)}%` : 'Not collected'}
-                color={overall.win_rate != null && overall.win_rate >= 55 ? 'text-emerald-400' : overall.win_rate != null && overall.win_rate < 45 ? 'text-red-400' : 'text-amber-400'}
-                sub={`Lookback ${lookback === 'all' ? 'all' : `${lookback}d`}. Not a closed trade.`} />
+              <SummaryCard label="Past threshold" value={pastThresholdLabel(overall.correct, overall.wrong, overall.win_rate, minSamples)}
+                color={(() => {
+                  const label = pastThresholdLabel(overall.correct, overall.wrong, overall.win_rate, minSamples);
+                  if (!label.endsWith('%') || overall.win_rate == null) return 'text-slate-400';
+                  return overall.win_rate >= 55 ? 'text-emerald-400' : overall.win_rate < 45 ? 'text-red-400' : 'text-amber-400';
+                })()}
+                sub="Last 90 days. Neutral outcomes are excluded. Not a closed trade." />
               <SummaryCard label="Correct" value={overall.correct.toLocaleString()} color="text-emerald-400" />
               <SummaryCard label="Wrong" value={overall.wrong.toLocaleString()} color="text-red-400" />
             </div>
@@ -213,7 +208,7 @@ export default function SignalAccuracyPage() {
           {/* Outcome Thresholds Reference */}
           <div className="bg-slate-800/30 rounded-xl border border-slate-700/50 p-4">
             <h3 className="text-xs font-semibold text-slate-300 mb-2">Price-move thresholds</h3>
-            <p className="text-[11px] text-slate-400 mb-2">A labeled observation means the price moved past this percent by the horizon. Sample minimum is {minSamples}. This is not a closed trade, a stop, or a fee.</p>
+            <p className="text-[11px] text-slate-400 mb-2">A labeled observation means the price moved past this percent by the horizon. Neutral outcomes are excluded from the past-threshold share. The share is shown when correct and wrong outcomes together reach {minSamples}. This is not a closed trade, a stop, or a fee.</p>
             {thresholds.length > 0 && (
               <div className="flex flex-wrap gap-3">
                 {thresholds.map(t => (
@@ -237,7 +232,7 @@ export default function SignalAccuracyPage() {
                       {scannerStats.reduce((s, r) => s + r.labeled_signals, 0).toLocaleString()} labeled observations
                     </span>
                   </div>
-                  <div className="divide-y divide-white/10 p-3 sm:hidden">{scannerStats.map((row,i) => <div data-accuracy-card key={i} className="py-2 text-xs"><p className="font-semibold">{marketText(row.direction)} context · {row.horizon_label || row.horizon_minutes + 'm'}</p><p>{row.labeled_signals} labelled observations · {row.win_rate != null ? `${Number(row.win_rate).toFixed(1)}% past threshold` : 'Threshold share not collected'}</p><p className="text-slate-400">{marketText(row.data_quality)}</p></div>)}</div>
+                  <div className="divide-y divide-white/10 p-3 sm:hidden">{scannerStats.map((row,i) => <div data-accuracy-card key={i} className="py-2 text-xs"><p className="font-semibold">{marketText(row.direction)} context · {row.horizon_label || row.horizon_minutes + 'm'}</p><p>{row.labeled_signals} labelled observations · {sharePhrase(row.correct_count, row.wrong_count, row.win_rate, minSamples)}</p><p className="text-slate-400">{marketText(row.data_quality)}</p></div>)}</div>
                   <div className="hidden overflow-x-auto sm:block">
                     <table className="w-full text-xs">
                       <thead>
@@ -246,8 +241,8 @@ export default function SignalAccuracyPage() {
                           <th className="text-left px-3 py-2">Horizon</th>
                           <th className="text-right px-3 py-2">Observations</th>
                           <th className="text-right px-3 py-2">Past threshold</th>
-                          <th className="text-right px-3 py-2">Avg up move</th>
-                          <th className="text-right px-3 py-2">Avg down move</th>
+                          <th className="text-right px-3 py-2">Avg favorable</th>
+                          <th className="text-right px-3 py-2">Avg adverse</th>
                           <th className="text-right px-3 py-2">R:R</th>
                           <th className="text-right px-3 py-2">Move expectancy</th>
                           <th className="text-right px-3 py-2">Quality</th>
@@ -255,7 +250,8 @@ export default function SignalAccuracyPage() {
                       </thead>
                       <tbody>
                         {scannerStats.map((s, i) => {
-                          const wr = s.win_rate != null ? parseFloat(s.win_rate) : null;
+                          const rateLabel = pastThresholdLabel(s.correct_count, s.wrong_count, s.win_rate, minSamples);
+                          const wr = rateLabel.endsWith('%') && s.win_rate != null ? parseFloat(s.win_rate) : null;
                           const exp = s.expectancy != null ? parseFloat(s.expectancy) : null;
                           return (
                             <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20">
@@ -270,9 +266,9 @@ export default function SignalAccuracyPage() {
                               <td className="px-3 py-2 text-right text-slate-300">{s.labeled_signals}</td>
                               <td className={`px-3 py-2 text-right font-medium ${
                                 wr != null && wr >= 55 ? 'text-emerald-400' : wr != null && wr < 45 ? 'text-red-400' : 'text-amber-400'
-                              }`}>{wr != null ? `${wr.toFixed(1)}%` : 'Not collected'}</td>
-                              <td className="px-3 py-2 text-right text-emerald-400">{s.avg_win ? `+${parseFloat(s.avg_win).toFixed(2)}%` : 'Not collected'}</td>
-                              <td className="px-3 py-2 text-right text-red-400">{s.avg_loss ? `${parseFloat(s.avg_loss).toFixed(2)}%` : 'Not collected'}</td>
+                              }`}>{rateLabel}</td>
+                              <td className={`px-3 py-2 text-right ${Number(s.avg_win) > 0 ? 'text-emerald-400' : Number(s.avg_win) < 0 ? 'text-red-400' : 'text-slate-400'}`}>{formatSignedPercent(s.avg_win)}</td>
+                              <td className={`px-3 py-2 text-right ${Number(s.avg_loss) < 0 ? 'text-red-400' : Number(s.avg_loss) > 0 ? 'text-emerald-400' : 'text-slate-400'}`}>{formatSignedPercent(s.avg_loss)}</td>
                               <td className="px-3 py-2 text-right text-slate-300">{s.risk_reward != null && Number.isFinite(Number(s.risk_reward)) ? marketText(Number(s.risk_reward)) : 'Not collected'}</td>
                               <td className={`px-3 py-2 text-right font-medium ${
                                 exp != null && exp > 0 ? 'text-emerald-400' : exp != null && exp < 0 ? 'text-red-400' : 'text-slate-400'
@@ -289,7 +285,7 @@ export default function SignalAccuracyPage() {
             </div>
           ) : (
             <div className="bg-slate-800/30 rounded-xl border border-slate-700/50 p-8 text-center">
-              <p className="text-slate-400 text-sm">No aggregate accuracy group meets the selected minimum sample threshold.</p>
+              <p className="text-slate-400 text-sm">Not enough data yet</p>
               <p className="text-slate-500 text-xs mt-1">Recent observations can still appear below while more outcomes are labeled.</p>
             </div>
           )}
@@ -359,6 +355,11 @@ export default function SignalAccuracyPage() {
       )}
     </div>
   );
+}
+
+function sharePhrase(correct: number, wrong: number, rate: string | number | null, min: number) {
+  const label = pastThresholdLabel(correct, wrong, rate, min);
+  return label.endsWith('%') ? `${label} past threshold` : label;
 }
 
 function SummaryCard({ label, value, sub, color = 'text-white' }: { label: string; value: string; sub?: string; color?: string }) {

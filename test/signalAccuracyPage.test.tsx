@@ -114,8 +114,76 @@ it('keeps the empty state when nothing is labelled yet', async () => {
   const { container } = render(<Accuracy />);
   await screen.findByText('Outcomes pending');
   const text = container.textContent ?? '';
-  expect(text).toContain('No aggregate accuracy group meets the selected minimum sample threshold.');
+  expect(text).toContain('Not enough data yet');
+  expect(text).not.toContain('No aggregate accuracy group meets the selected minimum sample threshold.');
   expect(text).toContain('General information only, not financial advice.');
   expect(text).not.toMatch(/1h|4h/);
   expect(container.querySelector('[data-accuracy-card]')).toBeNull();
+  expect(screen.queryByRole('button', { name: '30d' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'All' })).toBeNull();
+});
+
+it('does not show 100% when one decisive outcome sits among neutrals', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => ({
+    ok: true,
+    json: async () => ({
+      ...payload,
+      stats: [{
+        ...payload.stats[1],
+        horizon_label: '1d',
+        horizon_minutes: 1440,
+        labeled_signals: 10,
+        correct_count: 1,
+        wrong_count: 0,
+        neutral_count: 9,
+        win_rate: '100',
+        avg_win: '-3.00',
+        avg_loss: '2.60',
+        expectancy: '-2.60',
+        direction: 'bearish',
+      }],
+      overall: { total: 10, labeled: 10, correct: 1, wrong: 0, neutral: 9, win_rate: 100 },
+    }),
+  })));
+  const { container } = render(<Accuracy />);
+  expect((await screen.findAllByText('Not enough data yet')).length).toBeGreaterThan(0);
+  const text = container.textContent ?? '';
+  expect(text).not.toMatch(/100\.0%/);
+  expect(text).toContain('Neutral outcomes are excluded');
+  expect(text).not.toContain('+-3.00%');
+  expect(text).toContain('-3.00%');
+});
+
+it('shows direction-adjusted moves with their own sign and colour', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => ({
+    ok: true,
+    json: async () => ({
+      ...payload,
+      stats: [{
+        ...payload.stats[1],
+        direction: 'bearish',
+        correct_count: 20,
+        wrong_count: 20,
+        labeled_signals: 40,
+        win_rate: '50',
+        avg_win: '2.60',
+        avg_loss: '-2.60',
+        expectancy: '0.00',
+      }],
+      overall: { total: 40, labeled: 40, correct: 20, wrong: 20, neutral: 0, win_rate: 50 },
+    }),
+  })));
+  const { container } = render(<Accuracy />);
+  await screen.findByText('+2.60%');
+  const text = container.textContent ?? '';
+  expect(text).toContain('+2.60%');
+  expect(text).toContain('-2.60%');
+  expect(text).not.toContain('+-');
+  const cells = [...container.querySelectorAll('td')].map((cell) => cell.textContent);
+  expect(cells).toContain('+2.60%');
+  expect(cells).toContain('-2.60%');
+  const adverse = [...container.querySelectorAll('td')].find((cell) => cell.textContent === '-2.60%');
+  expect(adverse?.className).toContain('text-red-400');
+  const favorable = [...container.querySelectorAll('td')].find((cell) => cell.textContent === '+2.60%');
+  expect(favorable?.className).toContain('text-emerald-400');
 });

@@ -8,6 +8,8 @@
 
 BEGIN;
 
+SET LOCAL lock_timeout = '5s';
+
 ALTER TABLE public.signal_accuracy_stats
   ADD COLUMN IF NOT EXISTS scanner_version VARCHAR(20) DEFAULT 'unknown';
 
@@ -96,7 +98,7 @@ BEGIN
     sf.signal_type,
     sf.direction,
     so.horizon_minutes,
-    COALESCE(sf.scanner_version, 'unknown'),
+    COALESCE(sf.scanner_version, 'unknown'), -- select item 4; GROUP BY 4 uses this expression
     COUNT(DISTINCT sf.id),
     -- Labeled = outcomes that are not 'unknown'
     COUNT(*) FILTER (WHERE so.outcome IN ('correct', 'wrong', 'neutral')),
@@ -132,7 +134,9 @@ BEGIN
   JOIN signal_outcomes so ON sf.id = so.signal_id
   WHERE sf.signal_at > NOW() - (p_days || ' days')::INTERVAL
     AND so.horizon_minutes IN (1440, 10080)
-  GROUP BY sf.signal_type, sf.direction, so.horizon_minutes, sf.scanner_version;
+  -- Group by the COALESCE expression (item 4), not the raw scanner_version.
+  -- NULL and 'unknown' must land in one row or the primary key raises 23505.
+  GROUP BY 1, 2, 3, 4;
 END;
 $$ LANGUAGE plpgsql;
 

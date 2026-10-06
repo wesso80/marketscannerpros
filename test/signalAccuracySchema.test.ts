@@ -30,6 +30,9 @@ it('migration 119 is idempotent and only publishes the 1d and 1w horizons', () =
   expect(migration).toContain('IF pk_cols > 0 THEN');
   expect(migration).toContain('PRIMARY KEY (signal_type, direction, horizon_minutes, scanner_version)');
   expect(migration).toContain('CREATE OR REPLACE FUNCTION refresh_signal_accuracy');
+  expect(migration).toContain("SET LOCAL lock_timeout = '5s'");
+  expect(migration).toContain('GROUP BY 1, 2, 3, 4');
+  expect(migration).not.toContain('GROUP BY sf.signal_type, sf.direction, so.horizon_minutes, sf.scanner_version');
   expect(migration).toContain('AND so.horizon_minutes IN (1440, 10080)');
   expect(migration).toContain('correct / (correct + wrong)');
   expect(migration).toContain("NULLIF(COUNT(*) FILTER (WHERE so.outcome IN ('correct', 'wrong')), 0)");
