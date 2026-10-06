@@ -8,6 +8,7 @@ import UpgradeGate from "@/components/UpgradeGate";
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import RegimeBanner from '@/components/RegimeBanner';
 import AdaptivePersonalityCard from '@/components/AdaptivePersonalityCard';
+import { formatChangePercent } from '@/lib/presentation/formatChangePercent';
 
 interface CompanyData {
   symbol: string;
@@ -444,10 +445,10 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
                     {data.changePercent && (
                       <div style={{ 
                         fontSize: "14px", 
-                        color: data.changePercent.includes("-") ? "var(--msp-bear)" : "var(--msp-bull)",
+                        color: Number(String(data.changePercent).replace(/%/g, '')) < 0 ? "var(--msp-bear)" : "var(--msp-bull)",
                         fontWeight: "600"
                       }}>
-                        {data.changePercent}
+                        {formatChangePercent(data.changePercent)}
                       </div>
                     )}
                   </div>
