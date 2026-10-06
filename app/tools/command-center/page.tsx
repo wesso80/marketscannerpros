@@ -13,6 +13,7 @@ import { calendarDataWarning, upcomingConfirmedEvents } from '@/lib/calendarPres
 
 import { useEffect, useMemo, useState } from 'react';
 import {
+  DAILY_PICKS_CURRENT_PATH,
   useDailyPicksBundle,
   useRegime,
   useSectorsHeatmap,
@@ -136,7 +137,8 @@ export default function CommandCenterPage() {
   const [asset,setAsset]=useState<'crypto'|'equity'>('crypto');
   const quotes=usePublicMarketFeed<{quotes:Record<string,DisplayQuote>}>('/api/cached/bulk-quotes?symbols=BTC,ETH,SOL,SPY,QQQ,IWM,DIA');
   const funding=usePublicMarketFeed<{coins:Array<{symbol:string;fundingRatePercent:number}>;timestamp?:string;freshnessStatus?:string;source?:string}>('/api/funding-rates');
-  // Same current-day limit=20 read as DeskFolds (one in-flight GET). This shell shows the top 5.
+  // Same current-day limit=20 read as DeskFolds (one in-flight GET). The server re-sorts that
+  // window by verdict, so this shell takes the first 5 of the shared result rather than a separate limit=5.
   const dailyPicks=useDailyPicksBundle();
   const picks: { data: PicksResponse | null; loading: boolean; error: string | null } = {
     data: dailyPicks.data ? {
@@ -151,7 +153,9 @@ export default function CommandCenterPage() {
   };
   const rows=topPicks(picks.data,asset);
   const previousDate=previousScanDate(rows[0]?.scan_date,asset);
-  const previous=usePublicMarketFeed<PicksResponse>(previousDate?`/api/scanner/daily-picks?limit=5&type=top&date=${previousDate}`:null);
+  // Same query as the current-day read, plus the date, then the same top-5 slice. A limit=5
+  // previous day is a different verdict window and would report adds and drops that did not happen.
+  const previous=usePublicMarketFeed<PicksResponse>(previousDate?`${DAILY_PICKS_CURRENT_PATH}&date=${previousDate}`:null);
   const changes=diffPicks(rows,topPicks(previous.data,asset));
 
   // Snapshot the market environment on each visit so we can show the user what

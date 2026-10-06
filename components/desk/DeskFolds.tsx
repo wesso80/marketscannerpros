@@ -265,6 +265,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
         if (controller.signal.aborted || (err instanceof DOMException && err.name === 'AbortError')) return;
         showNoReading();
       } finally {
+        clearTimeout(timer);
         if (!controller.signal.aborted) {
           setMag7Loading(false);
           setIndicesLoading(false);

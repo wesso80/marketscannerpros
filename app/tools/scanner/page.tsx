@@ -954,8 +954,6 @@ function ScannerContent() {
   /* ─── Shared detail state ─── */
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
   const [selectedAssetClass, setSelectedAssetClass] = useState<'equity' | 'crypto' | 'forex' | null>(null);
-  const [symbolDetail, setSymbolDetail] = useState<SymbolDetail | null>(null);
-  const [detailLoading] = useState(false);
 
   const currentRegimeRaw = regime.data?.regime || 'RANGE_NEUTRAL'; // unavailable regime → neutral weights (what /api/regime used to return with no signals)
   const currentRegime = normalizeRegimeKey(currentRegimeRaw);
@@ -1069,22 +1067,8 @@ function ScannerContent() {
         proScanBullish: proScanResults.bullish,
         proScanBearish: proScanResults.bearish,
       }),
-      ...(symbolDetail && {
-        selectedSymbol: symbolDetail.symbol,
-        selectedScore: symbolDetail.score,
-        selectedDirection: symbolDetail.direction,
-        selectedPrice: symbolDetail.price,
-        selectedRsi: symbolDetail.rsi,
-        selectedAdx: symbolDetail.adx,
-        selectedAtr: symbolDetail.atr,
-        selectedCci: symbolDetail.cci,
-        selectedMacdHist: symbolDetail.macd_hist,
-        selectedConfidence: symbolDetail.confidence,
-        selectedSetup: symbolDetail.setup,
-        selectedInstitutionalFilter: symbolDetail.institutionalFilter,
-      }),
     };
-  }, [mode, currentRegime, v2Timeframe, proTimeframe, proAsset, rankedRows, proScanResults, symbolDetail]);
+  }, [mode, currentRegime, v2Timeframe, proTimeframe, proAsset, rankedRows, proScanResults]);
 
   const aiSymbols = useMemo(() =>
     selectedSymbol ? [selectedSymbol] : rankedRows.slice(0, 5).map(r => r.symbol),
@@ -1092,13 +1076,10 @@ function ScannerContent() {
   );
 
   const aiSummary = useMemo(() => {
-    if (symbolDetail) {
-      return `${symbolDetail.symbol} — Score: ${symbolDetail.score}, Direction: ${symbolDetail.direction}, RSI: ${symbolDetail.rsi ?? 'N/A'}, ADX: ${symbolDetail.adx ?? 'N/A'}`;
-    }
     const bullish = rankedRows.filter(r => r.direction === 'bullish').length;
     const bearish = rankedRows.filter(r => r.direction === 'bearish').length;
     return `Scanner: ${rankedRows.length} results, ${bullish} bullish / ${bearish} bearish, Regime: ${currentRegime}, Timeframe: ${mode === 'ranked' ? v2Timeframe : proTimeframe}`;
-  }, [symbolDetail, rankedRows, currentRegime, mode, v2Timeframe, proTimeframe]);
+  }, [rankedRows, currentRegime, mode, v2Timeframe, proTimeframe]);
 
   useRegisterPageData('scanner', aiData, aiSymbols, aiSummary);
 
@@ -1123,7 +1104,6 @@ function ScannerContent() {
     setProScanResults(null);
     setSelectedSymbol(null);
     setSelectedAssetClass(null);
-    setSymbolDetail(null);
     try {
       const payload: any = { type: proAsset, timeframe: proTimeframe, universeSize: proUniverseSize, filters: proFilters, sort: proSort };
       payload.mode = proAsset === 'crypto' ? 'deep' : 'hybrid';
@@ -1256,17 +1236,11 @@ function ScannerContent() {
   },[router,proAsset,proTimeframe]);
 
 
-  /* ─── Detail section (shared between both modes) ─── */
-  const detailTimeframeLabel = mode === 'ranked'
-    ? (v2Timeframe === '15m' ? '15M' : v2Timeframe === '1h' ? '1H' : v2Timeframe === 'weekly' ? 'W' : 'D')
-    : proTimeframe.toUpperCase();
-  const detailAssetType = selectedAssetClass ?? (mode === 'ranked' ? 'equity' : proAsset);
   const activeScannerStage: ScannerStage = selectedSymbol ? 'analysis' : mode;
   const selectScannerMode = useCallback((nextMode: ScannerMode) => {
     setMode(nextMode);
     setSelectedSymbol(null);
     setSelectedAssetClass(null);
-    setSymbolDetail(null);
   }, []);
   const canOpenAnalysis = Boolean(selectedSymbol) || (mode === 'ranked' ? rankedRows.length > 0 : proScreenerRows.length > 0);
   const openScannerAnalysis = useCallback(() => {
@@ -1328,7 +1302,7 @@ function ScannerContent() {
     weakProRows ? `${weakProRows} returned rows have weak data` : null,
     proScanResults?.universe?.valid < proScanResults?.universe?.input ? 'Partial universe coverage' : null,
   ]).filter(Boolean) as string[];
-  const dataLoadingCount = (mode === 'ranked' ? [equity.loading, crypto.loading, detailLoading] : [proScanLoading, detailLoading]).filter(Boolean).length;
+  const dataLoadingCount = (mode === 'ranked' ? [equity.loading, crypto.loading] : [proScanLoading]).filter(Boolean).length;
   const dataHealthValue = dataIssues.length ? `${dataIssues.length} issue${dataIssues.length === 1 ? '' : 's'}` : dataLoadingCount ? `${dataLoadingCount} loading` : mode === 'pro' && !proScanResults ? 'Not scanned' : 'Ready';
   const dataHealthTone = dataIssues.length ? 'var(--msp-warn)' : dataLoadingCount ? 'var(--msp-flat)' : 'var(--msp-bull)';
   const dataHealthDetail = dataIssues.length ? dataIssues.join(', ') : dataLoadingCount ? 'Feeds syncing' : 'No feed errors reported';
@@ -1381,7 +1355,7 @@ function ScannerContent() {
       <header className="rounded-lg border border-slate-700 p-3">
         <h1 className="text-xl font-semibold">Scanner</h1>
         <p className="mt-1 text-sm font-semibold" data-scanner-verdict>{selectedSymbol ? `Evidence for ${selectedSymbol}` : queueCount ? `${queueCount} research candidates` : 'Run a scan to collect research candidates.'}</p>
-        <div className="mt-2 flex flex-wrap gap-3 text-xs"><Link href={goldenEggHref}>Open Symbol</Link><Link href={terminalHref}>Open Terminal</Link>{selectedSymbol&&<button onClick={()=>{setSelectedSymbol(null);setSelectedAssetClass(null);setSymbolDetail(null);}}>Back to results</button>}</div>
+        <div className="mt-2 flex flex-wrap gap-3 text-xs"><Link href={goldenEggHref}>Open Symbol</Link><Link href={terminalHref}>Open Terminal</Link>{selectedSymbol&&<button onClick={()=>{setSelectedSymbol(null);setSelectedAssetClass(null);}}>Back to results</button>}</div>
       </header>
       <ComplianceDisclaimer compact />
       <TabBar label="Scanner mode" activeId={mode === 'pro' ? 'pro' : 'quick'} onChange={id=>{selectScannerMode(id==='pro'?'pro':'ranked');setShowAllRows(false);}} items={[{id:'quick',label:'Quick scan'},{id:'pro',label:'Pro scanner'}]} />
@@ -1583,29 +1557,6 @@ function ScannerContent() {
           )}
         </>
         </UpgradeGate>
-      )}
-
-      {/* ═══════════════════════════════ INLINE DETAIL PANEL ═══════════════════════════════ */}
-      {selectedSymbol && (
-        <>
-          {detailLoading ? (
-            <Card>
-              <div className="flex items-center gap-3 py-8 justify-center">
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
-                <span className="text-sm text-slate-400">Loading analysis for {selectedSymbol}...</span>
-              </div>
-            </Card>
-          ) : symbolDetail ? (
-            <SymbolDetailPanel
-              detail={symbolDetail}
-              timeframeLabel={detailTimeframeLabel}
-              onClose={() => { setSelectedSymbol(null); setSelectedAssetClass(null); setSymbolDetail(null); }}
-              assetType={detailAssetType}
-              activeRegime={currentRegime}
-              returnLabel={mode === 'ranked' ? 'Back to Ranked' : 'Back to Pro Scanner'}
-            />
-          ) : null}
-        </>
       )}
 
       {/* Errors */}

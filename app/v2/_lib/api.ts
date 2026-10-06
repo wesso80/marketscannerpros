@@ -987,9 +987,12 @@ export interface DailyPicksBundle {
   dataQuality?: ScannerResponse['metadata']['dataQuality'];
 }
 
+/** Current-day daily picks. Today shell and DeskFolds share this exact query. */
+export const DAILY_PICKS_CURRENT_PATH = '/api/scanner/daily-picks?limit=20';
+
 /**
- * Current-day daily picks (limit=20). One in-flight request is shared by the Today shell
- * and DeskFolds so a page load does not issue a second GET for the same snapshot.
+ * One in-flight request is shared by the Today shell and DeskFolds so a page load
+ * does not issue a second GET for the same snapshot.
  */
 let dailyPicksInflight: Promise<DailyPicksBundle> | null = null;
 
@@ -999,7 +1002,7 @@ export function fetchDailyPicksBundle(): Promise<DailyPicksBundle> {
     success?: boolean;
     topPicks?: { equity?: unknown[]; crypto?: unknown[] };
     dataQuality?: ScannerResponse['metadata']['dataQuality'];
-  } | null>('/api/scanner/daily-picks?limit=20').then((data) => {
+  } | null>(DAILY_PICKS_CURRENT_PATH).then((data) => {
     if (!data || typeof data !== 'object') return { success: false, equity: [], crypto: [] };
     return {
       success: data.success !== false,
