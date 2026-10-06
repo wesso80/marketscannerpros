@@ -219,6 +219,61 @@ describe('clover period fields on the paid signup paths', () => {
     expect(verifySessionToken(res.cookies.get('ms_auth')!.value).tier).toBe('pro');
   });
 
+  it('confirm keeps the existing tier when an active subscription has an unknown price', async () => {
+    mocks.q.mockImplementation(async (sql: unknown) => {
+      if (String(sql).includes('SELECT stripe_subscription_id')) {
+        return [{ stripe_subscription_id: 'sub_paid', status: 'active', tier: 'pro' }];
+      }
+      return [{ workspace_id: 'ws_confirm' }];
+    });
+    const subscription = cloverSubscription();
+    subscription.items.data[0].price = { id: 'price_unknown' };
+    mocks.sessionsRetrieve.mockResolvedValue({
+      id: 'cs_unknown',
+      status: 'complete',
+      payment_status: 'paid',
+      customer: 'cus_confirm',
+      customer_details: { email: 'confirm-unknown@example.com' },
+      subscription,
+    });
+
+    const res = await confirmGET(new NextRequest('https://example.test/api/stripe/confirm?session_id=cs_unknown'));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.tier).toBe('pro');
+    const insert = insertCall();
+    expect(String(insert![0])).toContain("WHEN EXCLUDED.tier = 'free' AND EXCLUDED.status IN ('active', 'trialing', 'past_due')");
+    expect(String(insert![0])).toContain('THEN user_subscriptions.tier');
+    expect((insert![1] as unknown[])[2]).toBe('free');
+    expect((insert![1] as unknown[])[3]).toBe('active');
+    expect(verifySessionToken(res.cookies.get('ms_auth')!.value).tier).toBe('pro');
+  });
+
+  it('confirm does not let a canceled session overwrite a manual Pro grant', async () => {
+    mocks.q.mockImplementation(async (sql: unknown) => {
+      if (String(sql).includes('SELECT stripe_subscription_id')) {
+        return [{ stripe_subscription_id: null, status: 'active', tier: 'pro' }];
+      }
+      return [{ workspace_id: 'should-not-write' }];
+    });
+    const subscription = cloverSubscription();
+    subscription.id = 'sub_old';
+    subscription.status = 'canceled';
+    mocks.sessionsRetrieve.mockResolvedValue({
+      id: 'cs_manual',
+      status: 'complete',
+      payment_status: 'paid',
+      customer: 'cus_confirm',
+      customer_details: { email: 'confirm-manual@example.com' },
+      subscription,
+    });
+
+    const res = await confirmGET(new NextRequest('https://example.test/api/stripe/confirm?session_id=cs_manual'));
+    expect(res.status).toBe(200);
+    expect(insertCall()).toBeUndefined();
+    expect((await res.json()).tier).toBe('free');
+  });
+
   it('login stores the item period without failing the sign-in', async () => {
     mocks.customersList.mockResolvedValue({ data: [{ id: 'cus_login', email: 'paid@example.com' }] });
     mocks.subscriptionsList.mockResolvedValue({ data: [cloverSubscription()] });

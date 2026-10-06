@@ -116,23 +116,56 @@ function skipCustomerWrite(eventType: string, reason: 'deleted' | 'no-email', de
 }
 
 const PROTECTED_STATUSES = ['active', 'trialing', 'past_due', 'unpaid'];
+const MANUAL_GRANT_BLOCK_STATUSES = ['canceled', 'incomplete', 'incomplete_expired'];
+
+function isLiveStatus(status: string): boolean {
+  return status === 'active' || status === 'trialing';
+}
+
+function periodMillis(value: unknown): number | null {
+  if (value instanceof Date) {
+    const time = value.getTime();
+    return Number.isNaN(time) ? null : time;
+  }
+  if (typeof value === 'string' && value.trim()) {
+    const time = new Date(value).getTime();
+    return Number.isNaN(time) ? null : time;
+  }
+  return null;
+}
 
 /**
- * A retrieved active or trialing subscription always wins, including over a
- * different id (cancel-at-period-end, then a new sub). Any other incoming
- * status must not replace a different sub that is still active, trialing,
- * past_due, or unpaid.
+ * Same subscription id may update its own row. A manual Pro grant (active,
+ * no stripe_subscription_id) is not overwritten by a canceled or incomplete
+ * event. When both subscriptions are active or trialing, the later
+ * current_period_end wins. A live incoming sub still replaces a different
+ * sub that is not itself live. Anything else cannot replace active,
+ * trialing, past_due, or unpaid.
  */
 function mayReplaceSubscription(
-  existing: { stripe_subscription_id?: string | null; status?: string | null },
+  existing: { stripe_subscription_id?: string | null; status?: string | null; current_period_end?: unknown },
   incomingSubscriptionId: string,
   incomingStatus: string,
+  incomingPeriodEnd: Date | null,
 ): boolean {
   const currentId = typeof existing.stripe_subscription_id === 'string' ? existing.stripe_subscription_id : '';
-  if (!currentId || currentId === incomingSubscriptionId) return true;
-  if (incomingStatus === 'active' || incomingStatus === 'trialing') return true;
-  const status = existing.status || '';
-  return !PROTECTED_STATUSES.includes(status);
+  const existingStatus = existing.status || '';
+  if (!currentId) {
+    if (existingStatus === 'active' && MANUAL_GRANT_BLOCK_STATUSES.includes(incomingStatus)) return false;
+    return true;
+  }
+  if (currentId === incomingSubscriptionId) return true;
+  const incomingLive = isLiveStatus(incomingStatus);
+  const existingLive = isLiveStatus(existingStatus);
+  if (incomingLive && existingLive) {
+    const incomingMs = incomingPeriodEnd && !Number.isNaN(incomingPeriodEnd.getTime()) ? incomingPeriodEnd.getTime() : null;
+    const existingMs = periodMillis(existing.current_period_end);
+    if (incomingMs == null) return false;
+    if (existingMs == null) return true;
+    return incomingMs > existingMs;
+  }
+  if (incomingLive) return true;
+  return !PROTECTED_STATUSES.includes(existingStatus);
 }
 
 const SIDE_EFFECT_MEMORY_CAP = 1000;
@@ -312,6 +345,55 @@ async function processReferralReward(
   }
 }
 
+async function findLiveReplacement(
+  customerId: string,
+  deletedSubscriptionId: string,
+): Promise<Stripe.Subscription | null> {
+  const [activeList, trialingList] = await Promise.all([
+    stripe.subscriptions.list({ customer: customerId, status: 'active', limit: 20 }),
+    stripe.subscriptions.list({ customer: customerId, status: 'trialing', limit: 20 }),
+  ]);
+  const candidates = [...activeList.data, ...trialingList.data].filter((sub) =>
+    sub.id !== deletedSubscriptionId && (sub.status === 'active' || sub.status === 'trialing'),
+  );
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => {
+    const aEnd = subscriptionPeriodDate(a, 'current_period_end')?.getTime() ?? 0;
+    const bEnd = subscriptionPeriodDate(b, 'current_period_end')?.getTime() ?? 0;
+    return bEnd - aEnd;
+  });
+  return candidates[0];
+}
+
+async function repointSubscription(
+  deletedSubscriptionId: string,
+  replacement: Stripe.Subscription,
+): Promise<void> {
+  const mapped = tierFromSubscriptionItems(replacement.items?.data);
+  const periodEnd = safePeriodEnd(subscriptionPeriodDate(replacement, 'current_period_end'));
+  await q(
+    `UPDATE user_subscriptions
+     SET tier = CASE
+           WHEN $2 = 'free' AND $3 IN ('active', 'trialing', 'past_due') THEN tier
+           ELSE $2
+         END,
+         status = $3,
+         stripe_subscription_id = $4,
+         current_period_end = $5,
+         is_trial = $6,
+         updated_at = NOW()
+     WHERE stripe_subscription_id = $1`,
+    [
+      deletedSubscriptionId,
+      mapped.tier,
+      replacement.status,
+      replacement.id,
+      periodEnd,
+      replacement.status === 'trialing',
+    ],
+  );
+}
+
 async function cancelSubscriptionById(stripeSubscriptionId: string): Promise<void> {
   await q(
     `UPDATE user_subscriptions
@@ -339,11 +421,11 @@ async function upsertSubscription(
   const periodEndValue = safePeriodEnd(periodEnd);
 
   try {
-    const existing = await q<{ stripe_subscription_id: string | null; status: string }>(
-      `SELECT stripe_subscription_id, status FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1`,
+    const existing = await q<{ stripe_subscription_id: string | null; status: string; current_period_end?: unknown }>(
+      `SELECT stripe_subscription_id, status, current_period_end FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1`,
       [workspaceId],
     );
-    if (existing[0] && !mayReplaceSubscription(existing[0], stripeSubscriptionId, status)) {
+    if (existing[0] && !mayReplaceSubscription(existing[0], stripeSubscriptionId, status, periodEndValue)) {
       console.error(`[Webhook] Not overwriting ${existing[0].status} subscription ${existing[0].stripe_subscription_id} with ${status} ${stripeSubscriptionId} for ${normalizedEmail}`);
       return false;
     }
@@ -366,9 +448,27 @@ async function upsertSubscription(
         current_period_end = EXCLUDED.current_period_end,
         is_trial = EXCLUDED.is_trial,
         updated_at = NOW()
-      WHERE user_subscriptions.stripe_subscription_id IS NULL
+      WHERE (
+            user_subscriptions.stripe_subscription_id IS NULL
+            AND NOT (
+              user_subscriptions.status = 'active'
+              AND EXCLUDED.status IN ('canceled', 'incomplete', 'incomplete_expired')
+            )
+          )
          OR user_subscriptions.stripe_subscription_id = EXCLUDED.stripe_subscription_id
-         OR EXCLUDED.status IN ('active', 'trialing')
+         OR (
+              EXCLUDED.status IN ('active', 'trialing')
+              AND user_subscriptions.status IN ('active', 'trialing')
+              AND EXCLUDED.current_period_end IS NOT NULL
+              AND (
+                user_subscriptions.current_period_end IS NULL
+                OR EXCLUDED.current_period_end > user_subscriptions.current_period_end
+              )
+            )
+         OR (
+              EXCLUDED.status IN ('active', 'trialing')
+              AND user_subscriptions.status NOT IN ('active', 'trialing')
+            )
          OR user_subscriptions.status NOT IN ('active', 'trialing', 'past_due', 'unpaid')
       RETURNING workspace_id
     `, [workspaceId, normalizedEmail, tier, status, stripeSubscriptionId, customerId, periodEndValue, isTrial]);
@@ -548,6 +648,47 @@ export async function POST(req: NextRequest) {
           } else {
             throw error;
           }
+        }
+
+        const stripeCustomerId = typeof subscription.customer === 'string'
+          ? subscription.customer
+          : (subscription.customer && typeof subscription.customer === 'object' && 'id' in subscription.customer
+            ? String((subscription.customer as { id?: string }).id || '')
+            : '');
+        let replacement: Stripe.Subscription | null = null;
+        if (stripeCustomerId && loaded !== 'deleted' && loaded !== null) {
+          try {
+            replacement = await findLiveReplacement(stripeCustomerId, subscription.id);
+          } catch (error) {
+            if (
+              error !== null &&
+              typeof error === 'object' &&
+              (error as { code?: unknown }).code === 'resource_missing'
+            ) {
+              replacement = null;
+            } else {
+              throw error;
+            }
+          }
+        }
+
+        if (replacement) {
+          console.error(`[Webhook] customer.subscription.deleted ${subscription.id}: customer still has ${replacement.status} ${replacement.id}; re-pointing`);
+          const periodEnd = subscriptionPeriodDate(replacement, 'current_period_end');
+          const mapped = tierFromSubscriptionItems(replacement.items?.data);
+          if (loaded && loaded !== 'deleted' && loaded !== 'no-email') {
+            await upsertSubscription(
+              loaded.id,
+              loaded.email,
+              mapped.tier,
+              replacement.status,
+              replacement.id,
+              periodEnd,
+              replacement.status === 'trialing',
+            );
+          }
+          await repointSubscription(subscription.id, replacement);
+          break;
         }
 
         if (loaded && loaded !== 'deleted' && loaded !== 'no-email') {

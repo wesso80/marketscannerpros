@@ -30,7 +30,14 @@ function mayReplaceSubscription(
   incomingStatus: string,
 ): boolean {
   const currentId = typeof existing.stripe_subscription_id === "string" ? existing.stripe_subscription_id : "";
-  if (!currentId || currentId === incomingSubscriptionId) return true;
+  if (!currentId) {
+    const status = existing.status || "";
+    if (status === "active" && (incomingStatus === "canceled" || incomingStatus === "incomplete" || incomingStatus === "incomplete_expired")) {
+      return false;
+    }
+    return true;
+  }
+  if (currentId === incomingSubscriptionId) return true;
   if (incomingStatus === "active" || incomingStatus === "trialing") return true;
   return !PROTECTED_STATUSES.includes(existing.status || "");
 }
@@ -67,6 +74,7 @@ export async function GET(req: NextRequest) {
     const periodEnd = sub ? subscriptionPeriodDate(sub, "current_period_end") : null;
     const subscriptionStatus = sub?.status || "active";
     const livePaid = sub?.status === "active" || sub?.status === "trialing";
+    let keptTier = "";
     if (sub && !periodEnd) {
       console.error(`[stripe/confirm] subscription ${sub.id}: current_period_end missing or unusable on items.data[0] and on the subscription; storing null`);
     }
@@ -74,12 +82,17 @@ export async function GET(req: NextRequest) {
     // Update subscription in database
     if (email) {
       try {
-        const existing = await q<{ stripe_subscription_id: string | null; status: string }>(
-          `SELECT stripe_subscription_id, status FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1`,
+        const existing = await q<{ stripe_subscription_id: string | null; status: string; tier?: string }>(
+          `SELECT stripe_subscription_id, status, tier FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1`,
           [workspaceId],
         );
         const incomingId = sub?.id || "";
         const guardStatus = sub?.status || "canceled";
+        const existingTier = typeof existing[0]?.tier === "string" ? existing[0].tier : "";
+        if (tier === "free" && livePaid && existingTier && existingTier !== "free") {
+          keptTier = existingTier;
+          console.error(`[stripe/confirm] subscription ${incomingId || "none"}: unknown price id(s) [${priceIds.join(", ") || "none"}] with status ${subscriptionStatus}; keeping the existing tier`);
+        }
         if (existing[0] && !mayReplaceSubscription(existing[0], incomingId, guardStatus)) {
           console.error(`[stripe/confirm] Not overwriting ${existing[0].status} subscription ${existing[0].stripe_subscription_id} with ${subscriptionStatus} ${incomingId || "none"}`);
         } else {
@@ -90,13 +103,23 @@ export async function GET(req: NextRequest) {
             ON CONFLICT (workspace_id) 
             DO UPDATE SET 
               email = EXCLUDED.email,
-              tier = EXCLUDED.tier,
+              tier = CASE
+                WHEN EXCLUDED.tier = 'free' AND EXCLUDED.status IN ('active', 'trialing', 'past_due')
+                THEN user_subscriptions.tier
+                ELSE EXCLUDED.tier
+              END,
               status = EXCLUDED.status,
               stripe_customer_id = EXCLUDED.stripe_customer_id,
               stripe_subscription_id = EXCLUDED.stripe_subscription_id,
               current_period_end = EXCLUDED.current_period_end,
               updated_at = NOW()
-            WHERE user_subscriptions.stripe_subscription_id IS NULL
+            WHERE (
+                  user_subscriptions.stripe_subscription_id IS NULL
+                  AND NOT (
+                    user_subscriptions.status = 'active'
+                    AND EXCLUDED.status IN ('canceled', 'incomplete', 'incomplete_expired')
+                  )
+                )
                OR user_subscriptions.stripe_subscription_id = EXCLUDED.stripe_subscription_id
                OR $8::boolean
                OR user_subscriptions.status NOT IN ('active', 'trialing', 'past_due', 'unpaid')
@@ -122,7 +145,8 @@ export async function GET(req: NextRequest) {
     }
 
     // A canceled or unpaid replay must not mint a Pro session.
-    const sessionTier = livePaid ? tier : "free";
+    // An unknown price on a live sub keeps the tier already stored.
+    const sessionTier = !livePaid ? "free" : (keptTier || tier);
     const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
     const token = signSessionToken({ cid: customerId, tier: sessionTier, workspaceId, exp });
 
