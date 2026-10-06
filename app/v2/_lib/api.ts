@@ -997,6 +997,34 @@ export async function fetchSavedScannerResults(type: 'crypto' | 'equity'): Promi
   return { success: true, results, metadata: { count: results.length, timestamp: data.dataQuality?.computedAt ?? '', dataQuality: data.dataQuality } };
 }
 
+/** One GET of the stored daily snapshot for Today. Does not POST /api/scanner/run. */
+export interface DailyPicksBundle {
+  success: boolean;
+  equity: unknown[];
+  crypto: unknown[];
+  dataQuality?: ScannerResponse['metadata']['dataQuality'];
+}
+
+export async function fetchDailyPicksBundle(): Promise<DailyPicksBundle> {
+  const data = await apiFetch<{
+    success?: boolean;
+    topPicks?: { equity?: unknown[]; crypto?: unknown[] };
+    dataQuality?: ScannerResponse['metadata']['dataQuality'];
+  } | null>('/api/scanner/daily-picks?limit=20');
+  if (!data || typeof data !== 'object') return { success: false, equity: [], crypto: [] };
+  return {
+    success: data.success !== false,
+    equity: Array.isArray(data.topPicks?.equity) ? data.topPicks.equity : [],
+    crypto: Array.isArray(data.topPicks?.crypto) ? data.topPicks.crypto : [],
+    dataQuality: data.dataQuality,
+  };
+}
+
+/** Shared by the Today ranked queue so equity and crypto come from a single daily-picks read. */
+export function useDailyPicksBundle() {
+  return useApi(fetchDailyPicksBundle, ['daily-picks']);
+}
+
 export function useGoldenEgg(symbol: string | null, timeframe: ScanTimeframe = 'daily', assetType?: string) {
   return useApi(() => symbol ? fetchGoldenEgg(symbol, timeframe, assetType) : Promise.resolve(null as any), [symbol, timeframe, assetType]);
 }

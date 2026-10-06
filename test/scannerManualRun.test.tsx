@@ -35,3 +35,14 @@ it('manual ranked requests ignore an old response after timeframe changes',async
  await act(async()=>{resolve(new Response(JSON.stringify({success:true,results:[{symbol:'OLD'}]}),{status:200}));await pending;});
  expect(result.current.data).toBeNull();expect(fetchMock).toHaveBeenCalledTimes(1);
 });
+it('one explicit ranked Run click fires exactly one /api/scanner/run',async()=>{
+ const calls:Array<{url:string;init?:RequestInit}>=[];
+ vi.stubGlobal('fetch',vi.fn(async(url:string,init?:RequestInit)=>{calls.push({url,init});return new Response(JSON.stringify({success:true,results:[{symbol:'AAPL',score:70,timeframe:'daily',type:'equity'}],metadata:{count:1,timestamp:'2026-10-05T00:00:00Z'}}),{status:200});}));
+ render(<ScannerPage/>);
+ await act(async()=>{});
+ expect(calls.filter(c=>c.url==='/api/scanner/run')).toHaveLength(0);
+ fireEvent.click(screen.getByTestId('run-educational-scan'));
+ await waitFor(()=>expect(calls.filter(c=>c.url==='/api/scanner/run')).toHaveLength(1));
+ expect(calls.filter(c=>c.url==='/api/scanner/run')).toHaveLength(1);
+ expect(calls.find(c=>c.url==='/api/scanner/run')!.init?.method).toBe('POST');
+});
