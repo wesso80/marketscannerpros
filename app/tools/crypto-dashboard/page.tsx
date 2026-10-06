@@ -18,6 +18,7 @@ import ChipRow from '@/components/visual/ChipRow';
 import SourceLine from '@/components/visual/SourceLine';
 import StatTile from '@/components/visual/StatTile';
 import { DERIVATIVE_FEED_BASIS, conditionsPhrase, derivativeDecisionReady, pressurePhrase, sydneyClock } from '@/lib/crypto/derivativeDesk';
+import { selectBtcOpenInterestTile } from '@/lib/crypto/openInterestTotal';
 import { formatMarketTime } from '@/lib/market/priceStamp';
 
 export default function CryptoDashboard(props: { embeddedInDashboard?: boolean } = {}) {
@@ -75,7 +76,7 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
           avgLong: parseFloat(lsRes.average?.longPercent || '50'),
           avgShort: parseFloat(lsRes.average?.shortPercent || '50'),
         } : null,
-        openInterest: oiRes?.meta?.freshnessStatus === 'fresh' && oiRes?.summary ? oiRes : null,
+        openInterest: oiRes?.summary || oiRes?.coins?.length ? oiRes : null,
         liquidations: null,
         prices,
       };
@@ -268,19 +269,13 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
     if (value >= 1) return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     return `$${value.toLocaleString('en-US', { maximumFractionDigits: 6 })}`;
   };
-  const oiTotal = (() => {
-    const formatted = data.openInterest?.summary?.totalOpenInterestFormatted;
-    const raw = data.openInterest?.summary?.totalOpenInterest;
-    if (raw == null || (typeof raw === 'number' && !(raw > 0))) return null;
-    if (typeof formatted !== 'string' || !formatted || formatted === '$0.00') return null;
-    return formatted;
-  })();
-  const oiSource = typeof data.openInterest?.summary?.sourceLabel === 'string' && data.openInterest.summary.sourceLabel
-    ? data.openInterest.summary.sourceLabel
-    : 'CoinGecko derivatives';
+  const oiTile = selectBtcOpenInterestTile(data.openInterest);
+  const oiSource = oiTile.sourceLabel;
   const oiChangeLabel = typeof data.openInterest?.summary?.change24hLabel === 'string' && data.openInterest.summary.change24hLabel
     ? data.openInterest.summary.change24hLabel
     : '24h change on the fixed contract basket, not this total';
+  const basketChange = oiTrendAvailable ? data.openInterest?.summary?.change24h : null;
+  const basketText = typeof basketChange === 'number' ? `${basketChange >= 0 ? '+' : ''}${basketChange.toFixed(2)}%` : null;
 
   return (
     <div className={`mx-auto w-full max-w-none ${embeddedInDashboard ? 'px-0 pb-6 pt-0' : 'px-4 pb-24 pt-6 md:px-6'}`}>
@@ -350,9 +345,13 @@ function CryptoDashboardPaid({ embeddedInDashboard = false }: { embeddedInDashbo
         {primarySymbols.map((symbol) => (
           <StatTile key={symbol} label={symbol} value={money(data.prices[symbol]?.price)} change={data.prices[symbol]?.change24h} />
         ))}
-        <StatTile label="Total open interest" value={loading ? null : (oiTotal ?? 'unavailable')} change={oiTrendAvailable ? data.openInterest?.summary?.change24h : null} />
+        <StatTile label="BTC open interest" value={loading ? null : (oiTile.value ?? 'unavailable')} />
       </div>
-      <p className="mb-4 text-xs text-white/70">{oiSource}. {oiChangeLabel}.</p>
+      <p className="mb-1 text-xs text-white/70">{oiSource}.</p>
+      <p className="mb-1 text-xs text-white/70">Basket 24h: {basketText ?? 'unavailable'}. {oiChangeLabel}.</p>
+      {oiTile.shownCoinCount > 0 && oiTile.shownSumFormatted ? (
+        <p className="mb-4 text-xs text-white/70">Open interest across {oiTile.shownCoinCount} coins: {oiTile.shownSumFormatted}. {oiTile.shownSourceLabel}.</p>
+      ) : <div className="mb-4" />}
 
       {baselineClock && (
         <p className="mb-4 text-sm text-[var(--msp-warn)]">24h change: building, ready about {baselineClock}</p>

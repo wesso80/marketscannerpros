@@ -152,6 +152,9 @@ interface ScanRequest {
 interface DerivativesData {
   openInterest: number;        // OI in USD
   openInterestCoin: number;    // OI in native coin
+  /** Display-only total from the shared helper. Scoring keeps openInterest. */
+  sharedOpenInterest?: number | null;
+  openInterestSource?: string | null;
   fundingRate?: number;        // Current funding rate as percentage
   longShortRatio?: number;     // L/S ratio
   oiChangePercent?: number;    // 5m OI change percent
@@ -1780,6 +1783,8 @@ export async function POST(req: NextRequest) {
                     ? derivData.openInterest
                     : derivData.openInterestCoin * price,
                   openInterestCoin: derivData.openInterestCoin,
+                  sharedOpenInterest: derivData.sharedOpenInterest ?? null,
+                  openInterestSource: derivData.openInterestSource ?? null,
                   fundingRate: derivData.fundingRate,
                   longShortRatio: derivData.longShortRatio,
                   oiChangePercent: derivData.oiChangePercent,

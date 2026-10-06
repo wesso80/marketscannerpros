@@ -155,7 +155,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Coin not found' }, { status: 404 });
     }
     
-    // Funding stays on its existing feed. Open interest uses the shared all-venue total.
+    // Funding stays on its existing feed. Open interest uses the shared top-venue total.
     let fundingRates: { rate: number; sentiment: string } | null = null;
     let openInterest: { total: number | null; sourceLabel: string; observedAt: string | null } | null = null;
     try {

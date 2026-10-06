@@ -56,13 +56,18 @@ function installFetch(mode: 'empty' | 'three') {
         summary: {
           totalOpenInterest: 50_000_000_000,
           totalOpenInterestFormatted: '$50.00B',
+          sourceLabel: 'CoinGecko derivatives · top 3 exchanges per coin',
           change24h: 1.2,
+          change24hLabel: '24h change on the fixed contract basket, not this total',
           marketSignal: 'stable',
           comparisonReason: null,
           coverage: 'Fixed contracts',
           baselineReadyAt: null,
         },
-        coins: [{ symbol: 'BTC', openInterestValue: 30_000_000_000, change24h: 1.1 }],
+        coins: [
+          { symbol: 'BTC', openInterest: 30_000_000_000, openInterestValue: 30_000_000_000, openInterestFormatted: '$30.00B', sourceLabel: 'CoinGecko derivatives · top 3 exchanges', change24h: 1.1 },
+          { symbol: 'ETH', openInterest: 20_000_000_000, openInterestValue: 20_000_000_000, openInterestFormatted: '$20.00B', sourceLabel: 'CoinGecko derivatives · top 2 exchanges', change24h: 0.4 },
+        ],
       });
     }
     if (url.includes('/api/crypto/heatmap')) {
@@ -118,7 +123,13 @@ describe('crypto derivatives desk', () => {
     expect(source.textContent).toContain('no shared provider observation time supplied');
     expect(screen.queryByRole('button', { name: /Liquidations/ })).toBeNull();
     expect(document.body.textContent).not.toContain('3 of 4');
+    expect(document.body.textContent).toContain('BTC open interest');
+    expect(document.body.textContent).toContain('$30.00B');
+    expect(document.body.textContent).toContain('CoinGecko derivatives · top 3 exchanges');
+    expect(document.body.textContent).toContain('Basket 24h: +1.20%');
+    expect(document.body.textContent).toContain('Open interest across 2 coins: $50.00B');
     expect(document.body.textContent).toContain('24h change on the fixed contract basket, not this total');
+    expect(document.body.textContent).not.toContain('Total open interest');
     expect(screen.getAllByText('Show all 4').length).toBeGreaterThan(0);
     expect(document.body.textContent).not.toMatch(/Unavailable/);
     expect(document.body.textContent).not.toContain('Wait for complete data');

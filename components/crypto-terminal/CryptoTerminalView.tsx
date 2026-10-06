@@ -527,7 +527,7 @@ export default function CryptoTerminalView({
                     <div className="grid grid-cols-2 gap-2">
                       <MiniStat label="Avg Funding" value={fmtFunding(aggFunding.fundingRatePct)} sub="Unavailable: funding intervals not supplied" />
                       <MiniStat label="Sentiment" value={aggFunding.sentiment} />
-                      <MiniStat label="Total OI" value={aggOI.totalOI == null ? 'unavailable' : fmtUsd(aggOI.totalOI)} sub={aggOI.sourceLabel ?? (aggOI.exchangeCount > 0 ? `${aggOI.exchangeCount} exchanges` : 'unavailable')} />
+                      <MiniStat label="Total OI" value={aggOI.totalOI == null ? 'unavailable' : fmtUsd(aggOI.totalOI)} sub={aggOI.sourceLabel ?? (aggOI.exchangeCount > 0 ? `CoinGecko derivatives · top ${aggOI.exchangeCount} ${aggOI.exchangeCount === 1 ? 'exchange' : 'exchanges'}` : 'unavailable')} />
                       <MiniStat label="Perps Volume" value={fmtUsd(aggOI.totalVolume24h)} />
                     </div>
                   </div>

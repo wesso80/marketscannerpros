@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import {
   FIXED_BASKET_CHANGE_LABEL,
   headlineOpenInterest,
+  selectBtcOpenInterestTile,
   sumOpenInterestTotals,
   type OpenInterestTotal,
 } from '@/lib/crypto/openInterestTotal';
@@ -68,11 +69,14 @@ describe('shared open-interest total', () => {
       symbol: 'BTC',
       totalUsd: BTC_TOTAL,
       exchanges: 3,
-      sourceLabel: 'CoinGecko derivatives · 3 exchanges',
+      sourceLabel: 'CoinGecko derivatives · top 3 exchanges',
     });
     expect(btc.observedAt).toEqual(expect.any(String));
-    expect(eth).toMatchObject({ symbol: 'ETH', totalUsd: 2_000_000_000, exchanges: 1, sourceLabel: 'CoinGecko derivatives · 1 exchange' });
-    expect(headlineOpenInterest([btc, eth]).totalUsd).toBe(BTC_TOTAL + 2_000_000_000);
+    expect(eth).toMatchObject({ symbol: 'ETH', totalUsd: 2_000_000_000, exchanges: 1, sourceLabel: 'CoinGecko derivatives · top 1 exchange' });
+    const headline = headlineOpenInterest([btc, eth]);
+    expect(headline.totalUsd).toBe(BTC_TOTAL + 2_000_000_000);
+    expect(headline.exchanges).toBe(3);
+    expect(headline.sourceLabel).toBe('CoinGecko derivatives · top 3 exchanges per coin');
   });
 
   it('returns null, not 0, when the feed fails or a coin has no usable quote', () => {
@@ -86,7 +90,7 @@ describe('shared open-interest total', () => {
       { market: 'OKX', symbol: 'BTCUSDT', index_id: 'BTC', contract_type: 'perpetual', open_interest: -5, last_traded_at: tradedAt() },
     ], ['BTC'])[0].totalUsd).toBeNull();
     const blank: OpenInterestTotal = { symbol: 'SOL', totalUsd: null, exchanges: 0, observedAt: null, sourceLabel: 'CoinGecko derivatives' };
-    const present: OpenInterestTotal = { symbol: 'BTC', totalUsd: 5, exchanges: 1, observedAt: '2026-10-06T00:00:00.000Z', sourceLabel: 'CoinGecko derivatives · 1 exchange' };
+    const present: OpenInterestTotal = { symbol: 'BTC', totalUsd: 5, exchanges: 1, observedAt: '2026-10-06T00:00:00.000Z', sourceLabel: 'CoinGecko derivatives · top 1 exchange' };
     expect(headlineOpenInterest(null).totalUsd).toBeNull();
     expect(headlineOpenInterest([blank, present]).totalUsd).toBe(5);
   });
@@ -123,15 +127,15 @@ describe('three routes share one BTC total', () => {
     const derivBody = await (await derivatives(new NextRequest('http://localhost/api/crypto-derivatives?symbol=BTC'))).json();
     const btc = oiBody.coins.find((coin: { symbol: string }) => coin.symbol === 'BTC');
     expect(detailBody.derivatives.open_interest).toBe(BTC_TOTAL);
-    expect(detailBody.derivatives.open_interest_source).toBe('CoinGecko derivatives · 3 exchanges');
+    expect(detailBody.derivatives.open_interest_source).toBe('CoinGecko derivatives · top 3 exchanges');
     expect(btc.openInterest).toBe(BTC_TOTAL);
-    expect(btc.sourceLabel).toBe('CoinGecko derivatives · 3 exchanges');
+    expect(btc.sourceLabel).toBe('CoinGecko derivatives · top 3 exchanges');
     expect(oiBody.summary.totalOpenInterest).toBe(BTC_TOTAL);
     expect(oiBody.summary.totalOpenInterest).not.toBe(100);
     expect(oiBody.summary.change24h).toBe(2.5);
     expect(oiBody.summary.change24hLabel).toBe(FIXED_BASKET_CHANGE_LABEL);
     expect(derivBody.aggregatedOI.totalOI).toBe(BTC_TOTAL);
-    expect(derivBody.aggregatedOI.sourceLabel).toBe('CoinGecko derivatives · 3 exchanges');
+    expect(derivBody.aggregatedOI.sourceLabel).toBe('CoinGecko derivatives · top 3 exchanges');
     expect(derivBody.aggregatedOI.totalOI).toBe(detailBody.derivatives.open_interest);
     expect(derivBody.aggregatedOI.totalOI).toBe(btc.openInterest);
   });
@@ -150,5 +154,40 @@ describe('three routes share one BTC total', () => {
     const detailBody = await (await detail(new NextRequest('http://localhost/api/crypto/detail?action=detail&symbol=BTC'))).json();
     expect(detailBody.derivatives?.open_interest ?? null).toBeNull();
     expect(JSON.stringify(detailBody)).not.toContain('"open_interest":0');
+  });
+
+  it('the BTC dashboard tile matches detail and crypto-derivatives when other coins are present', async () => {
+    basket.getOiEvidence.mockResolvedValue({
+      coins: [
+        { symbol: 'BTC', value: 100, change24h: 2.5, exchanges: 1, observedAt: Date.now(), comparisonAt: null },
+        { symbol: 'ETH', value: 40, change24h: -1, exchanges: 1, observedAt: Date.now(), comparisonAt: null },
+      ],
+      totalOpenInterest: 140,
+      change24h: 2.5,
+      comparisonReason: null,
+      coverage: 'Fixed contracts selected from the initial snapshot. Not the whole market.',
+      baselineReadyAt: null,
+      observedAt: new Date().toISOString(),
+      method: 'coingecko-major-perpetual-usd-v3',
+    });
+    const { GET: detail } = await import('@/app/api/crypto/detail/route');
+    const { GET: openInterest } = await import('@/app/api/crypto/open-interest/route');
+    const { GET: derivatives } = await import('@/app/api/crypto-derivatives/route');
+    const detailBody = await (await detail(new NextRequest('http://localhost/api/crypto/detail?action=detail&symbol=BTC'))).json();
+    const oiBody = await (await openInterest(new NextRequest('http://localhost/api/crypto/open-interest'))).json();
+    const derivBody = await (await derivatives(new NextRequest('http://localhost/api/crypto-derivatives?symbol=BTC'))).json();
+    const tile = selectBtcOpenInterestTile(oiBody);
+    expect(oiBody.summary.totalOpenInterest).toBe(BTC_TOTAL + 2_000_000_000);
+    expect(tile.usd).toBe(BTC_TOTAL);
+    expect(tile.usd).not.toBe(oiBody.summary.totalOpenInterest);
+    expect(tile.value).toBe('$14.35B');
+    expect(tile.sourceLabel).toBe('CoinGecko derivatives · top 3 exchanges');
+    expect(tile.shownCoinCount).toBe(2);
+    expect(tile.shownSumFormatted).toBe('$16.35B');
+    expect(tile.shownSourceLabel).toBe('CoinGecko derivatives · top 3 exchanges per coin');
+    expect(tile.usd).toBe(detailBody.derivatives.open_interest);
+    expect(tile.usd).toBe(derivBody.aggregatedOI.totalOI);
+    expect(tile.sourceLabel).toBe(detailBody.derivatives.open_interest_source);
+    expect(tile.sourceLabel).toBe(derivBody.aggregatedOI.sourceLabel);
   });
 });

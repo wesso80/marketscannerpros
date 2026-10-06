@@ -4,8 +4,9 @@
  * history does not cover 24 hours, and a missing total is never shown as zero.
  */
 import { DERIVATIVE_FEED_BASIS } from '@/lib/crypto/derivativeDesk';
+import { OI_QUOTE_MAX_AGE_MS } from '@/lib/crypto/openInterestTotal';
 
-export type DeskTile = { label: string; value: string; warning?: boolean };
+export type DeskTile = { label: string; value: string; warning?: boolean; source?: string };
 
 type Coin = { symbol?: string };
 
@@ -13,8 +14,22 @@ type FundingBody = { meta?: { freshnessStatus?: string }; stale?: boolean; coins
 type LongShortBody = { coins?: Array<Coin & { longAccount?: number; shortAccount?: number }> } | null;
 type OpenInterestBody = {
   meta?: { freshnessStatus?: string };
-  coins?: Array<Coin & { openInterestValue?: number; openInterestFormatted?: string }>;
+  coins?: Array<Coin & {
+    openInterestValue?: number | null;
+    openInterestFormatted?: string | null;
+    sourceLabel?: string | null;
+    observedAt?: string | null;
+  }>;
 } | null;
+
+/** Freshness follows the selected coin's own last trade, not the oldest trade in the whole response. */
+export function openInterestQuoteFresh(observedAt: string | null | undefined, now = Date.now()): boolean {
+  if (!observedAt) return false;
+  const at = Date.parse(observedAt);
+  if (!Number.isFinite(at)) return false;
+  const ageMs = now - at;
+  return ageMs >= -60_000 && ageMs <= OI_QUOTE_MAX_AGE_MS;
+}
 
 export function coinCode(symbol: string): string {
   const upper = symbol.trim().toUpperCase();
@@ -36,6 +51,7 @@ function formatOi(value: number): string {
 export function selectCryptoDeskTiles(
   symbol: string,
   feeds: { funding: FundingBody; longShort: LongShortBody; openInterest: OpenInterestBody },
+  now = Date.now(),
 ): { mode: 'tiles'; tiles: DeskTile[]; basis: string | null } | { mode: 'gate' } {
   const code = coinCode(symbol);
   const tiles: DeskTile[] = [];
@@ -47,13 +63,13 @@ export function selectCryptoDeskTiles(
     tiles.push({ label: 'Funding', value: `${rate > 0 ? '+' : ''}${rate.toFixed(4)}%` });
   }
 
-  const oiFresh = feeds.openInterest?.meta?.freshnessStatus === 'fresh';
-  const oi = oiFresh ? matchCoin(feeds.openInterest?.coins, code) : undefined;
-  if (oi) {
+  const oi = matchCoin(feeds.openInterest?.coins, code);
+  if (oi && openInterestQuoteFresh(oi.observedAt, now)) {
     const formatted = typeof oi.openInterestFormatted === 'string' ? oi.openInterestFormatted.trim() : '';
     const raw = oi.openInterestValue;
     const value = formatted || (typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? formatOi(raw) : '');
-    if (value) tiles.push({ label: 'Open interest', value });
+    const source = typeof oi.sourceLabel === 'string' ? oi.sourceLabel.trim() : '';
+    if (value) tiles.push({ label: 'Open interest', value, source: source || undefined });
   }
 
   const ls = matchCoin(feeds.longShort?.coins, code);

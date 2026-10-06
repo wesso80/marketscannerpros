@@ -730,7 +730,7 @@ function CryptoDetailPageContent({ embedded = false }: { embedded?: boolean }) {
                       <p className="text-[11px] uppercase text-slate-500">Derivatives Overlay</p>
                       <p className="text-[11px] text-slate-300">Funding: {coinData.derivatives.funding_rate !== undefined ? `${coinData.derivatives.funding_rate.toFixed(4)}% / interval` : 'Not collected'}</p>
                       <p className="text-[11px] text-slate-300">Sentiment: {marketText(coinData.derivatives.funding_sentiment)}</p>
-                      <p className="text-[11px] text-slate-300">Open Interest: {formatNumber(coinData.derivatives.open_interest ?? undefined)}</p>
+                      <p className="text-[11px] text-slate-300">Open Interest: {typeof coinData.derivatives.open_interest === 'number' && Number.isFinite(coinData.derivatives.open_interest) && coinData.derivatives.open_interest > 0 ? formatNumber(coinData.derivatives.open_interest) : 'unavailable'}</p>
                       {coinData.derivatives.open_interest_source ? <p className="text-[11px] text-slate-400">{coinData.derivatives.open_interest_source}</p> : null}
                     </div>
                   )}

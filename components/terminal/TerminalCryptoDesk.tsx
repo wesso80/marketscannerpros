@@ -64,7 +64,10 @@ export default function TerminalCryptoDesk({ symbol }: { symbol: string }) {
     <section aria-label="Crypto derivatives" className="space-y-3">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {state.tiles.map((tile) => (
-          <StatTile key={tile.label} label={tile.label} value={tile.value} warning={tile.warning} />
+          <div key={tile.label} className="min-w-0">
+            <StatTile label={tile.label} value={tile.value} warning={tile.warning} />
+            {tile.source ? <p className="mt-1 text-[11px] text-[var(--msp-text-muted)]">{tile.source}</p> : null}
+          </div>
         ))}
       </div>
       {state.basis ? <p className="text-xs text-[var(--msp-warn)]">{state.basis}</p> : null}

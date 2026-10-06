@@ -15,6 +15,9 @@ export interface ScanPick {
   indicators?: Record<string, any>;
   derivatives?: {
     openInterest?: number;
+    /** Shared-helper total for display. Scoring does not read this field. */
+    sharedOpenInterest?: number | null;
+    openInterestSource?: string | null;
     fundingRate?: number;
     longShortRatio?: number;
     oiChangePercent?: number;
@@ -35,6 +38,26 @@ interface ResearchCaseModalProps {
 function fmt(n: number | undefined | null, decimals = 2): string {
   if (n == null || !Number.isFinite(n)) return '—';
   return n.toFixed(decimals);
+}
+
+function formatResearchOi(oi: number): string {
+  return oi >= 1e9 ? `$${(oi / 1e9).toFixed(2)}B` : `$${(oi / 1e6).toFixed(1)}M`;
+}
+
+/** BTC and other crypto OI in this modal use the shared helper total when the scan attached one. */
+function researchOpenInterest(derivatives: ScanPick['derivatives']): { text: string; source: string } | null {
+  if (!derivatives) return null;
+  const shared = derivatives.sharedOpenInterest;
+  if (typeof shared === 'number' && Number.isFinite(shared) && shared > 0) {
+    return { text: formatResearchOi(shared), source: derivatives.openInterestSource || 'CoinGecko derivatives' };
+  }
+  if (derivatives.openInterestSource != null || Object.prototype.hasOwnProperty.call(derivatives, 'sharedOpenInterest')) {
+    return { text: 'unavailable', source: derivatives.openInterestSource || 'CoinGecko derivatives' };
+  }
+  if (typeof derivatives.openInterest === 'number' && Number.isFinite(derivatives.openInterest) && derivatives.openInterest > 0) {
+    return { text: formatResearchOi(derivatives.openInterest), source: 'CoinGecko derivatives · top 3 exchanges' };
+  }
+  return null;
 }
 
 function fmtPrice(n: number | undefined | null): string {
@@ -162,9 +185,9 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
     if (pick.derivatives?.fundingRate != null) {
       items.push({ label: 'Funding Rate', value: `${pick.derivatives.fundingRate.toFixed(4)}%`, verdict: pick.derivatives.fundingRate > 0.03 ? 'bear' : pick.derivatives.fundingRate < -0.03 ? 'bull' : 'neutral' });
     }
-    if (pick.derivatives?.openInterest) {
-      const oi = pick.derivatives.openInterest;
-      items.push({ label: 'Open Interest', value: oi >= 1e9 ? `$${(oi / 1e9).toFixed(2)}B` : `$${(oi / 1e6).toFixed(1)}M`, verdict: 'neutral' });
+    const oiReading = researchOpenInterest(pick.derivatives);
+    if (oiReading) {
+      items.push({ label: 'Open Interest', value: `${oiReading.text} · ${oiReading.source}`, verdict: 'neutral' });
     }
     return items;
   }, [ind, pick]);
@@ -293,6 +316,7 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
   // ── Verdict color ──
   const verdictColor = (v: 'bull' | 'bear' | 'neutral') =>
     v === 'bull' ? 'var(--msp-bull)' : v === 'bear' ? 'var(--msp-bear)' : 'var(--msp-text-muted)';
+  const oiReading = researchOpenInterest(pick.derivatives);
 
   return (
     <div
@@ -455,7 +479,7 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
           {pick.derivatives && (
             <Section title="Derivatives Data">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                {pick.derivatives.openInterest != null && <KV label="Open Interest" value={pick.derivatives.openInterest >= 1e9 ? `$${(pick.derivatives.openInterest / 1e9).toFixed(2)}B` : `$${(pick.derivatives.openInterest / 1e6).toFixed(1)}M`} />}
+                {oiReading && <KV label="Open Interest" value={`${oiReading.text} · ${oiReading.source}`} />}
                 {pick.derivatives.fundingRate != null && <KV label="Funding Rate" value={`${pick.derivatives.fundingRate.toFixed(4)}%`} accent={pick.derivatives.fundingRate > 0.03 ? 'var(--msp-bear)' : pick.derivatives.fundingRate < -0.03 ? 'var(--msp-bull)' : undefined} />}
                 {pick.derivatives.longShortRatio != null && <KV label="Long/Short Ratio" value={pick.derivatives.longShortRatio.toFixed(2)} />}
                 {pick.derivatives.basisPercent != null && <KV label="Basis" value={`${pick.derivatives.basisPercent.toFixed(3)}%`} />}

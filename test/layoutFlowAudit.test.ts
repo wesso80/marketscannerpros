@@ -659,9 +659,6 @@ describe('layout and flow audit regressions', () => {
     expect(cryptoDashboard).toContain('Funding elevated (longs paying)');
     expect(cryptoDashboard).toContain('Funding negative (shorts paying)');
     expect(cryptoDashboard).toContain('Open interest building');
-    expect(cryptoDashboard).not.toContain('Liquidations: not collected');
-    expect(cryptoDashboard).not.toContain('3 of 4');
-    expect(cryptoDashboard).not.toMatch(/get\('\/api\/crypto\/liquidations'\)/);
     expect(cryptoDashboard).not.toContain('WARN Funding elevated - longs paying shorts');
     expect(cryptoDashboard).not.toContain('BEAR Longs getting liquidated - bearish');
     expect(cryptoDashboard).not.toContain('⚠️ Funding elevated');
@@ -686,8 +683,6 @@ describe('layout and flow audit regressions', () => {
     expect(cryptoDashboard).toContain('Funding, open interest, and account ratios. Research only.');
     expect(cryptoDashboard).toContain('title="Research scenarios"');
     expect(cryptoDashboard).toContain('aria-label="Conditions"');
-    expect(cryptoDashboard).toContain('Funding and long/short: OKX · OI:');
-    expect(cryptoDashboard).toContain('24h change on the fixed contract basket, not this total');
     expect(cryptoDashboard).not.toContain("h1 className={`${embeddedInDashboard ? 'mt-1 text-base'");
     expect(macroDashboard).toContain('aria-label="Macro command header"');
     expect(macroDashboard).toContain('Global regime gate for liquidity, rates, growth, and cross-asset context.');
@@ -1291,5 +1286,19 @@ describe('layout and flow audit regressions', () => {
     expect(economicCalendarPage).toContain("ariaLabel=\"Economic Calendar command header\"");
     expect(economicCalendarPage).toContain("Refresh calendar");
 
+  });
+
+  it('crypto derivatives dashboard labels BTC open interest separately from the basket change', () => {
+    const cryptoDashboard = read('app/tools/crypto-dashboard/page.tsx');
+    expect(cryptoDashboard).toContain('label="BTC open interest"');
+    expect(cryptoDashboard).toContain('selectBtcOpenInterestTile');
+    expect(cryptoDashboard).toContain('Basket 24h:');
+    expect(cryptoDashboard).toContain('Open interest across {oiTile.shownCoinCount} coins:');
+    expect(cryptoDashboard).toContain('Funding and long/short: OKX · OI:');
+    expect(cryptoDashboard).toContain('24h change on the fixed contract basket, not this total');
+    expect(cryptoDashboard).not.toContain('Total open interest');
+    expect(cryptoDashboard).not.toContain('Liquidations: not collected');
+    expect(cryptoDashboard).not.toContain('3 of 4');
+    expect(cryptoDashboard).not.toMatch(/get\('\/api\/crypto\/liquidations'\)/);
   });
 });
