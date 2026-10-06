@@ -352,7 +352,7 @@ function ResearchPagePaid() {
         <Card>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <p data-research-verdict role="status" className="text-lg font-semibold">{savedLoading ? 'Loading saved research…' : savedError ? 'The last request did not complete.' : savedCases.length ? `${savedCases.length} saved research cases loaded` : 'No saved research cases yet.'}</p>
+              <p data-research-verdict role="status" className="text-lg font-semibold">{savedLoading ? 'Loading saved research…' : savedError ? 'The last request did not complete.' : savedCases.length ? `${savedCases.length} saved research cases loaded` : 'No saved research cases yet. Save a case from Scanner or Symbol to build a research archive.'}</p>
               <div className="text-[10px] text-slate-500">Educational scenario records saved from Scanner and Symbol.</div>
             </div>
             <button
@@ -367,9 +367,7 @@ function ResearchPagePaid() {
 
           {savedError && <div className="mb-3 rounded border border-red-500/30 bg-red-950/30 px-3 py-2 text-xs text-red-300">The request could not be completed. {savedCases.length > 0 ? 'Previously loaded cases remain below.' : 'Use Refresh to try again.'}</div>}
 
-          {savedLoading && savedCases.length === 0 ? <SkeletonRows n={6} /> : savedCases.length === 0 && !savedError ? (
-            <div className="py-8 text-center text-xs text-slate-500">No saved research cases yet. Save a case from Scanner or Symbol to build a research archive.</div>
-          ) : (
+          {savedLoading && savedCases.length === 0 ? <SkeletonRows n={6} /> : savedCases.length === 0 && !savedError ? null : (
             <div className="space-y-2">
               {(showAllSavedCases ? savedCases : savedCases.slice(0, 5)).map((item) => (
                 <div key={item.id} data-saved-case className="rounded-lg border border-slate-800/70 bg-slate-950/40 p-3">
