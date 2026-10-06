@@ -28,8 +28,8 @@ it('formats measured numbers and observation dates without changing values',()=>
 it.each(['NO_SETUP','NO_STRUCTURAL_STOP','NO_VALIDATED_EDGE: TREND_CONTINUATION','RR_BELOW_MIN','NEW_UNMAPPED_REASON'])('maps %s to research wording',code=>{expect(symbolText(code)).not.toMatch(raw);expect(symbolText(code)).not.toMatch(forbidden);});
 it.each(['NEAR','LINK','BTC'])('%s compact summary has one stage, readable detail, one source and no legacy/advice text',async symbol=>{
  const d=crypto(symbol),before=JSON.stringify(d);vi.mocked(fetch).mockResolvedValue({ok:true,json:async()=>d} as Response);
- const {container}=render(<CryptoBreakdown compact symbol={symbol} timeframe="daily"/>);await screen.findByText('NO BASE');
- const top=container.querySelector('[data-symbol-summary]')!;expect(top.textContent?.match(/no base/gi)).toHaveLength(1);
+ const {container}=render(<CryptoBreakdown compact symbol={symbol} timeframe="daily"/>);await screen.findByText('No base yet');
+ const top=container.querySelector('[data-symbol-summary]')!;expect(container.querySelector('[data-stage-badge]')?.textContent).toBe('No base yet');expect(top.textContent).not.toMatch(/\bNO BASE\b/);expect(top.textContent?.match(/no base/gi)).toHaveLength(1);
  expect(container.textContent).not.toMatch(/WATCH.*LONG|Grade B|WATCHING|Assessment: Watch/);
  expect(container.textContent).not.toMatch(forbidden);expect(container.textContent).not.toMatch(raw);
  for(const fold of container.querySelectorAll('details')){fold.open=true;fireEvent(fold,new Event('toggle'));}
@@ -41,7 +41,7 @@ it.each(['NEAR','LINK','BTC'])('%s compact summary has one stage, readable detai
 it.each(['AAPL','NVDA'])('%s blocked top has one verdict and a plain recorded reason',async symbol=>{
  const p=buildPayload(symbol,'equity',price,ind,null,null,'1D',null,null,null,{nowMs:now});p.canonicalVerdict={...p.canonicalVerdict,permission:'BLOCK',setupType:'NONE',blockReasons:[{code:'NO_STRUCTURAL_STOP',message:'NO_STRUCTURAL_STOP'}],factors:[]} as any;const before=JSON.stringify(p);
  vi.mocked(fetch).mockResolvedValue({ok:true,json:async()=>({ok:true,candles:bars.map(b=>({...b,c:b.close,h:b.high,l:b.low}))})} as Response);
- const {container}=render(<EquityTop data={p}/>);await screen.findByRole('img');expect(container.textContent?.match(/no setup/gi)).toHaveLength(1);expect(container.textContent).toContain('No clear stop level in the chart');expect(container.textContent).not.toContain('No measured checks');expect(container.textContent).not.toMatch(raw);expect(container.textContent).not.toMatch(forbidden);expect(JSON.stringify(p)).toBe(before);
+ const {container}=render(<EquityTop data={p}/>);await screen.findByRole('img');expect(container.querySelector('[data-equity-verdict]')?.textContent).toBe('No setup');expect(container.textContent?.match(/no setup/gi)).toHaveLength(1);expect(container.textContent).toContain('No clear stop level in the chart');expect(container.textContent).not.toContain('No measured checks');expect(container.textContent).not.toMatch(raw);expect(container.textContent).not.toMatch(forbidden);expect(JSON.stringify(p)).toBe(before);
 });
 it('Pro price header shows dated session close without inventing an instant',()=>{
  const {container}=render(<SymbolSnapshotHeader compact symbol="AAPL" asset="equity" timeframe="daily" stamp={{assetType:'equity',price:250,priceBasis:'last_close',latestDay:'2026-10-02'}} pick={null}/>);

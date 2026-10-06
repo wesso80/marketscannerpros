@@ -6,7 +6,7 @@ import type {DisplayChart} from './BaseChart';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import RuleChips from './RuleChips';
 import type {DisplayStat} from './StatCards';
-import {symbolText,symbolNumber,symbolDate} from '@/lib/presentation/symbolDisplay';
+import {symbolText,symbolNumber,symbolDate,symbolVerdictLabel} from '@/lib/presentation/symbolDisplay';
 
 
 /** Presentation only: no stock stage/base is inferred from crypto rules. */
@@ -27,8 +27,9 @@ export default function EquityTop({data,pick}:{data:GoldenEggPayload;pick?:{grad
  const blocked=engine?.permission==='BLOCK';
  const blockReason=(engine?.blockReasons??[]).map(reason=>symbolText(typeof reason==='string'?reason:reason.message||reason.code)).join(' · ') || 'The recorded eligibility checks did not pass.';
  const verdict=blocked?blockReason:rules.length?`${passed} of ${rules.length} measured checks meet their recorded thresholds.`:'No measured checks were returned in this packet.';
+ const verdictPill=symbolVerdictLabel(engine?.setupType==='NONE'?'NONE':blocked?'BLOCKED':engine?.setupType??'Research snapshot');
  return <div className="space-y-3">{error&&<p role="status" className="text-xs text-amber-300">Daily chart feed failed. Other observations retain their own dates.</p>}
- <SymbolSummary stage={<span data-equity-verdict className="rounded-full border border-amber-300 px-3 py-1 text-sm text-amber-300">{engine?.setupType==='NONE'?'No setup':blocked?'Blocked':symbolText(engine?.setupType??'Research snapshot')}</span>} verdict={verdict} rules={rules.slice(0,4)} chart={{bars,levels:levels.map(l=>({name:symbolText(l.label),value:l.price})),basis:'Alpha Vantage daily bars'}} tiles={tiles}/>
+ <SymbolSummary stage={<span data-equity-verdict className="rounded-full border border-amber-300 px-3 py-1 text-sm text-amber-300">{verdictPill}</span>} verdict={verdict} rules={rules.slice(0,4)} chart={{bars,levels:levels.map(l=>({name:symbolText(l.label),value:l.price})),basis:'Alpha Vantage daily bars'}} tiles={tiles}/>
  {rules.length>4&&<CollapsibleSection deferMount title="Additional checks" summary={`${rules.length-4} more measured ${rules.length===5?'check':'checks'}`}><RuleChips items={rules.slice(4)} showSource={false}/></CollapsibleSection>}
  </div>;
 }
