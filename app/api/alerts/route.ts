@@ -4,7 +4,7 @@ import { q } from '@/lib/db';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { validateBasicAlertAssetType } from '@/lib/alerts/assetTypes';
 import { ALERT_LIMITS, alertLimitReachedPayload } from '@/lib/alerts/planLimits';
-import { countActiveAlertsForCap } from '@/lib/alerts/activeCount';
+import { countActiveAlertsForCap, countsTowardAlertCap } from '@/lib/alerts/activeCount';
 import { PRICE_ALERT_WITHOUT_LEVEL_SQL } from '@/lib/alerts/priceOrphan';
 import { newAlertCooldownMinutes } from '@/lib/alerts/alertTiming';
 
@@ -401,6 +401,38 @@ export async function PUT(req: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ error: 'Alert ID required' }, { status: 400 });
+    }
+
+    const requestedActive = updates.isActive !== undefined ? updates.isActive : updates.is_active;
+    if (requestedActive === true) {
+      const existing = await q<{
+        is_active: boolean | null;
+        condition_type: string | null;
+        condition_value: number | string | null;
+      }>(
+        `SELECT is_active, condition_type, condition_value
+         FROM alerts
+         WHERE id = $1 AND workspace_id = $2
+         LIMIT 1`,
+        [id, session.workspaceId]
+      );
+      if (!existing.length) {
+        return NextResponse.json({ error: 'Alert not found' }, { status: 404 });
+      }
+      const row = existing[0];
+      const alreadyActive = row.is_active === true;
+      const wouldCount = countsTowardAlertCap({
+        is_active: true,
+        condition_type: row.condition_type,
+        condition_value: row.condition_value,
+      });
+      if (!alreadyActive && wouldCount) {
+        const { tier, maxAlerts } = alertPlan(session);
+        const activeCount = await countActiveAlertsForCap(session.workspaceId);
+        if (activeCount >= maxAlerts) {
+          return NextResponse.json(alertLimitReachedPayload(tier, activeCount), { status: 403 });
+        }
+      }
     }
 
     // Build dynamic update query

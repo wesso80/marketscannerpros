@@ -15,7 +15,7 @@ import { useRiskPermission } from "@/components/risk/RiskPermissionContext";
 import { alertConditionLabel, alertHistoryLabel } from '@/lib/alertPresentation';
 import { isDiscordWebhookUrl } from '@/lib/notifications/discordWebhook';
 import { checkedActiveAlerts, consoleAlertType, deriveStatus, legacyMultiAlerts, opensSmartTabFirst, smartAlertShare } from '@/lib/alerts/consoleStatus';
-import { ALERT_LIMITS } from '@/lib/alerts/planLimits';
+import { ALERT_LIMITS, publishAlertCapNotice } from '@/lib/alerts/planLimits';
 import { isPriceAlertWithoutLevel } from '@/lib/alerts/priceOrphan';
 import AlertCapNotice from '@/components/alerts/AlertCapNotice';
 import RegimeBanner from '@/components/RegimeBanner';
@@ -236,11 +236,15 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   }, [activeAlerts, multiAlerts]);
 
   const toggleAlert = async (alert: AlertItem) => {
-    await fetch('/api/alerts', {
+    const res = await fetch('/api/alerts', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: alert.id, isActive: !alert.is_active }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 403 && typeof data?.message === 'string') publishAlertCapNotice(data.message);
+    }
     await fetchAll();
   };
 

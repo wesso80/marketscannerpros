@@ -11,12 +11,15 @@ export const ALERT_LIMITS = {
 
 export type AlertPlanTier = keyof typeof ALERT_LIMITS;
 
-/** Same 403 body for every user-initiated create path. */
+/** Same 403 body for every user-initiated create and re-activation path. */
 export function alertLimitReachedPayload(tier: AlertPlanTier, current: number) {
   const maxAlerts = ALERT_LIMITS[tier];
+  const message = tier === 'pro'
+    ? `You have ${maxAlerts} active alerts, the most Pro allows. Pause or delete one to add a new one.`
+    : `Your ${tier} plan allows ${maxAlerts} active alerts. Upgrade to create more.`;
   return {
     error: 'Alert limit reached' as const,
-    message: `Your ${tier} plan allows ${maxAlerts} active alerts. Upgrade to create more.`,
+    message,
     limit: maxAlerts,
     current,
   };

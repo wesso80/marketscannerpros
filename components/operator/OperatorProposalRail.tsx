@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { skippedAlertDraftReason } from '@/lib/alerts/capFeedback';
 
 type OperatorProposalActionType = 'create_alert' | 'create_journal_draft' | 'create_plan_draft';
 
@@ -161,9 +162,9 @@ export default function OperatorProposalRail({
         return;
       }
 
-      const alertResult = executePayload?.result;
-      if (alertResult?.kind === 'alert_draft' && alertResult.created === false && alertResult.reason) {
-        setFeedback(alertResult.reason);
+      const skippedReason = skippedAlertDraftReason(executePayload?.result);
+      if (skippedReason) {
+        setFeedback(skippedReason);
         return;
       }
 

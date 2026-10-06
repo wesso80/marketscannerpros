@@ -50,8 +50,17 @@ it('workflow event ingest publishes the auto-plan skip so the page can show it',
   })));
 
   const body = await emitWorkflowEvents([{ event_type: 'trade.plan.created' } as never]);
+  expect(body?.autoAlertsSkippedForCap).toBe(1);
   expect(body?.autoAlertSkipReasons).toEqual([capMessage]);
   expect(seen).toEqual([capMessage]);
+
+  seen.length = 0;
+  (fetch as unknown as { mockResolvedValueOnce: (value: unknown) => void }).mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({ autoAlertsCreated: 0, autoAlertsSkippedForCap: 0, autoAlertSkipReasons: [capMessage] }),
+  });
+  await emitWorkflowEvents([{ event_type: 'trade.plan.created' } as never]);
+  expect(seen).toEqual([]);
   window.removeEventListener('msp-alert-cap-notice', onNotice);
 });
 
@@ -73,6 +82,7 @@ it('draft alert creation shows the cap sentence instead of a success line', asyn
   fireEvent.click(await screen.findByRole('button', { name: 'Draft' }));
 
   expect(await screen.findByText(capMessage)).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Draft' })).toBeTruthy();
   await waitFor(() => {
     expect(screen.queryByText(/Draft created/i)).toBeNull();
   });

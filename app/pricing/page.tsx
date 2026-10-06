@@ -74,6 +74,7 @@ export default function PricingPage() {
   }, []);
 
   const isPaidUser = currentTier === "pro" || currentTier === "pro_trader";
+  const markedPlan = currentTier === "free" || isPaidUser;
 
   const handleCheckout = async (planId: PlanId) => {
     if (planId === "free") {
@@ -218,7 +219,7 @@ export default function PricingPage() {
     const savings = Math.max(0, yearlyEquivalent - plan.priceYearlyRaw);
     if (savings <= 0) return "";
     const monthsFree = Math.round((savings / plan.priceMonthlyRaw) * 10) / 10;
-    const shown = Number.isInteger(monthsFree) ? String(monthsFree) : String(monthsFree);
+    const shown = String(monthsFree);
     return `about ${shown} ${shown === "1" ? "month" : "months"} free`;
   };
 
@@ -239,7 +240,7 @@ export default function PricingPage() {
         <header className="pt-10 text-center">
           <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
             <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
-            {currentTier
+            {markedPlan
               ? "Your current plan is marked below."
               : "Start free. Upgrade to Pro for the full platform."}
           </div>

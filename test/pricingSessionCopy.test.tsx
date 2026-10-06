@@ -64,6 +64,16 @@ it('a signed-in Free session marks Free as the current plan without the no-card 
   expect(document.body.textContent).not.toMatch(moduleNames);
 });
 
+it('an unknown tier such as admin does not say a plan is marked', async () => {
+  me.ok = true;
+  me.body = { email: 'admin@example.test', tier: 'admin' };
+  renderPricing();
+  expect(await screen.findByRole('button', { name: 'Start Free' })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Current plan' })).toBeNull();
+  expect(document.body.textContent).not.toContain('Your current plan is marked below.');
+  expect(document.body.textContent).toContain('Start free. Upgrade to Pro for the full platform.');
+});
+
 it('a signed-out visitor still sees Start Free and the original hero', async () => {
   renderPricing();
   expect(await screen.findByRole('button', { name: 'Start Free' })).toBeTruthy();
@@ -86,4 +96,6 @@ it('monthly view takes the yearly price from PLAN_PRICES and the page has no roa
   expect(layout).not.toMatch(moduleNames);
   expect(page).toContain('7-day money-back guarantee');
   expect(page).toContain('PLAN_PRICES.pro.monthly');
+  expect(page).not.toContain('Number.isInteger(monthsFree) ? String(monthsFree) : String(monthsFree)');
+  expect(page).toContain('const shown = String(monthsFree)');
 });

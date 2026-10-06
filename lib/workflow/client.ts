@@ -86,8 +86,11 @@ export async function emitWorkflowEvents(events: MSPEvent[]): Promise<WorkflowEv
       body: JSON.stringify({ events }),
     });
     const body = await response.json().catch(() => null) as WorkflowEventsResult | null;
-    const reason = body?.autoAlertSkipReasons?.find((item) => typeof item === 'string' && item.trim());
-    if (reason) publishAlertCapNotice(reason);
+    const skipped = Number(body?.autoAlertsSkippedForCap ?? 0);
+    if (skipped > 0) {
+      const reason = body?.autoAlertSkipReasons?.find((item) => typeof item === 'string' && item.trim());
+      publishAlertCapNotice(reason || 'Alert not created: you are at your plan limit for active alerts.');
+    }
     return body;
   } catch {
     return null;

@@ -8,6 +8,7 @@ import UpgradeGate from '@/components/UpgradeGate';
 import { writeOperatorState } from '@/lib/operatorState';
 import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
 import AlertCapNotice from '@/components/alerts/AlertCapNotice';
+import { focusAlertCreateFeedback, skippedAlertDraftReason } from '@/lib/alerts/capFeedback';
 import { useUserTier, canAccessBrain, canAccessBacktest } from '@/lib/useUserTier';
 import type { CandidateEvaluation, OperatorContext, UnifiedSignal } from '@/lib/workflow/types';
 import CapitalControlStrip from '@/components/risk/CapitalControlStrip';
@@ -802,9 +803,9 @@ function OperatorDashboard() {
         return;
       }
 
-      const alertResult = data?.result;
-      if (alertResult?.kind === 'alert_draft' && alertResult.created === false && alertResult.reason) {
-        setProposalFeedback(alertResult.reason);
+      const skippedReason = skippedAlertDraftReason(data?.result);
+      if (skippedReason) {
+        setProposalFeedback(skippedReason);
         return;
       }
 
@@ -853,7 +854,12 @@ function OperatorDashboard() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ symbol: primary, decisionPacketId: loopDecisionPacketId }),
         });
-        const createData = createRes.ok ? await createRes.json() : null;
+        const createData = await createRes.json().catch(() => null);
+        const feedback = focusAlertCreateFeedback(createRes.ok, createData, primary);
+        if (!feedback.proceed) {
+          setProposalFeedback(feedback.message);
+          return;
+        }
         emitWorkflowEvents([
           createWorkflowEvent({
             eventType: 'operator.context.updated',
@@ -869,7 +875,7 @@ function OperatorDashboard() {
             },
           }),
         ]);
-        setHeartbeatDrift(createData?.alertId ? `Alert created for ${primary} (${createData.alertId})` : `Alert action triggered for ${primary}`);
+        setHeartbeatDrift(feedback.message);
         router.push(`/tools/workspace?tab=alerts&symbol=${encodeURIComponent(primary)}&from=operator&source=focus_strip${createData?.alertId ? `&alertId=${encodeURIComponent(createData.alertId)}` : ''}`);
         return;
       }
