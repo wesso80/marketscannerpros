@@ -311,7 +311,10 @@ function isPreciousQuote(symbol: string): symbol is PreciousMetal {
 async function preferLastGood(symbol: keyof typeof COMMODITIES, row: CommodityData): Promise<CommodityData> {
   if (!isPreciousQuote(symbol) || row.price != null) return row;
   const last = await readShared<CommodityData>(lastGoodKey(symbol));
-  if (last?.symbol === symbol && typeof last.price === 'number' && Number.isFinite(last.price) && last.price > 0) return last;
+  if (last?.symbol === symbol && typeof last.price === 'number' && Number.isFinite(last.price) && last.price > 0) {
+    // Hours-old gold or silver stays visible with its own as-of time, but it does not enter the breadth score.
+    return { ...last, eligibleForGate: false };
+  }
   return row;
 }
 

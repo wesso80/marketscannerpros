@@ -3,10 +3,19 @@ import { getCached, getCachedMulti, setCached } from '@/lib/redis';
 /** Shared response cache. About 15 minutes, one copy for every user and instance. */
 export const SHARED_RESPONSE_TTL_SECONDS = 15 * 60;
 
+/** In-memory fallback cap. Oldest entries go first once this is full. */
+export const SHARED_MEMORY_MAX_ENTRIES = 500;
+
 type MemoryEntry = { value: unknown; expiresAt: number };
 
 /** Used only when Redis is down, so a miss does not turn into a vendor call on every request. */
 const memoryCache = new Map<string, MemoryEntry>();
+
+function dropExpired(now: number): void {
+  for (const [key, entry] of memoryCache) {
+    if (entry.expiresAt <= now) memoryCache.delete(key);
+  }
+}
 
 function readMemory<T>(key: string): T | null {
   const hit = memoryCache.get(key);
@@ -19,7 +28,15 @@ function readMemory<T>(key: string): T | null {
 }
 
 function writeMemory<T>(key: string, value: T, ttlSeconds: number): void {
-  memoryCache.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 });
+  const now = Date.now();
+  dropExpired(now);
+  memoryCache.delete(key);
+  memoryCache.set(key, { value, expiresAt: now + ttlSeconds * 1000 });
+  while (memoryCache.size > SHARED_MEMORY_MAX_ENTRIES) {
+    const oldest = memoryCache.keys().next().value;
+    if (oldest === undefined) break;
+    memoryCache.delete(oldest);
+  }
 }
 
 /** Test hook. Production calls do not need to clear this. */

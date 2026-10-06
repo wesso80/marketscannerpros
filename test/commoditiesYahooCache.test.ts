@@ -136,7 +136,10 @@ describe('commodity cache and Yahoo failure row', () => {
     const body = await second.json();
     expect(body.commodity.price).toBe(4025.5);
     expect(body.commodity.price).not.toBe(0);
+    expect(priced.eligibleForGate).toBe(true);
+    expect(body.commodity.eligibleForGate).toBe(false);
     expect(body.commodity.asOfLabel).toBe(priced.asOfLabel);
+    expect(body.commodity.freshnessStatus).toBe(priced.freshnessStatus);
     expect(body.commodity.changePercent).toBeCloseTo((25.5 / 4000) * 100, 8);
     expect(state.writes.some((write) => write.key === 'commodities:v1:GOLD' && write.ttl === 90)).toBe(true);
   });
