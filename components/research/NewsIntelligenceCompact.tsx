@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import { NEWS_BRIEF_LABEL } from '@/lib/news/newsBrief';
@@ -151,7 +150,6 @@ export default function NewsIntelligenceCompact(props: NewsIntelligenceCompactPr
 
   return (
     <section aria-label="News intelligence" className="min-w-0 max-w-full space-y-3">
-      <ComplianceDisclaimer collapsible />
       <p data-research-verdict role="status" className="break-words text-lg font-semibold">{verdict}</p>
       {props.error ? <p className="text-sm text-amber-200">No current articles are shown. Use Find news evidence to try again.</p> : null}
 

@@ -454,7 +454,7 @@ function ResearchPagePaid() {
       )}
 
       </div>}
-      <ComplianceDisclaimer compact />
+      {tab !== 'News Intelligence' && <ComplianceDisclaimer compact />}
     </div>
   );
 }
