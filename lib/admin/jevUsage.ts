@@ -87,6 +87,14 @@ export async function recordJevUsage(event:JevUsageEvent,redis?:UsageRedis|null)
   }
  }catch{/* measurement only */}
 }
+/** Today's call count for one module, or null when Redis is not configured. A missing key is 0. */
+export async function readJevModuleCalls(day:string,module:string,redis?:UsageRedis|null):Promise<number|null>{
+ try{
+  const client=redis===undefined?await redisIfConfigured():redis;
+  if(!client||typeof client.get!=='function')return null;
+  return num(await client.get(usageKey(day,module,'calls')))??0;
+ }catch{return null;}
+}
 export async function readRecordedJevUsage(redis:UsageRedis|null):Promise<JevUsageBucket[]>{
  if(!redis||typeof redis.smembers!=='function'||typeof redis.get!=='function')return [];
  try{
