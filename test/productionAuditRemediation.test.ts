@@ -1,3 +1,4 @@
+import { moveExpectancy } from '@/lib/signals/accuracyDisplay';
 import { getToolByKey } from '@/lib/toolCatalog';
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
@@ -47,7 +48,13 @@ describe('2026-09-21 production audit remediations', () => {
     expect(route).toContain("scanner_type: signal.signal_type");
     expect(route).toContain("created_at: signal.signal_at");
     expect(route).toContain("outcome: latestOutcome?.outcome || 'pending'");
-    expect(route).toContain("winPct * avgWin - (1 - winPct) * Math.abs(avgLoss)");
+    expect(route).toContain('moveExpectancy(');
+    const winPct = 0.62;
+    const avgWin = 1.8;
+    const avgLoss = -0.9;
+    const expectancy = moveExpectancy(winPct * 100, avgWin, avgLoss);
+    expect(expectancy).toBeCloseTo(winPct * avgWin - (1 - winPct) * Math.abs(avgLoss));
+    expect(moveExpectancy(winPct * 100, avgWin, -2.4)).toBeLessThan(expectancy);
     expect(recorder).toContain("LEFT JOIN LATERAL");
     expect(recorder).toContain("ORDER BY so.horizon_minutes DESC");
   });
