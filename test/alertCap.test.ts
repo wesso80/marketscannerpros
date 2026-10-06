@@ -7,7 +7,7 @@ import {
   countActiveAlertsForCap,
   countsTowardAlertCap,
 } from '@/lib/alerts/activeCount';
-import { PRICE_ALERT_WITHOUT_LEVEL_SQL } from '@/lib/alerts/priceOrphan';
+import { ACTIVE_WORKFLOW_AUTO_ORPHAN_SQL, PRICE_ALERT_WITHOUT_LEVEL_SQL, isActiveWorkflowAutoOrphan } from '@/lib/alerts/priceOrphan';
 import { ALERT_LIMITS, alertCapSkipReason, alertLimitReachedPayload } from '@/lib/alerts/planLimits';
 import { focusAlertCreateFeedback, skippedAlertDraftReason } from '@/lib/alerts/capFeedback';
 
@@ -202,16 +202,25 @@ describe('alert create paths at the Pro cap', () => {
     expect(body.quota.max).toBe(100);
   });
 
-  it('create-from-focus returns the same 403 and does not insert', async () => {
+  it('create-from-focus blocks a level that counts, and allows a level-0 row at the cap', async () => {
     state.capCount = 100;
-    const res = await createFromFocus(new NextRequest('https://example.test/api/alerts/create-from-focus', {
+    const blocked = await createFromFocus(new NextRequest('https://example.test/api/alerts/create-from-focus', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ symbol: 'AAPL', direction: 'bullish', level: 190 }),
     }));
-    expect(res.status).toBe(403);
-    expect(await res.json()).toEqual(alertLimitReachedPayload('pro', 100));
+    expect(blocked.status).toBe(403);
+    expect(await blocked.json()).toEqual(alertLimitReachedPayload('pro', 100));
     expect(wroteAlert()).toBe(false);
+
+    state.queries = [];
+    const empty = await createFromFocus(new NextRequest('https://example.test/api/alerts/create-from-focus', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ symbol: 'AAPL', direction: 'bullish', level: 0 }),
+    }));
+    expect(empty.status).toBe(200);
+    expect(wroteAlert()).toBe(true);
   });
 
   it('blocks re-activation at the cap and leaves pause, edit, and already-active rows alone', async () => {
@@ -253,6 +262,32 @@ describe('alert create paths at the Pro cap', () => {
     const orphan = await putAlert({ id: 'orphan', isActive: true });
     expect(orphan.status).toBe(200);
 
+    state.rows = [{ is_active: true, condition_type: 'price_above', condition_value: 0 }];
+    state.queries = [];
+    const giveLevel = await putAlert({ id: 'empty', conditionValue: 25 });
+    expect(giveLevel.status).toBe(403);
+    expect(await giveLevel.json()).toEqual(alertLimitReachedPayload('pro', 100));
+    expect(state.queries.some((sql) => /UPDATE alerts/i.test(sql))).toBe(false);
+
+    state.rows = [{ is_active: false, condition_type: 'price_below', condition_value: 0 }];
+    state.queries = [];
+    const pausedWithLevel = await putAlert({ id: 'paused-empty', isActive: true, conditionValue: 40 });
+    expect(pausedWithLevel.status).toBe(403);
+    expect(state.queries.some((sql) => /UPDATE alerts/i.test(sql))).toBe(false);
+
+    state.capCount = 99;
+    state.rows = [{ is_active: true, condition_type: 'price_above', condition_value: 0 }];
+    state.queries = [];
+    const underCap = await putAlert({ id: 'empty', conditionValue: 25 });
+    expect(underCap.status).toBe(200);
+
+    paid.value = false;
+    state.capCount = 3;
+    state.rows = [{ is_active: true, condition_type: 'price_above', condition_value: 0 }];
+    const freeLevel = await putAlert({ id: 'empty', conditionValue: 9 });
+    expect(freeLevel.status).toBe(403);
+    expect(await freeLevel.json()).toEqual(alertLimitReachedPayload('free', 3));
+
     paid.value = false;
     state.capCount = 3;
     state.rows = [{ is_active: false, condition_type: 'price_below', condition_value: 40 }];
@@ -273,7 +308,7 @@ describe('alert create paths at the Pro cap', () => {
     }
   });
 
-  it('auto plan alerts and draft alerts skip at the cap without throwing', async () => {
+  it('auto plan alerts skip at the cap without throwing', async () => {
     state.capCount = 100;
     const workflow = await postWorkflowEvent(new NextRequest('https://example.test/api/workflow/events', {
       method: 'POST',
@@ -306,7 +341,26 @@ describe('alert create paths at the Pro cap', () => {
     expect(workflowBody.autoAlertSkipReasons).toEqual([alertCapSkipReason('pro', 100)]);
     expect(wroteAlert()).toBe(false);
 
-    state.queries = [];
+    expect(alertCapSkipReason('free', 3)).toBe("Alert not created: you're at your plan's limit of 3 active alerts.");
+    expect(focusAlertCreateFeedback(false, alertLimitReachedPayload('pro', 100), 'AAPL')).toEqual({
+      message: 'You have 100 active alerts, the most Pro allows. Pause or delete one to add a new one.',
+      proceed: false,
+    });
+    expect(skippedAlertDraftReason({ kind: 'alert_draft', created: false, reason: alertCapSkipReason('pro', 100) })).toBe(alertCapSkipReason('pro', 100));
+  });
+
+  it('an inactive draft is created at the cap because it does not count', async () => {
+    state.capCount = 100;
+    const seen: unknown[][] = [];
+    mocks.q.mockImplementation(async (sql: string, params: unknown[] = []) => {
+      state.queries.push(sql);
+      seen.push(params);
+      if (isCapCount(sql)) return [{ count: state.capCount }];
+      if (/alerts_last_hour/i.test(sql)) return [{ alerts_last_hour: 0, alerts_today: 0 }];
+      if (/INSERT INTO operator_action_executions/i.test(sql)) return [{ id: 1 }];
+      if (/INSERT INTO alerts/i.test(sql)) return [{ id: 'draft-1' }];
+      return [];
+    });
     const draft = await executeAction(new NextRequest('https://example.test/api/actions/execute', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -318,26 +372,22 @@ describe('alert create paths at the Pro cap', () => {
     }));
     expect(draft.status).toBe(200);
     const draftBody = await draft.json();
-    expect(draftBody.success).toBe(true);
-    expect(draftBody.result.created).toBe(false);
-    expect(draftBody.result.reason).toBe(alertCapSkipReason('pro', 100));
-    expect(draftBody.result.reason).toBe("Alert not created: you're at your plan's limit of 100 active alerts.");
-    expect(alertCapSkipReason('free', 3)).toBe("Alert not created: you're at your plan's limit of 3 active alerts.");
-    expect(wroteAlert()).toBe(false);
-    expect(draftBody.error).toBeUndefined();
-    expect(state.queries.some((sql) => /DELETE FROM operator_action_executions/i.test(sql))).toBe(true);
-    expect(state.queries.some((sql) => /status = 'completed'/i.test(sql))).toBe(false);
-    expect(skippedAlertDraftReason(draftBody.result)).toBe(alertCapSkipReason('pro', 100));
-    expect(focusAlertCreateFeedback(false, alertLimitReachedPayload('pro', 100), 'AAPL')).toEqual({
-      message: 'You have 100 active alerts, the most Pro allows. Pause or delete one to add a new one.',
-      proceed: false,
-    });
-    expect(focusAlertCreateFeedback(true, { alertId: 'a1' }, 'AAPL').proceed).toBe(true);
+    expect(draftBody.result.created).toBe(true);
+    expect(draftBody.result.reason).toBeNull();
+    const insert = state.queries.findIndex((sql) => /INSERT INTO alerts/i.test(sql));
+    expect(insert).toBeGreaterThanOrEqual(0);
+    expect(seen[insert][8]).toBe(false);
   });
 
-  it('a skipped draft is not stored, so the same key can create after a slot frees', async () => {
-    const executions = new Map<string, { status: string }>();
+  it('stores a draft created at the cap, and a repeat of that key does not insert again', async () => {
+    const executions = new Map<string, { status: string; result?: unknown }>();
     state.capCount = 100;
+    const body = {
+      actionType: 'alert.create',
+      idempotencyKey: 'cap-draft-retry',
+      params: { symbol: 'AAPL', threshold: 100 },
+    };
+    let alertInserts = 0;
     mocks.q.mockImplementation(async (sql: string, params: unknown[] = []) => {
       state.queries.push(sql);
       if (isCapCount(sql)) return [{ count: state.capCount }];
@@ -353,62 +403,94 @@ describe('alert create paths at the Pro cap', () => {
         return [];
       }
       if (/UPDATE operator_action_executions/i.test(sql) && /completed/i.test(sql)) {
-        executions.set(String(params[1]), { status: 'completed' });
+        executions.set(String(params[1]), { status: 'completed', result: params[3] });
         return [];
       }
       if (/SELECT status, result/i.test(sql)) {
         const row = executions.get(String(params[1]));
         return row ? [row] : [];
       }
-      if (/INSERT INTO alerts/i.test(sql)) return [{ id: 'new-alert' }];
+      if (/INSERT INTO alerts/i.test(sql)) {
+        alertInserts += 1;
+        return [{ id: 'new-alert' }];
+      }
       return [];
     });
 
-    const body = {
-      actionType: 'alert.create',
-      idempotencyKey: 'cap-draft-retry',
-      params: { symbol: 'AAPL', threshold: 100 },
-    };
     const first = await executeAction(new NextRequest('https://example.test/api/actions/execute', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
     }));
     expect(first.status).toBe(200);
-    expect((await first.json()).result.created).toBe(false);
-    expect(executions.size).toBe(0);
+    expect((await first.json()).result.created).toBe(true);
+    expect(executions.get('cap-draft-retry')?.status).toBe('completed');
+    expect(alertInserts).toBe(1);
 
-    state.capCount = 99;
     const second = await executeAction(new NextRequest('https://example.test/api/actions/execute', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
     }));
     expect(second.status).toBe(200);
-    const secondBody = await second.json();
-    expect(secondBody.replay).toBe(false);
-    expect(secondBody.result.created).toBe(true);
-    expect(state.queries.some((sql) => /INSERT INTO alerts/i.test(sql))).toBe(true);
+    expect((await second.json()).replay).toBe(true);
+    expect(alertInserts).toBe(1);
+    expect(readFileSync(resolve(__dirname, '../app/api/actions/execute/route.ts'), 'utf8')).toContain('DELETE FROM operator_action_executions');
   });
 
-  it('bulk cleanup deletes price alerts with no level, including focus orphans', async () => {
+  it('bulk cleanup switches off only active smart workflow.auto rows with value 0', async () => {
+    expect(isActiveWorkflowAutoOrphan({
+      is_active: true,
+      is_smart_alert: true,
+      condition_value: 0,
+      smart_alert_context: { source: 'workflow.auto' },
+    })).toBe(true);
+    expect(isActiveWorkflowAutoOrphan({
+      is_active: false,
+      is_smart_alert: true,
+      condition_value: 0,
+      smart_alert_context: { source: 'workflow.auto' },
+    })).toBe(false);
+    expect(isActiveWorkflowAutoOrphan({
+      is_active: true,
+      is_smart_alert: false,
+      condition_value: 0,
+      smart_alert_context: { source: 'focus.creator' },
+    })).toBe(false);
+    expect(isActiveWorkflowAutoOrphan({
+      is_active: true,
+      is_smart_alert: true,
+      condition_value: 12,
+      smart_alert_context: { source: 'workflow.auto' },
+    })).toBe(false);
+
     mocks.q.mockImplementation(async (sql: string) => {
       state.queries.push(sql);
-      if (/DELETE FROM alerts/i.test(sql)) return [{ id: 'focus-orphan' }, { id: 'auto-orphan' }];
+      if (/UPDATE alerts/i.test(sql) && /is_active = false/i.test(sql)) return [{ id: 'auto-on' }];
       return [];
     });
 
     const res = await deleteAlerts(new NextRequest('https://example.test/api/alerts?bulk=auto-orphaned', { method: 'DELETE' }));
     expect(res.status).toBe(200);
-    expect((await res.json()).deletedCount).toBe(2);
+    const body = await res.json();
+    expect(body.switchedOffCount).toBe(1);
+    expect(body.deletedCount).toBe(1);
 
-    const cleanup = state.queries.find((sql) => /DELETE FROM alerts/i.test(sql));
+    const cleanup = state.queries.find((sql) => /UPDATE alerts/i.test(sql) && /is_active = false/i.test(sql));
     expect(cleanup).toBeTruthy();
-    expect(cleanup).toMatch(/condition_type IN \('price_above', 'price_below'\)/);
-    expect(cleanup).toMatch(/COALESCE\(condition_value, 0\) <= 0/);
-    expect(cleanup).not.toMatch(/is_smart_alert/);
-    expect(cleanup).not.toMatch(/workflow\.auto/);
-    expect(cleanup).not.toMatch(/focus\.creator/);
+    expect(cleanup).toContain(ACTIVE_WORKFLOW_AUTO_ORPHAN_SQL);
+    expect(cleanup).toMatch(/is_smart_alert = true/);
+    expect(cleanup).toMatch(/condition_value = 0/);
+    expect(cleanup).toMatch(/workflow\.auto/);
+    expect(cleanup).toMatch(/is_active IS TRUE/);
+    expect(state.queries.some((sql) => /DELETE FROM alerts/i.test(sql))).toBe(false);
     expect(state.queries.some((sql) => /UPDATE alert_quotas/i.test(sql))).toBe(true);
+
+    const page = readFileSync(resolve(__dirname, '../app/tools/alerts/page.tsx'), 'utf8');
+    expect(page).toContain('isActiveWorkflowAutoOrphan');
+    expect(page).toContain('alert.is_active && !isPriceAlertWithoutLevel');
+    const toggle = page.slice(page.indexOf('const toggleAlert'), page.indexOf('const deleteAlert'));
+    expect(toggle).toContain('setActionError');
+    expect(toggle).not.toContain('status === 403');
   });
 });

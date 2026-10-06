@@ -6,6 +6,7 @@ import { enqueueEngineJob } from '@/lib/engine/jobQueue';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { ALERT_LIMITS, alertLimitReachedPayload } from '@/lib/alerts/planLimits';
 import { countActiveAlertsForCap } from '@/lib/alerts/activeCount';
+import { isPriceAlertWithoutLevel } from '@/lib/alerts/priceOrphan';
 
 type CreateFromFocusBody = {
   focusId?: string;
@@ -138,9 +139,11 @@ export async function POST(req: NextRequest) {
     };
 
     const tier = hasPaidSessionAccess(session) ? 'pro' : 'free';
-    const activeCount = await countActiveAlertsForCap(session.workspaceId);
-    if (activeCount >= ALERT_LIMITS[tier]) {
-      return NextResponse.json(alertLimitReachedPayload(tier, activeCount), { status: 403 });
+    if (!isPriceAlertWithoutLevel(conditionType, conditionValue)) {
+      const activeCount = await countActiveAlertsForCap(session.workspaceId);
+      if (activeCount >= ALERT_LIMITS[tier]) {
+        return NextResponse.json(alertLimitReachedPayload(tier, activeCount), { status: 403 });
+      }
     }
 
     const inserted = await q<{ id: string }>(

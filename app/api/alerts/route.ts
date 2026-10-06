@@ -5,7 +5,7 @@ import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { validateBasicAlertAssetType } from '@/lib/alerts/assetTypes';
 import { ALERT_LIMITS, alertLimitReachedPayload } from '@/lib/alerts/planLimits';
 import { countActiveAlertsForCap, countsTowardAlertCap } from '@/lib/alerts/activeCount';
-import { PRICE_ALERT_WITHOUT_LEVEL_SQL } from '@/lib/alerts/priceOrphan';
+import { ACTIVE_WORKFLOW_AUTO_ORPHAN_SQL } from '@/lib/alerts/priceOrphan';
 import { newAlertCooldownMinutes } from '@/lib/alerts/alertTiming';
 
 /**
@@ -403,35 +403,43 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Alert ID required' }, { status: 400 });
     }
 
-    const requestedActive = updates.isActive !== undefined ? updates.isActive : updates.is_active;
-    if (requestedActive === true) {
-      const existing = await q<{
-        is_active: boolean | null;
-        condition_type: string | null;
-        condition_value: number | string | null;
-      }>(
-        `SELECT is_active, condition_type, condition_value
-         FROM alerts
-         WHERE id = $1 AND workspace_id = $2
-         LIMIT 1`,
-        [id, session.workspaceId]
-      );
-      if (!existing.length) {
-        return NextResponse.json({ error: 'Alert not found' }, { status: 404 });
-      }
-      const row = existing[0];
-      const alreadyActive = row.is_active === true;
-      const wouldCount = countsTowardAlertCap({
-        is_active: true,
-        condition_type: row.condition_type,
-        condition_value: row.condition_value,
-      });
-      if (!alreadyActive && wouldCount) {
-        const { tier, maxAlerts } = alertPlan(session);
-        const activeCount = await countActiveAlertsForCap(session.workspaceId);
-        if (activeCount >= maxAlerts) {
-          return NextResponse.json(alertLimitReachedPayload(tier, activeCount), { status: 403 });
-        }
+    const existing = await q<{
+      is_active: boolean | null;
+      condition_type: string | null;
+      condition_value: number | string | null;
+    }>(
+      `SELECT is_active, condition_type, condition_value
+       FROM alerts
+       WHERE id = $1 AND workspace_id = $2
+       LIMIT 1`,
+      [id, session.workspaceId]
+    );
+    if (!existing.length) {
+      return NextResponse.json({ error: 'Alert not found' }, { status: 404 });
+    }
+    const row = existing[0];
+    const incomingActive = updates.isActive !== undefined ? updates.isActive : updates.is_active;
+    const nextActive = incomingActive === undefined ? row.is_active === true : incomingActive === true;
+    const nextValue = updates.conditionValue !== undefined
+      ? updates.conditionValue
+      : updates.condition_value !== undefined
+        ? updates.condition_value
+        : row.condition_value;
+    const countedBefore = countsTowardAlertCap({
+      is_active: row.is_active === true,
+      condition_type: row.condition_type,
+      condition_value: row.condition_value,
+    });
+    const countedAfter = countsTowardAlertCap({
+      is_active: nextActive,
+      condition_type: row.condition_type,
+      condition_value: nextValue,
+    });
+    if (!countedBefore && countedAfter) {
+      const { tier, maxAlerts } = alertPlan(session);
+      const activeCount = await countActiveAlertsForCap(session.workspaceId);
+      if (activeCount >= maxAlerts) {
+        return NextResponse.json(alertLimitReachedPayload(tier, activeCount), { status: 403 });
       }
     }
 
@@ -501,23 +509,24 @@ export async function DELETE(req: NextRequest) {
     const id = url.searchParams.get('id');
     const bulk = url.searchParams.get('bulk');
 
-    // Price alerts with no level never fire. That covers auto-plan and focus orphans.
+    // Switch off active smart auto-plan rows with no level. Do not delete them.
     if (bulk === 'auto-orphaned') {
-      const deleted = await q(
-        `DELETE FROM alerts
+      const switched = await q<{ id: string }>(
+        `UPDATE alerts
+         SET is_active = false
          WHERE workspace_id = $1
-           AND ${PRICE_ALERT_WITHOUT_LEVEL_SQL}
+           AND ${ACTIVE_WORKFLOW_AUTO_ORPHAN_SQL}
          RETURNING id`,
         [session.workspaceId]
       );
-      const count = deleted.length;
+      const count = switched.length;
       if (count > 0) {
         await q(
           `UPDATE alert_quotas SET active_alerts = GREATEST(0, active_alerts - $2) WHERE workspace_id = $1`,
           [session.workspaceId, count]
         );
       }
-      return NextResponse.json({ success: true, deletedCount: count });
+      return NextResponse.json({ success: true, deletedCount: count, switchedOffCount: count });
     }
 
     if (!id) {

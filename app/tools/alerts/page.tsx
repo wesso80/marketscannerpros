@@ -15,8 +15,8 @@ import { useRiskPermission } from "@/components/risk/RiskPermissionContext";
 import { alertConditionLabel, alertHistoryLabel } from '@/lib/alertPresentation';
 import { isDiscordWebhookUrl } from '@/lib/notifications/discordWebhook';
 import { checkedActiveAlerts, consoleAlertType, deriveStatus, legacyMultiAlerts, opensSmartTabFirst, smartAlertShare } from '@/lib/alerts/consoleStatus';
-import { ALERT_LIMITS, publishAlertCapNotice } from '@/lib/alerts/planLimits';
-import { isPriceAlertWithoutLevel } from '@/lib/alerts/priceOrphan';
+import { ALERT_LIMITS } from '@/lib/alerts/planLimits';
+import { isActiveWorkflowAutoOrphan, isPriceAlertWithoutLevel } from '@/lib/alerts/priceOrphan';
 import AlertCapNotice from '@/components/alerts/AlertCapNotice';
 import RegimeBanner from '@/components/RegimeBanner';
 import StatTile from '@/components/visual/StatTile';
@@ -38,6 +38,7 @@ type AlertItem = {
   is_recurring?: boolean | null;
   triggered_at?: string;
   is_smart_alert?: boolean;
+  smart_alert_context?: { source?: string | null } | string | null;
   is_multi_condition?: boolean;
   cooldown_minutes?: number | null;
 };
@@ -108,6 +109,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{ name: string; level: string }>({ name: '', level: '' });
   const [editError, setEditError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   // Watchlist "Alert" button links here with ?symbol=X: prefill the new-alert form with it.
   const searchParams = useSearchParams();
@@ -236,6 +238,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   }, [activeAlerts, multiAlerts]);
 
   const toggleAlert = async (alert: AlertItem) => {
+    setActionError(null);
     const res = await fetch('/api/alerts', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -243,7 +246,13 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      if (res.status === 403 && typeof data?.message === 'string') publishAlertCapNotice(data.message);
+      const message = typeof data?.message === 'string' && data.message
+        ? data.message
+        : typeof data?.error === 'string' && data.error
+          ? data.error
+          : 'Could not update that alert.';
+      setActionError(message);
+      return;
     }
     await fetchAll();
   };
@@ -286,7 +295,11 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   };
 
   const orphanedCount = useMemo(
-    () => alerts.filter((a) => isPriceAlertWithoutLevel(a.condition_type, a.condition_value)).length,
+    () => alerts.filter((alert) => isActiveWorkflowAutoOrphan(alert)).length,
+    [alerts],
+  );
+  const activeTowardCap = useMemo(
+    () => alerts.filter((alert) => alert.is_active && !isPriceAlertWithoutLevel(alert.condition_type, alert.condition_value)).length,
     [alerts],
   );
 
@@ -337,8 +350,13 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
     <div className={`mx-auto w-full max-w-none space-y-4 ${embeddedInWorkspace ? 'px-0 py-0' : 'px-4 py-6 md:px-6'}`}>
       {upgrade.moment && <UpgradeMoment kind={upgrade.moment} dismiss={upgrade.dismiss} />}
       <AlertCapNotice />
+      {actionError ? (
+        <div data-alert-action-error className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">
+          {actionError}
+        </div>
+      ) : null}
       <header className="rounded-lg border border-slate-700 p-3">
-        <div className="flex items-center justify-between gap-2"><h2 className="!text-base font-semibold">Alerts</h2><button type="button" onClick={() => { if (tier === 'free' && alerts.filter(alert => alert.is_active).length >= ALERT_LIMITS.free) { upgrade.show('alerts'); return; } setActiveZone4Tab('basic'); setZone4Open(true); }} disabled={riskLocked} className="min-h-10 rounded border border-slate-600 px-3 text-sm disabled:opacity-50">New alert</button></div>
+        <div className="flex items-center justify-between gap-2"><h2 className="!text-base font-semibold">Alerts</h2><button type="button" onClick={() => { if (tier === 'free' && activeTowardCap >= ALERT_LIMITS.free) { upgrade.show('alerts'); return; } setActiveZone4Tab('basic'); setZone4Open(true); }} disabled={riskLocked} className="min-h-10 rounded border border-slate-600 px-3 text-sm disabled:opacity-50">New alert</button></div>
         <p data-alerts-verdict className="mt-1 text-sm text-slate-300">{loadWarning ? 'Alert data could not be fully loaded.' : `${activeAlerts.length} active user-defined notification${activeAlerts.length === 1 ? '' : 's'}.`}</p>
       </header>
       {loadWarning && (
@@ -367,15 +385,15 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
         )}
         {orphanedCount > 0 && cleanupStatus !== 'done' && (
           <div className="mt-2 flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-            <span>{orphanedCount} price alerts have no level and will not trigger.</span>
+            <span>{orphanedCount} empty auto alerts are on and will not trigger.</span>
             <button type="button" onClick={cleanupOrphaned} disabled={cleanupStatus === 'cleaning'} className="ml-3 shrink-0 rounded-lg bg-amber-500/20 px-3 py-1 text-xs font-semibold text-amber-100 hover:bg-amber-500/30 disabled:opacity-50">
-              {cleanupStatus === 'cleaning' ? 'Cleaning…' : 'Clean Up'}
+              {cleanupStatus === 'cleaning' ? 'Switching…' : 'Switch off'}
             </button>
           </div>
         )}
         {cleanupStatus === 'done' && (
           <div className="mt-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
-            Cleaned up {cleanupCount} orphaned alerts.
+            Switched off {cleanupCount} empty auto alerts.
           </div>
         )}
       </section>

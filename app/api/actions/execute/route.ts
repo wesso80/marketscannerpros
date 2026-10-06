@@ -8,8 +8,6 @@ import { buildPermissionSnapshot, evaluateCandidate, type StrategyTag } from '@/
 import { computeEntryRiskMetrics, getLatestPortfolioEquity } from '@/lib/journal/riskAtEntry';
 import { getRuntimeRiskSnapshotInput } from '@/lib/risk/runtimeSnapshot';
 import { runExecutionPipeline } from '@/lib/execution/runPipeline';
-import { ALERT_LIMITS, alertCapSkipReason, type AlertPlanTier } from '@/lib/alerts/planLimits';
-import { countActiveAlertsForCap } from '@/lib/alerts/activeCount';
 
 type CanonicalActionType =
   | 'alert.create'
@@ -223,20 +221,9 @@ async function evaluateAssistGate(workspaceId: string, actionType: CanonicalActi
   return { allowed: true, reason: null };
 }
 
-async function createAlertDraft(workspaceId: string, payload: Record<string, any>, tier: AlertPlanTier) {
+async function createAlertDraft(workspaceId: string, payload: Record<string, any>) {
   const symbol = asUpper(payload.symbol || payload.ticker, 20);
   if (!symbol) throw new Error('alert.create requires symbol');
-
-  const activeCount = await countActiveAlertsForCap(workspaceId);
-  if (activeCount >= ALERT_LIMITS[tier]) {
-    return {
-      kind: 'alert_draft' as const,
-      created: false,
-      alertId: null,
-      symbol,
-      reason: alertCapSkipReason(tier, activeCount),
-    };
-  }
 
   const side = asUpper(payload.side || payload.direction, 8);
   const conditionType = side === 'SHORT' || side === 'BEARISH' ? 'price_below' : 'price_above';
@@ -849,9 +836,9 @@ async function performAction(
   actionType: CanonicalActionType,
   payload: Record<string, any>,
   effectiveMode: ExecuteMode,
-  options: { guardEnabled: boolean; alertTier: AlertPlanTier }
+  options: { guardEnabled: boolean }
 ) {
-  if (actionType === 'alert.create') return createAlertDraft(workspaceId, payload, options.alertTier);
+  if (actionType === 'alert.create') return createAlertDraft(workspaceId, payload);
   if (actionType === 'plan.create') return createPlanDraft(workspaceId, payload);
   if (actionType === 'journal.open') return createJournalOpen(workspaceId, payload, options.guardEnabled);
   if (actionType === 'trade.close') return closeTrade(workspaceId, payload);
@@ -960,7 +947,6 @@ export async function POST(req: NextRequest) {
     const downgradeReason = requestedMode === 'assist' && !assistGate.allowed ? assistGate.reason : null;
     const guardEnabled = req.cookies.get('msp_risk_guard')?.value !== 'off';
 
-    const alertTier: AlertPlanTier = hasPaidSessionAccess(session) ? 'pro' : 'free';
     const result = await performAction(
       session.workspaceId,
       parsedActionType,
@@ -970,7 +956,7 @@ export async function POST(req: NextRequest) {
         packetId: body.decisionPacketId || payload.packetId || null,
       },
       effectiveMode,
-      { guardEnabled, alertTier }
+      { guardEnabled }
     );
 
     const skippedAtCap = result?.kind === 'alert_draft' && 'created' in result && result.created === false;
