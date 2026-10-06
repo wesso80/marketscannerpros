@@ -634,7 +634,7 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
           </dl>
         </details>}
         <p data-commodity-source className="text-xs text-white/45">Source: Alpha Vantage · {data?.sourceAsOf ? `Latest included observation: ${new Date(`${data.sourceAsOf}T12:00:00Z`).toLocaleDateString('en-AU', {timeZone:'UTC',weekday:'short',day:'numeric',month:'short'}).replace(',', '')}` : 'Observation date not collected'}{data?.lastUpdate ? ` · Retrieved ${new Date(data.lastUpdate).toLocaleString('en-AU', {timeZone:'Australia/Sydney',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})}` : ''} · Individual dates and proxy units in observation details.</p>
-        <ComplianceDisclaimer compact />
+        {!embedded && <ComplianceDisclaimer compact />}
       </main>
     </div>
   );

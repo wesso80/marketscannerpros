@@ -540,7 +540,7 @@ export default function AlertsWidget({
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-slate-400">
-              {creationOnly ? `${quota?.used || 0} saved notifications` : `${quota?.used || 0}/${quota?.max || 3} alerts`}
+              {quota?.used || 0}/{quota?.max || 3} alerts
             </span>
             <button
               onClick={() => setShowCreate(!showCreate)}

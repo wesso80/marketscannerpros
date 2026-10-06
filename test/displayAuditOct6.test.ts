@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { compactAmount } from '@/lib/presentation/compactAmount';
 import { cleanNewsTitle, uniqueNews } from '@/lib/presentation/newsDisplay';
 import { smartAlertShare } from '@/lib/alerts/consoleStatus';
@@ -32,4 +33,30 @@ describe('October display fixes', () => {
   expect(learningText('MSP Day Trader AIO (Score 5+)')).toContain('score at least 5');
   expect(learningText('BBWP < 20')).toBe('volatility below its 20th historical percentile');
  });
+});
+
+describe('one disclaimer on Track and Markets hosts', () => {
+  const src = (p: string) => readFileSync(p, 'utf8');
+  const count = (s: string, needle: string) => s.split(needle).length - 1;
+
+  it('Workspace and Explorer each render exactly one host disclaimer', () => {
+    expect(count(src('app/tools/workspace/page.tsx'), '<ComplianceDisclaimer compact />')).toBe(1);
+    expect(count(src('app/tools/explorer/page.tsx'), '<ComplianceDisclaimer compact />')).toBe(1);
+  });
+
+  it('embedded tabs leave the disclaimer to the host', () => {
+    expect(src('app/tools/commodities/page.tsx')).toContain('{!embedded && <ComplianceDisclaimer compact />}\n      </main>');
+    expect(src('app/tools/equity-explorer/page.tsx')).toContain('{!embedded && <ComplianceDisclaimer compact />}');
+    expect(src('app/tools/crypto-explorer/page.tsx')).toContain('{!embedded && <ComplianceDisclaimer compact />}');
+    expect(src('components/markets/MoversView.tsx')).toContain('{!props.embedded && <ComplianceDisclaimer collapsible />}');
+    expect(src('components/journal/layout/JournalLayout.tsx')).toContain('{!props.embeddedInWorkspace && <p');
+  });
+
+  it('keeps the full Alerts banner, the 999 Pro tile, the x/3 counter, the Journal upgrade block and wrapping tabs', () => {
+    expect(src('app/tools/alerts/page.tsx')).toContain('Triggered alerts are not trading signals, financial advice');
+    expect(src('app/tools/alerts/page.tsx')).toContain('{ALERT_LIMITS.pro} active alerts');
+    expect(src('components/AlertsWidget.tsx')).toContain('{quota?.used || 0}/{quota?.max || 3} alerts');
+    expect(src('components/journal/layout/JournalLayout.tsx')).toContain('Intelligence Dock — Pro Feature');
+    expect(src('components/visual/TabBar.tsx')).toContain('flex flex-wrap gap-1');
+  });
 });

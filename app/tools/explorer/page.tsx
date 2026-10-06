@@ -19,6 +19,7 @@ import type { RegimePriority } from '@/app/v2/_lib/types';
 import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
 import SectorEtfHoldings from '@/components/markets/SectorEtfHoldings';
 import TabBar from '@/components/visual/TabBar';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import { marketText } from '@/lib/marketsPresentation';
@@ -558,6 +559,8 @@ export default function ExplorerPage() {
       {tab === 'Movers' && (
         <MarketMoversV1 embedded />
       )}
+      {/* The one disclaimer for Markets: embedded views leave theirs to this host. */}
+      <ComplianceDisclaimer compact />
 
 
       </div>

@@ -11,6 +11,7 @@ import { Suspense, useEffect, useState, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { UpgradeGate } from '@/app/v2/_components/ui';
 import TabBar from '@/components/visual/TabBar';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { useUserTier } from '@/lib/useUserTier';
 import { RiskPermissionProvider } from '@/components/risk/RiskPermissionContext';
 import WatchlistWidget from '@/components/WatchlistWidget';
@@ -101,6 +102,8 @@ function WorkspaceContent() {
         activeId={tab}
         onChange={id => selectWorkspaceTab(id as WorkspaceTab)}
       />
+      {/* The one disclaimer for Track: embedded tabs leave theirs to this host. */}
+      <ComplianceDisclaimer compact />
     </div>
   );
 }

@@ -80,3 +80,14 @@ Ran `npx vitest run --reporter=json --outputFile=...` on the revised draft and u
 | Vitest failed-suite counter | 46 | 46 |
 
 **Zero new failure names; the failed-test sets match exactly.** The reported 46 failing-test baseline was not reproduced as a test count here: there are 50 failed assertions on both runs (the reporter's failed-suite count is 46). No claim of a green full suite. The exact matching names and counters are saved in `2026-10-06-display-full-test-comparison.json`. TypeScript and `git diff --check` also pass.
+
+## Review rework (rebased onto batch `cca76a6`)
+
+- **Disclaimer once on Track and Markets.** Embedded tabs already defer theirs, so `app/tools/workspace/page.tsx` and `app/tools/explorer/page.tsx` each render one `ComplianceDisclaimer compact`. Embedded Commodities and Equity Deep-Dive now defer to the host too, so every Workspace and Explorer tab shows exactly one.
+- **Alerts banner restored** to the full amber "user-defined notifications only…" text.
+- **Pro tile restored** to `{ALERT_LIMITS.pro} active alerts` (999). Enforced caps unchanged.
+- **x/3 counter restored** in `AlertsWidget` (including the creation-only view).
+- **Journal upgrade block restored** inside "Review by setup" (Intelligence Dock — Pro Feature).
+- **Tabs wrap again**: `TabBar` reverted to the batch version; the two tab-layout tests and the Pro-tile assertion reverted to match.
+- Added regression checks in `test/displayAuditOct6.test.ts` for all of the above.
+- Verification: `tsc --noEmit` clean. On the 44 test files this PR touches or that reference the changed files, the failing set is identical to `cca76a6` (14 pre-existing failures, none new).

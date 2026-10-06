@@ -9,11 +9,11 @@ const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
 const base = { condition_value: 1, is_active: true };
 
 describe('TR-25 remaining alert details', () => {
-  it('Plan & Limits uses reader wording without changing enforced caps', () => {
+  it('Plan & Limits shows the enforced caps, not ∞', () => {
     expect(ALERT_LIMITS).toEqual({ free: 3, pro: 999 });
     const page = read('app/tools/alerts/page.tsx');
     expect(page).not.toContain('>∞<');
-    expect(page).toContain('Expanded notification capacity');
+    expect(page).toContain('{ALERT_LIMITS.pro} active alerts');
     expect(page).toContain('{ALERT_LIMITS.free} active alerts');
   });
 
