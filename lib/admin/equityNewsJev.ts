@@ -12,7 +12,7 @@ import {CAL_CORE,calibrateField,splitAt,type CalibrationFieldBase} from './calib
  * Admin only. Evidence only: nothing here changes a classification, a packet, or a rule.
  */
 export const NEWS_JEV_RULE='jev-news-v1' as const;
-export const NEWS_JEV={perRun:150,scoreBatch:10,labelBatch:80,lookbackDays:7,labelAfterDays:2,giveUpAfterDays:14,barsPerSymbol:40,summaryChars:400,cooldownMs:600000,maxCallsPerDay:200} as const;
+export const NEWS_JEV={perRun:150,scoreBatch:10,labelBatch:80,lookbackDays:7,labelAfterDays:2,giveUpAfterDays:14,barsPerSymbol:40,summaryChars:400,cooldownMs:600000,maxCallsPerDay:100} as const;
 /** Scoring slot on the 15-minute cron. The slot key is written only after that slot succeeds. */
 export const NEWS_SCORE_SLOT_MS=60*60*1000;
 export const NEWS_EVENT_TYPES=['earnings','guidance','merger_acquisition','regulatory_legal','product','management','financing','analyst','macro_sector','other'] as const;
