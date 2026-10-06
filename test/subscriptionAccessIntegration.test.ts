@@ -25,15 +25,13 @@ describe('getVerifiedTier: expired subscription â€” static analysis', () =>
 
   it('downgrades non-active statuses to free in getVerifiedTier', () => {
     const content = read(MIDDLEWARE_FILE);
-    // Must contain the canonical check for active/trialing statuses
-    expect(content).toContain("status === 'active'");
-    expect(content).toContain("status === 'trialing'");
-    // Must return free for other statuses
-    expect(content).toContain("'free'");
-    // The ternary/conditional that enforces the downgrade
-    const activeIdx = content.indexOf("status === 'active'");
-    const freeIdx = content.indexOf("'free'", activeIdx);
-    expect(freeIdx).toBeGreaterThan(activeIdx);
+    const helper = read('lib/entitlements.ts');
+    // The status check lives in the shared helper; this gate must call it
+    // and must read current_period_end so an expired trial is not cached as Pro.
+    expect(content).toContain('effectiveTierFromSubscription');
+    expect(content).toContain('current_period_end');
+    expect(helper).toContain("status !== 'active' && status !== 'trialing'");
+    expect(helper).toContain("return 'free'");
   });
 
   it('getVerifiedTier caches tier with a TTL to prevent stale cookie bypass', () => {

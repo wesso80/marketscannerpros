@@ -1,10 +1,10 @@
 /**
  * Billing fields that moved in Stripe API 2025-03-31.basil.
  *
- * The live webhook endpoint sends 2025-08-27.basil payloads. The client that
- * retrieves subscriptions is pinned to 2025-09-30.clover, so a retrieved
- * object can differ from the event snapshot. Both shapes put the period on
- * the subscription item and the invoice's subscription id on
+ * The live webhook endpoint sends 2025-08-27.basil payloads, which still put
+ * current_period_end on the subscription. The client that retrieves
+ * subscriptions is pinned to 2025-09-30.clover, which puts the period on each
+ * subscription item. The invoice's subscription id moved to
  * parent.subscription_details. Older events still use the top-level fields.
  * Read the new location first, then the legacy one. Never build an Invalid Date.
  */
@@ -35,7 +35,7 @@ function stripeObjectId(value: unknown): string | null {
   return null;
 }
 
-/** Item period first, then the legacy top-level field, then null. Never an Invalid Date. */
+/** Item period first (clover), then the legacy top-level field (basil), then null. */
 export function subscriptionPeriodDate(
   subscription: unknown,
   field: 'current_period_end' | 'current_period_start',

@@ -1,6 +1,6 @@
 /**
  * Market regime from market data the app already stores (no new provider or key):
- *   - VIX level and 5-session change (FRED VIXCLS in macro_series)
+ *   - VIX level and 5-session change (Cboe daily close, FRED VIXCLS when Cboe is unavailable)
  *   - SPY and QQQ daily close vs their 50- and 200-day averages (ohlcv_bars)
  *   - high-yield credit spread change (FRED BAMLH0A0HYM2), when present
  * These are the same inputs the scanner's regime overlay uses
@@ -12,6 +12,7 @@
  */
 import type { Regime } from '@/lib/risk-governor-hard';
 import type { IndexTrend, RegimeOverlayInputs } from '@/lib/scoring/canonical/regimeOverlay';
+import { CBOE_VIX_SOURCE_LABEL } from '@/lib/macro/cboeVix';
 import { DAILY_SERIES_MAX_MISSING_SESSIONS, isDailySeriesStale } from '@/lib/time/dataFreshness';
 
 export const MARKET_REGIME_POLICY = {
@@ -55,7 +56,7 @@ function toMs(value: string | null | undefined): number | null {
   return Number.isFinite(ms) ? ms : null;
 }
 
-const SOURCE_LABEL: Record<string, string> = { 'fred-csv': 'FRED CSV', 'alpha-vantage': 'Alpha Vantage' };
+const SOURCE_LABEL: Record<string, string> = { 'fred-csv': 'FRED CSV', 'alpha-vantage': 'Alpha Vantage', cboe: CBOE_VIX_SOURCE_LABEL };
 
 /** "VIX as of 2026-09-22 (4 days old, FRED CSV)": each input's own date, so a stale input is named. */
 function describeInputDate(label: string, value: string | null | undefined, now: number, source?: string | null): string {

@@ -58,7 +58,10 @@ it('pricing calls the live Intelligence modules live', () => {
   const pricing = read('app/pricing/page.tsx');
   expect(pricing).toContain('Live with Pro: Global M2, Liquidity Transmission and Market Fragility');
   expect(pricing).toContain('the live Intelligence modules (Global M2, Liquidity Transmission and Market Fragility)');
-  expect(pricing).toContain('Lead/Lag, NQ Pressure, Auction and Master are roadmap modules and are not included as live features today');
+  expect(pricing).not.toContain('Lead/Lag');
+  expect(pricing).not.toContain('NQ Pressure');
+  expect(pricing).not.toMatch(/\bAuction\b/);
+  expect(pricing).not.toMatch(/\bMaster\b/);
   expect(pricing).not.toContain('Production Intelligence');
   expect(pricing).not.toContain('entire Intelligence suite');
 });

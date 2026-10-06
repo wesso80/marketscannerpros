@@ -10,6 +10,7 @@ import {
   type DerivativeTicker,
 } from '@/lib/coingecko';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
+import { OPEN_INTEREST_FEED, sumOpenInterestTotals } from '@/lib/crypto/openInterestTotal';
 
 /* ─── helpers ──────────────────────────────────── */
 
@@ -88,7 +89,7 @@ export async function GET(req: NextRequest) {
 
   /* ── multi-coin mode (for heatmap / overview) ──── */
   if (mode === 'multi') {
-    const cacheKey = `crypto-deriv:v2:multi`;
+    const cacheKey = `crypto-deriv:v3:multi`;
     const cached = await getCached<any>(cacheKey);
     if (cached) return NextResponse.json(cached);
 
@@ -120,9 +121,12 @@ export async function GET(req: NextRequest) {
       (marketData ?? []).map(m => [m.symbol.toUpperCase(), m])
     );
 
+    const totals = new Map(sumOpenInterestTotals(allTickers, TOP_SYMBOLS).map((row) => [row.symbol, row]));
     const coins = TOP_SYMBOLS.filter(s => grouped[s]?.length).map(s => {
       const rows = grouped[s];
       const mkt = priceMap.get(s);
+      const volume = aggregateOI(rows);
+      const shared = totals.get(s);
       return {
         symbol: s,
         name: mkt?.name ?? s,
@@ -131,7 +135,15 @@ export async function GET(req: NextRequest) {
         change24h: mkt?.price_change_percentage_24h ?? null,
         exchanges: rows,
         aggregatedFunding: { symbol: s, ...aggregateFunding(rows) },
-        aggregatedOI: { symbol: s, ...aggregateOI(rows) },
+        aggregatedOI: {
+          symbol: s,
+          totalOI: shared?.totalUsd ?? null,
+          contracts: volume.contracts,
+          observedAt: shared?.observedAt ?? null,
+          totalVolume24h: volume.totalVolume24h,
+          exchangeCount: shared?.exchanges ?? 0,
+          sourceLabel: shared?.sourceLabel ?? OPEN_INTEREST_FEED,
+        },
       };
     });
 
@@ -141,7 +153,7 @@ export async function GET(req: NextRequest) {
   }
 
   /* ── single-coin mode ─────────────────────────── */
-  const cacheKey = `crypto-deriv:v2:${symbol}`;
+  const cacheKey = `crypto-deriv:v3:${symbol}`;
   const cached = await getCached<any>(cacheKey);
   if (cached) return NextResponse.json(cached);
 
@@ -191,7 +203,17 @@ export async function GET(req: NextRequest) {
   };
 
   const funding = { symbol, ...aggregateFunding(rows) };
-  const oi = { symbol, ...aggregateOI(rows) };
+  const volume = aggregateOI(rows);
+  const shared = sumOpenInterestTotals(allTickers, [symbol])[0];
+  const oi = {
+    symbol,
+    totalOI: shared?.totalUsd ?? null,
+    contracts: volume.contracts,
+    observedAt: shared?.observedAt ?? null,
+    totalVolume24h: volume.totalVolume24h,
+    exchangeCount: shared?.exchanges ?? 0,
+    sourceLabel: shared?.sourceLabel ?? OPEN_INTEREST_FEED,
+  };
 
   const body = {
     coin,

@@ -59,6 +59,11 @@ function dailyFund(input: CommodityQuoteStamp, dateOnly: boolean): boolean {
 }
 
 export function commodityFreshnessLabel(input: CommodityQuoteStamp, nowMs = Date.now()): string {
+  // Futures quotes are delayed. A UTC date-only session stamp must not be labelled as that session's close.
+  if (input.source === 'YAHOO_FUTURES') {
+    return input.freshnessStatus === 'STALE' ? 'Stale' : 'Delayed';
+  }
+
   const raw = (input.date ?? '').trim();
   const monthly = input.cadence === 'monthly' || input.source === 'LEGACY_MONTHLY';
   if (monthly) {

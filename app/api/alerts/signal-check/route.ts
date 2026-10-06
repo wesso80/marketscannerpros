@@ -5,6 +5,7 @@ import { deliverUserAlertEmail } from '@/lib/alerts/emailControls';
 import { buildTriggeredAlertContent } from '@/lib/email';
 import { sendPushToUser } from '@/lib/pushServer';
 import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
+import { historyPriceInsert } from '@/lib/alerts/historyPrice';
 
 /**
  * Scanner Signal Alerts Checker
@@ -355,12 +356,14 @@ async function triggerSignalAlert(alert: SignalAlert, result: CheckResult, scan:
     userEmail = userResult[0]?.email || null;
   }
 
-  // Record in history
+  // A real scan price is written to both columns. A missing price is NULL in trigger_price;
+  // 0 stays in triggered_price only because that column is NOT NULL.
+  const historyPrice = historyPriceInsert('NULLIF($6, 0)', '$6');
   await q(
     `INSERT INTO alert_history (
       workspace_id, alert_id, symbol, condition_type, condition_value, 
-      triggered_price, triggered_at, notification_sent
-    ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7)`,
+      ${historyPrice.columns}, triggered_at, notification_sent
+    ) VALUES ($1, $2, $3, $4, $5, ${historyPrice.values}, NOW(), $7)`,
     [
       alert.workspace_id,
       alert.id,

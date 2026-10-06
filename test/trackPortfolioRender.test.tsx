@@ -32,6 +32,42 @@ it('renders saved exposure, one verdict, closed folds and a chart without changi
  expect(container.textContent).not.toMatch(/N\/A|NaN|undefined/);
  expect(state.positions[0].quantity).toBe(2);
 });
+it('shows total cost and side-aware open P&L instead of a stored -121470 pl', async () => {
+  state.positions = [
+    { id: 1, symbol: 'AAPL', side: 'LONG', quantity: 10, entryPrice: 100, currentPrice: 110, pl: -121470, plPercent: -99, entryDate: '2026-10-02' },
+    { id: 2, symbol: 'MSFT', side: 'SHORT', quantity: 5, entryPrice: 200, currentPrice: 180, pl: -50000, plPercent: -50, entryDate: '2026-10-02' },
+    { id: 3, symbol: 'OPT', side: 'LONG', quantity: 2, entryPrice: 1.5, currentPrice: 2, tradeType: 'Options', pl: 0, plPercent: 0, entryDate: '2026-10-02' },
+  ];
+  const { container } = render(<PortfolioContent embeddedInWorkspace />);
+  await screen.findByRole('img', { name: 'Allocation by recorded position value' });
+  expect(screen.getByText('Total cost')).toBeTruthy();
+  expect(screen.getByText('$300')).toBeTruthy();
+  expect(screen.getByText('$600')).toBeTruthy();
+  expect(screen.getByText('+$300')).toBeTruthy();
+  expect(container.textContent).toContain('Value minus Total cost equals Open P&L');
+  expect(container.textContent).not.toContain('121,470');
+  expect(container.textContent).not.toContain('121470');
+  expect(container.textContent).not.toContain('-99');
+  fireEvent.click(screen.getByRole('tab', { name: 'Positions', exact: true }));
+  expect(screen.getAllByText('+10.00%').length).toBeGreaterThan(0);
+  expect(container.textContent).not.toContain('-99.00%');
+});
+it('shows unavailable for a missing price and leaves that position out of the totals', async () => {
+  state.positions = [
+    { id: 1, symbol: 'AAPL', side: 'LONG', quantity: 10, entryPrice: 100, currentPrice: 110, pl: -99, plPercent: -99, entryDate: '2026-10-02' },
+    { id: 2, symbol: 'GAP', side: 'short', quantity: 5, entryPrice: 20, currentPrice: null, pl: 0, plPercent: -50, entryDate: '2026-10-02' },
+  ];
+  const { container } = render(<PortfolioContent embeddedInWorkspace />);
+  await screen.findByRole('img', { name: 'Allocation by recorded position value' });
+  expect(screen.getByText('$1,100')).toBeTruthy();
+  expect(screen.getByText('$1,000')).toBeTruthy();
+  expect(screen.getByText('+$100')).toBeTruthy();
+  expect(screen.getByText('1 position without a current price')).toBeTruthy();
+  fireEvent.click(screen.getByRole('tab', { name: 'Positions', exact: true }));
+  expect(screen.getAllByText('unavailable').length).toBeGreaterThan(0);
+  expect(container.textContent).not.toContain('-99');
+  expect(container.textContent).not.toMatch(/\$NaN/);
+});
 it.each(['Positions','Ledger','Risk','Allocation'])('%s keeps raw missing values out of rendered detail',async name=>{
  state.positions=[{id:1,symbol:'AAPL',side:'LONG',quantity:2,entryPrice:100,currentPrice:125,pl:50,plPercent:25,entryDate:'2026-10-02'}];
  const {container}=render(<PortfolioContent embeddedInWorkspace/>);

@@ -168,8 +168,9 @@ export function buildSignals(data: CryptoDerivativesResponse): DerivedSignal[] {
   }
 
   // High OI relative to volume
-  if (aggregatedOI.totalOI > 0 && aggregatedOI.totalVolume24h > 0) {
-    const oiToVol = aggregatedOI.totalOI / aggregatedOI.totalVolume24h;
+  const totalOi = aggregatedOI.totalOI;
+  if (totalOi != null && totalOi > 0 && aggregatedOI.totalVolume24h > 0) {
+    const oiToVol = totalOi / aggregatedOI.totalVolume24h;
     if (oiToVol > 3) {
       signals.push({
         symbol: coin.symbol,

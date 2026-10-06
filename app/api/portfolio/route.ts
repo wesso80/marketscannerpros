@@ -5,7 +5,7 @@ import { getRuntimeRiskSnapshotInput } from "@/lib/risk/runtimeSnapshot";
 import { buildPermissionSnapshot } from "@/lib/risk-governor-hard";
 
 import { computePortfolioRisk, type ExternalFlow } from '@/lib/portfolio/riskAnalytics';
-import { positionUnits } from '@/lib/portfolio/positionValue';
+import { openPositionPL, openPositionPLPercent } from '@/lib/portfolio/positionValue';
 import { normalizeExpiration } from '@/lib/options/contractQuote';
 import { readServerPortfolioState, replacePortfolio, sqlErrorCode, type SyncProgress } from '@/lib/portfolio/serverSync';
 import { classifyClosedJournalLinks, type ClosedJournalLink } from '@/lib/portfolio/closedReconcile';
@@ -122,11 +122,9 @@ export async function GET(req: NextRequest) {
       const entry = parseFloat(p.entry_price);
       const current = parseFloat(p.current_price);
       // Option prices are premium per share: value/P&L use the contract multiplier.
-      const units = positionUnits({ quantity: qty, tradeType: p.trade_type || undefined });
-      const pl = p.side === 'LONG' 
-        ? (current - entry) * units 
-        : (entry - current) * units;
-      const plPercent = ((current - entry) / entry) * 100 * (p.side === 'LONG' ? 1 : -1);
+      const book = { side: p.side, quantity: qty, entryPrice: entry, currentPrice: current, tradeType: p.trade_type || undefined };
+      const pl = openPositionPL(book) ?? 0;
+      const plPercent = openPositionPLPercent(book) ?? 0;
 
       return {
         id: p.id,

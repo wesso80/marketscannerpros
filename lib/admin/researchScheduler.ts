@@ -302,14 +302,20 @@ export async function runResearchScheduler(input: SchedulerRunInput): Promise<Sc
 }
 
 export async function listSchedulerRuns(workspaceId: string, limit = 50) {
-  await ensureSchedulerTable();
-  const rows = await q(
-    `SELECT run_id, mode, market, timeframe, started_at, completed_at, symbols_scanned, errors, stale_data, alerts_fired, alerts_suppressed, runtime_ms
-       FROM admin_research_scheduler_runs
-      WHERE workspace_id = $1
-      ORDER BY created_at DESC
-      LIMIT $2`,
-    [workspaceId, Math.max(1, Math.min(200, limit))],
-  );
-  return rows;
+  // Read path only. Table creation stays on the manual trigger (POST), which is paused while discovery-only is on.
+  try {
+    return await q(
+      `SELECT run_id, mode, market, timeframe, started_at, completed_at, symbols_scanned, errors, stale_data, alerts_fired, alerts_suppressed, runtime_ms
+         FROM admin_research_scheduler_runs
+        WHERE workspace_id = $1
+        ORDER BY created_at DESC
+        LIMIT $2`,
+      [workspaceId, Math.max(1, Math.min(200, limit))],
+    );
+  } catch (error) {
+    const code = (error as { code?: string })?.code;
+    const message = error instanceof Error ? error.message : String(error ?? '');
+    if (code === '42P01' || /relation .* does not exist/i.test(message)) return [];
+    throw error;
+  }
 }

@@ -4,7 +4,7 @@ import { q } from '@/lib/db';
 import { hashWorkspaceId } from '@/lib/auth';
 import { sendWelcomeEmail } from '@/lib/email';
 import { checkContestEntry } from '@/lib/referralContest';
-import { invoiceSubscriptionId, subscriptionPeriodDate } from '@/lib/stripeSubscriptionPeriod';
+import { invoiceSubscriptionId, subscriptionPeriodDate } from '@/lib/stripe/subscriptionPeriod';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-09-30.clover',

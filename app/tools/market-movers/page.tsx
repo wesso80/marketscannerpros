@@ -83,6 +83,8 @@ export interface MoversData {
   topGainers: Mover[];
   topLosers: Mover[];
   mostActive: Mover[];
+  /** Rows removed after the existing floors because the daily move was extreme and unchecked. */
+  extremeHiddenCount?: number;
 }
 
 type MoverTab = 'gainers' | 'losers' | 'active';
@@ -183,6 +185,7 @@ export default function MarketMoversPage() {
                 momentum_accel: l.momentum_accel ?? null,
                 inUniverse: l.in_universe === true,
               })) || [],
+            extremeHiddenCount: Number(result.extremeHiddenCount) || 0,
             mostActive:
               result.mostActive?.map((a: any) => ({
                 ticker: a.ticker,

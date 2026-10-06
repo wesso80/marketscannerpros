@@ -51,6 +51,7 @@ export default function MoversView(props: MoversViewProps) {
   const assessment = loading ? 'Loading recorded movers…' : error ? 'Movers could not be collected.' : !hasObservations ? 'No mover observations collected.' : rows.length === 0 ? 'No movers match this selection.' : environment.deploymentMode === 'YES' ? 'Conditions support further research.' : environment.deploymentMode === 'NO' ? 'Conditions do not meet the research criteria.' : 'Conditions show mixed evidence.';
   return <section className="min-w-0 space-y-3 text-white" aria-label="Market Movers">
     <header><h1 className="text-xl font-semibold">Market Movers</h1><p data-movers-verdict role="status" className="mt-2 text-sm font-medium">{assessment}</p></header>
+    {!loading && !error && (data?.extremeHiddenCount ?? 0) > 0 && <p className="text-sm text-slate-300">{data!.extremeHiddenCount === 1 ? '1 extreme move hidden' : `${data!.extremeHiddenCount} extreme moves hidden`}</p>}
     <ComplianceDisclaimer collapsible />
     {!loading && !error && hasObservations && <>
       <div className="flex flex-wrap gap-2" role="group" aria-label="Mover lists">

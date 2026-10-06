@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { hashWorkspaceId, signSessionToken } from "@/lib/auth";
 import { q } from "@/lib/db";
-import { subscriptionPeriodDate } from "@/lib/stripeSubscriptionPeriod";
+import { subscriptionPeriodDate } from "@/lib/stripe/subscriptionPeriod";
 
 const PRO_PRICE_IDS = [
   process.env.STRIPE_PRO_MONTHLY_PRICE_ID,

@@ -5,7 +5,7 @@
  *
  *   BTC price + 24h change      CoinGecko /simple/price (lib/coingecko getSimplePrices)
  *   SPY / GLD / XLK / XLU / XLF  quote cascade (lib/marketData getQuote: Redis → Postgres → Alpha Vantage)
- *   VIX                          regime overlay inputs (macro_series, FRED CSV fallback when stale — PR #107)
+ *   VIX                          regime overlay inputs (Cboe daily close, then stored VIXCLS / FRED CSV)
  *   DXY (broad USD, DTWEXBGS)    macro_series with the same FRED CSV fallback; change = last two observations
  *   BTC↔SPY correlation          20 daily returns: SPY closes from ohlcv_bars, BTC 00:00 UTC closes from CoinGecko
  *
@@ -15,6 +15,7 @@
 import { getSimplePrices, getMarketChartHistory } from '@/lib/coingecko';
 import { getQuote } from '@/lib/marketData';
 import { loadRegimeOverlayInputs, macroWithFallback } from '@/lib/scoring/canonical/regimeOverlayData';
+import { CBOE_VIX_SOURCE_LABEL } from '@/lib/macro/cboeVix';
 import { loadStoredDailyBars } from '@/lib/scoring/canonical/barStore';
 import type { AssetSnapshot, CorrelationRegimeInput } from '@/lib/correlation-regime-engine';
 
@@ -101,7 +102,7 @@ export const defaultCrossAssetDeps: CrossAssetDeps = {
   },
   vix: async () => {
     const v = (await loadRegimeOverlayInputs()).vix;
-    return v && fin(v.level) ? { level: v.level, asOf: v.asOf ?? null, source: v.source === 'alpha-vantage' ? 'Alpha Vantage INDEX_DATA (VIX)' : v.source === 'fred-csv' ? 'FRED CSV (VIXCLS)' : 'FRED (VIXCLS, stored)' } : null;
+    return v && fin(v.level) ? { level: v.level, asOf: v.asOf ?? null, source: v.source === 'cboe' ? CBOE_VIX_SOURCE_LABEL : v.source === 'alpha-vantage' ? 'Alpha Vantage INDEX_DATA (VIX)' : v.source === 'fred-csv' ? 'FRED CSV (VIXCLS)' : 'FRED (VIXCLS, stored)' } : null;
   },
   dxy: async () => {
     const r = await macroWithFallback('DXY', 2, Date.now());

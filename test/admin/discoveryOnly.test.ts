@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { adminDiscoveryOnly, discoveryOnlyAction } from '@/lib/admin/discoveryOnly';
+import { adminDiscoveryOnly, businessScope, discoveryOnlyAction } from '@/lib/admin/discoveryOnly';
 afterEach(() => vi.unstubAllEnvs());
 it('defaults to the owner-requested discovery-only scope and can be explicitly restored', () => {
   vi.stubEnv('ADMIN_DISCOVERY_ONLY', undefined);
@@ -28,4 +28,45 @@ it.each(['/api/cron/macro-ingest', '/api/cron/global-m2-ingest', '/api/cron/refr
 });
 it.each(['/admin', '/admin/live-scanner', '/admin/portfolio-lab/positions'])('replaces inactive pages before their data fetches: %s', path => {
   expect(discoveryOnlyAction(path)).toBe('pause_page');
+});
+
+const writeMethods = ['POST', 'PUT', 'PATCH', 'DELETE'] as const;
+const businessApiCases = businessScope.getApis.flatMap((path) => [
+  [path, 'GET', 'allow'] as const,
+  ...writeMethods.map((method) => [path, method, 'pause_api'] as const),
+]);
+it.each(businessApiCases)('business API %s %s -> %s', (path, method, expected) => {
+  expect(discoveryOnlyAction(path, method)).toBe(expected);
+});
+it.each(businessScope.pages)('opens the business page while other admin pages stay paused: %s', path => {
+  expect(discoveryOnlyAction(path, 'GET')).toBe('allow');
+  expect(discoveryOnlyAction(path, 'POST')).toBe('allow');
+});
+it.each(['/admin', '/admin/live-scanner', '/admin/growth-commander', '/admin/settings', '/admin/diagnostics', '/admin/opportunity-board', '/admin/system'])('other admin pages still pause: %s', path => {
+  expect(discoveryOnlyAction(path, 'GET')).toBe('pause_page');
+  expect(discoveryOnlyAction(path, 'POST')).toBe('pause_page');
+});
+it.each(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const)('crypto, jev, and background results stay the same for %s', method => {
+  expect(discoveryOnlyAction('/api/admin/crypto-markets/summary', method)).toBe('allow');
+  expect(discoveryOnlyAction('/api/admin/crypto-markets/jev', method)).toBe('allow');
+  expect(discoveryOnlyAction('/api/cron/arca-cycle', method)).toBe('allow');
+  expect(discoveryOnlyAction('/admin/crypto-markets', method)).toBe('allow');
+  expect(discoveryOnlyAction('/admin/crypto-discovery', method)).toBe('allow');
+  expect(discoveryOnlyAction('/admin/equity-research', method)).toBe('allow');
+  expect(discoveryOnlyAction('/api/admin/equity-research', method)).toBe('allow');
+  expect(discoveryOnlyAction('/api/admin/equity-news-jev', method)).toBe('allow');
+  expect(discoveryOnlyAction('/admin/transcripts', method)).toBe('allow');
+  expect(discoveryOnlyAction('/api/admin/transcripts', method)).toBe('allow');
+  expect(discoveryOnlyAction('/api/cron/evening-packet', method)).toBe('skip_job');
+  expect(discoveryOnlyAction('/api/cron/admin-scan', method)).toBe('skip_job');
+  expect(discoveryOnlyAction('/api/jobs/email-morning-brief', method)).toBe('skip_job');
+  expect(discoveryOnlyAction('/api/operator/engine/auto-scan', method)).toBe('skip_job');
+  expect(discoveryOnlyAction('/api/admin/live-scanner', method)).toBe('pause_api');
+  expect(discoveryOnlyAction('/api/admin/sync-stripe', method)).toBe('pause_api');
+  expect(discoveryOnlyAction('/api/admin/portfolio-lab/cycle', method)).toBe('pause_api');
+});
+it('treats a missing method as GET and still pauses lowercase writes', () => {
+  expect(discoveryOnlyAction('/api/admin/income')).toBe('allow');
+  expect(discoveryOnlyAction('/api/admin/income/', 'post')).toBe('pause_api');
+  expect(discoveryOnlyAction('/api/admin/trials/', 'DELETE')).toBe('pause_api');
 });

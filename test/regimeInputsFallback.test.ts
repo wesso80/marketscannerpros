@@ -101,7 +101,10 @@ describe('loadRegimeOverlayInputs stale-input fallbacks (OV-1)', () => {
     expect(inputs.hyOas).toMatchObject({ asOf: dayStr(2), source: 'fred-csv' });
     expect(inputs.spy).toMatchObject({ source: 'stored' });
     expect(mocks.avDaily).not.toHaveBeenCalled();
-    expect(fetchMock.mock.calls.every(([u]) => String(u).startsWith('https://fred.stlouisfed.org/graph/fredgraph.csv?id='))).toBe(true);
+    const urls = fetchMock.mock.calls.map(([u]) => String(u));
+    expect(urls.some((u) => u.includes('id=VIXCLS'))).toBe(true);
+    expect(urls.every((u) => u.startsWith('https://fred.stlouisfed.org/graph/fredgraph.csv?id=') || u.includes('/VIX_History.csv'))).toBe(true);
+    expect(urls.some((u) => u.includes('INDEX_DATA'))).toBe(false);
     expect(classifyMarketRegime(inputs, NOW)).toMatchObject({ available: true });
   });
 

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useAdmin } from "../admin-client-layout";
+import ReadOnlyPauseNote from "@/components/admin/ReadOnlyPauseNote";
 
 interface DeleteRequest {
   id: string;
@@ -14,6 +16,7 @@ interface DeleteRequest {
 }
 
 export default function AdminDeleteRequestsPage() {
+  const { discoveryPaused } = useAdmin();
   const [requests, setRequests] = useState<DeleteRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -117,6 +120,8 @@ export default function AdminDeleteRequestsPage() {
         )}
       </h1>
 
+      {discoveryPaused && <ReadOnlyPauseNote />}
+
       {error && (
         <div style={{
           background: "rgba(239, 68, 68, 0.1)",
@@ -208,7 +213,7 @@ export default function AdminDeleteRequestsPage() {
                 </div>
               )}
 
-              {req.status === "pending" && (
+              {req.status === "pending" && !discoveryPaused && (
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   <button
                     onClick={() => updateStatus(req.id, "processing")}
@@ -259,7 +264,7 @@ export default function AdminDeleteRequestsPage() {
                 </div>
               )}
 
-              {req.status === "processing" && (
+              {req.status === "processing" && !discoveryPaused && (
                 <div style={{ display: "flex", gap: "0.5rem" }}>
                   <button
                     onClick={() => {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { historyPriceSelect } from '@/lib/alerts/historyPrice';
 
 // GET /api/alerts/unread - Get unacknowledged alert triggers for current user
 export async function GET(req: NextRequest) {
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
         id,
         symbol,
         condition_met,
-        trigger_price,
+        ${historyPriceSelect('', 'trigger_price')},
         triggered_at
       FROM alert_history
       WHERE workspace_id = $1

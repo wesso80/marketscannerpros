@@ -1,13 +1,14 @@
 /**
  * Server-side loader for the regime overlay inputs, from data the app already stores (no new paid dependencies):
- *   - VIX: Alpha Vantage INDEX_DATA daily (lib/macro/avIndexData.ts) first; FRED (stored VIXCLS, then CSV) as fallback (MV-1)
+ *   - VIX: Cboe daily close (lib/macro/cboeVix.ts) first; FRED (stored VIXCLS, then CSV) as fallback
  *   - macro_series (FRED ingest): VIX (VIXCLS), CREDIT_HY_OAS (BAMLH0A0HYM2), US_M2 (M2SL)
  *   - ohlcv_bars (worker bar store): SPY and QQQ daily closes → SMA50 / SMA200
  *   - optional macro risk state from the Golden Egg macro regime (caller passes it; it costs AV calls)
  * Every part fails soft: a missing input is just not counted by evaluateRegimeOverlay. Cached 15 minutes.
  *
  * Stale-input fallbacks (OV-1), used only when the stored rows are older than the regime's stale limit:
- *   - VIX / HY OAS: FRED's keyless CSV (lib/macro/fredCsv.ts), cached 6 hours per instance.
+ *   - VIX: Cboe when it is current, or at least as new as FRED. Otherwise stored VIXCLS, or FRED's keyless CSV when that is stale.
+ *   - HY OAS: FRED's keyless CSV (lib/macro/fredCsv.ts), cached 6 hours per instance.
  *   - SPY / QQQ: one Alpha Vantage TIME_SERIES_DAILY_ADJUSTED (full) call per symbol through
  *     lib/marketData/client.ts, cached 6 hours per instance. Not written back to ohlcv_bars: that
  *     helper returns adjusted closes, while the worker stores raw closes in the same table.
@@ -19,7 +20,7 @@ import { isDailySeriesStale } from '@/lib/time/dataFreshness';
 import { FRED_SERIES } from '@/lib/macro/fred';
 import { getFredCsvCached } from '@/lib/macro/fredCsv';
 import { avFetchDailyBars } from '@/lib/marketData/client';
-import { avIndexFailureReason, getAvIndexDailyCached } from '@/lib/macro/avIndexData';
+import { getCboeVixDailyCached } from '@/lib/macro/cboeVix';
 
 const TTL_MS = 15 * 60 * 1000;
 let cache: { at: number; data: RegimeOverlayInputs } | null = null;
@@ -27,7 +28,7 @@ let cache: { at: number; data: RegimeOverlayInputs } | null = null;
 const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
 
 type Obs = { on: string; value: number };
-type Sourced<T> = T & { source: 'stored' | 'fred-csv' | 'alpha-vantage' };
+type Sourced<T> = T & { source: 'stored' | 'fred-csv' | 'alpha-vantage' | 'cboe' };
 
 /** True when a YYYY-MM-DD / ISO date is missing or stale under the shared trading-day rule (lib/time/dataFreshness). */
 export function isOlderThanStaleLimit(dateLike: string | null | undefined, now = Date.now()): boolean {
@@ -101,24 +102,22 @@ export async function macroWithFallback(key: keyof typeof FRED_SERIES, limit: nu
 }
 
 /**
- * VIX: Alpha Vantage INDEX_DATA first (same-day close, MV-1), FRED (stored VIXCLS, then its CSV) as the fallback.
- * Alpha Vantage is used when it is current, or when it is at least as new as what FRED has.
+ * Shared VIX chain. Cboe daily close is used when it is not past the stale limit, or when its date is at
+ * least as new as FRED's latest observation. A stale Cboe file (CDN cache, holiday gap) does not hide a
+ * fresher FRED print. FRED — stored VIXCLS, then its CSV — is the fallback when Cboe fails, times out,
+ * parses to nothing, or is older. The note says why the reading is FRED's.
+ * Alpha Vantage INDEX_DATA is not called: this plan is not entitled, and the refusal was logged every cycle.
+ * The historical name is kept so existing callers (operator market-data, tests) share this one function.
  */
 export async function vixWithAlphaVantagePrimary(limit: number, now: number): Promise<Sourced<{ rows: Obs[]; note?: string }> | null> {
-  const av = await getAvIndexDailyCached('VIX', { now }).catch(() => null);
-  const fromAv = av?.length ? { rows: av.slice(0, limit), source: 'alpha-vantage' as const } : null;
-  if (fromAv && !isOlderThanStaleLimit(fromAv.rows[0].on, now)) return fromAv;
+  const cboe = await getCboeVixDailyCached({ now }).catch(() => null);
+  const fromCboe = cboe?.length ? { rows: cboe.slice(0, limit), source: 'cboe' as const } : null;
+  if (fromCboe && !isOlderThanStaleLimit(fromCboe.rows[0].on, now)) return fromCboe;
   const fred = await macroWithFallback('VIX', limit, now).catch(() => null);
-  if (fromAv && (!fred?.rows.length || fromAv.rows[0].on >= fred.rows[0].on)) return fromAv;
-  // Say plainly why the VIX is FRED's, so a FRED-dated regime is understandable without server logs (#157 follow-up).
-  // The current Alpha Vantage plan has no INDEX_DATA access ("You are not yet entitled to index data access…").
-  const reason = avIndexFailureReason('VIX');
-  const notInPlan = reason != null && /not (yet )?entitled|premium (endpoint|plan)/i.test(reason);
-  const note = fromAv
-    ? `VIX from FRED: the Alpha Vantage VIX (latest ${fromAv.rows[0].on}) is older than FRED's`
-    : notInPlan
-      ? `VIX from FRED, which lags 1–3 days: Alpha Vantage VIX is not included in the current plan (Alpha Vantage says: "${reason!.split(/(?<=\.)\s/)[0]}")`
-      : `VIX from FRED, which lags 1–3 days: Alpha Vantage VIX unavailable (${reason ?? (process.env.ALPHA_VANTAGE_API_KEY ? 'no rows' : 'no Alpha Vantage key configured')})`;
+  if (fromCboe && (!fred?.rows.length || fromCboe.rows[0].on >= fred.rows[0].on)) return fromCboe;
+  const note = fromCboe
+    ? `VIX from FRED: the Cboe daily VIX (latest ${fromCboe.rows[0].on}) is older than FRED's`
+    : 'VIX from FRED, which lags 1–3 days: Cboe daily VIX unavailable';
   return fred ? { ...fred, note } : null;
 }
 

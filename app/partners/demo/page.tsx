@@ -60,7 +60,7 @@ const capabilities = [
   {
     icon: "CRYP",
     title: "Crypto Terminal",
-    description: "Crypto-specific command center with derivatives data, liquidation analysis, DeFi stats, dominance tracking, and new listings monitor.",
+    description: "Crypto-specific command center with derivatives data, DeFi stats, dominance tracking, and new listings monitor.",
     tier: "Pro+",
   },
 ];

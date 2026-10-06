@@ -9,6 +9,7 @@ import { avTakeToken } from '@/lib/avRateGovernor';
 import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
 import { decideAlert, isStaleStockQuote } from '@/lib/alerts/alertTiming';
 import { fxQuoteUrl, parseFxAlertQuote, quoteSourceFor } from '@/lib/alerts/assetTypes';
+import { historyPriceInsert } from '@/lib/alerts/historyPrice';
 
 /**
  * Alert Price Checker
@@ -232,13 +233,14 @@ async function triggerAlert(alert: Alert, quote: AlertQuote) {
     }
   }
   
-  // Record in history (optional - don't fail if table doesn't exist)
+  // Same quote price in trigger_price and triggered_price. See lib/alerts/historyPrice.ts.
+  const historyPrice = historyPriceInsert('$3');
   try {
     await q(
       `INSERT INTO alert_history (
-        alert_id, workspace_id, triggered_at, trigger_price, condition_met,
+        alert_id, workspace_id, triggered_at, ${historyPrice.columns}, condition_met,
         symbol, condition_type, condition_value, notification_sent, notification_channel
-      ) VALUES ($1, $2, NOW(), $3, $4, $5, $6, $7, $8, $9)`,
+      ) VALUES ($1, $2, NOW(), ${historyPrice.values}, $4, $5, $6, $7, $8, $9)`,
       [
         alert.id,
         alert.workspace_id,
@@ -252,7 +254,7 @@ async function triggerAlert(alert: Alert, quote: AlertQuote) {
       ]
     );
   } catch (historyError) {
-    console.error(`[Alert] Failed to record history (non-fatal):`, historyError);
+    console.error(`[Alert] Failed to insert alert_history for ${alert.symbol} (${alert.id}). The trigger was not recorded:`, historyError);
   }
 
   // Update alert status - THIS IS CRITICAL
