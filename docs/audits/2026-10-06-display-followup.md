@@ -91,3 +91,9 @@ Ran `npx vitest run --reporter=json --outputFile=...` on the revised draft and u
 - **Tabs wrap again**: `TabBar` reverted to the batch version; the two tab-layout tests and the Pro-tile assertion reverted to match.
 - Added regression checks in `test/displayAuditOct6.test.ts` for all of the above.
 - Verification: `tsc --noEmit` clean. On the 44 test files this PR touches or that reference the changed files, the failing set is identical to `cca76a6` (14 pre-existing failures, none new).
+
+## Rebased onto batch `f017361` (after #434)
+
+- `app/tools/alerts/page.tsx` and `lib/alerts/consoleStatus.ts` are identical to the batch. This draft no longer reclassifies plain price/percent/volume rules (the `/^(price_|percent_|volume_)/` early return is dropped) and no longer changes the Alerts page (rule grouping, creation-only Capabilities and the related summary wording are withdrawn in favour of #434). `SavedRuleGroup` and `AlertsWidget`'s `creationOnly` option remain but are unused by the batch page.
+- Tests that covered those withdrawn changes are back to their batch versions (`alertsLayoutRender`, `alertsLimitsPushTag`, `alertsWatchlistCaveats`); `displayAuditOct6` keeps only the four-decimal price label check from that case.
+- Verification against `f017361`: `tsc --noEmit` clean; full Vitest 5,431 tests, 48 failing, identical failing set to the batch (none new).

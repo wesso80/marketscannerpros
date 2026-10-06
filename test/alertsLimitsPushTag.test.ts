@@ -27,7 +27,7 @@ describe('TR-25 remaining alert details', () => {
   it('Smart % counts smart/strategy alerts among checked active alerts only', () => {
     expect(isSmartConsoleAlert({ condition_type: 'strategy_breakout' })).toBe(true);
     expect(isSmartConsoleAlert({ condition_type: 'scanner_signal' })).toBe(true);
-    expect(isSmartConsoleAlert({ condition_type: 'price_above', is_smart_alert: true })).toBe(false);
+    expect(isSmartConsoleAlert({ condition_type: 'price_above', is_smart_alert: true })).toBe(true);
     expect(isSmartConsoleAlert({ condition_type: 'price_above' })).toBe(false);
 
     const alerts = [

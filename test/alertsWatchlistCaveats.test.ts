@@ -29,9 +29,7 @@ describe('Alerts Console lists every alert', () => {
   it('shows the first 5 then "Show all N alerts" instead of silently dropping the rest', () => {
     expect(page).toContain('const CONSOLE_ROW_LIMIT = 5;');
     expect(page).not.toMatch(/filtered\)\.slice\(0, 12\)/);
-    expect(page).toContain('visibleGroups.map(');
-    expect(page).toContain('allRuleGroups.slice(0, CONSOLE_ROW_LIMIT)');
-    expect(page).toContain('visibleGroups.flatMap(([,group]) => group)');
+    expect(page).toContain('visibleAlertRows.map(');
     expect(page).toContain('Show all ${alertRows.length} alerts');
     expect(page).toContain('of ${alertRows.length} shown');
   });

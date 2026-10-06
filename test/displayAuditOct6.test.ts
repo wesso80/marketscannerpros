@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { compactAmount } from '@/lib/presentation/compactAmount';
 import { cleanNewsTitle, uniqueNews } from '@/lib/presentation/newsDisplay';
-import { smartAlertShare } from '@/lib/alerts/consoleStatus';
 import { learningText } from '@/lib/learningPresentation';
 import { alertConditionLabel } from '@/lib/alertPresentation';
 describe('October display fixes', () => {
@@ -22,11 +21,8 @@ describe('October display fixes', () => {
   expect(rows[0].title).toBe('[RSS] CoinDesk: Bitcoin update');
   expect(cleanNewsTitle(rows[0].title,rows[0].source_name)).toBe('Bitcoin update');
  });
- it('does not call plain price rules smart due to a legacy flag', () => {
-  const price={condition_type:'price_above',condition_value:.167397,is_active:true,is_smart_alert:true};
-  expect(smartAlertShare([price])).toBe(0);
-  expect(smartAlertShare([price,{...price,condition_type:'strategy_buy_signal'}])).toBe(50);
-  expect(alertConditionLabel(price.condition_type,price.condition_value)).toBe('price above $0.1674');
+ it('shows small alert prices to four decimal places', () => {
+  expect(alertConditionLabel('price_above',.167397)).toBe('price above $0.1674');
  });
  it('uses readable learner labels while retaining numeric thresholds', () => {
   expect(learningText('🧠 Brain Signal Replay (Decision Packets)')).toBe('Recorded signal replay');
