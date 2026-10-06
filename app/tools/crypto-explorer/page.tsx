@@ -7,6 +7,7 @@ import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import { MarketMetrics, MarketSparkline } from '@/components/explorer/MarketsSummary';
 import { marketText } from '@/lib/marketsPresentation';
+import { assetExplorerLabel } from '@/lib/presentation/assetExplorerLabel';
 
 import { useState, useEffect, useCallback, useRef, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -608,8 +609,8 @@ function CryptoDetailPageContent({ embedded = false }: { embedded?: boolean }) {
                 ['Micro', upeMicroState || 'Not collected'],
                 ['Risk', decision.riskTag],
                 ['Alignment', permissionLabel],
-                ['CRCS', upeSignal && Number.isFinite(upeSignal.crcsUser) ? upeSignal.crcsUser.toFixed(1) : 'Not collected'],
-                ['ΔHr', upeSignal && Number.isFinite(upeSignal.microAdjustment) ? `${upeSignal.microAdjustment >= 0 ? '+' : ''}${upeSignal.microAdjustment.toFixed(2)}` : 'Not collected'],
+                [assetExplorerLabel('CRCS'), upeSignal && Number.isFinite(upeSignal.crcsUser) ? upeSignal.crcsUser.toFixed(1) : 'Not collected'],
+                [assetExplorerLabel('ΔHr'), upeSignal && Number.isFinite(upeSignal.microAdjustment) ? `${upeSignal.microAdjustment >= 0 ? '+' : ''}${upeSignal.microAdjustment.toFixed(2)}` : 'Not collected'],
               ].map(([k, v]) => (
                 <div key={marketText(k)} className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[11px] leading-tight text-slate-300 md:px-2 md:text-[11px]">
                   <span className="font-semibold text-slate-100">{marketText(k)}</span> · {marketText(v)}
@@ -621,7 +622,7 @@ function CryptoDetailPageContent({ embedded = false }: { embedded?: boolean }) {
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="mb-1 flex flex-wrap items-start justify-between gap-1.5 md:items-center">
                   <div>
-                    <p className="text-[11px] font-medium text-slate-400">Zone 2 · Action</p>
+                    <p className="text-[11px] font-medium text-slate-400">{assetExplorerLabel('Zone 2 · Action')}</p>
                     <h2 className="text-xs font-bold">Price and alignment</h2>
                   </div>
                   <button
@@ -698,7 +699,7 @@ function CryptoDetailPageContent({ embedded = false }: { embedded?: boolean }) {
 
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="mb-1">
-                  <p className="text-[11px] font-medium text-slate-400">Zone 2 · Context</p>
+                  <p className="text-[11px] font-medium text-slate-400">{assetExplorerLabel('Zone 2 · Context')}</p>
                   <h2 className="text-xs font-bold">Trend / RS / Liquidity Context</h2>
                 </div>
 
@@ -738,7 +739,7 @@ function CryptoDetailPageContent({ embedded = false }: { embedded?: boolean }) {
             {/* Open by default; the user can still collapse it. Native <details> keeps the content mounted either way. */}
             <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
               <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
-                <span>Zone 3 • Informational</span>
+                <span>{assetExplorerLabel('Zone 3 • Informational')}</span>
                 <span className="text-[11px] text-slate-500 group-open:hidden">Expand</span>
                 <span className="hidden text-[11px] text-slate-500 group-open:inline">Collapse</span>
               </summary>

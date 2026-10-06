@@ -15,6 +15,9 @@ const mapped: Array<[string, string]> = [
   ['Zone 2 • Context', 'Market context'],
   ['Zone 3', 'Additional detail'],
   ['Zone 3 • Informational', 'Additional detail'],
+  ['Zone 2 • News & Guides', 'News and guides'],
+  ['ZONE 2 • NEWS & GUIDES', 'News and guides'],
+  ['Zone 3 • Institutional Treasury Holdings', 'Institutional treasury holdings'],
 ];
 
 it.each(mapped)('maps %s to the reader label %s', (raw, label) => {
@@ -39,6 +42,7 @@ it('leaves prose and camelCase alone', () => {
   expect(assetExplorerLabel('crcsUser')).toBe('crcsUser');
   expect(assetExplorerLabel('microAdjustment')).toBe('microAdjustment');
   expect(assetExplorerLabel('See CRCS in the note')).toBe('See CRCS in the note');
+  expect(assetExplorerLabel('Read ZONE 2 • NEWS & GUIDES before the open.')).toBe('Read ZONE 2 • NEWS & GUIDES before the open.');
 });
 
 it('exports the shared map for the crypto assets tab', () => {

@@ -22,6 +22,8 @@ export const ASSET_EXPLORER_LABELS: Record<string, string> = {
   'ZONE 2 CONTEXT': 'Market context',
   'ZONE 3': 'Additional detail',
   'ZONE 3 INFORMATIONAL': 'Additional detail',
+  'ZONE 2 NEWS & GUIDES': 'News and guides',
+  'ZONE 3 INSTITUTIONAL TREASURY HOLDINGS': 'Institutional treasury holdings',
 };
 
 const ENGINE_TOKEN = /^[A-Z0-9]+(?:[_\s,]+[A-Z0-9]+)*$/;

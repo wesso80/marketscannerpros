@@ -9,6 +9,7 @@ export function formatChangePercent(value: unknown): string {
   const numeric = readChangePercent(value);
   if (numeric == null) return 'Not recorded';
   const text = numeric.toFixed(2);
+  if (Number(text) === 0) return '0.00%';
   return `${numeric > 0 ? '+' : ''}${text}%`;
 }
 
