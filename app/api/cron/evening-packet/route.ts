@@ -85,7 +85,8 @@ async function persistPacket(workspaceId: string, dateISO: string, packetJson: u
       [workspaceId, dateISO, JSON.stringify(packetJson)],
     );
     return true;
-  } catch {
+  } catch (error) {
+    console.error(`[evening-packet] failed to insert evening_packets for ${workspaceId} ${dateISO}:`, error);
     return false;
   }
 }
