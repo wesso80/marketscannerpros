@@ -58,7 +58,6 @@ export async function GET(req: NextRequest) {
            )::int AS alerts_today
          FROM alerts
          WHERE workspace_id = $1
-           AND is_smart_alert = true
            AND smart_alert_context->>'source' = 'workflow.auto'`,
         [session.workspaceId]
       ),

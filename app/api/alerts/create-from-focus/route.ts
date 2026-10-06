@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { detectAssetClass } from '@/lib/detectAssetClass';
 import { enqueueEngineJob } from '@/lib/engine/jobQueue';
 
 type CreateFromFocusBody = {
@@ -26,6 +27,25 @@ function eventId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+type FocusAssetType = 'crypto' | 'equity' | 'forex';
+
+/** Packet asset class when it names a market the price checker can use; otherwise null. */
+function assetTypeFromPacket(assetClass: unknown, market: unknown): FocusAssetType | null {
+  const raw = String(assetClass || market || '').trim().toLowerCase();
+  if (raw === 'crypto' || raw === 'coin' || raw === 'coins') return 'crypto';
+  if (raw === 'forex' || raw === 'fx') return 'forex';
+  if (raw === 'equity' || raw === 'stock' || raw === 'stocks') return 'equity';
+  return null;
+}
+
+/** Packet market first (crypto when the packet says crypto), else the symbol helper. Default equity. */
+function resolveFocusAssetType(
+  packet: { asset_class?: string | null; market?: string | null } | undefined,
+  symbol: string,
+): FocusAssetType {
+  return assetTypeFromPacket(packet?.asset_class, packet?.market) ?? detectAssetClass(symbol);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getSessionFromCookie();
@@ -37,10 +57,11 @@ export async function POST(req: NextRequest) {
     const requestedPacketId = String(body.decisionPacketId || body.focusId || '').trim();
     let symbol = normalizeSymbol(body.symbol);
     let decisionPacketId = requestedPacketId || null;
+    let packetAsset: { asset_class?: string | null; market?: string | null } | undefined;
 
     if (decisionPacketId) {
-      const rows = await q<{ packet_id: string; symbol: string; status: string }>(
-        `SELECT packet_id, symbol, status
+      const rows = await q<{ packet_id: string; symbol: string; status: string; asset_class: string | null; market: string | null }>(
+        `SELECT packet_id, symbol, status, asset_class, market
          FROM decision_packets
          WHERE workspace_id = $1
            AND (
@@ -58,12 +79,13 @@ export async function POST(req: NextRequest) {
       if (rows[0]) {
         decisionPacketId = rows[0].packet_id;
         if (!symbol) symbol = normalizeSymbol(rows[0].symbol);
+        packetAsset = { asset_class: rows[0].asset_class, market: rows[0].market };
       }
     }
 
     if (!symbol) {
-      const latestPacket = await q<{ packet_id: string; symbol: string }>(
-        `SELECT packet_id, symbol
+      const latestPacket = await q<{ packet_id: string; symbol: string; asset_class: string | null; market: string | null }>(
+        `SELECT packet_id, symbol, asset_class, market
          FROM decision_packets
          WHERE workspace_id = $1
          ORDER BY updated_at DESC
@@ -73,6 +95,7 @@ export async function POST(req: NextRequest) {
       if (latestPacket[0]) {
         symbol = normalizeSymbol(latestPacket[0].symbol);
         decisionPacketId = decisionPacketId || latestPacket[0].packet_id;
+        packetAsset = packetAsset || { asset_class: latestPacket[0].asset_class, market: latestPacket[0].market };
       }
     }
 
@@ -81,16 +104,23 @@ export async function POST(req: NextRequest) {
     }
 
     const packetRows = decisionPacketId
-      ? await q<{ entry_zone: number | null; status: string; packet_id: string }>(
-          `SELECT entry_zone, status, packet_id
+      ? await q<{ entry_zone: number | null; status: string; packet_id: string; asset_class: string | null; market: string | null }>(
+          `SELECT entry_zone, status, packet_id, asset_class, market
            FROM decision_packets
            WHERE workspace_id = $1 AND packet_id = $2
            LIMIT 1`,
           [session.workspaceId, decisionPacketId]
         )
       : [];
+    if (packetRows[0]) {
+      packetAsset = {
+        asset_class: packetRows[0].asset_class ?? packetAsset?.asset_class ?? null,
+        market: packetRows[0].market ?? packetAsset?.market ?? null,
+      };
+    }
 
     const conditionValue = asFinite(body.level) ?? asFinite(packetRows[0]?.entry_zone) ?? 0;
+    const assetType = resolveFocusAssetType(packetAsset, symbol);
     const conditionType =
       body.direction === 'bearish' ? 'price_below'
       : body.direction === 'neutral' ? 'price_above'
@@ -110,14 +140,15 @@ export async function POST(req: NextRequest) {
         name, notes, is_active, is_recurring, notify_email, notify_push, expires_at,
         is_smart_alert, cooldown_minutes, smart_alert_context
       ) VALUES (
-        $1, $2, 'equity', $3, $4, NULL,
-        $5, $6, true, true, false, true, $7,
-        true, 30, $8::jsonb
+        $1, $2, $3, $4, $5, NULL,
+        $6, $7, true, true, false, true, $8,
+        false, 30, $9::jsonb
       )
       RETURNING id`,
       [
         session.workspaceId,
         symbol,
+        assetType,
         conditionType,
         conditionValue,
         alertName,

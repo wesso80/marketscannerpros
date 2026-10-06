@@ -38,7 +38,6 @@ export async function GET() {
          FROM alerts
          WHERE workspace_id = $1
            AND created_at >= CURRENT_DATE
-           AND is_smart_alert = true
            AND smart_alert_context->>'source' = 'workflow.auto'`,
         [session.workspaceId]
       ),

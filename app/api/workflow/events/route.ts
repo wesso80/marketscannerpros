@@ -93,6 +93,30 @@ function getPlanPayload(payload: Record<string, any>): Record<string, any> {
   return payload;
 }
 
+/** Short/bearish plans alert below the level. Long/bullish, or an unknown side, alert above. */
+function planPriceConditionType(event: MSPEvent): 'price_above' | 'price_below' {
+  const payload = (event.payload || {}) as Record<string, any>;
+  const plan = getPlanPayload(payload);
+  const candidates = [
+    plan?.side,
+    plan?.direction,
+    payload?.side,
+    payload?.direction,
+    plan?.setup?.side,
+    plan?.setup?.direction,
+    plan?.setup?.bias,
+    plan?.bias,
+    payload?.setup?.bias,
+    payload?.bias,
+  ];
+  for (const raw of candidates) {
+    const text = String(raw ?? '').trim().toLowerCase();
+    if (text === 'short' || text === 'bearish') return 'price_below';
+    if (text === 'long' || text === 'bullish') return 'price_above';
+  }
+  return 'price_above';
+}
+
 function extractDecisionPacketId(event: MSPEvent): string | null {
   const payload = event.payload as Record<string, any>;
   const planPayload = getPlanPayload(payload);
@@ -212,7 +236,6 @@ async function createRiskGovernorRuntime(workspaceId: string): Promise<RiskGover
            )::int AS alerts_today
          FROM alerts
          WHERE workspace_id = $1
-           AND is_smart_alert = true
            AND smart_alert_context->>'source' = 'workflow.auto'`,
         [workspaceId]
       ),
@@ -536,7 +559,6 @@ async function autoCreatePlanAlertForEvent(workspaceId: string, event: MSPEvent,
     `SELECT id FROM alerts
      WHERE workspace_id = $1
        AND is_active = true
-       AND is_smart_alert = true
        AND smart_alert_context->>'workflowId' = $2
        AND smart_alert_context->>'planId' = $3
      LIMIT 1`,
@@ -551,6 +573,7 @@ async function autoCreatePlanAlertForEvent(workspaceId: string, event: MSPEvent,
   if (alertPrice === 0) {
     return { created: false, hasAlert: false, decisionPacketId, blockedEvent: null as MSPEvent | null };
   }
+  const conditionType = planPriceConditionType(event);
   const timeframe = typeof planPayload?.timeframe === 'string' ? planPayload.timeframe : null;
   const alertContext = {
     source: 'workflow.auto',
@@ -568,14 +591,15 @@ async function autoCreatePlanAlertForEvent(workspaceId: string, event: MSPEvent,
       name, notes, is_active, is_recurring, notify_email, notify_push,
       is_smart_alert, smart_alert_context, cooldown_minutes
     ) VALUES (
-      $1, $2, $3, 'price_above', $4, $5,
-      $6, $7, true, true, false, true,
-      true, $8::jsonb, 60
+      $1, $2, $3, $4, $5, $6,
+      $7, $8, true, true, false, true,
+      false, $9::jsonb, 60
     )`,
     [
       workspaceId,
       symbol,
       normalizeAlertAssetType(event.entity?.asset_class),
+      conditionType,
       alertPrice,
       timeframe,
       `MSP Auto Plan Alert • ${symbol}`,
