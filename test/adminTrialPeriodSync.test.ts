@@ -44,11 +44,26 @@ function sqlOf(calls: unknown[][], includes: string): { sql: string; params: unk
   return { sql: String(found![0]), params: (found![1] as unknown[]) ?? [] };
 }
 
+/** Extra digits past milliseconds. JavaScript Date drops them, Postgres does not. */
+function hasSubMillisecondDigits(value: string): boolean {
+  const fraction = /\.(\d+)/.exec(value)?.[1] ?? '';
+  return fraction.length > 3;
+}
+
+function truncatedMillis(value: string): number {
+  const match = /^(.*\.)(\d+)(Z|[+-]\d{2}:?\d{2})$/.exec(value);
+  if (!match) return Date.parse(value);
+  return Date.parse(`${match[1]}${match[2].slice(0, 3).padEnd(3, '0')}${match[3]}`);
+}
+
 /** Mirrors SYNC_ADMIN_TRIAL_PERIOD_END. The SQL text is asserted by the caller. */
 function applyAdminSync(rows: SubRow[], sql: string, params: unknown[]): SubRow[] {
   expect(sql).toContain("status = 'trialing'");
   expect(sql).toContain('stripe_subscription_id IS NULL');
-  expect(sql).toContain('unnest($3::text[])::timestamptz AT TIME ZONE \'UTC\'');
+  const compact = sql.replace(/\s+/g, ' ');
+  const truncatesMillis = compact.includes("date_trunc('milliseconds', current_period_end)")
+    && compact.includes("date_trunc('milliseconds', unnest($3::text[])::timestamptz AT TIME ZONE 'UTC')");
+  expect(truncatesMillis).toBe(true);
   const email = String(params[0]).toLowerCase();
   const periodEnd = String(params[1]);
   const previous = (params[2] as string[]).map((value) => Date.parse(value));
@@ -56,7 +71,10 @@ function applyAdminSync(rows: SubRow[], sql: string, params: unknown[]): SubRow[
     const sameEmail = row.email.toLowerCase() === email;
     const trialing = row.status === 'trialing';
     const noStripe = row.stripe_subscription_id == null;
-    const sameAdminEnd = row.current_period_end != null && previous.includes(Date.parse(row.current_period_end));
+    const sameAdminEnd = row.current_period_end != null && previous.some((ms) => {
+      if (!truncatesMillis && hasSubMillisecondDigits(row.current_period_end!)) return false;
+      return ms === truncatedMillis(row.current_period_end!);
+    });
     const match = sameEmail && trialing && (noStripe || sameAdminEnd);
     return match ? { ...row, current_period_end: periodEnd } : row;
   });
@@ -163,6 +181,29 @@ describe('admin trial extend and revoke', () => {
     expect(after[1]).toEqual(before[1]);
     expect(after[2]).toEqual(before[2]);
     expect(after[3]).toEqual(before[3]);
+  });
+
+  it('extend matches a former subscriber whose period end has microseconds', async () => {
+    query.mockImplementation(async (sql: string) => {
+      if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') return { rows: [] };
+      if (sql.includes('FOR UPDATE')) return { rows: [{ expires_at: PREVIOUS }] };
+      if (sql.includes('UPDATE user_trials')) return { rows: [{ expires_at: NEW_END }] };
+      if (sql.includes('SELECT id, expires_at')) return { rows: [{ id: 1, expires_at: PREVIOUS }] };
+      return { rows: [] };
+    });
+
+    await POST(request('POST', { email: EMAIL, days: 30 }));
+    const sync = sqlOf(query.mock.calls, 'UPDATE user_subscriptions');
+    const microEnd = '2026-08-01T00:00:00.000456Z';
+    const nextMillisecond = '2026-08-01T00:00:00.001Z';
+    const before: SubRow[] = [
+      { email: EMAIL, status: 'trialing', stripe_subscription_id: 'sub_old', current_period_end: microEnd, tier: 'pro_trader' },
+      { email: EMAIL, status: 'trialing', stripe_subscription_id: 'sub_off', current_period_end: nextMillisecond, tier: 'pro_trader' },
+    ];
+    const after = applyAdminSync(before, sync.sql, sync.params);
+
+    expect(after[0].current_period_end).toBe(NEW_END);
+    expect(after[1]).toEqual(before[1]);
   });
 
   it('revoke syncs a former subscriber and leaves a live Stripe trial alone', async () => {

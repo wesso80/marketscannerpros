@@ -12,6 +12,8 @@ import { requireAdmin } from '@/lib/adminAuth';
  * has a different period end, so it does not match.
  * $3 is that previous expires_at as ISO text. current_period_end is timestamp
  * without time zone, so compare it to the UTC wall time of those instants.
+ * Both sides are truncated to milliseconds so a writer that stored microseconds
+ * still matches the millisecond expiry locked from user_trials.
  */
 const SYNC_ADMIN_TRIAL_PERIOD_END = `
   UPDATE user_subscriptions
@@ -20,8 +22,8 @@ const SYNC_ADMIN_TRIAL_PERIOD_END = `
     AND status = 'trialing'
     AND (
       stripe_subscription_id IS NULL
-      OR current_period_end = ANY (
-        SELECT (unnest($3::text[])::timestamptz AT TIME ZONE 'UTC')
+      OR date_trunc('milliseconds', current_period_end) = ANY (
+        SELECT date_trunc('milliseconds', unnest($3::text[])::timestamptz AT TIME ZONE 'UTC')
       )
     )
 `;
