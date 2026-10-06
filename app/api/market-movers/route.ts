@@ -5,6 +5,7 @@ import { normalizeCryptoMover } from '@/lib/analysis/publicMover';
 import { fetchAvTopMovers } from '@/lib/avTopMovers';
 import { EQUITY_MOVER_MIN_VOLUME, isExtremeDailyMove, isUncheckedExtremeMove, passesServerMoverFilter } from '@/lib/analysis/moverQuality';
 import { isWarmupStatus, momentumAccelFromWarmup, type MomentumBar } from '@/lib/movers/momentumAccel';
+import { latestUsSessionDate, toYmd, usSessionsBetween } from '@/lib/time/usSession';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -35,30 +36,60 @@ function normalizeAVMover(item: any) {
     market_cap: '',
     market_cap_rank: '',
     asset_class: 'equity' as const,
-    ...(item.previous_close != null || item.previousClose != null
-      ? { previous_close: item.previous_close ?? item.previousClose }
-      : {}),
   };
 }
 
-/** Stored previous closes only. No vendor call. Missing quotes leave an extreme print unchecked. */
-async function previousClosesFor(symbols: string[]): Promise<Map<string, number>> {
+type StoredClose = { prevClose: number; assetType: string | null; tradingDay: string | null };
+
+/**
+ * Stored previous closes only. The feed row's own previous_close is ignored: it always agrees with its own percent.
+ * null means the lookup failed, so every extreme stays hidden. No vendor call.
+ *
+ * quotes_latest is keyed by symbol only. Crypto extremes will nearly always hide: the close is used only when
+ * symbol_universe says that one row is crypto, and a US session close is almost never the 24h reference a crypto
+ * percent was measured from.
+ */
+async function storedClosesFor(symbols: string[]): Promise<Map<string, StoredClose> | null> {
   const unique = [...new Set(symbols.map((s) => String(s || '').toUpperCase()).filter(Boolean))];
-  const map = new Map<string, number>();
+  const map = new Map<string, StoredClose>();
   if (!unique.length) return map;
   try {
-    const rows = await q<{ symbol: string; prev_close: string | null }>(
-      `SELECT symbol, prev_close FROM quotes_latest WHERE symbol = ANY($1)`,
+    const rows = await q<{ symbol: string; prev_close: string | null; latest_trading_day: unknown; asset_type: string | null }>(
+      `SELECT q.symbol, q.prev_close, q.latest_trading_day, u.asset_type
+       FROM quotes_latest q
+       LEFT JOIN symbol_universe u ON u.symbol = q.symbol
+       WHERE q.symbol = ANY($1)`,
       [unique],
     );
     for (const row of rows) {
       const n = Number(row.prev_close);
-      if (row.symbol && Number.isFinite(n) && n > 0) map.set(String(row.symbol).toUpperCase(), n);
+      if (!row.symbol || !Number.isFinite(n) || !(n > 0)) continue;
+      map.set(String(row.symbol).toUpperCase(), {
+        prevClose: n,
+        assetType: row.asset_type == null ? null : String(row.asset_type),
+        tradingDay: toYmd(row.latest_trading_day),
+      });
     }
   } catch (e) {
     console.error('[Market Movers] Stored previous close lookup failed (non-fatal):', e);
+    return null;
   }
   return map;
+}
+
+/** Our stored close when it is the same asset class and the session date is this trading day or the previous one. */
+function acceptedStoredClose(
+  mover: { asset_class?: 'equity' | 'crypto' },
+  stored: StoredClose | undefined,
+  nowMs: number,
+): number | null {
+  if (!stored?.tradingDay) return null;
+  const kind = String(stored.assetType ?? '').trim().toLowerCase();
+  const classOk = mover.asset_class === 'crypto' ? kind === 'crypto' : kind === 'equity' || kind === 'etf';
+  if (!classOk) return null;
+  const session = latestUsSessionDate(nowMs);
+  if (stored.tradingDay > session || usSessionsBetween(stored.tradingDay, session) > 1) return null;
+  return stored.prevClose;
 }
 
 export async function GET(request: NextRequest) {
@@ -95,17 +126,18 @@ export async function GET(request: NextRequest) {
     const cryptoActivePool = (mostActive || []).map(normalizeMostActive);
 
     const listed = [eqGainerPool, eqLoserPool, eqActivePool, cryptoGainerPool, cryptoLoserPool, cryptoActivePool].flat() as Array<{
-      ticker: string; change_percentage?: string | number | null; previous_close?: string | number | null;
+      ticker: string; asset_class?: 'equity' | 'crypto'; change_percentage?: string | number | null;
     }>;
-    const prevClose = await previousClosesFor(
-      listed.filter((m) => isExtremeDailyMove(m) && m.previous_close == null).map((m) => m.ticker),
-    );
+    const storedCloses = await storedClosesFor(listed.filter((m) => isExtremeDailyMove(m)).map((m) => m.ticker));
+    const checkedAt = Date.now();
     const extremeHidden = new Set<string>();
-    const withoutExtremes = <T extends { ticker: string; previous_close?: string | number | null }>(rows: T[]) => rows.filter((row) => {
-      const previous_close = row.previous_close ?? prevClose.get(String(row.ticker).toUpperCase());
-      const checked = previous_close == null ? row : { ...row, previous_close };
+    const withoutExtremes = <T extends { ticker: string; asset_class?: 'equity' | 'crypto' }>(rows: T[]) => rows.filter((row) => {
+      const ticker = String(row.ticker).toUpperCase();
+      const assetClass = row.asset_class === 'crypto' ? 'crypto' : 'equity';
+      const previous_close = storedCloses == null ? null : acceptedStoredClose(row, storedCloses.get(ticker), checkedAt);
+      const checked = { ...row, previous_close, previousClose: null };
       if (!isUncheckedExtremeMove(checked)) return true;
-      extremeHidden.add(String(row.ticker).toUpperCase());
+      extremeHidden.add(`${assetClass}:${ticker}`);
       return false;
     });
 

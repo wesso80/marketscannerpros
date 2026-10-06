@@ -1,3 +1,5 @@
+import { isLongSide } from './positionValue';
+
 type Position = {
   id: number; side: 'LONG' | 'SHORT'; quantity: number;
   entryPrice: number; currentPrice: number; pl: number; plPercent: number;
@@ -11,7 +13,7 @@ export function splitPosition<T extends Position>(position: T, fraction: number,
     || !Number.isFinite(Date.parse(closeDate))) throw new Error('Invalid paper close');
   const closedQuantity = position.quantity * fraction;
   const remainingQuantity = position.quantity - closedQuantity;
-  const direction = position.side === 'LONG' ? 1 : -1;
+  const direction = isLongSide(position.side) ? 1 : -1;
   const realizedPL = (exitPrice - position.entryPrice) * closedQuantity * multiplier * direction;
   const remainingPL = (position.currentPrice - position.entryPrice) * remainingQuantity * multiplier * direction;
   return {

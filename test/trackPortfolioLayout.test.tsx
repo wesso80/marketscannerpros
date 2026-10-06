@@ -13,6 +13,8 @@ it('shows measured open value and an honest daily-change gap, with neutral alloc
   const before = JSON.stringify(allocation);
   const {container} = render(<PortfolioOverview value={1250} totalCost={1000} openPL={125} allocation={allocation} limit={25}/>);
   expect(screen.getByText('Value simulated')).toBeTruthy();
+  expect(container.querySelector('.lg\\:grid-cols-5')).toBeTruthy();
+  expect(container.querySelector('.col-span-2')).toBeTruthy();
   expect(screen.getByText('Not measured')).toBeTruthy();
   expect(screen.getByRole('img', {name:'Allocation by recorded position value'})).toBeTruthy();
   expect(container.textContent).not.toMatch(/N\/A|—|NaN|undefined/);

@@ -7,6 +7,7 @@ vi.mock('@/lib/coingecko', () => ({ getTopGainersLosers: mocks.top, getMarketDat
 vi.mock('@/lib/avRateGovernor', () => ({ avTakeToken: async () => undefined }));
 
 import { isWarrantRightOrUnit, passesServerMoverFilter } from '@/lib/analysis/moverQuality';
+import { latestUsSessionDate, previousUsTradingDay } from '@/lib/time/usSession';
 
 const row = (ticker: string, price: string, volume: string, pct = '50%') => ({ ticker, price, change_amount: '1', change_percentage: pct, volume });
 
@@ -57,27 +58,78 @@ describe('GET /api/market-movers filters equities server-side', () => {
     expect(body.extremeHiddenCount).toBe(0);
   });
 
-  it('hides an unchecked +900% print, keeps a checked +200.1% print, and reports the count', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => ({
-      json: async () => ({
-        last_updated: '2026-09-25 16:15:59 US/Eastern',
-        top_gainers: [
-          row('APUS', '5.03', '2500000', '60%'),
-          row('FAKE', '10', '5000000', '900%'),
-          { ...row('REAL', '30.01', '1000000', '200.10%'), previous_close: '10' },
-        ],
-        top_losers: [row('BENF', '3.1', '400000', '-30%')],
-        most_actively_traded: [row('INTC', '31', '90000000', '2%')],
-      }),
-    })));
+  const session = latestUsSessionDate(Date.now());
+  const equityClose = (symbol: string, prev: string, day = session, asset = 'equity') => (
+    { symbol, prev_close: prev, latest_trading_day: day, asset_type: asset }
+  );
+  const gainers = () => ({
+    last_updated: '2026-09-25 16:15:59 US/Eastern',
+    top_gainers: [
+      row('APUS', '5.03', '2500000', '60%'),
+      row('FAKE', '10', '5000000', '900%'),
+      // The feed's own previous close would agree with +200.10%. It must not keep the row.
+      { ...row('REAL', '30.01', '1000000', '200.10%'), previous_close: '10' },
+    ],
+    top_losers: [row('BENF', '3.1', '400000', '-30%')],
+    most_actively_traded: [row('INTC', '31', '90000000', '2%')],
+  });
+
+  it('keeps an extreme when our stored close matches, and hides one with no stored close', async () => {
+    mocks.q.mockImplementation(async (sql: string) => (
+      String(sql).includes('prev_close') ? [equityClose('REAL', '10')] : []
+    ));
+    vi.stubGlobal('fetch', vi.fn(async () => ({ json: async () => gainers() })));
     const { GET } = await import('@/app/api/market-movers/route');
     const body = await (await GET(new NextRequest('https://example.test/api/market-movers'))).json();
     const tickers = (list: any[]) => list.map((m: any) => m.ticker);
     expect(tickers(body.topGainers)).toEqual(expect.arrayContaining(['APUS', 'REAL']));
     expect(tickers(body.topGainers)).not.toContain('FAKE');
-    expect(tickers(body.topLosers)).not.toContain('FAKE');
-    expect(tickers(body.mostActive)).not.toContain('FAKE');
     expect(body.extremeHiddenCount).toBe(1);
     expect(JSON.stringify(body)).not.toContain('FAKE');
+  });
+
+  it('hides an extreme when the stored close is missing, even if the feed row carries previous_close', async () => {
+    mocks.q.mockImplementation(async (sql: string) => (String(sql).includes('prev_close') ? [] : []));
+    vi.stubGlobal('fetch', vi.fn(async () => ({ json: async () => gainers() })));
+    const { GET } = await import('@/app/api/market-movers/route');
+    const body = await (await GET(new NextRequest('https://example.test/api/market-movers'))).json();
+    const tickers = (list: any[]) => list.map((m: any) => m.ticker);
+    expect(tickers(body.topGainers)).not.toContain('REAL');
+    expect(tickers(body.topGainers)).not.toContain('FAKE');
+    expect(tickers(body.topGainers)).toContain('APUS');
+    expect(body.extremeHiddenCount).toBe(2);
+  });
+
+  it('hides every extreme when the stored-close lookup throws', async () => {
+    mocks.q.mockImplementation(async (sql: string) => {
+      if (String(sql).includes('prev_close')) throw new Error('db down');
+      return [];
+    });
+    vi.stubGlobal('fetch', vi.fn(async () => ({ json: async () => gainers() })));
+    const { GET } = await import('@/app/api/market-movers/route');
+    const body = await (await GET(new NextRequest('https://example.test/api/market-movers'))).json();
+    const tickers = (list: any[]) => list.map((m: any) => m.ticker);
+    expect(tickers(body.topGainers).filter((ticker: string) => ticker !== 'SOL')).toEqual(['APUS']);
+    expect(body.extremeHiddenCount).toBe(2);
+  });
+
+  it('rejects a stored close from the other asset class, a stale session, and counts hides by asset class plus symbol', async () => {
+    mocks.top.mockResolvedValue({
+      top_gainers: [{ symbol: 'fake', usd: 10, usd_24h_change: 900, usd_24h_vol: 2e7, usd_market_cap: 7e10 }],
+      top_losers: [],
+    });
+    mocks.q.mockImplementation(async (sql: string) => (
+      String(sql).includes('prev_close')
+        ? [equityClose('REAL', '10', session, 'crypto'), equityClose('FAKE', '1', '2020-01-02', 'equity')]
+        : []
+    ));
+    vi.stubGlobal('fetch', vi.fn(async () => ({ json: async () => gainers() })));
+    const { GET } = await import('@/app/api/market-movers/route');
+    const body = await (await GET(new NextRequest('https://example.test/api/market-movers'))).json();
+    const tickers = (list: any[]) => list.filter((m: any) => m.asset_class === 'equity').map((m: any) => m.ticker);
+    expect(tickers(body.topGainers)).not.toContain('REAL');
+    expect(body.topGainers.some((m: any) => m.asset_class === 'crypto' && m.ticker === 'FAKE')).toBe(false);
+    expect(body.extremeHiddenCount).toBe(3);
+    expect(previousUsTradingDay(session) < session).toBe(true);
   });
 });
