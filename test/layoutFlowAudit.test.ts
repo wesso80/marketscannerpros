@@ -98,10 +98,12 @@ describe('layout and flow audit regressions', () => {
     expect(hero).toContain('Open Scanner Preview');
     expect(hero).not.toContain('/logos/landing-hero.png');
 
-    expect(commandHub.indexOf('<Hero />')).toBeLessThan(commandHub.indexOf('Start with the workflow'));
-    expect(commandHub.indexOf('Start with the workflow')).toBeLessThan(commandHub.indexOf('<HomePreviewStrip />'));
+    expect(commandHub.indexOf('<Hero />')).toBeLessThan(commandHub.indexOf('<HomePreviewStrip />'));
+    // The workflow appears once: the guided chooser grid was removed in favour of the four core steps.
+    expect(commandHub).not.toContain('Start with the workflow');
+    expect(commandHub).not.toContain('guidedPaths');
     expect(commandHub).toContain('Core workflow tools');
-    expect(commandHub).toContain('One research path, five decisions.');
+    expect(commandHub).toContain('One research path, four decisions.');
     expect(commandHub).toContain('const workflowSteps = [');
     expect(commandHub).not.toContain('Core Scanners');
     expect(commandHub).not.toContain('v2 Platform Surfaces');
@@ -234,8 +236,12 @@ describe('layout and flow audit regressions', () => {
     expect(earningsLayout).toContain("canonical: 'https://marketscannerpros.app/tools/research?tab=earnings'");
     expect(earningsCalendarLayout).toContain("canonical: 'https://marketscannerpros.app/tools/research?tab=earnings'");
     expect(commandHub).toContain("href: '/tools/workspace?tab=backtest'");
-    expect(commandHub).toContain("href: '/tools/terminal?tab=options-flow'");
-    expect(commandHub).toContain("href: '/tools/crypto-dashboard'");
+    expect(commandHub).toContain("href: '/tools/scanner'");
+    expect(commandHub).toContain("href: '/tools/golden-egg'");
+    expect(commandHub).toContain("href: '/tools/workspace'");
+    // Terminal is mentioned as deeper context, not a step card or link.
+    expect(commandHub).toContain('Terminal, options and crypto derivatives add deeper context when you need it.');
+    expect(commandHub).not.toContain("href: '/tools/terminal");
     expect(toolsNavBar).toContain('primaryNavTools');
     expect(areaLinks.track.map(t => t.href)).toEqual(expect.arrayContaining(['/tools/workspace?tab=portfolio', '/tools/workspace?tab=journal']));
     expect(areaLinks.today.map(t => t.href)).toContain('/tools/msp-radar');
