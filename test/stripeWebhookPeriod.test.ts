@@ -7,6 +7,9 @@ const ITEM_PERIOD_END = 1682288167;
 const ITEM_PERIOD_START = 1679609767;
 const LEGACY_PERIOD_END = 1714000000;
 const LEGACY_PERIOD_START = 1711321600;
+const BASIL_PERIOD_END = 1700000000;
+const BASIL_PERIOD_START = 1697408000;
+const BASIL_API_VERSION = '2025-08-27.basil';
 
 const mocks = vi.hoisted(() => ({
   q: vi.fn(async () => [] as unknown[]),
@@ -79,6 +82,27 @@ function cloverSubscription(overrides: Record<string, unknown> = {}) {
     items: {
       object: 'list',
       data: [cloverItem()],
+      has_more: false,
+      total_count: 1,
+    },
+    ...overrides,
+  };
+}
+
+/** Subscription shape for API 2025-08-27.basil: periods live on the item, not the subscription. */
+function basilSubscription(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'sub_test_basil',
+    object: 'subscription',
+    customer: 'cus_test_period',
+    status: 'active',
+    items: {
+      object: 'list',
+      data: [cloverItem({
+        end: BASIL_PERIOD_END,
+        start: BASIL_PERIOD_START,
+        priceId: PRICE_ID,
+      })],
       has_more: false,
       total_count: 1,
     },
@@ -641,6 +665,84 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
     expect(mocks.sendWelcomeEmail).toHaveBeenCalledTimes(1);
     const inserts = mocks.q.mock.calls.filter((call) => String(call[0]).includes('INSERT INTO user_subscriptions'));
     expect(inserts).toHaveLength(2);
+  });
+
+  it('checkout.session.completed reads a basil payload and stores the clover retrieve period', async () => {
+    const basilEventSubscription = basilSubscription();
+    expect(basilEventSubscription).not.toHaveProperty('current_period_end');
+    expect(basilEventSubscription).not.toHaveProperty('current_period_start');
+    const cloverLive = cloverSubscription({ id: 'sub_test_basil', status: 'trialing' });
+    expect(cloverLive).not.toHaveProperty('current_period_end');
+    mocks.subscriptionsRetrieve.mockResolvedValue(cloverLive);
+
+    const res = await postEvent(stripeEvent('checkout.session.completed', {
+      id: 'cs_test_basil',
+      object: 'checkout.session',
+      mode: 'subscription',
+      customer: 'cus_test_period',
+      subscription: basilEventSubscription,
+      status: 'complete',
+      payment_status: 'paid',
+      metadata: {},
+    }, BASIL_API_VERSION));
+
+    expect(res.status).toBe(200);
+    expect(mocks.subscriptionsRetrieve).toHaveBeenCalledWith('sub_test_basil');
+    expectUnixDate(storedPeriodEnd(), ITEM_PERIOD_END);
+    const insert = mocks.q.mock.calls.find((call) => String(call[0]).includes('INSERT INTO user_subscriptions'));
+    expect((insert![1] as unknown[])[2]).toBe('pro');
+    expect((insert![1] as unknown[])[3]).toBe('trialing');
+    assertNoInvalidDates();
+  });
+
+  it('customer.subscription.updated reads a basil payload and stores the clover retrieve', async () => {
+    const basilEvent = basilSubscription({ status: 'active' });
+    expect(basilEvent).not.toHaveProperty('current_period_end');
+    const cloverLive = cloverSubscription({
+      id: 'sub_test_basil',
+      status: 'past_due',
+    });
+    mocks.subscriptionsRetrieve.mockResolvedValue(cloverLive);
+
+    const res = await postEvent(stripeEvent(
+      'customer.subscription.updated',
+      basilEvent,
+      BASIL_API_VERSION,
+    ));
+
+    expect(res.status).toBe(200);
+    expect(mocks.subscriptionsRetrieve).toHaveBeenCalledWith('sub_test_basil');
+    expectUnixDate(storedPeriodEnd(), ITEM_PERIOD_END);
+    const insert = mocks.q.mock.calls.find((call) => String(call[0]).includes('INSERT INTO user_subscriptions'));
+    expect((insert![1] as unknown[])[3]).toBe('past_due');
+    expect((insert![1] as unknown[])[4]).toBe('sub_test_basil');
+    assertNoInvalidDates();
+  });
+
+  it('invoice.payment_failed reads the subscription id from a basil invoice', async () => {
+    const basilInvoice = {
+      id: 'in_test_basil',
+      object: 'invoice',
+      customer: 'cus_test_period',
+      parent: {
+        type: 'subscription_details',
+        quote_details: null,
+        subscription_details: { subscription: 'sub_test_basil', metadata: null },
+      },
+    };
+    expect(basilInvoice).not.toHaveProperty('subscription');
+    mocks.subscriptionsRetrieve.mockResolvedValue(cloverSubscription({
+      id: 'sub_test_basil',
+      status: 'past_due',
+    }));
+
+    const res = await postEvent(stripeEvent('invoice.payment_failed', basilInvoice, BASIL_API_VERSION));
+
+    expect(res.status).toBe(200);
+    expect(mocks.subscriptionsRetrieve).toHaveBeenCalledWith('sub_test_basil');
+    const update = mocks.q.mock.calls.find((call) => String(call[0]).includes("status = 'past_due'"));
+    expect(update).toBeTruthy();
+    expect((update![1] as unknown[])[1]).toBe('sub_test_basil');
   });
 
   it('rejects a bad signature with 400 and does not write', async () => {
