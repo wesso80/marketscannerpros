@@ -108,7 +108,7 @@ function toReasonLabel(reason: string) {
   return reason;
 }
 
-export default function MarketMoversPage() {
+export default function MarketMoversPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { tier, isLoading: tierLoading } = useUserTier();
   const [data, setData] = useState<MoversData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -531,7 +531,7 @@ export default function MarketMoversPage() {
   ]);
 
   if (tierLoading) return <div className="min-h-screen bg-[var(--msp-bg)]" />;
-  if (!canAccessPortfolioInsights(tier)) return <><ComplianceDisclaimer compact /><UpgradeGate requiredTier="pro" feature="Market Movers" /></>;
+  if (!canAccessPortfolioInsights(tier)) return <>{!embedded && <ComplianceDisclaimer compact />}<UpgradeGate requiredTier="pro" feature="Market Movers" /></>;
 
-  return <MoversView data={data} loading={loading} error={error} rows={shownRows} environment={environment} permissionedCount={permissionedCount} activeTab={activeTab} assetFilter={assetFilter} setupMode={setupMode} onTab={setActiveTab} onAsset={setAssetFilter} onSetup={setSetupMode} />;
+  return <MoversView embedded={embedded} data={data} loading={loading} error={error} rows={shownRows} environment={environment} permissionedCount={permissionedCount} activeTab={activeTab} assetFilter={assetFilter} setupMode={setupMode} onTab={setActiveTab} onAsset={setAssetFilter} onSetup={setSetupMode} />;
 }

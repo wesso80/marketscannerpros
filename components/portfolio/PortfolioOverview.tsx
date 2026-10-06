@@ -11,7 +11,7 @@ export default function PortfolioOverview({ value, openPL, allocation, limit }: 
   const shades = ['#e2e8f0', '#94a3b8', '#64748b', '#475569', '#334155'];
   let offset = 0;
   return <section className="min-w-0 space-y-3" aria-label="Portfolio overview">
-    <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2 lg:grid-cols-4 [&_[data-stat-card]>p:first-child]:whitespace-nowrap [&_[data-stat-card]>p:first-child]:break-normal">
       <StatTile label="Value simulated" value={formatMoney(value)} />
       <div className="[&_[data-stat-card]]:h-full [&_[data-stat-card]>p:first-child]:text-base"><StatTile label="Today" value="Not measured" /></div>
       <StatTile label="Open P&L" value={formatSignedMoney(openPL)} />

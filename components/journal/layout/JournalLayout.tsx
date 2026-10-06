@@ -112,7 +112,7 @@ export default function JournalLayout(props: JournalLayoutProps) {
         />
       )}
 
-      <CollapsibleSection
+      {props.dockSummary && props.dockModules && <CollapsibleSection
         title="Review by setup"
         summary={
           props.dockSummary
@@ -129,24 +129,7 @@ export default function JournalLayout(props: JournalLayoutProps) {
           onCollapseAll={props.onCollapseAllDock}
         />
 
-        {!props.dockSummary && !props.dockModules && (
-          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-center">
-            <p className="text-sm font-semibold text-amber-300">
-              Intelligence Dock — Pro Feature
-            </p>
-            <p className="mt-1 text-xs text-slate-400">
-              Upgrade to Pro for automated trade data analysis, risk scoring,
-              labeling, evidence snapshots, and AI-powered summaries.
-            </p>
-            <a
-              href="/pricing"
-              className="mt-2 inline-block rounded-lg bg-emerald-500/20 px-4 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/30 transition-colors"
-            >
-              Upgrade to Pro
-            </a>
-          </div>
-        )}
-      </CollapsibleSection>
+      </CollapsibleSection>}
       <CollapsibleSection
         title="Journal settings"
         summary="Research auto-log and record actions"
@@ -185,9 +168,7 @@ export default function JournalLayout(props: JournalLayoutProps) {
         asOf={props.header?.asOfTs}
         basis="Journal load time; individual mark times in record details"
       />
-      <p className="text-xs text-slate-400">
-        General information only, not financial advice.
-      </p>
+      {!props.embeddedInWorkspace && <p className="text-xs text-slate-400">General information only, not financial advice.</p>}
     </div>
   );
 }

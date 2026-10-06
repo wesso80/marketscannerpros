@@ -190,7 +190,7 @@ export default function SignalAccuracyPage() {
           {overall && (
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <SummaryCard label="Total Observations" value={overall.total.toLocaleString()} />
-              <SummaryCard label="Labeled" value={overall.labeled.toLocaleString()} sub={overall.total > 0 ? `${((overall.labeled / overall.total) * 100).toFixed(0)}% resolved` : undefined} />
+              <SummaryCard label="Labelled" value={overall.labeled.toLocaleString()} sub={overall.total > 0 ? `${((overall.labeled / overall.total) * 100).toFixed(0)}% resolved` : undefined} />
               <SummaryCard label="Past threshold" value={overall.win_rate != null ? `${overall.win_rate.toFixed(1)}%` : 'Not collected'}
                 color={overall.win_rate != null && overall.win_rate >= 55 ? 'text-emerald-400' : overall.win_rate != null && overall.win_rate < 45 ? 'text-red-400' : 'text-amber-400'}
                 sub={`Lookback ${lookback === 'all' ? 'all' : `${lookback}d`}. Not a closed trade.`} />
@@ -200,9 +200,6 @@ export default function SignalAccuracyPage() {
           )}
 
           {overall && overall.labeled > 0 && <figure data-research-chart className="rounded-lg border border-white/10 p-3"><figcaption className="mb-2 text-sm">Recorded outcome counts</figcaption>{[['Correct',overall.correct],['Wrong',overall.wrong],['Neutral',overall.neutral]].map(([label,count]) => <div key={label} className="grid grid-cols-[5rem_1fr_3rem] items-center gap-2 py-1 text-xs"><span>{label}</span><span className="h-2 bg-white/5"><span className="block h-2 bg-slate-400" style={{width: `${Number(count) / overall.labeled * 100}%`}} /></span><span>{Number(count).toLocaleString()}</span></div>)}</figure>}
-          <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-100">
-            This page reviews historical scanner observations for educational pattern analysis only. It does not validate future performance, does not provide trading signals, and does not recommend buying, selling, holding, shorting, or trading any asset.
-          </div>
           <ComplianceDisclaimer compact />
 
           <CollapsibleSection title="Outcome evidence" summary={`${measuredStats.length} measured groups · ${recentSignals.length} recent observations`}>
@@ -211,13 +208,13 @@ export default function SignalAccuracyPage() {
           {thresholds.length > 0 && (
             <div className="bg-slate-800/30 rounded-xl border border-slate-700/50 p-4">
               <h3 className="text-xs font-semibold text-slate-300 mb-2">Price-move thresholds</h3>
-              <p className="text-[11px] text-slate-400 mb-2">A labeled observation means the price moved past this percent by the horizon. Sample minimum is {minSamples}. This is not a closed trade, a stop, or a fee.</p>
+              <p className="text-[11px] text-slate-400 mb-2">A labelled observation means the price moved past this percent by the horizon. Sample minimum is {minSamples}. This is not a closed trade, a stop, or a fee.</p>
               <div className="flex flex-wrap gap-3">
                 {thresholds.map(t => (
                   <div key={t.horizon_minutes} className="bg-slate-900/50 rounded-lg px-3 py-1.5 text-[11px]">
                     <span className="text-white font-medium">{t.horizon_label}</span>
-                    <span className="text-slate-500 ml-2">OK &ge;{t.correct_threshold}%</span>
-                    <span className="text-slate-500 ml-2">NO &le;{t.wrong_threshold}%</span>
+                    <span className="text-slate-500 ml-2">Correct: at least {t.correct_threshold}% in the recorded direction</span>
+                    <span className="text-slate-500 ml-2">Wrong: at least {t.wrong_threshold}% in the opposite direction</span>
                   </div>
                 ))}
               </div>
@@ -300,7 +297,7 @@ export default function SignalAccuracyPage() {
               <div className="px-4 py-3 border-b border-slate-700/50">
                 <h3 className="text-sm font-bold text-white">Recent Observations</h3>
               </div>
-              <div className="divide-y divide-white/10 p-3 sm:hidden">{shownRecent.map((row,i) => <div data-recent-card key={i} className="py-2 text-xs"><p className="font-semibold">{row.symbol} · {marketText(row.score)}</p><p>{marketText(row.direction)} context · {observationLabel(row.outcome)}</p>{row.pct_move != null && <p>{row.pct_move.toFixed(2)}% recorded move</p>}<p className="text-slate-400">{new Date(row.created_at).toLocaleDateString()}</p></div>)}</div>
+              <div className="divide-y divide-white/10 p-3 sm:hidden">{shownRecent.map((row,i) => <div data-recent-card key={i} className="py-2 text-xs"><p className="font-semibold">{row.symbol} · {marketText(row.score)}</p><p>{marketText(row.direction)} context · {observationLabel(row.outcome)}</p>{row.pct_move != null && <p>{row.pct_move.toFixed(2)}% recorded move</p>}<p className="text-slate-400">{new Date(row.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</p></div>)}</div>
               <div className="hidden overflow-x-auto sm:block">
                 <table className="w-full text-xs">
                   <thead>
@@ -336,7 +333,7 @@ export default function SignalAccuracyPage() {
                             'bg-slate-700 text-slate-400'
                           }`}>{observationLabel(s.outcome)}</span>
                         </td>
-                        <td className="px-3 py-2 text-right text-slate-500">{new Date(s.created_at).toLocaleDateString()}</td>
+                        <td className="px-3 py-2 text-right text-slate-500">{new Date(s.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -351,7 +348,7 @@ export default function SignalAccuracyPage() {
 
           {/* Metadata */}
           {data?.metadata && (
-            <p className="text-[11px] text-slate-500 text-center">{data.metadata.note}</p>
+            <p className="text-[11px] text-slate-500 text-center">{data.metadata.note.replace(/>=\s*/g, 'at least ').replace(/\blabeled\b/g, 'labelled')}</p>
           )}
         </>
       )}

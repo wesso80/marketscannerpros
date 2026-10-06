@@ -1,5 +1,6 @@
 'use client';
 
+import { cleanNewsTitle, uniqueNews } from '@/lib/presentation/newsDisplay';
 import { useState, useEffect } from 'react';
 import SourceLine from '@/components/visual/SourceLine';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
@@ -41,7 +42,8 @@ function timeAgo(iso: string): string {
 
 export default function CryptoNewsWidget({ coinId, title = 'Crypto News', compact = false }: Props) {
   const [showAll, setShowAll] = useState(false);
-  const [articles, setArticles] = useState<NewsArticle[]>([]);
+  const [rawArticles, setArticles] = useState<NewsArticle[]>([]);
+  const articles = uniqueNews(rawArticles);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'news' | 'guides'>('all');
@@ -177,7 +179,7 @@ export default function CryptoNewsWidget({ coinId, title = 'Crypto News', compac
               )}
               <div className="min-w-0 flex-1">
                 <p className="mb-1 line-clamp-2 text-[13px] font-semibold leading-snug text-slate-200 group-hover:text-white">
-                  {article.title}
+                  {cleanNewsTitle(article.title, article.source_name)}
                 </p>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-[10px] text-slate-500">{article.source_name}</span>

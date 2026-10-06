@@ -17,13 +17,13 @@ export default function TabBar({
   const buttons = useRef<Array<HTMLButtonElement | null>>([]);
   const routes = items.every((item) => item.href);
   const style =
-    "inline-flex min-h-10 items-center rounded-t-lg border-b-2 px-3 text-sm hover:text-[var(--msp-accent)]";
+    "inline-flex shrink-0 whitespace-nowrap min-h-10 items-center rounded-t-lg border-b-2 px-3 text-sm hover:text-[var(--msp-accent)]";
   return (
     <div className="min-w-0">
       <nav
         role={routes ? undefined : "tablist"}
         aria-label={label}
-        className="flex flex-wrap gap-1 border-b border-[var(--msp-border)]"
+        className="flex flex-nowrap overflow-x-auto gap-1 border-b border-[var(--msp-border)]"
       >
         {items.map((item, index) =>
           routes ? (

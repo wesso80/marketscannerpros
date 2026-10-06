@@ -53,3 +53,21 @@ it('a failed load shows a fault instead of a zero active verdict or numeric plac
  expect(container.querySelectorAll('[data-stat-card]')).toHaveLength(0);
  expect(container.querySelector('[data-alerts-verdict]')?.textContent).not.toContain('0 active');
 });
+it('folds identical saved price rules without deleting their individual controls',async()=>{
+ state.alerts=Array.from({length:3},(_,i)=>({id:String(i+1),symbol:'XLM',condition_type:'price_above',condition_value:.167397,is_active:true,is_smart_alert:true,trigger_count:0,name:`Price ${i+1}`}));
+ const {container}=render(<AlertsContent embeddedInWorkspace/>);
+ const summary=await screen.findByText('XLM price above $0.1674 · 3 saved rules');
+ expect(summary.closest('details')?.open).toBe(false);
+ expect(container.querySelectorAll('[data-alert-row]')).toHaveLength(3);
+ expect(state.requests.every(r=>r.method==='GET')).toBe(true);
+});
+it('capabilities offers creation controls without rendering a second saved-alert console',async()=>{
+ state.alerts=[{id:'1',symbol:'XLM',condition_type:'price_above',condition_value:.167397,is_active:true,trigger_count:0,name:'One rule'}];
+ const {container}=render(<AlertsContent embeddedInWorkspace/>);
+ await screen.findByText('1 active user-defined notification.');
+ fireEvent.click(screen.getByText('Alert Capabilities'));
+ await screen.findByRole('group',{name:'Notification rule type'});
+ expect(screen.getByRole('button',{name:'Price rule'})).toBeTruthy();
+ expect(container.querySelectorAll('[data-alert-row]')).toHaveLength(1);
+ expect(state.requests.every(r=>r.method==='GET')).toBe(true);
+});

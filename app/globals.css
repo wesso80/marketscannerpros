@@ -263,11 +263,11 @@ a:hover {
 }
 
 /* Explicit responsive nav — immune to Tailwind layer ordering issues.
-   The logged-in desktop nav (7 surfaces + account controls) needs ~1400px; below that the drawer is used so no link is clipped. */
+   The full navigation starts at 1280px; compact branding leaves room for every link. */
 .msp-desktop-nav {
   display: none !important;
 }
-@media (min-width: 1440px) {
+@media (min-width: 1280px) {
   .msp-desktop-nav {
     display: flex !important;
   }
@@ -275,7 +275,7 @@ a:hover {
 .msp-mobile-nav {
   display: flex !important;
 }
-@media (min-width: 1440px) {
+@media (min-width: 1280px) {
   .msp-mobile-nav {
     display: none !important;
   }
@@ -1207,4 +1207,10 @@ button.truncate {
   [style*="overflowX"] table td {
     white-space: nowrap;
   }
+}
+
+@media (min-width: 1280px) and (max-width: 1439px) {
+  .msp-full-name { display: none !important; }
+  .msp-short-name { display: inline !important; }
+  .msp-desktop-nav { min-width: 0; }
 }

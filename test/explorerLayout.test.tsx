@@ -19,9 +19,9 @@ import ExplorerPage from '@/app/tools/explorer/page';
 import CryptoNewsWidget from '@/components/CryptoNewsWidget';
 beforeEach(()=>{vi.stubGlobal('React',React);state.tab='overview';state.push.mockReset();});
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
-it('uses nine accessible market tabs and keeps one verdict/source with closed detail',()=>{
+it('uses ten accessible market tabs and keeps one verdict/source with closed detail',()=>{
  const {container}=render(<ExplorerPage/>);
- expect(within(screen.getByRole('tablist',{name:'Market views'})).getAllByRole('tab')).toHaveLength(9);
+ expect(within(screen.getByRole('tablist',{name:'Market views'})).getAllByRole('tab')).toHaveLength(10);
  expect(container.querySelectorAll('[data-layout-verdict]')).toHaveLength(1);
  expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);
  expect(container.querySelectorAll('details[open]')).toHaveLength(0);
@@ -30,7 +30,7 @@ it('uses nine accessible market tabs and keeps one verdict/source with closed de
  expect(screen.getAllByRole('button',{name:/Open X\d+ in Symbol/})).toHaveLength(11);
 });
 it('sector table stays folded while measured bars remain visible',()=>{
- state.tab='heatmap';const {container}=render(<ExplorerPage/>);
+ state.tab='sectors';const {container}=render(<ExplorerPage/>);
  expect(container.querySelector('[data-market-chart]')).toBeTruthy();
  expect(screen.getByText('Sector details').closest('details')?.open).toBe(false);
  expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);
@@ -49,4 +49,12 @@ it('plain labels preserve numbers and distinguish absent evidence from real zero
  expect(marketText(0)).toBe('0');expect(marketText(null)).toBe('Not collected');
  expect(marketText('risk_on')).toBe('risk on');expect(marketText('Finance series')).toBe('Finance series');
  expect(marketText('Permission: Unavailable')).toBe('Alignment: Not collected');
+});
+
+it('heatmap opens the heatmap view and tab clicks update the URL',()=>{
+ state.tab='heatmap';render(<ExplorerPage/>);
+ expect(screen.getByRole('tab',{name:'Heatmap'}).getAttribute('aria-selected')).toBe('true');
+ expect(screen.getByText('Sector Heatmap')).toBeTruthy();
+ fireEvent.click(screen.getByRole('tab',{name:'Commodities'}));
+ expect(state.push).toHaveBeenCalledWith('/tools/explorer?tab=commodities',{scroll:false});
 });

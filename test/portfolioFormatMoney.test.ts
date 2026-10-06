@@ -4,17 +4,17 @@ import { formatMoney, formatSignedMoney } from '@/lib/portfolio/formatMoney';
 describe('portfolio formatMoney (TR-2)', () => {
   it('keeps the minus sign on negative amounts', () => {
     expect(formatMoney(-1234.56, 'en-US')).toBe('-$1,234.56');
-    expect(formatMoney(-0.5, 'en-US')).toBe('-$0.5');
+    expect(formatMoney(-0.5, 'en-US')).toBe('-$0.50');
   });
 
   it('formats positive amounts and zero without a sign', () => {
     expect(formatMoney(1234.56, 'en-US')).toBe('$1,234.56');
-    expect(formatMoney(0, 'en-US')).toBe('$0');
+    expect(formatMoney(0, 'en-US')).toBe('$0.00');
   });
 
   it('never shows "-$0" for values that round to zero', () => {
-    expect(formatMoney(-0.001, 'en-US')).toBe('$0');
-    expect(formatMoney(-0, 'en-US')).toBe('$0');
+    expect(formatMoney(-0.001, 'en-US')).toBe('$0.00');
+    expect(formatMoney(-0, 'en-US')).toBe('$0.00');
   });
 
   it('Account Equity = cash + open value shows negative when the sum is negative', () => {
@@ -28,7 +28,7 @@ describe('portfolio formatSignedMoney', () => {
   it('always shows an explicit sign', () => {
     expect(formatSignedMoney(1234.56, 'en-US')).toBe('+$1,234.56');
     expect(formatSignedMoney(-1234.56, 'en-US')).toBe('-$1,234.56');
-    expect(formatSignedMoney(0, 'en-US')).toBe('+$0');
-    expect(formatSignedMoney(-0.001, 'en-US')).toBe('+$0');
+    expect(formatSignedMoney(0, 'en-US')).toBe('+$0.00');
+    expect(formatSignedMoney(-0.001, 'en-US')).toBe('+$0.00');
   });
 });

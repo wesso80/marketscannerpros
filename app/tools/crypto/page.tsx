@@ -12,7 +12,7 @@ import CryptoFeedStatusNotes from '@/components/CryptoFeedStatusNotes';
 import Link from 'next/link';
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import { usePolling } from '@/hooks/usePolling';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import FreeLoading from '@/components/free/Loading';
 import { useUserTier, canAccessCryptoCommandCenter } from '@/lib/useUserTier';
@@ -149,6 +149,14 @@ function CryptoCommandCenterPaid({ embedded = false }: { embedded?: boolean }) {
 function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }) {
   const { tier, isAdmin, isLoading: tierLoading } = useUserTier();
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const selectSection = (section: Section) => {
+    setActiveSection(section);
+    const query = new URLSearchParams(searchParams.toString());
+    query.set('section', section === 'market' ? 'heatmap' : section);
+    if (embedded) query.set('tab', 'crypto-command');
+    router.push(`${embedded ? '/tools/explorer' : '/tools/crypto'}?${query}`, { scroll: false });
+  };
   const [activeSection, setActiveSection] = useState<Section>('overview');
   const [logTab, setLogTab] = useState<LogTab>('alerts');
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
@@ -156,8 +164,7 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
-    const sectionParam = searchParams.get('section');
-    if (!sectionParam) return;
+    const sectionParam = searchParams.get('section') || (searchParams.get('tab') === 'heatmap' ? 'heatmap' : 'overview');
 
     const sectionMap: Record<string, Section> = {
       heatmap: 'market',
@@ -473,13 +480,13 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
     {marketData?.market && <MarketSparkline values={(marketData.market.sparkline || []).map((p: {value:number})=>p.value)} title="Total crypto market cap"/>}
     {!morningDecision.dataComplete && <p className="rounded border border-amber-400/30 p-2 text-xs text-amber-300">{marketText(morningDecision.hardBlocks.join(' · '))}</p>}
     <button type="button" onClick={() => void fetchOverview()} className="min-h-10 text-sm underline">Refresh evidence</button>
-    <CollapsibleSection title="Market evidence" summary={marketText(morningDecision.breadthLabel)}>
+    <CollapsibleSection key={searchParams.get("section") || searchParams.get("tab")} open={Boolean(searchParams.get("section")) || searchParams.get("tab") === "heatmap"} title="Market evidence" summary={marketText(morningDecision.breadthLabel)}>
       <MarketMetrics items={[
         {label:'Risk state',value:morningDecision.riskState},{label:'Leadership',value:morningDecision.leadership},
         {label:'Liquidity',value:morningDecision.liquidity},{label:'Volatility',value:morningDecision.volatility},
       ]}/>
       <p className="my-3 text-xs">{marketText(morningDecision.explanation)}</p>
-      <label className="text-sm">Explore <select className="ml-2 rounded border border-slate-700 bg-slate-900 p-2" value={activeSection} onChange={e=>setActiveSection(e.target.value as Section)}>{sectionItems.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+      <label className="text-sm">Explore <select className="ml-2 rounded border border-slate-700 bg-slate-900 p-2" value={activeSection} onChange={e=>selectSection(e.target.value as Section)}>{sectionItems.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
       <div className="mt-3"><Suspense fallback={<WidgetSkeleton/>}>{renderPrimaryWidget()}</Suspense></div>
     </CollapsibleSection>
     <CollapsibleSection title="Snapshot notes" summary={`${logs.data.length} feed notes`}>
@@ -622,7 +629,7 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
                     <button
                       type="button"
                       key={item.id}
-                      onClick={() => setActiveSection(item.id)}
+                      onClick={() => selectSection(item.id)}
                       className={`rounded-md border px-2 py-1.5 text-left transition-colors ${
                         activeSection === item.id
                           ? 'border-emerald-400/50 bg-emerald-500/15 text-emerald-200'

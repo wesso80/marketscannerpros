@@ -186,7 +186,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
     <div className="space-y-3">
       <h2 className="text-xl font-semibold">Backtest</h2>
       <p data-layout-verdict className="text-sm text-slate-300">{error ? 'The simulation could not be completed.' : loading ? `Historical simulation running for ${symbol}.` : result ? `${symbol}: ${n(result.totalTrades)} simulated trades, ${fmtPct(n(result.totalReturn))} historical return.` : 'No simulation has been run in this view.'}</p>
-      <p className="text-xs text-slate-400">General information only, not financial advice.</p>
+      {!embeddedInWorkspace && <p className="text-xs text-slate-400">General information only, not financial advice.</p>}
 
       <UpgradeGate requiredTier="pro" currentTier={tier} feature="Strategy backtesting">
         {/* ── Mode Toggle ──────────────────────────────────────── */}
@@ -222,7 +222,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
             {embeddedInWorkspace && (
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/60 pb-3">
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Backtest method</div>
+                  <div className="text-[10px] font-bold tracking-[0.12em] text-slate-500">Backtest method</div>
                   <div className="mt-0.5 text-xs text-slate-400">Choose a method and review the historical simulation.</div>
                 </div>
                 <div className="flex gap-1">
@@ -247,7 +247,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
             {/* Top row: Symbol + Timeframe */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div>
-                <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Symbol</label>
+                <label className="text-[10px] text-slate-500 tracking-wider block mb-1">Symbol</label>
                 <input
                   value={symbol}
                   onChange={e => handleSymbolChange(e.target.value)}
@@ -255,7 +255,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                 />
               </div>
               <div>
-                <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Timeframe</label>
+                <label className="text-[10px] text-slate-500 tracking-wider block mb-1">Timeframe</label>
                 <select
                   value={timeframe}
                   onChange={e => setTimeframe(e.target.value)}
@@ -265,7 +265,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                 </select>
               </div>
               <div>
-                <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Start</label>
+                <label className="text-[10px] text-slate-500 tracking-wider block mb-1">Start</label>
                 <input
                   type="date"
                   value={startDate}
@@ -274,7 +274,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                 />
               </div>
               <div>
-                <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">End</label>
+                <label className="text-[10px] text-slate-500 tracking-wider block mb-1">End</label>
                 <input
                   type="date"
                   value={endDate}
@@ -288,7 +288,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
             {mode === 'strategy' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Edge Group</label>
+                  <label className="text-[10px] text-slate-500 tracking-wider block mb-1">Edge Group</label>
                   <select
                     value={edgeGroup}
                     onChange={e => handleEdgeGroupChange(e.target.value as EdgeGroupId)}
@@ -298,7 +298,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Strategy</label>
+                  <label className="text-[10px] text-slate-500 tracking-wider block mb-1">Strategy</label>
                   <select
                     value={strategy}
                     onChange={e => setStrategy(e.target.value)}
@@ -320,7 +320,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
             {mode === 'scanner' && (
               <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                 <div>
-                  <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Proxy threshold</label>
+                  <label className="text-[10px] text-slate-500 tracking-wider block mb-1">Proxy threshold</label>
                   <input
                     type="number"
                     min={50} max={95} step={5}
@@ -330,7 +330,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">ATR Invalidation ×</label>
+                  <label className="text-[10px] text-slate-500 tracking-wider block mb-1">ATR Invalidation ×</label>
                   <input
                     type="number"
                     min={0.5} max={5} step={0.5}
@@ -340,7 +340,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">ATR Key Level ×</label>
+                  <label className="text-[10px] text-slate-500 tracking-wider block mb-1">ATR Key Level ×</label>
                   <input
                     type="number"
                     min={0.5} max={10} step={0.5}
@@ -350,7 +350,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Max Bars</label>
+                  <label className="text-[10px] text-slate-500 tracking-wider block mb-1">Max Bars</label>
                   <input
                     type="number"
                     min={5} max={100} step={5}
@@ -376,7 +376,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
             {/* Capital + Run */}
             <div className="flex items-end gap-3">
               <div>
-                <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Capital ($)</label>
+                <label className="text-[10px] text-slate-500 tracking-wider block mb-1">Capital ($)</label>
                 <input
                   type="number"
                   min={1000} step={1000}
@@ -470,7 +470,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
 
                 {/* Extended metrics */}
                 <Card>
-                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Performance Detail</h3>
+                  <h3 className="text-xs font-semibold text-slate-400 tracking-wider mb-3">Performance Detail</h3>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-y-3 gap-x-4 text-xs">
                     <MetricRow label="Total Trades" value={n(result.totalTrades).toString()} />
                     <MetricRow label="Winners" value={n(result.winningTrades).toString()} color="text-emerald-400" />
@@ -503,7 +503,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                 {/* Data coverage */}
                 {result.dataCoverage && (
                   <Card>
-                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Data Coverage</h3>
+                    <h3 className="text-xs font-semibold text-slate-400 tracking-wider mb-2">Data Coverage</h3>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs text-slate-400">
                       <div>Applied: <span className="text-white">{result.dataCoverage.applied.startDate} → {result.dataCoverage.applied.endDate}</span></div>
                       <div>Bars: <span className="text-white">{result.dataCoverage.bars}</span></div>
@@ -517,7 +517,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
             {/* ─── EQUITY CURVE ─────────────────────────────── */}
             {(!showTabbedResults || resultTab === equityLabel) && (
               <Card>
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">{equityLabel}</h3>
+                <h3 className="text-xs font-semibold text-slate-400 tracking-wider mb-3">{equityLabel}</h3>
                 {result.equityCurve && result.equityCurve.length > 1 ? (
                   <EquityCurveChart data={result.equityCurve} />
                 ) : (
@@ -529,7 +529,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
             {/* ─── TRADES ───────────────────────────────────── */}
             {(!showTabbedResults || resultTab === 'Trades') && (
               <Card>
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                <h3 className="text-xs font-semibold text-slate-400 tracking-wider mb-3">
                   Trade History ({result.trades?.length || 0} trades)
                 </h3>
                 {result.trades && result.trades.length > 0 ? (
@@ -544,7 +544,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
             {(!showTabbedResults || resultTab === 'Diagnostics') && result.diagnostics && (
               <Card>
                 <div className="flex items-center gap-3 mb-3">
-                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Strategy Diagnostics</h3>
+                  <h3 className="text-xs font-semibold text-slate-400 tracking-wider">Strategy Diagnostics</h3>
                   <Badge
                     label={`${result.diagnostics.score}/100`}
                     color={result.diagnostics.score >= 70 ? 'var(--msp-bull)' : result.diagnostics.score >= 40 ? 'var(--msp-warn)' : 'var(--msp-bear)'}
@@ -582,7 +582,7 @@ function MetricCard({ label, value, color }: { label: string; value: string; col
   return (
     <Card>
       <div className="text-center">
-        <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{label}</div>
+        <div className="text-[10px] text-slate-500 tracking-wider mb-1">{label}</div>
         <div className={`text-lg font-bold ${color || 'text-white'}`}>{value}</div>
       </div>
     </Card>
@@ -650,7 +650,7 @@ function TradeTable({ trades }: { trades: BacktestTrade[] }) {
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="border-b border-slate-700/50 text-[10px] uppercase text-slate-500 tracking-wider">
+            <tr className="border-b border-slate-700/50 text-[10px] text-slate-500 tracking-wider">
               <th className="py-2 px-2 text-left">Side</th>
               <th className="py-2 px-2 text-left">Entry</th>
               <th className="py-2 px-2 text-left">Exit</th>

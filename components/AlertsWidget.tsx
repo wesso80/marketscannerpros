@@ -72,6 +72,7 @@ interface AlertHistory {
 interface AlertsWidgetProps {
   className?: string;
   compact?: boolean;
+  creationOnly?: boolean;
   onCreateAlert?: (symbol: string, currentPrice: number) => void;
   prefilledSymbol?: string;
 }
@@ -79,6 +80,7 @@ interface AlertsWidgetProps {
 export default function AlertsWidget({
   className = '',
   compact = false,
+  creationOnly = false,
   onCreateAlert,
   prefilledSymbol,
 }: AlertsWidgetProps) {
@@ -87,7 +89,7 @@ export default function AlertsWidget({
   const [quota, setQuota] = useState<AlertQuota | null>(null);
   const [history, setHistory] = useState<AlertHistory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
+  const [showCreate, setShowCreate] = useState(creationOnly);
   const [activeTab, setActiveTab] = useState<'basic' | 'strategy' | 'smart' | 'triggered'>('basic');
   const [showSmartCreate, setShowSmartCreate] = useState(false);
   const [loggingHistoryId, setLoggingHistoryId] = useState<string | null>(null);
@@ -534,11 +536,11 @@ export default function AlertsWidget({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xl">🔔</span>
-            <h3 className="text-lg font-semibold text-white">Alert Intelligence</h3>
+            <h3 className="text-lg font-semibold text-white">{creationOnly ? 'Create notification' : 'Alert Intelligence'}</h3>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-slate-400">
-              {quota?.used || 0}/{quota?.max || 3} alerts
+              {creationOnly ? `${quota?.used || 0} saved notifications` : `${quota?.used || 0}/${quota?.max || 3} alerts`}
             </span>
             <button
               onClick={() => setShowCreate(!showCreate)}
@@ -550,8 +552,10 @@ export default function AlertsWidget({
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-4 mt-4 overflow-x-auto [&>button]:flex-shrink-0">
+        {creationOnly ? <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Notification rule type">
+          <button type="button" className="min-h-10 rounded border border-slate-700 px-3 text-sm" aria-pressed={activeTab==='basic'} onClick={()=>{setActiveTab('basic');setShowCreate(true);}}>Price rule</button>
+          <button type="button" className="min-h-10 rounded border border-slate-700 px-3 text-sm" aria-pressed={activeTab==='smart'} onClick={()=>{setActiveTab('smart');setShowCreate(false);setShowSmartCreate(true);}}>Market condition</button>
+        </div> : <div className="flex gap-4 mt-4 overflow-x-auto [&>button]:flex-shrink-0">
           <button
             onClick={() => setActiveTab('basic')}
             className={`text-sm pb-2 border-b-2 transition-colors ${
@@ -592,7 +596,8 @@ export default function AlertsWidget({
           >
             Triggered ({history.length})
           </button>
-        </div>
+        </div>}
+
       </div>
 
       {/* Create Alert Form */}
@@ -708,7 +713,7 @@ export default function AlertsWidget({
 
       {/* Content */}
       <div className="p-4 max-h-96 overflow-y-auto">
-        {activeTab === 'basic' ? (
+        {activeTab === 'basic' ? (creationOnly ? null : (
           // Basic Alerts Tab
           (() => {
             return basicAlerts.length === 0 ? (
@@ -780,7 +785,7 @@ export default function AlertsWidget({
             </div>
           );
           })()
-        ) : activeTab === 'smart' ? (
+        )) : activeTab === 'smart' ? (
           // Smart Alerts Tab
           <div>
             {/* Smart Alert Create Form */}
@@ -1061,7 +1066,7 @@ export default function AlertsWidget({
             )}
 
             {/* Smart Alerts List */}
-            {(() => {
+            {!creationOnly && (() => {
               return contextualSmartAlerts.length === 0 ? (
                 isPaidTier(tier) ? (
                   <div className="text-center py-6">

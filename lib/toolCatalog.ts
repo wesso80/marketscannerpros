@@ -40,7 +40,7 @@ const metadata: Record<string, Partial<ToolPage>> = {
   "/tools/golden-egg": {
     key: "golden-egg",
     description: "Single-symbol research",
-    icon: "GE",
+    icon: "SY",
     tier: "pro",
   },
   "/tools/terminal?tab=time-scanner": {

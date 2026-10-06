@@ -1,7 +1,16 @@
 /** Display labels only: identifiers, strategy inputs and measured scores stay unchanged. */
 export function learningText(value: string | null | undefined): string {
   if (!value) return 'Not collected';
-  return value.replace(/dealers short gamma/gi, 'dealer negative gamma positioning').replace(/Golden Egg/g, 'Symbol').replace(/Command Center/g, 'Overview')
+  return value.replace(/^[\p{Extended_Pictographic}\uFE0F\u200D\s]+/u, '')
+    .replace(/Brain Signal Replay \(Decision Packets\)/g, 'Recorded signal replay')
+    .replace(/ AIO \(Score 5\+\)/g, ' (score at least 5)')
+    .replace(/Bias (\d+)\+/g, 'alignment at least $1')
+    .replace(/BBWP < 20/g, 'volatility below its 20th historical percentile')
+    .replace(/BBWP > 70/g, 'volatility above its 70th historical percentile')
+    .replace(/DVE shifts to expansion regime with increasing BBWP/g, 'Volatility increases relative to its history')
+    .replace(/DVE regime is Expansion/g, 'Volatility is expanding')
+    .replace(/BBWP/g, 'historical volatility percentile')
+    .replace(/dealers short gamma/gi, 'dealer negative gamma positioning').replace(/Golden Egg/g, 'Symbol').replace(/Command Center/g, 'Overview')
     .replace(/\bBullish\/bearish\b/gi, 'Upward/downward')
     .replace(/\bbullish\b/gi, 'upward').replace(/\bbearish\b/gi, 'downward')
     .replace(/\blongs?\b/gi, 'upside cases').replace(/\bshorts?\b/gi, 'downside cases')

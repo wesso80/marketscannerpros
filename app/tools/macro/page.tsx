@@ -368,7 +368,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
   const incompleteFeeds = [!completeAssessment && 'Required macro observations', commoditiesError && 'Commodities', correlationError && 'Cross-asset context', spyPCRError && 'Options positioning'].filter(Boolean);
 
   if (!isAdmin && tier !== 'pro' && tier !== 'pro_trader') return <main id="macro-summary" className="space-y-4 p-4">
-    <h1 className="text-2xl font-semibold">{FREE_COPY.macro}</h1>
+    {embeddedInDashboard ? <h2 className="!text-lg font-semibold">{FREE_COPY.macro}</h2> : <h1 className="text-2xl font-semibold">{FREE_COPY.macro}</h1>}
     {tierLoading ? <p>{FREE_COPY.loading}</p> : !data ? <p data-verdict-box className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-amber-200">Macro observations not collected for this view.</p> : <div className="grid gap-4 sm:grid-cols-2">
       {[[FREE_COPY.treasury, data.rates.treasury10y], [FREE_COPY.inflation, data.inflation.inflationRate]].map(([label, observation]) => {
         const item = observation as IndicatorValue;
@@ -381,7 +381,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
 
   return (
     <div className={`${embeddedInDashboard ? '' : 'min-h-screen'} bg-[var(--msp-bg)] text-white`}>
-      {embeddedInDashboard && <h1 className="text-2xl font-semibold">Macro</h1>}
+      {embeddedInDashboard && <h2 className="!text-lg font-semibold">Macro</h2>}
       {!embeddedInDashboard && (<>
         <section
           className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
@@ -463,7 +463,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
         ) : data && gate ? (
           <>
             <section data-global-regime className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
-              <h2 className="text-sm text-slate-400">Published macro observations</h2>
+              <p className="text-xs text-slate-400">Published macro observations</p>
               <div data-verdict-box className="rounded-xl border border-white/10 p-3">
                 <p className="text-3xl font-semibold" style={{ color: gate.permission === 'yes' ? 'var(--msp-bull)' : gate.permission === 'conditional' ? 'var(--msp-warn)' : 'var(--msp-bear)' }}>{assessment}</p>
                 {completeAssessment && <p className="text-sm text-white/70">Score {gate.score >= 0 ? '+' : ''}{gate.score} · {macroLabel(gate.riskState)}</p>}
@@ -474,7 +474,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   {label: 'Rates', value: data.rates.treasury10y.value, format: (n: number) => toPct(n)},
                   {label: 'Curve', value: data.rates.yieldCurve.value, format: (n: number) => toPct(n)},
                   {label: 'Inflation', value: data.inflation.inflationRate.value, format: (n: number) => toPct(n, 1)},
-                  {label: 'Growth', value: data.growth.realGDP.value, format: (n: number) => `$${(n / 1000).toFixed(1)}T`},
+                  {label: 'US real GDP (trillion USD)', value: data.growth.realGDP.value, format: (n: number) => `$${(n / 1000).toFixed(1)}T`},
                 ].filter(item => typeof item.value === 'number' && Number.isFinite(item.value)).map(item => <div data-macro-tile key={item.label}><StatTile label={item.label} value={item.format(item.value!)} /></div>)}
               </div>
               {incompleteFeeds.length > 0 && <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-200">Not collected: {incompleteFeeds.join(' · ')}.</p>}
@@ -500,7 +500,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   const rangeY = maxY - minY || 1;
                   const w = 400;
                   const h = 120;
-                  const pad = { l: 40, r: 20, t: 10, b: 25 };
+                  const pad = { l: 52, r: 28, t: 24, b: 25 };
                   const pw = w - pad.l - pad.r;
                   const ph = h - pad.t - pad.b;
                   const svgPoints = points.map((p, i) => ({
@@ -522,10 +522,10 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                         {/* curve line */}
                         <path d={pathD} fill="none" stroke={inverted ? 'var(--msp-bear)' : 'var(--msp-warn)'} strokeWidth="2" />
                         {/* dots + labels */}
-                        {svgPoints.map(p => (
+                        {svgPoints.map((p, index) => (
                           <g key={p.label}>
                             <circle cx={p.x} cy={p.y} r="4" fill={inverted ? 'var(--msp-bear)' : 'var(--msp-warn)'} />
-                            <text x={p.x} y={p.y - 8} textAnchor="middle" fill="white" fontSize="10" fontWeight="600">{p.value.toFixed(2)}%</text>
+                            <text x={p.x + (index === 0 ? 6 : index === svgPoints.length - 1 ? -6 : 0)} y={p.y - 8} textAnchor={index === 0 ? "start" : index === svgPoints.length - 1 ? "end" : "middle"} fill="white" fontSize="10" fontWeight="600">{p.value.toFixed(2)}%</text>
                             <text x={p.x} y={h - 5} textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="10">{p.label}</text>
                           </g>
                         ))}
