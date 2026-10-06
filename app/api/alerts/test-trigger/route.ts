@@ -136,6 +136,7 @@ export async function GET(_req: NextRequest) {
 
     // 8. Record in history (same as real flow). Both price columns get this quote.
     const historyPrice = historyPriceInsert('$3');
+    let historyRecorded = false;
     try {
       await q(
         `INSERT INTO alert_history (alert_id, workspace_id, triggered_at, ${historyPrice.columns}, condition_met,
@@ -143,6 +144,7 @@ export async function GET(_req: NextRequest) {
          VALUES ($1, $2, NOW(), ${historyPrice.values}, $4, 'AAPL', 'price_below', 99999, $5, 'email')`,
         [alertId, session.workspaceId, price, `AAPL below $99999 (now $${price!.toFixed(2)})`, !!emailResult],
       );
+      historyRecorded = true;
       step('✅ Alert history recorded');
     } catch (err: any) {
       console.error(`[alert-test] Failed to insert alert_history for AAPL (${alertId}). The trigger was not recorded:`, err);
@@ -154,10 +156,10 @@ export async function GET(_req: NextRequest) {
     step('✅ Test alert cleaned up');
 
     // 10. Summary
-    const success = !!emailResult;
+    const success = !!emailResult && historyRecorded;
     step(success
       ? `🎉 END-TO-END TEST PASSED — check ${email} for the test alert email`
-      : '❌ TEST FAILED — email was not sent, see steps above');
+      : `❌ TEST FAILED — ${emailResult ? 'alert history was not recorded' : 'email was not sent'}, see steps above`);
 
     return NextResponse.json({ success, log, email, price, emailId: emailResult });
   } catch (err: any) {

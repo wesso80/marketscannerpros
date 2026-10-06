@@ -606,8 +606,9 @@ async function triggerSmartAlert(alert: SmartAlert, result: CheckResult) {
     userEmail = userResult[0]?.email || null;
   }
 
-  // Record in history. Same value in trigger_price and triggered_price.
-  const historyPrice = historyPriceInsert('$3');
+  // result.value is a metric (Fear & Greed, funding, ratio), not a quote.
+  // trigger_price stays NULL. The metric stays in triggered_price because that column is NOT NULL.
+  const historyPrice = historyPriceInsert('NULL', '$3');
   await q(
     `INSERT INTO alert_history (
       alert_id, workspace_id, triggered_at, ${historyPrice.columns},

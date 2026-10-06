@@ -27,17 +27,28 @@ import { GET as historyGet } from '@/app/api/alerts/history/route';
 import { GET as recentGet } from '@/app/api/alerts/recent/route';
 import { GET as unreadGet } from '@/app/api/alerts/unread/route';
 
-/** What Postgres returns for a reader that COALESCE's the two price columns. */
-function priceFromReaderSql(sql: string, stored: { trigger_price: number | null; triggered_price: number | null }) {
-  const coalesced = stored.trigger_price ?? stored.triggered_price;
+const PRICE_TYPES = ['price_above', 'price_below', 'percent_change_up', 'percent_change_down'];
+
+/** What Postgres returns for historyPriceSelect: price types fall back, other types do not, and 0 is null. */
+function displayedPrice(conditionType: string, stored: { trigger_price: number | null; triggered_price: number | null }) {
+  if (PRICE_TYPES.includes(conditionType)) {
+    if (stored.trigger_price != null) return stored.trigger_price;
+    if (stored.triggered_price == null || stored.triggered_price === 0) return null;
+    return stored.triggered_price;
+  }
+  return stored.trigger_price;
+}
+
+function priceFromReaderSql(sql: string, stored: { trigger_price: number | null; triggered_price: number | null; condition_type: string }) {
+  const shown = displayedPrice(stored.condition_type, stored);
   const row: Record<string, unknown> = {
     id: 'h1',
     alert_id: 'a1',
     symbol: 'QNT',
     condition_met: 'QNT crossed above $80',
-    condition: 'price_above',
+    condition: stored.condition_type,
     target_price: 80,
-    condition_type: 'price_above',
+    condition_type: stored.condition_type,
     condition_value: 80,
     triggered_at: '2026-10-06T00:00:00.000Z',
     notification_sent: false,
@@ -47,8 +58,13 @@ function priceFromReaderSql(sql: string, stored: { trigger_price: number | null;
     alert_name: 'QNT level',
     alert_active: false,
   };
-  if (/COALESCE\(\s*(?:h\.)?trigger_price\s*,\s*(?:h\.)?triggered_price\s*\)\s+AS\s+trigger_price/i.test(sql)) row.trigger_price = coalesced;
-  if (/COALESCE\(\s*(?:h\.)?trigger_price\s*,\s*(?:h\.)?triggered_price\s*\)\s+AS\s+triggered_price/i.test(sql)) row.triggered_price = coalesced;
+  const cast = String.raw`::float8 AS`;
+  if (new RegExp(String.raw`CASE WHEN (?:h\.)?condition_type IN \([^)]*\) THEN COALESCE\(\s*(?:h\.)?trigger_price\s*,\s*NULLIF\(\s*(?:h\.)?triggered_price\s*,\s*0\s*\)\s*\) ELSE (?:h\.)?trigger_price END\)${cast} trigger_price`, 'i').test(sql)) {
+    row.trigger_price = shown;
+  }
+  if (new RegExp(String.raw`CASE WHEN (?:h\.)?condition_type IN \([^)]*\) THEN COALESCE\(\s*(?:h\.)?trigger_price\s*,\s*NULLIF\(\s*(?:h\.)?triggered_price\s*,\s*0\s*\)\s*\) ELSE (?:h\.)?trigger_price END\)${cast} triggered_price`, 'i').test(sql)) {
+    row.triggered_price = shown;
+  }
   return row;
 }
 
@@ -62,14 +78,23 @@ describe('alert_history price columns', () => {
     mocks.email.mockResolvedValue({ action: 'sent', reason: 'each', providerId: 'email-1' });
   });
 
-  it('builds one insert placeholder and a coalesce select', () => {
+  it('builds insert placeholders and a price-type select cast to float8', () => {
     expect(historyPriceInsert('$6')).toEqual({
       columns: 'trigger_price, triggered_price',
       values: '$6, $6',
     });
-    expect(historyPriceSelect('h', 'trigger_price')).toBe('COALESCE(h.trigger_price, h.triggered_price) AS trigger_price');
-    expect(historyPriceSelect('', 'trigger_price')).toBe('COALESCE(trigger_price, triggered_price) AS trigger_price');
-    expect(historyPriceSelect('h', 'triggered_price')).toBe('COALESCE(h.trigger_price, h.triggered_price) AS triggered_price');
+    expect(historyPriceInsert('NULL', '$3')).toEqual({
+      columns: 'trigger_price, triggered_price',
+      values: 'NULL, $3',
+    });
+    expect(historyPriceInsert('NULLIF($6, 0)', '$6')).toEqual({
+      columns: 'trigger_price, triggered_price',
+      values: 'NULLIF($6, 0), $6',
+    });
+    const aliased = historyPriceSelect('h', 'trigger_price');
+    expect(aliased).toBe("(CASE WHEN h.condition_type IN ('price_above', 'price_below', 'percent_change_up', 'percent_change_down') THEN COALESCE(h.trigger_price, NULLIF(h.triggered_price, 0)) ELSE h.trigger_price END)::float8 AS trigger_price");
+    expect(historyPriceSelect('', 'trigger_price')).toBe("(CASE WHEN condition_type IN ('price_above', 'price_below', 'percent_change_up', 'percent_change_down') THEN COALESCE(trigger_price, NULLIF(triggered_price, 0)) ELSE trigger_price END)::float8 AS trigger_price");
+    expect(historyPriceSelect('h', 'triggered_price')).toContain('::float8 AS triggered_price');
   });
 
   it('test-trigger writes the quote to both price columns', async () => {
@@ -86,6 +111,8 @@ describe('alert_history price columns', () => {
 
     const res = await testTrigger(new NextRequest('https://example.test/api/alerts/test-trigger'));
     expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
     const insert = historyInsert(mocks.q.mock.calls);
     expect(insert).toBeTruthy();
     const sql = insert![0].replace(/\s+/g, ' ');
@@ -107,6 +134,8 @@ describe('alert_history price columns', () => {
     const err = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       const body = await (await testTrigger(new NextRequest('https://example.test/api/alerts/test-trigger'))).json();
+      expect(body.success).toBe(false);
+      expect(body.log.join('\n')).toContain('alert history was not recorded');
       expect(body.log.join('\n')).toContain('History insert failed');
       expect(body.log.join('\n')).not.toMatch(/non-fatal/i);
       expect(err.mock.calls.some((call) => String(call[0]).includes('Failed to insert alert_history for AAPL (alert-test)') && call[1] === dbError)).toBe(true);
@@ -116,7 +145,7 @@ describe('alert_history price columns', () => {
     }
   });
 
-  it('smart-check writes the fired value to both price columns', async () => {
+  it('smart-check stores the metric in triggered_price and leaves trigger_price null', async () => {
     mocks.q.mockImplementation(async (sql: string) => {
       if (sql.includes('FROM alerts') && sql.includes('is_smart_alert')) {
         return [{
@@ -137,8 +166,14 @@ describe('alert_history price columns', () => {
     expect(body.triggeredIds).toEqual(['smart-1']);
     const insert = historyInsert(mocks.q.mock.calls);
     expect(insert![0].replace(/\s+/g, ' ')).toContain('trigger_price, triggered_price');
-    expect(insert![0]).toContain('$3, $3');
+    expect(insert![0]).toContain('NULL, $3');
+    expect(insert![0]).not.toContain('$3, $3');
     expect(insert![1][2]).toBe(90);
+
+    const stored = { trigger_price: null, triggered_price: 90, condition_type: 'greed_extreme' };
+    mocks.q.mockImplementation(async (sql: string) => [priceFromReaderSql(sql, stored)]);
+    const history = await (await historyGet(new NextRequest('https://example.test/api/alerts/history'))).json();
+    expect(history.history[0].trigger_price).toBeNull();
     vi.unstubAllGlobals();
   });
 
@@ -164,8 +199,34 @@ describe('alert_history price columns', () => {
     expect(body.triggeredIds).toEqual(['sig-1']);
     const insert = historyInsert(mocks.q.mock.calls);
     expect(insert![0].replace(/\s+/g, ' ')).toContain('trigger_price, triggered_price');
-    expect(insert![0]).toContain('$6, $6');
+    expect(insert![0]).toContain('NULLIF($6, 0), $6');
     expect(insert![1][5]).toBe(210.25);
+    vi.unstubAllGlobals();
+  });
+
+  it('signal-check writes null trigger_price when the scan has no price', async () => {
+    mocks.q.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM alerts') && sql.includes('scanner_buy_signal')) {
+        return [{
+          id: 'sig-0', workspace_id: 'ws-1', symbol: 'AAPL', condition_type: 'scanner_buy_signal',
+          condition_value: 65, is_recurring: false, notify_email: false, notify_push: false,
+          name: 'buy', cooldown_minutes: 60, triggered_at: null, last_derivative_value: null,
+          smart_alert_context: null,
+        }];
+      }
+      return [];
+    });
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        results: [{ symbol: 'AAPL', score: 80, direction: 'bullish', signals: { bullish: 4, bearish: 1, neutral: 0 } }],
+      }),
+    })));
+    const body = await (await signalCheck(new NextRequest('https://example.test/api/alerts/signal-check'))).json();
+    expect(body.triggeredIds).toEqual(['sig-0']);
+    const insert = historyInsert(mocks.q.mock.calls);
+    expect(insert![0]).toContain('NULLIF($6, 0), $6');
+    expect(insert![1][5]).toBe(0);
     vi.unstubAllGlobals();
   });
 
@@ -194,11 +255,16 @@ describe('alert_history price columns', () => {
     expect(insert![0].replace(/\s+/g, ' ')).toContain('trigger_price, triggered_price');
     expect(insert![0]).toContain('$6, $6');
     expect(insert![1][5]).toBe(123.45);
+    const sqls = mocks.q.mock.calls.map(([sql]) => String(sql));
+    const insertAt = sqls.findIndex((sql) => sql.includes('INSERT INTO alert_history'));
+    const updateAt = sqls.findIndex((sql) => sql.includes('UPDATE alerts'));
+    expect(insertAt).toBeGreaterThanOrEqual(0);
+    expect(updateAt).toBeGreaterThan(insertAt);
     vi.unstubAllGlobals();
   });
 
-  it('history, recent and unread return the price when only triggered_price is stored', async () => {
-    const stored = { trigger_price: null as number | null, triggered_price: 91 };
+  it('history, recent and unread fall back to triggered_price only for price conditions', async () => {
+    const stored = { trigger_price: null as number | null, triggered_price: 91, condition_type: 'price_above' };
     mocks.q.mockImplementation(async (sql: string) => {
       if (sql.includes('COUNT(*)')) return [{ total_triggers: '1', unacknowledged: '1', last_24h: '1', last_7d: '1' }];
       if (sql.includes('alert_history')) return [priceFromReaderSql(sql, stored)];
@@ -207,6 +273,7 @@ describe('alert_history price columns', () => {
 
     const history = await (await historyGet(new NextRequest('https://example.test/api/alerts/history'))).json();
     expect(history.history[0].trigger_price).toBe(91);
+    expect(String(mocks.q.mock.calls.find(([sql]) => String(sql).includes('FROM alert_history'))![0])).toContain('::float8');
 
     const recent = await (await recentGet(new NextRequest('https://example.test/api/alerts/recent'))).json();
     expect(recent.alerts[0].trigger_price).toBe(91);
@@ -214,5 +281,27 @@ describe('alert_history price columns', () => {
 
     const unread = await (await unreadGet(new NextRequest('https://example.test/api/alerts/unread'))).json();
     expect(unread.alerts[0].trigger_price).toBe(91);
+  });
+
+  it('readers hide a stored 0 and do not show a smart metric as a price', async () => {
+    const zero = { trigger_price: null as number | null, triggered_price: 0, condition_type: 'price_below' };
+    mocks.q.mockImplementation(async (sql: string) => {
+      if (sql.includes('COUNT(*)')) return [{ total_triggers: '1', unacknowledged: '1', last_24h: '1', last_7d: '1' }];
+      if (sql.includes('alert_history')) return [priceFromReaderSql(sql, zero)];
+      return [];
+    });
+    const zeroHistory = await (await historyGet(new NextRequest('https://example.test/api/alerts/history'))).json();
+    expect(zeroHistory.history[0].trigger_price).toBeNull();
+
+    const metric = { trigger_price: null as number | null, triggered_price: 90, condition_type: 'greed_extreme' };
+    mocks.q.mockImplementation(async (sql: string) => {
+      if (sql.includes('alert_history')) return [priceFromReaderSql(sql, metric)];
+      return [];
+    });
+    const recent = await (await recentGet(new NextRequest('https://example.test/api/alerts/recent'))).json();
+    expect(recent.alerts[0].trigger_price).toBeNull();
+    expect(recent.alerts[0].triggered_price).toBeNull();
+    const unread = await (await unreadGet(new NextRequest('https://example.test/api/alerts/unread'))).json();
+    expect(unread.alerts[0].trigger_price).toBeNull();
   });
 });

@@ -240,7 +240,14 @@ async function checkStrategyAlerts(req: NextRequest) {
             }
 
             if (shouldTrigger) {
-              // Update alert as triggered
+              // Record history first. A failed insert leaves the alert active.
+              // Same fill price in both price columns.
+              const historyPrice = historyPriceInsert('$6');
+              await q(`
+                INSERT INTO alert_history (workspace_id, alert_id, symbol, condition_type, condition_value, ${historyPrice.columns}, notification_sent, notification_type)
+                VALUES ($1, $2, $3, $4, $5, ${historyPrice.values}, true, 'strategy')
+              `, [alert.workspace_id, alert.id, symbol, alert.condition_type, alert.condition_value, signal.price]);
+
               await q(`
                 UPDATE alerts 
                 SET triggered_at = NOW(), 
@@ -249,13 +256,6 @@ async function checkStrategyAlerts(req: NextRequest) {
                     is_active = CASE WHEN is_recurring THEN true ELSE false END
                 WHERE id = $1
               `, [alert.id, signal.price]);
-
-              // Record in alert history. Same fill price in both price columns.
-              const historyPrice = historyPriceInsert('$6');
-              await q(`
-                INSERT INTO alert_history (workspace_id, alert_id, symbol, condition_type, condition_value, ${historyPrice.columns}, notification_sent, notification_type)
-                VALUES ($1, $2, $3, $4, $5, ${historyPrice.values}, true, 'strategy')
-              `, [alert.workspace_id, alert.id, symbol, alert.condition_type, alert.condition_value, signal.price]);
 
               // Send notifications
               const alertName = alert.name || `${strategy} Alert`;

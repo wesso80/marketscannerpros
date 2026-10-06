@@ -356,8 +356,9 @@ async function triggerSignalAlert(alert: SignalAlert, result: CheckResult, scan:
     userEmail = userResult[0]?.email || null;
   }
 
-  // Record in history. scan.price is written to both price columns.
-  const historyPrice = historyPriceInsert('$6');
+  // A real scan price is written to both columns. A missing price is NULL in trigger_price;
+  // 0 stays in triggered_price only because that column is NOT NULL.
+  const historyPrice = historyPriceInsert('NULLIF($6, 0)', '$6');
   await q(
     `INSERT INTO alert_history (
       workspace_id, alert_id, symbol, condition_type, condition_value, 
