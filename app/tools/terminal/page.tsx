@@ -21,6 +21,7 @@ import { detectMarketPath, type MarketPath } from '@/lib/terminal/marketPath';
 import CapitalPressureView from '@/components/terminal/CapitalPressureView';
 import TerminalCryptoDesk from '@/components/terminal/TerminalCryptoDesk';
 import { hasCommoditySessionMap } from '@/lib/terminal/futures/cashBridgeMap';
+import { futuresScheduleRangeSummary, terminalHorizonLabel } from '@/lib/terminal/horizonChip';
 
 const OptionsTerminalView = dynamic(() => import('@/components/options-terminal/OptionsTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div> });
 const CryptoTerminalView = dynamic(() => import('@/components/crypto-terminal/CryptoTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div> });
@@ -258,6 +259,15 @@ function marketPathToLegacyAsset(path: MarketPath): 'crypto' | 'equity' {
   return path === 'crypto' ? 'crypto' : 'equity';
 }
 
+function readableCalDate(iso: string | null | undefined, asset: 'crypto' | 'equity'): string | null {
+  if (!iso || Number.isNaN(new Date(iso).getTime())) return null;
+  try {
+    return formatCalDate(iso, asset);
+  } catch {
+    return null;
+  }
+}
+
 function formatCalDate(iso: string, asset: 'crypto' | 'equity'): string {
   const d = new Date(iso);
   const tz = asset === 'crypto' ? 'UTC' : 'America/New_York';
@@ -381,6 +391,7 @@ export default function TerminalPage() {
   const calendar = useCloseCalendar(sym, anchor, horizon);
   const futuresTerminal = useFuturesTerminal(marketPath === 'futures' ? sym : null, futuresAnchorMode, horizon);
   const calData = calendar.data as ForwardCloseCalendar | null;
+  const horizonLabel = calData ? terminalHorizonLabel(calData.horizonDays, readableCalDate(calData.horizonEndISO, asset)) : null;
 
   const isPriorDay = anchor === 'PRIOR_DAY';
   const isEquity = asset === 'equity';
@@ -474,7 +485,7 @@ export default function TerminalPage() {
       {/* -- CLOSE CALENDAR ------------------------------------------- */}
       {tab === 'Close Calendar' && (marketPath === 'futures' ? (
         <div className="min-w-0 space-y-3">
-          <CollapsibleSection title="Schedule range" summary={`Today · ${horizon}d · ${FUTURES_ANCHOR_LABEL[futuresAnchorMode]}`}>
+          <CollapsibleSection title="Schedule range" summary={futuresScheduleRangeSummary(horizon, FUTURES_ANCHOR_LABEL[futuresAnchorMode])}>
             <div className="flex min-w-0 flex-wrap items-end gap-3">
               <div className="min-w-0">
                 <div className="mb-1 text-[11px] uppercase tracking-wider text-slate-500">Anchor</div>
@@ -569,7 +580,7 @@ export default function TerminalPage() {
               <Card>
                 <div className="flex flex-wrap items-center gap-4 text-xs">
                   <span className="text-slate-400">{isPriorDay ? 'Prior Day' : 'Anchor'}: <span className="font-semibold text-slate-200">{formatCalDate(calData.anchorTimeISO, asset)}</span></span>
-                  {!isPriorDay && <span className="text-slate-400">Horizon: <span className="font-semibold text-slate-200">{calData.horizonDays}d ? {formatCalDate(calData.horizonEndISO, asset)}</span></span>}
+                  {!isPriorDay && horizonLabel && <span className="text-slate-400">Horizon: <span className="font-semibold text-slate-200">{horizonLabel}</span></span>}
                   <span className="text-slate-400">Daily+ closes: <span className="font-semibold text-emerald-400">{calData.totalCloseEventsInHorizon}</span></span>
                 </div>
               </Card>
