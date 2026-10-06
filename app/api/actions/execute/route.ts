@@ -266,11 +266,13 @@ async function createAlertDraft(workspaceId: string, payload: Record<string, any
   );
 
   return {
-    kind: 'alert_draft',
+    kind: 'alert_draft' as const,
+    created: true,
     alertId: inserted[0]?.id || null,
     symbol,
     conditionType,
     conditionValue,
+    reason: null,
   };
 }
 
@@ -960,9 +962,9 @@ export async function POST(req: NextRequest) {
     await q(
       `UPDATE operator_action_executions
        SET status = 'completed',
-           mode = $3,
-           result = $4::jsonb,
-           updated_at = NOW()
+         mode = $3,
+         result = $4::jsonb,
+         updated_at = NOW()
        WHERE workspace_id = $1 AND idempotency_key = $2`,
       [
         session.workspaceId,

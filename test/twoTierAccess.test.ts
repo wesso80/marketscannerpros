@@ -151,13 +151,13 @@ describe('Pro gets the allowances the retired Pro Trader plan had', () => {
     expect(AI_DAILY_LIMITS.free).toBe(10);
   });
 
-  it('alert limits: Pro 999, Free stays at 3', () => {
+  it('alert limits: Pro 100, Free stays at 3', () => {
     // Limits live in lib/alerts/planLimits.ts, shared by the API and the Alerts page (TR-25).
     const src = read('lib/alerts/planLimits.ts');
     expect(src).toMatch(/free: 3,/);
-    expect(src).toMatch(/pro: 999,/);
+    expect(src).toMatch(/pro: 100,/);
     expect(src).not.toMatch(/pro: 25/);
-    expect(read('app/api/alerts/route.ts')).toContain("import { ALERT_LIMITS } from '@/lib/alerts/planLimits';");
+    expect(read('app/api/alerts/route.ts')).toContain("import { ALERT_LIMITS, alertLimitReachedPayload } from '@/lib/alerts/planLimits';");
   });
 
   it('tool catalog / workflows only know Free and Pro', () => {

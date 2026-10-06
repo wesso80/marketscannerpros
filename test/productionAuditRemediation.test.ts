@@ -96,7 +96,9 @@ describe('2026-09-21 production audit remediations', () => {
     const account = read('app/account/page.tsx');
 
     expect(pricing).toContain("Live with Pro: Global M2, Liquidity Transmission and Market Fragility");
-    expect(pricing).toContain("roadmap modules and are not included as live features today");
+    expect(pricing).not.toContain("roadmap modules and are not included as live features today");
+    expect(pricing).not.toContain("Lead/Lag");
+    expect(pricing).not.toContain("NQ Pressure");
     expect(account).toContain("Production Intelligence (Global M2, Liquidity Transmission, Fragility)");
     expect(pricing).not.toContain("Full Intelligence suite —");
   });

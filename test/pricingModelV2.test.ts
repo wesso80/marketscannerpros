@@ -131,7 +131,7 @@ describe('2026 pricing simplification — single Pro plan', () => {
     // Copy specified by the migration brief.
     expect(src).toContain('Start Free');
     expect(src).toContain('Go Pro');
-    expect(src).toContain('Current Plan');
+    expect(src).toContain('Current plan');
     expect(src).toContain('Explore the platform and see how MarketScannerPros analyses market conditions.');
     expect(src).toContain('Full access to MarketScannerPros');
     // The old third tier must not appear as a customer-facing plan.
