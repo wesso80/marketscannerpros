@@ -93,9 +93,9 @@ describe('layout and flow audit regressions', () => {
     const workflows = read('lib/toolWorkflows.ts');
     const parkedDashboard = read('components/home/TradePermissionDashboard.tsx');
 
-    expect(hero).toContain("Educational scanner, confluence, testing, and review workflow");
+    expect(hero).toContain('Educational research workflow');
     expect(hero).toContain('No brokerage execution. No financial advice.');
-    expect(hero).toContain('Open Scanner Preview');
+    expect(hero).toContain('Open the Scanner');
     expect(hero).not.toContain('/logos/landing-hero.png');
 
     expect(commandHub.indexOf('<Hero />')).toBeLessThan(commandHub.indexOf('<HomePreviewStrip />'));
@@ -103,7 +103,7 @@ describe('layout and flow audit regressions', () => {
     expect(commandHub).not.toContain('Start with the workflow');
     expect(commandHub).not.toContain('guidedPaths');
     expect(commandHub).toContain('Core workflow tools');
-    expect(commandHub).toContain('One research path, four decisions.');
+    expect(commandHub).toContain('One research path, four steps.');
     expect(commandHub).toContain('const workflowSteps = [');
     expect(commandHub).not.toContain('Core Scanners');
     expect(commandHub).not.toContain('v2 Platform Surfaces');
