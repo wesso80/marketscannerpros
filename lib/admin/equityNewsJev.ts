@@ -1,6 +1,7 @@
 import {q} from '@/lib/db';
 import {pgReadBars,pgReadOverview} from '@/lib/marketData/store';
 import {askJev,JevFailure,jevConfigured} from './jevClient';
+import {readJevModuleCalls} from './jevUsage';
 import {CAL_CORE,calibrateField,splitAt,type CalibrationFieldBase} from './calibrationCore';
 /**
  * Equity news verification (jev-news-v1). For each stored catalyst headline, Jev answers four fixed questions from the
@@ -11,7 +12,9 @@ import {CAL_CORE,calibrateField,splitAt,type CalibrationFieldBase} from './calib
  * Admin only. Evidence only: nothing here changes a classification, a packet, or a rule.
  */
 export const NEWS_JEV_RULE='jev-news-v1' as const;
-export const NEWS_JEV={perRun:150,lookbackDays:7,labelAfterDays:2,giveUpAfterDays:14,barsPerSymbol:40,summaryChars:400,cooldownMs:600000} as const;
+export const NEWS_JEV={perRun:150,scoreBatch:10,labelBatch:80,lookbackDays:7,labelAfterDays:2,giveUpAfterDays:14,barsPerSymbol:40,summaryChars:400,cooldownMs:600000,maxCallsPerDay:200} as const;
+/** Scoring slot on the 15-minute cron. The slot key is written only after that slot succeeds. */
+export const NEWS_SCORE_SLOT_MS=60*60*1000;
 export const NEWS_EVENT_TYPES=['earnings','guidance','merger_acquisition','regulatory_legal','product','management','financing','analyst','macro_sector','other'] as const;
 export const NEWS_DIRECTIONS=['positive','negative','neutral'] as const;
 /** Fixed questions. Changing a word starts a new sample (bump NEWS_JEV_RULE). */
@@ -64,15 +67,33 @@ export function newsState(e:PendingEvent,companyName:string|null){
 async function companyName(ticker:string){
  try{const o=await pgReadOverview(ticker);return o?.overview.name??null;}catch{return null;}
 }
-/** Stamps up to perRun unscored headlines from the last lookbackDays. Never throws per row; a missing gateway key stamps nothing. */
-export async function scorePendingNews(now=Date.now(),limit=NEWS_JEV.perRun){
+export type NewsScoreOpts={callsToday?:(now:number)=>Promise<number>};
+/** Redis usage counter for module equity-news, else today's stamps. A missing counter is 0. */
+export async function equityNewsCallsToday(now=Date.now(),read?:(now:number)=>Promise<number>):Promise<number>{
+ if(read)return read(now);
+ const day=new Date(now).toISOString().slice(0,10);
+ try{
+  const n=await readJevModuleCalls(day,'equity-news');
+  if(n!=null)return n;
+ }catch{/* stamp count below */}
+ const rows=await q<{n:number|string}>(`SELECT COUNT(*)::int AS n FROM news_jev_stamps WHERE checked_at >= $1::timestamptz AND (status = 'scored' OR (status = 'unavailable' AND COALESCE(reason, '') <> 'no-key'))`,[`${day}T00:00:00.000Z`]);
+ const n=Number(rows[0]?.n??0);
+ return Number.isFinite(n)?n:0;
+}
+/** Stamps up to `limit` unscored headlines from the last lookbackDays. Stops before askJev once maxCallsPerDay is reached. Never throws per row; a missing gateway key stamps nothing. */
+export async function scorePendingNews(now=Date.now(),limit:number=NEWS_JEV.perRun,opts:NewsScoreOpts={}){
  await ensureNewsJevTable();
  if(!jevConfigured())return {scored:0,unavailable:0,skipped:'no-key' as const};
  const rows=await q<PendingEvent>(`SELECT e.id,e.ticker,e.headline,e.source,e.event_timestamp_utc,e.event_timestamp_et,e.raw_payload FROM catalyst_events e LEFT JOIN news_jev_stamps s ON s.event_id=e.id WHERE s.event_id IS NULL AND e.event_timestamp_utc>=$1 AND e.event_timestamp_utc<=$2 AND e.headline IS NOT NULL ORDER BY e.event_timestamp_utc DESC LIMIT $3`,[new Date(now-NEWS_JEV.lookbackDays*86400000).toISOString(),new Date(now).toISOString(),limit]);
- let scored=0,unavailable=0;
+ let scored=0,unavailable=0,capped=false;
  const names=new Map<string,Promise<string|null>>();
- for(let i=0;i<rows.length;i+=4){
-  await Promise.all(rows.slice(i,i+4).map(async e=>{
+ for(let i=0;i<rows.length;){
+  const used=await equityNewsCallsToday(now,opts.callsToday);
+  if(used>=NEWS_JEV.maxCallsPerDay){capped=true;break;}
+  const room=Math.min(4,NEWS_JEV.maxCallsPerDay-used,rows.length-i);
+  const slice=rows.slice(i,i+room);
+  i+=room;
+  await Promise.all(slice.map(async e=>{
    const t=e.ticker.toUpperCase();
    if(!names.has(t))names.set(t,companyName(t));
    const name=await names.get(t)!;
@@ -88,6 +109,7 @@ export async function scorePendingNews(now=Date.now(),limit=NEWS_JEV.perRun){
    }
   }));
  }
+ if(capped&&scored===0&&unavailable===0)return {scored,unavailable,skipped:'cap' as const};
  return {scored,unavailable,skipped:null};
 }
 /** ET calendar date of the event; a headline after the 4pm close still belongs to that ET day, and its next bar is the following session. */
@@ -157,9 +179,34 @@ export async function runNewsJevDaily(now=Date.now()){
  const labelling=await labelNewsOutcomes(now).catch(e=>{console.error('[news-jev] labelling failed',e);return {labelled:0,waiting:0,noBars:0,error:'labelling failed'};});
  return {scoring,labelling};
 }
-/** Same step behind a once-per-UTC-day key, for a cron that runs every 15 minutes (the evening cron is skipped while ADMIN_DISCOVERY_ONLY is on). */
-export async function runNewsJevDailyOnce(redis:{set:(key:string,value:string,opts:{nx:true;ex:number})=>Promise<unknown>},now=Date.now()){
- const day=new Date(now).toISOString().slice(0,10);
- if(!await redis.set(`admin:equity-news-jev:day:${day}`,'done',{nx:true,ex:36*3600}))return {ok:true,skipped:true as const};
- return {ok:true,skipped:false as const,...(await runNewsJevDaily(now))};
+type NewsRedis={
+ set:(key:string,value:string,opts:{nx:true;ex:number})=>Promise<unknown>;
+ get?:(key:string)=>Promise<unknown>;
+};
+const newsDayKey=(now:number)=>`admin:equity-news-jev:day:${new Date(now).toISOString().slice(0,10)}`;
+const newsSlotKey=(now:number)=>`admin:equity-news-jev:slot:${Math.floor(now/NEWS_SCORE_SLOT_MS)}`;
+/**
+ * 15-minute cron step (arca-cycle) while the evening job is discovery-skipped.
+ * Labelling runs every call. Scoring runs at most once per hour, in a small batch,
+ * and only while the daily cap has room. The day key and the slot key are written
+ * after a successful pass. A throw leaves both unset, so the next tick retries.
+ */
+export async function runNewsJevDailyOnce(redis:NewsRedis,now=Date.now(),opts:NewsScoreOpts={}){
+ let labelling:{labelled:number;waiting:number;noBars:number;error?:string};
+ let labelFailed=false;
+ try{labelling=await labelNewsOutcomes(now,NEWS_JEV.labelBatch);}
+ catch(e){labelFailed=true;console.error('[news-jev] labelling failed',e);labelling={labelled:0,waiting:0,noBars:0,error:'labelling failed'};}
+ const slot=newsSlotKey(now);
+ const slotTaken=redis.get?await redis.get(slot):null;
+ if(slotTaken)return {ok:!labelFailed,skipped:false as const,scoring:{scored:0,unavailable:0,skipped:'slot' as const},labelling};
+ let scoring:{scored:number;unavailable:number;skipped:'no-key'|'cap'|'error'|null};
+ let scoreFailed=false;
+ try{scoring=await scorePendingNews(now,NEWS_JEV.scoreBatch,opts);}
+ catch(e){scoreFailed=true;console.error('[news-jev] scoring failed',e);scoring={scored:0,unavailable:0,skipped:'error'};}
+ const succeeded=!labelFailed&&!scoreFailed&&scoring.skipped!=='error'&&scoring.skipped!=='no-key';
+ if(succeeded){
+  await redis.set(slot,'done',{nx:true,ex:Math.ceil(NEWS_SCORE_SLOT_MS/1000)+3600});
+  await redis.set(newsDayKey(now),'done',{nx:true,ex:36*3600});
+ }
+ return {ok:succeeded,skipped:false as const,scoring,labelling};
 }

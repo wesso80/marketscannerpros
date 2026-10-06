@@ -61,6 +61,8 @@ describe('schedule table',()=>{
   expect(byName['refresh-fundamentals']).toMatchObject({schedule:'0 22 * * 1-5',body:{maxAgeHours:20}});
   expect(byName['journal-auto-close']).toMatchObject({schedule:'2-59/5 * * * *',path:'/api/jobs/journal-auto-close?limit=200'});
   expect(byName['upe-crcs-hourly']).toMatchObject({kind:'script',script:'worker:upe:crcs:hourly'});
+  expect(byName['label-signal-accuracy-outcomes']).toMatchObject({kind:'script',script:'worker:outcomes',schedule:'25 */2 * * *',timeoutMs:600_000});
+  expect(SCHEDULE.some(j=>j.kind==='script'&&j.script==='worker:outcomes:loop')).toBe(false);
  });
  it('the worker has WEB_URL and CRON_SECRET in render.yaml, and the web service still owns the secret',()=>{
   const yaml=renderYaml();

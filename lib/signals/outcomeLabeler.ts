@@ -17,6 +17,7 @@
 
 import { q, tx } from '@/lib/db';
 import type { PoolClient } from 'pg';
+import { bandForHorizon, classifyMove } from './outcomeRule';
 
 export interface OutcomeLabel {
   signalId: number;
@@ -26,19 +27,17 @@ export interface OutcomeLabel {
   source: 'journal' | 'portfolio_closed' | 'market_mtm';
 }
 
-/** Thresholds for labeling (in % move) */
-const NEUTRAL_THRESHOLD = 0.15; // ±0.15% is noise
-
 /**
- * Label a single signal outcome based on actual price difference.
+ * Label one move with the shared per-horizon band (outcome_thresholds / outcomeRule).
+ * Horizons this labeler stores that are not in the seed (5, 30, 960 minutes) use the
+ * nearest seeded band. See bandForHorizon.
  */
-function labelOutcome(
+export function labelOutcome(
   direction: 'bullish' | 'bearish',
   pctMove: number,
+  horizonMinutes: number,
 ): 'correct' | 'wrong' | 'neutral' {
-  if (Math.abs(pctMove) < NEUTRAL_THRESHOLD) return 'neutral';
-  if (direction === 'bullish') return pctMove > 0 ? 'correct' : 'wrong';
-  return pctMove < 0 ? 'correct' : 'wrong';
+  return classifyMove(direction, pctMove, bandForHorizon(horizonMinutes));
 }
 
 /**
@@ -125,10 +124,9 @@ export async function labelSignalOutcomes(workspaceId: string): Promise<{ labele
 
         if (exitPrice !== null && signal.price_at_signal > 0) {
           const pctMove = ((exitPrice - signal.price_at_signal) / signal.price_at_signal) * 100;
-          const outcome = labelOutcome(signal.direction, pctMove);
-
-          // Determine horizon in minutes based on timeframe
+          // Horizon stored on the row, then the band for that horizon.
           const horizonMinutes = timeframeToHorizonMinutes(signal.timeframe);
+          const outcome = labelOutcome(signal.direction, pctMove, horizonMinutes);
 
           await q(`
             INSERT INTO signal_outcomes (signal_id, horizon_minutes, pct_move, outcome)
@@ -218,6 +216,8 @@ async function refreshAccuracyStats(): Promise<void> {
 
 /**
  * Map timeframe string to horizon minutes for labeling.
+ * 4h is stored as 960 minutes, which is not an outcome_thresholds row.
+ * bandForHorizon maps 960 to the 1d band (2%), the nearest seed.
  */
 function timeframeToHorizonMinutes(timeframe: string): number {
   switch (timeframe.toLowerCase()) {

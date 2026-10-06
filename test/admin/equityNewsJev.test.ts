@@ -4,12 +4,14 @@ const q=vi.fn();
 const pgReadBars=vi.fn(),pgReadOverview=vi.fn();
 vi.mock('@/lib/db',()=>({q:(...a:unknown[])=>q(...a)}));
 vi.mock('@/lib/marketData/store',()=>({pgReadBars:(...a:unknown[])=>pgReadBars(...a),pgReadOverview:(...a:unknown[])=>pgReadOverview(...a)}));
-import {NEWS_JEV_DDL,NEWS_JEV_QUESTIONS,NEWS_JEV_RULE,buildNewsLedger,ddlStatements,eventDateET,labelNewsOutcomes,newsState,returnAroundEvent,scorePendingNews,type NewsObs,type PendingEvent} from '@/lib/admin/equityNewsJev';
+import {NEWS_JEV,NEWS_JEV_DDL,NEWS_JEV_QUESTIONS,NEWS_JEV_RULE,buildNewsLedger,ddlStatements,eventDateET,labelNewsOutcomes,newsState,returnAroundEvent,runNewsJevDailyOnce,scorePendingNews,type NewsObs,type PendingEvent} from '@/lib/admin/equityNewsJev';
 const now=Date.UTC(2026,9,1,21,0);
 const savedKey=process.env.AI_GATEWAY_API_KEY;
+const savedRedisUrl=process.env.UPSTASH_REDIS_REST_URL;
+const savedRedisToken=process.env.UPSTASH_REDIS_REST_TOKEN;
 const event=(id:string,ticker:string,headline:string,hoursAgo=5):PendingEvent=>({id,ticker,headline,source:'NEWS',event_timestamp_utc:new Date(now-hoursAgo*3600000).toISOString(),event_timestamp_et:null,raw_payload:{body:'Body text '.repeat(60)}});
-beforeEach(()=>{q.mockReset();pgReadBars.mockReset();pgReadOverview.mockReset();process.env.AI_GATEWAY_API_KEY='jev-key';});
-afterEach(()=>{vi.unstubAllGlobals();if(savedKey===undefined)delete process.env.AI_GATEWAY_API_KEY;else process.env.AI_GATEWAY_API_KEY=savedKey;});
+beforeEach(()=>{q.mockReset();pgReadBars.mockReset();pgReadOverview.mockReset();process.env.AI_GATEWAY_API_KEY='jev-key';delete process.env.UPSTASH_REDIS_REST_URL;delete process.env.UPSTASH_REDIS_REST_TOKEN;});
+afterEach(()=>{vi.unstubAllGlobals();if(savedKey===undefined)delete process.env.AI_GATEWAY_API_KEY;else process.env.AI_GATEWAY_API_KEY=savedKey;if(savedRedisUrl===undefined)delete process.env.UPSTASH_REDIS_REST_URL;else process.env.UPSTASH_REDIS_REST_URL=savedRedisUrl;if(savedRedisToken===undefined)delete process.env.UPSTASH_REDIS_REST_TOKEN;else process.env.UPSTASH_REDIS_REST_TOKEN=savedRedisToken;});
 it('the table the job creates is exactly the checked-in migration',()=>{
  const norm=(s:string)=>s.replace(/\r\n/g,'\n');
  expect(norm(NEWS_JEV_DDL)).toBe(norm(readFileSync('migrations/109_news_jev_stamps.sql','utf8')));
@@ -80,6 +82,39 @@ it('the ledger grades Jev answers and the regex classifier side by side on the s
  expect(ledger.source.reasons).toEqual({'http-500':5});
  expect(JSON.stringify(ledger)).not.toMatch(/win ?rate/i);
  expect(buildNewsLedger([],{stamped:0,scored:0,unavailable:0,reasons:{},labelled:0,noBars:0,waiting:0},now).note).toContain('No labelled headlines yet');
+});
+const jevOk=()=>({ok:true,json:async()=>({model:'jev-1.13.0',answers:{aboutCompany:{probability:.95},priceMaterial:{probability:.7},direction:{choice:'positive',probabilities:{positive:.8,negative:.1,neutral:.1},confidence:.7},eventType:{choice:'earnings',probabilities:{earnings:.9},confidence:.85}},usage:{input_tokens:410}})});
+it('does not mark the day done when scoring throws, and does mark it after a clean pass',async()=>{
+ const set=vi.fn(async()=>'OK');
+ const redis={get:async()=>null,set};
+ q.mockRejectedValue(new Error('db down'));
+ const failed=await runNewsJevDailyOnce(redis,now);
+ expect(failed.ok).toBe(false);
+ expect(failed.scoring.skipped).toBe('error');
+ expect(set).not.toHaveBeenCalled();
+ q.mockResolvedValue([]);
+ const ok=await runNewsJevDailyOnce(redis,now);
+ expect(ok.ok).toBe(true);
+ expect(set.mock.calls.map(c=>c[0])).toContain(`admin:equity-news-jev:day:${new Date(now).toISOString().slice(0,10)}`);
+});
+it('stops scoring at the daily cap and still labels',async()=>{
+ const rows=Array.from({length:3},(_,i)=>event(`e${i}`,'AAPL',`headline ${i}`));
+ const recent=new Date(now-3*86400000).toISOString();
+ q.mockImplementation(async(sql:string)=>String(sql).startsWith('SELECT e.id')?rows:String(sql).startsWith('SELECT event_id')?[{event_id:'a',ticker:'AAPL',event_at:recent}]:[]);
+ const d=(day:string,close:number)=>({ts:Date.parse(`${day}T00:00:00Z`),open:0,high:0,low:0,close,volume:0});
+ pgReadBars.mockResolvedValue({bars:[d('2026-09-26',100),d('2026-09-29',104)],fetchedAt:''});
+ let used=NEWS_JEV.maxCallsPerDay-1;
+ const fetch=vi.fn(async()=>{used+=1;return jevOk();});
+ vi.stubGlobal('fetch',fetch);
+ const stopped=await scorePendingNews(now,10,{callsToday:async()=>used});
+ expect(fetch).toHaveBeenCalledTimes(1);
+ expect(stopped).toMatchObject({scored:1,skipped:null});
+ fetch.mockClear();
+ const set=vi.fn(async()=>'OK');
+ const capped=await runNewsJevDailyOnce({get:async()=>null,set},now,{callsToday:async()=>NEWS_JEV.maxCallsPerDay});
+ expect(fetch).not.toHaveBeenCalled();
+ expect(capped.scoring).toMatchObject({scored:0,skipped:'cap'});
+ expect(capped.labelling).toMatchObject({labelled:1});
 });
 it('the stamp never feeds the public catalyst routes, the classifier, or the ingest pipeline',()=>{
  for(const f of ['lib/catalyst/classifier.ts','lib/catalyst/newsProvider.ts','app/api/catalyst/events/route.ts','app/api/catalyst/study/route.ts','app/api/catalyst/ingest/route.ts','lib/equityNewsRelevance.ts'])expect(readFileSync(f,'utf8')).not.toMatch(/equityNewsJev|news_jev_stamps/);
