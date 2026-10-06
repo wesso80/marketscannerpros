@@ -134,9 +134,9 @@ function legacySubscription() {
   };
 }
 
-function stripeEvent(type: string, object: Record<string, unknown>, apiVersion: string) {
+function stripeEvent(type: string, object: Record<string, unknown>, apiVersion: string, id?: string) {
   return {
-    id: `evt_test_${type.replaceAll('.', '_')}`,
+    id: id ?? `evt_test_${type.replaceAll('.', '_')}`,
     object: 'event',
     api_version: apiVersion,
     created: 1750000000,
@@ -486,7 +486,11 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
     ));
 
     expect(res.status).toBe(200);
-    expect(mocks.q).not.toHaveBeenCalled();
+    const cancel = mocks.q.mock.calls.find((call) => String(call[0]).includes("tier = 'free'") && String(call[0]).includes('stripe_subscription_id = $1'));
+    expect(cancel).toBeTruthy();
+    expect((cancel![1] as unknown[])[0]).toBe('sub_test_period');
+    const insert = mocks.q.mock.calls.find((call) => String(call[0]).includes('INSERT INTO user_subscriptions'));
+    expect(insert).toBeUndefined();
   });
 
   it('returns 500 when customer.subscription.deleted fails for another Stripe error', async () => {
@@ -580,7 +584,9 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
     expect(res.status).toBe(200);
     expect(mocks.subscriptionsRetrieve).toHaveBeenCalledWith('sub_old');
     const insert = mocks.q.mock.calls.find((call) => String(call[0]).includes('INSERT INTO user_subscriptions'));
-    expect(String(insert![0])).toContain("status NOT IN ('active', 'trialing')");
+    expect(String(insert![0])).toContain("user_subscriptions.status NOT IN ('active', 'trialing', 'past_due', 'unpaid')");
+    expect(String(insert![0])).toContain("EXCLUDED.status IN ('active', 'trialing')");
+    expect(String(insert![0])).toContain("WHEN EXCLUDED.tier = 'free'");
     expect((insert![1] as unknown[])[3]).toBe('canceled');
     expect((insert![1] as unknown[])[4]).toBe('sub_old');
   });
@@ -644,6 +650,9 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
         claims += 1;
         return claims === 1 ? [{ event_id: 'evt_test_checkout_session_completed' }] : [];
       }
+      if (String(sql).includes('INSERT INTO user_subscriptions')) {
+        return [{ workspace_id: 'ws_test' }];
+      }
       return [];
     });
     const subscription = cloverSubscription();
@@ -668,9 +677,6 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
   });
 
   it('checkout.session.completed reads a basil payload and stores the clover retrieve period', async () => {
-    const basilEventSubscription = basilSubscription();
-    expect(basilEventSubscription).not.toHaveProperty('current_period_end');
-    expect(basilEventSubscription).not.toHaveProperty('current_period_start');
     const cloverLive = cloverSubscription({ id: 'sub_test_basil', status: 'trialing' });
     expect(cloverLive).not.toHaveProperty('current_period_end');
     mocks.subscriptionsRetrieve.mockResolvedValue(cloverLive);
@@ -680,7 +686,7 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
       object: 'checkout.session',
       mode: 'subscription',
       customer: 'cus_test_period',
-      subscription: basilEventSubscription,
+      subscription: 'sub_test_basil',
       status: 'complete',
       payment_status: 'paid',
       metadata: {},
@@ -743,6 +749,207 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
     const update = mocks.q.mock.calls.find((call) => String(call[0]).includes("status = 'past_due'"));
     expect(update).toBeTruthy();
     expect((update![1] as unknown[])[1]).toBe('sub_test_basil');
+  });
+
+  it('an unknown price on an active subscription keeps the existing tier and logs', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const subscription = cloverSubscription({
+      id: 'sub_unknown_price',
+      status: 'active',
+      items: {
+        object: 'list',
+        data: [cloverItem({ priceId: 'price_unknown' })],
+        has_more: false,
+        total_count: 1,
+      },
+    });
+    mocks.subscriptionsRetrieve.mockResolvedValue(subscription);
+
+    const res = await postEvent(stripeEvent(
+      'customer.subscription.updated',
+      subscription,
+      '2025-09-30.clover',
+    ));
+
+    expect(res.status).toBe(200);
+    const insert = mocks.q.mock.calls.find((call) => String(call[0]).includes('INSERT INTO user_subscriptions'));
+    expect(String(insert![0])).toContain("WHEN EXCLUDED.tier = 'free' AND EXCLUDED.status IN ('active', 'trialing', 'past_due')");
+    expect(String(insert![0])).toContain('THEN user_subscriptions.tier');
+    expect((insert![1] as unknown[])[2]).toBe('free');
+    expect((insert![1] as unknown[])[3]).toBe('active');
+    expect(errSpy.mock.calls.some((call) => {
+      const line = String(call[0]);
+      return line.includes('sub_unknown_price') && line.includes('price_unknown') && line.includes('keeping the existing tier');
+    })).toBe(true);
+    errSpy.mockRestore();
+  });
+
+  it('maps the tier from every subscription item', async () => {
+    const subscription = cloverSubscription({
+      items: {
+        object: 'list',
+        data: [
+          cloverItem({ priceId: 'price_unknown' }),
+          cloverItem({ priceId: PRICE_ID }),
+        ],
+        has_more: false,
+        total_count: 2,
+      },
+    });
+    mocks.subscriptionsRetrieve.mockResolvedValue(subscription);
+
+    const res = await postEvent(stripeEvent(
+      'customer.subscription.updated',
+      subscription,
+      '2025-09-30.clover',
+    ));
+
+    expect(res.status).toBe(200);
+    const insert = mocks.q.mock.calls.find((call) => String(call[0]).includes('INSERT INTO user_subscriptions'));
+    expect((insert![1] as unknown[])[2]).toBe('pro');
+  });
+
+  it('customer.subscription.deleted cancels by subscription id when the customer is deleted', async () => {
+    mocks.customersRetrieve.mockResolvedValue({ id: 'cus_gone', object: 'customer', deleted: true });
+    const res = await postEvent(stripeEvent(
+      'customer.subscription.deleted',
+      cloverSubscription({ id: 'sub_deleted_customer', status: 'canceled' }),
+      '2025-09-30.clover',
+    ));
+
+    expect(res.status).toBe(200);
+    const insert = mocks.q.mock.calls.find((call) => String(call[0]).includes('INSERT INTO user_subscriptions'));
+    expect(insert).toBeUndefined();
+    const cancel = mocks.q.mock.calls.find((call) => String(call[0]).includes("tier = 'free'") && String(call[0]).includes('stripe_subscription_id = $1'));
+    expect(cancel).toBeTruthy();
+    expect((cancel![1] as unknown[])[0]).toBe('sub_deleted_customer');
+  });
+
+  it('does not let a stale canceled subscription replace a newer past_due row', async () => {
+    mocks.q.mockImplementation(async (sql: unknown) => {
+      if (String(sql).includes('SELECT stripe_subscription_id')) {
+        return [{ stripe_subscription_id: 'sub_new', status: 'past_due' }];
+      }
+      return [];
+    });
+    mocks.subscriptionsRetrieve.mockResolvedValue(cloverSubscription({ id: 'sub_old', status: 'canceled' }));
+
+    const res = await postEvent(stripeEvent(
+      'customer.subscription.updated',
+      cloverSubscription({ id: 'sub_old', status: 'active' }),
+      '2025-09-30.clover',
+    ));
+
+    expect(res.status).toBe(200);
+    const insert = mocks.q.mock.calls.find((call) => String(call[0]).includes('INSERT INTO user_subscriptions'));
+    expect(insert).toBeUndefined();
+  });
+
+  it('a live active subscription replaces a different active row', async () => {
+    mocks.q.mockImplementation(async (sql: unknown) => {
+      if (String(sql).includes('SELECT stripe_subscription_id')) {
+        return [{ stripe_subscription_id: 'sub_old', status: 'active' }];
+      }
+      if (String(sql).includes('INSERT INTO user_subscriptions')) {
+        return [{ workspace_id: 'ws_new' }];
+      }
+      return [];
+    });
+    mocks.subscriptionsRetrieve.mockResolvedValue(cloverSubscription({ id: 'sub_new', status: 'active' }));
+
+    const res = await postEvent(stripeEvent(
+      'customer.subscription.updated',
+      cloverSubscription({ id: 'sub_old', status: 'active' }),
+      '2025-09-30.clover',
+    ));
+
+    expect(res.status).toBe(200);
+    const insert = mocks.q.mock.calls.find((call) => String(call[0]).includes('INSERT INTO user_subscriptions'));
+    expect(insert).toBeTruthy();
+    expect((insert![1] as unknown[])[3]).toBe('active');
+    expect((insert![1] as unknown[])[4]).toBe('sub_new');
+  });
+
+  it('does not send the welcome email when the upsert is skipped', async () => {
+    mocks.q.mockImplementation(async (sql: unknown) => {
+      if (String(sql).includes('SELECT stripe_subscription_id')) {
+        return [{ stripe_subscription_id: 'sub_current', status: 'past_due' }];
+      }
+      return [{ workspace_id: 'should-not-matter' }];
+    });
+    mocks.subscriptionsRetrieve.mockResolvedValue(cloverSubscription({ id: 'sub_old', status: 'canceled' }));
+
+    const res = await postEvent(stripeEvent('checkout.session.completed', {
+      id: 'cs_skipped',
+      object: 'checkout.session',
+      mode: 'subscription',
+      customer: 'cus_test_period',
+      subscription: 'sub_old',
+      status: 'complete',
+    }, '2025-09-30.clover', 'evt_checkout_skipped'));
+
+    expect(res.status).toBe(200);
+    expect(mocks.sendWelcomeEmail).not.toHaveBeenCalled();
+    const insert = mocks.q.mock.calls.find((call) => String(call[0]).includes('INSERT INTO user_subscriptions'));
+    expect(insert).toBeUndefined();
+  });
+
+  it('dedupes side effects in memory when the processed-events table is missing', async () => {
+    mocks.q.mockImplementation(async (sql: unknown) => {
+      if (String(sql).includes('stripe_processed_events')) {
+        const missing = new Error('relation "stripe_processed_events" does not exist') as Error & { code: string };
+        missing.code = '42P01';
+        throw missing;
+      }
+      if (String(sql).includes('INSERT INTO user_subscriptions')) {
+        return [{ workspace_id: 'ws_test' }];
+      }
+      return [];
+    });
+    const subscription = cloverSubscription();
+    mocks.subscriptionsRetrieve.mockResolvedValue(subscription);
+    const event = stripeEvent('checkout.session.completed', {
+      id: 'cs_42p01',
+      object: 'checkout.session',
+      mode: 'subscription',
+      customer: 'cus_test_period',
+      subscription: 'sub_test_period',
+      status: 'complete',
+    }, '2025-09-30.clover', 'evt_42p01_once');
+
+    const first = await postEvent(event);
+    const second = await postEvent(event);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(mocks.sendWelcomeEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns 500 when recording a processed event fails for a reason other than a missing table', async () => {
+    mocks.q.mockImplementation(async (sql: unknown) => {
+      if (String(sql).includes('stripe_processed_events')) {
+        const err = new Error('relation "stripe_processed_events" does not exist') as Error & { code?: string };
+        err.code = '08006';
+        throw err;
+      }
+      if (String(sql).includes('INSERT INTO user_subscriptions')) {
+        return [{ workspace_id: 'ws_test' }];
+      }
+      return [];
+    });
+    mocks.subscriptionsRetrieve.mockResolvedValue(cloverSubscription());
+
+    const res = await postEvent(stripeEvent('checkout.session.completed', {
+      id: 'cs_db_error',
+      object: 'checkout.session',
+      mode: 'subscription',
+      customer: 'cus_test_period',
+      subscription: 'sub_test_period',
+      status: 'complete',
+    }, '2025-09-30.clover', 'evt_processed_db_error'));
+
+    expect(res.status).toBe(500);
+    expect(mocks.sendWelcomeEmail).not.toHaveBeenCalled();
   });
 
   it('rejects a bad signature with 400 and does not write', async () => {

@@ -44,6 +44,39 @@ function getTierFromPriceId(priceId: string): 'pro' | 'pro_trader' | 'free' {
   return 'free';
 }
 
+/** Pro Trader wins if any item matches, then Pro, otherwise free. */
+function tierFromSubscriptionItems(
+  items: Array<{ price?: { id?: string | null } | null } | null> | null | undefined,
+): { tier: 'pro' | 'pro_trader' | 'free'; priceIds: string[] } {
+  if (!items || items.length === 0) {
+    throw new Error('subscription items are missing');
+  }
+  const priceIds = (items ?? [])
+    .map((item) => item?.price?.id)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0);
+  if (priceIds.some((id) => getTierFromPriceId(id) === 'pro_trader')) {
+    return { tier: 'pro_trader', priceIds };
+  }
+  if (priceIds.some((id) => getTierFromPriceId(id) === 'pro')) {
+    return { tier: 'pro', priceIds };
+  }
+  return { tier: 'free', priceIds };
+}
+
+function logUnknownLivePrice(
+  eventType: string,
+  subscriptionId: string,
+  status: string,
+  priceIds: string[],
+  tier: 'pro' | 'pro_trader' | 'free',
+): void {
+  if (tier !== 'free') return;
+  if (status !== 'active' && status !== 'trialing' && status !== 'past_due') return;
+  console.error(
+    `[Webhook] ${eventType} subscription ${subscriptionId}: unknown price id(s) [${priceIds.join(', ') || 'none'}] with status ${status}; keeping the existing tier`,
+  );
+}
+
 // Referral credit — a single Pro plan is sold, but legacy Pro Trader
 // renewals may still trigger webhook events, so the map keeps both keys.
 const REFERRAL_CREDIT_BY_TIER: Record<string, number> = {
@@ -82,30 +115,42 @@ function skipCustomerWrite(eventType: string, reason: 'deleted' | 'no-email', de
   console.error(`[Webhook] ${eventType}: ${why}; not writing (${detail})`);
 }
 
-/** A different subscription must not clobber a live active or trialing row. */
+const PROTECTED_STATUSES = ['active', 'trialing', 'past_due', 'unpaid'];
+
+/**
+ * A retrieved active or trialing subscription always wins, including over a
+ * different id (cancel-at-period-end, then a new sub). Any other incoming
+ * status must not replace a different sub that is still active, trialing,
+ * past_due, or unpaid.
+ */
 function mayReplaceSubscription(
   existing: { stripe_subscription_id?: string | null; status?: string | null },
   incomingSubscriptionId: string,
+  incomingStatus: string,
 ): boolean {
   const currentId = typeof existing.stripe_subscription_id === 'string' ? existing.stripe_subscription_id : '';
   if (!currentId || currentId === incomingSubscriptionId) return true;
+  if (incomingStatus === 'active' || incomingStatus === 'trialing') return true;
   const status = existing.status || '';
-  return status !== 'active' && status !== 'trialing';
+  return !PROTECTED_STATUSES.includes(status);
 }
 
+const SIDE_EFFECT_MEMORY_CAP = 1000;
 const seenSideEffectEventIds = new Set<string>();
 
 function rememberSideEffect(eventId: string): boolean {
   if (seenSideEffectEventIds.has(eventId)) return false;
   seenSideEffectEventIds.add(eventId);
+  while (seenSideEffectEventIds.size > SIDE_EFFECT_MEMORY_CAP) {
+    const oldest = seenSideEffectEventIds.values().next().value;
+    if (oldest === undefined) break;
+    seenSideEffectEventIds.delete(oldest);
+  }
   return true;
 }
 
-function isMissingProcessedEventsTable(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false;
-  if ((error as { code?: unknown }).code === '42P01') return true;
-  const message = error instanceof Error ? error.message : String(error);
-  return message.includes('stripe_processed_events') && message.toLowerCase().includes('does not exist');
+function isUndefinedTable(error: unknown): boolean {
+  return Boolean(error && typeof error === 'object' && (error as { code?: unknown }).code === '42P01');
 }
 
 /** 'claimed' runs side effects. 'duplicate' skips them. 'untracked' means the gate table is unavailable. */
@@ -120,12 +165,12 @@ async function claimSideEffects(eventId: string, eventType: string): Promise<'cl
     );
     return rows.length > 0 ? 'claimed' : 'duplicate';
   } catch (error) {
-    if (isMissingProcessedEventsTable(error)) {
-      console.error(`[Webhook] stripe_processed_events is not migrated yet; guarding side effects without it (${eventId})`);
-    } else {
-      console.error(`[Webhook] could not record processed event ${eventId}; guarding side effects without the table`, error);
+    if (isUndefinedTable(error)) {
+      console.error(`[Webhook] stripe_processed_events is not migrated yet; guarding side effects in memory (${eventId})`);
+      return 'untracked';
     }
-    return 'untracked';
+    console.error(`[Webhook] could not record processed event ${eventId}`, error);
+    throw error;
   }
 }
 
@@ -147,8 +192,12 @@ async function processReferralReward(
   email: string,
   stripeCustomerId: string,
   refereeCouponApplied: boolean = false,
-  refereeTier: string = 'pro'
+  refereeTier: string = 'pro',
+  eventId: string = '',
 ) {
+  let referralId = '';
+  let claimed = false;
+  let movedMoney = false;
   try {
     // Check if this user signed up via referral and hasn't been rewarded yet
     const referralResult = await q(
@@ -164,6 +213,7 @@ async function processReferralReward(
     }
 
     const referral = referralResult[0];
+    referralId = String(referral.id ?? '');
     console.log(`[Referral] Found pending referral for ${email}, couponApplied=${refereeCouponApplied}`);
 
     // Anti-abuse: monthly cap per referrer
@@ -178,17 +228,19 @@ async function processReferralReward(
     }
 
     // Claim the pending signup before any Stripe credit so a second delivery cannot pay twice.
-    const claimed = await q(
+    // A failure before money moves rolls the claim back to pending.
+    const claimedRows = await q(
       `UPDATE referral_signups
        SET status = 'rewarded', reward_applied_at = NOW(), converted_at = NOW()
        WHERE id = $1 AND status = 'pending'
        RETURNING id`,
       [referral.id],
     );
-    if (claimed.length === 0) {
-      console.error(`[Referral] signup ${referral.id} is no longer pending; not applying credit again`);
+    if (claimedRows.length === 0) {
+      console.error(`[Referral] signup ${referral.id} is no longer pending; not applying credit again (customer ${stripeCustomerId}, event ${eventId})`);
       return;
     }
+    claimed = true;
 
     const creditCents = getReferralCreditCents(refereeTier);
 
@@ -207,6 +259,7 @@ async function processReferralReward(
         currency: 'usd',
         description: `Referral welcome credit — $${creditCents / 100} off your next invoice`,
       });
+      movedMoney = true;
       await q(
         `INSERT INTO referral_rewards (workspace_id, referral_signup_id, reward_type, credit_amount_cents, stripe_balance_txn_id, applied_at)
          VALUES ($1, $2, 'credit', $3, $4, NOW())`,
@@ -228,6 +281,7 @@ async function processReferralReward(
           description: `Referral reward: you invited ${email}`,
         }
       );
+      movedMoney = true;
       await q(
         `INSERT INTO referral_rewards (workspace_id, referral_signup_id, reward_type, credit_amount_cents, stripe_balance_txn_id, applied_at)
          VALUES ($1, $2, 'credit', $3, $4, NOW())`,
@@ -241,9 +295,30 @@ async function processReferralReward(
     console.log(`[Referral] ✅ Referee ${email} (${refereeTier}) — referrer credited $${creditCents / 100}`);
 
   } catch (error) {
-    console.error('[Referral] Error processing reward:', error);
+    console.error(`[Referral] Error processing reward referral=${referralId || 'unknown'} customer=${stripeCustomerId} event=${eventId}:`, error);
+    if (claimed && !movedMoney && referralId) {
+      try {
+        await q(
+          `UPDATE referral_signups
+           SET status = 'pending', reward_applied_at = NULL, converted_at = NULL
+           WHERE id = $1 AND status = 'rewarded'`,
+          [referralId],
+        );
+      } catch (rollbackError) {
+        console.error(`[Referral] Failed to roll back rewarded mark referral=${referralId} customer=${stripeCustomerId} event=${eventId}:`, rollbackError);
+      }
+    }
     // Don't throw - referral failures shouldn't break subscription processing
   }
+}
+
+async function cancelSubscriptionById(stripeSubscriptionId: string): Promise<void> {
+  await q(
+    `UPDATE user_subscriptions
+     SET tier = 'free', status = 'canceled', updated_at = NOW()
+     WHERE stripe_subscription_id = $1`,
+    [stripeSubscriptionId],
+  );
 }
 
 async function upsertSubscription(
@@ -253,12 +328,12 @@ async function upsertSubscription(
   status: string,
   stripeSubscriptionId: string,
   periodEnd: Date | null,
-  isTrial: boolean = false
-) {
+  isTrial: boolean = false,
+): Promise<boolean> {
   const normalizedEmail = email.trim();
   if (!normalizedEmail) {
     console.error('[Webhook] Refusing subscription write with an empty email');
-    return;
+    return false;
   }
   const workspaceId = hashWorkspaceId(normalizedEmail.toLowerCase());
   const periodEndValue = safePeriodEnd(periodEnd);
@@ -268,9 +343,9 @@ async function upsertSubscription(
       `SELECT stripe_subscription_id, status FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1`,
       [workspaceId],
     );
-    if (existing[0] && !mayReplaceSubscription(existing[0], stripeSubscriptionId)) {
-      console.error(`[Webhook] Not overwriting ${existing[0].status} subscription ${existing[0].stripe_subscription_id} with ${stripeSubscriptionId} for ${normalizedEmail}`);
-      return;
+    if (existing[0] && !mayReplaceSubscription(existing[0], stripeSubscriptionId, status)) {
+      console.error(`[Webhook] Not overwriting ${existing[0].status} subscription ${existing[0].stripe_subscription_id} with ${status} ${stripeSubscriptionId} for ${normalizedEmail}`);
+      return false;
     }
 
     const written = await q(`
@@ -281,7 +356,11 @@ async function upsertSubscription(
       ON CONFLICT (workspace_id) 
       DO UPDATE SET 
         email = EXCLUDED.email,
-        tier = EXCLUDED.tier,
+        tier = CASE
+          WHEN EXCLUDED.tier = 'free' AND EXCLUDED.status IN ('active', 'trialing', 'past_due')
+          THEN user_subscriptions.tier
+          ELSE EXCLUDED.tier
+        END,
         status = EXCLUDED.status,
         stripe_subscription_id = EXCLUDED.stripe_subscription_id,
         current_period_end = EXCLUDED.current_period_end,
@@ -289,15 +368,17 @@ async function upsertSubscription(
         updated_at = NOW()
       WHERE user_subscriptions.stripe_subscription_id IS NULL
          OR user_subscriptions.stripe_subscription_id = EXCLUDED.stripe_subscription_id
-         OR user_subscriptions.status NOT IN ('active', 'trialing')
+         OR EXCLUDED.status IN ('active', 'trialing')
+         OR user_subscriptions.status NOT IN ('active', 'trialing', 'past_due', 'unpaid')
       RETURNING workspace_id
     `, [workspaceId, normalizedEmail, tier, status, stripeSubscriptionId, customerId, periodEndValue, isTrial]);
 
     if (written.length === 0) {
       console.error(`[Webhook] Upsert skipped by conflict guard for ${normalizedEmail} (${stripeSubscriptionId})`);
-      return;
+      return false;
     }
     console.log(`[Webhook] Upserted subscription: ${normalizedEmail} - ${tier} (${status})`);
+    return true;
   } catch (error) {
     console.error('[Webhook] Failed to upsert subscription:', error);
     throw error;
@@ -344,15 +425,16 @@ export async function POST(req: NextRequest) {
             skipCustomerWrite(event.type, loaded === 'deleted' ? 'deleted' : 'no-email', subscription.id);
             break;
           }
-          const priceId = subscription.items.data[0]?.price.id || '';
-          const tier = getTierFromPriceId(priceId);
+          const mapped = tierFromSubscriptionItems(subscription.items?.data);
+          const tier = mapped.tier;
+          logUnknownLivePrice(event.type, subscription.id, subscription.status, mapped.priceIds, tier);
           const workspaceId = hashWorkspaceId(loaded.email.toLowerCase());
           const periodEnd = subscriptionPeriodDate(subscription, 'current_period_end');
           if (!periodEnd) {
             console.error(`[Webhook] checkout.session.completed subscription ${subscription.id}: current_period_end missing or unusable on items.data[0] and on the subscription; storing null`);
           }
           
-          await upsertSubscription(
+          const wrote = await upsertSubscription(
             loaded.id,
             loaded.email,
             tier,
@@ -388,20 +470,22 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          await runSideEffectsOnce(event, async () => {
-            // Coupon was applied at checkout, so refereeCouponApplied = true
-            if (subscription.status === 'active') {
-              await processReferralReward(workspaceId, loaded.email, loaded.id, true, tier);
-            }
-            if (tier === 'pro' || tier === 'pro_trader') {
-              try {
-                await sendWelcomeEmail(loaded.email, tier);
-                console.log(`[Webhook] Welcome email sent to ${loaded.email} (${tier})`);
-              } catch (emailErr) {
-                console.error('[Webhook] Welcome email failed (non-blocking):', emailErr);
+          if (wrote) {
+            await runSideEffectsOnce(event, async () => {
+              // Coupon was applied at checkout, so refereeCouponApplied = true
+              if (subscription.status === 'active') {
+                await processReferralReward(workspaceId, loaded.email, loaded.id, true, tier, event.id);
               }
-            }
-          });
+              if (tier === 'pro' || tier === 'pro_trader') {
+                try {
+                  await sendWelcomeEmail(loaded.email, tier);
+                  console.log(`[Webhook] Welcome email sent to ${loaded.email} (${tier})`);
+                } catch (emailErr) {
+                  console.error('[Webhook] Welcome email failed (non-blocking):', emailErr);
+                }
+              }
+            });
+          }
         }
         break;
       }
@@ -417,15 +501,16 @@ export async function POST(req: NextRequest) {
           skipCustomerWrite(event.type, loaded === 'deleted' ? 'deleted' : 'no-email', subscription.id);
           break;
         }
-        const priceId = subscription.items.data[0]?.price.id || '';
-        const tier = getTierFromPriceId(priceId);
+        const mapped = tierFromSubscriptionItems(subscription.items?.data);
+        const tier = mapped.tier;
+        logUnknownLivePrice(event.type, subscription.id, subscription.status, mapped.priceIds, tier);
         const workspaceId = hashWorkspaceId(loaded.email.toLowerCase());
         const periodEnd = subscriptionPeriodDate(subscription, 'current_period_end');
         if (!periodEnd) {
           console.error(`[Webhook] ${event.type} subscription ${subscription.id}: current_period_end missing or unusable on items.data[0] and on the subscription; storing null`);
         }
         
-        await upsertSubscription(
+        const wrote = await upsertSubscription(
           loaded.id,
           loaded.email,
           tier,
@@ -435,12 +520,12 @@ export async function POST(req: NextRequest) {
           subscription.status === 'trialing'
         );
 
-        if (subscription.status === 'active') {
+        if (wrote && subscription.status === 'active') {
           await runSideEffectsOnce(event, async () => {
             // On subscription.updated (trial→active), referee didn't get coupon — give balance credit
             // On subscription.created with active status, coupon was applied at checkout
             const couponApplied = event.type === 'customer.subscription.created';
-            await processReferralReward(workspaceId, loaded.email, loaded.id, couponApplied, tier);
+            await processReferralReward(workspaceId, loaded.email, loaded.id, couponApplied, tier, event.id);
           });
         }
         break;
@@ -448,22 +533,38 @@ export async function POST(req: NextRequest) {
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
-        const customer = await stripe.customers.retrieve(subscription.customer as string);
-        const loaded = loadCustomer(customer);
-        if (loaded === 'deleted' || loaded === 'no-email') {
-          skipCustomerWrite(event.type, loaded === 'deleted' ? 'deleted' : 'no-email', subscription.id);
-          break;
+        let loaded: LoadedCustomer | 'deleted' | 'no-email' | null = null;
+        try {
+          const customer = await stripe.customers.retrieve(subscription.customer as string);
+          loaded = loadCustomer(customer);
+        } catch (error) {
+          if (
+            error !== null &&
+            typeof error === 'object' &&
+            (error as { code?: unknown }).code === 'resource_missing'
+          ) {
+            console.error(`[Webhook] customer.subscription.deleted: Stripe resource_missing; canceling by subscription id ${subscription.id}`);
+            loaded = null;
+          } else {
+            throw error;
+          }
         }
-        
-        await upsertSubscription(
-          loaded.id,
-          loaded.email,
-          'free',
-          'canceled',
-          subscription.id,
-          null,
-          false
-        );
+
+        if (loaded && loaded !== 'deleted' && loaded !== 'no-email') {
+          await upsertSubscription(
+            loaded.id,
+            loaded.email,
+            'free',
+            'canceled',
+            subscription.id,
+            null,
+            false
+          );
+        } else if (loaded === 'deleted' || loaded === 'no-email') {
+          console.error(`[Webhook] customer.subscription.deleted: ${loaded === 'deleted' ? 'Stripe customer is deleted' : 'customer email is empty'}; canceling by subscription id ${subscription.id}`);
+        }
+
+        await cancelSubscriptionById(subscription.id);
         break;
       }
 

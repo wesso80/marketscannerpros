@@ -21,6 +21,20 @@ function detectTier(priceIds: string[]): "free" | "pro" | "pro_trader" {
   return "free";
 }
 
+const PROTECTED_STATUSES = ["active", "trialing", "past_due", "unpaid"];
+
+/** Same rule as the webhook: a live active or trialing sub always wins. */
+function mayReplaceSubscription(
+  existing: { stripe_subscription_id?: string | null; status?: string | null },
+  incomingSubscriptionId: string,
+  incomingStatus: string,
+): boolean {
+  const currentId = typeof existing.stripe_subscription_id === "string" ? existing.stripe_subscription_id : "";
+  if (!currentId || currentId === incomingSubscriptionId) return true;
+  if (incomingStatus === "active" || incomingStatus === "trialing") return true;
+  return !PROTECTED_STATUSES.includes(existing.status || "");
+}
+
 export async function GET(req: NextRequest) {
   const sessionId = req.nextUrl.searchParams.get("session_id");
   if (!sessionId) {
@@ -52,6 +66,7 @@ export async function GET(req: NextRequest) {
     const workspaceId = email ? hashWorkspaceId(email) : hashWorkspaceId(customerId);
     const periodEnd = sub ? subscriptionPeriodDate(sub, "current_period_end") : null;
     const subscriptionStatus = sub?.status || "active";
+    const livePaid = sub?.status === "active" || sub?.status === "trialing";
     if (sub && !periodEnd) {
       console.error(`[stripe/confirm] subscription ${sub.id}: current_period_end missing or unusable on items.data[0] and on the subscription; storing null`);
     }
@@ -59,42 +74,62 @@ export async function GET(req: NextRequest) {
     // Update subscription in database
     if (email) {
       try {
-        await q(`
-          INSERT INTO user_subscriptions 
-            (workspace_id, email, tier, status, stripe_customer_id, stripe_subscription_id, current_period_end, updated_at, created_at)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-          ON CONFLICT (workspace_id) 
-          DO UPDATE SET 
-            email = EXCLUDED.email,
-            tier = EXCLUDED.tier,
-            status = EXCLUDED.status,
-            stripe_customer_id = EXCLUDED.stripe_customer_id,
-            stripe_subscription_id = EXCLUDED.stripe_subscription_id,
-            current_period_end = EXCLUDED.current_period_end,
-            updated_at = NOW()
-        `, [
-          workspaceId,
-          email,
-          tier,
-          subscriptionStatus,
-          customerId,
-          sub?.id || null,
-          periodEnd,
-        ]);
+        const existing = await q<{ stripe_subscription_id: string | null; status: string }>(
+          `SELECT stripe_subscription_id, status FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1`,
+          [workspaceId],
+        );
+        const incomingId = sub?.id || "";
+        const guardStatus = sub?.status || "canceled";
+        if (existing[0] && !mayReplaceSubscription(existing[0], incomingId, guardStatus)) {
+          console.error(`[stripe/confirm] Not overwriting ${existing[0].status} subscription ${existing[0].stripe_subscription_id} with ${subscriptionStatus} ${incomingId || "none"}`);
+        } else {
+          const written = await q(`
+            INSERT INTO user_subscriptions 
+              (workspace_id, email, tier, status, stripe_customer_id, stripe_subscription_id, current_period_end, updated_at, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+            ON CONFLICT (workspace_id) 
+            DO UPDATE SET 
+              email = EXCLUDED.email,
+              tier = EXCLUDED.tier,
+              status = EXCLUDED.status,
+              stripe_customer_id = EXCLUDED.stripe_customer_id,
+              stripe_subscription_id = EXCLUDED.stripe_subscription_id,
+              current_period_end = EXCLUDED.current_period_end,
+              updated_at = NOW()
+            WHERE user_subscriptions.stripe_subscription_id IS NULL
+               OR user_subscriptions.stripe_subscription_id = EXCLUDED.stripe_subscription_id
+               OR $8::boolean
+               OR user_subscriptions.status NOT IN ('active', 'trialing', 'past_due', 'unpaid')
+            RETURNING workspace_id
+          `, [
+            workspaceId,
+            email,
+            tier,
+            subscriptionStatus,
+            customerId,
+            sub?.id || null,
+            periodEnd,
+            livePaid,
+          ]);
+          if (written.length === 0) {
+            console.error(`[stripe/confirm] Upsert skipped by conflict guard for ${email} (${incomingId || "none"})`);
+          }
+        }
       } catch (dbErr) {
         console.error("[stripe/confirm] DB error:", dbErr);
         return NextResponse.json({ error: "Failed to save subscription" }, { status: 500 });
       }
     }
 
-    // Issue new session cookie with the paid tier
+    // A canceled or unpaid replay must not mint a Pro session.
+    const sessionTier = livePaid ? tier : "free";
     const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
-    const token = signSessionToken({ cid: customerId, tier, workspaceId, exp });
+    const token = signSessionToken({ cid: customerId, tier: sessionTier, workspaceId, exp });
 
     const host = req.headers.get("host") || "";
     const isLocalhost = host.includes("localhost") || host.includes("127.0.0.1");
 
-    const res = NextResponse.json({ ok: true, tier, workspaceId });
+    const res = NextResponse.json({ ok: true, tier: sessionTier, workspaceId });
     res.cookies.set("ms_auth", token, isLocalhost
       ? { httpOnly: true, secure: false, sameSite: "lax" as const, path: "/", maxAge: 60 * 60 * 24 * 30 }
       : { httpOnly: true, secure: true, sameSite: "none" as const, domain: ".marketscannerpros.app", path: "/", maxAge: 60 * 60 * 24 * 30 }

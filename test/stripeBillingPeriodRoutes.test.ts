@@ -40,6 +40,7 @@ vi.mock('@/lib/email', () => ({
 let confirmGET: (req: NextRequest) => Promise<Response>;
 let loginPOST: (req: NextRequest) => Promise<Response>;
 let signSessionToken: (payload: object) => string;
+let verifySessionToken: (token: string) => Record<string, unknown>;
 
 function cloverSubscription(options?: { omitPeriod?: boolean }) {
   const item: Record<string, unknown> = {
@@ -65,7 +66,9 @@ describe('clover period fields on the paid signup paths', () => {
     process.env.STRIPE_PRO_MONTHLY_PRICE_ID = PRICE_ID;
     confirmGET = (await import('../app/api/stripe/confirm/route')).GET;
     loginPOST = (await import('../app/api/auth/login/route')).POST;
-    signSessionToken = (await import('../lib/auth')).signSessionToken;
+    const auth = await import('../lib/auth');
+    signSessionToken = auth.signSessionToken;
+    verifySessionToken = auth.verifySessionToken;
   });
 
   beforeEach(() => {
@@ -155,6 +158,65 @@ describe('clover period fields on the paid signup paths', () => {
     expect(res.status).toBe(500);
     expect(errSpy.mock.calls.some((call) => String(call[0]).includes('[stripe/confirm] DB error:'))).toBe(true);
     errSpy.mockRestore();
+  });
+
+  it('confirm does not restore Pro from a canceled subscription on a different id', async () => {
+    mocks.q.mockImplementation(async (sql: unknown) => {
+      if (String(sql).includes('SELECT stripe_subscription_id')) {
+        return [{ stripe_subscription_id: 'sub_current', status: 'past_due' }];
+      }
+      return [{ workspace_id: 'should-not-write' }];
+    });
+    const subscription = cloverSubscription();
+    subscription.id = 'sub_old';
+    subscription.status = 'canceled';
+    mocks.sessionsRetrieve.mockResolvedValue({
+      id: 'cs_old',
+      status: 'complete',
+      payment_status: 'paid',
+      customer: 'cus_confirm',
+      customer_details: { email: 'confirm-old@example.com' },
+      subscription,
+    });
+
+    const res = await confirmGET(new NextRequest('https://example.test/api/stripe/confirm?session_id=cs_old'));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.tier).toBe('free');
+    expect(insertCall()).toBeUndefined();
+    const token = res.cookies.get('ms_auth')?.value;
+    expect(token).toBeTruthy();
+    expect(verifySessionToken(token!).tier).toBe('free');
+  });
+
+  it('confirm lets a live active subscription replace a different row and sets a paid cookie', async () => {
+    mocks.q.mockImplementation(async (sql: unknown) => {
+      if (String(sql).includes('SELECT stripe_subscription_id')) {
+        return [{ stripe_subscription_id: 'sub_old', status: 'active' }];
+      }
+      return [{ workspace_id: 'ws_new' }];
+    });
+    const subscription = cloverSubscription();
+    subscription.id = 'sub_new';
+    mocks.sessionsRetrieve.mockResolvedValue({
+      id: 'cs_new',
+      status: 'complete',
+      payment_status: 'paid',
+      customer: 'cus_confirm',
+      customer_details: { email: 'confirm-new@example.com' },
+      subscription,
+    });
+
+    const res = await confirmGET(new NextRequest('https://example.test/api/stripe/confirm?session_id=cs_new'));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.tier).toBe('pro');
+    const insert = insertCall();
+    expect(insert).toBeTruthy();
+    expect(String(insert![0])).toContain("user_subscriptions.status NOT IN ('active', 'trialing', 'past_due', 'unpaid')");
+    expect((insert![1] as unknown[])[5]).toBe('sub_new');
+    expect((insert![1] as unknown[])[7]).toBe(true);
+    expect(verifySessionToken(res.cookies.get('ms_auth')!.value).tier).toBe('pro');
   });
 
   it('login stores the item period without failing the sign-in', async () => {
