@@ -18,9 +18,10 @@ it('keeps one regime in the closed summary and retains eligible evidence behind 
  const fold=container.querySelector('details')!;expect(fold.open).toBe(false);
  const summary=fold.querySelector('summary')!;
  expect(summary.textContent?.match(/Trend Up/g)).toHaveLength(1);
- expect(summary.textContent).toContain('2 supporting signals');
+ expect(summary.textContent).toContain('2 supporting readings');
+ expect(summary.textContent?.toLowerCase()).not.toContain('signal');
  expect(summary.className).toContain('min-h-10');
- expect(screen.getByRole('list',{name:'Market regime supporting signals',hidden:true}).querySelectorAll('li')).toHaveLength(2);
+ expect(screen.getByRole('list',{name:'Market regime supporting readings',hidden:true}).querySelectorAll('li')).toHaveLength(2);
  expect(container.textContent).not.toMatch(/excluded|TREND_UP|macro_context/);
  expect(container.querySelector('[class*="overflow-x-auto"]')).toBeNull();
  expect(JSON.stringify(state.data)).toBe(original);
@@ -29,6 +30,16 @@ it('preserves hideIfMissing behavior and never creates a default regime',()=>{
  const {container,rerender}=render(<RegimeBar hideIfMissing/>);expect(container.textContent).toBe('');
  rerender(<RegimeBar/>);expect(container.textContent).toContain('Not available right now');expect(container.querySelector('details')).toBeNull();
  state.data={regime:'unknown',signals:[]};rerender(<RegimeBar hideIfMissing/>);expect(container.textContent).toBe('');
+});
+it('renders supporting reading and never the word signal',()=>{
+ state.data={regime:'TREND_UP',signals:[{source:'market',kind:'market',regime:'TREND_UP',stale:false}]};
+ const {container}=render(<RegimeBar/>);
+ expect(container.textContent).toContain('1 supporting reading');
+ expect(container.textContent?.toLowerCase()).not.toContain('signal');
+ for (const el of container.querySelectorAll('[aria-label],[title]')) {
+  expect(`${el.getAttribute('aria-label') ?? ''} ${el.getAttribute('title') ?? ''}`.toLowerCase()).not.toContain('signal');
+ }
+ expect(screen.getByRole('list',{name:'Market regime supporting readings',hidden:true})).toBeTruthy();
 });
 it('does not expose retained signal evidence while loading',()=>{
  state.loading=true;state.data={regime:'TREND_UP',signals:[{source:'market',regime:'TREND_UP',stale:false}]};

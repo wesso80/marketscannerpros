@@ -38,10 +38,10 @@ export default function RegimeBar({ hideIfMissing = false }: { hideIfMissing?: b
           <summary className="min-h-10 cursor-pointer content-center text-xs text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">
             <span className="inline-flex max-w-full flex-wrap items-center gap-x-3 gap-y-1 align-middle">
               {summary}
-              <span>{nonStaleSignals.length} supporting {nonStaleSignals.length === 1 ? 'signal' : 'signals'}</span>
+              <span>{nonStaleSignals.length} supporting {nonStaleSignals.length === 1 ? 'reading' : 'readings'}</span>
             </span>
           </summary>
-          <ul aria-label="Market regime supporting signals" className="grid min-w-0 gap-2 pb-2 pt-1 sm:grid-cols-2 lg:grid-cols-3">
+          <ul aria-label="Market regime supporting readings" className="grid min-w-0 gap-2 pb-2 pt-1 sm:grid-cols-2 lg:grid-cols-3">
             {nonStaleSignals.map((signal) => (
               <li key={signal.source} className="min-w-0 break-words text-xs text-slate-400">
                 <span>{signal.kind === 'market' ? 'Market data' : humanizeEnum(signal.source)}</span>
