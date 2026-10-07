@@ -40,6 +40,8 @@ import { FREE_COPY } from '@/components/free/copy';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import PriceEvidencePanel from '@/components/research/PriceEvidencePanel';
 import TimingEvidencePanel from '@/components/research/TimingEvidencePanel';
+import ResearchSnapshotCard from '@/components/research/ResearchSnapshotCard';
+import { buildResearchSnapshot } from '@/lib/research/researchSnapshot';
 import ChipRow from '@/components/visual/ChipRow';
 import type {StampLineProps} from '@/components/visual/StampLine';
 import SourceLine from '@/components/visual/SourceLine';
@@ -661,9 +663,23 @@ export default function GoldenEggPage() {
     }
   }
 
+  // Phase 3: factual summary, observation dates and section status from the shared snapshot (no verdict).
+  const researchSnapshot = geCanonical ? buildResearchSnapshot({
+    canonical: geCanonical, priceEvidence: ge?.priceEvidence, timingEvidence: ge?.timingEvidence,
+    volatilityRelease: dve.loading ? undefined : d?.signal ? { type: d.signal.type, state: d.signal.state } : null,
+  }) : null;
+  const q = encodeURIComponent(sym);
+  const specialistLinks = [
+    ...(quoteType === 'crypto' ? [] : [{ href: optionsHref(sym), label: 'Options' }]),
+    { href: `/tools/volatility-engine?symbol=${q}`, label: 'Volatility' },
+    { href: `/tools/deep-analysis?symbol=${q}`, label: 'Deep analysis' },
+    { href: `/tools/terminal?tab=time-confluence&symbol=${q}`, label: 'Time confluence' },
+  ];
+
   return (
     <div className="mx-auto max-w-6xl space-y-3">
       <SymbolSnapshotHeader name={geCanonical?.fundamentals?.name} symbol={sym} asset={snapshotAsset} timeframe={timeframe} stamp={symbolQuoteStamp(sym,snapshotAsset,quote.data)} pick={findSymbolPick(dailyPicks.data,sym,snapshotAsset)} rankLoading={dailyPicks.loading} rankError={dailyPicks.error} quiet={isAuthBlocked} compact/>
+      {!isAuthBlocked && researchSnapshot && !loading && <ResearchSnapshotCard s={researchSnapshot} links={specialistLinks}/>}
 
 
       {isAuthBlocked && goldenEgg.isUpgradeRequired && (
@@ -693,12 +709,13 @@ export default function GoldenEggPage() {
 
       {!isAuthBlocked && (quoteType==='crypto'?<><CryptoBreakdown compact showSource={false} onStamp={setCryptoStamp} symbol={sym} timeframe={timeframe} coinId={searchParams.get('id')??undefined}/>{ge?.priceEvidence&&!loading&&<CollapsibleSection title="Measured price and volatility" summary={ge.priceEvidence.summary[0]??`Completed bar ${ge.priceEvidence.basis.lastCompletedBar??'n/a'}`}><PriceEvidencePanel e={ge.priceEvidence}/></CollapsibleSection>}{ge?.timingEvidence&&!loading&&<CollapsibleSection title="Timing and events" summary={ge.timingEvidence.summary[1]??ge.timingEvidence.summary[0]}><TimingEvidencePanel t={ge.timingEvidence}/></CollapsibleSection>}</>:<>
         {ge&&!loading&&<EquityTop data={ge} pick={findSymbolPick(dailyPicks.data,sym,'equity')}/>}
-        {ge?.priceEvidence&&!loading&&<CollapsibleSection title="Measured price and volatility" summary={ge.priceEvidence.summary[0]??`Completed bar ${ge.priceEvidence.basis.lastCompletedBar??'n/a'}`}><PriceEvidencePanel e={ge.priceEvidence}/></CollapsibleSection>}{ge?.timingEvidence&&!loading&&<CollapsibleSection title="Timing and events" summary={ge.timingEvidence.summary[1]??ge.timingEvidence.summary[0]}><TimingEvidencePanel t={ge.timingEvidence}/></CollapsibleSection>}
+        {ge?.priceEvidence&&!loading&&<CollapsibleSection title="Measured price and volatility" summary={ge.priceEvidence.summary[0]??`Completed bar ${ge.priceEvidence.basis.lastCompletedBar??'n/a'}`}><PriceEvidencePanel e={ge.priceEvidence}/></CollapsibleSection>}
         {goldenEgg.error&&!loading&&<p role="alert" className="text-sm text-amber-300">Symbol data feed failed. <button className="min-h-10 underline" onClick={()=>goldenEgg.refetch()}>Retry</button></p>}
         {ge&&<>
-        <CollapsibleSection deferMount title="Scenario map" summary={`${ge.layer2.setup.keyLevels.length} recorded levels`}><p>{symbolText(ge.layer2.scenario.referenceTrigger)}</p><p>{symbolText(ge.layer2.scenario.invalidationLevel.logic)}</p></CollapsibleSection>
         <CollapsibleSection deferMount title="Options" summary={geCanonical?.options?`Expiry ${geCanonical.options.expiry}`:'Options data not collected'}><SymbolOptionsContext compact symbol={sym} expiry={searchParams.get('expiry')??undefined}/></CollapsibleSection>
+        {ge?.timingEvidence&&!loading&&<CollapsibleSection title="Timing and events" summary={ge.timingEvidence.summary[1]??ge.timingEvidence.summary[0]}><TimingEvidencePanel t={ge.timingEvidence}/></CollapsibleSection>}
         <CollapsibleSection deferMount title="Fundamentals" summary={geCanonical?.fundamentals?.marketCap!=null?`Market cap ${formatUsdShort(geCanonical.fundamentals.marketCap)}${geCanonical.fundamentals.lastReportedQuarter?` · latest reported quarter ${geCanonical.fundamentals.lastReportedQuarter}`:''}`:'Company overview and ownership'}><CompanyOverview symbol={sym}/><OwnershipFlowPanel symbol={sym}/></CollapsibleSection>
+        <CollapsibleSection deferMount title="Scenario map" summary={`${ge.layer2.setup.keyLevels.length} recorded levels`}><p>{symbolText(ge.layer2.scenario.referenceTrigger)}</p><p>{symbolText(ge.layer2.scenario.invalidationLevel.logic)}</p></CollapsibleSection>
         <ChipRow items={[{id:'evidence',label:`${geDataQuality==='GOOD'?'Evidence and data checks':'Some data checks failed'} · ${geEvidenceItems.length} checks`,warning:geDataQuality!=='GOOD',detail:<EvidenceStack title="Evidence" items={geEvidenceItems.map(item=>({...item,value:symbolText(item.value),detail:item.detail?symbolText(item.detail):undefined}))}/>}]} />
         </>}
       </>)}
