@@ -37,11 +37,16 @@ export async function GET(request: NextRequest) {
     }
     const timeframe = (searchParams.get('timeframe') || 'daily').toLowerCase();
     const assetClass = detectAssetClass(symbol, searchParams.get('type') || undefined);
+    // Optional options expiry (equities). Used only if listed; an unlisted expiry is reported, never replaced.
+    const expiryParam = searchParams.get('expiry');
+    if (expiryParam && !/^\d{4}-\d{2}-\d{2}$/.test(expiryParam)) {
+      return NextResponse.json({ success: false, error: 'Invalid expiry (expected YYYY-MM-DD)' }, { status: 400 });
+    }
     fallbackSymbol = symbol;
     fallbackAssetClass = assetClass;
     fallbackTfLabel = tfLabelFor(timeframe);
 
-    const result = await computeGoldenEgg({ symbol, timeframe, assetClass, workspaceId: session.workspaceId, fresh: searchParams.get('fresh') === '1' });
+    const result = await computeGoldenEgg({ symbol, timeframe, assetClass, workspaceId: session.workspaceId, fresh: searchParams.get('fresh') === '1', expiry: expiryParam });
     // Provider status is reported at the route boundary so consumers see source/freshness alongside the packet.
     const providerStatus = result.cached
       ? buildMarketDataProviderStatus({ source: 'memory_cache', provider: 'memory_cache' })

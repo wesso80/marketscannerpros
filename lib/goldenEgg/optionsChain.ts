@@ -74,8 +74,10 @@ const numOrNull = (v: unknown): number | null => { const n = typeof v === 'numbe
  * Pick the expiry a trader would read for positioning: the most-OI expiry among 7–60 DTE (liquid, not 0DTE, not LEAPS).
  * Falls back to the nearest expiry with ≥ 7 DTE, then to the highest-OI expiry overall.
  */
-export function selectCanonicalExpiry(contracts: RawContract[], nowMs = Date.now()): { expiry: string | null; reason: string; available: string[] } {
+export function selectCanonicalExpiry(contracts: RawContract[], nowMs = Date.now(), requested?: string | null): { expiry: string | null; reason: string; available: string[] } {
   const available=[...new Set(contracts.map(c=>String(c.expiration??'')))].filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)&&d>=marketDateKey(nowMs)).sort();
+  // An explicit expiry is used only if listed; otherwise null (never a silent fallback to the default expiry).
+  if(requested) return {expiry:selectOptionsExpiry(available,requested,nowMs),available,reason:available.includes(requested)?'requested expiry':`requested expiry ${requested} is not listed in the chain`};
   return {expiry:selectOptionsExpiry(available,undefined,nowMs),available,reason:'shared default: next listed expiry after the New York market date'};
 }
 
@@ -104,10 +106,10 @@ export function atmImpliedVol(chain: RawContract[], spot: number): number | null
 export function summarizeChain(
   contracts: RawContract[],
   spot: number,
-  opts: { nowMs?: number; snapshotTs?: string; recentCloses?: number[]; recentDates?: string[] } = {},
+  opts: { nowMs?: number; snapshotTs?: string; recentCloses?: number[]; recentDates?: string[]; expiry?: string | null } = {},
 ): CanonicalOptionsSnapshot | null {
   const nowMs = opts.nowMs ?? Date.now();
-  const sel = selectCanonicalExpiry(contracts, nowMs);
+  const sel = selectCanonicalExpiry(contracts, nowMs, opts.expiry);
   if (!sel.expiry) return null;
   const chain = contracts.filter((c) => c.expiration === sel.expiry);
   const observedDates = [...new Set(chain.map(c => String(c.date ?? '')).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort();

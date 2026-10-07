@@ -428,7 +428,7 @@ export async function fetchIndicators(
 export async function fetchOptionsSnapshot(
   symbol: string,
   price: number,
-  ctx: { recentCloses?: number[]; recentDates?: string[] } = {},
+  ctx: { recentCloses?: number[]; recentDates?: string[]; /** Explicit expiry: used only if listed, else null (no fallback). */ expiry?: string | null } = {},
 ): Promise<OptionsSnapshot | null> {
   if (!AV_KEY) return null;
   try {
@@ -448,7 +448,7 @@ export async function fetchOptionsSnapshot(
 
     // ONE expiry, ONE timestamp. All P/C, walls, max pain and IV below refer to this chain only.
     const snapshotTs = rawData[0]?.date ? String(rawData[0].date).slice(0, 10) : '';
-    const canonical = summarizeChain(rawData, price, { snapshotTs, recentCloses: ctx.recentCloses, recentDates: ctx.recentDates });
+    const canonical = summarizeChain(rawData, price, { snapshotTs, recentCloses: ctx.recentCloses, recentDates: ctx.recentDates, expiry: ctx.expiry });
     // No call open interest near spot: there is no put/call ratio to report, so options positioning is unavailable (never 1.0).
     if (!canonical || canonical.putCallOi == null) return null;
     canonical.notes.push(`Source: ${provider}.`);

@@ -33,7 +33,7 @@ export const dynamic = 'force-dynamic';
 
 // ── In-memory cache (3 min) ─────────────────────────────────────────────
 type BarAge = { assetClass: 'equity' | 'crypto' | 'forex'; timeframe: string; lastBarAt: string | null; barInterval: string | null };
-const dveCache = new Map<string, { data: DVEReading; price: number; ts: number; barAge: BarAge; priceEvidence: PriceEvidence | null }>();
+const dveCache = new Map<string, { data: DVEReading; price: number; ts: number; barAge: BarAge; priceEvidence: PriceEvidence | null; optionsRequest: { expiry: string; status: 'used' | 'unavailable' } | null }>();
 const DVE_CACHE_TTL = 3 * 60 * 1000;
 
 /**
@@ -69,15 +69,21 @@ export async function GET(request: NextRequest) {
     const avIntervalMap: Record<string, string> = { '15m': '15min', '1h': '60min', 'daily': 'daily', 'weekly': 'weekly' };
     const avInterval = avIntervalMap[timeframe] || 'daily';
 
-    // 3. Check cache (include timeframe in key)
-    const cacheKey = `${symbol}_${timeframe}`;
+    // 3. Resolve the asset first: the same ticker can be an equity and a crypto, and they must never share a reading.
+    const assetClass = detectAssetClass(symbol, searchParams.get('type') || undefined);
+    const expiryParam = searchParams.get('expiry');
+    if (expiryParam && !/^\d{4}-\d{2}-\d{2}$/.test(expiryParam)) {
+      return NextResponse.json({ success: false, error: 'Invalid expiry (expected YYYY-MM-DD)' }, { status: 400 });
+    }
+    // Options (and so an expiry) apply to equities only; elsewhere the parameter is ignored and does not split the cache.
+    const expiry = assetClass === 'equity' ? expiryParam : null;
+
+    // 4. Cache: everything that changes the reading is in the key.
+    const cacheKey = `${symbol}_${timeframe}_${assetClass}_${expiry ?? 'default-expiry'}`;
     const cached = dveCache.get(cacheKey);
     if (cached && Date.now() - cached.ts < DVE_CACHE_TTL) {
-      return NextResponse.json({ success: true, data: cached.data, price: cached.price, priceEvidence: cached.priceEvidence, cached: true, ...freshnessMeta(cached.barAge, cached.ts) });
+      return NextResponse.json({ success: true, data: cached.data, price: cached.price, priceEvidence: cached.priceEvidence, optionsRequest: cached.optionsRequest ?? undefined, cached: true, ...freshnessMeta(cached.barAge, cached.ts) });
     }
-
-    // 4. Detect asset class
-    const assetClass = detectAssetClass(symbol, searchParams.get('type') || undefined);
 
     // 5. Fetch price + MPE in parallel (DVE needs historical data)
     const [priceData, mpeData] = await Promise.all([
@@ -104,7 +110,7 @@ export async function GET(request: NextRequest) {
     // 7. Fetch options (equities only)
     let optsData = null;
     if (assetClass === 'equity') {
-      optsData = await fetchOptionsSnapshot(symbol, priceData.price);
+      optsData = await fetchOptionsSnapshot(symbol, priceData.price, { expiry });
       if (!optsData) {
         console.warn(`[DVE] ${symbol} — options data unavailable (no usable REALTIME_OPTIONS/HISTORICAL_OPTIONS chain)`);
       }
@@ -186,8 +192,10 @@ export async function GET(request: NextRequest) {
     // The Symbol page's measured values (completed daily bars only, dated) from the same bars, so the two views can be
     // compared on one basis. Daily timeframe only; forex has no evidence definition yet.
     const priceEvidence = timeframe === 'daily' && assetClass !== 'forex' ? priceEvidenceFromSeries(symbol, assetClass, priceData, computedAtMs) : null;
-    dveCache.set(cacheKey, { data: reading, price: priceData.price, ts: computedAtMs, barAge, priceEvidence });
-    return NextResponse.json({ success: true, data: reading, price: priceData.price, priceEvidence, cached: false, ...freshnessMeta(barAge, computedAtMs) });
+    // An explicit expiry that is not listed leaves options out of the reading (no substitute expiry) and says so.
+    const optionsRequest = expiry ? { expiry, status: optsData ? 'used' as const : 'unavailable' as const } : null;
+    dveCache.set(cacheKey, { data: reading, price: priceData.price, ts: computedAtMs, barAge, priceEvidence, optionsRequest });
+    return NextResponse.json({ success: true, data: reading, price: priceData.price, priceEvidence, optionsRequest: optionsRequest ?? undefined, cached: false, ...freshnessMeta(barAge, computedAtMs) });
   } catch (error) {
     console.error('[DVE API] Error:', error);
     return NextResponse.json(

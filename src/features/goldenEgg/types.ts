@@ -157,6 +157,8 @@ export interface GoldenEggPayload {
   priceEvidence?: import('@/lib/research/priceEvidence').PriceEvidence | null;
   /** Session, bar closes, next earnings and scheduled releases, each dated (lib/research/timingEvidence). */
   timingEvidence?: import('@/lib/research/timingEvidence').TimingEvidence | null;
+  /** Present when the caller asked for a specific options expiry: whether that expiry's chain was used. */
+  optionsRequest?: { expiry: string; status: 'used' | 'unavailable' };
   meta: {
     symbol: string;
     assetClass: 'equity' | 'crypto' | 'forex';

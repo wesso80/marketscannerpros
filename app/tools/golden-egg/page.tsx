@@ -417,8 +417,10 @@ export default function GoldenEggPage() {
   }, [sym, selectedSymbol, selectSymbol]);
 
   // Core data
-  const goldenEgg = useGoldenEgg(sym, timeframe, resolvedType);
-  const dve = useDVE(sym, timeframe, resolvedType);
+  // One selected expiry for every section: the packet, the Volatility reading and the Options fold (W1).
+  const requestedExpiry = searchParams.get('expiry');
+  const goldenEgg = useGoldenEgg(sym, timeframe, resolvedType, requestedExpiry);
+  const dve = useDVE(sym, timeframe, resolvedType, requestedExpiry);
   const quote = useQuote(sym, quoteType);
   const regime = useRegime();
   const dailyPicks=usePublicMarketFeed<PicksResponse>('/api/scanner/daily-picks?limit=20');
@@ -653,6 +655,7 @@ export default function GoldenEggPage() {
   const researchSnapshot = geCanonical ? buildResearchSnapshot({
     canonical: geCanonical, priceEvidence: ge?.priceEvidence, timingEvidence: ge?.timingEvidence,
     volatilityRelease: dve.loading ? undefined : d?.signal ? { type: d.signal.type, state: d.signal.state } : null,
+    optionsRequest: ge?.optionsRequest ?? null,
   }) : null;
   const volatilityEvidence = geCanonical && ge?.priceEvidence ? buildVolatilityEvidence({
     assetClass: geCanonical.assetClass, priceEvidence: ge.priceEvidence,
@@ -669,7 +672,7 @@ export default function GoldenEggPage() {
   const evidenceFold = evidenceSummary && !loading ? <CollapsibleSection deferMount title="Evidence summary" summary={evidenceSummary.headline}><EvidenceSummaryPanel s={evidenceSummary}/></CollapsibleSection> : null;
   const q = encodeURIComponent(sym);
   const specialistLinks = [
-    ...(quoteType === 'crypto' ? [] : [{ href: optionsHref(sym), label: 'Options' }]),
+    ...(quoteType === 'crypto' ? [] : [{ href: optionsHref(sym, requestedExpiry ?? undefined), label: 'Options' }]),
     { href: `/tools/volatility-engine?symbol=${q}`, label: 'Volatility' },
     { href: `/tools/deep-analysis?symbol=${q}`, label: 'Deep analysis' },
     { href: `/tools/terminal?tab=time-confluence&symbol=${q}`, label: 'Time confluence' },
@@ -711,7 +714,7 @@ export default function GoldenEggPage() {
         {ge?.priceEvidence&&!loading&&<CollapsibleSection title="Price and structure" summary={ge.priceEvidence.summary[0]??`Completed bar ${ge.priceEvidence.basis.lastCompletedBar??'n/a'}`}><PriceEvidencePanel e={ge.priceEvidence} section="price"/></CollapsibleSection>}{volatilityFold}
         {goldenEgg.error&&!loading&&<p role="alert" className="text-sm text-amber-300">Symbol data feed failed. <button className="min-h-10 underline" onClick={()=>goldenEgg.refetch()}>Retry</button></p>}
         {ge&&<>
-        <CollapsibleSection deferMount title="Options" summary={geCanonical?.options?`Expiry ${geCanonical.options.expiry}`:'Options data not collected'}><SymbolOptionsContext compact symbol={sym} expiry={searchParams.get('expiry')??undefined}/></CollapsibleSection>
+        <CollapsibleSection deferMount title="Options" summary={geCanonical?.options?`Expiry ${geCanonical.options.expiry}`:'Options data not collected'}><SymbolOptionsContext compact symbol={sym} expiry={requestedExpiry??undefined}/></CollapsibleSection>
         {ge?.timingEvidence&&!loading&&<CollapsibleSection title="Timing and events" summary={ge.timingEvidence.summary[1]??ge.timingEvidence.summary[0]}><TimingEvidencePanel t={ge.timingEvidence}/></CollapsibleSection>}
         <CollapsibleSection deferMount title="Fundamentals" summary={geCanonical?.fundamentals?.marketCap!=null?`Market cap ${formatUsdShort(geCanonical.fundamentals.marketCap)}${geCanonical.fundamentals.lastReportedQuarter?` · latest reported quarter ${geCanonical.fundamentals.lastReportedQuarter}`:''}`:'Company overview and ownership'}><CompanyOverview symbol={sym}/></CollapsibleSection>
         <CollapsibleSection deferMount title="News and ownership" summary="Symbol news grouped by event, and dated ownership filings. Loads when opened."><SymbolNewsPanel symbol={sym} type="equity"/><div className="mt-3"><OwnershipFlowPanel symbol={sym}/></div></CollapsibleSection>

@@ -940,6 +940,8 @@ export interface GoldenEggComputeParams {
   workspaceId?: string | null;
   /** Skip the 3-minute memory cache. */
   fresh?: boolean;
+  /** Explicit options expiry (YYYY-MM-DD, equities). Used only if listed in the chain; never replaced by the default. */
+  expiry?: string | null;
 }
 
 export interface GoldenEggComputeResult {
@@ -1003,10 +1005,14 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
   const avIntervalMap: Record<string, string> = { '15m': '15min', '1h': '60min', 'daily': 'daily', 'weekly': 'weekly' };
   const avInterval = avIntervalMap[timeframe] || 'daily';
   const tfLabel = tfLabelFor(timeframe);
-  const cacheKey = `${symbol}_${timeframe}_${assetClass}`;
+  // Options exist for equities only; an expiry on any other asset is ignored rather than splitting the cache.
+  const expiry = assetClass === 'equity' && params.expiry && /^\d{4}-\d{2}-\d{2}$/.test(params.expiry) ? params.expiry : null;
+  // Everything that changes the packet is in the key: symbol, timeframe, asset class and the options expiry.
+  const cacheKey = `${symbol}_${timeframe}_${assetClass}_${expiry ?? 'default-expiry'}`;
   const hit = cache.get(cacheKey);
   if (!params.fresh && hit && Date.now() - hit.ts < CACHE_TTL) {
-    return { payload: hit.data, cached: true, localDemo: false, warnings: [], dataQuality: buildMarketDataProviderStatus({ source: 'memory_cache', provider: 'memory_cache' }) };
+    const req = hit.data.optionsRequest;
+    return { payload: hit.data, cached: true, localDemo: false, warnings: req?.status === 'unavailable' ? [`Options for the requested ${req.expiry} expiry are not available; no other expiry was substituted.`] : [], dataQuality: buildMarketDataProviderStatus({ source: 'memory_cache', provider: 'memory_cache' }) };
   }
 
   const tcSymbol = assetClass === 'crypto' ? `${symbol.replace(/[-/]?(USDT|USD)$/i, '')}USD` : symbol;
@@ -1040,7 +1046,7 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
   const benchSeries: { btcCloses?: number[]; ethCloses?: number[] } = {};
   if (assetClass === 'equity') {
     [optsData, fundamentals] = await Promise.all([
-      fetchOptionsSnapshot(symbol, priceData.price, { recentCloses: priceData.historicalCloses, recentDates: priceData.historicalDates }),
+      fetchOptionsSnapshot(symbol, priceData.price, { recentCloses: priceData.historicalCloses, recentDates: priceData.historicalDates, expiry }),
       getFundamentalsSummary(symbol).catch(() => null),
     ]);
   } else if (assetClass === 'crypto') {
@@ -1078,7 +1084,8 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
     console.warn('[golden-egg] canonical verdict unavailable:', e instanceof Error ? e.message : e);
   }
 
-  if (payload.layer1.direction !== 'NEUTRAL') {
+  // Signal records describe the default packet; a packet for an explicitly chosen expiry is not a new signal.
+  if (payload.layer1.direction !== 'NEUTRAL' && !expiry) {
     recordSignal({
       symbol, signalType: 'golden_egg', direction: payload.layer1.direction === 'LONG' ? 'bullish' : 'bearish', score: payload.canonicalVerdict?.score ?? payload.layer1.confidence,
       priceAtSignal: priceData.price, timeframe: tfLabel,
@@ -1104,6 +1111,12 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
       releases: calendarFeed ? { events: calendarFeed.events.filter((e) => !e.isReleased), source: `Economic calendar (${calendarFeed.meta?.providers?.map((p: { id: string }) => p.id).join(', ') || 'providers'})` } : null,
     }) };
   }
+  const warnings: string[] = [];
+  if (expiry) {
+    const used = payload.canonical?.options?.expiry === expiry;
+    payload = { ...payload, optionsRequest: { expiry, status: used ? 'used' : 'unavailable' } };
+    if (!used) warnings.push(`Options for the requested ${expiry} expiry are not available (not listed in the chain, or no usable open interest); no other expiry was substituted.`);
+  }
   cache.set(cacheKey, { data: payload, ts: Date.now() });
-  return { payload, cached: false, localDemo: false, warnings: [], dataQuality: goldenEggLiveDataQuality(assetClass) };
+  return { payload, cached: false, localDemo: false, warnings, dataQuality: goldenEggLiveDataQuality(assetClass) };
 }
