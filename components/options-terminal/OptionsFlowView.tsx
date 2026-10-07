@@ -151,7 +151,7 @@ function tierBadge(tier: string): { bg: string; color: string } {
 
 function skewLabel(signal: string): { label: string; color: string } {
   // Skew is descriptive, not a direction call: equities normally price puts above calls.
-  if (signal === 'steep_put_skew') return { label: 'Steep Put Skew (heavy hedging)', color: 'var(--msp-warn)' };
+  if (signal === 'steep_put_skew') return { label: 'Steep put skew (puts priced above calls)', color: 'var(--msp-warn)' };
   if (signal === 'normal_put_skew') return { label: 'Normal Put Skew', color: 'var(--msp-text-muted)' };
   if (signal === 'call_skew') return { label: 'Call Skew (upside demand)', color: 'var(--msp-info)' };
   return { label: 'Flat Skew', color: 'var(--msp-text-muted)' };
@@ -333,7 +333,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                       </div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '10px', color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Institutional Flow</div>
+                      <div style={{ fontSize: '10px', color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }} title="Direction of the larger estimated trades in the snapshot; not a statement about who traded">Large-trade lean</div>
                       <div style={{ fontSize: '14px', fontWeight: 700, color: dirColor(data.smartMoney.direction), textTransform: 'uppercase' }}>
                         {data.smartMoney.direction}
                       </div>

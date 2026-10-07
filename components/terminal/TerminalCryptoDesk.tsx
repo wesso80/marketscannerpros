@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import StatTile from '@/components/visual/StatTile';
+import SourceLine from '@/components/visual/SourceLine';
 import { boundedJsonFetch } from '@/lib/boundedFetch';
 import { coinCode, selectCryptoDeskTiles, type DeskTile } from '@/lib/terminal/cryptoDeskTiles';
 
@@ -66,7 +67,7 @@ export default function TerminalCryptoDesk({ symbol }: { symbol: string }) {
         {state.tiles.map((tile) => (
           <div key={tile.label} className="min-w-0">
             <StatTile label={tile.label} value={tile.value} warning={tile.warning} />
-            {tile.source ? <p className="mt-1 text-[11px] text-[var(--msp-text-muted)]">{tile.source}</p> : null}
+            <SourceLine source={tile.source || 'Source not supplied'} asOf={tile.asOf ?? null} />
           </div>
         ))}
       </div>

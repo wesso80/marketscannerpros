@@ -527,6 +527,9 @@ function ScannerContent() {
     return marketAsset==='crypto'?cr:eq;
   }, [equity.data, crypto.data,marketAsset]);
 
+  // Completion time of the scan whose rows are shown, so a finished scan's source line carries a time.
+  const rankedScan = marketAsset==='crypto'?crypto.data:equity.data;
+  const rankedScanAsOf = rankedScan?.metadata?.dataQuality?.computedAt ?? rankedScan?.metadata?.timestamp ?? null;
   const rankedLocalDemo = Boolean(equity.data?.metadata?.localDemo || crypto.data?.metadata?.localDemo);
   const rankedProviderStatuses = useMemo(() => ([
     { label: 'Equity', status: downgradeProviderStatusForRows(equity.data?.metadata?.dataQuality?.providerStatus ?? null, equity.data?.results), quality: equity.data?.metadata?.dataQuality ?? null },
@@ -922,7 +925,13 @@ function ScannerContent() {
 
 
           <Card>
-            {v2Loading ? <p>Collecting scan results…</p> : rankedRows.length===0 ? (
+            {v2Loading ? <p>Collecting scan results…</p> : rankedRows.length===0 && allResults.length>0 ? (
+              // A completed scan whose evidence filter matches nothing keeps its result: no example card.
+              <div data-scanner-no-matches className="rounded-lg border border-[var(--msp-border)] p-4 text-sm">
+                <p className="font-semibold">No matches for this filter</p>
+                <p className="mt-1 text-[var(--msp-text-muted)]">0 of {allResults.length} scanned candidates match {scannerCopy(activeTab)}. Choose another evidence filter to see them.</p>
+              </div>
+            ) : rankedRows.length===0 ? (
               <div data-scanner-example className="rounded-lg border border-[var(--msp-border)] p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--msp-warn)]">Example</p>
                 <p className="mt-2 text-sm">No live queue is loaded. This sample shows the card shape only. Run a scan when you want live rows.</p>
@@ -1098,7 +1107,7 @@ function ScannerContent() {
           {crypto.error && <div>Crypto scan: {crypto.error}</div>}
         </div>
       )}
-      <SourceLine source={rankedLocalDemo || proScanResults?.dataQuality?.source === 'local_demo' ? 'Example' : 'Scanner queue'} basis="Last completed bar" />
+      <SourceLine source={rankedLocalDemo || proScanResults?.dataQuality?.source === 'local_demo' ? 'Example' : 'Scanner queue'} asOf={mode === 'ranked' ? rankedScanAsOf : proScanResults?.dataQuality?.computedAt ?? null} basis="Last completed bar" />
     </div>
   );
 }
