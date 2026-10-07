@@ -5,7 +5,7 @@
    Real API data: /api/golden-egg + /api/dve + /api/quote
    --------------------------------------------------------------------------- */
 
-import { CANONICAL_SETUP_TOOLTIP, INDICATOR_COMPOSITE_LABEL, INDICATOR_COMPOSITE_TOOLTIP, TIMEFRAME_PULL_LABEL, CLOSE_CALENDAR_LABEL, TIMING_TOOLTIP } from '@/lib/goldenEgg/labels';
+import { CLOSE_CALENDAR_LABEL, TIMING_TOOLTIP } from '@/lib/goldenEgg/labels';
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { parseResearchTimeframe } from '@/lib/researchContext';
@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { humanizeEnum } from '@/lib/presentation/labels';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useGoldenEgg, useDVE, useQuote, useRegime, type ScanTimeframe, SCAN_TIMEFRAMES } from '@/app/v2/_lib/api';
-import { Card, Badge, ScoreBar, UpgradeGate } from '@/app/v2/_components/ui';
+import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { REGIME_COLORS, VERDICT_COLORS, CROSS_MARKET, LIFECYCLE_COLORS, REGIME_WEIGHTS } from '@/app/v2/_lib/constants';
 import type { RegimePriority, Verdict, LifecycleState } from '@/app/v2/_lib/types';
@@ -27,11 +27,10 @@ import MarketStatusStrip from '@/components/market/MarketStatusStrip';
 import RiskFlagPanel, { type RiskFlag } from '@/components/market/RiskFlagPanel';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
 import { setupTypeDisplay } from '@/lib/scoring/canonical/scannerAdapter';
-import ScoreTypeBadge from '@/components/ui/ScoreTypeBadge';
 import { PageHero } from '@/components/ui';
 import { describeLevelRelation } from '@/lib/goldenEgg/timing';
 import { formatUsdShort } from '@/lib/goldenEgg/semantics';
-import { NO_EDGE_BANNER, calibrationSummary, cautionTags, gradeRelativeNote, noSetupDisplay, priceChangeBasisLabel, scoreLabel } from '@/lib/scoring/canonical/display';
+import { noSetupDisplay, priceChangeBasisLabel } from '@/lib/scoring/canonical/display';
 import {optionsHref} from '@/lib/market/links';
 import { lookupAssetType } from '@/lib/lookupAssetType';
 import {SymbolSnapshotHeader} from '@/components/market/SymbolSnapshotHeader';
@@ -44,6 +43,9 @@ import ResearchSnapshotCard from '@/components/research/ResearchSnapshotCard';
 import SymbolNewsPanel from '@/components/research/SymbolNewsPanel';
 import VolatilityEvidencePanel from '@/components/research/VolatilityEvidencePanel';
 import EvidenceSummaryPanel from '@/components/research/EvidenceSummaryPanel';
+import DescriptiveStates from '@/components/research/DescriptiveStates';
+import { describeStates } from '@/lib/research/descriptiveStates';
+import { bbwpBasisNote } from '@/lib/research/priceEvidence';
 import { buildEvidenceSummary } from '@/lib/research/evidenceSummary';
 import { buildVolatilityEvidence } from '@/lib/research/volatilityEvidence';
 import { buildResearchSnapshot } from '@/lib/research/researchSnapshot';
@@ -78,13 +80,13 @@ const IntradayCharts = dynamic(() => import('@/app/tools/intraday-charts/page'),
 const CompanyOverview = dynamic(() => import('@/app/tools/company-overview/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Fundamentals…</div> });
 const OwnershipFlowPanel = dynamic(() => import('@/components/golden-egg/OwnershipFlowPanel'), { ssr: false });
 
-const GE_TABS = ['Verdict', 'Chart', 'Deep Analysis', 'Fundamentals'] as const;
+const GE_TABS = ['Evidence', 'Chart', 'Deep Analysis', 'Fundamentals'] as const;
 type GETab = typeof GE_TABS[number];
 
 const GE_TAB_META: Record<GETab, { eyebrow: string; description: string }> = {
-  Verdict: {
-    eyebrow: '1. Verdict packet',
-    description: 'Answer first: alignment, data trust, reference, invalidation, and next check.',
+  Evidence: {
+    eyebrow: '1. Measured evidence',
+    description: 'Measured states with their definitions, data trust, scenario levels and the next check.',
   },
   Chart: {
     eyebrow: '2. Price context',
@@ -92,11 +94,11 @@ const GE_TAB_META: Record<GETab, { eyebrow: string; description: string }> = {
   },
   'Deep Analysis': {
     eyebrow: '3. Evidence detail',
-    description: 'Review the deeper technical evidence behind the verdict.',
+    description: 'Review the deeper technical evidence and its sources.',
   },
   Fundamentals: {
     eyebrow: '4. Business context',
-    description: 'Check company or asset fundamentals before relying on the setup.',
+    description: 'Company or asset fundamentals, with their reporting periods.',
   },
 };
 
@@ -105,8 +107,8 @@ function GoldenEggTabRail({ activeTab, onSelectTab }: { activeTab: GETab; onSele
     <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2" aria-label="Symbol validation views">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-amber-300">Validation workbench</div>
-          <div className="text-[0.72rem] text-slate-500">Verdict first, then inspect chart, evidence detail, and business context.</div>
+          <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-amber-300">Research views</div>
+          <div className="text-[0.72rem] text-slate-500">Measured evidence first, then the chart, evidence detail and business context.</div>
         </div>
         <a href="/tools/liquidity-sweep" className="rounded-md border border-slate-700/70 bg-slate-900/60 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-slate-400 no-underline transition hover:border-emerald-400/30 hover:text-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50">
           Open Liquidity Sweep
@@ -156,7 +158,7 @@ function GoldenEggSubviewFrame({
   onSelectTab,
   children,
 }: {
-  tab: Exclude<GETab, 'Verdict'>;
+  tab: Exclude<GETab, 'Evidence'>;
   symbol: string;
   terminalHref: string;
   onSelectTab: (tab: GETab) => void;
@@ -181,7 +183,7 @@ function GoldenEggSubviewFrame({
             <h2 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">{symbolText(tab)} check for {symbolText(symbol)}</h2>
             <p className="mt-1 text-xs leading-5 text-slate-400">{symbolText(meta.description)}</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" onClick={() => onSelectTab('Verdict')} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">Review Verdict</button>
+              <button type="button" onClick={() => onSelectTab('Evidence')} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">Review evidence</button>
               <button type="button" onClick={() => onSelectTab(adjacentTab)} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Open {adjacentTab}</button>
               <a href={terminalHref} className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Open Terminal</a>
             </div>
@@ -190,7 +192,7 @@ function GoldenEggSubviewFrame({
           <div className="grid self-start gap-1.5 sm:grid-cols-2">
             <GoldenEggSubviewMetric label="Symbol" value={symbol} tone="#FBBF24" detail="Single-symbol validation context" />
             <GoldenEggSubviewMetric label="View" value={tab} tone="#10B981" detail={meta.eyebrow} />
-            <GoldenEggSubviewMetric label="Focus" value={tab === 'Chart' ? 'Price Action' : tab === 'Deep Analysis' ? 'Evidence Detail' : 'Business Context'} tone="#A5B4FC" detail="Completes the Verdict packet" />
+            <GoldenEggSubviewMetric label="Focus" value={tab === 'Chart' ? 'Price Action' : tab === 'Deep Analysis' ? 'Evidence Detail' : 'Business Context'} tone="#A5B4FC" detail="Part of the research views" />
             <GoldenEggSubviewMetric label="Next Check" value={adjacentTab} tone="#F59E0B" detail="Continue the validation sequence" />
           </div>
         </div>
@@ -201,7 +203,7 @@ function GoldenEggSubviewFrame({
 }
 
 const GOLDEN_EGG_WORKFLOW_CHECKS = [
-  'Verdict first',
+  'Measured evidence first',
   'Data trust',
   'Reference level',
   'Invalidation',
@@ -272,12 +274,6 @@ function dirColor(d?: string) {
   return 'var(--msp-warn)';
 }
 
-function gradeColor(g: string) {
-  if (g === 'A') return 'var(--msp-bull)';
-  if (g === 'B') return 'var(--msp-info)';
-  if (g === 'C') return 'var(--msp-warn)';
-  return 'var(--msp-bear)';
-}
 
 /** Adaptive price formatter — keeps sub-dollar assets readable */
 function fmtP(v: number | null | undefined): string {
@@ -325,14 +321,11 @@ function geDataQualityDetail(label: string, missing: string[]): string {
   return `Missing or weak: ${missing.join(', ')}.`;
 }
 
-function summarizeGENextCheck(args: { dataQuality: string; hasScenarioLevels: boolean; assessment?: string | null; primaryBlocker?: string | null; confluence: number; crossMarket: 'supportive' | 'neutral' | 'headwind' }) {
-  if (args.dataQuality !== 'GOOD') return 'Refresh Golden Egg inputs before relying on reference levels.';
-  if (!args.hasScenarioLevels) return 'Wait for valid reference and invalidation levels before escalation.';
-  if (args.primaryBlocker) return `Review blocker: ${args.primaryBlocker}.`;
-  if (args.crossMarket === 'headwind') return 'Check whether cross-market headwinds ease before treating the setup as clean.';
-  if ((args.assessment || '').toUpperCase() !== 'ALIGNED') return 'Wait for assessment to move from watch/mixed into aligned.';
-  if (args.confluence < 70) return 'Indicator composite is below 70/100.';
-  return 'Monitor whether price respects the reference level and indicator composite holds.';
+function summarizeGENextCheck(args: { dataQuality: string; hasScenarioLevels: boolean }) {
+  // Phase 4: no assessment, composite threshold or blocker score here; only what to look at next.
+  if (args.dataQuality !== 'GOOD') return 'Refresh the inputs before relying on reference levels.';
+  if (!args.hasScenarioLevels) return 'Reference and invalidation levels are not both available.';
+  return 'Check the measured states again after the next completed bar.';
 }
 
 function assessmentDisplayLabel(assessment?: string | null): string {
@@ -343,34 +336,23 @@ function assessmentDisplayLabel(assessment?: string | null): string {
   return 'Watch';
 }
 
-function summarizeGEReason(args: { direction?: string | null; setupType?: string | null; confluence: number; crossMarket: 'supportive' | 'neutral' | 'headwind'; dataQuality: string; primaryDriver?: string | null; primaryBlocker?: string | null }) {
+function summarizeGEReason(args: { dataQuality: string; summary?: string | null }) {
   if (args.dataQuality !== 'GOOD') return `Research context is limited by ${args.dataQuality.toLowerCase()} inputs.`;
-  if (args.primaryBlocker) return `${args.primaryDriver || 'Setup evidence'} is present, but ${args.primaryBlocker} is limiting conviction.`;
-  const direction = args.direction ? `${args.direction.toLowerCase()} ` : '';
-  const setup = args.setupType ? args.setupType.replace(/_/g, ' ') : 'setup';
-  if (args.crossMarket === 'headwind') return `${direction}${setup} is present, but cross-market conditions are a headwind.`;
-  if (args.confluence >= 70) return `${direction}${setup} has an indicator composite of at least 70/100 with no primary blocker flagged.`;
-  return `${direction}${setup} is forming, but indicator composite is still below 70/100.`;
+  return args.summary || 'Measured daily evidence is not available for this timeframe.';
 }
 
-function summarizeGEResearchCaution(args: { dataQuality: string; hasScenarioLevels: boolean; assessment?: string | null; confluence: number; primaryBlocker?: string | null }) {
+function summarizeGEResearchCaution(args: { dataQuality: string; hasScenarioLevels: boolean }) {
   if (args.dataQuality !== 'GOOD') return 'Research caution: core inputs are incomplete or weak.';
   if (!args.hasScenarioLevels) return 'Research caution: reference and invalidation levels are not both available.';
-  if (args.primaryBlocker) return `Research caution: blocker still present — ${args.primaryBlocker}.`;
-  if ((args.assessment || '').toUpperCase() !== 'ALIGNED') return 'Research caution: Golden Egg assessment is not scenario aligned.';
-  if (args.confluence < 70) return 'Research caution: indicator composite remains below 70/100.';
-  return 'Research caution: verify whether price interaction confirms or rejects the scenario.';
+  return 'Research caution: verify whether new bars confirm or change the measured states.';
 }
 
-function buildGEInvalidationConditions(args: { confluence: number; dataQuality: string; primaryBlocker?: string | null; crossMarket: 'supportive' | 'neutral' | 'headwind'; dveRegime?: string | null; timeVerdict?: string | null }) {
+function buildGEInvalidationConditions(args: { dataQuality: string; dveRegime?: string | null; timeVerdict?: string | null }) {
   return [
     'Reference or invalidation level becomes unavailable.',
     args.dataQuality !== 'GOOD' ? 'Data trust remains degraded or missing.' : null,
-    args.confluence < 60 ? 'Indicator composite remains below 60/100.' : 'Indicator composite drops below 60/100.',
-    args.primaryBlocker ? `Primary blocker persists: ${args.primaryBlocker}.` : null,
-    args.crossMarket === 'headwind' ? 'Cross-market conditions remain a headwind.' : 'Cross-market conditions flip to headwind.',
-    args.dveRegime === 'climax' ? 'DVE remains in climax risk.' : 'DVE flips into climax risk.',
-    args.timeVerdict === 'disagree' ? 'Timing note only: midpoint pull remains opposed; does not change the verdict.' : 'Timing note only: midpoint pull may disagree; does not change the verdict.',
+    args.dveRegime === 'climax' ? 'Volatility engine remains in its climax regime.' : 'Volatility engine moves into its climax regime.',
+    args.timeVerdict === 'disagree' ? 'Timing note only: midpoint pull remains opposed.' : 'Timing note only: midpoint pull may change.',
   ].filter(Boolean) as string[];
 }
 
@@ -402,7 +384,7 @@ export default function GoldenEggPage() {
   const [symbolInput, setSymbolInput] = useState('');
   const [cryptoStamp,setCryptoStamp] = useState<StampLineProps|null>(null);
   const [timeframe, setTimeframe] = useState<ScanTimeframe>(requestedTimeframe ?? 'daily');
-  const [activeTab, setActiveTab] = useState<GETab>('Verdict');
+  const [activeTab, setActiveTab] = useState<GETab>('Evidence');
   const [assetType, setAssetType] = useState<'auto' | 'equity' | 'crypto'>(requestedAsset === 'crypto' || requestedAsset === 'equity' ? requestedAsset : 'auto');
   useEffect(() => {
     setTimeframe(requestedTimeframe ?? 'daily');
@@ -473,13 +455,13 @@ export default function GoldenEggPage() {
   const crossMarketAlignment = geCanonical && geCanonical.crossMarket.alignment !== 'unknown'
     ? { alignment: geCanonical.crossMarket.alignment as 'supportive' | 'neutral' | 'headwind', factors: geCanonical.crossMarket.items.filter((i) => i.relation !== 'unknown').map((i) => `${i.symbol}: ${i.trend} (${i.relation})`) }
     : deriveCrossMarketAlignment(regime.data?.signals);
-  const geNextUsefulCheck = summarizeGENextCheck({ dataQuality: geDataQuality, hasScenarioLevels: geHasScenarioLevels, assessment: geAssessment, primaryBlocker: ge?.layer1?.primaryBlocker, confluence: geConfluenceScore, crossMarket: crossMarketAlignment.alignment });
+  const geNextUsefulCheck = summarizeGENextCheck({ dataQuality: geDataQuality, hasScenarioLevels: geHasScenarioLevels });
   const geAssessmentLabel = geNoQualifyingSetup ? 'No Setup' : assessmentDisplayLabel(geAssessment);
   const geReason = geNoQualifyingSetup
     ? `No canonical setup qualifies on this bar${geNoSetup?.detail ? ` — ${geNoSetup.detail.replace(/^Closest:/, 'closest:')}` : ''}.`
-    : summarizeGEReason({ direction: ge?.layer1?.direction, setupType: setupTypeDisplay(geEngine, ge?.layer2?.setup?.setupType, { withDirection: false }).toLowerCase(), confluence: geConfluenceScore, crossMarket: crossMarketAlignment.alignment, dataQuality: geDataQuality, primaryDriver: ge?.layer1?.primaryDriver, primaryBlocker: ge?.layer1?.primaryBlocker });
-  const geDoNothing = summarizeGEResearchCaution({ dataQuality: geDataQuality, hasScenarioLevels: geHasScenarioLevels, assessment: geAssessment, confluence: geConfluenceScore, primaryBlocker: ge?.layer1?.primaryBlocker });
-  const geInvalidationConditions = buildGEInvalidationConditions({ confluence: geConfluenceScore, dataQuality: geDataQuality, primaryBlocker: ge?.layer1?.primaryBlocker, crossMarket: crossMarketAlignment.alignment, dveRegime: d?.volatility?.regime, timeVerdict: ge?.layer3?.timeConfluence?.verdict });
+    : summarizeGEReason({ dataQuality: geDataQuality, summary: ge?.priceEvidence?.summary.join(' ') });
+  const geDoNothing = summarizeGEResearchCaution({ dataQuality: geDataQuality, hasScenarioLevels: geHasScenarioLevels });
+  const geInvalidationConditions = buildGEInvalidationConditions({ dataQuality: geDataQuality, dveRegime: d?.volatility?.regime, timeVerdict: ge?.layer3?.timeConfluence?.verdict });
   const geMarketStatusItems = [
     {
       label: 'Quote',
@@ -541,15 +523,15 @@ export default function GoldenEggPage() {
   ];
   const geEvidenceItems = [
     {
-      label: 'Why This Appeared',
-      value: geDataQuality === 'GOOD' ? 'Supported' : geDataQuality,
+      label: 'Measured evidence',
+      value: geDataQuality === 'GOOD' ? 'Recorded' : geDataQuality,
       status: geDataQuality === 'GOOD' ? 'supportive' as const : 'missing' as const,
       detail: geReason,
     },
     {
-      label: 'Cross Market',
-      value: crossMarketAlignment.alignment === 'headwind' ? 'Headwind' : crossMarketAlignment.alignment === 'supportive' ? 'Tailwind' : 'Neutral',
-      status: crossMarketAlignment.alignment === 'supportive' ? 'supportive' as const : crossMarketAlignment.alignment === 'headwind' ? 'conflicting' as const : 'neutral' as const,
+      label: 'Reference markets',
+      value: crossMarketAlignment.factors.length ? `${crossMarketAlignment.factors.length} recorded` : 'Not recorded',
+      status: 'neutral' as const,
       detail: crossMarketAlignment.factors.slice(0, 3).join(' | ') || 'No cross-market data.',
     },
     {
@@ -605,7 +587,7 @@ export default function GoldenEggPage() {
   const geAiSummary = useMemo(() => {
     if (goldenEgg.error) return `Golden Egg: ${sym} unavailable — ${goldenEgg.error}`;
     if (!ge) return `Golden Egg: Loading ${sym}...`;
-    return `${sym} — Assessment: ${geAssessment}, Direction: ${ge.layer1.direction}, Indicator composite: ${geConfluenceDisplay}`;
+    return `${sym} — ${ge.priceEvidence?.summary.join(' ') || 'Measured daily evidence not available.'}`;
   }, [sym, ge, geAssessment, geConfluenceScore, goldenEgg.error]);
 
   useRegisterPageData('deep_analysis', geAiData, [sym], geAiSummary);
@@ -631,9 +613,7 @@ export default function GoldenEggPage() {
           confluenceScore: geConfluenceScore,
           truthLayer: {
             whatWeKnow: [
-              `Golden Egg assessment is ${geAssessment ?? 'unknown'}.`,
-              `Indicator composite score is ${geConfluenceDisplay}.`,
-              ge.layer1?.primaryDriver ? `Primary driver: ${ge.layer1.primaryDriver}.` : null,
+              ...(researchSnapshot?.summary ?? []),
             ].filter(Boolean),
             whatWeDoNotKnow: geMissingInputs({ price: quote.data?.price ?? ge?.meta?.price, confluence: geConfluenceScore, assessment: geAssessment, reference: geReferencePrice, invalidation: geInvalidationPrice }),
             dataQuality: geDataQuality,
@@ -713,7 +693,7 @@ export default function GoldenEggPage() {
             </p>
             <div className="mt-5 grid gap-2 text-left text-xs text-slate-300 sm:grid-cols-2">
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Regime and bias context</div>
-              <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Indicator composite and data-quality checks</div>
+              <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Measured states and data-quality checks</div>
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Scenario reference and invalidation levels</div>
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Volatility, flow, and timing context</div>
             </div>
@@ -829,8 +809,8 @@ export default function GoldenEggPage() {
           )}
         </GoldenEggSubviewFrame>
       )}
-      {/* ─── Verdict Tab (main GE analysis) ─── */}
-      {!isAuthBlocked && activeTab === 'Verdict' && <>
+      {/* ─── Evidence tab (main Symbol analysis) ─── */}
+      {!isAuthBlocked && activeTab === 'Evidence' && <>
       {/* Loading state */}
       {loading && (
         <Card>
@@ -870,18 +850,14 @@ export default function GoldenEggPage() {
             </div>
           )}
           {/* -- VERDICT HEADER (Section 0 — Answer First) ------------ */}
-          <Card className="border-l-4" style={{ borderLeftColor: verdictColor(geAssessment || 'WATCH') }}>
+          <Card>
             <div className="flex flex-col gap-4">
-              {/* Top row: Symbol + Regime + Bias + Verdict */}
+              {/* Top row: symbol, regime and data trust */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <h2 className="text-2xl font-bold text-white">{symbolText(ge.meta.symbol)}</h2>
                     {regime.data && <Badge label={symbolText(`Regime: ${humanizeEnum(regime.data.regime)}`)} color={REGIME_COLORS[regime.data.regime?.toLowerCase() as RegimePriority] || 'var(--msp-text-muted)'} small />}
-                    <span title="Directional context from the Symbol evidence"><Badge label={symbolText(ge.layer1.direction)} color={dirColor(ge.layer1.direction)} /></span>
-                    {geNoQualifyingSetup ? null : <span title={geEngine ? 'Symbol grade (A/B/C; F = blocked)' : 'Grade summarizes the Symbol evidence'}><Badge label={symbolText(`Grade ${ge.layer1.grade}`)} color={gradeColor(ge.layer1.grade)} small /></span>}
-                    {geNoQualifyingSetup ? null : (() => { const lc = geEngine ? (geEngine.permission === 'PASS' ? 'READY' : geEngine.permission === 'WATCH' ? 'WATCHING' : 'INVALIDATED') : deriveGELifecycle(geAssessment, geConfluenceScore); return <span title="Lifecycle describes whether the setup is forming, ready, watching, or invalidated" className="text-[11px] px-1.5 py-0.5 rounded border font-semibold" style={{ color: LIFECYCLE_COLORS[lc], borderColor: LIFECYCLE_COLORS[lc] + '40', backgroundColor: LIFECYCLE_COLORS[lc] + '15' }}>{symbolText(lc.replace('_', ' '))}</span>; })()}
-                    <span title="Cross-market factors can support, oppose, or remain neutral to the setup" className="text-[11px] px-1.5 py-0.5 rounded border font-semibold" style={{ color: ALIGNMENT_COLOR[crossMarketAlignment.alignment], borderColor: ALIGNMENT_COLOR[crossMarketAlignment.alignment] + '40', backgroundColor: ALIGNMENT_COLOR[crossMarketAlignment.alignment] + '15' }}>{symbolText(crossMarketAlignment.alignment === 'headwind' ? 'Headwind' : crossMarketAlignment.alignment === 'supportive' ? 'Tailwind' : 'Neutral')}</span>
                     <span title={symbolText(geDataQualityTitle)} className="text-[11px] px-1.5 py-0.5 rounded border font-semibold" style={{ color: geDataQualityColor(geDataQuality), borderColor: geDataQualityColor(geDataQuality) + '40', backgroundColor: geDataQualityColor(geDataQuality) + '15' }}>Data {symbolText(geDataQuality==='GOOD'?'Checks passed':'Some checks failed')}</span>
                   </div>
                   <div className="text-lg font-bold text-white">
@@ -895,58 +871,21 @@ export default function GoldenEggPage() {
                   <div className="text-xs text-slate-500 mt-1">{symbolText(ge.meta.assetClass)} — {symbolText(ge.meta.timeframe)} — {symbolText(new Date(ge.meta.asOfTs).toLocaleString())}</div>
                 </div>
 
-                <div className="flex items-center gap-4 flex-wrap">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold uppercase tracking-wider" style={{ color: geNoQualifyingSetup ? 'var(--msp-text-muted)' : verdictColor(geAssessment || 'WATCH') }}>
-                      {symbolText(geAssessmentLabel)}
-                    </div>
-                    <div className="text-[11px] text-slate-500 uppercase">Assessment</div>
-                  </div>
-                  {geEngine ? (
-                    <div className="text-center max-w-xs" title={symbolText(CANONICAL_SETUP_TOOLTIP)}>
-                      {geNoSetup ? (
-                        <>
-                          <div className="text-xl font-bold" style={{ color: geNoQualifyingSetup ? 'var(--msp-text-muted)' : verdictColor(geAssessment || 'WATCH') }} data-testid="ge-no-setup">{symbolText(geNoSetup.headline)}</div>
-                          {geNoSetup.detail ? <div className="text-[11px] text-slate-400" data-testid="ge-no-setup-detail">{symbolText(geNoSetup.detail)}</div> : null}
-                          <div className="text-[11px] text-slate-500 uppercase">Canonical</div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="text-3xl font-bold" style={{ color: verdictColor(geAssessment || 'WATCH') }}>{symbolText(scoreLabel(geEngine))}</div>
-                          <div className="text-[11px] text-slate-500 uppercase">Canonical · {symbolText(geSetupLabel)}{symbolText(cautionTags(geEngine).map((t) => ` · ${t}`).join(''))}</div>
-                        </>
-                      )}
-                      {geEngine.scoreBasis && geEngine.permission === 'WATCH' ? <div className="text-[10px] font-semibold text-amber-300/90">{symbolText(NO_EDGE_BANNER)}</div> : null}
-                      {calibrationSummary(geEngine) ? <div className="text-[10px] text-slate-400">{symbolText(calibrationSummary(geEngine))}</div> : null}
-                      {gradeRelativeNote(geEngine) ? <div className="text-[10px] text-slate-400" data-testid="ge-grade-relative">{symbolText(gradeRelativeNote(geEngine))}</div> : null}
-                      <div className="text-[10px] text-slate-500" title={symbolText(INDICATOR_COMPOSITE_TOOLTIP)}>{symbolText(INDICATOR_COMPOSITE_LABEL)} {symbolText(geConfluenceDisplay)}</div>
-                    </div>
-                  ) : (
-                    <div className="text-center">
-                      <div className="text-3xl font-bold" style={{ color: verdictColor(geAssessment || 'WATCH') }}>{symbolText(geConfluenceDisplay)}</div>
-                      <div className="text-[11px] text-slate-500 uppercase" title={symbolText(INDICATOR_COMPOSITE_TOOLTIP)}>{symbolText(INDICATOR_COMPOSITE_LABEL)}</div>
-                    </div>
-                  )}
-                  <ScoreTypeBadge
-                    type={geDataQuality === 'MISSING' ? 'partial' : geDataQuality === 'DEGRADED' ? 'partial' : 'evidence-alignment'}
-                    compact
-                  />
-                </div>
               </div>
+
+              <DescriptiveStates states={describeStates(ge.priceEvidence, dve.loading ? undefined : d?.signal ? { type: d.signal.type, state: d.signal.state } : null)} />
 
               <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-3">
                 <div className="mb-2 flex items-center justify-between gap-3 border-b border-slate-800/50 pb-2">
-                  <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-500">Verdict Packet</div>
+                  <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-500">Research packet</div>
                   <div className="text-[11px] text-slate-500">{symbolText(ge.meta.assetClass)} · {symbolText(ge.meta.timeframe)}</div>
                 </div>
-                <div className="grid gap-2 md:grid-cols-6">
+                <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4">
                   {[
-                    ['Assessment', geAssessmentLabel, verdictColor(geAssessment || 'WATCH'), 'Scenario alignment for educational research only.'],
                     ['Data Trust', geDataQuality, geDataQualityColor(geDataQuality), geDataQualityTitle],
                     ['Reference', formatLevel(geReferencePrice), 'var(--msp-bull)', geSafeScenario?.referenceTrigger || 'Reference unavailable.'],
                     ['Invalidation', formatLevel(geInvalidationPrice), 'var(--msp-bear)', geSafeScenario?.invalidationLevel?.logic || 'Invalidation unavailable.'],
                     ['Next Check', geNextUsefulCheck, 'var(--msp-info)', geNextUsefulCheck],
-                    ['Blocker', ge.layer1.primaryBlocker || 'None flagged', ge.layer1.primaryBlocker ? 'var(--msp-warn)' : 'var(--msp-bull)', ge.layer1.primaryBlocker || 'No primary blocker returned by the model.'],
                   ].map(([label, value, color, title]) => (
                     <div key={label} title={symbolText(title)} className="rounded-md border border-slate-700/50 bg-[#0A101C]/50 px-2.5 py-2">
                       <div className="text-[11px] uppercase tracking-wide text-slate-500">{symbolText(label)}</div>
@@ -963,7 +902,7 @@ export default function GoldenEggPage() {
               {/* Level of Interest / Invalidation / Key Levels row */}
               <div className="pt-3 border-t border-slate-800/50">
                 <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
-                  <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-400">Validated scenario levels</div>
+                  <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-400">Scenario levels</div>
                   <div className="text-[11px] text-slate-500">Canonical bars + structure-anchored levels where structure exists; model (ATR) levels are labelled as such. Scanner shows a faster preliminary ATR estimate; these supersede it.</div>
                 </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -991,9 +930,9 @@ export default function GoldenEggPage() {
                   <div className="text-[11px] text-slate-500 mt-0.5">
                     {geCanonical
                       ? (geCanonical.levels.zones.some((z) => z.basis === 'structural')
-                        ? `S = structural level, M = model zone (reference-to-invalidation risk multiple, with price caps labelled). Illustrative R to the primary zone ≈ ${geCanonical.levels.illustrativeR ?? 'Not recorded'} — not a forecast.`
-                        : 'All zones are model zones based on reference-to-invalidation risk; price caps are labelled. No structural targets were found within range. R is a mechanical calculation, not a forecast.')
-                      : `Scenario R:R example ${isUsableNumber(geSafeScenario?.hypotheticalRr?.expectedR) ? geSafeScenario.hypotheticalRr.expectedR.toFixed(1) : 'Not recorded'} — hypothetical illustration only, not a trading instruction`}
+                        ? 'S = structural level, M = model zone (from the reference-to-invalidation distance, with price caps labelled). Levels are references, not targets.'
+                        : 'All zones are model zones from the reference-to-invalidation distance; price caps are labelled. No structural levels were found within range. Levels are references, not targets.')
+                      : 'Levels are references, not targets.'}
                   </div>
                 </div>
               </div>
@@ -1008,14 +947,6 @@ export default function GoldenEggPage() {
 
               {/* Driver / Blocker + Research Note */}
               <div className="flex items-center gap-4 flex-wrap">
-                <div className="text-[11px] text-slate-500">
-                  Driver: <span className="text-white font-semibold">{symbolText(ge.layer1.primaryDriver)}</span>
-                </div>
-                {ge.layer1.primaryBlocker && (
-                  <div className="text-[11px] text-slate-500">
-                    Blocker: <span className="text-red-400 font-semibold">{symbolText(ge.layer1.primaryBlocker)}</span>
-                  </div>
-                )}
                 <button
                   type="button"
                   onClick={handleSaveResearchCase}
@@ -1035,30 +966,6 @@ export default function GoldenEggPage() {
               )}
             </div>
 
-            {/* Score Breakdown */}
-            {ge.layer1.scoreBreakdown && ge.layer1.scoreBreakdown.length > 0 && (
-              <div className="mt-4 pt-3 border-t border-slate-800/50">
-                <div className="text-[11px] text-slate-500 mb-2 uppercase">Score Breakdown</div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {ge.layer1.scoreBreakdown.filter((sb: any)=>sb.available!==false&&Number.isFinite(sb.value)).map((sb: any) => (
-                    <div key={sb.key} className="bg-[var(--msp-panel-2)] rounded-lg p-2">
-                      <div className="text-[11px] text-slate-500">{symbolText(sb.key)} (w:{symbolText(sb.weight)})</div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-white">{symbolText(sb.value.toFixed(1))}</span>
-                        {sb.available !== false && <ScoreBar value={Math.min(sb.value, 100)} color="#10B981" />}
-                      </div>
-                      {sb.points != null && <div className="text-[11px] text-slate-400">{symbolText(sb.points.toFixed(2))} points · {symbolText((sb.effectiveWeight ?? sb.weight).toFixed(0))}% effective weight</div>}
-                      {sb.note && <div className="text-[11px] text-slate-600 mt-0.5">{symbolText(sb.note)}</div>}
-                    </div>
-                  ))}
-                </div>
-                {ge.layer1.scoreCalculation && <p className="mt-2 text-xs text-slate-400">
-                  Coverage {symbolText((ge.layer1.scoreCalculation.coverage * 100).toFixed(0))}% · Component total {symbolText(ge.layer1.scoreCalculation.rawTotal.toFixed(2))}
-                  {ge.layer1.scoreCalculation.capAdjustment < 0 && ` · Trust cap ${ge.layer1.scoreCalculation.trustCap}`}
-                  {symbolText(' · Final ')}{symbolText(ge.layer1.scoreCalculation.finalScore)}/100. Research alignment, not an outcome probability.
-                </p>}
-              </div>
-            )}
           </Card>
 
           {/* -- CROSS-MARKET INFLUENCE (Phase 5 — Dynamic + Static) ------- */}
@@ -1168,7 +1075,7 @@ export default function GoldenEggPage() {
               ))}
             </div>
             <div className="mt-3 pt-2 border-t border-slate-800/50 text-[11px] text-slate-500">
-              Reference-market reads describe context for the symbol's direction; they are not folded into the indicator composite number.
+              Reference-market reads are context only; they are not counted as evidence for this symbol.
             </div>
               </div>
             </details>
@@ -1191,8 +1098,7 @@ export default function GoldenEggPage() {
                 <div>
                   <div className="text-[11px] text-slate-500 uppercase">Timeframe Alignment</div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-white">{symbolText(ge.layer2.setup.timeframeAlignment.score)}/{symbolText(ge.layer2.setup.timeframeAlignment.max)}</span>
-                    <ScoreBar value={(ge.layer2.setup.timeframeAlignment.score / ge.layer2.setup.timeframeAlignment.max) * 100} color="#10B981" />
+                    <span className="text-xs text-white">{symbolText(`${ge.layer2.setup.timeframeAlignment.score} of ${ge.layer2.setup.timeframeAlignment.max} timeframes point the same way`)}</span>
                   </div>
                   {ge.layer2.setup.timeframeAlignment.details.map((d: any, i: number) => (
                     <div key={i} className="text-[11px] text-slate-500 mt-0.5">• {symbolText(d)}</div>
@@ -1210,10 +1116,6 @@ export default function GoldenEggPage() {
               <h3 className="text-xs font-semibold text-emerald-400 mb-3">Structure</h3>
               <p className="mb-2 text-xs text-slate-500">All levels below are bar-close references · {symbolText(geCanonical?.lastCompletedBarAt?symbolDate(geCanonical.lastCompletedBarAt):'date not recorded')}</p>
               <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-slate-500 uppercase">Structure Verdict:</span>
-                  <Badge label={symbolText(ge.layer3.structure.verdict)} color={ge.layer3.structure.verdict === 'agree' ? 'var(--msp-bull)' : ge.layer3.structure.verdict === 'disagree' ? 'var(--msp-bear)' : 'var(--msp-warn)'} small />
-                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {['htf', 'mtf', 'ltf'].map((tf) => (
                     <div key={tf} className="bg-[var(--msp-panel-2)] rounded p-2">
@@ -1275,15 +1177,7 @@ export default function GoldenEggPage() {
                   <div className="space-y-3">
                     {/* Signal Strength + Direction + Banners */}
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Badge label={symbolText(`vs setup: ${tc.verdict}`)} color={tc.verdict === 'agree' ? 'var(--msp-bull)' : tc.verdict === 'disagree' ? 'var(--msp-bear)' : tc.verdict === 'unknown' ? 'var(--msp-flat)' : 'var(--msp-warn)'} />
-                      <Badge label={symbolText(tc.signalStrength.replace('_', ' '))} color={
-                        tc.signalStrength === 'strong' ? 'var(--msp-bull)' : tc.signalStrength === 'moderate' ? 'var(--msp-warn)' : 'var(--msp-flat)'
-                      } small />
-                      <Badge label={symbolText(tc.direction)} color={
-                        tc.direction === 'bullish' ? 'var(--msp-bull)' : tc.direction === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-flat)'
-                      } small />
                       {(tc as any).sessionState && <Badge label={symbolText((tc as any).sessionState === 'closed' ? 'session closed' : (tc as any).sessionState === 'always_open' ? '24/7 market' : 'session open')} color="var(--msp-flat)" small />}
-                      {(tc as any).gating && <span title={symbolText(((tc as any).gating.reasons || []).join(' · '))} className="text-[11px] px-1.5 py-0.5 rounded border border-slate-700 text-slate-400">{symbolText((tc as any).gating.eligibleForHardGate ? 'gates verdict' : (tc as any).gating.valid ? 'noted, not gating' : 'not valid as evidence')}</span>}
                       {tc.banners.map((b: string, i: number) => (
                         <span key={i} className="text-[11px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-semibold">{symbolText(b)}</span>
                       ))}
@@ -1297,7 +1191,7 @@ export default function GoldenEggPage() {
                         background: tc.decompressionTarget.direction === 'up' ? 'rgba(16,185,129,0.08)' : tc.decompressionTarget.direction === 'down' ? 'rgba(239,68,68,0.08)' : 'rgba(148,163,184,0.08)',
                         borderColor: tc.decompressionTarget.direction === 'up' ? 'rgba(16,185,129,0.25)' : tc.decompressionTarget.direction === 'down' ? 'rgba(239,68,68,0.25)' : 'rgba(148,163,184,0.15)',
                       }}>
-                        <div className="text-[11px] text-slate-500 uppercase mb-1">Likely Decompression Level</div>
+                        <div className="text-[11px] text-slate-500 uppercase mb-1">Weighted mid-50 level</div>
                         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                           <span className="text-lg font-bold font-mono" style={{
                             color: tc.decompressionTarget.direction === 'up' ? 'var(--msp-bull)' : tc.decompressionTarget.direction === 'down' ? 'var(--msp-bear)' : 'var(--msp-text)',
@@ -1315,31 +1209,6 @@ export default function GoldenEggPage() {
                     )}
 
                     {tc.decompression.unmeasuredTFs?.length ? <p className="text-xs text-slate-500">Not measured on this data: {symbolText(tc.decompression.unmeasuredTFs.join(', '))}. Excluded from counts and levels.</p> : null}
-                    {/* Timeframe pull + Score Breakdown */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      <div className="bg-[var(--msp-panel-2)] rounded p-2">
-                        <div className="text-[11px] text-slate-500" title={symbolText(TIMING_TOOLTIP)}>{symbolText(TIMEFRAME_PULL_LABEL)}</div>
-                        <div className="text-sm font-bold text-white">{symbolText(tc.confidence)}/100</div>
-                        <ScoreBar value={tc.confidence} color="#10B981" />
-                      </div>
-                      <div className="bg-[var(--msp-panel-2)] rounded p-2">
-                        <div className="text-[11px] text-slate-500">Direction</div>
-                        <div className="text-sm font-bold" style={{ color: tc.scoreBreakdown.directionScore > 15 ? 'var(--msp-bull)' : tc.scoreBreakdown.directionScore < -15 ? 'var(--msp-bear)' : 'var(--msp-flat)' }}>
-                          {symbolText(tc.scoreBreakdown.directionScore > 0 ? '+' : '')}{symbolText(tc.scoreBreakdown.directionScore)}
-                        </div>
-                      </div>
-                      <div className="bg-[var(--msp-panel-2)] rounded p-2">
-                        <div className="text-[11px] text-slate-500">Cluster Score</div>
-                        <div className="text-sm font-bold text-white">{symbolText(tc.scoreBreakdown.clusterScore)}</div>
-                        <ScoreBar value={tc.scoreBreakdown.clusterScore} color="#06B6D4" />
-                      </div>
-                      <div className="bg-[var(--msp-panel-2)] rounded p-2">
-                        <div className="text-[11px] text-slate-500">Decompression</div>
-                        <div className="text-sm font-bold text-white">{symbolText(tc.scoreBreakdown.decompressionScore)}</div>
-                        <ScoreBar value={tc.scoreBreakdown.decompressionScore} color="#8B5CF6" />
-                      </div>
-                    </div>
-
                     {/* Close Schedule Timeline — grouped by category */}
                     {tc.closeSchedule && tc.closeSchedule.length > 0 && (
                       <div>
@@ -1393,36 +1262,12 @@ export default function GoldenEggPage() {
                     <div>
                       <div className="text-[11px] text-slate-500 uppercase mb-1" title={symbolText(TIMING_TOOLTIP)}>{symbolText(CLOSE_CALENDAR_LABEL)}</div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-white">{symbolText(tc.candleCloseConfluence.confluenceScore)}/100</span>
-                        <Badge label={symbolText(tc.candleCloseConfluence.confluenceRating)} color={
-                          tc.candleCloseConfluence.confluenceRating === 'extreme' ? 'var(--msp-bear)' :
-                          tc.candleCloseConfluence.confluenceRating === 'high' ? 'var(--msp-warn)' :
-                          tc.candleCloseConfluence.confluenceRating === 'moderate' ? 'var(--msp-info)' : 'var(--msp-flat)'
-                        } small />
-                        {tc.candleCloseConfluence.closingNowCount > 0 && (
-                          <span className="text-[11px] text-yellow-400">Now: {symbolText(tc.candleCloseConfluence.closingNowCount)} TFs closing</span>
-                        )}
+                        <span className="text-[11px] text-slate-300">{symbolText(tc.candleCloseConfluence.closingNowCount > 0 ? `${tc.candleCloseConfluence.closingNowCount} timeframes closing now` : 'No timeframe closing now')}</span>
                       </div>
                       {tc.candleCloseConfluence.isMonthEnd && <div className="text-[11px] text-yellow-400 mt-0.5">Month-end calendar</div>}
                       {tc.candleCloseConfluence.isWeekEnd && <div className="text-[11px] text-blue-400 mt-0.5">Week-end calendar</div>}
                     </div>
 
-                    {/* Scenario */}
-                    <div className="bg-[var(--msp-panel-2)] rounded-lg p-2">
-                      <div className="text-[11px] text-slate-500 uppercase mb-1">Agent scenario {symbolText((tc as any).gating && !(tc as any).gating.valid ? '(not valid as evidence — shown for transparency)' : '')}</div>
-                      <div className="text-xs text-slate-300">{symbolText(tc.prediction.reasoning.replace(/Calendar confirms (BULLISH|BEARISH)/i, 'Calendar pull $1').replace(/Direction: (BULLISH|BEARISH)/i, 'Pull direction: $1'))}</div>
-                      <div className="flex items-center gap-3 mt-1">
-                        {tc.prediction.targetLevel > 0 && <span className="text-[11px] text-slate-500">Key Level: <span className="text-white font-mono">{symbolText(fmtPrice(tc.prediction.targetLevel))}</span></span>}
-                        <span className="text-[11px] text-slate-500">Next close: <span className="text-white">{symbolText(tc.prediction.expectedMoveTime)}</span></span>
-                      </div>
-                    </div>
-
-                    {/* Best Reference Window */}
-                    {tc.candleCloseConfluence.bestEntryWindow.reason && (tc as any).sessionState !== 'closed' && (
-                      <div className="text-[11px] text-emerald-400">
-                        Best window: {symbolText(tc.candleCloseConfluence.bestEntryWindow.reason)}
-                      </div>
-                    )}
                   </div>
                 );
               })() : (
@@ -1441,7 +1286,6 @@ export default function GoldenEggPage() {
                     <Badge label={symbolText(d.volatility.regime)} color={
                       d.volatility.regime === 'compression' ? '#06B6D4' : d.volatility.regime === 'expansion' ? 'var(--msp-warn)' : d.volatility.regime === 'climax' ? 'var(--msp-bear)' : 'var(--msp-flat)'
                     } />
-                    <span className="text-xs text-slate-400">Confluence: {symbolText(d.volatility.regimeConfidence.toFixed(0))}%</span>
                   </div>
 
                   {/* BBWP Gauge + Direction */}
@@ -1484,28 +1328,18 @@ export default function GoldenEggPage() {
                         })()}
                       </div>
                     </div>
-                    <div className="bg-[var(--msp-panel-2)] rounded p-2">
-                      <div className="text-[11px] text-slate-500">Direction</div>
-                      <div className="text-sm font-bold" style={{ color: dirColor(d.direction.bias) }}>{symbolText(d.direction.bias)}</div>
-                      <div className="text-[11px] text-slate-500">Score: {symbolText(d.direction.score.toFixed(1))}</div>
+                    <div className="bg-[var(--msp-panel-2)] rounded p-2 text-[11px] text-slate-400">
+                      <div className="text-slate-500">BBWP basis</div>
+                      {symbolText(bbwpBasisNote(d.volatility.bbwp, ge.priceEvidence) ?? 'BBWP from the Volatility engine (BB 13, one-year percentile).')}
                     </div>
                   </div>
                   {d.signal.active && d.signal.type !== 'none' && (
                     <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2">
-                      <div className="text-[11px] text-emerald-400 font-semibold">Active Setup: {symbolText(d.signal.type.replace(/_/g, ' '))}</div>
-                      <div className="text-[11px] text-slate-400">Strength: {symbolText(d.signal.strength.toFixed(0))}%</div>
+                      <div className="text-[11px] text-emerald-400 font-semibold">Signal recorded: {symbolText(d.signal.type.replace(/_/g, ' '))}</div>
+                      <div className="text-[11px] text-slate-400">{symbolText(d.signal.triggerReason.join(' · '))}</div>
                     </div>
                   )}
-                  {d.projection.expectedMovePct > 0 && (
-                    <div className="text-xs text-slate-400">
-                      Expected move: <span className="text-white font-semibold">{symbolText(d.projection.expectedMovePct.toFixed(1))}%</span>
-                      <span className="text-slate-600 ml-1">(hit rate: {symbolText(d.projection.hitRate.toFixed(0))}%, n={symbolText(d.projection.sampleSize)})</span>
-                    </div>
-                  )}
-                  {d.breakout.score > 40 && (
-                    <div className="text-xs"><span className="text-yellow-400">Breakout Score: {symbolText(d.breakout.score.toFixed(0))}</span> — {symbolText(d.breakout.label)}</div>
-                  )}
-                  {d.trap.detected && <div className="text-xs text-red-400">Trap detected (score: {symbolText(d.trap.score.toFixed(0))})</div>}
+                  {d.trap.detected && <div className="text-xs text-amber-300">Trap pattern recorded by the Volatility engine.</div>}
                   <div className="text-[11px] text-slate-500">{symbolText(d.summary)}</div>
                 </div>
               ) : ge.layer3.structure.volatility ? (
@@ -1524,7 +1358,6 @@ export default function GoldenEggPage() {
               </h3>
               {ge.layer3.options?.enabled ? (
                 <div className="space-y-2">
-                  <Badge label={symbolText(ge.layer3.options.verdict)} color={ge.layer3.options.verdict === 'agree' ? 'var(--msp-bull)' : ge.layer3.options.verdict === 'disagree' ? 'var(--msp-bear)' : 'var(--msp-warn)'} />
                   <div className="space-y-1">
                     {ge.layer3.options.highlights.map((h: any, i: number) => (
                       <div key={i} className="flex justify-between text-xs">
@@ -1575,17 +1408,12 @@ export default function GoldenEggPage() {
                 {geSafeScenario?.reactionZones.map((t: any, i: number) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
                     <span className="text-emerald-400 font-mono">{symbolText(formatLevel(t.price))}</span>
-                    {t.rMultiple && <span className="text-slate-500">{symbolText(t.rMultiple.toFixed(1))}R</span>}
                     {t.note && <span className="text-slate-600">{symbolText(t.note)}</span>}
                   </div>
                 ))}
               </div>
             </div>
             <div className="flex items-center gap-4 mt-4 pt-3 border-t border-slate-800/50">
-              <div>
-                <span className="text-[11px] text-slate-500">Hypothetical R:R</span>
-                <span className="text-sm font-bold text-white ml-2">{symbolText(isUsableNumber(geSafeScenario?.hypotheticalRr?.expectedR) ? `${geSafeScenario.hypotheticalRr.expectedR.toFixed(1)}R` : 'Not recorded')}</span>
-              </div>
               <a href={canonicalTerminalHref} className="px-4 py-2 bg-slate-700/50 text-slate-400 rounded-lg text-xs hover:bg-slate-700/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50 no-underline">
                 Open in Terminal
               </a>
@@ -1593,26 +1421,8 @@ export default function GoldenEggPage() {
             <div className="mt-2 text-[11px] text-slate-600">Levels are calculated from technical indicators for educational and informational purposes only. This does not constitute financial advice, does not recommend any course of action, and does not consider your personal circumstances. Past performance does not guarantee future results.</div>
           </Card>
 
-          {/* -- NARRATIVE -------------------------------------------- */}
-          {ge.layer3.narrative?.enabled && (
-            <Card>
-              <h3 className="text-xs font-semibold text-emerald-400 mb-3">Narrative</h3>
-              <div className="text-sm text-slate-300 mb-3">{symbolText(ge.layer3.narrative.summary)}</div>
-              <ul className="space-y-1">
-                {ge.layer3.narrative.bullets.map((b: any, i: number) => (
-                  <li key={i} className="text-xs text-slate-400">• {symbolText(b)}</li>
-                ))}
-              </ul>
-              {ge.layer3.narrative.risks.length > 0 && (
-                <div className="mt-3 pt-2 border-t border-slate-800/50">
-                  <div className="text-[11px] text-red-400 uppercase mb-1">Risks</div>
-                  {ge.layer3.narrative.risks.map((r: any, i: number) => (
-                    <div key={i} className="text-xs text-red-400/80">{symbolText(r)}</div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          )}
+          {/* Phase 4: the engine narrative (permission wording and a /100 composite) is not shown; the research snapshot
+              at the top of the page gives the factual summary. */}
         </>
         </UpgradeGate>
       )}

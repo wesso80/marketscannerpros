@@ -7,11 +7,14 @@ export default function StatTile({
   value,
   change,
   warning = false,
+  large = true,
 }: {
   label: string;
   value: string | number | null | undefined;
   change?: number | null;
   warning?: boolean;
+  /** Smaller value text for narrow grids (long prices otherwise wrap mid-number on phones). */
+  large?: boolean;
 }) {
   if (value == null || (typeof value === "number" && !Number.isFinite(value)))
     return null;
@@ -23,7 +26,7 @@ export default function StatTile({
     <StatCard
       label={label}
       value={String(value)}
-      large
+      large={large}
       color={warning ? "var(--msp-warn)" : tone}
       detail={detail}
     />

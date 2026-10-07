@@ -38,10 +38,10 @@ it.each(['NEAR','LINK','BTC'])('%s compact summary has one stage, readable detai
  expect(screen.getAllByText('$1.09B').length).toBeGreaterThan(0);expect(screen.getAllByText('$0.4664').length).toBeGreaterThan(0);expect(screen.getAllByText('1.49x').length).toBeGreaterThan(0);
  expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);expect(container.textContent).not.toMatch(raw);expect(container.textContent).not.toMatch(forbidden);expect(container.textContent).not.toContain('sha256');expect(JSON.stringify(d)).toBe(before);
 });
-it.each(['AAPL','NVDA'])('%s blocked top has one verdict and a plain recorded reason',async symbol=>{
+it.each(['AAPL','NVDA'])('%s blocked top shows no verdict pill or permission reason (Phase 4), only measured evidence',async symbol=>{
  const p=buildPayload(symbol,'equity',price,ind,null,null,'1D',null,null,null,{nowMs:now});p.canonicalVerdict={...p.canonicalVerdict,permission:'BLOCK',setupType:'NONE',blockReasons:[{code:'NO_STRUCTURAL_STOP',message:'NO_STRUCTURAL_STOP'}],factors:[]} as any;const before=JSON.stringify(p);
  vi.mocked(fetch).mockResolvedValue({ok:true,json:async()=>({ok:true,candles:bars.map(b=>({...b,c:b.close,h:b.high,l:b.low}))})} as Response);
- const {container}=render(<EquityTop data={p}/>);await screen.findByRole('img');expect(container.querySelector('[data-equity-verdict]')?.textContent).toBe('No setup');expect(container.textContent?.match(/no setup/gi)).toHaveLength(1);expect(container.textContent).toContain('No clear stop level in the chart');expect(container.textContent).not.toContain('No measured checks');expect(container.textContent).not.toMatch(raw);expect(container.textContent).not.toMatch(forbidden);expect(JSON.stringify(p)).toBe(before);
+ const {container}=render(<EquityTop data={p}/>);await screen.findByRole('img');expect(container.querySelector('[data-equity-verdict]')).toBeNull();expect(container.textContent).not.toMatch(/no setup|No clear stop level|blocked/i);expect(container.textContent).toContain('Measured daily evidence is not available for this timeframe.');expect(container.textContent).not.toMatch(raw);expect(container.textContent).not.toMatch(forbidden);expect(JSON.stringify(p)).toBe(before);
 });
 it('Pro price header shows dated session close without inventing an instant',()=>{
  const {container}=render(<SymbolSnapshotHeader compact symbol="AAPL" asset="equity" timeframe="daily" stamp={{assetType:'equity',price:250,priceBasis:'last_close',latestDay:'2026-10-02'}} pick={null}/>);
