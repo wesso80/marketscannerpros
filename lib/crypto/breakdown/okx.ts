@@ -23,9 +23,11 @@ export async function okxSpot(base:string){return cachedPart(`okx-spot:${base}`,
  catch(error){if(!notListed(error))throw error;return {name:'OKX',price:null,asOf:null,basis:`No OKX ${base}-USDT spot listed`};}
 });}
 export function oiChange(current:number|null,asOf:string|null,rows:unknown[][],hours:number){
- if(!current||!asOf)return null;const target=Date.parse(asOf)-hours*3600000;
- const old=rows.map(r=>({t:number(r[0]),v:number(r[3])})).filter(r=>r.t!=null&&r.v!=null&&r.v>0&&r.t<=target&&target-r.t<=3600000).sort((a,b)=>b.t!-a.t!)[0];
- return old?(current/old.v!-1)*100:null;
+ if(current==null||!Number.isFinite(current)||current<0||!asOf||!Number.isFinite(hours)||hours<=0)return null;
+ const target=Date.parse(asOf)-hours*3600000;if(!Number.isFinite(target))return null;
+ const old=rows.map(r=>({t:number(r[0]),v:number(r[3])})).filter(r=>r.t!=null&&r.v!=null&&r.v>=0&&r.t<=target&&target-r.t<=3600000).sort((a,b)=>b.t!-a.t!)[0];
+ if(!old||old.v===0)return null;const change=(current/old.v!-1)*100;
+ return Number.isFinite(change)?change:null;
 }
 export async function loadOkx(base:string,now=Date.now()):Promise<Section>{
  const inst=`${base}-USDT-SWAP`,scope=`OKX ${inst} only (one venue). Not the whole market.`;
@@ -45,7 +47,7 @@ export async function loadOkx(base:string,now=Date.now()):Promise<Section>{
  const metrics=[
   metric('Funding, 8h-equivalent',funding?.ratePercent8h??null,scope,iso(funding?.observedAt),'Current-period estimate; normalized from observed interval','okx','percent',now),
   metric('Funding interval (hours)',funding?.intervalHours??null,scope,iso(funding?.observedAt),'Observed funding schedule','okx','count',now),
-  metric('Next funding time',iso(data(0)[0]?.nextFundingTime),scope,iso(funding?.observedAt),'Scheduled settlement time, UTC','okx',undefined,now),
+  metric('Next funding time',iso(funding?.settlementTime),scope,iso(funding?.observedAt),'Current-period rate settles at fundingTime, UTC; nextFundingTime is the following period','okx',undefined,now),
   metric('Open interest (USD)',oiUsd,scope,oiTime,'Venue-reported oiUsd','okx','usd',now),
   metric('Open interest (coins)',oiCcy,scope,oiTime,'Venue-reported oiCcy','okx','count',now),
   metric('Open interest change, 24h',oiChange(oiUsd,oiTime,history,24),scope,oiTime,'Same instrument hourly history; earlier observation within one hour of lookback','okx','percent',now),
