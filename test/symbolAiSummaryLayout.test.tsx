@@ -2,6 +2,7 @@
 import React from 'react';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
+vi.mock('@/components/research/SymbolComparisonChart', () => ({ default: () => <div>Comparison fixture</div> }));
 import SymbolAiSummary from '@/components/research/SymbolAiSummary';
 const sections = { summary: ['Dated fixture overview'], evidence: [{ input: 'Daily price', observations: ['Close 100 on 6 October'] }], events: ['Reported results'], differences: ['Quote and daily bars have different times'], missing: ['Options unavailable'], recheck: ['After the next close'] };
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
