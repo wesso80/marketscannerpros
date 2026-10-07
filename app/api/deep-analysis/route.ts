@@ -9,18 +9,18 @@
  * directional engine.
  */
 import { putCallTilt } from '@/lib/options/oiSummary';
+import { buildSymbolNews, fetchSymbolNewsFeed, SYMBOL_NEWS } from '@/lib/research/newsEvidence';
 import { independence, type EvidenceInput, type Independence, type TaggedPoint } from '@/lib/research/evidenceInputs';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { deepAnalysisLimiter, getClientIP } from '@/lib/rateLimit';
-import { avFetch } from '@/lib/avRateGovernor';
 import { getGlobalData } from '@/lib/coingecko';
 import { cryptoNewsName } from '@/lib/crypto/newsRelevance';
 import { detectAssetClass } from '@/lib/goldenEggFetchers';
 import { computeGoldenEgg } from '@/lib/goldenEgg/engine';
 import { getEarningsHistory, getFundamentalsSummary, type EarningsHistory, type FundamentalsSummary } from '@/lib/goldenEgg/companyOverview';
-import { filterRelevantNews, summarizeNews, avTickerKey, type RelevantArticle } from '@/lib/goldenEgg/newsRelevance';
+import { summarizeNews, type RelevantArticle } from '@/lib/goldenEgg/newsRelevance';
 import { formatUsdShort } from '@/lib/goldenEgg/semantics';
 import { noSetupDisplay, targetBasisLabel } from '@/lib/scoring/canonical/display';
 import type { GoldenEggPayload, GoldenEggCanonical } from '@/src/features/goldenEgg/types';
@@ -28,7 +28,6 @@ import type { GoldenEggPayload, GoldenEggCanonical } from '@/src/features/golden
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 function isLocalDeepAnalysisDemoAllowed(): boolean {
@@ -36,15 +35,6 @@ function isLocalDeepAnalysisDemoAllowed(): boolean {
 }
 
 // ── News (ticker-relevant only) ─────────────────────────────────────────
-async function fetchNewsFeed(symbol: string, assetClass: 'equity' | 'crypto' | 'forex'): Promise<{ feed: any[]; provider: string }> {
-  if (!ALPHA_VANTAGE_API_KEY) return { feed: [], provider: 'unavailable' };
-  const key = avTickerKey(symbol, assetClass);
-  const data = await avFetch<any>(`https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=${encodeURIComponent(key)}&limit=50&sort=LATEST&apikey=${ALPHA_VANTAGE_API_KEY}`, `NEWS ${key}`);
-  return { feed: Array.isArray(data?.feed) ? data.feed : [], provider: NEWS_PROVIDER_LABEL };
-}
-
-const NEWS_PROVIDER_LABEL = 'alpha_vantage NEWS_SENTIMENT (ticker-filtered: relevance ≥ 0.3 and names the company/ticker, or relevance ≥ 0.9)';
-
 /** Name used for the "names the company" check: OVERVIEW name for equities, CoinGecko id for crypto ("bitcoin", "shiba inu"). */
 function newsCompanyName(symbol: string, assetClass: 'equity' | 'crypto' | 'forex', fundamentals: FundamentalsSummary | null): string | null {
   if (assetClass === 'equity') return fundamentals?.name ?? null;
@@ -326,13 +316,15 @@ export async function GET(request: NextRequest) {
 
     // 2) Enrichment only: relevant news, earnings, fundamentals, crypto sentiment proxy.
     const [newsRes, fundamentals, earnings, cryptoSentiment] = await Promise.all([
-      fetchNewsFeed(symbol, assetClass).catch(() => ({ feed: [] as any[], provider: 'unavailable' })),
+      fetchSymbolNewsFeed(symbol, assetClass),
       assetClass === 'equity' ? getFundamentalsSummary(symbol).catch(() => null) : Promise.resolve(null),
       assetClass === 'equity' ? getEarningsHistory(symbol).catch(() => null) : Promise.resolve(null),
       assetClass === 'crypto' ? fetchCryptoSentiment() : Promise.resolve(null),
     ]);
     // Filtered after fundamentals resolve so the company name can be matched (same rule as the Equity Deep-Dive).
-    const news: RelevantArticle[] = filterRelevantNews(newsRes.feed, symbol, assetClass, { companyName: newsCompanyName(symbol, assetClass, fundamentals) });
+    // Same feed, cache and event grouping as the Symbol page (lib/research/newsEvidence).
+    const symbolNews = buildSymbolNews(symbol, assetClass, newsRes, newsCompanyName(symbol, assetClass, fundamentals));
+    const news: RelevantArticle[] = symbolNews.articles;
 
     // 3) Analyst: deterministic sections from the packet + model interpretation constrained to the packet.
     const deterministic = buildDeterministicAnalyst(c, ge, news, fundamentals);
@@ -406,7 +398,7 @@ export async function GET(request: NextRequest) {
         multiple: fundamentals.multiple, period: fundamentals.period, revenueGrowthYoy: fundamentals.revenueGrowthYoy, earningsGrowthYoy: fundamentals.earningsGrowthYoy, profitMargin: fundamentals.profitMargin,
       } : null,
       news: news.map((n) => ({ title: n.title, summary: n.summary, source: n.source, sentiment: n.sentiment, sentimentScore: n.sentimentScore, url: n.url, publishedAt: n.publishedAt, relevance: n.relevance, catalyst: n.catalyst, catalystReason: n.catalystReason })),
-      newsMeta: { considered: newsRes.feed.length, relevant: news.length, provider: newsRes.provider, headline: newsSummary.headline, positive: newsSummary.positive, negative: newsSummary.negative, eventRisk: newsSummary.eventRisk, events: newsSummary.events.length, rule: 'Articles about the same event (same catalyst, within 72 hours, matching headline wording) count once.' },
+      newsMeta: { considered: symbolNews.considered, relevant: news.length, provider: newsRes.status === 'available' ? `${SYMBOL_NEWS.provider} (ticker-filtered)` : `unavailable: ${newsRes.reason ?? 'provider request failed'}`, fetchedAt: newsRes.fetchedAt, headline: newsSummary.headline, positive: newsSummary.positive, negative: newsSummary.negative, eventRisk: newsSummary.eventRisk, events: newsSummary.events.length, rule: 'Articles about the same event (same catalyst, within 72 hours, matching headline wording) count once.' },
       cryptoData: assetClass === 'crypto' ? { fearGreed: cryptoSentiment ? { value: cryptoSentiment.value, classification: cryptoSentiment.classification, basis: cryptoSentiment.basis } : null, marketData: c.network ? { marketCapRank: c.network.marketCapRank, marketCap: c.network.marketCap, totalVolume: c.network.spotVolume24h, circulatingSupply: c.network.circulatingSupply, maxSupply: c.network.maxSupply, fdv: c.network.fdv, ath: c.network.ath, athChangePercent: c.network.distanceFromAthPct } : null } : null,
       earnings: earnings ? {
         nextEarningsDate: fundamentals?.nextEarningsDate ?? null, daysToEarnings: fundamentals?.daysToEarnings ?? null,
