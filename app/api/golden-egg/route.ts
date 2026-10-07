@@ -12,6 +12,7 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { detectAssetClass } from '@/lib/goldenEggFetchers';
 import { computeGoldenEgg, tfLabelFor, buildLocalDemoGoldenEggPayload, goldenEggDemoDataQuality, isLocalGoldenEggDemoAllowed } from '@/lib/goldenEgg/engine';
+import { toPublicSymbolPacket } from '@/lib/research/publicSymbolPacket';
 import { buildMarketDataProviderStatus, emitProductionDemoDataAlert, isLocalDemoMarketDataAllowed } from '@/lib/scanner/providerStatus';
 
 export const runtime = 'nodejs';
@@ -53,7 +54,8 @@ export async function GET(request: NextRequest) {
       : result.dataQuality;
     return NextResponse.json({
       success: true,
-      data: result.payload,
+      // W3: the public contract is built from an allow-list; the internal packet (cached, private consumers) is untouched.
+      data: toPublicSymbolPacket(result.payload),
       cached: result.cached || undefined,
       localDemo: result.localDemo || undefined,
       warnings: result.warnings.length ? result.warnings : undefined,
@@ -72,7 +74,7 @@ export async function GET(request: NextRequest) {
       const dq = goldenEggDemoDataQuality(message, { symbol: fallbackSymbol, assetClass: fallbackAssetClass, timeframe: fallbackTfLabel });
       return NextResponse.json({
         success: true,
-        data: buildLocalDemoGoldenEggPayload(fallbackSymbol, fallbackAssetClass, fallbackTfLabel, message),
+        data: toPublicSymbolPacket(buildLocalDemoGoldenEggPayload(fallbackSymbol, fallbackAssetClass, fallbackTfLabel, message)),
         localDemo: true,
         warnings: dq.warnings,
         dataQuality: dq,

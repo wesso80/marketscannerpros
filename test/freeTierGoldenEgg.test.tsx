@@ -20,6 +20,7 @@ import {baseBreakoutV1} from '@/lib/crypto/breakdown/baseBreakoutV1';
 import {levels} from '@/lib/crypto/breakdown/levels';
 import {SECTION_KEYS,type Breakdown} from '@/lib/crypto/breakdown/types';
 import {buildPayload} from '@/lib/goldenEgg/engine';
+import {toPublicSymbolPacket} from '@/lib/research/publicSymbolPacket';
 import {now,price,ind} from './fixtures/goldenEggTiming';
 import GoldenEggPage from '@/app/tools/golden-egg/page';
 
@@ -100,7 +101,7 @@ it.each(['AAPL','NVDA'])('Pro full Symbol page for %s has closed folds and clean
   const before=JSON.stringify(packet);
   vi.mocked(fetch).mockImplementation(async(input:any)=>{
     const url=String(input);
-    const body=url.startsWith('/api/golden-egg')?{data:packet}:url.startsWith('/api/quote')?quote:url.startsWith('/api/bars')?{ok:true,candles:price.historicalCloses!.map((c,i)=>({t:new Date(now-(300-i)*86400000).toISOString(),c}))}:url.includes('/api/scanner/')?{equity:[],crypto:[],topPicks:{equity:[],crypto:[]}}:{};
+    const body=url.startsWith('/api/golden-egg')?{data:toPublicSymbolPacket(packet)}:url.startsWith('/api/quote')?quote:url.startsWith('/api/bars')?{ok:true,candles:price.historicalCloses!.map((c,i)=>({t:new Date(now-(300-i)*86400000).toISOString(),c}))}:url.includes('/api/scanner/')?{equity:[],crypto:[],topPicks:{equity:[],crypto:[]}}:{};
     return {ok:true,status:200,json:async()=>body} as Response;
   });
   const {container}=render(<GoldenEggPage/>);
@@ -130,7 +131,7 @@ it('Pro crypto full page keeps one source and cleans every compact fold',async()
  breakdown.top=buildTop({...breakdown,bars,rule:baseBreakoutV1(bars),levels:levels(bars)});
  const before=JSON.stringify({packet,breakdown});
  vi.mocked(fetch).mockImplementation(async(input:any)=>{
- const url=String(input),body=url.startsWith('/api/crypto/breakdown')?breakdown:url.startsWith('/api/golden-egg')?{data:packet}:url.startsWith('/api/quote')?quote:{};
+ const url=String(input),body=url.startsWith('/api/crypto/breakdown')?breakdown:url.startsWith('/api/golden-egg')?{data:toPublicSymbolPacket(packet)}:url.startsWith('/api/quote')?quote:{};
  return {ok:true,status:200,json:async()=>body} as Response;
  });
  const {container}=render(<GoldenEggPage/>);

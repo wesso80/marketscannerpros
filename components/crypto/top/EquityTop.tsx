@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
-import type {GoldenEggPayload} from '@/src/features/goldenEgg/types';
+import type {PublicSymbolPacket} from '@/lib/research/publicSymbolPacket';
 import {SymbolSummary} from './CryptoTop';
 import type {DisplayChart} from './BaseChart';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
@@ -11,7 +11,7 @@ import {symbolText,symbolNumber,symbolDate} from '@/lib/presentation/symbolDispl
 
 
 /** Presentation only: no stock stage/base is inferred from crypto rules. */
-export default function EquityTop({data,pick}:{data:GoldenEggPayload;pick?:{grade?:string|null;scan_date?:string}|null}){
+export default function EquityTop({data,pick}:{data:PublicSymbolPacket;pick?:{grade?:string|null;scan_date?:string}|null}){
  const [bars,setBars]=useState<DisplayChart['bars']>([]),[error,setError]=useState(false);
  useEffect(()=>{const abort=new AbortController();setBars([]);setError(false);
   fetch(`/api/bars?symbol=${encodeURIComponent(data.meta.symbol)}&timeframe=daily&limit=140`,{signal:abort.signal}).then(async r=>{if(!r.ok)throw Error();const body=await r.json();if(!body.ok||!Array.isArray(body.candles))throw Error();if(!abort.signal.aborted)setBars(body.candles.filter((c:any)=>Number.isFinite(c.c)&&Number.isFinite(Date.parse(c.t))).map((c:any)=>({t:c.t,close:c.c,high:c.h,low:c.l})));}).catch(()=>{if(!abort.signal.aborted)setError(true);});

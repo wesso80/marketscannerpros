@@ -205,82 +205,13 @@ export interface ScannerResponse {
 }
 
 // --- Golden Egg ---
+/** /api/golden-egg: the public Symbol contract (W3), never the internal engine packet. */
 export interface GoldenEggResponse {
   success: boolean;
-  data: {
-    meta: { symbol: string; assetClass: string; price: number; asOfTs: string; timeframe: string };
-    layer1: {
-      assessment: string;
-      permission: string;
-      direction: string;
-      confluenceScore: number;
-      confidence: number;
-      grade: string;
-      primaryDriver: string;
-      primaryBlocker?: string;
-      scoreBreakdown: Array<{ key: string; weight: number; value: number; note?: string }>;
-    };
-    layer2: {
-      setup: {
-        setupType: string;
-        thesis: string;
-        timeframeAlignment: { score: number; max: number; details: string[] };
-        keyLevels: Array<{ label: string; price: number; kind: string }>;
-        invalidation: string;
-      };
-      execution: {
-        entryTrigger: string;
-        entry: { type: string; price?: number };
-        stop: { price: number; logic: string };
-        targets: Array<{ price: number; rMultiple?: number; note?: string }>;
-        rr: { expectedR: number; minR: number };
-      };
-      scenario: {
-        referenceTrigger: string;
-        referenceLevel: { type: string; price?: number };
-        invalidationLevel: { price: number; logic: string };
-        reactionZones: Array<{ price: number; rMultiple?: number; note?: string }>;
-        hypotheticalRr: { expectedR: number; minR: number };
-        hypotheticalRisk?: { riskPct: number; riskUsd?: number; sizeUnits?: number };
-      };
-    };
-    layer3: {
-      structure: {
-        verdict: string;
-        trend: { htf: string; mtf: string; ltf: string };
-        volatility: {
-          regime: string;
-          bbwp?: number;
-          rateOfChange?: number;
-          directionalBias?: string;
-          directionalConfidence?: number;
-          contractionContinuation?: number;
-          expansionContinuation?: number;
-          signalType?: string;
-          breakoutScore?: number;
-          trapDetected?: boolean;
-          exhaustionRisk?: number;
-        };
-        liquidity: { overhead?: string; below?: string; note?: string };
-      };
-      options?: {
-        enabled: boolean;
-        verdict: string;
-        highlights: Array<{ label: string; value: string }>;
-        notes?: string[];
-      };
-      momentum: {
-        verdict: string;
-        indicators: Array<{ name: string; value: string; state: string }>;
-      };
-      narrative?: {
-        enabled: boolean;
-        summary: string;
-        bullets: string[];
-        risks: string[];
-      };
-    };
-  };
+  data: import('@/lib/research/publicSymbolPacket').PublicSymbolPacket;
+  cached?: boolean;
+  localDemo?: boolean;
+  warnings?: string[];
 }
 
 // --- News ---
