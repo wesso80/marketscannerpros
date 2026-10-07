@@ -32,6 +32,19 @@ function list(parts: string[]): string {
   return parts.length <= 1 ? parts.join('') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
 }
 
+/**
+ * The Volatility (DVE) release reading in words. Undefined (not loaded) → null, so nothing is claimed; with `always`,
+ * a quiet reading is stated even when volatility is not compressed.
+ */
+export function releaseStatement(rel: VolatilityRelease, volatility: 'compressed' | 'normal' | 'expanded' | null, always = false): string | null {
+  if (rel === undefined) return null;
+  if (rel === null) return 'The volatility release reading is not available.';
+  if (/release/.test(rel.type) && rel.state === 'fired') return `A volatility release was recorded (${rel.type.endsWith('_up') ? 'upward' : 'downward'}).`;
+  if (rel.state === 'armed') return 'A volatility release condition is being watched but has not been met.';
+  if (volatility === 'compressed') return 'A volatility release has not been recorded.';
+  return always ? 'No volatility release signal is recorded on the latest reading.' : null;
+}
+
 export function buildResearchSnapshot(input: {
   canonical: SnapshotCanonical;
   priceEvidence?: PriceEvidence | null;
@@ -55,13 +68,8 @@ export function buildResearchSnapshot(input: {
   } else summary.push(`Measured daily evidence is not available for ${sym} on this timeframe.`);
 
   // 2. Volatility release, only when the Volatility reading was loaded.
-  const rel = input.volatilityRelease;
-  if (rel !== undefined) {
-    if (rel === null) summary.push('The volatility release reading is not available.');
-    else if (/release/.test(rel.type) && rel.state === 'fired') summary.push(`A volatility release was recorded (${rel.type.endsWith('_up') ? 'upward' : 'downward'}).`);
-    else if (rel.state === 'armed') summary.push('A volatility release condition is being watched but has not been met.');
-    else if (pe?.states.volatility === 'compressed') summary.push('A volatility release has not been recorded.');
-  }
+  const relText = releaseStatement(input.volatilityRelease, pe?.states.volatility ?? null);
+  if (relText) summary.push(relText);
 
   // 3. Options coverage, with its own date.
   if (equity) {

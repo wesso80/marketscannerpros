@@ -5,22 +5,24 @@ import { PRICE_EVIDENCE } from '@/lib/research/priceEvidence';
 const num = (v: number | null | undefined, dp = 2) => (v == null ? 'Not available' : v.toLocaleString('en-US', { maximumFractionDigits: dp, minimumFractionDigits: 0 }));
 const pct = (v: number | null | undefined) => (v == null ? '' : ` (${v >= 0 ? '+' : ''}${v.toFixed(2)}% from close)`);
 
-/** Measured price and volatility observations with their basis. Descriptive only: no score, grade or forecast. */
-export default function PriceEvidencePanel({ e }: { e: PriceEvidence }) {
+/** Measured price and volatility observations with their basis (no score, grade or forecast). `section="price"` leaves out the volatility rows, which the Symbol page shows in its own Volatility section. */
+export default function PriceEvidencePanel({ e, section = 'all' }: { e: PriceEvidence; section?: 'all' | 'price' }) {
   const P = PRICE_EVIDENCE;
-  const rows: { label: string; value: string; note?: string }[] = [
+  const all: { label: string; value: string; note?: string; vol?: boolean }[] = [
     { label: 'Close', value: num(e.close, 4) },
     ...e.averages.map((a) => ({ label: `${a.kind}${a.length}`, value: `${num(a.value, 4)}${pct(a.pctFromClose)}`, note: a.side ? `close ${a.side}` : undefined })),
     { label: 'ADX14 (+DI / −DI)', value: e.adx.adx == null ? 'Not available' : `${num(e.adx.adx, 1)} (${num(e.adx.plusDI, 1)} / ${num(e.adx.minusDI, 1)})`, note: e.states.trend ? `${e.states.trend}: below ${P.adx.developing} weak, ${P.adx.strong}+ strong` : undefined },
     { label: 'RSI14', value: num(e.rsi14, 1) },
-    { label: 'ATR14', value: e.atr14 == null ? 'Not available' : `${num(e.atr14, 4)} (${num(e.atrPct, 2)}% of close)` },
-    { label: 'Realised volatility (20 days, annualised)', value: e.realisedVol20 == null ? 'Not available' : `${e.realisedVol20}%` },
-    { label: 'BBWP (band-width percentile, 1 year)', value: num(e.bbwp, 1), note: e.states.volatility ? `${e.states.volatility}: below ${P.bbwp.compressed} compressed, above ${P.bbwp.expanded} expanded` : undefined },
+    { vol: true, label: 'ATR14', value: e.atr14 == null ? 'Not available' : `${num(e.atr14, 4)} (${num(e.atrPct, 2)}% of close)` },
+    { vol: true, label: 'Realised volatility (20 days, annualised)', value: e.realisedVol20 == null ? 'Not available' : `${e.realisedVol20}%` },
+    { vol: true, label: 'BBWP (band-width percentile, 1 year)', value: num(e.bbwp, 1), note: e.states.volatility ? `${e.states.volatility}: below ${P.bbwp.compressed} compressed, above ${P.bbwp.expanded} expanded` : undefined },
     { label: `Volume vs prior ${P.volumeLookback} sessions`, value: e.volumeRatio == null ? 'Not available' : `${e.volumeRatio}×`, note: e.states.volume ?? undefined },
   ];
+  const rows = section === 'price' ? all.filter((r) => !r.vol) : all;
+  const summary = section === 'price' ? e.summary.slice(0, 1) : e.summary;
   return (
     <div className="space-y-2 text-sm" data-price-evidence>
-      {e.summary.map((s) => <p key={s}>{s}</p>)}
+      {summary.map((s) => <p key={s}>{s}</p>)}
       <p className="text-xs text-slate-400" data-evidence-basis>
         Daily measures use the completed bar of {e.basis.lastCompletedBar ?? 'n/a'} ({e.basis.barsUsed} bars{e.basis.source ? `, ${e.basis.source}` : ''}).
         {e.basis.excludedPartialBar ? ` The unfinished ${e.basis.excludedPartialBar} bar is excluded.` : ''}
