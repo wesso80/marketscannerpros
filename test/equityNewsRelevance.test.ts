@@ -78,7 +78,7 @@ describe('OV-17 Equity Deep-Dive news: ticker-specific, real dates, ticker senti
     expect(ge).toEqual(dd);
     expect(ge).toHaveLength(30);
     expect(read('lib/goldenEgg/newsRelevance.ts')).toContain("from '@/lib/equityNewsRelevance'");
-    expect(read('app/api/deep-analysis/route.ts')).toContain('buildSymbolNews(symbol, assetClass, newsRes, newsCompanyName(');
+    expect(read('app/api/deep-analysis/route.ts')).toContain('buildSymbolNews(symbol, assetClass, feed, ');
     expect(read('lib/research/newsEvidence.ts')).toContain('filterRelevantNews(feed.feed as any[], symbol, assetClass, { companyName })');
   });
 

@@ -149,6 +149,6 @@ describe('CoinGecko /news coin feeds (Analyst plan, coin_id)', () => {
     expect(read('app/tools/news/page.tsx')).toContain('<TickerSentimentSummary items={tickerSummaries}');
     expect(read('app/tools/research/page.tsx')).toContain('(article.relevantTickers ?? []).includes(candidateSymbol)');
     expect(read('components/news/TickerSentimentSummary.tsx')).toContain('Unavailable ({item.reason})');
-    expect(read('app/api/deep-analysis/route.ts')).toContain("if (assetClass === 'crypto') return cryptoNewsName(symbol);");
+    expect(read('app/api/deep-analysis/route.ts')).toContain("assetClass === 'equity' ? fundamentals?.name ?? null : cryptoNewsName(symbol)");
   });
 });

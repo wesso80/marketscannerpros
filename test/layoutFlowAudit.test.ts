@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { areaLinks, primaryNavTools, toolWorkflows } from '@/lib/toolWorkflows';
 import { derivativesOiSourceLine } from '@/lib/crypto/openInterestTotal';
@@ -459,9 +459,12 @@ describe('layout and flow audit regressions', () => {
       ['app/tools/options-terminal/layout.tsx', 'https://marketscannerpros.app/tools/options'],
       ['app/tools/crypto-terminal/layout.tsx', 'https://marketscannerpros.app/tools/terminal?tab=crypto'],
       ['app/tools/confluence-scanner/layout.tsx', 'https://marketscannerpros.app/tools/terminal?tab=time-confluence'],
-      ['app/tools/deep-analysis/layout.tsx', 'https://marketscannerpros.app/tools/golden-egg'],
       ['app/tools/intraday-charts/layout.tsx', 'https://marketscannerpros.app/tools/golden-egg'],
     ];
+
+    // W3 Option 2: the standalone Deep Analysis page is retired; its URL redirects to the Symbol page.
+    expect(existsSync('app/tools/deep-analysis/page.tsx')).toBe(false);
+    expect(read('next.config.mjs')).toContain("{ source: '/tools/deep-analysis', destination: '/tools/golden-egg', permanent: true }");
 
     legacyCanonicals.forEach(([file, canonical]) => {
       const layout = read(file);
@@ -1166,11 +1169,11 @@ describe('layout and flow audit regressions', () => {
     const goldenEggPage = read('app/tools/golden-egg/page.tsx');
     const goldenEggLayout = read('app/tools/golden-egg/layout.tsx');
     const intradayChartsPage = read('app/tools/intraday-charts/page.tsx');
-    const deepAnalysisPage = read('app/tools/deep-analysis/page.tsx');
+    const aiSummary = read('components/research/SymbolAiSummary.tsx');
     const companyOverviewPage = read('app/tools/company-overview/page.tsx');
     const workflows = read('lib/toolWorkflows.ts');
 
-    expect(goldenEggPage).toContain("const GE_TABS = ['Evidence', 'Chart', 'Deep Analysis', 'Fundamentals'] as const");
+    expect(goldenEggPage).toContain("const GE_TABS = ['Evidence', 'Chart', 'AI summary', 'Fundamentals'] as const");
     expect(goldenEggPage).toContain('function GoldenEggTabRail');
     expect(goldenEggPage).toContain('function GoldenEggSubviewFrame');
     expect(goldenEggPage).toContain('Symbol subview');
@@ -1206,8 +1209,7 @@ describe('layout and flow audit regressions', () => {
     expect(goldenEggPage).not.toContain('Loading Liquidity Sweep');
     expect(goldenEggPage).not.toContain('rounded-t-md whitespace-nowrap transition-colors');
     expect(intradayChartsPage).toContain("embeddedInGoldenEgg ? 'px-0 pb-0 pt-0' : 'px-2 pb-6 pt-3 md:px-3'");
-    expect(deepAnalysisPage).toContain("embeddedInGoldenEgg ? '' : 'min-h-screen'");
-    expect(deepAnalysisPage).toContain("embeddedInGoldenEgg ? 'px-0 py-0' : 'px-4 py-8'");
+    expect(aiSummary).toContain('data-symbol-ai-summary className="min-w-0');
     expect(companyOverviewPage).toContain('const embeddedInGoldenEgg = Boolean(propSymbol);');
     expect(companyOverviewPage).toContain('padding: embeddedInGoldenEgg ? "8px 0 0" : "24px 16px"');
     expect(goldenEggLayout).not.toContain('liquidity');
@@ -1235,17 +1237,18 @@ describe('layout and flow audit regressions', () => {
   it('keeps Golden Egg nested pages in embedded validation mode', () => {
     const goldenEggPage = read('app/tools/golden-egg/page.tsx');
     const chartPage = read('app/tools/intraday-charts/page.tsx');
-    const deepAnalysisPage = read('app/tools/deep-analysis/page.tsx');
+    const aiSummary = read('components/research/SymbolAiSummary.tsx');
     const fundamentalsPage = read('app/tools/company-overview/page.tsx');
 
     expect(goldenEggPage).toContain("<GoldenEggSubviewFrame tab=\"Chart\" symbol={sym} terminalHref={canonicalTerminalHref} onSelectTab={setActiveTab}>");
-    expect(goldenEggPage).toContain("<GoldenEggSubviewFrame tab=\"Deep Analysis\" symbol={sym} terminalHref={canonicalTerminalHref} onSelectTab={setActiveTab}>");
+    expect(goldenEggPage).toContain("<GoldenEggSubviewFrame tab=\"AI summary\" symbol={sym} terminalHref={canonicalTerminalHref} onSelectTab={setActiveTab}>");
+    expect(goldenEggPage).toContain("<SymbolAiSummary symbol={sym} type={quoteType === 'crypto' ? 'crypto' : 'equity'} timeframe={timeframe} expiry={requestedExpiry} />");
     expect(goldenEggPage).toContain("<GoldenEggSubviewFrame tab=\"Fundamentals\" symbol={sym} terminalHref={canonicalTerminalHref} onSelectTab={setActiveTab}>");
     expect(chartPage).toContain('{!embeddedInGoldenEgg && <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-700 bg-slate-900 p-2">');
     expect(chartPage).toContain("embeddedInGoldenEgg ? 'px-0 pb-0 pt-0' : 'px-2 pb-6 pt-3 md:px-3'");
     expect(chartPage).toContain('Educational caution: elevated session risk; review only until conditions improve.');
     expect(chartPage).toContain("<div className=\"text-xs text-[var(--msp-text-muted)]\">Intraday console</div>");
-    expect(deepAnalysisPage).toContain("embeddedInGoldenEgg ? 'px-0 py-0' : 'px-4 py-8'");
+    expect(aiSummary).not.toContain('min-h-screen');
     expect(fundamentalsPage).toContain('const embeddedInGoldenEgg = Boolean(propSymbol);');
     expect(fundamentalsPage).toContain('{!embeddedInGoldenEgg && (');
     expect(fundamentalsPage).toContain('padding: embeddedInGoldenEgg ? "8px 0 0" : "24px 16px"');

@@ -49,15 +49,17 @@ describe('shared price evidence for other views', () => {
 });
 
 describe('views read the shared snapshot', () => {
-  it('Deep analysis returns the shared evidence and tags each point with its input', () => {
+  it('the Symbol AI summary (W3 Option 2) is built from the shared evidence and groups each point by its input', () => {
     const route = readFileSync('app/api/deep-analysis/route.ts', 'utf8');
-    expect(route).toContain('priceEvidence: ge.priceEvidence ?? null');
-    expect(route).toContain('timingEvidence: ge.timingEvidence ?? null');
-    expect(route).toContain('INDEPENDENCE OF EVIDENCE');
-    expect(route).toMatch(/supportInputs: supports\.map/);
-    const page = readFileSync('app/tools/deep-analysis/page.tsx', 'utf8');
-    expect(page).toContain('data-evidence-input');
-    expect(page).toContain('<PriceEvidencePanel e={result.goldenEgg.priceEvidence}');
+    expect(route).toContain('buildResearchSnapshot({ canonical: p.canonical, priceEvidence: p.priceEvidence, timingEvidence: p.timingEvidence');
+    expect(route).toContain('buildEvidenceSummary({');
+    expect(route).toContain('independenceNote: ev.independenceNote');
+    const lib = readFileSync('lib/research/symbolSummary.ts', 'utf8');
+    expect(lib).toContain('evidence: ev.groups.map((g) => ({ input: g.label, observations: g.observations }))');
+    expect(lib).toContain('OBSERVATIONS BY INPUT (${independenceNote}):');
+    const view = readFileSync('components/research/SymbolAiSummary.tsx', 'utf8');
+    expect(view).toContain('Evidence by input');
+    expect(view).toContain('{data.independenceNote &&');
   });
   it('Volatility returns and shows the shared evidence', () => {
     expect(readFileSync('app/api/dve/route.ts', 'utf8')).toContain('priceEvidenceFromSeries(symbol, assetClass, priceData, computedAtMs)');

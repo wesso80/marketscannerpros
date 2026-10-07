@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import CryptoBreakdown from '@/components/crypto/CryptoBreakdown';
@@ -152,13 +152,11 @@ it('shows NEAR risk labels and the AAPL source line as reader text', async () =>
 });
 
 it('wires the helpers into the symbol deep views and leaves scoring, pricing, and fetches alone', () => {
-  const deep = readFileSync('app/tools/deep-analysis/page.tsx', 'utf8');
   const egg = readFileSync('app/tools/golden-egg/page.tsx', 'utf8');
   const breakdown = readFileSync('components/crypto/CryptoBreakdown.tsx', 'utf8');
-  expect(deep).toContain('readerLabel(ge.canonicalVerdict.setupType)');
-  expect(deep).toContain("readerLabel('legacy grade')");
-  expect(deep).toContain('readerLabel(ge.verdict.primaryBlocker');
-  expect(deep).not.toContain('legacy grade ${');
+  // The Deep Analysis page (setup type, legacy grade, blocker labels) was retired in W3; the AI summary carries none of them.
+  expect(existsSync('app/tools/deep-analysis/page.tsx')).toBe(false);
+  expect(readFileSync('components/research/SymbolAiSummary.tsx', 'utf8')).not.toMatch(/setupType|legacy grade|primaryBlocker/);
   expect(egg).toContain('readerSourceLabel(');
   expect(breakdown).toContain('readerLabel(m.label)');
   expect(breakdown).toContain('readerSourceLabel(');

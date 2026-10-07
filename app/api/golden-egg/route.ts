@@ -4,7 +4,7 @@
  * GET /api/golden-egg?symbol=AAPL&timeframe=daily&type=equity
  *
  * Thin wrapper around lib/goldenEgg/engine — the same canonical packet is consumed by /api/deep-analysis, so the
- * Verdict tab and the Deep Analyst can never disagree on price, indicators, options or levels.
+ * Evidence tab and the Symbol AI summary can never disagree on price, indicators, options or levels.
  */
 
 import { NextRequest, NextResponse } from 'next/server';

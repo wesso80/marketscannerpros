@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { selectCryptoDeskTiles } from '@/lib/terminal/cryptoDeskTiles';
 
@@ -46,7 +46,9 @@ describe("Pip audit follow-ups (display only)", () => {
     expect(view).toContain('Large-trade lean');
   });
 
-  it('F05: the 52-week tile says Not collected instead of rendering empty', () => {
-    expect(read('app/tools/deep-analysis/page.tsx')).toContain('data-week52-missing');
+  it('F05: the Deep Analysis 52-week tile was retired with that page (W3); the AI summary has no 52-week tile or field', () => {
+    expect(existsSync('app/tools/deep-analysis/page.tsx')).toBe(false);
+    expect(read('components/research/SymbolAiSummary.tsx')).not.toMatch(/week52|52-week/i);
+    expect(read('lib/research/symbolSummary.ts')).not.toMatch(/week52|52-week/i);
   });
 });

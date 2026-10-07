@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { gradeBasis, gradeRelativeNote, priceChangeBasisLabel } from '@/lib/scoring/canonical/display';
 
 const calibrated = (direction: 'long' | 'short', expectedR: number) => ({
@@ -48,11 +48,10 @@ describe('RS-19: labelled change basis and IV definitions', () => {
     expect(engine).toContain("label: 'Mean IV, all strikes', value: c.avgIv");
     expect(engine).not.toContain("'Avg IV (chain)'");
   });
-  it('Golden Egg and Deep Analysis label their % change', () => {
+  it('Golden Egg labels its % change (the Deep Analysis page, which also did, was retired in W3)', () => {
     const ge = readFileSync('app/tools/golden-egg/page.tsx', 'utf8');
     expect(ge).toContain("toFixed(2)}% {priceChangeBasisLabel(ge.meta.assetClass, 'rolling_24h')}");
-    const da = readFileSync('app/tools/deep-analysis/page.tsx', 'utf8');
-    expect(da).toContain('priceChangeBasisLabel(result.assetType, { barInterval: ge.barInterval })');
-    expect(da).not.toContain("{ge ? 'vs prior close' : '24h'}");
+    expect(existsSync('app/tools/deep-analysis/page.tsx')).toBe(false);
+    expect(readFileSync('components/research/SymbolAiSummary.tsx', 'utf8')).not.toMatch(/changePct|% change/);
   });
 });
