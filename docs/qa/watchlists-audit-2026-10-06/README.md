@@ -10,17 +10,17 @@ Validation: 35 focused tests passed across watchlistsCompact, watchlistTodayMove
 
 | Hard layout gate | Status |
 |---|---|
-| One verdict above first fold | One list summary tested; placement for Pip |
-| About two screens closed | Pending Pip |
-| No sideways scroll at 390 | Pending Pip |
+| One verdict above first fold | Pass. One list summary above the fold at 1280 and 390. See [evidence.md](evidence.md) |
+| About two screens closed | Pass against the 2.3 hard max. Five symbols closed are 2.211 phone screens, above the 2.0 target. Show all 8 is 2.882 and is the expanded list |
+| No sideways scroll at 390 | Pass. Document width 390. Track tabs wrap |
 | No fake/empty tool | No fixture data in production; existing fetch-failure caveat below |
-| No banned/engine words | Mode labels plain; populated errors/signals for Pip |
-| Readable numbers + one source line | Existing formatters retained; one source, quote details folded |
-| Screenshots 1280 and 390 | Pending Pip; no screenshots claimed |
-| Symbol / Overview / Track chrome | Symbol action wording; routes and shared chrome unchanged |
+| No banned/engine words | Mode labels plain; populated and error copy captured |
+| Readable numbers + one source line | One SourceLine on populated and empty. Error has none. Quote details stay folded |
+| Screenshots 1280 and 390 | Captured, mocked. [evidence.md](evidence.md) |
+| Symbol / Overview / Track chrome | Workspace chrome included. Symbol routes were not clicked |
 
 **Pip to check:** Workspace → Watchlists at 1280×800 and 390×844. Capture before/after with five symbols and folds closed; record first-fold summary, document height/screen count and overflow. Include crypto, equity and an options-contract symbol, cached and missing prices, and long list names. Exercise switch list/mode, Show all/five, filters/sort, quote evidence, Symbol/Options links and tracking lock. On disposable test lists check create, rename, add/remove and confirmed list deletion, export and first-visible alert behavior. Shared Workspace chrome must be included.
 
 Existing caveat retained: fetchItems catches failures by logging, and can retain previous items after a failed list switch. This presentation PR does not claim that data-state failure fixed; it needs a separate follow-up and must not be marked as full data-truth acceptance. Quote date/Today semantics and provider freshness are unchanged.
 
-User assigned visual checks to Pip. Keep draft/HOLD pending that evidence. No merge/deploy.
+Layout-gate screenshots are attached in [evidence.md](evidence.md). Switch list, filters, quote folds, symbol routes, and list mutations were not run. Keep draft. No merge/deploy. The stale-list-on-load-failure caveat above is still open.

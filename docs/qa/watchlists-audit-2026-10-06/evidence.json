@@ -1,0 +1,644 @@
+{
+  "mocked": true,
+  "fixtureBasis": "Deterministic intercepted /api/watchlists, /api/watchlists/items, and POST /api/scanner/quotes. MSFT is omitted from the live quote fixture so the cached item price is used. The options contract is not sent to the quote helper. External origins aborted. Not live-provider acceptance. Initial load-error is a failed watchlists list request, not a failed list switch.",
+  "route": "/tools/workspace?tab=watchlists",
+  "tip": "audit/watchlists-compact",
+  "viewports": [
+    "1280x800",
+    "390x844"
+  ],
+  "hardMaxScreens390": 2.3,
+  "targetScreens390": 2,
+  "maxScreens390Closed": 2.2109004739336493,
+  "maxScreens1280Closed": 1.44625,
+  "staleListOnLoadFailure": "Known open truth issue in fetchItems. This capture does not switch lists after a failed items request and does not claim that issue fixed.",
+  "results": [
+    {
+      "id": "populated-closed",
+      "dataCase": "populated",
+      "action": "closed",
+      "route": "/tools/workspace?tab=watchlists",
+      "pngFull": "shots/populated-closed-1280-full.png",
+      "pngFold": "shots/populated-closed-1280-fold.png",
+      "observedAt": "2026-10-05T18:34:42.598Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1157,
+      "screens": 1.44625,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved watchlist · individual quote feeds · Not available right now · Prices may use cached observations · each quote’s source, date and basis appear in its details; no shared observation time"
+      ],
+      "summaries": [
+        {
+          "text": "International Research Watchlist Core Book · 8 saved symbols loaded",
+          "top": 259,
+          "bottom": 279,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "rowCount": 5,
+      "rowText": [
+        "NEARcryptoToday: +3.88%Quote details and actions$4.82 · spot · 06:00 AEST Sat 3 Oct · +3.88% vs 24h ago · provider quoteToday: +3.88%ScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "AAPLequityToday: +1.16%Quote details and actions$229.10 · basis unknown · 06:00 AEST Sat 3 Oct · +1.16% vs prior close · provider quoteToday: +1.16%ScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "AAPL 2026-10-16 180CoptionToday: No priceQuote details and actionsno quote · basis unknown · time unknown · provider quoteToday: No priceScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "MSFTequityToday: +0.40%Quote details and actions$420.50 · basis unknown · 06:00 AEST Fri 2 Oct · +0.40% vs prior close · cached quotecachedToday: +0.40%ScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "NVDAequityToday: No priceQuote details and actionsno quote · basis unknown · time unknown · provider quoteToday: No priceScanSymbolOptionsAlertOpen ScannerResearchRemove"
+      ],
+      "showAll": [
+        "Show all 8"
+      ],
+      "trackHeading": "Track",
+      "disclaimerCollapsed": true,
+      "smallControlCount": 5,
+      "smallControls": [
+        {
+          "tag": "A",
+          "label": "MarketScannerProsMSP",
+          "width": 198,
+          "height": 32
+        },
+        {
+          "tag": "BUTTON",
+          "label": "☆",
+          "width": 22,
+          "height": 20
+        },
+        {
+          "tag": "BUTTON",
+          "label": "ⓘ General Information Only — educational use only.Read ▾",
+          "width": 1246,
+          "height": 29
+        },
+        {
+          "tag": "A",
+          "label": "Privacy Policy",
+          "width": 101,
+          "height": 22
+        },
+        {
+          "tag": "A",
+          "label": "Cookie Policy",
+          "width": 98,
+          "height": 22
+        }
+      ],
+      "controlCount": 79,
+      "scrollY": 0
+    },
+    {
+      "id": "populated-closed",
+      "dataCase": "populated",
+      "action": "closed",
+      "route": "/tools/workspace?tab=watchlists",
+      "pngFull": "shots/populated-closed-390-full.png",
+      "pngFold": "shots/populated-closed-390-fold.png",
+      "observedAt": "2026-10-05T18:34:43.161Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1866,
+      "screens": 2.2109004739336493,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved watchlist · individual quote feeds · Not available right now · Prices may use cached observations · each quote’s source, date and basis appear in its details; no shared observation time"
+      ],
+      "summaries": [
+        {
+          "text": "International Research Watchlist Core Book · 8 saved symbols loaded",
+          "top": 334.5,
+          "bottom": 374.5,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "rowCount": 5,
+      "rowText": [
+        "NEARcryptoToday: +3.88%Quote details and actions$4.82 · spot · 06:00 AEST Sat 3 Oct · +3.88% vs 24h ago · provider quoteToday: +3.88%ScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "AAPLequityToday: +1.16%Quote details and actions$229.10 · basis unknown · 06:00 AEST Sat 3 Oct · +1.16% vs prior close · provider quoteToday: +1.16%ScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "AAPL 2026-10-16 180CoptionToday: No priceQuote details and actionsno quote · basis unknown · time unknown · provider quoteToday: No priceScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "MSFTequityToday: +0.40%Quote details and actions$420.50 · basis unknown · 06:00 AEST Fri 2 Oct · +0.40% vs prior close · cached quotecachedToday: +0.40%ScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "NVDAequityToday: No priceQuote details and actionsno quote · basis unknown · time unknown · provider quoteToday: No priceScanSymbolOptionsAlertOpen ScannerResearchRemove"
+      ],
+      "showAll": [
+        "Show all 8"
+      ],
+      "trackHeading": "Track",
+      "disclaimerCollapsed": true,
+      "smallControlCount": 4,
+      "smallControls": [
+        {
+          "tag": "A",
+          "label": "MarketScannerProsMSP",
+          "width": 74,
+          "height": 32
+        },
+        {
+          "tag": "BUTTON",
+          "label": "☆",
+          "width": 22,
+          "height": 20
+        },
+        {
+          "tag": "A",
+          "label": "Privacy Policy",
+          "width": 101,
+          "height": 22
+        },
+        {
+          "tag": "A",
+          "label": "Cookie Policy",
+          "width": 98,
+          "height": 22
+        }
+      ],
+      "controlCount": 79,
+      "scrollY": 0
+    },
+    {
+      "id": "populated-show-all",
+      "dataCase": "populated",
+      "action": "show-all",
+      "route": "/tools/workspace?tab=watchlists",
+      "pngFull": "shots/populated-show-all-1280-full.png",
+      "pngFold": "shots/populated-show-all-1280-fold.png",
+      "observedAt": "2026-10-05T18:34:43.697Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 1346,
+      "screens": 1.6825,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved watchlist · individual quote feeds · Not available right now · Prices may use cached observations · each quote’s source, date and basis appear in its details; no shared observation time"
+      ],
+      "summaries": [
+        {
+          "text": "International Research Watchlist Core Book · 8 saved symbols loaded",
+          "top": 259,
+          "bottom": 279,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "rowCount": 8,
+      "rowText": [
+        "NEARcryptoToday: +3.88%Quote details and actions$4.82 · spot · 06:00 AEST Sat 3 Oct · +3.88% vs 24h ago · provider quoteToday: +3.88%ScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "AAPLequityToday: +1.16%Quote details and actions$229.10 · basis unknown · 06:00 AEST Sat 3 Oct · +1.16% vs prior close · provider quoteToday: +1.16%ScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "AAPL 2026-10-16 180CoptionToday: No priceQuote details and actionsno quote · basis unknown · time unknown · provider quoteToday: No priceScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "MSFTequityToday: +0.40%Quote details and actions$420.50 · basis unknown · 06:00 AEST Fri 2 Oct · +0.40% vs prior close · cached quotecachedToday: +0.40%ScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "NVDAequityToday: No priceQuote details and actionsno quote · basis unknown · time unknown · provider quoteToday: No priceScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "EURUSDforexToday: -0.15%Quote details and actions$1.09 · basis unknown · 06:00 AEST Sat 3 Oct · -0.15% vs prior close · provider quoteToday: -0.15%ScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "TSLAequityToday: +2.41%Quote details and actions$251.20 · basis unknown · 06:00 AEST Sat 3 Oct · +2.41% vs prior close · provider quoteToday: +2.41%ScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "AMDequityToday: -1.10%Quote details and actions$160.40 · basis unknown · 06:00 AEST Sat 3 Oct · -1.10% vs prior close · provider quoteToday: -1.10%ScanSymbolOptionsAlertOpen ScannerResearchRemove"
+      ],
+      "showAll": [
+        "Show five"
+      ],
+      "trackHeading": "Track",
+      "disclaimerCollapsed": true,
+      "smallControlCount": 5,
+      "smallControls": [
+        {
+          "tag": "A",
+          "label": "MarketScannerProsMSP",
+          "width": 198,
+          "height": 32
+        },
+        {
+          "tag": "BUTTON",
+          "label": "☆",
+          "width": 22,
+          "height": 20
+        },
+        {
+          "tag": "BUTTON",
+          "label": "ⓘ General Information Only — educational use only.Read ▾",
+          "width": 1246,
+          "height": 29
+        },
+        {
+          "tag": "A",
+          "label": "Privacy Policy",
+          "width": 101,
+          "height": 22
+        },
+        {
+          "tag": "A",
+          "label": "Cookie Policy",
+          "width": 98,
+          "height": 22
+        }
+      ],
+      "controlCount": 106,
+      "scrollY": 0
+    },
+    {
+      "id": "populated-show-all",
+      "dataCase": "populated",
+      "action": "show-all",
+      "route": "/tools/workspace?tab=watchlists",
+      "pngFull": "shots/populated-show-all-390-full.png",
+      "pngFold": "shots/populated-show-all-390-fold.png",
+      "observedAt": "2026-10-05T18:34:44.260Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 2432,
+      "screens": 2.881516587677725,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved watchlist · individual quote feeds · Not available right now · Prices may use cached observations · each quote’s source, date and basis appear in its details; no shared observation time"
+      ],
+      "summaries": [
+        {
+          "text": "International Research Watchlist Core Book · 8 saved symbols loaded",
+          "top": 334.5,
+          "bottom": 374.5,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "rowCount": 8,
+      "rowText": [
+        "NEARcryptoToday: +3.88%Quote details and actions$4.82 · spot · 06:00 AEST Sat 3 Oct · +3.88% vs 24h ago · provider quoteToday: +3.88%ScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "AAPLequityToday: +1.16%Quote details and actions$229.10 · basis unknown · 06:00 AEST Sat 3 Oct · +1.16% vs prior close · provider quoteToday: +1.16%ScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "AAPL 2026-10-16 180CoptionToday: No priceQuote details and actionsno quote · basis unknown · time unknown · provider quoteToday: No priceScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "MSFTequityToday: +0.40%Quote details and actions$420.50 · basis unknown · 06:00 AEST Fri 2 Oct · +0.40% vs prior close · cached quotecachedToday: +0.40%ScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "NVDAequityToday: No priceQuote details and actionsno quote · basis unknown · time unknown · provider quoteToday: No priceScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "EURUSDforexToday: -0.15%Quote details and actions$1.09 · basis unknown · 06:00 AEST Sat 3 Oct · -0.15% vs prior close · provider quoteToday: -0.15%ScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "TSLAequityToday: +2.41%Quote details and actions$251.20 · basis unknown · 06:00 AEST Sat 3 Oct · +2.41% vs prior close · provider quoteToday: +2.41%ScanSymbolOptionsAlertOpen ScannerResearchRemove",
+        "AMDequityToday: -1.10%Quote details and actions$160.40 · basis unknown · 06:00 AEST Sat 3 Oct · -1.10% vs prior close · provider quoteToday: -1.10%ScanSymbolOptionsAlertOpen ScannerResearchRemove"
+      ],
+      "showAll": [
+        "Show five"
+      ],
+      "trackHeading": "Track",
+      "disclaimerCollapsed": true,
+      "smallControlCount": 4,
+      "smallControls": [
+        {
+          "tag": "A",
+          "label": "MarketScannerProsMSP",
+          "width": 74,
+          "height": 32
+        },
+        {
+          "tag": "BUTTON",
+          "label": "☆",
+          "width": 22,
+          "height": 20
+        },
+        {
+          "tag": "A",
+          "label": "Privacy Policy",
+          "width": 101,
+          "height": 22
+        },
+        {
+          "tag": "A",
+          "label": "Cookie Policy",
+          "width": 98,
+          "height": 22
+        }
+      ],
+      "controlCount": 106,
+      "scrollY": 0
+    },
+    {
+      "id": "empty",
+      "dataCase": "empty",
+      "action": "closed",
+      "route": "/tools/workspace?tab=watchlists",
+      "pngFull": "shots/empty-1280-full.png",
+      "pngFold": "shots/empty-1280-fold.png",
+      "observedAt": "2026-10-05T18:34:44.729Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 890,
+      "screens": 1.1125,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved watchlist · individual quote feeds · Not available right now · Prices may use cached observations · each quote’s source, date and basis appear in its details; no shared observation time"
+      ],
+      "summaries": [
+        {
+          "text": "International Research Watchlist Core Book · 0 saved symbols loaded",
+          "top": 259,
+          "bottom": 279,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "rowCount": 0,
+      "rowText": [],
+      "showAll": [],
+      "trackHeading": "Track",
+      "disclaimerCollapsed": true,
+      "smallControlCount": 5,
+      "smallControls": [
+        {
+          "tag": "A",
+          "label": "MarketScannerProsMSP",
+          "width": 198,
+          "height": 32
+        },
+        {
+          "tag": "BUTTON",
+          "label": "☆",
+          "width": 22,
+          "height": 20
+        },
+        {
+          "tag": "BUTTON",
+          "label": "ⓘ General Information Only — educational use only.Read ▾",
+          "width": 1246,
+          "height": 29
+        },
+        {
+          "tag": "A",
+          "label": "Privacy Policy",
+          "width": 101,
+          "height": 22
+        },
+        {
+          "tag": "A",
+          "label": "Cookie Policy",
+          "width": 98,
+          "height": 22
+        }
+      ],
+      "controlCount": 33,
+      "scrollY": 0
+    },
+    {
+      "id": "empty",
+      "dataCase": "empty",
+      "action": "closed",
+      "route": "/tools/workspace?tab=watchlists",
+      "pngFull": "shots/empty-390-full.png",
+      "pngFold": "shots/empty-390-fold.png",
+      "observedAt": "2026-10-05T18:34:45.239Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 1034,
+      "screens": 1.2251184834123223,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 1,
+      "sourceText": [
+        "Source · Saved watchlist · individual quote feeds · Not available right now · Prices may use cached observations · each quote’s source, date and basis appear in its details; no shared observation time"
+      ],
+      "summaries": [
+        {
+          "text": "International Research Watchlist Core Book · 0 saved symbols loaded",
+          "top": 334.5,
+          "bottom": 374.5,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "rowCount": 0,
+      "rowText": [],
+      "showAll": [],
+      "trackHeading": "Track",
+      "disclaimerCollapsed": true,
+      "smallControlCount": 4,
+      "smallControls": [
+        {
+          "tag": "A",
+          "label": "MarketScannerProsMSP",
+          "width": 74,
+          "height": 32
+        },
+        {
+          "tag": "BUTTON",
+          "label": "☆",
+          "width": 22,
+          "height": 20
+        },
+        {
+          "tag": "A",
+          "label": "Privacy Policy",
+          "width": 101,
+          "height": 22
+        },
+        {
+          "tag": "A",
+          "label": "Cookie Policy",
+          "width": 98,
+          "height": 22
+        }
+      ],
+      "controlCount": 33,
+      "scrollY": 0
+    },
+    {
+      "id": "error",
+      "dataCase": "error",
+      "action": "closed",
+      "route": "/tools/workspace?tab=watchlists",
+      "pngFull": "shots/error-1280-full.png",
+      "pngFold": "shots/error-1280-fold.png",
+      "observedAt": "2026-10-05T18:34:45.700Z",
+      "width": 1280,
+      "height": 800,
+      "scrollHeight": 800,
+      "screens": 1,
+      "docScrollWidth": 1280,
+      "docClientWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "bodyClientWidth": 1280,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 0,
+      "sourceText": [],
+      "summaries": [
+        {
+          "text": "The last watchlist request did not complete.",
+          "top": 259,
+          "bottom": 279,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 1248,
+        "clientWidth": 1248,
+        "overflows": false
+      },
+      "rowCount": 0,
+      "rowText": [],
+      "showAll": [],
+      "trackHeading": "Track",
+      "disclaimerCollapsed": true,
+      "smallControlCount": 5,
+      "smallControls": [
+        {
+          "tag": "A",
+          "label": "MarketScannerProsMSP",
+          "width": 198,
+          "height": 32
+        },
+        {
+          "tag": "BUTTON",
+          "label": "☆",
+          "width": 22,
+          "height": 20
+        },
+        {
+          "tag": "BUTTON",
+          "label": "ⓘ General Information Only — educational use only.Read ▾",
+          "width": 1246,
+          "height": 29
+        },
+        {
+          "tag": "A",
+          "label": "Privacy Policy",
+          "width": 101,
+          "height": 22
+        },
+        {
+          "tag": "A",
+          "label": "Cookie Policy",
+          "width": 98,
+          "height": 22
+        }
+      ],
+      "controlCount": 20,
+      "scrollY": 0
+    },
+    {
+      "id": "error",
+      "dataCase": "error",
+      "action": "closed",
+      "route": "/tools/workspace?tab=watchlists",
+      "pngFull": "shots/error-390-full.png",
+      "pngFold": "shots/error-390-fold.png",
+      "observedAt": "2026-10-05T18:34:46.193Z",
+      "width": 390,
+      "height": 844,
+      "scrollHeight": 844,
+      "screens": 1,
+      "docScrollWidth": 390,
+      "docClientWidth": 390,
+      "bodyScrollWidth": 390,
+      "bodyClientWidth": 390,
+      "overflowX": false,
+      "openFolds": 0,
+      "sourceCount": 0,
+      "sourceText": [],
+      "summaries": [
+        {
+          "text": "The last watchlist request did not complete.",
+          "top": 334.5,
+          "bottom": 354.5,
+          "aboveFold": true
+        }
+      ],
+      "oneSummaryAboveFold": true,
+      "tabBar": {
+        "scrollWidth": 366,
+        "clientWidth": 366,
+        "overflows": false
+      },
+      "rowCount": 0,
+      "rowText": [],
+      "showAll": [],
+      "trackHeading": "Track",
+      "disclaimerCollapsed": true,
+      "smallControlCount": 4,
+      "smallControls": [
+        {
+          "tag": "A",
+          "label": "MarketScannerProsMSP",
+          "width": 74,
+          "height": 32
+        },
+        {
+          "tag": "BUTTON",
+          "label": "☆",
+          "width": 22,
+          "height": 20
+        },
+        {
+          "tag": "A",
+          "label": "Privacy Policy",
+          "width": 101,
+          "height": 22
+        },
+        {
+          "tag": "A",
+          "label": "Cookie Policy",
+          "width": 98,
+          "height": 22
+        }
+      ],
+      "controlCount": 20,
+      "scrollY": 0
+    }
+  ],
+  "errors": []
+}
