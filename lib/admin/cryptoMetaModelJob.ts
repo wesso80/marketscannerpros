@@ -9,6 +9,8 @@ import {fetchCoinbaseCandles} from './cryptoPaperMarket';
 import {aggregate} from './strategyHarness';
 import {REPLAY} from './cryptoReplay';
 import type {ExchangeBar} from './cryptoExchangeVolume';
+import {latestExitModel} from './cryptoExitSelectJob';
+import {selectPlan} from './cryptoExitSelect';
 
 /** Model store, holdout lock and the live log-only score table (Neon). Admin-only, research only. */
 export const META_DDL=`-- Shadow meta-labelling model (Phase 4): trained models, the locked holdout and live log-only scores (research only).
@@ -92,8 +94,10 @@ export const META_LIVE={perRun:4,lookbackHours:48};
 export async function scoreLiveSignals(now=Date.now()){
  try{await ensureSignalLedger();await ensureMetaTables();}catch{return {ok:false,error:'Model tables unavailable'};}
  try{
-  const model=await latestModel();if(!model)return {ok:true,skipped:'No trained model'};
-  if(model.model.featuresVersion!==SIGNAL_FEATURES.version)return {ok:true,skipped:'Model features out of date; retrain'};
+  // Either model may be present: the Phase 4 win-chance model and/or the Phase 5 exit selector (both log only).
+  const m0=await latestModel(),e0=await latestExitModel();
+  const model=m0&&m0.model.featuresVersion===SIGNAL_FEATURES.version?m0:null,exitModel=e0&&e0.model.featuresVersion===SIGNAL_FEATURES.version?e0:null;
+  if(!model&&!exitModel)return {ok:true,skipped:m0||e0?'Model features out of date; retrain':'No trained model'};
   const due=await q<{signal_id:string;coin:string;product:string|null;venue:string|null;signal_at:string|Date}>(
    `SELECT l.signal_id,l.coin,l.product,l.venue,l.signal_at FROM crypto_signal_ledger l LEFT JOIN crypto_meta_scores s ON s.signal_id=l.signal_id
     WHERE l.source='live-4h' AND s.signal_id IS NULL AND l.signal_at > $1 ORDER BY l.signal_at DESC LIMIT $2`,[new Date(now-META_LIVE.lookbackHours*H).toISOString(),META_LIVE.perRun]);
@@ -101,7 +105,7 @@ export async function scoreLiveSignals(now=Date.now()){
   for(const row of due){
    const t=new Date(row.signal_at).getTime(),save=(status:'SCORED'|'UNAVAILABLE',reason:string|null,probs:unknown,features:unknown)=>q(
     `INSERT INTO crypto_meta_scores (signal_id,model_id,coin,product,signal_at,status,reason,probs,features) VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb) ON CONFLICT (signal_id) DO NOTHING`,
-    [row.signal_id,model.model_id,row.coin,row.product,new Date(t).toISOString(),status,reason,probs==null?null:JSON.stringify(probs),features==null?null:JSON.stringify(features)]);
+    [row.signal_id,model?.model_id??null,row.coin,row.product,new Date(t).toISOString(),status,reason,probs==null?null:JSON.stringify(probs),features==null?null:JSON.stringify(features)]);
    try{
     if(row.venue!=='gdax'||!/-USD$/.test(row.product??'')){await save('UNAVAILABLE','Not a Coinbase USD signal; the model was trained on Coinbase candles only',null,null);continue;}
     const hourly=await fetchCoinbaseCandles(row.product!,Math.floor((t-REPLAY.warmHours*H)/H)*H,t,H);
@@ -114,11 +118,12 @@ export async function scoreLiveSignals(now=Date.now()){
     const [rank]=await q<{r:number}>(`SELECT r FROM (SELECT d.coin_id,rank() OVER (ORDER BY d.market_cap DESC) r FROM cg_hist_daily d JOIN cg_hist_coins c ON c.id=d.coin_id AND NOT c.stable WHERE d.day=$1::date AND d.market_cap IS NOT NULL) x WHERE coin_id=$2`,[new Date(day).toISOString().slice(0,10),row.coin]).catch(()=>[]);
     const [first]=await q<{day:string|null}>(`SELECT min(day)::text day FROM cg_hist_daily WHERE coin_id=$1 AND price IS NOT NULL`,[row.coin]).catch(()=>[]);
     const features=signalFeatures({signal:sig,signalAt:t,four:four.slice(Math.max(0,i-160),i+1),daily,btcDaily,mcapRank:rank?Number(rank.r):null,firstHistoryDay:first?.day??null});
-    const probs=predictBoth(model.model.models,encode(features.values));
-    await save('SCORED',null,{logistic:Math.round(probs.logistic*10000)/10000,gbt:Math.round(probs.gbt*10000)/10000,stage:sig.stage},features);scored++;
+    const x=encode(features.values),probs=model?predictBoth(model.model.models,x):null,exit=exitModel?selectPlan(exitModel.model.selector,x):null;
+    await save('SCORED',null,{...(probs?{logistic:Math.round(probs.logistic*10000)/10000,gbt:Math.round(probs.gbt*10000)/10000}:{}),stage:sig.stage,
+     ...(exit?{exit:{plan:exit.plan,expectedR:exit.expectedR,expected:exit.expected,modelId:exitModel!.model_id}}:{})},features);scored++;
    }catch(e){await save('UNAVAILABLE',`Candles unavailable: ${e instanceof Error?e.message.slice(0,120):'request failed'}`,null,null).catch(()=>undefined);}
   }
-  return {ok:true,due:due.length,scored,model:model.model_id};
+  return {ok:true,due:due.length,scored,model:model?.model_id??null,exitModel:exitModel?.model_id??null};
  }catch(e){return {ok:false,error:e instanceof Error?e.message:'Live scoring failed'};}
 }
 async function btcDailyFor(day:number):Promise<ExchangeBar[]>{
