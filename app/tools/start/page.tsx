@@ -1,2 +1,2 @@
-import StartToday from '@/components/free/StartToday';
-export default function Page() { return <StartToday />; }
+import StartGate from '@/components/free/StartGate';
+export default function Page() { return <StartGate />; }

@@ -17,7 +17,8 @@ type AnalyticsEvent =
   | "upgrade_pro"
   | "upgrade_pro_trader"
   | "open_dashboard"
-  | "open_ai_analyst";
+  | "open_ai_analyst"
+  | "start_here_step";
 
 type EventProps = Record<string, string | number | boolean | undefined>;
 
