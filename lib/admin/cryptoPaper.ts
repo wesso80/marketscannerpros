@@ -29,6 +29,7 @@ import {unavailableCatalyst} from './cryptoJevCatalyst';
 import {unavailableChart} from './cryptoJevChart';
 import {fillTrailingNoTrade,type TrailingAnchor} from './cryptoCandleGaps';
 import {paperTradeLog,type PaperLogRow} from './cryptoTradeLog';
+import {paperEntryGate} from './cryptoEntryGate';
 import {LOCK,loadLock,saveLock,newLockState,markLock,advanceLockPosition,settleWithLedger,finishEpisodeIfDone} from './cryptoPaperLock';
 import {ledgerRecords,recordSignals,signalLedgerView,ensureSignalLedger} from './cryptoSignalLedger';
 import {trackExcursions,giveBackView,ensureExcursionTables,excursionTablesReady} from './cryptoPaperExcursion';
@@ -359,19 +360,15 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
    await atomicQueries(async()=>{
     await q('SELECT id FROM arca_portfolios WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[workspaceId,target.id]);
     const current=await getPortfolioById(workspaceId,target.id);if(!current||current.mode!=='SIMULATED'||current.status!=='ACTIVE')throw Error('Entries paused');
-    if((await q('SELECT id FROM arca_simulated_orders WHERE workspace_id=$1 AND portfolio_id=$2 AND left(created_reason,length($3))=$3 LIMIT 1',[workspaceId,current.id,key])).length)throw Error('Signal already traded');
+    // Account-level checks: the shared pure gate (also used by the history replay). Reads first, then one decision.
+    const alreadyTraded=(await q('SELECT id FROM arca_simulated_orders WHERE workspace_id=$1 AND portfolio_id=$2 AND left(created_reason,length($3))=$3 LIMIT 1',[workspaceId,current.id,key])).length>0;
     const opens=await listOpenPositions(workspaceId,current.id);
-    if(opens.some(p=>p.symbol===candidate.id))throw Error('Position already open');
-    if(opens.length>=L.positions)throw Error(`${L.positions}-position cap`);
-    if(current.settings.feesPctEstimate!==.05||current.settings.slippagePctEstimate!==.05)throw Error('Unexpected paper cost settings');
-    if(current.totalEquity<current.startingBalance*(1-L.lossFromStartPct/100))throw Error(`${L.lossFromStartPct}% loss-from-start entry stop`);
     const [daily]=await q<{n:string}>('SELECT COUNT(*) AS n FROM arca_simulated_orders WHERE workspace_id=$1 AND portfolio_id=$2 AND filled_at >= date_trunc(\'day\',NOW() AT TIME ZONE \'UTC\') AT TIME ZONE \'UTC\'',[workspaceId,current.id]);
-    if(Number(daily?.n)>=L.dailyEntries)throw Error(`Daily ${L.dailyEntries}-entry cap`);
-    // Portfolio-level cap on the candidate's correlated cluster (existing positions are only counted, never resized).
-    const cluster=clusterAllowance(corr,opens.map(p=>({coin:p.symbol,riskUsd:positionRiskUsd(p)})),openBars.map(o=>o.coin),current.totalEquity,current.totalEquity*L.riskPerTradePct/100);
-    if(refusal&&cluster.blocked)throw Error(`Correlated cluster risk cap: ${cluster.members.join(', ')} already risk USD ${cluster.clusterRiskUsd.toFixed(2)} of USD ${cluster.capUsd.toFixed(2)}`);
-    const plan=planCryptoPaper(signal,quote,current.totalEquity,current.currentCash,Date.now(),converted ? .001 : .0005,liq.capUsd,refusal?cluster.scale:1);if(!plan.ok)throw Error(plan.reason);
-    if(opens.reduce((s,p)=>s+positionRiskUsd(p),0)+plan.risk>current.totalEquity*L.openRiskPct/100)throw Error(`${L.openRiskPct}% portfolio risk cap`);
+    const gate=paperEntryGate({coin:candidate.id,alreadyTraded,opens:opens.map(p=>({coin:p.symbol,riskUsd:positionRiskUsd(p)})),checkedCoins:openBars.map(o=>o.coin),
+     account:{equity:current.totalEquity,cash:current.currentCash,startingBalance:current.startingBalance,feesPct:current.settings.feesPctEstimate,slippagePct:current.settings.slippagePctEstimate},
+     dailyEntries:Number(daily?.n),refusal,corr,signal,quote,now:Date.now(),costRate:converted ? .001 : .0005,liquidityCapUsd:liq.capUsd},L);
+    if(!gate.ok)throw Error(gate.reason);
+    const {plan,cluster}=gate;
     const order=await createSimulatedOrder({portfolio:paperCostPortfolio(current,instrument),symbol:candidate.id,assetClass:'crypto',instrumentType:instrument,side:'LONG',orderType:'MARKET_SIM',plannedEntry:signal.close,triggerPrice:null,quantity:plan.quantity,notional:plan.notional,stopLoss:plan.stop,takeProfit1:plan.target,takeProfit2:null,takeProfit3:null,sourceEdgePacketId:null,playbookId:PLAYBOOK_V2,createdReason:key+JSON.stringify({sleeve,version:converted?2:1,signal,nativeSignal,pair,quote,plan,currency:'USD',exitModel:converted?'conservative-cross-currency-bounds':'native-usd',exitRules:CRYPTO_TIME_STOP,btcRegime,shadowFilter:{rule:BTC_DOWN_FILTER,decision:btcDownFilter(btcRegime?.state)},flowStamp:candidate.flowStamp??{rule:'flow-stamp-v1',stamp:'unavailable',takerBuyShare4h:null,source:'okx:public',checkedAt:new Date().toISOString()},jev:candidate.jev??unavailableJev(Date.now()),catalyst:candidate.catalyst??unavailableCatalyst(Date.now(),'not-stamped'),chart:candidate.chart??unavailableChart(Date.now(),'not-stamped',candidate.bars?.length??0),shadow:candidate.shadow??null,relativeStrength:rsEvidence(rsSnap,candidate.id,Date.now()),liquidity:{...liq,capped:plan.liquidityCapped},correlation:{...corr,cluster},derivatives,flow,simulation:true,exchangeOrder:false}),arcaConfidence:null});
     await fillOrderAndOpenPosition({portfolio:paperCostPortfolio(current,instrument),order,currentPrice:quote.ask,validationEvidence:{packetId:key,priceAt:quote.priceAt,regime:null,policyId:'crypto-paper-v1'}});
     opened++;
