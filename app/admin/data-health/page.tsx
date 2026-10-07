@@ -4,6 +4,7 @@ import { startVisiblePolling } from "@/lib/client/visiblePolling";
 import { useEffect, useState } from "react";
 import AdminProviderHealthGrid from "@/components/admin/AdminProviderHealthGrid";
 import AdminWebhookStatusPanel from "@/components/admin/AdminWebhookStatusPanel";
+import ScannerDataAuditPanel from "@/components/admin/ScannerDataAuditPanel";
 import Link from "next/link";
 import { useAdmin } from "../admin-client-layout";
 
@@ -65,6 +66,7 @@ export default function DataHealthPage() {
 
       <AdminProviderHealthGrid rows={providers} loading={loading} error={error} />
       {!error && <AdminWebhookStatusPanel rows={webhooks} loading={loading} />}
+      <ScannerDataAuditPanel />
 
       <section
         style={{

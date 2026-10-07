@@ -55,6 +55,7 @@ export const businessScope = {
     '/api/admin/costs',
     '/api/admin/delete-requests',
     '/api/admin/data-health',
+    '/api/admin/scanner-data-audit',
     '/api/admin/health',
     '/api/admin/research-scheduler',
   ],
