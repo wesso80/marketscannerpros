@@ -3,6 +3,7 @@ import { atr as measuredAtr } from '@/lib/indicators';
 import { atmStrike } from '@/lib/options/atmStrike';
 import { atmImpliedVol } from '@/lib/goldenEgg/optionsChain';
 import { selectOptionsExpiry } from '@/lib/options/expiry';
+import { summarizeOpenInterest, oiRowFromContract, putCallTilt, OI_BASIS, type OiSummary } from '@/lib/options/oiSummary';
 import { optionEntryBlocker, datedResearchCandidates } from '@/lib/options/decisionGate';
 /**
  * Options Confluence Analyzer
@@ -271,7 +272,7 @@ function calculateMarketDTE(
 /**
  * Normalize IV from API (handles both decimal 0.25 and percent 25 formats)
  */
-function normalizeIV(rawIV: number | string | undefined, fallback = 0.25): number {
+function normalizeIV(rawIV: number | string | undefined, fallback = Number.NaN): number {
   if (rawIV === null || rawIV === undefined) return fallback;
   const parsed = typeof rawIV === 'number' ? rawIV : parseFloat(String(rawIV));
   if (isNaN(parsed) || parsed <= 0) return fallback;
@@ -708,7 +709,9 @@ export interface ProfessionalTradeStack {
 export interface OpenInterestData {
   totalCallOI: number;
   totalPutOI: number;
-  pcRatio: number;              // Put/Call ratio
+  pcRatio: number;              // Put/Call ratio over strikes within ±30% of spot (shared definition, lib/options/oiSummary)
+  /** Shared open-interest summary: basis, in-range and every-strike figures, walls, max pain. */
+  basis?: OiSummary;
   sentiment: 'bullish' | 'bearish' | 'neutral';
   sentimentReason: string;
   maxPainStrike: number | null;
@@ -719,7 +722,7 @@ export interface OpenInterestData {
     totalOI: number;
     reliable: boolean;
   };
-  highOIStrikes: { strike: number; openInterest: number; volume: number; type: 'call' | 'put'; delta?: number; gamma?: number; theta?: number; vega?: number; iv?: number }[];
+  highOIStrikes: { strike: number; openInterest: number; volume: number; type: 'call' | 'put'; delta?: number; gamma?: number; theta?: number; vega?: number; iv?: number; greeksEstimated?: boolean }[];
   /** Every contract with open interest in the analysed expiry (strike range ±30%), for GEX estimates. */
   gexStrikes?: { strike: number; openInterest: number; type: 'call' | 'put'; delta?: number; gamma?: number }[];
   expirationDate: string;       // The expiration date being analyzed
@@ -1146,12 +1149,15 @@ export async function fetchOptionsChain(symbol: string, targetExpiration?: strin
     return null;
   }
 }
-function analyzeOpenInterest(
+export function analyzeOpenInterest(
   calls: AVOptionContract[],
   puts: AVOptionContract[],
   currentPrice: number,
   expirationDate: string
-): OpenInterestData {
+): OpenInterestData | null {
+  // Shared definitions (same numbers as Symbol for the same expiry). No call OI in range → no ratio → no analysis.
+  const shared = summarizeOpenInterest([...calls, ...puts].map(c => oiRowFromContract(c as unknown as Record<string, unknown>)).filter((r): r is NonNullable<typeof r> => r != null), currentPrice);
+  if (!shared || shared.inRange.putCall == null) return null;
   // Calculate DTE for Greeks estimation fallback
   const daysToExpiry = Math.max(1, dateDiffDaysYMD(formatNYDate(new Date()), expirationDate));
   
@@ -1172,6 +1178,8 @@ function analyzeOpenInterest(
     theta?: number;
     vega?: number;
     iv?: number;
+    /** True when delta/gamma/theta/vega were estimated (Black-Scholes, observed IV) because the provider omitted them. */
+    greeksEstimated?: boolean;
   }> = [];
   
   // Sanity check: ensure currentPrice is valid
@@ -1196,19 +1204,9 @@ function analyzeOpenInterest(
     };
   }
   
-  // Dynamic strike coverage: default ±30%, expand to ±50% on dense but low-OI chains
-  let minStrike = currentPrice * 0.7;
-  let maxStrike = currentPrice * 1.3;
-  const contractCount = calls.length + puts.length;
-  const roughTotalOI = [...calls, ...puts].reduce((sum, contract) => {
-    const oi = getIntField(contract as unknown as Record<string, unknown>, ['open_interest', 'openInterest'], 0);
-    return sum + oi;
-  }, 0);
-  if (contractCount > 800 && roughTotalOI < 500) {
-    minStrike = currentPrice * 0.5;
-    maxStrike = currentPrice * 1.5;
-    console.log('📊 Expanding OI strike filter to ±50% due to high contract count with weak OI coverage');
-  }
+  // Strike coverage: the shared ±30% range (no silent widening, so the stated basis is always the one used).
+  const minStrike = currentPrice * (1 - OI_BASIS.ratioRangePct / 100);
+  const maxStrike = currentPrice * (1 + OI_BASIS.ratioRangePct / 100);
   
   console.log(`📊 Filtering strikes to range: $${minStrike.toFixed(2)} - $${maxStrike.toFixed(2)} (current: $${currentPrice})`);
   
@@ -1246,12 +1244,16 @@ function analyzeOpenInterest(
         const apiVega = getOptionalNumericField(call as unknown as Record<string, unknown>, ['vega', 'Vega']);
         const vol = getIntField(call as unknown as Record<string, unknown>, ['volume', 'trade_volume'], 0);
         // Use normalized IV (handles both 0.25 and 25 formats)
-        const iv = normalizeIV(call.implied_volatility, 0.25);
+        // Observed IV only: a missing IV stays missing (it used to become 25%, which then priced estimated Greeks).
+        const ivRaw = normalizeIV(call.implied_volatility, Number.NaN);
+        const iv = Number.isFinite(ivRaw) ? ivRaw : undefined;
         
         // Use estimateGreeks as fallback when API doesn't provide Greeks or returns 0 (0DTE bug)
         let delta = apiDelta, gamma = apiGamma, theta = apiTheta, vega = apiVega;
-        if (!apiDelta || !apiGamma || !apiTheta || !apiVega) {
-          const estimated = estimateGreeks(currentPrice, strike, daysToExpiry, 0.05, iv, true);
+        // Estimated (Black-Scholes) only when the provider omitted Greeks AND an observed IV exists; flagged as estimated.
+        const greeksEstimated = (!apiDelta || !apiGamma || !apiTheta || !apiVega) && iv !== undefined;
+        if (greeksEstimated) {
+          const estimated = estimateGreeks(currentPrice, strike, daysToExpiry, 0.05, iv!, true);
           delta = apiDelta || estimated.delta;
           gamma = apiGamma || estimated.gamma;
           theta = apiTheta || estimated.theta;
@@ -1268,6 +1270,7 @@ function analyzeOpenInterest(
           theta,
           vega,
           iv,
+          greeksEstimated,
         });
       }
     }
@@ -1296,12 +1299,16 @@ function analyzeOpenInterest(
         const apiVega = getOptionalNumericField(put as unknown as Record<string, unknown>, ['vega', 'Vega']);
         const vol = getIntField(put as unknown as Record<string, unknown>, ['volume', 'trade_volume'], 0);
         // Use normalized IV (handles both 0.25 and 25 formats)
-        const iv = normalizeIV(put.implied_volatility, 0.25);
+        // Observed IV only: a missing IV stays missing (it used to become 25%, which then priced estimated Greeks).
+        const ivRaw = normalizeIV(put.implied_volatility, Number.NaN);
+        const iv = Number.isFinite(ivRaw) ? ivRaw : undefined;
         
         // Use estimateGreeks as fallback when API doesn't provide Greeks or returns 0 (0DTE bug)
         let delta = apiDelta, gamma = apiGamma, theta = apiTheta, vega = apiVega;
-        if (!apiDelta || !apiGamma || !apiTheta || !apiVega) {
-          const estimated = estimateGreeks(currentPrice, strike, daysToExpiry, 0.05, iv, false);  // false = put
+        // Estimated (Black-Scholes) only when the provider omitted Greeks AND an observed IV exists; flagged as estimated.
+        const greeksEstimated = (!apiDelta || !apiGamma || !apiTheta || !apiVega) && iv !== undefined;
+        if (greeksEstimated) {
+          const estimated = estimateGreeks(currentPrice, strike, daysToExpiry, 0.05, iv!, false);  // false = put
           delta = apiDelta || estimated.delta;
           gamma = apiGamma || estimated.gamma;
           theta = apiTheta || estimated.theta;
@@ -1318,6 +1325,7 @@ function analyzeOpenInterest(
           theta,
           vega,
           iv,
+          greeksEstimated,
         });
       }
     }
@@ -1329,20 +1337,23 @@ function analyzeOpenInterest(
   console.log(`📊 Raw strikes from API: min=$${uniqueRawStrikes[0]?.toFixed(2) || 'N/A'}, max=$${uniqueRawStrikes[uniqueRawStrikes.length - 1]?.toFixed(2) || 'N/A'}, total=${uniqueRawStrikes.length}`);
   console.log(`📊 Filtered strikes in range: ${filteredStrikes.length} strikes: ${filteredStrikes.slice(0, 10).map(s => '$' + s).join(', ')}${filteredStrikes.length > 10 ? '...' : ''}`);
   
-  // Put/Call ratio
-  const pcRatio = totalCallOI > 0 ? totalPutOI / totalCallOI : 1.0;
+  // Put/Call ratio and totals: the shared summary (the loops above also collect per-strike data for Greeks and reliability).
+  totalCallOI = shared.inRange.callOi;
+  totalPutOI = shared.inRange.putOi;
+  const pcRatio = shared.inRange.putCall;
   
   // Sentiment based on P/C ratio
   // < 0.7 = bullish (more calls), > 1.0 = bearish (more puts), between = neutral
   let sentiment: 'bullish' | 'bearish' | 'neutral' = 'neutral';
   let sentimentReason = 'P/C ratio in neutral range';
   
-  if (pcRatio < 0.7) {
+  const tilt = putCallTilt(pcRatio);
+  if (tilt === 'call-heavy') {
     sentiment = 'bullish';
-    sentimentReason = `P/C ${pcRatio.toFixed(2)} = heavy call buying`;
-  } else if (pcRatio > 1.0) {
+    sentimentReason = `P/C ${pcRatio.toFixed(2)}: more call than put open interest`;
+  } else if (tilt === 'put-heavy') {
     sentiment = 'bearish';
-    sentimentReason = `P/C ${pcRatio.toFixed(2)} = heavy put buying`;
+    sentimentReason = `P/C ${pcRatio.toFixed(2)}: more put than call open interest`;
   }
   
   // Find max pain strike (where most options expire worthless)
@@ -1404,9 +1415,8 @@ function analyzeOpenInterest(
     }
   }
 
-  if (!isReliableMaxPain) {
-    maxPainStrike = null;
-  }
+  // Max pain: the shared strike (same as Symbol), shown only when the reliability check passes.
+  maxPainStrike = isReliableMaxPain ? shared.maxPain : null;
   
   // Sort contracts: prioritize by OI, but if OI is 0 for all, sort by proximity to ATM
   const hasAnyOI = contractsWithGreeks.some(c => c.openInterest > 0);
@@ -1443,6 +1453,7 @@ function analyzeOpenInterest(
     totalCallOI,
     totalPutOI,
     pcRatio,
+    basis: shared,
     sentiment,
     sentimentReason,
     maxPainStrike,
@@ -3640,9 +3651,10 @@ export class OptionsConfluenceAnalyzer {
           dataQuality.greeksModel = dataQuality.hasGreeksFromAPI ? 'api' : 'black_scholes_european';
           
           openInterestAnalysis = analyzeOpenInterest(optionsChain.calls, optionsChain.puts, currentPrice, optionsChain.selectedExpiry);
-          dataQuality.hasMeaningfulOI = openInterestAnalysis.totalCallOI > 100 || openInterestAnalysis.totalPutOI > 100;
+          dataQuality.hasMeaningfulOI = !!openInterestAnalysis && (openInterestAnalysis.totalCallOI > 100 || openInterestAnalysis.totalPutOI > 100);
           
-          console.log(`📊 O/I Analysis (${optionsChain.selectedExpiry}): P/C=${openInterestAnalysis.pcRatio.toFixed(2)}, Sentiment=${openInterestAnalysis.sentiment}, Max Pain=$${openInterestAnalysis.maxPainStrike || 'N/A'}`);
+          if (openInterestAnalysis) console.log(`📊 O/I Analysis (${optionsChain.selectedExpiry}): P/C=${openInterestAnalysis.pcRatio.toFixed(2)}, Sentiment=${openInterestAnalysis.sentiment}, Max Pain=$${openInterestAnalysis.maxPainStrike || 'N/A'}`);
+          else console.log(`📊 O/I Analysis (${optionsChain.selectedExpiry}): no call open interest within ±${OI_BASIS.ratioRangePct}% of spot; unavailable`);
           
           // PRO TRADER: IV Analysis
           ivAnalysis = analyzeIV(optionsChain.calls, optionsChain.puts, currentPrice);
@@ -3652,8 +3664,11 @@ export class OptionsConfluenceAnalyzer {
           
           // PRO TRADER: Expected Move Calculation
           const avgIV = ivAnalysis?.currentIV;
-          const todayNy = formatNYDate(new Date());
-          const selectedCalendarDTE = Math.max(0, dateDiffDaysYMD(todayNy, optionsChain.selectedExpiry));
+          // Days to expiry counted from the option QUOTE date (as Symbol does), so a previous-session chain is not given
+          // a day less than its quotes describe. Falls back to today's New York date when the chain carries no date.
+          const quoteDates = [...optionsChain.calls, ...optionsChain.puts].map(c => String((c as unknown as {date?: unknown}).date ?? '').slice(0, 10)).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d));
+          const quoteDate = quoteDates.length ? quoteDates.sort()[quoteDates.length - 1] : formatNYDate(new Date());
+          const selectedCalendarDTE = Math.max(0, dateDiffDaysYMD(quoteDate, optionsChain.selectedExpiry));
           const selectedDTE = expirationDate
             ? calculateMarketDTE(new Date(), new Date(expirationDate), assetType)
             : 7;
@@ -3662,7 +3677,9 @@ export class OptionsConfluenceAnalyzer {
           // Add EOD data confidence cap
           dataConfidenceCaps.push('EOD options data - confidence capped (not realtime)');
           executionNotes.push('Expected move uses calendar days to the actual selected chain expiry; timing scores separately use market days.');
-          if (!openInterestAnalysis.maxPainReliability.reliable) {
+          if (!openInterestAnalysis) {
+            executionNotes.push(`Open-interest analysis unavailable: no call open interest within ±${OI_BASIS.ratioRangePct}% of spot on ${optionsChain.selectedExpiry}.`);
+          } else if (!openInterestAnalysis.maxPainReliability.reliable) {
             executionNotes.push(`Max pain reliability low (${openInterestAnalysis.maxPainReliability.score}/100) - max pain excluded`);
             dataConfidenceCaps.push('Max pain unreliable due to weak OI/strike coverage');
           }
@@ -3823,7 +3840,7 @@ export class OptionsConfluenceAnalyzer {
         confluenceResult,
         isCallDirection,
         quoteStrikes,
-        ivAnalysis.currentIV ?? 0.25,
+        ivAnalysis.currentIV,
       );
       allStrikes = picked.recommendations.filter(candidate => quoteStrikes.includes(candidate.strike));
       strikeSelectionDegraded = picked.degraded;

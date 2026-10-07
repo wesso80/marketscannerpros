@@ -8,6 +8,7 @@
  * INTERPRET the packet in a fixed research format. The Golden Egg verdict stays canonical; there is no second
  * directional engine.
  */
+import { putCallTilt } from '@/lib/options/oiSummary';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
@@ -261,7 +262,8 @@ function legacyOptions(c: GoldenEggCanonical) {
     totalCallOI: o.totalCallOi, totalPutOI: o.totalPutOi, putCallRatio: o.putCallOi, maxPain: o.maxPain,
     // avgIV stays DECIMAL (0.35 = 35%) for the legacy renderer, which multiplies by 100.
     avgIV: o.avgIvPct != null ? o.avgIvPct / 100 : null, ivRank: null, expectedMovePct: o.expectedMovePct, unusualActivity: o.unusualActivity, dealerGamma: o.dealerGamma,
-    sentiment: o.putCallOi > 1.2 ? 'Bearish' : o.putCallOi < 0.8 ? 'Bullish' : 'Neutral', quality: o.quality, notes: o.notes, source: 'golden_egg_canonical',
+    // Shared put/call tilt cut-offs (lib/options/oiSummary), the same as Symbol and the Options analysis.
+    sentiment: (() => { const t = putCallTilt(o.putCallOi); return t === 'put-heavy' ? 'Bearish' : t === 'call-heavy' ? 'Bullish' : t === 'balanced' ? 'Neutral' : 'Unavailable'; })(), quality: o.quality, notes: o.notes, source: 'golden_egg_canonical',
   };
 }
 

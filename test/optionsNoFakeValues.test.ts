@@ -56,8 +56,10 @@ describe('6. missing max pain is not "price is at max pain"', () => {
     const row = (type: 'call' | 'put') => ({ contractID: `XYZ${type}`, symbol: 'XYZ', expiration: '2030-01-18', strike: 'n/a', type, open_interest: '1000', volume: '10', implied_volatility: '0.3', date: '2026-09-25' });
     m.av = { REALTIME_OPTIONS: { data: [row('call'), row('put')] } };
     const snap = await fetchOptionsSnapshot('XYZ', 100);
-    expect(snap).not.toBeNull();
-    expect(snap?.maxPain).toBeNull();
+    // No contract has a usable strike, so the shared open-interest summary (lib/options/oiSummary) has no put/call
+    // ratio and the whole options snapshot is unavailable. Either way max pain is never the spot price.
+    expect(snap).toBeNull();
+    expect(snap?.maxPain ?? null).toBeNull();
   });
 
   const volState = { bbwp: 10, bbwpSma5: 10, regime: 'compression', regimeConfidence: 80, rateOfChange: 0, rateSmoothed: 0, acceleration: 0, rateDirection: 'flat', inSqueeze: false, squeezeStrength: 0 } as any;
