@@ -51,6 +51,8 @@ export function buildResearchSnapshot(input: {
   timingEvidence?: TimingEvidence | null;
   /** Latest Volatility (DVE) signal; undefined when not loaded, so no release statement is made. */
   volatilityRelease?: VolatilityRelease;
+  /** The expiry the reader asked for, and whether its chain was used (W1: never a substituted expiry). */
+  optionsRequest?: { expiry: string; status: 'used' | 'unavailable' } | null;
 }): ResearchSnapshot {
   const c = input.canonical, pe = input.priceEvidence ?? null, te = input.timingEvidence ?? null, sym = c.symbol;
   const equity = c.assetClass === 'equity';
@@ -74,7 +76,9 @@ export function buildResearchSnapshot(input: {
   // 3. Options coverage, with its own date.
   if (equity) {
     const o = c.options;
-    if (!o) summary.push('Options data was not collected.');
+    const req = input.optionsRequest;
+    if (req?.status === 'unavailable') summary.push(`Options data for the requested ${req.expiry} expiry is not available; no other expiry was substituted.`);
+    else if (!o) summary.push('Options data was not collected.');
     else if (o.quality.level !== 'GOOD') summary.push(`Options data for the ${o.expiry} expiry is ${o.quality.level.toLowerCase()}${o.quality.reasons[0] ? `: ${o.quality.reasons[0].replace(/\.$/, '')}` : ''}.`);
     else summary.push(`Options open interest for the ${o.expiry} expiry is from ${day(o.snapshotTs) ?? 'an undated quote'}.`);
   }
@@ -106,6 +110,7 @@ export function buildResearchSnapshot(input: {
   sections.push({ id: 'volatility', label: 'Volatility', status: volParts.every(Boolean) ? 'available' : volParts.some(Boolean) ? 'partial' : 'missing',
     note: [pe?.bbwp == null ? 'BBWP needs a year of bars' : null, equity && c.options?.avgIvPct == null ? 'options IV not collected' : null].filter(Boolean).join('; ') || 'ATR, BBWP and realised volatility measured.' });
   sections.push(!equity ? { id: 'options', label: 'Options', status: 'not applicable', note: c.assetClass === 'crypto' ? 'No listed options feed for crypto; derivatives are shown separately.' : 'No options feed for this asset.' }
+    : input.optionsRequest?.status === 'unavailable' ? { id: 'options', label: 'Options', status: 'missing', note: `Requested expiry ${input.optionsRequest.expiry} is not available.` }
     : !c.options ? { id: 'options', label: 'Options', status: 'missing', note: 'Options chain not collected.' }
     : { id: 'options', label: 'Options', status: c.options.quality.level === 'GOOD' ? 'available' : c.options.quality.level === 'DEGRADED' ? 'partial' : 'missing', note: c.options.quality.reasons[0] ?? `Expiry ${c.options.expiry}.` });
   sections.push(!te ? { id: 'timing', label: 'Timing and events', status: 'missing', note: 'Session and calendar not built.' }

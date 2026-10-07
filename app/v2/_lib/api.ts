@@ -641,9 +641,10 @@ export function fetchScannerResults(type: 'crypto' | 'equity' = 'equity', timefr
 }
 
 // --- Golden Egg ---
-export async function fetchGoldenEgg(symbol: string, timeframe: ScanTimeframe = 'daily', assetType?: string): Promise<GoldenEggResponse> {
+export async function fetchGoldenEgg(symbol: string, timeframe: ScanTimeframe = 'daily', assetType?: string, expiry?: string | null): Promise<GoldenEggResponse> {
   const params = new URLSearchParams({ symbol, timeframe });
   if (assetType) params.set('type', assetType);
+  if (expiry) params.set('expiry', expiry);
 
   // Golden Egg fans out to several market-data providers. Bound the client wait
   // so a slow derivatives source cannot leave the validation workflow loading forever.
@@ -662,9 +663,10 @@ export async function fetchGoldenEgg(symbol: string, timeframe: ScanTimeframe = 
 }
 
 // --- DVE ---
-export function fetchDVE(symbol: string, timeframe: ScanTimeframe = 'daily', assetType?: string): Promise<DVEResponse> {
+export function fetchDVE(symbol: string, timeframe: ScanTimeframe = 'daily', assetType?: string, expiry?: string | null): Promise<DVEResponse> {
   const params = new URLSearchParams({ symbol, timeframe });
   if (assetType) params.set('type', assetType);
+  if (expiry) params.set('expiry', expiry);
   return apiFetch(`/api/dve?${params}`);
 }
 
@@ -1022,12 +1024,12 @@ export function useDailyPicksBundle() {
   return useApi(fetchDailyPicksBundle, ['daily-picks']);
 }
 
-export function useGoldenEgg(symbol: string | null, timeframe: ScanTimeframe = 'daily', assetType?: string) {
-  return useApi(() => symbol ? fetchGoldenEgg(symbol, timeframe, assetType) : Promise.resolve(null as any), [symbol, timeframe, assetType]);
+export function useGoldenEgg(symbol: string | null, timeframe: ScanTimeframe = 'daily', assetType?: string, expiry?: string | null) {
+  return useApi(() => symbol ? fetchGoldenEgg(symbol, timeframe, assetType, expiry) : Promise.resolve(null as any), [symbol, timeframe, assetType, expiry ?? null]);
 }
 
-export function useDVE(symbol: string | null, timeframe: ScanTimeframe = 'daily', assetType?: string) {
-  return useApi(() => symbol ? fetchDVE(symbol, timeframe, assetType) : Promise.resolve(null as any), [symbol, timeframe, assetType]);
+export function useDVE(symbol: string | null, timeframe: ScanTimeframe = 'daily', assetType?: string, expiry?: string | null) {
+  return useApi(() => symbol ? fetchDVE(symbol, timeframe, assetType, expiry) : Promise.resolve(null as any), [symbol, timeframe, assetType, expiry ?? null]);
 }
 
 export function useQuote(symbol: string | null, type: 'stock' | 'crypto' = 'stock') {
