@@ -2,9 +2,10 @@ import { expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 const read = (p: string) => readFileSync(p, 'utf8');
 it('public pages use the distinct indicator and timing labels', () => {
-  for (const p of ['app/tools/deep-analysis/page.tsx','app/api/deep-analysis/route.ts']) {
+  // W3 Option 2: the Symbol AI summary (old Deep Analysis route) receives no indicator composite or legacy confluence.
+  for (const p of ['components/research/SymbolAiSummary.tsx','app/api/deep-analysis/route.ts','lib/research/symbolSummary.ts']) {
     expect(read(p)).not.toMatch(/legacy confluence/i);
-    expect(read(p)).toMatch(/Indicator composite/);
+    expect(read(p)).not.toMatch(/Indicator composite|legacyConfluence|confluenceScore/);
   }
   // Phase 4: Symbol shows no indicator composite at all.
   const goldenEgg = read('app/tools/golden-egg/page.tsx');

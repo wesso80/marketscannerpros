@@ -7,7 +7,7 @@ import { valuationAtPrice } from '@/lib/market/valuationIntegrity';
 /**
  * Golden Egg engine — the ONE validated research packet for a symbol.
  *
- * `computeGoldenEgg()` is consumed by /api/golden-egg (Verdict tab) AND /api/deep-analysis (Deep Analyst), so both
+ * `computeGoldenEgg()` is consumed by /api/golden-egg (Symbol Evidence tab) AND /api/deep-analysis (Symbol AI summary), so both
  * surfaces read identical price, indicators, options/derivatives, levels, trust and time-confluence facts.
  */
 

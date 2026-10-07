@@ -79,13 +79,13 @@ describe('with the real canonical engine', () => {
   });
 });
 
-describe('pages use it and Deep Analysis receives the block reasons', () => {
+describe('public Symbol surfaces carry no setup verdict', () => {
   const src = (p: string) => readFileSync(join(__dirname, '..', p), 'utf8');
-  it('Deep Analysis types and uses canonicalVerdict.blockReasons (the API already sends them)', () => {
-    const page = src('app/tools/deep-analysis/page.tsx');
-    expect(page).toMatch(/canonicalVerdict\?: \{[^}]*blockReasons\?: Array<\{ code: string; message: string \}>/);
-    expect(page).toMatch(/noSetupDisplay\(ge\.canonicalVerdict\)/);
-    expect(src('app/api/deep-analysis/route.ts')).toMatch(/blockReasons: ge\.canonicalVerdict\.blockReasons/);
+  it('the Symbol AI summary (W3 Option 2, replaced Deep Analysis) is built from the public packet, with no verdict or block reasons', () => {
+    const route = src('app/api/deep-analysis/route.ts');
+    expect(route).toContain('toPublicSymbolPacket(computed.payload)');
+    expect(route).not.toMatch(/canonicalVerdict|blockReasons|noSetupDisplay/);
+    expect(src('components/research/SymbolAiSummary.tsx')).not.toMatch(/canonicalVerdict|blockReasons|noSetupDisplay/);
   });
   it('Golden Egg shows no setup score or grade at all (Phase 4 descriptive states; W3 public contract has no verdict)', () => {
     const page = src('app/tools/golden-egg/page.tsx');
