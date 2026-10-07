@@ -11,7 +11,7 @@ import type { GoldenEggPayload, GoldenEggCanonical } from '@/src/features/golden
  * "best window", "agree/disagree with the setup" verdicts, DVE breakout / trap / exhaustion scores, cross-market
  * relation to the direction verdict, and the canonical/legacy verdict blocks.
  * Undecided product items are omitted until decided: setup classification and thesis, third-party analyst targets and
- * ratings, engine confirmation/invalidation lists.
+ * ratings and the beat/miss against consensus, engine confirmation/invalidation lists.
  */
 export const PUBLIC_SYMBOL_CONTRACT = 'public-symbol-v1' as const;
 
@@ -30,7 +30,7 @@ export interface PublicSymbolPacket {
     indicators: C['indicators']; liquidity: C['liquidity'];
     dataTrust: { level: C['dataTrust']['level']; label: string; reasons: string[]; freshness: string };
     options: C['options'];
-    fundamentals: Omit<NonNullable<C['fundamentals']>, 'analystTarget' | 'analystCount'> | null;
+    fundamentals: Omit<NonNullable<C['fundamentals']>, 'analystTarget' | 'analystCount' | 'lastEpsBeat'> | null;
     network: C['network'];
     derivatives: C['derivatives'];
     crossMarket: { summary: string; items: Array<{ symbol: string; label: string; price: number | null; changePct: number | null; trend: string; detail: string }> };
@@ -67,7 +67,7 @@ const arr = <T,>(v: T[] | undefined | null): T[] => (Array.isArray(v) ? v.map((x
 
 export function toPublicSymbolPacket(p: GoldenEggPayload): PublicSymbolPacket {
   const c = p.canonical, s = p.layer2.setup, sc = p.layer2.scenario, st = p.layer3.structure, tc = p.layer3.timeConfluence;
-  const fundamentals = c?.fundamentals ? (({ analystTarget: _t, analystCount: _n, ...rest }) => ({ ...rest }))(c.fundamentals) : null;
+  const fundamentals = c?.fundamentals ? (({ analystTarget: _t, analystCount: _n, lastEpsBeat: _b, ...rest }) => ({ ...rest }))(c.fundamentals) : null;
   return {
     contract: PUBLIC_SYMBOL_CONTRACT,
     meta: { symbol: p.meta.symbol, assetClass: p.meta.assetClass, price: p.meta.price, asOfTs: p.meta.asOfTs, timeframe: p.meta.timeframe },

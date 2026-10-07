@@ -1,7 +1,7 @@
 'use client';
 
 /* ---------------------------------------------------------------------------
-   SURFACE 3: GOLDEN EGG — Deep Analysis Page
+   SURFACE 3: SYMBOL — research page (evidence, chart, AI summary, fundamentals)
    Real API data: /api/golden-egg + /api/dve + /api/quote
    --------------------------------------------------------------------------- */
 
@@ -75,12 +75,12 @@ const CRYPTO_SET = new Set([
 ]);
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
-const DeepAnalysis = dynamic(() => import('@/app/tools/deep-analysis/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Deep Analysis…</div> });
+const SymbolAiSummary = dynamic(() => import('@/components/research/SymbolAiSummary'), { ssr: false });
 const IntradayCharts = dynamic(() => import('@/app/tools/intraday-charts/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Charts…</div> });
 const CompanyOverview = dynamic(() => import('@/app/tools/company-overview/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Fundamentals…</div> });
 const OwnershipFlowPanel = dynamic(() => import('@/components/golden-egg/OwnershipFlowPanel'), { ssr: false });
 
-const GE_TABS = ['Evidence', 'Chart', 'Deep Analysis', 'Fundamentals'] as const;
+const GE_TABS = ['Evidence', 'Chart', 'AI summary', 'Fundamentals'] as const;
 type GETab = typeof GE_TABS[number];
 
 const GE_TAB_META: Record<GETab, { eyebrow: string; description: string }> = {
@@ -92,9 +92,9 @@ const GE_TAB_META: Record<GETab, { eyebrow: string; description: string }> = {
     eyebrow: '2. Price context',
     description: 'Inspect price action and intraday structure around the scenario levels.',
   },
-  'Deep Analysis': {
-    eyebrow: '3. Evidence detail',
-    description: 'Review the deeper technical evidence and its sources.',
+  'AI summary': {
+    eyebrow: '3. AI summary',
+    description: 'A plain-language summary written only from the evidence on this page, with that evidence alongside.',
   },
   Fundamentals: {
     eyebrow: '4. Business context',
@@ -165,7 +165,7 @@ function GoldenEggSubviewFrame({
   children: React.ReactNode;
 }) {
   const meta = GE_TAB_META[tab];
-  const adjacentTab: GETab = tab === 'Chart' ? 'Deep Analysis' : tab === 'Deep Analysis' ? 'Fundamentals' : 'Chart';
+  const adjacentTab: GETab = tab === 'Chart' ? 'AI summary' : tab === 'AI summary' ? 'Fundamentals' : 'Chart';
 
   return (
     <div className="space-y-3">
@@ -192,7 +192,7 @@ function GoldenEggSubviewFrame({
           <div className="grid self-start gap-1.5 sm:grid-cols-2">
             <GoldenEggSubviewMetric label="Symbol" value={symbol} tone="#FBBF24" detail="Single-symbol validation context" />
             <GoldenEggSubviewMetric label="View" value={tab} tone="#10B981" detail={meta.eyebrow} />
-            <GoldenEggSubviewMetric label="Focus" value={tab === 'Chart' ? 'Price Action' : tab === 'Deep Analysis' ? 'Evidence Detail' : 'Business Context'} tone="#A5B4FC" detail="Part of the research views" />
+            <GoldenEggSubviewMetric label="Focus" value={tab === 'Chart' ? 'Price Action' : tab === 'AI summary' ? 'Written summary' : 'Business Context'} tone="#A5B4FC" detail="Part of the research views" />
             <GoldenEggSubviewMetric label="Next Check" value={adjacentTab} tone="#F59E0B" detail="Continue the validation sequence" />
           </div>
         </div>
@@ -615,7 +615,6 @@ export default function GoldenEggPage() {
   const specialistLinks = [
     ...(quoteType === 'crypto' ? [] : [{ href: optionsHref(sym, requestedExpiry ?? undefined), label: 'Options' }]),
     { href: `/tools/volatility-engine?symbol=${q}`, label: 'Volatility' },
-    { href: `/tools/deep-analysis?symbol=${q}`, label: 'Deep analysis' },
     { href: `/tools/terminal?tab=time-confluence&symbol=${q}`, label: 'Time confluence' },
   ];
 
@@ -676,9 +675,9 @@ export default function GoldenEggPage() {
           <IntradayCharts symbol={sym} timeframe={timeframe} assetType={quoteType === 'crypto' ? 'crypto' : 'stocks'} />
         </GoldenEggSubviewFrame>
       )}
-      {!isAuthBlocked && activeTab === 'Deep Analysis' && (
-        <GoldenEggSubviewFrame tab="Deep Analysis" symbol={sym} terminalHref={canonicalTerminalHref} onSelectTab={setActiveTab}>
-          <DeepAnalysis symbol={sym} timeframe={timeframe} assetType={quoteType === 'crypto' ? 'crypto' : 'equity'} />
+      {!isAuthBlocked && activeTab === 'AI summary' && (
+        <GoldenEggSubviewFrame tab="AI summary" symbol={sym} terminalHref={canonicalTerminalHref} onSelectTab={setActiveTab}>
+          <SymbolAiSummary symbol={sym} type={quoteType === 'crypto' ? 'crypto' : 'equity'} timeframe={timeframe} expiry={requestedExpiry} />
         </GoldenEggSubviewFrame>
       )}
       {!isAuthBlocked && activeTab === 'Fundamentals' && (
