@@ -16,8 +16,9 @@ describe('Symbol header hierarchy', () => {
     const header = source.slice(start, source.indexOf('/>', start));
     expect(header).toContain('compact');
     expect(header).not.toMatch(/Indicator composite|INDICATOR_COMPOSITE_LABEL|geConfluenceScore/);
-    expect(source.slice(source.indexOf(header) + header.length)).toContain('INDICATOR_COMPOSITE_LABEL');
-    expect(source).toContain('CANONICAL_SETUP_TOOLTIP');
+    // Phase 4: the composite is gone everywhere; the lower block shows descriptive states instead.
+    expect(source).not.toContain('INDICATOR_COMPOSITE_LABEL');
+    expect(source.slice(source.indexOf(header) + header.length)).toContain('<DescriptiveStates');
   });
 });
 

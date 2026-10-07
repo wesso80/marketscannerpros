@@ -25,7 +25,8 @@ describe('Golden Egg page wiring', () => {
   const page = readFileSync('app/tools/golden-egg/page.tsx', 'utf8');
   it('Setup Type and the reason line use the canonical setup', () => {
     expect(page).toContain('{symbolText(setupTypeDisplay(geEngine, ge.layer2.setup.setupType))}');
-    expect(page).toContain("setupType: setupTypeDisplay(geEngine, ge?.layer2?.setup?.setupType, { withDirection: false }).toLowerCase()");
+    // Phase 4: the reason line is the measured summary, not a setup verdict.
+    expect(page).toContain("summarizeGEReason({ dataQuality: geDataQuality, summary: ge?.priceEvidence?.summary.join(' ') })");
     expect(page).not.toContain("{ge.layer2.setup.setupType.replace(/_/g, ' ')}</div>");
   });
 });

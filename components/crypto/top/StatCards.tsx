@@ -14,7 +14,7 @@ function Card({title,value,stamp,zone,children,accent=false,missing=false,showSo
 }
 export type DisplayStat={label:string;value:string|number|null;detail?:string};
 export default function StatCards({top:t,zone='UTC',tiles,showSource=true}:{top?:TopFacts;zone?:string;tiles?:DisplayStat[];showSource?:boolean}){
- if(tiles)return <div data-symbol-stats className="grid grid-cols-2 gap-2 self-start">{tiles.filter(t=>t.value!=null).map(t=><div data-stat-card key={t.label}><StatTile label={t.label} value={t.value}/>{t.detail&&<p className="px-3 pb-2 text-xs text-[var(--msp-text-muted)]">{t.detail}</p>}</div>)}</div>;
+ if(tiles)return <div data-symbol-stats className="grid grid-cols-2 gap-2 self-start">{tiles.filter(t=>t.value!=null).map(t=><div data-stat-card key={t.label}><StatTile label={t.label} value={t.value} large={false}/>{t.detail&&<p className="px-3 pb-2 text-xs text-[var(--msp-text-muted)]">{t.detail}</p>}</div>)}</div>;
  const c=COPY.top,unlisted=t?.perpetualListed?.value===false,funding=number(t?.funding),interval=number(t?.fundingInterval),oi=number(t?.openInterest),change=number(t?.oiChange24h),rank=number(t?.rank),volume=t?.rule.volumeRatio??null;
  return <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
   <Card showSource={showSource} title={c.fundingTitle} value={unlisted?c.noPerpetual:funding==null?c.valueUnavailable:c.fundingPercent(funding)} missing={!unlisted&&funding==null} stamp={unlisted?t!.perpetualListed:t?.funding??t?.derivatives??null} zone={zone}>

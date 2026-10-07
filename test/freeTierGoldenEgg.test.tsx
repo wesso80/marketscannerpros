@@ -113,7 +113,9 @@ it.each(['AAPL','NVDA'])('Pro full Symbol page for %s has closed folds and clean
   fireEvent.click(evidence);
   const fold=[...container.querySelectorAll('details')].find(d=>d.querySelector('summary')?.textContent?.startsWith('Deep analysis'))!;
   fold.open=true;fireEvent(fold,new Event('toggle'));
-  await screen.findByText('Score Breakdown');
+  await screen.findByText('Research packet');
+  // Phase 4: no score breakdown, grade, permission label or /100 composite in the expanded verdict tab.
+  expect(container.textContent).not.toMatch(/Score Breakdown|Grade [A-F]\b|Indicator composite|\/100|READY|WATCHING|INVALIDATED|Hypothetical R:R|Best window|Breakout Score/);
   expect(container.textContent).not.toMatch(/UNAVAILABLE|UNVERIFIED|N\/A|Missing \(50\)/);
   expect(container.textContent).not.toContain('Absent component');
   expect(JSON.stringify(packet)).toBe(before);

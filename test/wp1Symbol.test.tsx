@@ -21,9 +21,9 @@ function crypto():Breakdown{
 function equity(symbol:string):GoldenEggPayload{return {meta:{symbol,assetClass:'equity',price:10,asOfTs:daily.at(-1)!.t,timeframe:'daily'},layer1:{assessment:'WATCH',confluenceScore:61,grade:'B'},layer2:{setup:{thesis:'Price remains inside the recorded range.',keyLevels:[{label:'Support',price:9,kind:'support'},{label:'Resistance',price:11,kind:'resistance'}]}},canonicalVerdict:{score:62,grade:'B',permission:'WATCH',factors:[{name:'Trend',value:.5,pass:true}]}} as GoldenEggPayload;}
 beforeEach(()=>{vi.stubGlobal('React',React);vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({ok:true,candles:daily.map(b=>({t:b.t,c:b.close,h:b.high,l:b.low}))})})));});
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
-it.each(['AAPL','NVDA'])('uses the shared chart, rule chips and stat tiles for %s without mutating its verdict',async symbol=>{
+it.each(['AAPL','NVDA'])('uses the shared chart, measured states and stat tiles for %s without mutating the packet (Phase 4: no rule chips)',async symbol=>{
  const payload=equity(symbol),before=JSON.stringify(payload);const {container}=render(<EquityTop data={payload}/>);
- await screen.findByRole('img');expect(container.querySelector('[data-symbol-summary]')).toBeTruthy();expect(container.querySelector('[data-rule-chip]')).toBeTruthy();expect(container.querySelector('[data-symbol-stats]')).toBeTruthy();expect(container.querySelector('[data-base-box]')).toBeNull();expect(JSON.stringify(payload)).toBe(before);
+ await screen.findByRole('img');expect(container.querySelector('[data-symbol-summary]')).toBeTruthy();expect(container.querySelector('[data-rule-chip]')).toBeNull();expect(container.querySelector('[data-equity-verdict]')).toBeNull();expect(container.querySelector('[data-symbol-stats]')).toBeTruthy();expect(container.querySelector('[data-base-box]')).toBeNull();expect(JSON.stringify(payload)).toBe(before);
  expect(fetch).toHaveBeenCalledTimes(1);expect(String(vi.mocked(fetch).mock.calls[0][0])).toContain('timeframe=daily');
 });
 it('preserves BTC rule stage and verdict inputs, with shared parts and no per-card source stamps',()=>{
@@ -52,13 +52,13 @@ it('paid failed crypto feed is an amber fault, never an upgrade card',async()=>{
  expect((await screen.findByRole('alert')).textContent).toContain('Crypto data feed failed');expect(screen.queryByText('Unlock with Pro')).toBeNull();
 });
 
-it('stock shows four readable checks and discloses every additional measured check',async()=>{
+it('stock shows measured states with definitions, not pass/fail factor checks (Phase 4)',async()=>{
  const p=equity('AAPL');p.canonicalVerdict!.factors=['trendQuality','entryLocation','volatilityRegime','volume','momentum'].map(name=>({name,value:.7,pass:true} as any));
  const {container}=render(<EquityTop data={p}/>);await screen.findByRole('img');
- expect(container.querySelectorAll('[data-rule-chip]')).toHaveLength(4);
+ expect(container.querySelectorAll('[data-rule-chip]')).toHaveLength(0);
  expect(container.querySelector('[data-stage-badge]')).toBeNull();
- expect(screen.getByText('5 of 5 measured checks meet their recorded thresholds.')).toBeTruthy();
- expect(container.textContent).not.toMatch(/trendQuality|entryLocation|volatilityRegime/);
- const fold=container.querySelector('details')!;expect(fold.textContent).toContain('1 more measured check');fold.open=true;fireEvent(fold,new Event('toggle'));
- await waitFor(()=>expect(container.querySelectorAll('[data-rule-chip]')).toHaveLength(5));
+ expect(container.textContent).not.toMatch(/measured checks meet|70%|trendQuality|entryLocation|volatilityRegime/);
+ const fold=container.querySelector('details')!;expect(fold.textContent).toContain('Measured states');fold.open=true;fireEvent(fold,new Event('toggle'));
+ await waitFor(()=>expect(container.querySelectorAll('[data-state]')).toHaveLength(4));
+ expect(container.textContent).toContain('ADX14: below 20 weak');
 });

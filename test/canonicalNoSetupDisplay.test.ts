@@ -87,9 +87,10 @@ describe('pages use it and Deep Analysis receives the block reasons', () => {
     expect(page).toMatch(/noSetupDisplay\(ge\.canonicalVerdict\)/);
     expect(src('app/api/deep-analysis/route.ts')).toMatch(/blockReasons: ge\.canonicalVerdict\.blockReasons/);
   });
-  it('Golden Egg renders the no-setup headline instead of the score for NONE', () => {
+  it('Golden Egg shows no setup score or grade at all (Phase 4 replaced them with descriptive states)', () => {
     const page = src('app/tools/golden-egg/page.tsx');
     expect(page).toMatch(/const geNoSetup = noSetupDisplay\(geEngine\)/);
-    expect(page).toMatch(/geNoSetup\.headline/);
+    expect(page).not.toMatch(/scoreLabel\(geEngine\)|Grade \$\{/);
+    expect(page).toContain('<DescriptiveStates states={describeStates(ge.priceEvidence');
   });
 });
