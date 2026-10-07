@@ -13,7 +13,10 @@ function bars(n:number,last='2026-10-06',vol:(i:number)=>number|null=()=>1000):E
 const preOpen=Date.parse('2026-10-07T10:35:00Z'),inSession=Date.parse('2026-10-07T17:00:00Z'),afterClose=Date.parse('2026-10-07T21:00:00Z');
 
 describe('completed bars only',()=>{
- it('an equity bar dated today (New York) is unfinished until 16:15 ET; crypto bars dated today (UTC) are unfinished',()=>{
+ it('an equity bar dated after the last closed US session is unfinished (16:00 ET; 13:00 on early-close days); crypto bars dated today (UTC) are unfinished',()=>{
+  // Fri 27 Nov 2026 (day after Thanksgiving) closes at 13:00 ET: complete at 13:30 ET (18:30 UTC), not at 12:30 ET.
+  expect(partialBarDate('2026-11-27','equity',Date.parse('2026-11-27T17:30:00Z'))).toBe('2026-11-27');
+  expect(partialBarDate('2026-11-27','equity',Date.parse('2026-11-27T18:30:00Z'))).toBeNull();
   expect(partialBarDate('2026-10-07','equity',inSession)).toBe('2026-10-07');
   expect(partialBarDate('2026-10-07','equity',afterClose)).toBeNull();
   expect(partialBarDate('2026-10-06','equity',inSession)).toBeNull();
