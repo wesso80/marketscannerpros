@@ -76,6 +76,49 @@ export function hasProAccess(tier: string | null | undefined): boolean {
   return isPaidTier(tier);
 }
 
+/** One `user_subscriptions` row, as the entitlement gates read it. */
+export type SubscriptionAccessRow = {
+  tier?: string | null;
+  status?: string | null;
+  current_period_end?: Date | string | number | null;
+};
+
+function periodEndMillis(value: SubscriptionAccessRow['current_period_end']): number | null {
+  if (value == null || value === '') return null;
+  if (value instanceof Date) {
+    const ms = value.getTime();
+    return Number.isFinite(ms) ? ms : null;
+  }
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/**
+ * Tier one subscription row grants.
+ *
+ * A `trialing` row is Pro only while `current_period_end` is still ahead of
+ * `nowMs` (the end instant itself is still Pro). A past end is Free.
+ * A `trialing` row with a missing or unreadable end is Free: a trial is a
+ * time box, and login always stores the end, so a blank end is not an open
+ * trial. Leaving it Pro would keep the same "trialing forever" hole.
+ * An `active` row ignores `current_period_end`, so a manual `pro_trader` /
+ * `pro` grant with a NULL end stays Pro, and a past end on a paid row does not
+ * downgrade it.
+ */
+export function effectiveTierFromSubscription(
+  row: SubscriptionAccessRow,
+  nowMs: number = Date.now(),
+): AppTier {
+  const status = row.status;
+  if (status !== 'active' && status !== 'trialing') return 'free';
+  if (status === 'trialing') {
+    const endMs = periodEndMillis(row.current_period_end);
+    if (endMs == null || endMs < nowMs) return 'free';
+  }
+  return normalizeTier(row.tier);
+}
+
 /**
  * Extract email from session cid (may be prefixed with trial_ or free_)
  */
@@ -113,9 +156,10 @@ export async function getEffectiveTier(
   if (!dbQuery) return normalizeTier(cookieTier);
 
   try {
+    type SubRow = { email: string; tier: string; status: string; current_period_end: Date | string | null };
     // 1) Try by workspace_id (primary key — fastest path)
-    const rows = await dbQuery<{ email: string; tier: string; status: string }>(
-      'SELECT email, tier, status FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1',
+    const rows = await dbQuery<SubRow>(
+      'SELECT email, tier, status, current_period_end FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1',
       [workspaceId]
     );
     let dbSub = rows.length > 0 ? rows[0] : null;
@@ -123,8 +167,8 @@ export async function getEffectiveTier(
     // 2) No row by workspace_id — try by stripe_customer_id
     //    For Stripe users, cid IS the Stripe customer ID (cus_xxxxx)
     if (!dbSub && cid && cid.startsWith('cus_')) {
-      const byCust = await dbQuery<{ email: string; tier: string; status: string }>(
-        'SELECT email, tier, status FROM user_subscriptions WHERE stripe_customer_id = $1 LIMIT 1',
+      const byCust = await dbQuery<SubRow>(
+        'SELECT email, tier, status, current_period_end FROM user_subscriptions WHERE stripe_customer_id = $1 LIMIT 1',
         [cid]
       );
       dbSub = byCust.length > 0 ? byCust[0] : null;
@@ -137,8 +181,8 @@ export async function getEffectiveTier(
     if (!dbSub && cid) {
       const emailFromCid = extractEmailFromCid(cid);
       if (emailFromCid) {
-        const byEmail = await dbQuery<{ email: string; tier: string; status: string }>(
-          'SELECT email, tier, status FROM user_subscriptions WHERE LOWER(email) = LOWER($1) AND (status = $2 OR status = $3) ORDER BY tier DESC LIMIT 1',
+        const byEmail = await dbQuery<SubRow>(
+          'SELECT email, tier, status, current_period_end FROM user_subscriptions WHERE LOWER(email) = LOWER($1) AND (status = $2 OR status = $3) ORDER BY tier DESC LIMIT 1',
           [emailFromCid, 'active', 'trialing']
         );
         dbSub = byEmail.length > 0 ? byEmail[0] : null;
@@ -151,9 +195,7 @@ export async function getEffectiveTier(
     if (dbSub) {
       // Check admin by DB email
       if (dbSub.email && ADMIN_EMAILS.includes(dbSub.email.toLowerCase())) return 'pro_trader';
-      // Cancelled/inactive → free
-      if (dbSub.status !== 'active' && dbSub.status !== 'trialing') return 'free';
-      return normalizeTier(dbSub.tier);
+      return effectiveTierFromSubscription(dbSub);
     }
   } catch (err) {
     console.error('[getEffectiveTier] DB error:', err);

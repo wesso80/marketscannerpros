@@ -63,7 +63,7 @@ const metadata: Record<string, Partial<ToolPage>> = {
   },
   "/tools/crypto-dashboard": {
     key: "crypto-dashboard",
-    description: "Funding rates, open interest, liquidations",
+    description: "Funding rates, open interest, and account ratios",
     icon: "DV",
     tier: "pro",
   },

@@ -16,6 +16,8 @@ import { alertConditionLabel, alertHistoryLabel } from '@/lib/alertPresentation'
 import { isDiscordWebhookUrl } from '@/lib/notifications/discordWebhook';
 import { checkedActiveAlerts, consoleAlertType, deriveStatus, legacyMultiAlerts, opensSmartTabFirst, smartAlertShare } from '@/lib/alerts/consoleStatus';
 import { ALERT_LIMITS } from '@/lib/alerts/planLimits';
+import { isActiveWorkflowAutoOrphan, isPriceAlertWithoutLevel } from '@/lib/alerts/priceOrphan';
+import AlertCapNotice from '@/components/alerts/AlertCapNotice';
 import RegimeBanner from '@/components/RegimeBanner';
 import StatTile from '@/components/visual/StatTile';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
@@ -36,6 +38,7 @@ type AlertItem = {
   is_recurring?: boolean | null;
   triggered_at?: string;
   is_smart_alert?: boolean;
+  smart_alert_context?: { source?: string | null } | string | null;
   is_multi_condition?: boolean;
   cooldown_minutes?: number | null;
 };
@@ -106,6 +109,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{ name: string; level: string }>({ name: '', level: '' });
   const [editError, setEditError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   // Watchlist "Alert" button links here with ?symbol=X: prefill the new-alert form with it.
   const searchParams = useSearchParams();
@@ -234,11 +238,22 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   }, [activeAlerts, multiAlerts]);
 
   const toggleAlert = async (alert: AlertItem) => {
-    await fetch('/api/alerts', {
+    setActionError(null);
+    const res = await fetch('/api/alerts', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: alert.id, isActive: !alert.is_active }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const message = typeof data?.message === 'string' && data.message
+        ? data.message
+        : typeof data?.error === 'string' && data.error
+          ? data.error
+          : 'Could not update that alert.';
+      setActionError(message);
+      return;
+    }
     await fetchAll();
   };
 
@@ -269,7 +284,12 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setEditError(data.error || 'Failed to save changes');
+        const message = typeof data?.message === 'string' && data.message
+          ? data.message
+          : typeof data?.error === 'string' && data.error
+            ? data.error
+            : 'Failed to save changes';
+        setEditError(message);
         return;
       }
       setEditingId(null);
@@ -279,7 +299,14 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
     }
   };
 
-  const orphanedCount = useMemo(() => alerts.filter((a) => a.is_smart_alert && Number(a.condition_value) === 0).length, [alerts]);
+  const orphanedCount = useMemo(
+    () => alerts.filter((alert) => isActiveWorkflowAutoOrphan(alert)).length,
+    [alerts],
+  );
+  const activeTowardCap = useMemo(
+    () => alerts.filter((alert) => alert.is_active && !isPriceAlertWithoutLevel(alert.condition_type, alert.condition_value)).length,
+    [alerts],
+  );
 
   useEffect(() => {
     // Opened from the Watchlist "Alert" button: show the new-alert form with the symbol filled in.
@@ -291,13 +318,25 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
 
   const cleanupOrphaned = async () => {
     setCleanupStatus('cleaning');
+    setActionError(null);
     try {
       const res = await fetch('/api/alerts?bulk=auto-orphaned', { method: 'DELETE' });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const message = typeof data?.message === 'string' && data.message
+          ? data.message
+          : typeof data?.error === 'string' && data.error
+            ? data.error
+            : 'Could not switch off empty auto alerts.';
+        setActionError(message);
+        setCleanupStatus('idle');
+        return;
+      }
       setCleanupCount(data.deletedCount ?? 0);
       setCleanupStatus('done');
       await fetchAll();
     } catch {
+      setActionError('Could not switch off empty auto alerts.');
       setCleanupStatus('idle');
     }
   };
@@ -327,8 +366,14 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
   return (
     <div className={`mx-auto w-full max-w-none space-y-4 ${embeddedInWorkspace ? 'px-0 py-0' : 'px-4 py-6 md:px-6'}`}>
       {upgrade.moment && <UpgradeMoment kind={upgrade.moment} dismiss={upgrade.dismiss} />}
+      <AlertCapNotice />
+      {actionError ? (
+        <div data-alert-action-error className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">
+          {actionError}
+        </div>
+      ) : null}
       <header className="rounded-lg border border-slate-700 p-3">
-        <div className="flex items-center justify-between gap-2"><h2 className="!text-base font-semibold">Alerts</h2><button type="button" onClick={() => { if (tier === 'free' && alerts.filter(alert => alert.is_active).length >= ALERT_LIMITS.free) { upgrade.show('alerts'); return; } setActiveZone4Tab('basic'); setZone4Open(true); }} disabled={riskLocked} className="min-h-10 rounded border border-slate-600 px-3 text-sm disabled:opacity-50">New alert</button></div>
+        <div className="flex items-center justify-between gap-2"><h2 className="!text-base font-semibold">Alerts</h2><button type="button" onClick={() => { if (tier === 'free' && activeTowardCap >= ALERT_LIMITS.free) { upgrade.show('alerts'); return; } setActiveZone4Tab('basic'); setZone4Open(true); }} disabled={riskLocked} className="min-h-10 rounded border border-slate-600 px-3 text-sm disabled:opacity-50">New alert</button></div>
         <p data-alerts-verdict className="mt-1 text-sm text-slate-300">{loadWarning ? 'Alert data could not be fully loaded.' : `${activeAlerts.length} active user-defined notification${activeAlerts.length === 1 ? '' : 's'}.`}</p>
       </header>
       {loadWarning && (
@@ -357,15 +402,15 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
         )}
         {orphanedCount > 0 && cleanupStatus !== 'done' && (
           <div className="mt-2 flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-            <span>{orphanedCount} auto-generated plan alerts with no entry price detected (will never trigger).</span>
+            <span>{orphanedCount} empty auto alerts are on and will not trigger.</span>
             <button type="button" onClick={cleanupOrphaned} disabled={cleanupStatus === 'cleaning'} className="ml-3 shrink-0 rounded-lg bg-amber-500/20 px-3 py-1 text-xs font-semibold text-amber-100 hover:bg-amber-500/30 disabled:opacity-50">
-              {cleanupStatus === 'cleaning' ? 'Cleaning…' : 'Clean Up'}
+              {cleanupStatus === 'cleaning' ? 'Switching…' : 'Switch off'}
             </button>
           </div>
         )}
         {cleanupStatus === 'done' && (
           <div className="mt-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
-            Cleaned up {cleanupCount} orphaned alerts.
+            Switched off {cleanupCount} empty auto alerts.
           </div>
         )}
       </section>

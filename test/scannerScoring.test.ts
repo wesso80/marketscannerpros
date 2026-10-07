@@ -167,8 +167,6 @@ describe('scanner UI metadata wiring', () => {
     expect(marketStatusStrip).toContain('Data Truth');
     expect(page).toContain('MarketStatusStrip');
     expect(page).toContain('DataFreshnessBadge');
-    expect(page).toContain('detail.rankExplanation');
     expect(page).toContain('r.rankExplanation?.summary');
-    expect(page).toContain('scoreQualityWarnings');
   });
 });

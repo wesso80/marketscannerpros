@@ -4,9 +4,11 @@ import { getSessionFromCookie } from '@/lib/auth';
 export async function GET(_req: NextRequest) {
   const session = await getSessionFromCookie();
   if (!session?.workspaceId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  // The former REST endpoint was delisted from OKX documentation. Its recent
-  // contract-size sample cannot establish a complete 24h USD liquidation total.
-  // A supported collector must validate instruments, units and window coverage.
+  // Checked again 6 Oct 2026. OKX public GET /api/v5/public/liquidation-orders
+  // needs no key and still answers, but paging BTC-USDT to the last filled order
+  // ended at about 22 hours (1,061 orders), short of 24 hours. Contract size is
+  // available, so USD math is possible, but the window is not a 24h total.
+  // Publishing that sample would overstate coverage. The tile is removed instead.
   return NextResponse.json({
     available: false, summary: null, coins: [], timeframe: null,
     source: null, timestamp: null, freshnessStatus: 'unavailable',

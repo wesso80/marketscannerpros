@@ -7,8 +7,8 @@ interface TriggeredAlert {
   id: string;
   symbol: string;
   condition: string;
-  target_price: number;
-  triggered_price: number;
+  target_price: number | string | null;
+  triggered_price: number | string | null;
   triggered_at: string;
 }
 
@@ -92,10 +92,18 @@ export default function AlertToast() {
     }
   };
 
-  const formatPrice = (price: number) => {
-    if (price >= 1000) return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    if (price >= 1) return price.toFixed(2);
-    return price.toFixed(6);
+  const formatPrice = (price: number | string | null | undefined) => {
+    if (price == null || price === '') return null;
+    const n = typeof price === 'number' ? price : Number(price);
+    if (!Number.isFinite(n)) return null;
+    if (n >= 1000) return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (n >= 1) return n.toFixed(2);
+    return n.toFixed(6);
+  };
+
+  const priceText = (price: number | string | null | undefined) => {
+    const formatted = formatPrice(price);
+    return formatted == null ? '—' : `$${formatted}`;
   };
 
   if (toasts.length === 0) return null;
@@ -117,10 +125,10 @@ export default function AlertToast() {
                 <span className="font-bold text-emerald-400 text-lg">{toast.symbol}</span>
               </div>
               <p className="text-sm text-neutral-200">
-                {formatCondition(toast.condition)} ${formatPrice(toast.target_price)}
+                {formatCondition(toast.condition)} {priceText(toast.target_price)}
               </p>
               <p className="text-xs text-neutral-400 mt-1">
-                Triggered at ${formatPrice(toast.triggered_price)}
+                Triggered at {priceText(toast.triggered_price)}
               </p>
             </div>
             <button

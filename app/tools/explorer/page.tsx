@@ -396,21 +396,25 @@ export default function ExplorerPage() {
               <div className="text-xs text-slate-500 py-8 text-center">No commodity data available</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {commodList.map((c: CommodityData) => (
+                {commodList.map((c: CommodityData) => {
+                  const price = typeof c.price === 'number' && Number.isFinite(c.price) ? c.price : null;
+                  const changePercent = typeof c.changePercent === 'number' && Number.isFinite(c.changePercent) ? c.changePercent : null;
+                  return (
                   <div key={c.symbol} className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                     <div className="flex items-center justify-between mb-1">
                       <div>
                         <div className="text-sm font-bold text-white">{c.name}</div>
                         <div className="text-[11px] text-slate-500">{c.category} — {c.unit}</div>
                       </div>
-                      <Badge label={c.changePercent > 0 ? 'UP' : c.changePercent < 0 ? 'DOWN' : 'FLAT'} color={c.changePercent > 0 ? 'var(--msp-bull)' : c.changePercent < 0 ? 'var(--msp-bear)' : 'var(--msp-flat)'} small />
+                      {changePercent == null ? null : <Badge label={changePercent > 0 ? 'UP' : changePercent < 0 ? 'DOWN' : 'FLAT'} color={changePercent > 0 ? 'var(--msp-bull)' : changePercent < 0 ? 'var(--msp-bear)' : 'var(--msp-flat)'} small />}
                     </div>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-lg font-bold text-white">{c.unit?.includes('cents') ? `${c.price.toFixed(2)}¢` : `$${c.price.toFixed(2)}`}</span>
-                      <span className={`text-xs ${pctColor(c.changePercent)}`}>{c.changePercent > 0 ? '+' : ''}{c.changePercent.toFixed(2)}%</span>
+                      <span className="text-lg font-bold text-white">{price == null ? 'unavailable' : c.unit?.includes('cents') ? `${price.toFixed(2)}¢` : `$${price.toFixed(2)}`}</span>
+                      <span className={`text-xs ${pctColor(changePercent)}`}>{changePercent == null ? 'unavailable' : `${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%`}</span>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
             {commodities.error && <div className="text-[11px] text-red-400/60 mt-2">Error: {commodities.error}</div>}

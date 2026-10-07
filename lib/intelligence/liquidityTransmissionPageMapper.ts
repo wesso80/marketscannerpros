@@ -234,25 +234,39 @@ function buildAlerts(r: LiquidityTransmissionResult): LiquidityAlertsDto {
  * fields; no new scoring is introduced here.
  */
 export function buildStage8Explanation(r: LiquidityTransmissionResult): LiquidityStage8ExplanationDto {
-  const downstreamExtended = r.downstream > 70;
-  const gapElevated = r.riskLiquidityGap >= 15;
-  const m2Slowing = r.liquidityCycle === 'LATE EXPANSION' || r.liquidityCycle === 'DECELERATION';
-  const validatedBelowThreshold = r.validated < 62;
-
-  const conditions = [
-    { label: 'Downstream extended', triggered: downstreamExtended,
-      detail: `Downstream risk-on ${round2(r.downstream)}/100` },
-    { label: 'Risk–liquidity gap elevated', triggered: gapElevated,
-      detail: `Gap ${r.riskLiquidityGap >= 0 ? '+' : ''}${round2(r.riskLiquidityGap)}` },
-    { label: 'M2 cycle slowing', triggered: m2Slowing,
-      detail: `Liquidity cycle: ${r.liquidityCycle}` },
-    { label: 'Validated liquidity below threshold', triggered: validatedBelowThreshold,
-      detail: `Validated ${round2(r.validated)}/100 (threshold 62)` },
-  ];
+  // Mirrors the engine's Stage-8 rule exactly (engines/liquidityTransmission.ts): ALL four conditions of the branch
+  // that matches the dominant direction must hold. Earlier text listed four late-cycle checks without the Master Link
+  // dominance gate (and used >70 instead of >=68), so four could show "Triggered" while Stage 8 was inactive.
+  const gap = `${r.riskLiquidityGap >= 0 ? '+' : ''}${round2(r.riskLiquidityGap)}`;
+  const conditions = r.dominantRiskOn
+    ? [
+      { label: 'Master Link risk-on dominant', triggered: r.dominantRiskOn,
+        detail: `Master Link ${round2(r.transmissionRiskOn)}/100 (50 or more)` },
+      { label: 'Downstream extended', triggered: r.downstream >= 68,
+        detail: `Downstream risk-on ${round2(r.downstream)}/100 (68 or more)` },
+      { label: 'Risk–liquidity gap elevated or M2 cycle slowing',
+        triggered: r.riskLiquidityGap >= 15 || r.liquidityCycle === 'LATE EXPANSION' || r.liquidityCycle === 'DECELERATION',
+        detail: `Gap ${gap} (15 or more) · liquidity cycle: ${r.liquidityCycle}` },
+      { label: 'Validated liquidity below threshold', triggered: r.validated < 62,
+        detail: `Validated ${round2(r.validated)}/100 (below 62)` },
+    ]
+    : [
+      { label: 'Master Link risk-off dominant', triggered: !r.dominantRiskOn,
+        detail: `Master Link ${round2(r.transmissionRiskOn)}/100 (below 50)` },
+      { label: 'Downstream washed out', triggered: r.downstream <= 32,
+        detail: `Downstream risk-on ${round2(r.downstream)}/100 (32 or less)` },
+      { label: 'Liquidity ahead of risk or M2 cycle bottoming',
+        triggered: r.riskLiquidityGap <= -15 || r.liquidityCycle === 'BOTTOMING',
+        detail: `Gap ${gap} (-15 or less) · liquidity cycle: ${r.liquidityCycle}` },
+      { label: 'Validated liquidity above floor', triggered: r.validated > 38,
+        detail: `Validated ${round2(r.validated)}/100 (above 38)` },
+    ];
 
   const headline = r.stage8Active
-    ? 'Downstream risk assets are running materially ahead of validated liquidity support.'
-    : 'Downstream and validated liquidity remain in balance.';
+    ? (r.dominantRiskOn
+      ? 'Downstream risk assets are running materially ahead of validated liquidity support.'
+      : 'Downstream risk assets are washed out while validated liquidity holds up.')
+    : 'Stage 8 needs all four conditions together; not all hold, so downstream and validated liquidity remain in balance.';
   const guidance = r.stage8Active
     ? 'Late-cycle/divergence risk elevated. Research signal only; watch for reset or new cycle.'
     : 'No late-cycle divergence signal at this time.';

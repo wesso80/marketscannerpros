@@ -13,6 +13,7 @@ import { q } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { getDailyAiLimit, isFreeForAllMode, normalizeTier } from "@/lib/entitlements";
 import { hasPaidSessionAccess } from "@/lib/proTraderAccess";
+import { hasCurrentPrice, openBookTotals, openPositionPL, openPositionPLPercent } from "@/lib/portfolio/positionValue";
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // Allow longer for comprehensive analysis
@@ -80,20 +81,22 @@ function buildDeterministicPortfolioDescription(positions: any[] = [], closedPos
   const open = Array.isArray(positions) ? positions : [];
   const closed = Array.isArray(closedPositions) ? closedPositions : [];
   const openSymbols = open.map((position) => String(position.symbol || 'N/A').toUpperCase()).join(', ') || 'none';
-  const totalValue = open.reduce((sum, position) => sum + Number(position.currentPrice || 0) * Number(position.quantity || 0), 0);
-  const totalCost = open.reduce((sum, position) => sum + Number(position.entryPrice || 0) * Number(position.quantity || 0), 0);
-  const totalUnrealized = open.reduce((sum, position) => sum + Number(position.pl || 0), 0);
+  const book = openBookTotals(open);
   const totalRealized = closed.reduce((sum, position) => sum + Number(position.realizedPL || 0), 0);
 
   const positionText = open.length > 0
     ? open.map((position) => {
         const symbol = String(position.symbol || 'N/A').toUpperCase();
         const quantity = Number(position.quantity || 0);
-        return `${symbol}: ${quantity} units, entry ${plainMoney(position.entryPrice)}, current ${plainMoney(position.currentPrice)}, recorded unrealised change ${money(position.pl)} / ${pct(position.plPercent)}`;
+        const pl = openPositionPL(position);
+        const plPercent = openPositionPLPercent(position);
+        const currentText = hasCurrentPrice(position.currentPrice) ? plainMoney(position.currentPrice) : 'unavailable';
+        const changeText = pl == null || plPercent == null ? 'unavailable' : `${money(pl)} / ${pct(plPercent)}`;
+        return `${symbol}: ${quantity} units, entry ${plainMoney(position.entryPrice)}, current ${currentText}, recorded unrealised change ${changeText}`;
       }).join('; ')
     : 'No open position records are present.';
 
-  return `The current simulation record shows ${open.length} open position${open.length === 1 ? '' : 's'}: ${openSymbols}. ${positionText}. Total recorded market value is ${plainMoney(totalValue)}, total recorded cost basis is ${plainMoney(totalCost)}, and net unrealised change is ${money(totalUnrealized)}. Closed simulation records total ${closed.length}, with recorded realised P&L of ${money(totalRealized)}. ${REQUIRED_PORTFOLIO_FOOTER}`;
+  return `The current simulation record shows ${open.length} open position${open.length === 1 ? '' : 's'}: ${openSymbols}. ${positionText}. Total recorded market value is ${plainMoney(book.value)}, total recorded cost basis is ${plainMoney(book.cost)}, and net unrealised change is ${money(book.pl)}. Closed simulation records total ${closed.length}, with recorded realised P&L of ${money(totalRealized)}. ${REQUIRED_PORTFOLIO_FOOTER}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -215,10 +218,11 @@ function buildPortfolioSummary(
 
   // Current positions
   if (positions && positions.length > 0) {
-    const totalValue = positions.reduce((sum: number, p: any) => sum + (p.currentPrice * p.quantity), 0);
-    const totalCost = positions.reduce((sum: number, p: any) => sum + (p.entryPrice * p.quantity), 0);
-    const totalPL = positions.reduce((sum: number, p: any) => sum + p.pl, 0);
-    const totalPLPercent = totalCost > 0 ? ((totalPL / totalCost) * 100) : 0;
+    const book = openBookTotals(positions);
+    const totalValue = book.value;
+    const totalCost = book.cost;
+    const totalPL = book.pl;
+    const totalPLPercent = totalCost !== 0 ? ((totalPL / Math.abs(totalCost)) * 100) : 0;
 
     summary += `### CURRENT OPEN POSITIONS (${positions.length} total)\n`;
     summary += `Total Market Value: $${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
@@ -229,24 +233,30 @@ function buildPortfolioSummary(
     summary += "|--------|------|-----|-------|---------|-----|-------|------------|\n";
     
     for (const p of positions) {
-      const plStr = `${p.pl >= 0 ? '+' : ''}$${p.pl.toFixed(2)}`;
-      const plPctStr = `${p.plPercent >= 0 ? '+' : ''}${p.plPercent.toFixed(2)}%`;
+      const pl = openPositionPL(p);
+      const plPercent = openPositionPLPercent(p);
+      const plStr = pl == null ? 'unavailable' : `${pl >= 0 ? '+' : ''}$${pl.toFixed(2)}`;
+      const plPctStr = plPercent == null ? 'unavailable' : `${plPercent >= 0 ? '+' : ''}${plPercent.toFixed(2)}%`;
+      const currentStr = hasCurrentPrice(p.currentPrice) ? `$${Number(p.currentPrice).toFixed(2)}` : 'unavailable';
       const entryDate = p.entryDate ? new Date(p.entryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A';
-      summary += `| ${p.symbol} | ${p.side} | ${p.quantity} | $${p.entryPrice.toFixed(2)} | $${p.currentPrice.toFixed(2)} | ${plStr} | ${plPctStr} | ${entryDate} |\n`;
+      summary += `| ${p.symbol} | ${p.side} | ${p.quantity} | $${Number(p.entryPrice).toFixed(2)} | ${currentStr} | ${plStr} | ${plPctStr} | ${entryDate} |\n`;
     }
     summary += "\n";
 
     // Highest and lowest recorded open-position changes
-    const sorted = [...positions].sort((a, b) => b.plPercent - a.plPercent);
+    const sorted = positions
+      .map((p) => ({ symbol: String(p.symbol), livePercent: openPositionPLPercent(p) }))
+      .filter((p): p is { symbol: string; livePercent: number } => p.livePercent != null)
+      .sort((a, b) => b.livePercent - a.livePercent);
     if (sorted.length > 0) {
-      const positiveChanges = sorted.filter(p => p.plPercent > 0).slice(0, 3);
-      const negativeChanges = sorted.filter(p => p.plPercent < 0).slice(-3).reverse();
+      const positiveChanges = sorted.filter(p => p.livePercent > 0).slice(0, 3);
+      const negativeChanges = sorted.filter(p => p.livePercent < 0).slice(-3).reverse();
       
       if (positiveChanges.length > 0) {
-        summary += `**Highest Positive Recorded Changes:** ${positiveChanges.map(p => `${p.symbol} (+${p.plPercent.toFixed(1)}%)`).join(', ')}\n`;
+        summary += `**Highest Positive Recorded Changes:** ${positiveChanges.map(p => `${p.symbol} (+${p.livePercent.toFixed(1)}%)`).join(', ')}\n`;
       }
       if (negativeChanges.length > 0) {
-        summary += `**Lowest Negative Recorded Changes:** ${negativeChanges.map(p => `${p.symbol} (${p.plPercent.toFixed(1)}%)`).join(', ')}\n`;
+        summary += `**Lowest Negative Recorded Changes:** ${negativeChanges.map(p => `${p.symbol} (${p.livePercent.toFixed(1)}%)`).join(', ')}\n`;
       }
       summary += "\n";
     }

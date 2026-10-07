@@ -10,7 +10,7 @@ const base = { condition_value: 1, is_active: true };
 
 describe('TR-25 remaining alert details', () => {
   it('Plan & Limits shows the enforced caps, not ∞', () => {
-    expect(ALERT_LIMITS).toEqual({ free: 3, pro: 999 });
+    expect(ALERT_LIMITS).toEqual({ free: 3, pro: 100 });
     const page = read('app/tools/alerts/page.tsx');
     expect(page).not.toContain('>∞<');
     expect(page).toContain('{ALERT_LIMITS.pro} active alerts');

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useAdmin } from "../layout";
+import { useAdmin } from "../admin-client-layout";
 
 interface BridgeChannel {
   id: number;

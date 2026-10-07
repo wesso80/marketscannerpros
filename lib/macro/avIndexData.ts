@@ -5,8 +5,8 @@
  *   → { symbol: "VIX", name: "Cboe Volatility Index", interval: "daily",
  *       data: [ { date: "2026-09-25", open: "14.96", high: "16.57", low: "14.12", close: "14.87" }, … ] }  (newest first)
  *
- * Used as the primary VIX for the market regime (MV-1): FRED's VIXCLS is published the morning after the session
- * and often lands 1–3 trading days late, which kept the regime's "stale inputs" note on. FRED stays the fallback
+ * The market regime does not call this for VIX. This plan is not entitled to INDEX_DATA, so VIX is read
+ * from the Cboe daily CSV, then FRED (stored VIXCLS, then its CSV)
  * (lib/scoring/canonical/regimeOverlayData.ts).
  */
 import { avFetch } from '@/lib/avRateGovernor';

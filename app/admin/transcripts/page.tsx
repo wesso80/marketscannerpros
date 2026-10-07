@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { AuditAggregate, TranscriptAudit } from '@/lib/admin/transcriptJevAudit';
+import { ADMIN_EQUITIES_PAUSED_MESSAGE } from '@/lib/admin/adminEquities';
 
 interface Summary {
   oneLiner: string;
@@ -161,7 +162,13 @@ export default function TranscriptsPage() {
         </div>
       )}
 
-      {error && (
+      {error && error === ADMIN_EQUITIES_PAUSED_MESSAGE && (
+        // An operator pause is a planned state, not a failure: calm grey notice, same wording.
+        <div role="status" data-paused-notice style={{ background: '#111827', border: '1px solid #374151', color: '#D1D5DB', padding: 12, borderRadius: 8, marginBottom: 16 }}>
+          {error}
+        </div>
+      )}
+      {error && error !== ADMIN_EQUITIES_PAUSED_MESSAGE && (
         <div style={{ background: '#7F1D1D', border: '1px solid #B91C1C', color: '#FECACA', padding: 12, borderRadius: 8, marginBottom: 16 }}>
           <strong>Error:</strong> {error}
         </div>

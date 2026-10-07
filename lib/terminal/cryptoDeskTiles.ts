@@ -1,19 +1,36 @@
 /**
  * Terminal Crypto tab tiles from feeds the Crypto Derivatives desk already reads.
- * Missing readings stay off the tiles. Liquidations are not collected (WP3) and are never zero.
+ * Missing readings stay off the tiles. There is no liquidations tile: the public OKX
+ * history does not cover 24 hours, and a missing total is never shown as zero.
  */
 import { DERIVATIVE_FEED_BASIS } from '@/lib/crypto/derivativeDesk';
+import { OI_QUOTE_MAX_AGE_MS } from '@/lib/crypto/openInterestTotal';
 
-export type DeskTile = { label: string; value: string; warning?: boolean };
+/** source and asOf come from the feed's own response; a tile without them shows no invented time. */
+export type DeskTile = { label: string; value: string; warning?: boolean; source?: string; asOf?: string | number };
 
 type Coin = { symbol?: string };
 
-type FundingBody = { meta?: { freshnessStatus?: string }; stale?: boolean; coins?: Array<Coin & { fundingRatePercent?: number }> } | null;
-type LongShortBody = { coins?: Array<Coin & { longAccount?: number; shortAccount?: number }> } | null;
+type FundingBody = { meta?: { freshnessStatus?: string; sourceAttribution?: string; lastUpdated?: string }; exchange?: string; stale?: boolean; coins?: Array<Coin & { fundingRatePercent?: number }> } | null;
+type LongShortBody = { exchange?: string; source?: string | null; timestamp?: string | number | null; coins?: Array<Coin & { longAccount?: number; shortAccount?: number; timestamp?: string | number }> } | null;
 type OpenInterestBody = {
   meta?: { freshnessStatus?: string };
-  coins?: Array<Coin & { openInterestValue?: number; openInterestFormatted?: string }>;
+  coins?: Array<Coin & {
+    openInterestValue?: number | null;
+    openInterestFormatted?: string | null;
+    sourceLabel?: string | null;
+    observedAt?: string | null;
+  }>;
 } | null;
+
+/** Freshness follows the selected coin's own last trade, not the oldest trade in the whole response. */
+export function openInterestQuoteFresh(observedAt: string | null | undefined, now = Date.now()): boolean {
+  if (!observedAt) return false;
+  const at = Date.parse(observedAt);
+  if (!Number.isFinite(at)) return false;
+  const ageMs = now - at;
+  return ageMs >= -60_000 && ageMs <= OI_QUOTE_MAX_AGE_MS;
+}
 
 export function coinCode(symbol: string): string {
   const upper = symbol.trim().toUpperCase();
@@ -35,6 +52,7 @@ function formatOi(value: number): string {
 export function selectCryptoDeskTiles(
   symbol: string,
   feeds: { funding: FundingBody; longShort: LongShortBody; openInterest: OpenInterestBody },
+  now = Date.now(),
 ): { mode: 'tiles'; tiles: DeskTile[]; basis: string | null } | { mode: 'gate' } {
   const code = coinCode(symbol);
   const tiles: DeskTile[] = [];
@@ -43,25 +61,24 @@ export function selectCryptoDeskTiles(
   const funding = fundingFresh ? matchCoin(feeds.funding?.coins, code) : undefined;
   if (funding && typeof funding.fundingRatePercent === 'number' && Number.isFinite(funding.fundingRatePercent)) {
     const rate = funding.fundingRatePercent;
-    tiles.push({ label: 'Funding', value: `${rate > 0 ? '+' : ''}${rate.toFixed(4)}%` });
+    tiles.push({ label: 'Funding', value: `${rate > 0 ? '+' : ''}${rate.toFixed(4)}%`, source: feeds.funding?.exchange || feeds.funding?.meta?.sourceAttribution || undefined, asOf: feeds.funding?.meta?.lastUpdated || undefined });
   }
 
-  const oiFresh = feeds.openInterest?.meta?.freshnessStatus === 'fresh';
-  const oi = oiFresh ? matchCoin(feeds.openInterest?.coins, code) : undefined;
-  if (oi) {
+  const oi = matchCoin(feeds.openInterest?.coins, code);
+  if (oi && openInterestQuoteFresh(oi.observedAt, now)) {
     const formatted = typeof oi.openInterestFormatted === 'string' ? oi.openInterestFormatted.trim() : '';
     const raw = oi.openInterestValue;
     const value = formatted || (typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? formatOi(raw) : '');
-    if (value) tiles.push({ label: 'Open interest', value });
+    const source = typeof oi.sourceLabel === 'string' ? oi.sourceLabel.trim() : '';
+    if (value) tiles.push({ label: 'Open interest', value, source: source || undefined, asOf: oi.observedAt || undefined });
   }
 
   const ls = matchCoin(feeds.longShort?.coins, code);
   if (ls && typeof ls.longAccount === 'number' && Number.isFinite(ls.longAccount) && typeof ls.shortAccount === 'number' && Number.isFinite(ls.shortAccount)) {
-    tiles.push({ label: 'Long/short', value: `${ls.longAccount.toFixed(1)} / ${ls.shortAccount.toFixed(1)}` });
+    tiles.push({ label: 'Long/short', value: `${ls.longAccount.toFixed(1)} / ${ls.shortAccount.toFixed(1)}`, source: feeds.longShort?.exchange || feeds.longShort?.source || undefined, asOf: ls.timestamp ?? feeds.longShort?.timestamp ?? undefined });
   }
 
   if (tiles.length === 0) return { mode: 'gate' };
   const complete = tiles.length === 3;
-  tiles.push({ label: 'Liquidations', value: 'Not collected', warning: true });
   return { mode: 'tiles', tiles, basis: complete ? DERIVATIVE_FEED_BASIS : null };
 }

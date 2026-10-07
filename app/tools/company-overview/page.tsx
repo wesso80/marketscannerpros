@@ -9,6 +9,7 @@ import { useV2 } from '@/app/v2/_lib/V2Context';
 import RegimeBanner from '@/components/RegimeBanner';
 import AdaptivePersonalityCard from '@/components/AdaptivePersonalityCard';
 import { formatChangePercent } from '@/lib/presentation/formatChangePercent';
+import { sectorTone } from '@/lib/overview/today';
 
 interface CompanyData {
   symbol: string;
@@ -445,7 +446,10 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
                     {data.changePercent && (
                       <div style={{ 
                         fontSize: "14px", 
-                        color: Number(String(data.changePercent).replace(/%/g, '')) < 0 ? "var(--msp-bear)" : "var(--msp-bull)",
+                        // Same flat grey as the crypto dashboard StatTile when the change rounds to 0.00%
+                        color: formatChangePercent(data.changePercent) === "0.00%"
+                          ? sectorTone(0).color
+                          : Number(String(data.changePercent).replace(/%/g, '')) < 0 ? "var(--msp-bear)" : "var(--msp-bull)",
                         fontWeight: "600"
                       }}>
                         {formatChangePercent(data.changePercent)}

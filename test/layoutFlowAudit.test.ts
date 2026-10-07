@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { areaLinks, primaryNavTools, toolWorkflows } from '@/lib/toolWorkflows';
+import { derivativesOiSourceLine } from '@/lib/crypto/openInterestTotal';
 
 const root = process.cwd();
 const read = (file: string) => readFileSync(join(root, file), 'utf8');
@@ -93,15 +94,17 @@ describe('layout and flow audit regressions', () => {
     const workflows = read('lib/toolWorkflows.ts');
     const parkedDashboard = read('components/home/TradePermissionDashboard.tsx');
 
-    expect(hero).toContain("Educational scanner, confluence, testing, and review workflow");
+    expect(hero).toContain('Educational research workflow');
     expect(hero).toContain('No brokerage execution. No financial advice.');
-    expect(hero).toContain('Open Scanner Preview');
+    expect(hero).toContain('Open the Scanner');
     expect(hero).not.toContain('/logos/landing-hero.png');
 
-    expect(commandHub.indexOf('<Hero />')).toBeLessThan(commandHub.indexOf('Start with the workflow'));
-    expect(commandHub.indexOf('Start with the workflow')).toBeLessThan(commandHub.indexOf('<HomePreviewStrip />'));
+    expect(commandHub.indexOf('<Hero />')).toBeLessThan(commandHub.indexOf('<HomePreviewStrip />'));
+    // The workflow appears once: the guided chooser grid was removed in favour of the four core steps.
+    expect(commandHub).not.toContain('Start with the workflow');
+    expect(commandHub).not.toContain('guidedPaths');
     expect(commandHub).toContain('Core workflow tools');
-    expect(commandHub).toContain('One research path, five decisions.');
+    expect(commandHub).toContain('One research path, four steps.');
     expect(commandHub).toContain('const workflowSteps = [');
     expect(commandHub).not.toContain('Core Scanners');
     expect(commandHub).not.toContain('v2 Platform Surfaces');
@@ -234,8 +237,12 @@ describe('layout and flow audit regressions', () => {
     expect(earningsLayout).toContain("canonical: 'https://marketscannerpros.app/tools/research?tab=earnings'");
     expect(earningsCalendarLayout).toContain("canonical: 'https://marketscannerpros.app/tools/research?tab=earnings'");
     expect(commandHub).toContain("href: '/tools/workspace?tab=backtest'");
-    expect(commandHub).toContain("href: '/tools/terminal?tab=options-flow'");
-    expect(commandHub).toContain("href: '/tools/crypto-dashboard'");
+    expect(commandHub).toContain("href: '/tools/scanner'");
+    expect(commandHub).toContain("href: '/tools/golden-egg'");
+    expect(commandHub).toContain("href: '/tools/workspace'");
+    // Terminal is mentioned as deeper context, not a step card or link.
+    expect(commandHub).toContain('Terminal, options and crypto derivatives add deeper context when you need it.');
+    expect(commandHub).not.toContain("href: '/tools/terminal");
     expect(toolsNavBar).toContain('primaryNavTools');
     expect(areaLinks.track.map(t => t.href)).toEqual(expect.arrayContaining(['/tools/workspace?tab=portfolio', '/tools/workspace?tab=journal']));
     expect(areaLinks.today.map(t => t.href)).toContain('/tools/msp-radar');
@@ -296,7 +303,6 @@ describe('layout and flow audit regressions', () => {
     expect(goldenEggFeature).toContain('/tools/workspace?tab=portfolio&add=');
     expect(goldenEggFeature).toContain('/tools/workspace?tab=alerts&symbol=');
     expect(goldenEggFeature).toContain('/tools/workspace?tab=backtest&symbol=');
-    expect(scannerPage).toContain('/tools/workspace?tab=alerts&symbol=');
     expect(alertsWidget).toContain('return `/tools/workspace?tab=journal&${params.toString()}`;');
     expect(alertsWidget).toContain('/tools/workspace?tab=backtest&symbol=');
     expect(watchlistWidget).toContain('alert: `/tools/workspace?tab=alerts&symbol=${encodedSymbol}`');
@@ -654,8 +660,6 @@ describe('layout and flow audit regressions', () => {
     expect(cryptoDashboard).toContain('Funding elevated (longs paying)');
     expect(cryptoDashboard).toContain('Funding negative (shorts paying)');
     expect(cryptoDashboard).toContain('Open interest building');
-    expect(cryptoDashboard).toContain('Liquidations: not collected');
-    expect(cryptoDashboard).not.toMatch(/get\('\/api\/crypto\/liquidations'\)/);
     expect(cryptoDashboard).not.toContain('WARN Funding elevated - longs paying shorts');
     expect(cryptoDashboard).not.toContain('BEAR Longs getting liquidated - bearish');
     expect(cryptoDashboard).not.toContain('⚠️ Funding elevated');
@@ -680,7 +684,6 @@ describe('layout and flow audit regressions', () => {
     expect(cryptoDashboard).toContain('Funding, open interest, and account ratios. Research only.');
     expect(cryptoDashboard).toContain('title="Research scenarios"');
     expect(cryptoDashboard).toContain('aria-label="Conditions"');
-    expect(cryptoDashboard).toContain('Funding and long/short: OKX · OI: CoinGecko, top 3 exchanges');
     expect(cryptoDashboard).not.toContain("h1 className={`${embeddedInDashboard ? 'mt-1 text-base'");
     expect(macroDashboard).toContain('aria-label="Macro command header"');
     expect(macroDashboard).toContain('Global regime gate for liquidity, rates, growth, and cross-asset context.');
@@ -1284,5 +1287,22 @@ describe('layout and flow audit regressions', () => {
     expect(economicCalendarPage).toContain("ariaLabel=\"Economic Calendar command header\"");
     expect(economicCalendarPage).toContain("Refresh calendar");
 
+  });
+
+  it('crypto derivatives dashboard labels BTC open interest separately from the basket change', () => {
+    const cryptoDashboard = read('app/tools/crypto-dashboard/page.tsx');
+    expect(cryptoDashboard).toContain('label="BTC open interest"');
+    expect(cryptoDashboard).toContain('selectBtcOpenInterestTile');
+    expect(cryptoDashboard).toContain('Basket 24h:');
+    expect(cryptoDashboard).toContain('Open interest across {oiTile.shownCoinCount} coins:');
+    const fixtureSource = 'CoinGecko derivatives · 3 of the top 3 derivatives exchanges';
+    expect(derivativesOiSourceLine(fixtureSource)).toBe('Funding and long/short: OKX · OI: CoinGecko derivatives · 3 of the top 3 derivatives exchanges');
+    expect(cryptoDashboard).toContain('derivativesOiSourceLine(oiSource)');
+    expect(cryptoDashboard).toContain("oiRes?.meta?.freshnessStatus === 'fresh'");
+    expect(cryptoDashboard).toContain('24h change on the fixed contract basket, not this total');
+    expect(cryptoDashboard).not.toContain('Total open interest');
+    expect(cryptoDashboard).not.toContain('Liquidations: not collected');
+    expect(cryptoDashboard).not.toContain('3 of 4');
+    expect(cryptoDashboard).not.toMatch(/get\('\/api\/crypto\/liquidations'\)/);
   });
 });

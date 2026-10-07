@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { verifyCronAuth } from '@/lib/adminAuth';
+import { effectiveTierFromSubscription } from '@/lib/entitlements';
 
 /**
  * Internal endpoint called by middleware during session refresh.
@@ -18,8 +19,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const rows = await q<{ tier: string; status: string }>(
-      `SELECT tier, status FROM user_subscriptions WHERE workspace_id = $1 ORDER BY updated_at DESC LIMIT 1`,
+    const rows = await q<{ tier: string; status: string; current_period_end: Date | string | null }>(
+      `SELECT tier, status, current_period_end FROM user_subscriptions WHERE workspace_id = $1 ORDER BY updated_at DESC LIMIT 1`,
       [workspaceId]
     );
 
@@ -27,13 +28,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ tier: 'free', status: 'none' });
     }
 
-    const { tier, status } = rows[0];
-    // If subscription is cancelled/expired, downgrade to free
-    if (status !== 'active' && status !== 'trialing') {
-      return NextResponse.json({ tier: 'free', status });
-    }
-
-    return NextResponse.json({ tier, status });
+    const { status } = rows[0];
+    // Same rule as /api/me and getVerifiedTier: expired trials are free; the stored status is unchanged.
+    return NextResponse.json({ tier: effectiveTierFromSubscription(rows[0]), status });
   } catch {
     // On DB error, return unknown so caller can fall back to cookie tier
     return NextResponse.json({ tier: 'unknown', status: 'error' });

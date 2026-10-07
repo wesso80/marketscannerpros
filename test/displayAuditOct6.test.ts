@@ -48,7 +48,7 @@ describe('one disclaimer on Track and Markets hosts', () => {
     expect(src('components/journal/layout/JournalLayout.tsx')).toContain('{!props.embeddedInWorkspace && <p');
   });
 
-  it('keeps the full Alerts banner, the 999 Pro tile, the x/3 counter, the Journal upgrade block and wrapping tabs', () => {
+  it('keeps the full Alerts banner, the current Pro limit tile, the x/3 counter, the Journal upgrade block and wrapping tabs', () => {
     expect(src('app/tools/alerts/page.tsx')).toContain('Triggered alerts are not trading signals, financial advice');
     expect(src('app/tools/alerts/page.tsx')).toContain('{ALERT_LIMITS.pro} active alerts');
     expect(src('components/AlertsWidget.tsx')).toContain('{quota?.used || 0}/{quota?.max || 3} alerts');

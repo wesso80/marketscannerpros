@@ -49,5 +49,28 @@ describe("GET /api/admin/income", () => {
     const src = fs.readFileSync(path.join(__dirname, "../../app/admin/income/page.tsx"), "utf8");
     expect(src).toContain("Pro Trader (legacy, billed as Pro)");
     expect(src).toContain("list-price estimate");
+    expect(src).toContain("Upstash (Redis)");
+    expect(src).toContain("Assistant team (Cursor Ultra)");
+    expect(src).toContain("Costs updated 7 Oct 2026");
+  });
+
+  it("uses the 7 Oct 2026 fixed costs and sums them into the total", async () => {
+    const body = await (await GET(new NextRequest("http://localhost/api/admin/income"))).json();
+    expect(body.costs.fixed).toMatchObject({
+      alpha_vantage: 750,
+      render: 90,
+      neon_db: 47.99,
+      coingecko: 141.9,
+      upstash: 8.69,
+      cursor_team: 200,
+      github: 25,
+      domain: 1.5,
+      nasdaq: 100,
+      stripe_base: 0,
+    });
+    expect(body.costs.totalFixed).toBeCloseTo(1365.08, 2);
+    expect(body.costs.ai).toBe(0);
+    expect(body.summary.totalCosts).toBeCloseTo(body.costs.totalFixed + body.costs.stripe, 2);
+    expect(body.costs.total).toBeCloseTo(body.summary.totalCosts, 2);
   });
 });

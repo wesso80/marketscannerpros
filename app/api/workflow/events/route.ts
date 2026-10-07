@@ -18,6 +18,8 @@ import {
 import { buildPermissionSnapshot } from '@/lib/risk-governor-hard';
 import { computeEntryRiskMetrics, getLatestPortfolioEquity } from '@/lib/journal/riskAtEntry';
 import { runExecutionPipeline } from '@/lib/execution/runPipeline';
+import { ALERT_LIMITS, alertCapSkipReason, type AlertPlanTier } from '@/lib/alerts/planLimits';
+import { countActiveAlertsForCap } from '@/lib/alerts/activeCount';
 
 const ALLOWED_EVENT_TYPES = new Set<WorkflowEventType>([
   'operator.session.started',
@@ -502,7 +504,7 @@ async function persistDecisionPacketMutation(workspaceId: string, mutation: Deci
   return { canonicalId, status: resolvedStatus };
 }
 
-async function autoCreatePlanAlertForEvent(workspaceId: string, event: MSPEvent, runtime: RiskGovernorRuntime) {
+async function autoCreatePlanAlertForEvent(workspaceId: string, event: MSPEvent, runtime: RiskGovernorRuntime, tier: AlertPlanTier) {
   if (event.event_type !== 'trade.plan.created') {
     return { created: false, hasAlert: false, decisionPacketId: null as string | null, blockedEvent: null as MSPEvent | null };
   }
@@ -573,6 +575,18 @@ async function autoCreatePlanAlertForEvent(workspaceId: string, event: MSPEvent,
   if (alertPrice === 0) {
     return { created: false, hasAlert: false, decisionPacketId, blockedEvent: null as MSPEvent | null };
   }
+
+  const activeCount = await countActiveAlertsForCap(workspaceId);
+  if (activeCount >= ALERT_LIMITS[tier]) {
+    return {
+      created: false,
+      hasAlert: false,
+      decisionPacketId,
+      blockedEvent: null as MSPEvent | null,
+      skippedReason: alertCapSkipReason(tier, activeCount),
+    };
+  }
+
   const conditionType = planPriceConditionType(event);
   const timeframe = typeof planPayload?.timeframe === 'string' ? planPayload.timeframe : null;
   const alertContext = {
@@ -1435,6 +1449,8 @@ export async function POST(req: NextRequest) {
     }
 
     let autoAlertsCreated = 0;
+    const autoAlertSkipReasons: string[] = [];
+    const alertTier: AlertPlanTier = hasPaidSessionAccess(session) ? 'pro' : 'free';
     let autoJournalDraftsCreated = 0;
     let autoCoachJournalUpdates = 0;
     let autoCoachActionTasksCreated = 0;
@@ -1446,9 +1462,12 @@ export async function POST(req: NextRequest) {
     const riskGovernorEvents: MSPEvent[] = [];
     for (const event of normalized) {
       try {
-        const autoAlertResult = await autoCreatePlanAlertForEvent(session.workspaceId, event, riskGovernorRuntime);
+        const autoAlertResult = await autoCreatePlanAlertForEvent(session.workspaceId, event, riskGovernorRuntime, alertTier);
         if (autoAlertResult.created) {
           autoAlertsCreated += 1;
+        }
+        if ('skippedReason' in autoAlertResult && autoAlertResult.skippedReason) {
+          autoAlertSkipReasons.push(autoAlertResult.skippedReason);
         }
         if (autoAlertResult.blockedEvent) {
           riskGovernorEvents.push(autoAlertResult.blockedEvent);
@@ -1567,6 +1586,8 @@ export async function POST(req: NextRequest) {
       sourceEventsLogged: normalized.length,
       decisionPacketsUpserted,
       autoAlertsCreated,
+      autoAlertsSkippedForCap: autoAlertSkipReasons.length,
+      autoAlertSkipReasons,
       autoJournalDraftsCreated,
       autoCoachAnalysesGenerated: autoCoachEvents.length,
       autoCoachActionTasksCreated,

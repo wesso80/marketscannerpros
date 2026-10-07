@@ -1,0 +1,223 @@
+{
+  "batchCommit": "f94d43a204237da3da758e6891244fd2dec2652a",
+  "previousPrHead": "2bbee560a1bc1f26a5a097d67b8c5a56bca1b800",
+  "command": "vitest run --reporter=json --outputFile=<local path>",
+  "dependencies": "Same installed dependencies; package-lock identical to dependency checkout",
+  "batch": {
+    "numTotalTests": 5760,
+    "numPassedTests": 5699,
+    "numFailedTests": 48,
+    "numPendingTests": 13,
+    "numFailedTestSuites": 41
+  },
+  "reconciledDraft": {
+    "numTotalTests": 5769,
+    "numPassedTests": 5708,
+    "numFailedTests": 48,
+    "numPendingTests": 13,
+    "numFailedTestSuites": 41
+  },
+  "matchingFailures": true,
+  "newFailures": [],
+  "baselineOnlyFailures": [],
+  "failures": [
+    {
+      "file": "admin/cryptoPageIntegrity.test.ts",
+      "name": "price display helpers Overview quote tiles use the shared USD stamp"
+    },
+    {
+      "file": "avMoversRealtimeEntitlement.test.ts",
+      "name": "movers surfaces show the feed basis Movers tab carries equityAsOf into a \"US equities\" status chip"
+    },
+    {
+      "file": "bulkSelectionRoute.test.ts",
+      "name": "bulk scanner (Pro crypto is Deep-only) does not add a retirement note to normal Deep requests"
+    },
+    {
+      "file": "bulkSelectionRoute.test.ts",
+      "name": "bulk scanner (Pro crypto is Deep-only) keeps every candidate evaluable by the default factor-agreement filter (Fast used to drop them all)"
+    },
+    {
+      "file": "bulkSelectionRoute.test.ts",
+      "name": "bulk scanner (Pro crypto is Deep-only) runs a leftover Fast (light) crypto request as a Deep scan instead of the retired market-data ranking"
+    },
+    {
+      "file": "commanderCommandState.test.ts",
+      "name": "admin commander command state strip surfaces hard command state, risk source, alert posture, data age, and allowed action"
+    },
+    {
+      "file": "cryptoBreakdownLabels.test.tsx",
+      "name": "scanner daily label uses bar interval and completed timestamp, without a spot fetch"
+    },
+    {
+      "file": "cryptoScanAliasRows.test.ts",
+      "name": "Pro crypto scan: no phantom alias rows lists each coin once and reports the aliases as duplicates"
+    },
+    {
+      "file": "intelligence/globalM2Reliability.test.ts",
+      "name": "Persisted source-of-truth fallback persist:false keeps deterministic behaviour (no store access)"
+    },
+    {
+      "file": "intelligence/launchState.test.ts",
+      "name": "intelligence launch: under-construction public pages app/intelligence/master/page.tsx renders IntelligenceUnderConstruction with module name Master Command Centre"
+    },
+    {
+      "file": "intelligenceOverviewStatus.test.ts",
+      "name": "Intelligence overview tiles use the pages' status rules (RS-10) the overview and the Fragility page share the helpers; no live tile hard-codes a status"
+    },
+    {
+      "file": "layoutFlowAudit.test.ts",
+      "name": "layout and flow audit regressions keeps Dashboard as a morning research start page with compact secondary lenses"
+    },
+    {
+      "file": "layoutFlowAudit.test.ts",
+      "name": "layout and flow audit regressions keeps Research intelligence views embedded and compliance-safe"
+    },
+    {
+      "file": "layoutFlowAudit.test.ts",
+      "name": "layout and flow audit regressions keeps Workspace Alerts compact without duplicate compliance chrome"
+    },
+    {
+      "file": "layoutFlowAudit.test.ts",
+      "name": "layout and flow audit regressions keeps Workspace Journal compact with a focused drawer"
+    },
+    {
+      "file": "layoutFlowAudit.test.ts",
+      "name": "layout and flow audit regressions keeps market context routes on compact tool chrome"
+    },
+    {
+      "file": "layoutFlowAudit.test.ts",
+      "name": "layout and flow audit regressions keeps public resource guides from exposing private operator language"
+    },
+    {
+      "file": "layoutFlowAudit.test.ts",
+      "name": "layout and flow audit regressions keeps secondary market routes on text-code visual identity"
+    },
+    {
+      "file": "layoutFlowAudit.test.ts",
+      "name": "layout and flow audit regressions keeps specialist tools in research wording instead of recommendation wording"
+    },
+    {
+      "file": "layoutFlowAudit.test.ts",
+      "name": "layout and flow audit regressions makes Terminal the handoff from Golden Egg to Backtest"
+    },
+    {
+      "file": "layoutFlowAudit.test.ts",
+      "name": "layout and flow audit regressions promotes remaining tier-1 tools to the A-grade command header treatment"
+    },
+    {
+      "file": "layoutFlowAudit.test.ts",
+      "name": "layout and flow audit regressions treats Scanner as Ranked, Pro, and Analysis views"
+    },
+    {
+      "file": "layoutSymbol.test.tsx",
+      "name": "L-6 shared options and links uses the shared Symbol link on all named entry surfaces"
+    },
+    {
+      "file": "layoutTrack.test.tsx",
+      "name": "quote timestamps survive watchlist and journal stamps; fetch-only stays unknown"
+    },
+    {
+      "file": "newsRelevanceMv2.test.ts",
+      "name": "CoinGecko /news coin feeds (Analyst plan, coin_id) route and UI wiring"
+    },
+    {
+      "file": "operatorMarketDataAccuracy.test.ts",
+      "name": "daily bars / key levels come from the lib/marketData cache equity key levels use cached daily bars and make no direct AV call"
+    },
+    {
+      "file": "optionsMoverEntry.test.ts",
+      "name": "sends only equity movers to the Options Terminal and names that destination"
+    },
+    {
+      "file": "phase1Overview.test.tsx",
+      "name": "Radar access and response states 500 has an explicit error and no fake count"
+    },
+    {
+      "file": "phase1Overview.test.tsx",
+      "name": "Radar access and response states 502 has an explicit error and no fake count"
+    },
+    {
+      "file": "phase1Overview.test.tsx",
+      "name": "Radar access and response states admin fetches once and renders only the projected fields"
+    },
+    {
+      "file": "phase1Overview.test.tsx",
+      "name": "Radar access and response states pro fetches once and renders only the projected fields"
+    },
+    {
+      "file": "phase1Overview.test.tsx",
+      "name": "Radar access and response states pro_trader fetches once and renders only the projected fields"
+    },
+    {
+      "file": "phase1Overview.test.tsx",
+      "name": "Today data presentation renders 11 sorted cells, an accessible text equivalent, and zero SPY as no quote"
+    },
+    {
+      "file": "phase1Overview.test.tsx",
+      "name": "Today data presentation uses the existing regime freshness precedence"
+    },
+    {
+      "file": "phase1Overview.test.tsx",
+      "name": "Today data presentation uses the existing regime freshness precedence"
+    },
+    {
+      "file": "phase1Overview.test.tsx",
+      "name": "Today data presentation uses the existing regime freshness precedence"
+    },
+    {
+      "file": "phase1Overview.test.tsx",
+      "name": "Today data presentation uses the existing regime freshness precedence"
+    },
+    {
+      "file": "phase2bToday.test.tsx",
+      "name": "Phase 2B today pages Macro inside Dashboard starts at Global regime"
+    },
+    {
+      "file": "phase2bToday.test.tsx",
+      "name": "Phase 2B today pages Macro render starts with Global regime"
+    },
+    {
+      "file": "phase2bToday.test.tsx",
+      "name": "Phase 2B today pages Radar and Movers empty fixtures avoid raw status words"
+    },
+    {
+      "file": "phase2cLayout.test.tsx",
+      "name": "renders a 7-column chain with a sticky strike and a phone Calls/Puts toggle"
+    },
+    {
+      "file": "phase2cReviewFixes.test.tsx",
+      "name": "prints real zeros, a dash only when a chain value is missing, and a readable quote badge"
+    },
+    {
+      "file": "productionAuditRound2.test.ts",
+      "name": "post-remediation audit round 2 regressions never fabricates treasury P&L when cost basis is absent"
+    },
+    {
+      "file": "sharedMarketComponents.test.ts",
+      "name": "shared market truth components uses the shared market status strip and freshness badge on the scanner page"
+    },
+    {
+      "file": "sharedMarketComponents.test.ts",
+      "name": "shared market truth components uses the shared truth, evidence, and risk components on the Options Terminal"
+    },
+    {
+      "file": "sharedMarketComponents.test.ts",
+      "name": "shared market truth components uses the shared truth, evidence, and risk components on the Volatility Engine page"
+    },
+    {
+      "file": "workerEquityBulkWiring.test.ts",
+      "name": "worker equities wiring (source guard) writes the same quotes_latest columns as the per-symbol upsert"
+    },
+    {
+      "file": "wp3MoversRows.test.tsx",
+      "name": "non-universe rows render no em dashes, and equities say CRCS once"
+    }
+  ],
+  "typescript": "passed",
+  "visualGate": "HOLD: 1280 and 390 screenshots not captured",
+  "notes": [
+    "Final full runs have identical failing test identities, including duplicate parametrized names.",
+    "An initial head run passed one bulkSelectionRoute assertion that failed on batch and the final head run. This is recorded as existing test variability, not a fix."
+  ]
+}

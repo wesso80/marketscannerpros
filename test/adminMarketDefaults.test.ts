@@ -70,7 +70,7 @@ describe('wiring (source checks)', () => {
   });
 
   it('sidebar and command palette link to SPY, not ADA', () => {
-    const layout = read('app/admin/layout.tsx');
+    const layout = read('app/admin/admin-client-layout.tsx');
     expect(layout).toContain('/admin/symbol/SPY');
     expect(layout).not.toContain('/admin/symbol/ADA');
     expect(read('lib/admin/commandPaletteCommands.ts')).not.toContain('/admin/symbol/ADA');

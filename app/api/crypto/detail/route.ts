@@ -5,11 +5,11 @@ import {
   COINGECKO_ID_MAP,
   getOHLC,
   getAggregatedFundingRates,
-  getAggregatedOpenInterest,
   getCoinDetailFull,
   searchCoins,
   getMarketChartFull,
 } from '@/lib/coingecko';
+import { getOpenInterestTotals } from '@/lib/crypto/openInterestTotal.server';
 
 interface CoinDetail {
   id: string;
@@ -155,23 +155,22 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Coin not found' }, { status: 404 });
     }
     
-    // Try to get derivatives data if available
+    // Funding stays on its existing feed. Open interest uses the shared top-venue total.
     let fundingRates: { rate: number; sentiment: string } | null = null;
-    let openInterest: { total: number; avgVolume24h: number } | null = null;
+    let openInterest: { total: number | null; sourceLabel: string; observedAt: string | null } | null = null;
     try {
       const derivSymbol = symbol.toUpperCase().replace('USDT', '');
       const [fundingData, oiData] = await Promise.all([
         getAggregatedFundingRates([derivSymbol]),
-        getAggregatedOpenInterest([derivSymbol]),
+        getOpenInterestTotals([derivSymbol]),
       ]);
-      // These return arrays, find matching symbol
       const fundingItem = fundingData.find(f => f.symbol.toUpperCase() === derivSymbol);
-      const oiItem = oiData.find(o => o.symbol.toUpperCase() === derivSymbol);
+      const oiItem = oiData?.find(o => o.symbol.toUpperCase() === derivSymbol) ?? null;
       if (fundingItem) {
         fundingRates = { rate: fundingItem.fundingRatePercent, sentiment: fundingItem.sentiment };
       }
       if (oiItem) {
-        openInterest = { total: oiItem.totalOpenInterest, avgVolume24h: oiItem.avgVolume24h };
+        openInterest = { total: oiItem.totalUsd, sourceLabel: oiItem.sourceLabel, observedAt: oiItem.observedAt };
       }
     } catch {
       // Derivatives data not available for this coin
@@ -271,8 +270,9 @@ export async function GET(req: NextRequest) {
       derivatives: fundingRates || openInterest ? {
         funding_rate: fundingRates?.rate,
         funding_sentiment: fundingRates?.sentiment,
-        open_interest: openInterest?.total,
-        volume_24h: openInterest?.avgVolume24h,
+        open_interest: openInterest?.total ?? null,
+        open_interest_source: openInterest?.sourceLabel ?? null,
+        open_interest_observed_at: openInterest?.observedAt ?? null,
       } : null,
       last_updated: coinDetail.market_data?.last_updated,
       source: meta.provider,

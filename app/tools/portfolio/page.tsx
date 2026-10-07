@@ -18,7 +18,7 @@ import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { splitPosition } from '@/lib/portfolio/closePosition';
 import { localDateInput, paperCloseDateIso, positionLimitWhenReady, profitFactorWhenReady } from '@/lib/portfolio/trackDisplay';
-import { positionMultiplier, positionOptionContract, positionUnits } from '@/lib/portfolio/positionValue';
+import { hasCurrentPrice, isLongSide, openBookTotals, openPositionPL, openPositionPLPercent, positionMultiplier, positionOptionContract, positionUnits } from '@/lib/portfolio/positionValue';
 import { accountEquityValues, updateTodaySnapshot } from '@/lib/portfolio/equitySnapshot';
 import { formatMoney, formatSignedMoney } from '@/lib/portfolio/formatMoney';
 import { measuredDrawdownPct, portfolioReturns, portfolioStateLabels } from '@/lib/portfolio/returnSummary';
@@ -666,12 +666,14 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
   useEffect(() => {
     if (positions.length > 0 || closedPositions.length > 0) {
-      const totalValue = positions.reduce((sum, p) => sum + (p.currentPrice * positionUnits(p)), 0);
-      const totalPL = positions.reduce((sum, p) => sum + p.pl, 0);
-      const topPositions = [...positions]
+      const book = openBookTotals(positions);
+      const totalValue = book.value;
+      const totalPL = book.pl;
+      const topPositions = positions
+        .map((p) => ({ symbol: p.symbol, pl: openPositionPL(p), plPercent: openPositionPLPercent(p) }))
+        .filter((p): p is { symbol: string; pl: number; plPercent: number } => p.pl != null && p.plPercent != null)
         .sort((a, b) => Math.abs(b.pl) - Math.abs(a.pl))
-        .slice(0, 5)
-        .map(p => ({ symbol: p.symbol, pl: p.pl, plPercent: p.plPercent }));
+        .slice(0, 5);
 
       setPageData({
         skill: 'portfolio',
@@ -801,10 +803,9 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   }
 
   function emitTradeUpdatedEvent(position: Position, newPrice: number, source: 'manual' | 'auto' = 'manual') {
-    const pl = position.side === 'LONG'
-      ? (newPrice - position.entryPrice) * positionUnits(position)
-      : (position.entryPrice - newPrice) * positionUnits(position);
-    const plPercent = ((pl / (position.entryPrice * positionUnits(position))) * 100);
+    const marked = { ...position, currentPrice: newPrice };
+    const pl = openPositionPL(marked) ?? 0;
+    const plPercent = openPositionPLPercent(marked) ?? 0;
     const parentEventId = tradeExecutionEventMapRef.current[position.id] || null;
 
     const tradeUpdatedEvent = createWorkflowEvent<TradePayload>({
@@ -823,7 +824,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         trade_id: `trade_${position.id}`,
         symbol: position.symbol,
         asset_class: 'mixed',
-        direction: position.side === 'LONG' ? 'long' : 'short',
+        direction: isLongSide(position.side) ? 'long' : 'short',
         status: 'open',
         live: {
           source,
@@ -878,11 +879,9 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       setPositions(prev => prev.map(p => {
         const update = updates.find(u => u.id === p.id);
         if (update) {
-          const pl = p.side === 'LONG'
-            ? (update.price - p.entryPrice) * positionUnits(p)
-            : (p.entryPrice - update.price) * positionUnits(p);
-          const denom = p.entryPrice * positionUnits(p);
-          const plPercent = denom > 0 ? ((pl / denom) * 100) : 0;
+          const marked = { ...p, currentPrice: update.price };
+          const pl = openPositionPL(marked) ?? 0;
+          const plPercent = openPositionPLPercent(marked) ?? 0;
           return { ...p, currentPrice: update.price, pl, plPercent };
         }
         return p;
@@ -1146,11 +1145,9 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     const entry = parseFloat(newPosition.entryPrice);
     const current = parseFloat(newPosition.currentPrice);
 
-    const pl = newPosition.side === 'LONG'
-      ? (current - entry) * qty
-      : (entry - current) * qty;
-    const denom = entry * qty;
-    const plPercent = denom > 0 ? ((pl / denom) * 100) : 0;
+    const draft = { side: newPosition.side, quantity: qty, entryPrice: entry, currentPrice: current };
+    const pl = openPositionPL(draft) ?? 0;
+    const plPercent = openPositionPLPercent(draft) ?? 0;
 
     const position: Position = {
       id: Date.now() + Math.random(),
@@ -1179,7 +1176,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         trade_id: `trade_${position.id}`,
         symbol: position.symbol,
         asset_class: 'mixed',
-        direction: position.side === 'LONG' ? 'long' : 'short',
+        direction: isLongSide(position.side) ? 'long' : 'short',
         status: 'open',
         execution: {
           side: position.side,
@@ -1189,8 +1186,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         },
         risk_runtime: {
           current_price: position.currentPrice,
-          unrealized_pnl: position.pl,
-          unrealized_pnl_percent: position.plPercent,
+          unrealized_pnl: openPositionPL(position) ?? 0,
+          unrealized_pnl_percent: openPositionPLPercent(position) ?? 0,
         },
       },
     });
@@ -1245,7 +1242,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         trade_id: `trade_${position.id}`,
         symbol: position.symbol,
         asset_class: 'mixed',
-        direction: position.side === 'LONG' ? 'long' : 'short',
+        direction: isLongSide(position.side) ? 'long' : 'short',
         status: 'open',
         execution: {
           side: position.side,
@@ -1255,8 +1252,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         },
         risk_runtime: {
           current_price: position.currentPrice,
-          unrealized_pnl: position.pl,
-          unrealized_pnl_percent: position.plPercent,
+          unrealized_pnl: openPositionPL(position) ?? 0,
+          unrealized_pnl_percent: openPositionPLPercent(position) ?? 0,
         },
       },
     });
@@ -1314,7 +1311,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         trade_id: `trade_${position.id}`,
         symbol: position.symbol,
         asset_class: 'mixed',
-        direction: position.side === 'LONG' ? 'long' : 'short',
+        direction: isLongSide(position.side) ? 'long' : 'short',
         status: 'closed',
         closed_at: closedPos.closeDate,
         realized_pnl: closedPos.realizedPL,
@@ -1346,11 +1343,9 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
     setPositions(prev => prev.map(p => {
       if (p.id === id) {
-        const pl = p.side === 'LONG'
-          ? (newPrice - p.entryPrice) * positionUnits(p)
-          : (p.entryPrice - newPrice) * positionUnits(p);
-        const denom = p.entryPrice * positionUnits(p);
-        const plPercent = denom > 0 ? ((pl / denom) * 100) : 0;
+        const marked = { ...p, currentPrice: newPrice };
+        const pl = openPositionPL(marked) ?? 0;
+        const plPercent = openPositionPLPercent(marked) ?? 0;
 
         return {
           ...p,
@@ -1512,16 +1507,20 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     }
 
     const headers = ['Symbol', 'Side', 'Quantity', 'Reference Price', 'Current Price', 'P&L', 'P&L %', 'Date Added'];
-    const rows = positions.map(p => [
-      p.symbol,
-      p.side,
-      p.quantity,
-      formatPriceRaw(p.entryPrice),
-      formatPriceRaw(p.currentPrice),
-      p.pl.toFixed(2),
-      p.plPercent.toFixed(2),
-      new Date(p.entryDate).toLocaleDateString()
-    ]);
+    const rows = positions.map(p => {
+      const pl = openPositionPL(p);
+      const plPercent = openPositionPLPercent(p);
+      return [
+        p.symbol,
+        p.side,
+        p.quantity,
+        formatPriceRaw(p.entryPrice),
+        hasCurrentPrice(p.currentPrice) ? formatPriceRaw(p.currentPrice) : 'unavailable',
+        pl == null ? 'unavailable' : pl.toFixed(2),
+        plPercent == null ? 'unavailable' : plPercent.toFixed(2),
+        new Date(p.entryDate).toLocaleDateString()
+      ];
+    });
 
     const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1565,10 +1564,16 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     document.body.removeChild(link);
   };
 
-  // Calculate metrics
-  const totalValue = positions.reduce((sum, p) => sum + (p.currentPrice * positionUnits(p)), 0);
-  const totalCost = positions.reduce((sum, p) => sum + (p.entryPrice * positionUnits(p)), 0);
-  const unrealizedPL = positions.reduce((sum, p) => sum + p.pl, 0);
+  // Overview value and cost are signed (a short is a liability) so value − cost equals open P&L.
+  // Gross sums below stay unsigned for exposure and allocation weights. A missing current price is in neither.
+  const book = openBookTotals(positions);
+  const overviewValue = book.value;
+  const overviewCost = book.cost;
+  const unrealizedPL = book.pl;
+  const unpricedCount = book.unpriced;
+  const pricedPositions = positions.filter((p) => hasCurrentPrice(p.currentPrice) && Number.isFinite(p.entryPrice));
+  const totalValue = pricedPositions.reduce((sum, p) => sum + (p.currentPrice * positionUnits(p)), 0);
+  const totalCost = pricedPositions.reduce((sum, p) => sum + (p.entryPrice * positionUnits(p)), 0);
   const realizedPL = closedPositions.reduce((sum, p) => sum + p.realizedPL, 0);
   const totalPL = unrealizedPL + realizedPL;
   const startingCapital = Number(startingCapitalInput || 0);
@@ -1582,7 +1587,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const numPositions = positions.length;
 
   // Allocation data for visualization
-  const allocationData = positions.map(p => ({
+  const allocationData = pricedPositions.map(p => ({
     symbol: p.symbol,
     value: p.currentPrice * positionUnits(p),
     percentage: totalValue > 0 ? ((p.currentPrice * positionUnits(p)) / totalValue * 100) : 0
@@ -1640,14 +1645,14 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   // Color palette for pie chart
   const colors = ['var(--msp-bull)', 'var(--msp-warn)', 'var(--msp-bear)', 'var(--msp-accent)', '#f97316', 'var(--msp-bull)', 'var(--msp-warn)', 'var(--msp-bull)', 'var(--msp-bear)'];
 
-  const longExposureValue = positions.filter((p) => p.side === 'LONG').reduce((sum, p) => sum + (p.currentPrice * positionUnits(p)), 0);
-  const shortExposureValue = positions.filter((p) => p.side === 'SHORT').reduce((sum, p) => sum + (p.currentPrice * positionUnits(p)), 0);
+  const longExposureValue = pricedPositions.filter((p) => isLongSide(p.side)).reduce((sum, p) => sum + (p.currentPrice * positionUnits(p)), 0);
+  const shortExposureValue = pricedPositions.filter((p) => !isLongSide(p.side)).reduce((sum, p) => sum + (p.currentPrice * positionUnits(p)), 0);
   const grossExposureValue = longExposureValue + shortExposureValue;
   const capitalBase = accountEquity > 0 ? accountEquity : Math.max(totalValue, 1000);
   const deploymentPct = capitalBase > 0 ? (grossExposureValue / capitalBase) * 100 : 0;
   const availableCash = accountCash;
   const largestPositionPct = totalValue > 0
-    ? Math.max(...positions.map((p) => ((p.currentPrice * positionUnits(p)) / totalValue) * 100), 0)
+    ? Math.max(...pricedPositions.map((p) => ((p.currentPrice * positionUnits(p)) / totalValue) * 100), 0)
     : 0;
 
   const classifySector = (symbol: string) => {
@@ -1660,7 +1665,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     return 'Other';
   };
 
-  const sectorExposure = positions.reduce((acc, position) => {
+  const sectorExposure = pricedPositions.reduce((acc, position) => {
     const sector = classifySector(position.symbol);
     const value = position.currentPrice * positionUnits(position);
     acc[sector] = (acc[sector] || 0) + value;
@@ -1738,7 +1743,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       const value = position.currentPrice * positionUnits(position);
       const concentrationPct = totalValue > 0 ? (value / totalValue) * 100 : 0;
       const stopPrice = validLevel(position.stopPrice);
-      const riskPerUnit = stopPrice == null ? null : position.side === 'LONG'
+      const riskPerUnit = stopPrice == null ? null : isLongSide(position.side)
         ? Math.max(0, position.currentPrice - stopPrice)
         : Math.max(0, stopPrice - position.currentPrice);
       const dollarRisk = riskPerUnit == null ? null : riskPerUnit * positionUnits(position);
@@ -1800,11 +1805,14 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
   const projectedGrossExposure = grossExposureValue + Math.max(0, draftPositionNotional);
   const projectedDeploymentPct = capitalBase > 0 ? (projectedGrossExposure / capitalBase) * 100 : 0;
 
-  const bestPerformer = positions.length > 0
-    ? [...positions].sort((a, b) => b.plPercent - a.plPercent)[0]
+  const rankedByOpenPercent = positions
+    .map((position) => ({ position, plPercent: openPositionPLPercent(position) }))
+    .filter((row): row is { position: Position; plPercent: number } => row.plPercent != null);
+  const bestPerformer = rankedByOpenPercent.length > 0
+    ? [...rankedByOpenPercent].sort((a, b) => b.plPercent - a.plPercent)[0]
     : null;
-  const worstPerformer = positions.length > 0
-    ? [...positions].sort((a, b) => a.plPercent - b.plPercent)[0]
+  const worstPerformer = rankedByOpenPercent.length > 0
+    ? [...rankedByOpenPercent].sort((a, b) => a.plPercent - b.plPercent)[0]
     : null;
 
   const portfolioHeaderActions = (
@@ -2169,7 +2177,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         </CollapsibleSection>)}
         <div className={`mt-4 rounded-xl border border-slate-700/60 bg-[var(--msp-panel)] ${embeddedInWorkspace ? 'p-3' : 'p-4'}`}>
           {activeTab === 'overview' && (dataLoaded ? positions.length > 0 ? (
-            <PortfolioOverview value={totalValue} openPL={unrealizedPL} allocation={allocationData} limit={riskSettings.maxPositionSize} />
+            <PortfolioOverview value={overviewValue} totalCost={overviewCost} openPL={unrealizedPL} allocation={allocationData} limit={riskSettings.maxPositionSize} unpricedCount={unpricedCount} />
           ) : <EmptyState title="Add your first position" action="Add Position" href="/tools/workspace?tab=portfolio&view=add" /> : <p role="status">Loading saved records…</p>)}
 
           {activeTab === 'risk-model' && (
@@ -2304,13 +2312,13 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       {positions.map((position) => (
                         <div key={position.id} className="flex justify-between">
                           <span>{position.symbol}</span>
-                          <span className="font-bold text-slate-200">{formatMoney(position.currentPrice * positionUnits(position))}</span>
+                          <span className="font-bold text-slate-200">{hasCurrentPrice(position.currentPrice) ? formatMoney(position.currentPrice * positionUnits(position)) : 'unavailable'}</span>
                         </div>
                       ))}
                       {riskContributors.length === 0 && <div className="text-slate-500">No contributors yet</div>}
                     </div>
-                    <div className="mt-2 text-slate-400">Top Gain: {bestPerformer ? `${bestPerformer.symbol} ${formatPct(bestPerformer.plPercent)}` : 'Not measured'}</div>
-                    <div className="text-slate-400">Top Loss: {worstPerformer ? `${worstPerformer.symbol} ${formatPct(worstPerformer.plPercent)}` : 'Not measured'}</div>
+                    <div className="mt-2 text-slate-400">Top Gain: {bestPerformer ? `${bestPerformer.position.symbol} ${formatPct(bestPerformer.plPercent)}` : 'Not measured'}</div>
+                    <div className="text-slate-400">Top Loss: {worstPerformer ? `${worstPerformer.position.symbol} ${formatPct(worstPerformer.plPercent)}` : 'Not measured'}</div>
                   </div>
                 </div>
               </div>
@@ -2640,8 +2648,10 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   </thead>
                   <tbody>
                     {positions.map((position) => {
-                      const notional = position.currentPrice * positionUnits(position);
-                      const sizePct = totalValue > 0 ? (notional / totalValue) * 100 : 0;
+                      const marked = hasCurrentPrice(position.currentPrice);
+                      const notional = marked ? position.currentPrice * positionUnits(position) : null;
+                      const plPercent = openPositionPLPercent(position);
+                      const sizePct = notional != null && totalValue > 0 ? (notional / totalValue) * 100 : 0;
                       // No hidden default stop: without a stop, R / Risk Remaining / Inval Dist show 'Not recorded'.
                       const stop = validLevel(position.stopPrice);
                       const target = validLevel(position.targetPrice);
@@ -2654,18 +2664,18 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       return (
                         <tr key={position.id} className="border-b border-slate-800/60 text-slate-300">
                           <td className="px-2 py-2 font-semibold text-slate-100"><Link href={symbolHref(position.symbol,position.assetClass??'equity')}>{position.symbol}</Link></td>
-                          <td className="px-2 py-2">{position.side === 'LONG' ? 'Purchased' : 'Sold'}</td>
+                          <td className="px-2 py-2">{isLongSide(position.side) ? 'Purchased' : 'Sold'}</td>
                           <td className="px-2 py-2 text-right tabular-nums">{position.quantity.toLocaleString(undefined, { maximumFractionDigits: 4 })}</td>
-                          <td className="px-2 py-2 text-right tabular-nums text-slate-100">${notional.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                          <td className="px-2 py-2 text-right tabular-nums text-slate-100">{notional == null ? 'unavailable' : `$${notional.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}</td>
                           <td className="px-2 py-2 text-right">{sizePct.toFixed(1)}%</td>
                           <td className="px-2 py-2 text-right">{formatPriceRaw(position.entryPrice)}</td>
-                          <td className="px-2 py-2 text-right"><span title="Recorded mark; price basis and observation time not collected">{formatPrice(position.currentPrice)}</span></td>
+                          <td className="px-2 py-2 text-right">{marked ? <span title="Recorded mark; price basis and observation time not collected">{formatPrice(position.currentPrice)}</span> : 'unavailable'}</td>
                           <td className="px-2 py-2 text-right tabular-nums" title={stop != null && levelsFromJournal ? 'From the linked Journal entry' : undefined}>{stop != null ? formatPriceRaw(stop) : <span className="text-slate-500" title="No stop set">Not set</span>}</td>
                           <td className="px-2 py-2 text-right tabular-nums" title={target != null && levelsFromJournal ? 'From the linked Journal entry' : undefined}>{target != null ? formatPriceRaw(target) : <span className="text-slate-500" title="No exit level recorded">Not set</span>}</td>
                           {rMultipleOpen == null
                             ? <td className="px-2 py-2 text-right text-slate-500" title={noRiskTitle}>Not measured</td>
                             : <td className={`px-2 py-2 text-right ${rMultipleOpen >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{rMultipleOpen >= 0 ? '+' : ''}{rMultipleOpen.toFixed(2)}R</td>}
-                          <td className={`px-2 py-2 text-right font-semibold ${position.plPercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatPct(position.plPercent)}</td>
+                          <td className={`px-2 py-2 text-right font-semibold ${plPercent == null ? 'text-slate-500' : plPercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{plPercent == null ? 'unavailable' : formatPct(plPercent)}</td>
                           <td className={`px-2 py-2 text-right ${riskRemainingPct == null ? 'text-slate-500' : ''}`} title={riskRemainingPct == null ? noRiskTitle : undefined}>{riskRemainingPct == null ? 'Not recorded' : `${riskRemainingPct.toFixed(0)}%`}</td>
                           <td className={`px-2 py-2 text-right ${stopDistancePct == null ? 'text-slate-500' : ''}`} title={stopDistancePct == null ? 'No stop set — use Edit Stop' : undefined}>{stopDistancePct == null ? 'Not recorded' : `${stopDistancePct.toFixed(2)}%`}</td>
                           <td className="px-2 py-2">

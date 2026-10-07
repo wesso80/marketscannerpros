@@ -76,7 +76,7 @@ describe('Options Flow uses the loaded Terminal symbol', () => {
 });
 
 describe('Crypto Derivatives tab', () => {
-  it('shows funding, open interest, long/short and a not-collected liquidations tile', async () => {
+  it('shows funding, open interest and long/short without a liquidations tile', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       calls.push(url);
@@ -93,7 +93,13 @@ describe('Crypto Derivatives tab', () => {
       if (url.includes('/api/crypto/open-interest')) {
         return json(200, {
           meta: { freshnessStatus: 'fresh' },
-          coins: [{ symbol: 'BTC', openInterestFormatted: '$30.00B', openInterestValue: 30_000_000_000 }],
+          coins: [{
+            symbol: 'BTC',
+            openInterestFormatted: '$30.00B',
+            openInterestValue: 30_000_000_000,
+            observedAt: new Date().toISOString(),
+            sourceLabel: 'CoinGecko derivatives · 3 of the top 3 derivatives exchanges',
+          }],
         });
       }
       return json(500, {});
@@ -103,10 +109,11 @@ describe('Crypto Derivatives tab', () => {
     expect(screen.getByText('+0.0125%')).toBeTruthy();
     expect(screen.getByText('Open interest')).toBeTruthy();
     expect(screen.getByText('$30.00B')).toBeTruthy();
+    expect(screen.getByText(/^Source · CoinGecko derivatives · 3 of the top 3 derivatives exchanges/)).toBeTruthy();
     expect(screen.getByText('Long/short')).toBeTruthy();
     expect(screen.getByText('55.0 / 45.0')).toBeTruthy();
-    expect(screen.getByText('Liquidations')).toBeTruthy();
-    expect(screen.getByText('Not collected')).toBeTruthy();
+    expect(screen.queryByText('Liquidations')).toBeNull();
+    expect(screen.getByText('Based on funding, long/short and open interest.')).toBeTruthy();
     expect(calls.some((url) => url.includes('/api/crypto/liquidations'))).toBe(false);
     expect(screen.queryByRole('link')).toBeNull();
   });
@@ -119,10 +126,47 @@ describe('Crypto Derivatives tab', () => {
     render(<TerminalCryptoDesk symbol="BTCUSD" />);
     expect(await screen.findByRole('heading', { name: 'Not collected for BTC' })).toBeTruthy();
     expect(screen.getAllByRole('heading')).toHaveLength(1);
-    expect(screen.getByText(/Liquidations are not collected/)).toBeTruthy();
+    expect(screen.queryByText(/Liquidations/)).toBeNull();
+    expect(document.body.textContent).not.toContain('3 of 4');
     expect(screen.queryByRole('link')).toBeNull();
     expect(calls.some((url) => url.includes('/api/crypto/liquidations'))).toBe(false);
     expect(document.body.textContent).not.toMatch(/Unavailable/);
+  });
+
+  it('uses the selected coin observation time, not the response freshness', () => {
+    const now = Date.now();
+    const openInterest = {
+      meta: { freshnessStatus: 'delayed' as const },
+      coins: [
+        {
+          symbol: 'BTC',
+          openInterestFormatted: '$14.35B',
+          openInterestValue: 14_350_000_000,
+          observedAt: new Date(now - 60_000).toISOString(),
+          sourceLabel: 'CoinGecko derivatives · 3 of the top 3 derivatives exchanges',
+        },
+        {
+          symbol: 'ETH',
+          openInterestFormatted: '$2.00B',
+          openInterestValue: 2_000_000_000,
+          observedAt: new Date(now - 2 * 60 * 60_000).toISOString(),
+          sourceLabel: 'CoinGecko derivatives · 1 of the top 3 derivatives exchanges',
+        },
+      ],
+    };
+    const btc = selectCryptoDeskTiles('BTCUSD', { funding: null, longShort: null, openInterest }, now);
+    expect(btc.mode).toBe('tiles');
+    if (btc.mode !== 'tiles') return;
+    const tile = btc.tiles.find((item) => item.label === 'Open interest');
+    expect(tile).toMatchObject({ value: '$14.35B', source: 'CoinGecko derivatives · 3 of the top 3 derivatives exchanges' });
+    const eth = selectCryptoDeskTiles('ETHUSD', { funding: null, longShort: null, openInterest }, now);
+    expect(eth.mode).toBe('gate');
+    const undated = selectCryptoDeskTiles('BTCUSD', {
+      funding: { meta: { freshnessStatus: 'fresh' }, stale: false, coins: [] },
+      longShort: null,
+      openInterest: { meta: { freshnessStatus: 'fresh' }, coins: [{ symbol: 'BTC', openInterestFormatted: '$1.00B', openInterestValue: 1 }] },
+    }, now);
+    expect(undated.mode).toBe('gate');
   });
 
   it('does not invent a zero when the loaded coin is missing', () => {

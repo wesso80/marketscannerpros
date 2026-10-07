@@ -1,6 +1,7 @@
 'use client';
 
 import { alertConditionLabel, alertHistoryLabel } from '@/lib/alertPresentation';
+import { publishAlertCapNotice } from '@/lib/alerts/planLimits';
 import { validateBasicAlertAssetType } from '@/lib/alerts/assetTypes';
 import { useState, useEffect, useCallback } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
@@ -72,7 +73,6 @@ interface AlertHistory {
 interface AlertsWidgetProps {
   className?: string;
   compact?: boolean;
-  creationOnly?: boolean;
   onCreateAlert?: (symbol: string, currentPrice: number) => void;
   prefilledSymbol?: string;
 }
@@ -80,7 +80,6 @@ interface AlertsWidgetProps {
 export default function AlertsWidget({
   className = '',
   compact = false,
-  creationOnly = false,
   onCreateAlert,
   prefilledSymbol,
 }: AlertsWidgetProps) {
@@ -89,7 +88,7 @@ export default function AlertsWidget({
   const [quota, setQuota] = useState<AlertQuota | null>(null);
   const [history, setHistory] = useState<AlertHistory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(creationOnly);
+  const [showCreate, setShowCreate] = useState(false);
   const [activeTab, setActiveTab] = useState<'basic' | 'strategy' | 'smart' | 'triggered'>('basic');
   const [showSmartCreate, setShowSmartCreate] = useState(false);
   const [loggingHistoryId, setLoggingHistoryId] = useState<string | null>(null);
@@ -212,11 +211,17 @@ export default function AlertsWidget({
 
   const toggleAlert = async (id: string, currentActive: boolean) => {
     try {
-      await fetch('/api/alerts', {
+      const res = await fetch('/api/alerts', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, isActive: !currentActive }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const message = typeof data?.message === 'string' ? data.message : 'Failed to update alert';
+        setError(message);
+        if (res.status === 403) publishAlertCapNotice(message);
+      }
       fetchAlerts();
     } catch (err) {
       console.error('Failed to toggle alert:', err);
@@ -536,7 +541,7 @@ export default function AlertsWidget({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xl">🔔</span>
-            <h3 className="text-lg font-semibold text-white">{creationOnly ? 'Create notification' : 'Alert Intelligence'}</h3>
+            <h3 className="text-lg font-semibold text-white">Alert Intelligence</h3>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-slate-400">
@@ -552,10 +557,8 @@ export default function AlertsWidget({
           </div>
         </div>
 
-        {creationOnly ? <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Notification rule type">
-          <button type="button" className="min-h-10 rounded border border-slate-700 px-3 text-sm" aria-pressed={activeTab==='basic'} onClick={()=>{setActiveTab('basic');setShowCreate(true);}}>Price rule</button>
-          <button type="button" className="min-h-10 rounded border border-slate-700 px-3 text-sm" aria-pressed={activeTab==='smart'} onClick={()=>{setActiveTab('smart');setShowCreate(false);setShowSmartCreate(true);}}>Market condition</button>
-        </div> : <div className="flex gap-4 mt-4 overflow-x-auto [&>button]:flex-shrink-0">
+        {/* Tabs */}
+        <div className="flex gap-4 mt-4 overflow-x-auto [&>button]:flex-shrink-0">
           <button
             onClick={() => setActiveTab('basic')}
             className={`text-sm pb-2 border-b-2 transition-colors ${
@@ -596,8 +599,7 @@ export default function AlertsWidget({
           >
             Triggered ({history.length})
           </button>
-        </div>}
-
+        </div>
       </div>
 
       {/* Create Alert Form */}
@@ -713,7 +715,7 @@ export default function AlertsWidget({
 
       {/* Content */}
       <div className="p-4 max-h-96 overflow-y-auto">
-        {activeTab === 'basic' ? (creationOnly ? null : (
+        {activeTab === 'basic' ? (
           // Basic Alerts Tab
           (() => {
             return basicAlerts.length === 0 ? (
@@ -785,7 +787,7 @@ export default function AlertsWidget({
             </div>
           );
           })()
-        )) : activeTab === 'smart' ? (
+        ) : activeTab === 'smart' ? (
           // Smart Alerts Tab
           <div>
             {/* Smart Alert Create Form */}
@@ -1066,7 +1068,7 @@ export default function AlertsWidget({
             )}
 
             {/* Smart Alerts List */}
-            {!creationOnly && (() => {
+            {(() => {
               return contextualSmartAlerts.length === 0 ? (
                 isPaidTier(tier) ? (
                   <div className="text-center py-6">

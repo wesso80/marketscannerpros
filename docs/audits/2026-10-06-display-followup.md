@@ -1,99 +1,62 @@
-# 6 October display follow-up — Pip review checklist
+# Display follow-up #428 — reconciled 7 October 2026
 
-Base: `batch/oct-wp` at `019956dc` (includes #424 and #425). #422 was open at start; Symbol deep-label files are untouched. This is a display/layout change, not live acceptance evidence. No production records or provider payloads were changed.
+Display/layout work only. Keep the draft on visual HOLD.
 
-## Implemented
+## Exact inputs
 
-| User item | Change / review target |
-| --- | --- |
-| Markets heatmap and URL state | Dedicated Heatmap tab reuses the existing equity sector grid. `tab=heatmap` selects it. Market tab selection writes canonical URLs; tab state follows URL/back/forward. Crypto `section=heatmap` opens the Market evidence fold with the requested widget; its selector writes the section URL. |
-| Header at 1280 | Full desktop navigation starts at 1280 in both CSS and drawer matchMedia. Compact MSP branding at 1280–1439 reserves link space. |
-| Commodities warning on crypto tabs | Outer feed warning now follows the displayed view. Commodities owns its errors; an unrelated commodities failure is not shown on crypto. |
-| Movers order | Display copies of gainers sorted descending and decliners ascending by percentage, including charts. Eligibility, scores and calculation order untouched. Overview lists use the same visible ordering. |
-| Large crypto values | Shared crypto amount rendering uses compact K/M/B/T values, e.g. $14.35B. Values and inputs unchanged. |
-| Duplicate Markets disclaimer | Embedded Crypto assets and Movers defer to the Markets host disclaimer; standalone views retain their notice. |
-| Crypto news | Deduplicate by normalized URL or cleaned title; remove RSS/news/guide and publisher prefixes. Provider objects and fetches unchanged. Research News/Earnings page files untouched. |
-| Empty tiles | Markets metric summaries and crypto evidence sections render available values and combine missing metrics into one labelled line. Genuine zero is retained. |
-| Research tabs / heading | Shared tabs are a single horizontal scroll row with nonshrinking labels. Published macro observations becomes a small paragraph, outside global h2 enlargement. |
-| Dashboard Macro | Dashboard heading/tabs appear in both views. Macro uses a subordinate heading. Orphan My Pages link removed. Yield-curve end labels are inset/aligned away from the y-axis, with more top padding. |
-| My Pages | Dashboard disclaimer follows content; orphan Crypto Derivatives link and extra Track navigation on Dashboard removed. |
-| False source unavailability | Shared plain source line distinguishes absent observation time from absent data: Observation time not supplied. It does not fabricate timestamps. Applies to Earnings, My Pages, Saved Cases, Crypto and News without editing Patch's News/Earnings files. |
-| Remaining labels | Calendar Global / High impact; Symbol catalog badge SY; real GDP tile explicitly labelled US real GDP (trillion USD). Research News/Earnings copy left alone. |
-| Portfolio | Currency has exactly two decimals; compact KPIs use a single column below 420 to keep figures together. The proposed Clear All Data relocation is withdrawn to avoid Patch’s concurrent Portfolio save work; the page file matches the batch exactly. |
-| Alerts repetitions | Identical displayed condition/symbol/threshold grouped under a closed count disclosure; every saved ID and action remains inside. No records deleted or merged. Full threshold remains in a title attribute; XLM-style prices display four decimal places, very small prices retain enough precision. |
-| Alerts summaries | Simple price/percent/volume rules no longer count as Smart from a legacy flag. No-trigger history shows a sentence rather than a status in a symbol slot. Unlabelled proportion bar removed. Plain lock wording and no 999 sentinel in embedded plan/creation display. |
-| Alerts folds | Native toggle state updates Expand/Collapse. Capabilities no longer repeats the console filters/list: it hosts creation-only controls with Price rule / Market condition choices. Existing creation handlers unchanged. |
-| Journal | Review by setup requires both review summary and modules, so a null body has no fold. Journal settings already has the auto-log toggle, help and Export/Import/Clear actions on this batch; retained rather than hiding working controls. Verify the reported live empty state against this version. |
-| Backtest / Learning | Display helper removes option emoji and translates Brain Signal Replay / AIO / Bias thresholds / BBWP / DVE wording. Registry identifiers, thresholds, strategies and engine maths untouched. Uppercase CSS removed from Backtest fields. |
-| Signal Accuracy | Threshold explanation states movement in recorded versus opposite direction, matching the existing worker (not two overlapping positive thresholds). Australian dates, labelled, at least. One full disclaimer. Standalone Track navigation uses shared TabBar styling. |
-| Track disclaimers | Embedded Journal, Backtest, Learning and Alerts no longer repeat the host disclaimer. The full Portfolio disclaimer is retained unchanged, per review. |
+- Batch: `f94d43a204237da3da758e6891244fd2dec2652a`.
+- Existing PR head: `2bbee560a1bc1f26a5a097d67b8c5a56bca1b800`.
+- Shared ancestor: `f0173618f429cad79b67fc2a759f039786db33d9`.
+- User-supplied ZIP commit comments match these heads. Every batch file matches GitHub's blob hashes. Ancestor file versions were fetched through the authenticated GitHub connection for three-way reconciliation.
+- Publication adds a merge commit to the feature branch with its old head and batch as parents. No rebase, force-push, PR merge or deployment.
+
+## Retained changes
+
+| Area | Display change |
+|---|---|
+| Markets URLs | Dedicated sector Heatmap tab; tabs follow the URL and selection updates it. Crypto section selection writes its URL and requested sections open the evidence fold. |
+| Header | Full navigation begins at 1280px with compact branding through 1439px. Actual fit needs visual proof. |
+| Feeds and movers | Warnings follow the visible view; gainers descend and decliners ascend in display copies and charts. |
+| Crypto | Compact large amounts, cleaned/deduplicated news headlines, missing metrics combined into one line. |
+| Dashboard/Macro | Heading/tabs in Macro view, no orphan links/extra Dashboard navigation, notice after content, smaller observations heading, explicit GDP units, inset yield labels. |
+| Sources | Missing observation time no longer falsely claims displayed data is unavailable. No invented timestamps. |
+| Portfolio | Two-decimal currency, one KPI column below 420px without mid-number wrapping, five desktop columns including Total cost. Largest-position span starts at 420px to prevent an implicit second phone column. |
+| Reader wording | Global / High impact, Symbol badge SY, four-decimal XLM-style alert prices, readable Backtest/Learning wording, Australian Signal Accuracy dates and labelled. |
+| Notices | Markets/Track host notice where embedded views defer theirs. Tool-specific legal disclosures remain; no claim that every tab has only one notice. |
+
+## Newer fixes preserved
+
+- Commodities: Yahoo gold/silver futures attribution, unavailable-value handling and source wrapping. Standalone notice retained; embedded notice defers to Markets.
+- Movers: hidden-extreme-move notice retained.
+- Signal Accuracy: current 1d/1w horizons, signed outcomes, shared threshold chips, sample minimum, neutral-exclusion rules and full current legal wording retained. Old competing threshold wording is not restored.
+- Portfolio: current cost and side-aware P&L calculations retained. `app/tools/portfolio/page.tsx` exactly matches batch, including save behavior and legal text. Clear All Data relocation remains deferred.
+- Alerts page, console classification and AlertsWidget exactly match batch. Later review withdrew grouping, creation-only Capabilities and summary changes. Their unused SavedRuleGroup component and creationOnly widget option are removed. Current limits are preserved, not reset to 999.
+- Shared TabBar exactly matches the batch's wrapping version, as required by later review. The initial scrolling-tab request remains unimplemented by this revision.
+- Research News/Earnings page files, APIs, scoring, workers, admin, Stripe, login, pricing, legal components and provider fetching are unchanged against batch.
 
 ## Verification
 
-- TypeScript: `./node_modules/.bin/tsc --noEmit` passed.
-- Focused Vitest: 28 passed in six files: `explorerLayout`, `displayAuditOct6`, `portfolioFormatMoney`, `alertsConsoleMultiStatus`, `alertsLayoutRender`, `workspaceTabPanels`.
-- `git diff --check` passed.
-- `wp3MoversRows.test.tsx` still expects retired CRCS/table markup. One failure reproduced on unchanged `019956dc` in a separate worktree. Not rewritten to mask it.
-- No full-suite pass claimed.
+Fresh full-suite counts and failure identities are in `2026-10-07-display-full-test-comparison.json`. The 6 October JSON is historical only.
 
-## Hard layout gate — HOLD for visual proof
+Both snapshots use the same installed dependencies; package-lock matches the dependency checkout. TypeScript and whitespace checks are recorded with the comparison. The first full comparison caught four stale assertions in newer tests: Portfolio amounts, responsive span, and embedded Commodities notice placement. Updated those expectations while retaining arithmetic, missing-price and Yahoo-source checks. The affected three files pass 16 tests, including standalone and embedded Commodities.
 
-| Gate | Status |
-| --- | --- |
-| One verdict above fold | Existing verdict components retained; authenticated visual recheck pending. |
-| Approximately two screens closed | Pending 1280/390 measurement; no claim from jsdom. |
-| No sideways page scroll at 390 | Nonwrapping inner tab scrollers and Portfolio layout implemented; full-page check pending. |
-| No fake/empty tools | Missing metrics collapsed; empty review fold gated; Journal settings has real controls in source. Live recheck pending. |
-| No banned/engine words | Requested display mappings changed; complete live copy scan pending. |
-| Readable numbers / one source line | Formatting and timestamp fallback implemented and focused tests pass; full-page recheck pending. |
-| 1280 / 390 screenshots | NOT CAPTURED. Current browser controls did not expose viewport resizing; previous 1363 audit screenshots are not proof for this change. |
-| Symbol / Overview / Track naming | Symbol catalog badge corrected; no route renames. |
+React review: no new fetching effects or conditional hooks; sorts use display copies; newer signed-value and missing-data behavior retained.
 
-Pip: open both widths, check all affected tabs before/after expansion, test browser Back/Forward between Markets and crypto sections, check header links fit at exactly 1280, inspect yield labels, confirm Portfolio figures do not split, open grouped alerts and confirm each saved rule still has its own actions, and confirm a single notice on each Track page. Do not merge until visual gate is checked.
+## Hard layout gate — HOLD
 
-## Explicitly untouched data questions
+| Gate | Remaining review |
+|---|---|
+| One verdict above fold | Check every affected view with parent chrome. |
+| About two screens closed | Measure at 1280×800 and 390×844; no new count claimed. |
+| No sideways scroll at 390 | Whole document, tabs and Portfolio cards; class tests are not visual proof. |
+| No fake/empty tools | Exercise loading, empty, error and populated states. |
+| No engine words | Full rendered-text scan. |
+| Readable numbers + one source line | Amounts, dates, source placement, missing quote time. |
+| 1280/390 screenshots | Not captured for this reconciliation; Pip check required. |
+| Symbol / Overview / Track | Existing reader chrome and SY badge; no route renames. |
 
-- Calendar: 4 high-impact events versus 16; 78 versus 31 events.
-- Macro Mixed versus header TREND UP.
-- BTC OI $14.35B versus $4.56B.
-- 429 errors on commodities and news feeds.
+Pip: check Markets Back/Forward and crypto section URLs, header fit at exactly 1280, Yahoo attribution, hidden-extreme notice, yield labels, Portfolio totals/missing prices, and notice duplication on every Track tab. Protected Portfolio/Alerts/Signal Accuracy legal wording has not been shortened to force the notice gate.
 
-No changes to data providers, rate limits, scoring, workers, Stripe, admin, pricing, login, legal amounts, or Research News/Earnings page files. No merges/deployments performed.
+## Outside this reconciliation
 
-## Review follow-up: Portfolio ownership and intentional assertions
-
-- Restored `app/tools/portfolio/page.tsx` exactly to batch `79549d2c`: no page-file delta, no disclaimer edit, no overlap with Patch’s save fix. Clear All Data relocation is deferred. Currency/KPI fixes remain isolated in `formatMoney` and `PortfolioOverview`.
-- Updated stale assertions for scrolling tabs, two-decimal dollar amounts, missing observation time, reader-facing plan wording and classification of plain price rules. Enforced limits remain 3/999; a legacy Smart flag does not change a simple price rule’s displayed classification.
-- Alert pagination now pages condition groups. The render regression opens Show all for twelve distinct rules and verifies all twelve rows remain; repeated rules keep separate IDs/actions inside their group.
-- Exact 390 layout proof remains Pip’s check. Class assertions and jsdom rendering are not screenshot evidence.
-
-### Full-suite comparison after review fixes
-
-Ran `npx vitest run --reporter=json --outputFile=...` on the revised draft and unchanged batch `79549d2c`, in separate worktrees using the same installed dependencies. Both commands completed with exit 1 due to existing failures.
-
-| Result | Batch | Revised draft |
-| --- | ---: | ---: |
-| Total tests | 5,374 | 5,381 |
-| Passed | 5,311 | 5,318 |
-| Failed tests | 50 | 50 |
-| Skipped/pending | 13 | 13 |
-| Vitest failed-suite counter | 46 | 46 |
-
-**Zero new failure names; the failed-test sets match exactly.** The reported 46 failing-test baseline was not reproduced as a test count here: there are 50 failed assertions on both runs (the reporter's failed-suite count is 46). No claim of a green full suite. The exact matching names and counters are saved in `2026-10-06-display-full-test-comparison.json`. TypeScript and `git diff --check` also pass.
-
-## Review rework (rebased onto batch `cca76a6`)
-
-- **Disclaimer once on Track and Markets.** Embedded tabs already defer theirs, so `app/tools/workspace/page.tsx` and `app/tools/explorer/page.tsx` each render one `ComplianceDisclaimer compact`. Embedded Commodities and Equity Deep-Dive now defer to the host too, so every Workspace and Explorer tab shows exactly one.
-- **Alerts banner restored** to the full amber "user-defined notifications only…" text.
-- **Pro tile restored** to `{ALERT_LIMITS.pro} active alerts` (999). Enforced caps unchanged.
-- **x/3 counter restored** in `AlertsWidget` (including the creation-only view).
-- **Journal upgrade block restored** inside "Review by setup" (Intelligence Dock — Pro Feature).
-- **Tabs wrap again**: `TabBar` reverted to the batch version; the two tab-layout tests and the Pro-tile assertion reverted to match.
-- Added regression checks in `test/displayAuditOct6.test.ts` for all of the above.
-- Verification: `tsc --noEmit` clean. On the 44 test files this PR touches or that reference the changed files, the failing set is identical to `cca76a6` (14 pre-existing failures, none new).
-
-## Rebased onto batch `f017361` (after #434)
-
-- `app/tools/alerts/page.tsx` and `lib/alerts/consoleStatus.ts` are identical to the batch. This draft no longer reclassifies plain price/percent/volume rules (the `/^(price_|percent_|volume_)/` early return is dropped) and no longer changes the Alerts page (rule grouping, creation-only Capabilities and the related summary wording are withdrawn in favour of #434). `SavedRuleGroup` and `AlertsWidget`'s `creationOnly` option remain but are unused by the batch page.
-- Tests that covered those withdrawn changes are back to their batch versions (`alertsLayoutRender`, `alertsLimitsPushTag`, `alertsWatchlistCaveats`); `displayAuditOct6` keeps only the four-decimal price label check from that case.
-- Verification against `f017361`: `tsc --noEmit` clean; full Vitest 5,431 tests, 48 failing, identical failing set to the batch (none new).
+Live Options acceptance, Overview versus current regime, calendar count discrepancies and feed 429s still need their own current-data checks. #446 already changed the shared crypto OI total: retest before treating the historical $14.35B / $4.56B mismatch as a current defect. No new provider requests or production-data writes were initiated for this reconciliation.

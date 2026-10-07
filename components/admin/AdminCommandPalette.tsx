@@ -9,6 +9,7 @@ import {
   groupAdminCommands,
   resolveShortcut,
 } from "@/lib/admin/commandPaletteCommands";
+import { adminNavVisibleWhilePaused } from "@/lib/admin/discoveryOnly";
 
 /**
  * AdminCommandPalette — Cmd-K (or Ctrl-K) launcher for the admin terminal.
@@ -24,14 +25,18 @@ import {
  * BOUNDARY: this is a navigation aid only. Every command resolves to an
  * admin research route. No execution, no order routing.
  */
-export default function AdminCommandPalette() {
+export default function AdminCommandPalette({ discoveryPaused = false }: { discoveryPaused?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const catalog = useMemo(
+    () => (discoveryPaused ? ADMIN_COMMANDS.filter((cmd) => adminNavVisibleWhilePaused(cmd.href)) : ADMIN_COMMANDS),
+    [discoveryPaused],
+  );
 
-  const filtered = useMemo(() => filterAdminCommands(query), [query]);
+  const filtered = useMemo(() => filterAdminCommands(query, catalog), [query, catalog]);
   const groups = useMemo(() => groupAdminCommands(filtered), [filtered]);
 
   const close = useCallback(() => {
@@ -82,7 +87,7 @@ export default function AdminCommandPalette() {
           return;
         }
         if (e.key.length === 1) {
-          const cmd = resolveShortcut(e.key);
+          const cmd = resolveShortcut(e.key, catalog);
           if (cmd) {
             e.preventDefault();
             router.push(cmd.href);
@@ -92,7 +97,7 @@ export default function AdminCommandPalette() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, close, router]);
+  }, [open, close, router, catalog]);
 
   // Focus the input each time the palette opens; reset highlight when
   // the filtered list changes.
@@ -175,7 +180,9 @@ export default function AdminCommandPalette() {
             }}
           />
           <div style={{ fontSize: 11, color: "#64748B", marginTop: 4 }}>
-            ↑↓ navigate · Enter open · Esc close · Cmd/Ctrl-K toggle · single letters jump (S/O/G/T/V/A/D/J)
+            {discoveryPaused
+              ? "Read-only while admin is paused · ↑↓ navigate · Enter open · Esc close"
+              : "↑↓ navigate · Enter open · Esc close · Cmd/Ctrl-K toggle · single letters jump (S/O/G/T/V/A/D/J)"}
           </div>
         </div>
 
@@ -258,7 +265,7 @@ export default function AdminCommandPalette() {
             fontSize: 11,
           }}
         >
-          {ADMIN_COMMANDS.length} commands · research, analytics, alerts only
+          {catalog.length} commands · research, analytics, alerts only
         </div>
       </div>
     </div>

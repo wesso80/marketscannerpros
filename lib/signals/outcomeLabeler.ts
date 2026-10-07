@@ -17,6 +17,7 @@
 
 import { q, tx } from '@/lib/db';
 import type { PoolClient } from 'pg';
+import { bandForHorizon, bandsFromRows, classifyMove, DEFAULT_OUTCOME_BANDS } from './outcomeRule';
 
 export interface OutcomeLabel {
   signalId: number;
@@ -26,19 +27,20 @@ export interface OutcomeLabel {
   source: 'journal' | 'portfolio_closed' | 'market_mtm';
 }
 
-/** Thresholds for labeling (in % move) */
-const NEUTRAL_THRESHOLD = 0.15; // ±0.15% is noise
-
 /**
- * Label a single signal outcome based on actual price difference.
+ * Label one move with the shared per-horizon band.
+ * `bands` is the outcome_thresholds map for this run. Horizons this labeler stores
+ * that are not in that map (5, 30, 960 minutes) use the nearest band. See bandForHorizon.
+ * Callers that omit the map get DEFAULT_OUTCOME_BANDS, which is also the fallback
+ * when the table is empty or the read fails.
  */
-function labelOutcome(
+export function labelOutcome(
   direction: 'bullish' | 'bearish',
   pctMove: number,
+  horizonMinutes: number,
+  bands: Readonly<Record<number, number>> = DEFAULT_OUTCOME_BANDS,
 ): 'correct' | 'wrong' | 'neutral' {
-  if (Math.abs(pctMove) < NEUTRAL_THRESHOLD) return 'neutral';
-  if (direction === 'bullish') return pctMove > 0 ? 'correct' : 'wrong';
-  return pctMove < 0 ? 'correct' : 'wrong';
+  return classifyMove(direction, pctMove, bandForHorizon(horizonMinutes, bands));
 }
 
 /**
@@ -48,6 +50,18 @@ function labelOutcome(
 export async function labelSignalOutcomes(workspaceId: string): Promise<{ labeled: number; errors: number }> {
   let labeled = 0;
   let errors = 0;
+
+  // One read per run. Empty table or a failed read → the default bands.
+  let bands: Record<number, number> = { ...DEFAULT_OUTCOME_BANDS };
+  try {
+    const thresholdRows = await q<{ horizon_minutes: number; correct_threshold: number }>(
+      `SELECT horizon_minutes, correct_threshold::float AS correct_threshold FROM outcome_thresholds`
+    );
+    bands = bandsFromRows(thresholdRows);
+  } catch (err) {
+    console.warn('[outcomeLabeler] outcome_thresholds read failed, using default bands:', err instanceof Error ? err.message : err);
+    bands = { ...DEFAULT_OUTCOME_BANDS };
+  }
 
   try {
     // 1. Get un-labeled signals (no outcome row, fired within last 30 days)
@@ -125,10 +139,9 @@ export async function labelSignalOutcomes(workspaceId: string): Promise<{ labele
 
         if (exitPrice !== null && signal.price_at_signal > 0) {
           const pctMove = ((exitPrice - signal.price_at_signal) / signal.price_at_signal) * 100;
-          const outcome = labelOutcome(signal.direction, pctMove);
-
-          // Determine horizon in minutes based on timeframe
+          // Horizon stored on the row, then the band for that horizon.
           const horizonMinutes = timeframeToHorizonMinutes(signal.timeframe);
+          const outcome = labelOutcome(signal.direction, pctMove, horizonMinutes, bands);
 
           await q(`
             INSERT INTO signal_outcomes (signal_id, horizon_minutes, pct_move, outcome)
@@ -159,57 +172,13 @@ export async function labelSignalOutcomes(workspaceId: string): Promise<{ labele
 }
 
 /**
- * Refresh the signal_accuracy_stats table (materialized view pattern).
+ * Rebuild signal_accuracy_stats. refresh_signal_accuracy is the only writer.
+ * It keeps migration 003's definitions: accuracy_pct = correct / (correct + wrong),
+ * precision_pct = correct / labelled. This path used to upsert the swapped pair.
  */
 async function refreshAccuracyStats(): Promise<void> {
   try {
-    await q(`
-      INSERT INTO signal_accuracy_stats (
-        signal_type, direction, horizon_minutes,
-        total_signals, correct_count, wrong_count,
-        accuracy_pct, precision_pct,
-        avg_pct_when_correct, avg_pct_when_wrong,
-        accuracy_score_76_100, computed_at
-      )
-      SELECT
-        sf.signal_type,
-        sf.direction,
-        so.horizon_minutes,
-        COUNT(*)::int AS total_signals,
-        COUNT(*) FILTER (WHERE so.outcome = 'correct')::int AS correct_count,
-        COUNT(*) FILTER (WHERE so.outcome = 'wrong')::int AS wrong_count,
-        ROUND(
-          COUNT(*) FILTER (WHERE so.outcome = 'correct')::numeric * 100.0 / NULLIF(COUNT(*), 0),
-          2
-        ) AS accuracy_pct,
-        ROUND(
-          COUNT(*) FILTER (WHERE so.outcome = 'correct')::numeric * 100.0 /
-          NULLIF(COUNT(*) FILTER (WHERE so.outcome IN ('correct', 'wrong')), 0),
-          2
-        ) AS precision_pct,
-        ROUND(AVG(so.pct_move) FILTER (WHERE so.outcome = 'correct'), 4) AS avg_pct_when_correct,
-        ROUND(AVG(so.pct_move) FILTER (WHERE so.outcome = 'wrong'), 4) AS avg_pct_when_wrong,
-        ROUND(
-          COUNT(*) FILTER (WHERE so.outcome = 'correct' AND sf.score >= 76)::numeric * 100.0 /
-          NULLIF(COUNT(*) FILTER (WHERE sf.score >= 76), 0),
-          2
-        ) AS accuracy_score_76_100,
-        NOW() AS computed_at
-      FROM signal_outcomes so
-      JOIN signals_fired sf ON sf.id = so.signal_id
-      WHERE sf.signal_at > NOW() - INTERVAL '90 days'
-      GROUP BY sf.signal_type, sf.direction, so.horizon_minutes
-      ON CONFLICT (signal_type, direction, horizon_minutes) DO UPDATE SET
-        total_signals = EXCLUDED.total_signals,
-        correct_count = EXCLUDED.correct_count,
-        wrong_count = EXCLUDED.wrong_count,
-        accuracy_pct = EXCLUDED.accuracy_pct,
-        precision_pct = EXCLUDED.precision_pct,
-        avg_pct_when_correct = EXCLUDED.avg_pct_when_correct,
-        avg_pct_when_wrong = EXCLUDED.avg_pct_when_wrong,
-        accuracy_score_76_100 = EXCLUDED.accuracy_score_76_100,
-        computed_at = EXCLUDED.computed_at
-    `);
+    await q(`SELECT refresh_signal_accuracy(90)`);
     console.info('[outcomeLabeler] Accuracy stats refreshed');
   } catch (err) {
     console.warn('[outcomeLabeler] Failed to refresh accuracy stats:', err instanceof Error ? err.message : err);
@@ -218,6 +187,8 @@ async function refreshAccuracyStats(): Promise<void> {
 
 /**
  * Map timeframe string to horizon minutes for labeling.
+ * 4h is stored as 960 minutes, which is not an outcome_thresholds row.
+ * bandForHorizon maps 960 to the 1d band (2%), the nearest seed.
  */
 function timeframeToHorizonMinutes(timeframe: string): number {
   switch (timeframe.toLowerCase()) {

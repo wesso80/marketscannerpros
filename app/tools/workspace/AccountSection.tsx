@@ -116,7 +116,7 @@ export default function AccountSection() {
         .then(async r => { if (r.ok) { const d = await r.json(); return d?.aiUsedToday ?? 0; } return 0; })
         .catch(() => 0),
       fetch('/api/alerts', { credentials: 'include' })
-        .then(async r => { if (r.ok) { const d = await r.json(); return Array.isArray(d?.alerts) ? d.alerts.filter((alert: { is_active?: boolean }) => alert.is_active).length : 0; } return 0; })
+        .then(async r => { if (r.ok) { const d = await r.json(); return typeof d?.quota?.used === 'number' ? d.quota.used : 0; } return 0; })
         .catch(() => 0),
       fetch('/api/watchlists', { credentials: 'include' })
         .then(async r => {
