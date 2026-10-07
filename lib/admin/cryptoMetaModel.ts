@@ -57,20 +57,22 @@ export function predictLr(m:LrModel,x:number[]){const z=lrRow(m,x);let s=m.b;for
 
 // ---------------------------------------------------------------- gradient-boosted trees (binary log loss, histogram splits)
 export type TreeNode={f:number;b:number;l:number;r:number}|{v:number};
-export type GbtModel={edges:number[][];f0:number;trees:TreeNode[][];gain:number[]};
+export type GbtConfig={trees:number;depth:number;rate:number;minLeaf:number;bins:number;lambda:number};
+/** `loss` absent = binary log loss (the Phase 4 models); 'squared' = regression (expected R). */
+export type GbtModel={edges:number[][];f0:number;trees:TreeNode[][];gain:number[];loss?:'squared'};
 /** Bin 0 = missing; bins 1..k by train quantile edges. */
 export function binOf(edges:number[],v:number){if(!Number.isFinite(v))return 0;let k=0;while(k<edges.length&&v>edges[k])k++;return k+1;}
-export function fitGbt(X:number[][],y:number[]):GbtModel{
- const {trees:T,depth,rate,minLeaf,bins,lambda}=META.gbt,n=X.length,p=X[0]?.length??0;
+export function fitGbt(X:number[][],y:number[],cfg:GbtConfig=META.gbt,loss:'logistic'|'squared'='logistic'):GbtModel{
+ const {trees:T,depth,rate,minLeaf,bins,lambda}=cfg,n=X.length,p=X[0]?.length??0,sq=loss==='squared';
  const edges=Array.from({length:p},(_,j)=>{const s=X.map(r=>r[j]).filter(Number.isFinite).sort((a,b)=>a-b),e:number[]=[];
   for(let k=1;k<bins;k++){const v=s[Math.floor(k*s.length/bins)];if(v!==undefined&&(!e.length||v>e.at(-1)!))e.push(v);}return e;});
  // Column-major bins (Uint8) and typed buffers: the split search is the hot loop.
  const nb=bins+1,cols=Array.from({length:p},(_,j)=>{const c=new Uint8Array(n);for(let i=0;i<n;i++)c[i]=binOf(edges[j],X[i][j]);return c;});
- const base=y.reduce((s,v)=>s+v,0)/n,f0=Math.log(Math.max(1e-6,base)/Math.max(1e-6,1-base));
+ const base=y.reduce((s,v)=>s+v,0)/n,f0=sq?base:Math.log(Math.max(1e-6,base)/Math.max(1e-6,1-base));
  const F=new Float64Array(n).fill(f0),g=new Float64Array(n),h=new Float64Array(n),trees:TreeNode[][]=[],gain=new Array(p).fill(0);
  const gh=new Float64Array(nb),hh=new Float64Array(nb),cn=new Int32Array(nb);
  for(let t=0;t<T;t++){
-  for(let i=0;i<n;i++){const q=sigmoid(F[i]);g[i]=q-y[i];h[i]=Math.max(1e-6,q*(1-q));}
+  for(let i=0;i<n;i++){if(sq){g[i]=F[i]-y[i];h[i]=1;continue;}const q=sigmoid(F[i]);g[i]=q-y[i];h[i]=Math.max(1e-6,q*(1-q));}
   const nodes:TreeNode[]=[];
   const grow=(idx:Int32Array,d:number):number=>{
    let G=0,H=0;for(let k=0;k<idx.length;k++){G+=g[idx[k]];H+=h[idx[k]];}
@@ -96,10 +98,11 @@ export function fitGbt(X:number[][],y:number[]):GbtModel{
   for(let i=0;i<n;i++){let k=0;for(;;){const nd=nodes[k];if('v' in nd){F[i]+=nd.v;break;}k=cols[nd.f][i]<=nd.b?nd.l:nd.r;}}
   trees.push(nodes);
  }
- return {edges,f0,trees,gain};
+ return {edges,f0,trees,gain,...(sq?{loss:'squared' as const}:{})};
 }
 function leaf(nodes:TreeNode[],bins:number[]){let k=0;for(;;){const nd=nodes[k];if('v' in nd)return nd.v;k=bins[nd.f]<=nd.b?nd.l:nd.r;}}
-export function predictGbt(m:GbtModel,x:number[]){const b=x.map((v,j)=>binOf(m.edges[j],v));let f=m.f0;for(const t of m.trees)f+=leaf(t,b);return sigmoid(f);}
+export function rawGbt(m:GbtModel,x:number[]){const b=x.map((v,j)=>binOf(m.edges[j],v));let f=m.f0;for(const t of m.trees)f+=leaf(t,b);return f;}
+export function predictGbt(m:GbtModel,x:number[]){const f=rawGbt(m,x);return m.loss==='squared'?f:sigmoid(f);}
 
 // ---------------------------------------------------------------- metrics
 export type Metrics={n:number;positives:number;baseRate:number|null;brier:number|null;brierClimatology:number|null;brierSkill:number|null;logLoss:number|null;auc:number|null};
@@ -129,7 +132,7 @@ export type MetaRow={id:string;signalAt:number;exitAt:number;y:0|1;r:number;x:nu
 export type ModelName='logistic'|'gbt';
 export type Fold={testFrom:string;testTo:string;train:number;test:number;trainBase:number;metrics:Record<ModelName,Metrics>};
 /** Training rows for a test window starting at `testFrom`: signal at least the embargo before it AND outcome known before it. */
-export const trainableBefore=(rows:MetaRow[],testFrom:number)=>rows.filter(r=>r.signalAt<testFrom-META.embargoDays*D&&r.exitAt<testFrom);
+export const trainableBefore=<T extends {signalAt:number;exitAt:number}>(rows:T[],testFrom:number)=>rows.filter(r=>r.signalAt<testFrom-META.embargoDays*D&&r.exitAt<testFrom);
 export function fitBoth(rows:MetaRow[]){const X=rows.map(r=>r.x),y=rows.map(r=>r.y);return {logistic:fitLr(X,y),gbt:fitGbt(X,y)};}
 export function predictBoth(m:ReturnType<typeof fitBoth>,x:number[]):Record<ModelName,number>{return {logistic:predictLr(m.logistic,x),gbt:predictGbt(m.gbt,x)};}
 export type Holdout={from:number;to:number};
