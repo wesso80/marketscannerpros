@@ -39,7 +39,7 @@ function HeaderContent() {
     if (!drawerOpen) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const desktop = window.matchMedia("(min-width: 1440px)");
+    const desktop = window.matchMedia("(min-width: 1280px)");
     const resize = () => {
       if (desktop.matches) setDrawerOpen(false);
     };

@@ -44,7 +44,7 @@ export default function LearningTab() {
     <div className="space-y-3">
       <h2 className="text-xl font-semibold">Learning</h2>
       <p data-layout-verdict className={error ? 'text-sm text-amber-300' : 'text-sm text-slate-300'}>{error ? 'Learning records could not be loaded.' : profile && profile.totalTrades > 0 ? `${profile.totalTrades.toLocaleString()} recorded trades in your learning profile.` : 'No recorded learning history yet.'}</p>
-      <p className="text-xs text-slate-400">General information only, not financial advice.</p>
+
       {/* ── Edge Score Overview ─────────────────────────────────── */}
       {profile && profile.totalTrades > 0 ? (
         <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>

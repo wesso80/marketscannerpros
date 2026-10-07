@@ -1,7 +1,9 @@
 import StatCard from '@/components/visual/StatCard';
 import { marketText } from '@/lib/marketsPresentation';
 export function MarketMetrics({items}:{items:{label:string;value:string|number|null|undefined}[]}) {
- return <div className="grid grid-cols-2 gap-2 md:grid-cols-4">{items.map(item=><StatCard key={item.label} label={item.label} value={marketText(item.value)}/>)}</div>;
+ const available=items.filter(item=>marketText(item.value)!=='Not collected');
+ const missing=items.filter(item=>marketText(item.value)==='Not collected');
+ return <><div className="grid grid-cols-2 gap-2 md:grid-cols-4">{available.map(item=><StatCard key={item.label} label={item.label} value={marketText(item.value)}/>)}</div>{missing.length>0&&<p className="text-xs text-slate-400">Not available yet: {missing.map(item=>item.label).join(', ')}</p>}</>;
 }
 export function MarketSparkline({values,title}:{values:number[];title:string}) {
  const observed=values.filter(Number.isFinite);

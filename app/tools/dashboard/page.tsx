@@ -36,7 +36,7 @@ export default function DashboardPage() {
   const macroView = active === 'macro';
   return (
     <div className="space-y-4">
-      {!macroView && (
+      {(
         <>
           <h1 className="text-2xl font-semibold">Dashboard</h1>
           <TabBar
@@ -47,10 +47,10 @@ export default function DashboardPage() {
               { id: 'macro', label: 'Macro', href: '/tools/dashboard?tab=macro' },
             ]}
           />
-          <p className="text-sm"><a href="/tools/crypto-dashboard">Crypto Derivatives</a></p>
+
         </>
       )}
-      {!macroView && <ComplianceDisclaimer compact />}
+
       {active === 'pages' && <FavoritesPanel embeddedInDashboard />}
       {macroView && <MacroDashboard embeddedInDashboard />}
       {macroView && !isPro && (
@@ -58,8 +58,8 @@ export default function DashboardPage() {
           <a className="inline-flex min-h-10 items-center underline" href="#macro-summary">{FREE_COPY.freeMacro}</a>
         </div>
       )}
-      {macroView && <p className="text-sm"><a href="/tools/dashboard?tab=pages">My Pages</a></p>}
-      {macroView && <ComplianceDisclaimer compact />}
+
+      <ComplianceDisclaimer compact />
     </div>
   );
 }

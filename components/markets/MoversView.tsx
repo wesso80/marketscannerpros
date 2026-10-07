@@ -18,6 +18,7 @@ type Environment = {
   medianVol: number; highBetaPolicy: string; breakoutPolicy: string; meanReversionPolicy: string;
 };
 export interface MoversViewProps {
+  embedded?: boolean;
   data: MoversData | null; loading: boolean; error: string | null;
   rows: EvaluatedMover[]; environment: Environment; permissionedCount: number;
   activeTab: 'gainers' | 'losers' | 'active'; assetFilter: 'all' | 'equity' | 'crypto';
@@ -40,19 +41,22 @@ function MoversChart({ title, rows, medianVol }: { title: string; rows: MoversDa
   </section>;
 }
 
-/** Presentation only. Rows, ordering, scores and eligibility arrive from the existing calculation. */
+/** Presentation only. List order follows percentage change; scores and eligibility remain unchanged. */
 export default function MoversView(props: MoversViewProps) {
   const { data, loading, error, rows, environment, permissionedCount, activeTab, assetFilter, setupMode } = props;
   const [expandedSelection, setExpandedSelection] = useState<string | null>(null);
   const selection = `${activeTab}/${assetFilter}/${setupMode}`;
   const showAll = expandedSelection === selection;
-  const visible = showAll ? rows : rows.slice(0, 5);
+  const ordered = [...rows];
+  if (activeTab === 'gainers') ordered.sort((a,b)=>b.changePercent-a.changePercent);
+  if (activeTab === 'losers') ordered.sort((a,b)=>a.changePercent-b.changePercent);
+  const visible = showAll ? ordered : ordered.slice(0, 5);
   const hasObservations = Boolean(data && (data.topGainers.length || data.topLosers.length || data.mostActive.length));
   const assessment = loading ? 'Loading recorded movers…' : error ? 'Movers could not be collected.' : !hasObservations ? 'No mover observations collected.' : rows.length === 0 ? 'No movers match this selection.' : environment.deploymentMode === 'YES' ? 'Conditions support further research.' : environment.deploymentMode === 'NO' ? 'Conditions do not meet the research criteria.' : 'Conditions show mixed evidence.';
   return <section className="min-w-0 space-y-3 text-white" aria-label="Market Movers">
     <header><h1 className="text-xl font-semibold">Market Movers</h1><p data-movers-verdict role="status" className="mt-2 text-sm font-medium">{assessment}</p></header>
     {!loading && !error && (data?.extremeHiddenCount ?? 0) > 0 && <p className="text-sm text-slate-300">{data!.extremeHiddenCount === 1 ? '1 extreme move hidden' : `${data!.extremeHiddenCount} extreme moves hidden`}</p>}
-    <ComplianceDisclaimer collapsible />
+    {!props.embedded && <ComplianceDisclaimer collapsible />}
     {!loading && !error && hasObservations && <>
       <div className="flex flex-wrap gap-2" role="group" aria-label="Mover lists">
         {([['gainers','Gainers'],['losers','Decliners'],['active','Most active']] as const).map(([id,label]) => <button key={id} type="button" className={control} aria-pressed={activeTab === id} onClick={() => props.onTab(id)}>{label}</button>)}
@@ -86,7 +90,7 @@ export default function MoversView(props: MoversViewProps) {
         <dl className="grid grid-cols-2 gap-3 text-sm">{[['Market',environment.marketMode],['Breadth',environment.breadthState],['Liquidity',environment.liquidityState],['Volatility',environment.volatilityState],['High-volatility assets',environment.highBetaPolicy],['Breakouts',environment.breakoutPolicy],['Reversals',environment.meanReversionPolicy],['Median cohort volume',number(environment.medianVol,0)]].map(([label,value])=><div key={label}><dt className="text-slate-400">{label}</dt><dd>{marketText(value)}</dd></div>)}</dl>
         <p className="mt-3 text-xs text-slate-400">Cohort volume compares this observation with this list, not the symbol’s historical volume. Crypto scores apply only to crypto. Scores summarise research criteria.</p>
       </CollapsibleSection>
-      <CollapsibleSection title="Change charts" summary="Recorded gainers and decliners"><div className="grid gap-5 md:grid-cols-2"><MoversChart title="Gainers" rows={data!.topGainers} medianVol={environment.medianVol}/><MoversChart title="Decliners" rows={data!.topLosers} medianVol={environment.medianVol}/></div></CollapsibleSection>
+      <CollapsibleSection title="Change charts" summary="Recorded gainers and decliners"><div className="grid gap-5 md:grid-cols-2"><MoversChart title="Gainers" rows={[...data!.topGainers].sort((a,b)=>b.changePercent-a.changePercent)} medianVol={environment.medianVol}/><MoversChart title="Decliners" rows={[...data!.topLosers].sort((a,b)=>a.changePercent-b.changePercent)} medianVol={environment.medianVol}/></div></CollapsibleSection>
     </>}
     {!loading && data && !error && <SourceLine source={`${equityMoversBasisLabel(data.equityFeed) || 'Equity movers'} · crypto market snapshot`} asOf={data.equityAsOf || undefined} basis="Equity observation time when supplied · crypto observations have a separate feed basis; no shared observation time supplied" />}
     {error && <p className="text-sm text-amber-200">No current list is shown. Reload this page to try again.</p>}

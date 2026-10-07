@@ -494,7 +494,7 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
         </header>}
 
         <p data-layout-verdict className="font-semibold text-sm">{loading ? 'Loading stock observations…' : error ? 'Stock observations could not be collected.' : data ? `${data.company.symbol}: ${upeSignal ? (upeSignal.eligibilityUser === 'eligible' ? 'Aligned' : upeSignal.eligibilityUser === 'conditional' ? 'Conditional' : 'Not aligned') : 'Assessment has not been collected.'}` : 'Choose a stock to review its recorded evidence.'}</p>
-        <ComplianceDisclaimer compact />
+        {!embedded && <ComplianceDisclaimer compact />}
 
         <section className="rounded-lg border border-slate-700 bg-slate-900 p-2">
           <form onSubmit={handleSearch}>

@@ -670,7 +670,7 @@ export default function EconomicCalendarPage({ embeddedInResearch = false }: { e
                     className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold ${selectedCountry === code ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200' : 'border-white/10 bg-white/5 text-white/70'}`}
                   >
                     {code !== 'GLOBAL' ? <span aria-hidden="true">{countryFlag(code)}</span> : null}
-                    <span>{code}</span>
+                    <span>{code === 'GLOBAL' ? 'Global' : code}</span>
                   </button>
                 ))}
                 <span className="mx-1 h-4 w-px bg-white/10" aria-hidden="true" />

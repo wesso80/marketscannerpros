@@ -183,7 +183,7 @@ export default function SignalAccuracyPage() {
           {overall && overall.labeled > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <SummaryCard label="Total Observations" value={overall.total.toLocaleString()} />
-              <SummaryCard label="Labeled" value={overall.labeled.toLocaleString()} sub={overall.total > 0 ? `${((overall.labeled / overall.total) * 100).toFixed(0)}% resolved` : undefined} />
+              <SummaryCard label="Labelled" value={overall.labeled.toLocaleString()} sub={overall.total > 0 ? `${((overall.labeled / overall.total) * 100).toFixed(0)}% resolved` : undefined} />
               <SummaryCard label="Past threshold" value={pastThresholdLabel(overall.correct, overall.wrong, overall.win_rate, minSamples)}
                 color={(() => {
                   const label = pastThresholdLabel(overall.correct, overall.wrong, overall.win_rate, minSamples);
@@ -208,7 +208,7 @@ export default function SignalAccuracyPage() {
           {/* Outcome Thresholds Reference */}
           <div className="bg-slate-800/30 rounded-xl border border-slate-700/50 p-4">
             <h3 className="text-xs font-semibold text-slate-300 mb-2">Price-move thresholds</h3>
-            <p className="text-[11px] text-slate-400 mb-2">A labeled observation means the price moved past this percent by the horizon. Neutral outcomes are excluded from the past-threshold share. The share is shown when correct and wrong outcomes together reach {minSamples}. This is not a closed trade, a stop, or a fee.</p>
+            <p className="text-[11px] text-slate-400 mb-2">A labelled observation means the price moved past this percent by the horizon. Neutral outcomes are excluded from the past-threshold share. The share is shown when correct and wrong outcomes together reach {minSamples}. This is not a closed trade, a stop, or a fee.</p>
             {thresholds.length > 0 && (
               <div className="flex flex-wrap gap-3">
                 {thresholds.map(t => (
@@ -298,7 +298,7 @@ export default function SignalAccuracyPage() {
               <div className="px-4 py-3 border-b border-slate-700/50">
                 <h3 className="text-sm font-bold text-white">Recent Observations</h3>
               </div>
-              <div className="divide-y divide-white/10 p-3 sm:hidden">{shownRecent.map((row,i) => <div data-recent-card key={i} className="py-2 text-xs"><p className="font-semibold">{row.symbol} · {marketText(row.score)}</p><p>{marketText(row.direction)} context · {observationLabel(row.outcome)}</p>{row.pct_move != null && <p>{formatSignedPercent(signedPctMove(row.direction, row.pct_move))} recorded move</p>}<p className="text-slate-400">{new Date(row.created_at).toLocaleDateString()}</p></div>)}</div>
+              <div className="divide-y divide-white/10 p-3 sm:hidden">{shownRecent.map((row,i) => <div data-recent-card key={i} className="py-2 text-xs"><p className="font-semibold">{row.symbol} · {marketText(row.score)}</p><p>{marketText(row.direction)} context · {observationLabel(row.outcome)}</p>{row.pct_move != null && <p>{formatSignedPercent(signedPctMove(row.direction, row.pct_move))} recorded move</p>}<p className="text-slate-400">{new Date(row.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</p></div>)}</div>
               <div className="hidden overflow-x-auto sm:block">
                 <table className="w-full text-xs">
                   <thead>
@@ -336,7 +336,7 @@ export default function SignalAccuracyPage() {
                             'bg-slate-700 text-slate-400'
                           }`}>{observationLabel(s.outcome)}</span>
                         </td>
-                        <td className="px-3 py-2 text-right text-slate-500">{new Date(s.created_at).toLocaleDateString()}</td>
+                        <td className="px-3 py-2 text-right text-slate-500">{new Date(s.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                       </tr>
                       );
                     })}
@@ -352,7 +352,7 @@ export default function SignalAccuracyPage() {
 
           {/* Metadata */}
           {data?.metadata && (
-            <p className="text-[11px] text-slate-500 text-center">{data.metadata.note}</p>
+            <p className="text-[11px] text-slate-500 text-center">{data.metadata.note.replace(/>=\s*/g, 'at least ').replace(/\blabeled\b/g, 'labelled')}</p>
           )}
         </>
       )}

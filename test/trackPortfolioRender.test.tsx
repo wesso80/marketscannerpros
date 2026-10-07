@@ -28,7 +28,7 @@ it('renders saved exposure, one verdict, closed folds and a chart without changi
  await screen.findByRole('img',{name:'Allocation by recorded position value'});
  expect(container.querySelectorAll('[data-portfolio-verdict]')).toHaveLength(1);
  expect(container.querySelectorAll('details[open]')).toHaveLength(0);
- expect(screen.getByText('$250')).toBeTruthy();
+ expect(screen.getByText('$250.00')).toBeTruthy();
  expect(container.textContent).not.toMatch(/N\/A|NaN|undefined/);
  expect(state.positions[0].quantity).toBe(2);
 });
@@ -41,9 +41,9 @@ it('shows total cost and side-aware open P&L instead of a stored -121470 pl', as
   const { container } = render(<PortfolioContent embeddedInWorkspace />);
   await screen.findByRole('img', { name: 'Allocation by recorded position value' });
   expect(screen.getByText('Total cost')).toBeTruthy();
-  expect(screen.getByText('$300')).toBeTruthy();
-  expect(screen.getByText('$600')).toBeTruthy();
-  expect(screen.getByText('+$300')).toBeTruthy();
+  expect(screen.getByText('$300.00')).toBeTruthy();
+  expect(screen.getByText('$600.00')).toBeTruthy();
+  expect(screen.getByText('+$300.00')).toBeTruthy();
   expect(container.textContent).toContain('Value minus Total cost equals Open P&L');
   expect(container.textContent).not.toContain('121,470');
   expect(container.textContent).not.toContain('121470');
@@ -59,9 +59,9 @@ it('shows unavailable for a missing price and leaves that position out of the to
   ];
   const { container } = render(<PortfolioContent embeddedInWorkspace />);
   await screen.findByRole('img', { name: 'Allocation by recorded position value' });
-  expect(screen.getByText('$1,100')).toBeTruthy();
-  expect(screen.getByText('$1,000')).toBeTruthy();
-  expect(screen.getByText('+$100')).toBeTruthy();
+  expect(screen.getByText('$1,100.00')).toBeTruthy();
+  expect(screen.getByText('$1,000.00')).toBeTruthy();
+  expect(screen.getByText('+$100.00')).toBeTruthy();
   expect(screen.getByText('1 position without a current price')).toBeTruthy();
   fireEvent.click(screen.getByRole('tab', { name: 'Positions', exact: true }));
   expect(screen.getAllByText('unavailable').length).toBeGreaterThan(0);

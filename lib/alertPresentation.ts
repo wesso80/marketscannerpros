@@ -17,7 +17,7 @@ export function alertConditionLabel(type: string, value: unknown): string {
   if (threshold == null || (type.startsWith('price_') && threshold <= 0)) return `${label} · threshold not recorded`;
   const unit = type.startsWith('price_') ? '$' : '';
   const suffix = /percent|funding|oi_change/.test(type) ? '%' : type === 'volume_spike' ? '×' : '';
-  return `${label} ${unit}${threshold.toLocaleString('en-US', { maximumFractionDigits: Math.abs(threshold) >= 1 ? 2 : 8 })}${suffix}`;
+  return `${label} ${unit}${threshold.toLocaleString('en-US', { maximumFractionDigits: Math.abs(threshold) >= 1 ? 2 : Math.abs(threshold) >= 0.01 ? 4 : 8 })}${suffix}`;
 }
 
 /** Display-only cleanup for recorded condition codes; stored evidence is unchanged. */

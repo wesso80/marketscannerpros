@@ -506,7 +506,7 @@ function CryptoDetailPageContent({ embedded = false }: { embedded?: boolean }) {
         />}
 
         <p data-layout-verdict className="text-sm font-semibold">{loading ? 'Loading coin observations…' : error ? 'Coin observations could not be collected.' : coinData ? `${coinData.coin.symbol.toUpperCase()}: ${permissionLabel}` : 'Choose a coin to review its recorded evidence.'}</p>
-        <ComplianceDisclaimer compact />
+        {!embedded && <ComplianceDisclaimer compact />}
 
         <CryptoMorningDecisionCard onDecision={setMarketGate} compact={embedded} />
 

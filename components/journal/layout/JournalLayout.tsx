@@ -185,9 +185,7 @@ export default function JournalLayout(props: JournalLayoutProps) {
         asOf={props.header?.asOfTs}
         basis="Journal load time; individual mark times in record details"
       />
-      <p className="text-xs text-slate-400">
-        General information only, not financial advice.
-      </p>
+      {!props.embeddedInWorkspace && <p className="text-xs text-slate-400">General information only, not financial advice.</p>}
     </div>
   );
 }

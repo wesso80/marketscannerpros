@@ -11,7 +11,7 @@
  * `locale` is only for tests; the page uses the browser default.
  */
 function formatAbs(value: number, locale?: string): string {
-  return Math.abs(value).toLocaleString(locale, { maximumFractionDigits: 2 });
+  return Math.abs(value).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function isNegativeAfterRounding(value: number): boolean {

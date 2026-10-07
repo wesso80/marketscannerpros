@@ -11,12 +11,12 @@ export default function PortfolioOverview({ value, totalCost, openPL, allocation
   const shades = ['#e2e8f0', '#94a3b8', '#64748b', '#475569', '#334155'];
   let offset = 0;
   return <section className="min-w-0 space-y-3" aria-label="Portfolio overview">
-    <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
+    <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2 lg:grid-cols-5 [&_[data-stat-card]>p:first-child]:whitespace-nowrap [&_[data-stat-card]>p:first-child]:break-normal">
       <StatTile label="Value simulated" value={formatMoney(value)} />
       <StatTile label="Total cost" value={formatMoney(totalCost)} />
       <div className="[&_[data-stat-card]]:h-full [&_[data-stat-card]>p:first-child]:text-base"><StatTile label="Today" value="Not measured" /></div>
       <StatTile label="Open P&L" value={formatSignedMoney(openPL)} />
-      <div className="col-span-2 lg:col-span-1"><StatTile label="Largest position" value={largest ? `${largest.percentage.toFixed(1)}%` : null} warning={Boolean(largest && largest.percentage > limit)} /></div>
+      <div className="min-[420px]:col-span-2 lg:col-span-1"><StatTile label="Largest position" value={largest ? `${largest.percentage.toFixed(1)}%` : null} warning={Boolean(largest && largest.percentage > limit)} /></div>
     </div>
     <p className="text-xs text-slate-400">Value minus Total cost equals Open P&amp;L. A short counts as negative value and cost, and gains when price falls. A daily change needs a matching prior-session valuation.</p>
     {unpricedCount > 0 && <p className="text-xs text-slate-400">{unpricedCount === 1 ? '1 position without a current price' : `${unpricedCount} positions without a current price`}</p>}

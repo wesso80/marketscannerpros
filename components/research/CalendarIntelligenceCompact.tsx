@@ -126,7 +126,7 @@ export default function CalendarIntelligenceCompact(props: CalendarIntelligenceC
                   <span aria-hidden="true">{countryFlag(event.countryCode)} </span>
                   {clean(event.name)}
                 </p>
-                <span className="text-xs text-amber-200">{clean(event.impact)} impact</span>
+                <span className="text-xs text-amber-200">{clean(event.impact).replace(/^./, letter => letter.toUpperCase())} impact</span>
               </div>
               <p className="break-words text-xs text-slate-400">{clean(event.country)} · {event.when}</p>
               <CollapsibleSection title="Release values" summary={clean(event.actual)}>
@@ -152,7 +152,7 @@ export default function CalendarIntelligenceCompact(props: CalendarIntelligenceC
         </button>
       ) : null}
 
-      <CollapsibleSection title="Filters" summary={`${props.days} day window · ${clean(props.country)}`}>
+      <CollapsibleSection title="Filters" summary={`${props.days} day window · ${props.country === 'GLOBAL' ? 'Global' : clean(props.country)}`}>
         <div className="flex min-w-0 flex-wrap gap-2">
           <label className="text-xs text-slate-400">
             Horizon

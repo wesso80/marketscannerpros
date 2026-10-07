@@ -51,13 +51,13 @@ function payload(commodity: ReturnType<typeof row>) {
 
 afterEach(() => { cleanup(); pageContext.setPageData.mockClear(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
-it('shows unavailable and the Yahoo futures label, never 0.00%', async () => {
+it.each([false, true])('shows unavailable and the Yahoo futures label, never 0.00% (embedded: %s)', async (embedded) => {
   vi.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
   vi.stubGlobal('fetch', vi.fn(async (url: string) => ({
     ok: true,
     json: async () => (String(url).includes('economic-indicators') ? {} : payload(row({}))),
   })));
-  const { container } = render(<CommoditiesPage embedded />);
+  const { container } = render(<CommoditiesPage embedded={embedded} />);
   await screen.findByText('Gold');
   expect(screen.getAllByText('unavailable').length).toBeGreaterThan(0);
   expect(screen.getAllByText(SOURCE).length).toBeGreaterThan(0);
@@ -67,7 +67,7 @@ it('shows unavailable and the Yahoo futures label, never 0.00%', async () => {
   expect(container.querySelector('.grid.sm\\:grid-cols-2.lg\\:grid-cols-3')).toBeTruthy();
   expect(container.textContent).not.toContain('0.00%');
   expect(container.textContent).not.toContain('$0.00');
-  expect(container.textContent).toContain('General information only, not financial advice.');
+  expect(container.textContent?.includes('General information only, not financial advice.')).toBe(!embedded);
 });
 
 it('shows a real futures change and the as-of time on the card', async () => {

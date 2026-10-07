@@ -8,7 +8,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
               /api/market-movers + /api/commodities + /api/economic-indicators
    --------------------------------------------------------------------------- */
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {symbolHref} from '@/lib/market/links';
@@ -19,6 +19,7 @@ import type { RegimePriority } from '@/app/v2/_lib/types';
 import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
 import SectorEtfHoldings from '@/components/markets/SectorEtfHoldings';
 import TabBar from '@/components/visual/TabBar';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import { marketText } from '@/lib/marketsPresentation';
@@ -44,13 +45,13 @@ function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
 }
 
-const TABS = ['Overview', 'Sectors', 'Commodities', 'Cross-Market', 'Equity Deep-Dive', 'Crypto Deep-Dive', 'Crypto Command', 'Crypto Intel', 'Movers'] as const;
+const TABS = ['Overview', 'Sectors', 'Heatmap', 'Commodities', 'Cross-Market', 'Equity Deep-Dive', 'Crypto Deep-Dive', 'Crypto Command', 'Crypto Intel', 'Movers'] as const;
 type ExplorerTab = typeof TABS[number];
 
 const EXPLORER_TAB_PARAM_MAP: Record<string, ExplorerTab> = {
   overview: 'Overview',
   sectors: 'Sectors',
-  heatmap: 'Sectors',
+  heatmap: 'Heatmap',
   commodities: 'Commodities',
   commodity: 'Commodities',
   'commodities-deep': 'Commodities',
@@ -101,16 +102,10 @@ export default function ExplorerPage() {
   const router=useRouter();
   const requestedInitialTab = EXPLORER_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()] || 'Overview';
   const [showSectors, setShowSectors] = useState(false);
-  const [tab, setTab] = useState<ExplorerTab>(requestedInitialTab);
+  const tab = requestedInitialTab;
   useDocumentTitle(tab === 'Movers' ? 'Market Movers' : tab === 'Crypto Command' ? 'Crypto Overview' : tab === 'Crypto Intel' ? 'Crypto News' : tab === 'Overview' ? 'Explorer' : tab);
 
-  useEffect(() => {
-    const requestedTab = EXPLORER_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()];
-    if (requestedTab) setTab(requestedTab);
-    // Only re-sync when the URL tab param changes; including `tab` here would force
-    // user clicks back to the URL value.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+
 
   // Movers pass their asset class so Golden Egg (?type=crypto|equity) opens the coin, not a same-ticker stock.
   const openGoldenEgg = (symbol: string, assetType?: ResearchAsset) => {
@@ -130,8 +125,8 @@ export default function ExplorerPage() {
   const cryptoData = cryptoOverview.data?.data;
   // Universe-quality floor (§M9): drop $0 / sub-dollar / nano-cap noise from the
   // headline surfaces (falls back to the raw list if the floor empties it).
-  const allGainers = filterMoversByFloor(movers.data?.topGainers || []);
-  const allLosers = filterMoversByFloor(movers.data?.topLosers || []);
+  const allGainers = filterMoversByFloor(movers.data?.topGainers || []).slice().sort((a, b) => (parseFloat(b.change_percentage) || 0) - (parseFloat(a.change_percentage) || 0));
+  const allLosers = filterMoversByFloor(movers.data?.topLosers || []).slice().sort((a, b) => (parseFloat(a.change_percentage) || 0) - (parseFloat(b.change_percentage) || 0));
   const eqGainers = allGainers.filter((m: Mover) => m.asset_class === 'equity').slice(0, 10);
   const eqLosers = allLosers.filter((m: Mover) => m.asset_class === 'equity').slice(0, 10);
   const cryptoGainers = allGainers.filter((m: Mover) => m.asset_class === 'crypto').slice(0, 10);
@@ -141,27 +136,10 @@ export default function ExplorerPage() {
 
   if (tierLoading) return <FreeLoading />;
 
-  const simpleTab = ['Overview', 'Sectors', 'Cross-Market'].includes(tab);
+  const simpleTab = ['Overview', 'Sectors', 'Heatmap', 'Cross-Market'].includes(tab);
   const sectorChangeCount = sectorData.filter(s => s.changePercent != null && s.changePercent > 0).length;
   const tabLabel = (label: string) => ({ 'Equity Deep-Dive': 'Equity', 'Crypto Deep-Dive': 'Crypto assets', 'Crypto Command': 'Crypto overview', 'Crypto Intel': 'Crypto news', 'Cross-Market': 'Cross-market' }[label] || label);
-  return (
-    <div className="min-w-0 space-y-3">
-      {tab !== 'Movers' && <h1 className="text-xl font-semibold">Markets</h1>}
-      <TabBar label="Market views" items={TABS.map(t => ({ id: t, label: tabLabel(t) }))} activeId={tab} onChange={value => setTab(value as ExplorerTab)} />
-      {simpleTab && <p data-layout-verdict className="font-semibold text-sm">{tab === 'Cross-Market' ? regime.data?.regime ? `Market context: ${marketText(regime.data.regime)}` : 'Market context has not been collected.' : sectorData.length ? `${sectorChangeCount} of ${sectorData.length} sectors show a positive recorded change.` : sectors.loading ? 'Loading sector observations…' : 'Sector observations have not been collected.'}</p>}
-      {(tier === 'free' || tier === 'anonymous') && (
-        <div className="text-xs text-center text-slate-400 bg-slate-800/50 border border-slate-700/30 rounded-lg px-3 py-2">
-          <a href="/pricing" className="inline-flex min-h-10 items-center underline">{FREE_COPY.upgrade}</a>
-        </div>
-      )}
-      <div className={(tier === 'free' || tier === 'anonymous') ? 'pointer-events-none select-none' : undefined}>
-
-      {/* -- OVERVIEW ------------------------------------------------- */}
-      {tab === 'Overview' && (
-        <div className="space-y-4">
-          {/* --- Equities Section --------------- */}
-          <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Equities</div>
-
+  const sectorHeatmap = <>
           {/* Sector Heatmap */}
           {sectorData.length > 0 && (
             <Card>
@@ -194,6 +172,35 @@ export default function ExplorerPage() {
             </Card>
           )}
           {sectors.loading && <Card><Skel h="h-40" /></Card>}
+
+  </>;
+  return (
+    <div className="min-w-0 space-y-3">
+      {tab !== 'Movers' && <h1 className="text-xl font-semibold">Markets</h1>}
+      <TabBar label="Market views" items={TABS.map(t => ({ id: t, label: tabLabel(t) }))} activeId={tab} onChange={value => {
+        const query = new URLSearchParams(searchParams.toString());
+        const canonical: Record<ExplorerTab, string> = { Overview: 'overview', Sectors: 'sectors', Heatmap: 'heatmap', Commodities: 'commodities', 'Cross-Market': 'cross', 'Equity Deep-Dive': 'equity', 'Crypto Deep-Dive': 'crypto', 'Crypto Command': 'crypto-command', 'Crypto Intel': 'crypto-intel', Movers: 'movers' };
+        query.set('tab', canonical[value as ExplorerTab]);
+        query.delete('section');
+        router.push(`/tools/explorer?${query}`, { scroll: false });
+      }} />
+      {simpleTab && <p data-layout-verdict className="font-semibold text-sm">{tab === 'Cross-Market' ? regime.data?.regime ? `Market context: ${marketText(regime.data.regime)}` : 'Market context has not been collected.' : sectorData.length ? `${sectorChangeCount} of ${sectorData.length} sectors show a positive recorded change.` : sectors.loading ? 'Loading sector observations…' : 'Sector observations have not been collected.'}</p>}
+      {(tier === 'free' || tier === 'anonymous') && (
+        <div className="text-xs text-center text-slate-400 bg-slate-800/50 border border-slate-700/30 rounded-lg px-3 py-2">
+          <a href="/pricing" className="inline-flex min-h-10 items-center underline">{FREE_COPY.upgrade}</a>
+        </div>
+      )}
+      <div className={(tier === 'free' || tier === 'anonymous') ? 'pointer-events-none select-none' : undefined}>
+
+      {tab === 'Heatmap' && sectorHeatmap}
+
+      {/* -- OVERVIEW ------------------------------------------------- */}
+      {tab === 'Overview' && (
+        <div className="space-y-4">
+          {/* --- Equities Section --------------- */}
+          <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Equities</div>
+
+          {sectorHeatmap}
 
           <CollapsibleSection title="Equity movers" summary={`${eqGainers.length} gainers · ${eqLosers.length} decliners`}>
           {/* Equity Top Movers */}
@@ -518,7 +525,7 @@ export default function ExplorerPage() {
 
       {simpleTab && <SourceLine source={tab === 'Cross-Market' ? 'Stored market observations' : 'Alpha Vantage sectors · CoinGecko crypto'} asOf={tab === 'Cross-Market' ? regime.data?.asOf : sectors.data?.asOf} tradingDay={sectors.data?.asOfTradingDay} basis={tab === 'Cross-Market' ? 'Stored context timestamp · static relationships labelled separately' : 'Sector quote timestamp · other feeds are independent snapshots'} />}
       {/* Keep failed feeds explicit, without exposing backend error codes. */}
-      {(sectors.error || cryptoOverview.error || movers.error || commodities.error) && <p className="rounded border border-amber-400/30 p-2 text-xs text-amber-300">Feeds not collected: {[sectors.error && 'Sectors', cryptoOverview.error && 'Crypto market', movers.error && 'Movers', commodities.error && 'Commodities'].filter(Boolean).join(', ')}</p>}
+      {(((tab === 'Sectors' || tab === 'Heatmap') && sectors.error) || (tab === 'Overview' && (sectors.error || cryptoOverview.error || movers.error))) && <p className="rounded border border-amber-400/30 p-2 text-xs text-amber-300">Feeds not collected: {[sectors.error && 'Sectors', tab === 'Overview' && cryptoOverview.error && 'Crypto market', tab === 'Overview' && movers.error && 'Movers'].filter(Boolean).join(', ')}</p>}
 
       {/* ─── Deep-dive Tabs (v1 components) ─── */}
       {tab === 'Equity Deep-Dive' && (
@@ -554,8 +561,10 @@ export default function ExplorerPage() {
         </div>
       )}
       {tab === 'Movers' && (
-        <MarketMoversV1 />
+        <MarketMoversV1 embedded />
       )}
+      {/* The one disclaimer for Markets: embedded views leave theirs to this host. */}
+      <ComplianceDisclaimer compact />
 
 
       </div>

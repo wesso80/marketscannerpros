@@ -1,3 +1,4 @@
+import { compactAmount } from '@/lib/presentation/compactAmount';
 export const COPY={
  top:{title:'Crypto at a glance',sourceUnavailable:'Source unavailable',priceUnavailable:'Price unavailable',unavailable:'—',change24h:'Change vs 24h ago',
   price:(v:number)=>'$'+v.toLocaleString('en-US',{minimumFractionDigits:v<1?0:2,maximumFractionDigits:v<1?8:2}),
@@ -6,7 +7,7 @@ export const COPY={
   fundingTitle:'Funding · 8h equivalent',oiTitle:'Open interest',volumeTitle:'Volume vs median',rankTitle:'Market-cap rank',
   noPerpetual:'No OKX perpetual listed',valueUnavailable:'Unavailable',missingReason:'Observation not reported or unavailable.',
   fundingPercent:(v:number)=>`${v.toFixed(4)}%`,fundingInterval:(v:number)=>`Original interval ${v}h`,
-  usd:(v:number)=>`$${v.toLocaleString('en-US',{maximumFractionDigits:0})} USD`,rankValue:(v:number)=>`#${v}`,
+  usd:(v:number)=>compactAmount(v,true),rankValue:(v:number)=>`#${v}`,
   oiChange:(v:string)=>`Change vs 24h ago: ${v}`,
   volumeBasis:(days:number)=>`Last day vs ${days}-day base median`,
   chartUnavailable:'Chart unavailable: daily bars missing.',baseLowUnavailable:'Base low unavailable',
