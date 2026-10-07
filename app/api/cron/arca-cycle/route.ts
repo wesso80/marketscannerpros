@@ -8,6 +8,7 @@ import {runCryptoBaseSleeveAll} from '@/lib/admin/cryptoPaperBase';
 import {runCryptoMarketData} from '@/lib/admin/cryptoMarketDataJob';
 import {runNewListings} from '@/lib/admin/cryptoNewListingsJob';
 import {historyStep} from '@/lib/admin/cgHistoryJob';
+import {resolveSkippedSignals} from '@/lib/admin/cryptoSignalLedger';
 import {CG_HISTORY} from '@/lib/admin/cgHistory';
 import {runDailyCalibration} from '@/lib/admin/cryptoCalibration';
 import {getRedis} from '@/lib/redis';
@@ -95,7 +96,9 @@ export async function POST(req: NextRequest) {
     const newListings=await runNewListings().catch(()=>({ok:false,error:'CoinGecko new listings failed'}));
     // Approved history backfill / daily top-up: a small throttled batch per run (does nothing until approved).
     const history=await historyStep(CG_HISTORY.callsPerCronRun).catch(()=>({ok:false,error:'History batch failed'}));
-    return NextResponse.json({...cryptoPaper,ok,monitoring,scanning,operationalAlerts,calibration,newsJev,marketData,newListings,history,breakoutVerdicts,baseSleeve:{monitoring:baseMonitoring,paper:basePaper}},{status:ok?200:503});
+    // Research only: replays a few skipped signals whose horizon has passed. Never affects this run's health.
+    const signalLedger=await resolveSkippedSignals().catch(()=>({ok:false,error:'Signal ledger resolution failed'}));
+    return NextResponse.json({...cryptoPaper,ok,monitoring,scanning,operationalAlerts,calibration,newsJev,marketData,newListings,history,signalLedger,breakoutVerdicts,baseSleeve:{monitoring:baseMonitoring,paper:basePaper}},{status:ok?200:503});
   }
   if(cryptoMarketsPaused()){
     if(!cryptoMarketsExitsPaused()){
@@ -109,6 +112,7 @@ export async function POST(req: NextRequest) {
     await runCryptoMarketData().catch(()=>undefined);
     await runNewListings().catch(()=>undefined);
     await historyStep(CG_HISTORY.callsPerCronRun).catch(()=>undefined);
+    await resolveSkippedSignals().catch(()=>undefined);
   }
   const started = Date.now();
   try {
