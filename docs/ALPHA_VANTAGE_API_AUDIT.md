@@ -201,7 +201,7 @@ REALTIME_OPTIONS_FMV     ✅ Counts against 600/min
 **File:** [app.py line 2373](app.py#L2373)
 
 ```python
-ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY", "UI755FUUAM6FRRI9")
+ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY", "<redacted>")
 ```
 
 **Status:** ✅ Uses environment variable  

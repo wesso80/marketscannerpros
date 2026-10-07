@@ -7,8 +7,13 @@ out/
 
 # Environment variables
 .env*
+!.env.example
 .env.local
 .env*.local
+
+# Local MCP config and one-off debug scripts (may contain credentials)
+.vscode/mcp.json
+_check_*.js
 
 # Backups & assets
 backups/
