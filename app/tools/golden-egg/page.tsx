@@ -437,6 +437,8 @@ export default function GoldenEggPage() {
   const geWarnings = ((goldenEgg.data as any)?.warnings || []) as string[];
   const geAssessment = ge?.layer1?.assessment;
   const geConfluenceScore = ge?.layer1?.confluenceScore ?? ge?.layer1?.confidence ?? 0;
+  // Display only: a missing composite reads "Unavailable", never 0/100 (the 0 above only feeds internal checks).
+  const geConfluenceDisplay = (ge?.layer1?.confluenceScore ?? ge?.layer1?.confidence) != null ? `${geConfluenceScore}/100` : 'Unavailable';
   // Canonical engine verdict (primary). The confluence score above is the secondary "indicator composite" when present.
   const geEngine = ge?.canonicalVerdict ?? null;
   const geSetupLabel = geEngine ? geEngine.setupType.replace(/_/g, ' ').toLowerCase() : null;
@@ -594,7 +596,7 @@ export default function GoldenEggPage() {
   const geAiSummary = useMemo(() => {
     if (goldenEgg.error) return `Golden Egg: ${sym} unavailable — ${goldenEgg.error}`;
     if (!ge) return `Golden Egg: Loading ${sym}...`;
-    return `${sym} — Assessment: ${geAssessment}, Direction: ${ge.layer1.direction}, Indicator composite: ${geConfluenceScore}/100`;
+    return `${sym} — Assessment: ${geAssessment}, Direction: ${ge.layer1.direction}, Indicator composite: ${geConfluenceDisplay}`;
   }, [sym, ge, geAssessment, geConfluenceScore, goldenEgg.error]);
 
   useRegisterPageData('deep_analysis', geAiData, [sym], geAiSummary);
@@ -621,7 +623,7 @@ export default function GoldenEggPage() {
           truthLayer: {
             whatWeKnow: [
               `Golden Egg assessment is ${geAssessment ?? 'unknown'}.`,
-              `Indicator composite score is ${geConfluenceScore}/100.`,
+              `Indicator composite score is ${geConfluenceDisplay}.`,
               ge.layer1?.primaryDriver ? `Primary driver: ${ge.layer1.primaryDriver}.` : null,
             ].filter(Boolean),
             whatWeDoNotKnow: geMissingInputs({ price: quote.data?.price ?? ge?.meta?.price, confluence: geConfluenceScore, assessment: geAssessment, reference: geReferencePrice, invalidation: geInvalidationPrice }),
@@ -877,11 +879,11 @@ export default function GoldenEggPage() {
                       {geEngine.scoreBasis && geEngine.permission === 'WATCH' ? <div className="text-[10px] font-semibold text-amber-300/90">{symbolText(NO_EDGE_BANNER)}</div> : null}
                       {calibrationSummary(geEngine) ? <div className="text-[10px] text-slate-400">{symbolText(calibrationSummary(geEngine))}</div> : null}
                       {gradeRelativeNote(geEngine) ? <div className="text-[10px] text-slate-400" data-testid="ge-grade-relative">{symbolText(gradeRelativeNote(geEngine))}</div> : null}
-                      <div className="text-[10px] text-slate-500" title={symbolText(INDICATOR_COMPOSITE_TOOLTIP)}>{symbolText(INDICATOR_COMPOSITE_LABEL)} {symbolText(geConfluenceScore)}/100</div>
+                      <div className="text-[10px] text-slate-500" title={symbolText(INDICATOR_COMPOSITE_TOOLTIP)}>{symbolText(INDICATOR_COMPOSITE_LABEL)} {symbolText(geConfluenceDisplay)}</div>
                     </div>
                   ) : (
                     <div className="text-center">
-                      <div className="text-3xl font-bold" style={{ color: verdictColor(geAssessment || 'WATCH') }}>{symbolText(geConfluenceScore)}/100</div>
+                      <div className="text-3xl font-bold" style={{ color: verdictColor(geAssessment || 'WATCH') }}>{symbolText(geConfluenceDisplay)}</div>
                       <div className="text-[11px] text-slate-500 uppercase" title={symbolText(INDICATOR_COMPOSITE_TOOLTIP)}>{symbolText(INDICATOR_COMPOSITE_LABEL)}</div>
                     </div>
                   )}

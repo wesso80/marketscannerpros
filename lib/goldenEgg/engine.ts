@@ -1,4 +1,5 @@
 import { describeMultiple } from '@/lib/goldenEgg/fundamentalsContext';
+import { oiBasisLabel } from '@/lib/options/oiSummary';
 import { valuationAtPrice } from '@/lib/market/valuationIntegrity';
 /**
  * Golden Egg engine — the ONE validated research packet for a symbol.
@@ -539,7 +540,7 @@ export function buildPayload(
       highlights: [
         { label: `Expiry`, value: `${c.expiry} (${c.daysToExpiry} DTE)` },
         { label: 'Snapshot', value: c.snapshotTs ? (/^\d{4}-\d{2}-\d{2}$/.test(c.snapshotTs) ? `${c.snapshotTs} (provider date; time unavailable)` : c.snapshotTs) : 'Unavailable' },
-        { label: 'Put/Call OI', value: c.putCallOi.toFixed(2) },
+        { label: c.oi ? `Put/Call OI (${oiBasisLabel(c.oi)})` : 'Put/Call OI', value: c.putCallOi == null ? 'Unavailable' : c.putCallOi.toFixed(2) },
         // ATM IV first: it is what other sites quote. The all-strike mean is pulled up by the far wings (the smile). (RS-19)
         { label: 'ATM IV (strikes within 2% of spot)', value: c.atmIv != null ? `${(c.atmIv * 100).toFixed(0)}%` : 'n/a' },
         { label: 'Mean IV, all strikes', value: c.avgIv != null ? `${(c.avgIv * 100).toFixed(0)}%` : 'n/a' },
@@ -548,8 +549,8 @@ export function buildPayload(
         { label: 'Dealer Gamma', value: c.dealerGamma },
         { label: 'Volume vs open interest', value: c.unusualActivity },
         { label: 'Max Pain', value: c.maxPain != null ? fmtLevel(c.maxPain) : 'n/a' },
-        { label: 'Call wall', value: c.callWall ? `${fmtLevel(c.callWall.strike)} (${c.callWall.relation} spot)` : 'n/a' },
-        { label: 'Put wall', value: c.putWall ? `${fmtLevel(c.putWall.strike)} (${c.putWall.relation} spot)` : 'n/a' },
+        { label: c.oi ? `Call wall (${oiBasisLabel(c.oi, 'wall')})` : 'Call wall', value: c.callWall ? `${fmtLevel(c.callWall.strike)} (${c.callWall.relation} spot)` : 'n/a' },
+        { label: c.oi ? `Put wall (${oiBasisLabel(c.oi, 'wall')})` : 'Put wall', value: c.putWall ? `${fmtLevel(c.putWall.strike)} (${c.putWall.relation} spot)` : 'n/a' },
         { label: 'Chain quality', value: c.quality.level },
       ],
       notes: [
@@ -691,7 +692,7 @@ export function buildPayload(
       note: flow.notes[0] ?? 'funding near exchange baseline',
     } : null,
     options: optsIn ? {
-      expiry: optsIn.canonical.expiry, daysToExpiry: optsIn.canonical.daysToExpiry, snapshotTs: optsIn.canonical.snapshotTs, putCallOi: optsIn.canonical.putCallOi,
+      expiry: optsIn.canonical.expiry, daysToExpiry: optsIn.canonical.daysToExpiry, snapshotTs: optsIn.canonical.snapshotTs, putCallOi: optsIn.putCallRatio,
       avgIvPct: optsIn.canonical.avgIv != null ? Math.round(optsIn.canonical.avgIv * 1000) / 10 : null, ivRank: null, expectedMovePct: optsIn.canonical.expectedMovePct, maxPain: optsIn.canonical.maxPain,
       callWall: optsIn.canonical.callWall ? { strike: optsIn.canonical.callWall.strike, relation: optsIn.canonical.callWall.relation } : null,
       putWall: optsIn.canonical.putWall ? { strike: optsIn.canonical.putWall.strike, relation: optsIn.canonical.putWall.relation } : null,

@@ -5,6 +5,7 @@ import { selectOptionsExpiry, marketDateKey } from '@/lib/options/expiry';
  * are never mixed; chain quality and split contamination are surfaced instead of being presented as flow evidence.
  */
 import { detectPriceDiscontinuity } from '@/lib/scanner/barAggregation';
+import { summarizeOpenInterest, oiRowFromContract, putCallTilt, type OiSummary } from '@/lib/options/oiSummary';
 
 export interface RawContract {
   contractID?: string;
@@ -33,9 +34,13 @@ export interface CanonicalOptionsSnapshot {
   snapshotTs: string;
   /** Which expiries existed and why this one was chosen. */
   expirySelection: string;
-  putCallOi: number;
+  /** Put/call open-interest ratio over strikes within ±30% of spot (shared definition, lib/options/oiSummary); null without call OI. */
+  putCallOi: number | null;
+  /** In-range totals (same strikes as putCallOi). */
   totalCallOi: number;
   totalPutOi: number;
+  /** Full shared open-interest summary: basis, in-range and every-strike figures, walls and max pain. */
+  oi: OiSummary | null;
   totalVolume: number;
   /** Average implied volatility across the chain, decimal (0.35 = 35%). */
   avgIv: number | null;
@@ -48,11 +53,13 @@ export interface CanonicalOptionsSnapshot {
   expectedMove: number | null;
   expectedMovePct: number | null;
   maxPain: number | null;
+  /** Largest open interest within ±15% of spot (shared definition). */
   callWall: { strike: number; oi: number; relation: 'above' | 'below' | 'at' } | null;
   putWall: { strike: number; oi: number; relation: 'above' | 'below' | 'at' } | null;
   dealerGamma: 'Unavailable';
   unusualActivity: 'Very High' | 'Elevated' | 'Normal';
-  sentiment: 'Bullish' | 'Bearish' | 'Neutral';
+  /** Put/call tilt with the shared cut-offs (lib/options/oiSummary PUT_CALL_TILT); Unavailable without call OI. */
+  sentiment: 'Bullish' | 'Bearish' | 'Neutral' | 'Unavailable';
   quality: { level: 'GOOD' | 'DEGRADED' | 'UNUSABLE'; reasons: string[]; contracts: number; strikeSpanPct: number | null };
   /** Highest OI contracts (for display only). */
   topCall: { strike: number; oi: number; volume: number; iv: number | null; delta: number | null; gamma: number | null; theta: number | null; vega: number | null } | null;
@@ -107,11 +114,14 @@ export function summarizeChain(
   const observedAt = opts.snapshotTs || (observedDates.length === 1 ? observedDates[0] : '');
   const calls = chain.filter((c) => String(c.type).toLowerCase() === 'call');
   const puts = chain.filter((c) => String(c.type).toLowerCase() === 'put');
-  const totalCallOi = calls.reduce((s, c) => s + num(c.open_interest), 0);
-  const totalPutOi = puts.reduce((s, c) => s + num(c.open_interest), 0);
+  // Open interest: the shared definition (in-range ratio, near-spot walls, in-range max pain).
+  const oi = summarizeOpenInterest(chain.map(oiRowFromContract).filter((r): r is NonNullable<typeof r> => r != null), spot);
+  const totalCallOi = oi?.inRange.callOi ?? 0;
+  const totalPutOi = oi?.inRange.putOi ?? 0;
   const totalVolume = chain.reduce((s, c) => s + num(c.volume), 0);
-  const putCallOi = totalCallOi > 0 ? totalPutOi / totalCallOi : 1;
-  const totalOi = totalCallOi + totalPutOi;
+  const putCallOi = oi?.inRange.putCall ?? null;
+  // Activity and thin-OI checks look at the whole expiry.
+  const totalOi = (oi?.allStrikes.callOi ?? 0) + (oi?.allStrikes.putOi ?? 0);
   const volOi = totalOi > 0 ? totalVolume / totalOi : 0;
   const unusualActivity: CanonicalOptionsSnapshot['unusualActivity'] = volOi > 1 ? 'Very High' : volOi > 0.5 ? 'Elevated' : 'Normal';
 
@@ -124,27 +134,20 @@ export function summarizeChain(
   const expectedMove = atmIv != null && spot > 0 && marketDays != null ? spot * atmIv * Math.sqrt(marketDays / 365) : null;
 
   const strikes = [...new Set(chain.map((c) => num(c.strike)).filter((k) => k > 0))].sort((a, b) => a - b);
-  let maxPain: number | null = null;
-  if (strikes.length) {
-    let minPain = Infinity;
-    for (const k of strikes) {
-      const pain = calls.reduce((s, c) => s + Math.max(0, k - num(c.strike)) * num(c.open_interest), 0)
-        + puts.reduce((s, p) => s + Math.max(0, num(p.strike) - k) * num(p.open_interest), 0);
-      if (pain < minPain) { minPain = pain; maxPain = k; }
-    }
-  }
-
-  const relation = (k: number): 'above' | 'below' | 'at' => (Math.abs(k - spot) / spot < 0.002 ? 'at' : k > spot ? 'above' : 'below');
-  const byOi = (arr: RawContract[]) => [...arr].sort((a, b) => num(b.open_interest) - num(a.open_interest));
-  const topC = byOi(calls)[0];
-  const topP = byOi(puts)[0];
+  const maxPain = oi?.maxPain ?? null;
   const asTop = (c: RawContract | undefined) => c ? ({ strike: num(c.strike), oi: num(c.open_interest), volume: num(c.volume), iv: numOrNull(c.implied_volatility), delta: numOrNull(c.delta), gamma: numOrNull(c.gamma), theta: numOrNull(c.theta), vega: numOrNull(c.vega) }) : null;
-  const callWall = topC ? { strike: num(topC.strike), oi: num(topC.open_interest), relation: relation(num(topC.strike)) } : null;
-  const putWall = topP ? { strike: num(topP.strike), oi: num(topP.open_interest), relation: relation(num(topP.strike)) } : null;
+  const callWall = oi?.walls.call ?? null;
+  const putWall = oi?.walls.put ?? null;
+  // "Highest OI" contracts are the ones at the shared wall strikes, so the detail matches the wall shown beside it.
+  const topC = callWall ? calls.find((c) => num(c.strike) === callWall.strike) : undefined;
+  const topP = putWall ? puts.find((c) => num(c.strike) === putWall.strike) : undefined;
+  // The corporate-action check needs the largest OI anywhere in the chain (a pre-split chain's walls sit far from spot).
+  const farCallWall = oi?.wallsAllStrikes.call ?? null, farPutWall = oi?.wallsAllStrikes.put ?? null;
 
   const netGamma = calls.reduce((s, c) => s + num(c.gamma) * num(c.open_interest), 0) - puts.reduce((s, p) => s + num(p.gamma) * num(p.open_interest), 0);
   const dealerGamma: CanonicalOptionsSnapshot['dealerGamma'] = 'Unavailable';
-  const sentiment: CanonicalOptionsSnapshot['sentiment'] = putCallOi > 1.2 ? 'Bearish' : putCallOi < 0.8 ? 'Bullish' : 'Neutral';
+  const tilt = putCallTilt(putCallOi);
+  const sentiment: CanonicalOptionsSnapshot['sentiment'] = tilt == null ? 'Unavailable' : tilt === 'put-heavy' ? 'Bearish' : tilt === 'call-heavy' ? 'Bullish' : 'Neutral';
 
   // ── Quality ────────────────────────────────────────────────────────────
   const reasons: string[] = [];
@@ -158,8 +161,8 @@ export function summarizeChain(
   if (chain.length < 10) reasons.push(`only ${chain.length} contracts on ${sel.expiry}`);
   if (totalOi < 2_000) reasons.push(`thin open interest (${totalOi.toLocaleString()} contracts)`);
   if (nearSpot < 3) reasons.push('fewer than 3 strikes within 10% of spot');
-  if (callWall && Math.abs(callWall.strike - spot) / spot > 0.4) reasons.push(`call wall ${callWall.strike} is ${Math.round(Math.abs(callWall.strike - spot) / spot * 100)}% from spot — chain may predate a corporate action`);
-  if (putWall && Math.abs(putWall.strike - spot) / spot > 0.5) reasons.push(`put wall ${putWall.strike} is ${Math.round(Math.abs(putWall.strike - spot) / spot * 100)}% from spot`);
+  if (farCallWall && Math.abs(farCallWall.strike - spot) / spot > 0.4) reasons.push(`largest call open interest (${farCallWall.strike}) is ${Math.round(Math.abs(farCallWall.strike - spot) / spot * 100)}% from spot — chain may predate a corporate action`);
+  if (farPutWall && Math.abs(farPutWall.strike - spot) / spot > 0.5) reasons.push(`largest put open interest (${farPutWall.strike}) is ${Math.round(Math.abs(farPutWall.strike - spot) / spot * 100)}% from spot`);
   if (maxPain != null && Math.abs(maxPain - spot) / spot > 0.25) reasons.push(`max pain ${maxPain} is ${Math.round(Math.abs(maxPain - spot) / spot * 100)}% from spot — not a near-term magnet`);
   if (opts.recentCloses?.length) {
     const disc = detectPriceDiscontinuity(opts.recentCloses, opts.recentDates);
@@ -178,8 +181,8 @@ export function summarizeChain(
     daysToExpiry,
     snapshotTs: observedAt,
     expirySelection: sel.reason,
-    putCallOi: Math.round(putCallOi * 100) / 100,
-    totalCallOi, totalPutOi, totalVolume,
+    putCallOi,
+    totalCallOi, totalPutOi, totalVolume, oi,
     avgIv: avgIv != null ? Math.round(avgIv * 10000) / 10000 : null,
     ivRank: null,
     atmIv: atmIv != null ? Math.round(atmIv * 10000) / 10000 : null,

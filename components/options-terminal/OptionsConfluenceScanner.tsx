@@ -1,5 +1,6 @@
 "use client";
 
+import { oiBasisLabel, putCallTilt, type OiSummary } from '@/lib/options/oiSummary';
 import { researchDate } from '@/components/terminal/researchPresentation';
 import OptionsResearchView from "@/components/terminal/OptionsResearchView";
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
@@ -91,7 +92,9 @@ interface HighOIStrike {
 interface OpenInterestAnalysis {
   totalCallOI: number;
   totalPutOI: number;
+  /** Put/call over strikes within ±30% of spot (shared definition; see `basis`). */
   pcRatio: number;
+  basis?: OiSummary;
   maxPainStrike: number | null;
   highOIStrikes: HighOIStrike[];
   sentiment: 'bullish' | 'bearish' | 'neutral';
@@ -2637,7 +2640,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                   <DepthCard className="rounded-[10px] border border-slate-500/20 bg-slate-900/40 p-[0.7rem] opacity-[0.95]" tiltStrength={4}>
                     <div className="text-[0.64rem] font-extrabold uppercase text-slate-500">Options Snapshot</div>
                     <div className="mt-1 grid gap-1 text-[0.76rem]">
-                      <div className="text-slate-200">P/C: {result.openInterestAnalysis ? result.openInterestAnalysis.pcRatio.toFixed(2) : 'N/A'}</div>
+                      <div className="text-slate-200" title={result.openInterestAnalysis?.basis ? oiBasisLabel(result.openInterestAnalysis.basis) : undefined}>P/C (±30% strikes): {result.openInterestAnalysis ? result.openInterestAnalysis.pcRatio.toFixed(2) : 'Unavailable'}</div>
                       <div className="text-slate-200">IV Rank: {result.ivAnalysis?.ivRank != null ? `${result.ivAnalysis.ivRank.toFixed(0)}%` : 'Unavailable'}</div>
                       <div className="text-slate-200">Strategy: {(result.strategyRecommendation?.strategy || 'N/A').toUpperCase()}</div>
                       <div className="text-slate-300">Expected Move: {result.expectedMove ? `${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A'}</div>
@@ -3670,14 +3673,13 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                   <div>
                     <div className="text-[0.67rem] font-bold uppercase text-slate-400">Setup Fit Score</div>
                     <div className="text-[1.02rem] font-black text-slate-50">
-                      {adaptiveMatch?.personalityMatch ?? 50}%
+                      {adaptiveMatch?.personalityMatch != null ? `${adaptiveMatch.personalityMatch}%` : 'Unavailable'}
                     </div>
                   </div>
                   <div>
                     <div className="text-[0.67rem] font-bold uppercase text-slate-400">Adaptive Confluence</div>
-                    <div className={`text-[1.02rem] font-black ${(adaptiveMatch?.adaptiveScore ?? 50) >= 70 ? 'text-emerald-500' : (adaptiveMatch?.adaptiveScore ?? 50) >= 50 ? 'text-amber-500' : 'text-red-500'}`}>
-                      {adaptiveMatch?.adaptiveScore ?? (result.compositeScore?.confidence ?? 50)}/100
-                    </div>
+                    {/* A missing score reads "Unavailable", never a placeholder 50/100. */}
+                    {(() => { const v = adaptiveMatch?.adaptiveScore ?? result.compositeScore?.confidence; return <div className={`text-[1.02rem] font-black ${v == null ? 'text-slate-400' : v >= 70 ? 'text-emerald-500' : v >= 50 ? 'text-amber-500' : 'text-red-500'}`}>{v == null ? 'Unavailable' : `${Math.round(v)}/100`}</div>; })()}
                   </div>
                   <div className="text-right text-[0.72rem] text-slate-400">
                     {adaptiveMatch?.hasProfile
@@ -4487,12 +4489,14 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false, s
                   {/* P/C Ratio */}
                   <div className="rounded-xl bg-[var(--msp-panel-2)] p-4 text-center">
                     <div className="mb-1 text-[0.8rem] text-slate-400">Put/Call Ratio</div>
-                    <div className={`text-[1.75rem] font-bold ${result.openInterestAnalysis.pcRatio > 1 ? 'text-red-500' : result.openInterestAnalysis.pcRatio < 0.7 ? 'text-emerald-500' : 'text-amber-500'}`}>
+                    <div className="text-[1.75rem] font-bold text-slate-100">
                       {result.openInterestAnalysis.pcRatio.toFixed(2)}
                     </div>
+                    {/* Descriptive tilt with the shared cut-offs: a ratio describes positioning; it is not a direction call. */}
                     <div className="text-[0.75rem] text-slate-500">
-                      {result.openInterestAnalysis.pcRatio > 1 ? 'Bearish bias' : result.openInterestAnalysis.pcRatio < 0.7 ? 'Bullish bias' : 'Neutral'}
+                      {({'put-heavy':'More put than call open interest','call-heavy':'More call than put open interest','balanced':'Balanced open interest'} as const)[putCallTilt(result.openInterestAnalysis.pcRatio) ?? 'balanced']}
                     </div>
+                    {result.openInterestAnalysis.basis && <div className="mt-1 text-[0.68rem] text-slate-500" data-oi-basis>{oiBasisLabel(result.openInterestAnalysis.basis)}{result.openInterestAnalysis.basis.allStrikes.putCall != null ? ` · every strike: ${result.openInterestAnalysis.basis.allStrikes.putCall.toFixed(2)}` : ''}</div>}
                   </div>
                   
                   {/* Max Pain */}
