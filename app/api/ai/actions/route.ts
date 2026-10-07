@@ -45,6 +45,13 @@ async function ensureJournalRiskColumns() {
   await q(`ALTER TABLE IF EXISTS journal_entries ADD COLUMN IF NOT EXISTS broker_order_id VARCHAR(120)`);
 }
 
+/** JSON parameters compared independently of key order (JSONB equality). */
+function sameParams(a: unknown, b: unknown): boolean {
+  const norm = (v: any): any => (v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, norm(v[k])])) : Array.isArray(v) ? v.map(norm) : v);
+  const parse = (v: unknown) => (typeof v === 'string' ? (() => { try { return JSON.parse(v); } catch { return v; } })() : v);
+  return JSON.stringify(norm(parse(a))) === JSON.stringify(norm(parse(b)));
+}
+
 async function resolveActionSkill(
   workspaceId: string,
   requestedSkill?: PageSkill,
@@ -195,6 +202,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unknown tool' }, { status: 400 });
     }
 
+    // ACT-R2: a supplied responseId must belong to this workspace, checked before any proposal, claim or effect
+    // (independently of whether a skill was also supplied).
+    if (responseId) {
+      const owned = await q(`SELECT id FROM ai_responses WHERE id = $1 AND workspace_id = $2 LIMIT 1`, [responseId, session.workspaceId]);
+      if (!owned[0]?.id) {
+        return NextResponse.json({ error: 'Response not found for this workspace' }, { status: 404 });
+      }
+    }
+
     const resolvedSkill = await resolveActionSkill(session.workspaceId, requestedSkill, responseId);
     if (!resolvedSkill) {
       return NextResponse.json({ error: 'Skill context required for tool execution' }, { status: 400 });
@@ -239,14 +255,38 @@ export async function POST(req: NextRequest) {
     }
 
     const existingAction = await q(
-      `SELECT id, status, result_data, error_message
+      `SELECT id, status, result_data, error_message, action_type, action_params
        FROM ai_actions
        WHERE workspace_id = $1 AND idempotency_key = $2
        ORDER BY created_at DESC
        LIMIT 1`,
       [session.workspaceId, idempotencyKey]
     );
-    const existing = existingAction[0] as { id: string; status: string; result_data: unknown; error_message: string | null } | undefined;
+    const existing = existingAction[0] as { id: string; status: string; result_data: unknown; error_message: string | null; action_type: string; action_params: unknown } | undefined;
+
+    // ACT-R1: an idempotency key (and any actionId) identifies one action. Reusing it for a different tool or
+    // parameters, or pairing it with another action's id, is rejected before any cached result, claim or retry.
+    if (existing && (existing.action_type !== tool || !sameParams(existing.action_params, parameters))) {
+      return NextResponse.json({ success: false, idempotencyKey, error: 'Idempotency key already used for a different action' }, { status: 409 });
+    }
+    if (actionId && (!existing || String(existing.id) !== String(actionId))) {
+      return NextResponse.json({ success: false, idempotencyKey, error: 'actionId does not match the action for this idempotency key' }, { status: 409 });
+    }
+    // ACT-R3: terminal states are not reused. A cancelled proposal is not revived and a failed attempt is not replayed
+    // under the same key (it may have had partial effects); a new attempt needs a new idempotency key.
+    if (existing?.status === 'cancelled' || existing?.status === 'failed') {
+      return NextResponse.json({
+        success: false, actionId: existing.id, idempotencyKey, status: existing.status as ActionStatus,
+        error: existing.status === 'cancelled' ? 'This proposal was cancelled; propose again with a new idempotency key' : 'This action failed; retry with a new idempotency key after checking for partial effects',
+      }, { status: 409 });
+    }
+    // ACT-R3: confirmed without a recorded outcome = execution started but was interrupted. Not re-run automatically.
+    if (existing?.status === 'confirmed') {
+      return NextResponse.json({
+        success: false, actionId: existing.id, idempotencyKey, status: 'confirmed' as ActionStatus, outcome: 'unknown',
+        error: 'Execution is in progress, or was interrupted before its outcome was recorded; check the target record before retrying with a new idempotency key',
+      }, { status: 409 });
+    }
 
     if (existing?.status === 'executed') {
       return NextResponse.json({
@@ -325,9 +365,8 @@ export async function POST(req: NextRequest) {
           status, dry_run, dry_run_result, required_confirmation, user_confirmed, tool_cost_level, execution_time_ms)
          VALUES ($1, $2, $3, $4, $5, $6, 'pending', true, $7, true, false, $8, $9)
          ON CONFLICT (workspace_id, idempotency_key) WHERE idempotency_key IS NOT NULL
-         DO UPDATE SET
-           status = CASE WHEN ai_actions.status IN ('executed', 'confirmed') THEN ai_actions.status ELSE 'pending' END,
-           dry_run_result = EXCLUDED.dry_run_result
+         DO UPDATE SET dry_run_result = EXCLUDED.dry_run_result
+         WHERE ai_actions.status = 'pending'
          RETURNING id, status`,
         [
           session.workspaceId,
@@ -342,6 +381,10 @@ export async function POST(req: NextRequest) {
         ]
       );
 
+      // A concurrent request moved the row out of 'pending' between the lookup and this upsert.
+      if (!pendingInsert[0]?.id) {
+        return NextResponse.json({ success: false, idempotencyKey, error: 'Action state changed; reload its status' }, { status: 409 });
+      }
       return NextResponse.json({
         success: true,
         actionId: pendingInsert[0]?.id,
@@ -354,6 +397,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Recovery policy (ACT-R3). The claim makes the ROUTE run an action at most once per key; it does not make the
+    // business effect exactly-once. An executor error is recorded as 'failed' (terminal: it may have had partial
+    // effects, so it is not replayed). A crash after the effect but before the outcome is written leaves 'confirmed',
+    // reported as "outcome unknown" and not re-run. In both cases the reader checks the target record and retries
+    // with a new idempotency key. Durable downstream idempotency is not provided by this route.
     // ACT02 + ACT03: claim exactly one row atomically before executing. Only the request whose UPDATE/INSERT returns the
     // row executes; a concurrent or repeated request finds it already claimed. A confirmation must match a pending
     // proposal in this workspace with the same tool and parameters, and the stored parameters are what runs.
@@ -367,7 +415,8 @@ export async function POST(req: NextRequest) {
            AND status = 'pending'
            AND action_type = $2
            AND action_params = $3::jsonb
-           AND (($4::text IS NOT NULL AND id::text = $4::text) OR ($4::text IS NULL AND idempotency_key = $5))
+           AND idempotency_key = $5
+           AND ($4::text IS NULL OR id::text = $4::text)
          RETURNING id, action_params`,
         [session.workspaceId, tool, JSON.stringify(parameters), actionId || null, idempotencyKey]
       );
@@ -390,17 +439,10 @@ export async function POST(req: NextRequest) {
          RETURNING id`,
         [session.workspaceId, responseId || null, tool, JSON.stringify(parameters), idempotencyKey, initiatedBy, policy.costLevel]
       );
-      // A previously failed attempt with the same key may be retried, again by one request only.
-      const reclaimed = inserted[0]?.id ? inserted : await q(
-        `UPDATE ai_actions SET status = 'confirmed'
-         WHERE workspace_id = $1 AND idempotency_key = $2 AND status = 'failed'
-         RETURNING id`,
-        [session.workspaceId, idempotencyKey]
-      );
-      if (!reclaimed[0]?.id) {
+      if (!inserted[0]?.id) {
         return NextResponse.json({ success: false, idempotencyKey, error: 'Action is already being executed' }, { status: 409 });
       }
-      claimedId = reclaimed[0].id;
+      claimedId = inserted[0].id;
     }
 
     // Execute the action (once, for the claimed row)
