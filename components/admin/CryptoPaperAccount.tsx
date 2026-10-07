@@ -8,7 +8,7 @@ import type {BtcRegime} from '@/lib/admin/cryptoBtcRegime';
 import CryptoPaperStats from './CryptoPaperStats';
 import type {GiveBackView} from '@/lib/admin/cryptoPaperExcursion';
 import type {LockState} from '@/lib/admin/cryptoPaperLock';
-type LedgerView={rule:string;horizonDays:number;counts:{decision:string;status:string;n:number}[];skippedByReason:{reason:string;signals:number;avgR:number;winRate:number}[]};
+type LedgerView={rule:string;horizonDays:number;counts:{decision:string;status:string;n:number}[];skippedByReason:{reason:string;signals:number;avgR:number;winRate:number}[];variantE?:{signals:number;closed:number;open:number;avgR:number|null;winRate:number|null;openMarkR:number}};
 import {publishPaperSnapshot,usePaperSnapshot} from './cryptoPaperSnapshot';
 import {latestCryptoCycle} from '@/lib/admin/cryptoCycleReport';
 type Limits={clusterRiskPct?:number;riskPerTradePct:number;notionalPct:number;maxPairVolumePct:number;maxVolumeAgeHours:number;positions:number;openRiskPct:number;dailyEntries:number;lossFromStartPct:number};
@@ -34,6 +34,7 @@ function SignalLedger({view}:{view?:LedgerView|null}){
  if(!view)return <p className="text-xs text-slate-400">Signal ledger: starts recording on the next entry cycle.</p>;
  const n=(d:string,st?:string)=>view.counts.filter(c=>c.decision===d&&(!st||c.status===st)).reduce((a,c)=>a+c.n,0);
  return <details className="text-xs"><summary>Signal ledger · {n('TAKEN')} taken · {n('SKIPPED')} skipped ({n('SKIPPED','RESOLVED')} replayed, {n('SKIPPED','PENDING')} waiting {view.horizonDays} days, {n('SKIPPED','UNAVAILABLE')} unavailable)</summary>
+  {view.variantE&&<p className="mt-1">Variant E in shadow (daily signals, BTC above its 200-day average, daily trend exits; no paper orders): {view.variantE.signals} signals · {view.variantE.closed} closed{view.variantE.avgR!=null?` · avg ${view.variantE.avgR>=0?'+':''}${view.variantE.avgR.toFixed(2)}R · win ${Math.round((view.variantE.winRate??0)*100)}%`:''} · {view.variantE.open} open (marked {view.variantE.openMarkR>=0?'+':''}{view.variantE.openMarkR.toFixed(2)}R total).{view.variantE.closed<30?' Under 30 closed: not yet meaningful.':''}</p>}
   <p className="mt-1 text-slate-400">Skipped signals are replayed as if entered at the decision quote (or the next 15m open) through the same fixed-2R plan and every shadow plan. Entry-zone and chase checks are bypassed so filters can be judged; each row records whether the zone would have passed. Research only.</p>
   {view.skippedByReason.length?<div className="overflow-auto"><table className="w-full min-w-[520px] text-left tabular-nums"><thead><tr>{['Skip reason','Replayed','Avg R (fixed 2R)','Win rate'].map(h=><th className="p-1" key={h}>{h}</th>)}</tr></thead><tbody>{view.skippedByReason.map(g=><tr key={g.reason} className="border-t border-slate-700"><td className="p-1">{g.reason}</td><td className="p-1">{g.signals}{g.signals<10?<span className="text-amber-300"> · few</span>:null}</td><td className={`p-1 ${g.avgR>0?'text-emerald-300':'text-red-300'}`}>{g.avgR>=0?'+':''}{g.avgR.toFixed(2)}R</td><td className="p-1">{Math.round(g.winRate*100)}%</td></tr>)}</tbody></table></div>:<p className="mt-1 text-slate-400">No skipped signals replayed yet.</p>}
  </details>;

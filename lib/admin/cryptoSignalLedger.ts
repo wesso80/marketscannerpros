@@ -122,7 +122,7 @@ export function replaySkipped(signal:Record<string,any>,entry:{ask:number;at:num
 export async function resolveSkippedSignals(now=Date.now()){
  try{await ensureSignalLedger();}catch{return {ok:false,error:'Signal ledger unavailable'};}
  const due=await q<{signal_id:string;product:string|null;venue:string|null;signal:any;entry:any;signal_at:string|Date}>(
-  `SELECT signal_id,product,venue,signal,entry,signal_at FROM crypto_signal_ledger WHERE status='PENDING' AND decision='SKIPPED' AND signal_at < $1 ORDER BY signal_at LIMIT $2`,
+  `SELECT signal_id,product,venue,signal,entry,signal_at FROM crypto_signal_ledger WHERE status='PENDING' AND decision='SKIPPED' AND source='live-4h' AND signal_at < $1 ORDER BY signal_at LIMIT $2`,
   [new Date(now-SIGNAL_LEDGER.horizonDays*D-STEP).toISOString(),SIGNAL_LEDGER.resolvePerRun]);
  let resolved=0;
  for(const row of due){
@@ -150,11 +150,14 @@ export async function resolveSkippedSignals(now=Date.now()){
 export async function signalLedgerView(){
  if(!ready)return null;
  try{
-  const rows=await q<{decision:string;status:string;n:string}>(`SELECT decision,status,COUNT(*) n FROM crypto_signal_ledger GROUP BY 1,2`);
-  const res=await q<{reason:string;outcomes:any}>(`SELECT unnest(reasons) AS reason,outcomes FROM crypto_signal_ledger WHERE status='RESOLVED' AND decision='SKIPPED'`);
+  const rows=await q<{decision:string;status:string;n:string}>(`SELECT decision,status,COUNT(*) n FROM crypto_signal_ledger WHERE source='live-4h' GROUP BY 1,2`);
+  const res=await q<{reason:string;outcomes:any}>(`SELECT unnest(reasons) AS reason,outcomes FROM crypto_signal_ledger WHERE status='RESOLVED' AND decision='SKIPPED' AND source='live-4h'`);
   const byReason=new Map<string,number[]>();
   for(const r of res){const v=r.outcomes?.fixed2r?.r;if(typeof v!=='number')continue;const k=r.reason.replace(/^(live|research): /,'').replace(/\d+(\.\d+)?/g,'N').slice(0,80);byReason.set(k,[...(byReason.get(k)??[]),v]);}
   const groups=[...byReason].map(([reason,rs])=>({reason,signals:rs.length,avgR:Math.round(rs.reduce((a,b)=>a+b,0)/rs.length*1000)/1000,winRate:Math.round(rs.filter(x=>x>0).length/rs.length*1000)/1000})).sort((a,b)=>b.signals-a.signals);
-  return {rule:SIGNAL_LEDGER.rule,horizonDays:SIGNAL_LEDGER.horizonDays,counts:rows.map(r=>({decision:r.decision,status:r.status,n:Number(r.n)})),skippedByReason:groups};
+  const e=await q<{status:string;r:number|null;mark:number|null}>(`SELECT status,(outcomes->'variantE'->>'r')::float8 AS r,(outcomes->'variantE'->>'markR')::float8 AS mark FROM crypto_signal_ledger WHERE source='variant-e'`);
+  const er=e.filter(x=>x.status==='RESOLVED'&&x.r!=null).map(x=>Number(x.r));
+  const variantE={signals:e.length,closed:er.length,open:e.filter(x=>x.status==='PENDING').length,avgR:er.length?Math.round(er.reduce((a,b)=>a+b,0)/er.length*1000)/1000:null,winRate:er.length?Math.round(er.filter(x=>x>0).length/er.length*1000)/1000:null,openMarkR:Math.round(e.filter(x=>x.status==='PENDING'&&x.mark!=null).reduce((a,x)=>a+Number(x.mark),0)*1000)/1000};
+  return {rule:SIGNAL_LEDGER.rule,horizonDays:SIGNAL_LEDGER.horizonDays,counts:rows.map(r=>({decision:r.decision,status:r.status,n:Number(r.n)})),skippedByReason:groups,variantE};
  }catch{return null;}
 }
