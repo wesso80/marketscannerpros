@@ -41,6 +41,7 @@ import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import PriceEvidencePanel from '@/components/research/PriceEvidencePanel';
 import TimingEvidencePanel from '@/components/research/TimingEvidencePanel';
 import ResearchSnapshotCard from '@/components/research/ResearchSnapshotCard';
+import SymbolNewsPanel from '@/components/research/SymbolNewsPanel';
 import { buildResearchSnapshot } from '@/lib/research/researchSnapshot';
 import ChipRow from '@/components/visual/ChipRow';
 import type {StampLineProps} from '@/components/visual/StampLine';
@@ -707,14 +708,15 @@ export default function GoldenEggPage() {
         </Card>
       )}
 
-      {!isAuthBlocked && (quoteType==='crypto'?<><CryptoBreakdown compact showSource={false} onStamp={setCryptoStamp} symbol={sym} timeframe={timeframe} coinId={searchParams.get('id')??undefined}/>{ge?.priceEvidence&&!loading&&<CollapsibleSection title="Measured price and volatility" summary={ge.priceEvidence.summary[0]??`Completed bar ${ge.priceEvidence.basis.lastCompletedBar??'n/a'}`}><PriceEvidencePanel e={ge.priceEvidence}/></CollapsibleSection>}{ge?.timingEvidence&&!loading&&<CollapsibleSection title="Timing and events" summary={ge.timingEvidence.summary[1]??ge.timingEvidence.summary[0]}><TimingEvidencePanel t={ge.timingEvidence}/></CollapsibleSection>}</>:<>
+      {!isAuthBlocked && (quoteType==='crypto'?<><CryptoBreakdown compact showSource={false} onStamp={setCryptoStamp} symbol={sym} timeframe={timeframe} coinId={searchParams.get('id')??undefined}/>{ge?.priceEvidence&&!loading&&<CollapsibleSection title="Measured price and volatility" summary={ge.priceEvidence.summary[0]??`Completed bar ${ge.priceEvidence.basis.lastCompletedBar??'n/a'}`}><PriceEvidencePanel e={ge.priceEvidence}/></CollapsibleSection>}{ge?.timingEvidence&&!loading&&<CollapsibleSection title="Timing and events" summary={ge.timingEvidence.summary[1]??ge.timingEvidence.summary[0]}><TimingEvidencePanel t={ge.timingEvidence}/></CollapsibleSection>}{ge&&!loading&&<CollapsibleSection deferMount title="News" summary="Symbol news grouped by event. Loads when opened."><SymbolNewsPanel symbol={sym} type="crypto"/></CollapsibleSection>}</>:<>
         {ge&&!loading&&<EquityTop data={ge} pick={findSymbolPick(dailyPicks.data,sym,'equity')}/>}
         {ge?.priceEvidence&&!loading&&<CollapsibleSection title="Measured price and volatility" summary={ge.priceEvidence.summary[0]??`Completed bar ${ge.priceEvidence.basis.lastCompletedBar??'n/a'}`}><PriceEvidencePanel e={ge.priceEvidence}/></CollapsibleSection>}
         {goldenEgg.error&&!loading&&<p role="alert" className="text-sm text-amber-300">Symbol data feed failed. <button className="min-h-10 underline" onClick={()=>goldenEgg.refetch()}>Retry</button></p>}
         {ge&&<>
         <CollapsibleSection deferMount title="Options" summary={geCanonical?.options?`Expiry ${geCanonical.options.expiry}`:'Options data not collected'}><SymbolOptionsContext compact symbol={sym} expiry={searchParams.get('expiry')??undefined}/></CollapsibleSection>
         {ge?.timingEvidence&&!loading&&<CollapsibleSection title="Timing and events" summary={ge.timingEvidence.summary[1]??ge.timingEvidence.summary[0]}><TimingEvidencePanel t={ge.timingEvidence}/></CollapsibleSection>}
-        <CollapsibleSection deferMount title="Fundamentals" summary={geCanonical?.fundamentals?.marketCap!=null?`Market cap ${formatUsdShort(geCanonical.fundamentals.marketCap)}${geCanonical.fundamentals.lastReportedQuarter?` · latest reported quarter ${geCanonical.fundamentals.lastReportedQuarter}`:''}`:'Company overview and ownership'}><CompanyOverview symbol={sym}/><OwnershipFlowPanel symbol={sym}/></CollapsibleSection>
+        <CollapsibleSection deferMount title="Fundamentals" summary={geCanonical?.fundamentals?.marketCap!=null?`Market cap ${formatUsdShort(geCanonical.fundamentals.marketCap)}${geCanonical.fundamentals.lastReportedQuarter?` · latest reported quarter ${geCanonical.fundamentals.lastReportedQuarter}`:''}`:'Company overview and ownership'}><CompanyOverview symbol={sym}/></CollapsibleSection>
+        <CollapsibleSection deferMount title="News and ownership" summary="Symbol news grouped by event, and dated ownership filings. Loads when opened."><SymbolNewsPanel symbol={sym} type="equity"/><div className="mt-3"><OwnershipFlowPanel symbol={sym}/></div></CollapsibleSection>
         <CollapsibleSection deferMount title="Scenario map" summary={`${ge.layer2.setup.keyLevels.length} recorded levels`}><p>{symbolText(ge.layer2.scenario.referenceTrigger)}</p><p>{symbolText(ge.layer2.scenario.invalidationLevel.logic)}</p></CollapsibleSection>
         <ChipRow items={[{id:'evidence',label:`${geDataQuality==='GOOD'?'Evidence and data checks':'Some data checks failed'} · ${geEvidenceItems.length} checks`,warning:geDataQuality!=='GOOD',detail:<EvidenceStack title="Evidence" items={geEvidenceItems.map(item=>({...item,value:symbolText(item.value),detail:item.detail?symbolText(item.detail):undefined}))}/>}]} />
         </>}
