@@ -155,6 +155,8 @@ export interface DeepAnalysisData {
 export interface GoldenEggPayload {
   /** Measured price/volatility evidence: completed daily bars only, each value dated (lib/research/priceEvidence). Null off the daily timeframe. */
   priceEvidence?: import('@/lib/research/priceEvidence').PriceEvidence | null;
+  /** Session, bar closes, next earnings and scheduled releases, each dated (lib/research/timingEvidence). */
+  timingEvidence?: import('@/lib/research/timingEvidence').TimingEvidence | null;
   meta: {
     symbol: string;
     assetClass: 'equity' | 'crypto' | 'forex';

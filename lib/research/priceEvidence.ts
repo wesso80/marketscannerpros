@@ -1,6 +1,7 @@
 import { atrSeries, dmiSeries, emaSeries, rsiSeries, smaSeries, lastFinite } from '@/lib/ta/core';
 import { computeBBWP } from '@/lib/directionalVolatilityEngine';
 import { BBWP } from '@/lib/directionalVolatilityEngine.constants';
+import { lastCompletedUsSessionDate } from '@/lib/time/usSession';
 
 /**
  * Measured price and volatility evidence for one ticker (ticker research page, Phase 2). One definition per measure,
@@ -19,8 +20,6 @@ export const PRICE_EVIDENCE = {
   adx: { developing: 20, strong: 25 },
   bbwp: { compressed: 20, expanded: 80 },
   volume: { below: 0.8, above: 1.2 },
-  /** A US equity daily bar dated today (New York) is complete only after the close plus a settling margin. */
-  equityCloseMinutesNy: 16 * 60 + 15,
 } as const;
 
 export type EvidenceBar = { date: string; open?: number | null; high: number; low: number; close: number; volume: number | null };
@@ -56,20 +55,15 @@ const fin = (v: unknown): v is number => typeof v === 'number' && Number.isFinit
 const r = (v: number, dp = 2) => Math.round(v * 10 ** dp) / 10 ** dp;
 const orNull = (v: number) => (Number.isFinite(v) ? v : null);
 
-function nyParts(ms: number) {
-  const f = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
-  const p = Object.fromEntries(f.formatToParts(new Date(ms)).map((x) => [x.type, x.value]));
-  return { date: `${p.year}-${p.month}-${p.day}`, minutes: (Number(p.hour) % 24) * 60 + Number(p.minute) };
-}
 /**
- * The bar to exclude as unfinished, if any. Equity: a bar dated today (New York) before 16:15 ET. Crypto: a bar
- * dated today (UTC), since a UTC daily candle closes at midnight.
+ * The bar to exclude as unfinished, if any. Equity: a bar dated after the last CLOSED US session (16:00 ET, or 13:00
+ * on early-close days; weekends and NYSE holidays via lib/time/usSession). Crypto: a bar dated today (UTC), since a
+ * UTC daily candle closes at midnight.
  */
 export function partialBarDate(lastDate: string, assetClass: 'equity' | 'crypto', nowMs: number): string | null {
   const d = lastDate.slice(0, 10);
   if (assetClass === 'crypto') return d === new Date(nowMs).toISOString().slice(0, 10) ? d : null;
-  const ny = nyParts(nowMs);
-  return d === ny.date && ny.minutes < PRICE_EVIDENCE.equityCloseMinutesNy ? d : null;
+  return d > lastCompletedUsSessionDate(nowMs) ? d : null;
 }
 
 export function buildPriceEvidence(input: {

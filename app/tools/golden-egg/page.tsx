@@ -39,6 +39,7 @@ import LockedPreview from '@/components/free/LockedPreview';
 import { FREE_COPY } from '@/components/free/copy';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import PriceEvidencePanel from '@/components/research/PriceEvidencePanel';
+import TimingEvidencePanel from '@/components/research/TimingEvidencePanel';
 import ChipRow from '@/components/visual/ChipRow';
 import type {StampLineProps} from '@/components/visual/StampLine';
 import SourceLine from '@/components/visual/SourceLine';
@@ -690,9 +691,9 @@ export default function GoldenEggPage() {
         </Card>
       )}
 
-      {!isAuthBlocked && (quoteType==='crypto'?<><CryptoBreakdown compact showSource={false} onStamp={setCryptoStamp} symbol={sym} timeframe={timeframe} coinId={searchParams.get('id')??undefined}/>{ge?.priceEvidence&&!loading&&<CollapsibleSection title="Measured price and volatility" summary={ge.priceEvidence.summary[0]??`Completed bar ${ge.priceEvidence.basis.lastCompletedBar??'n/a'}`}><PriceEvidencePanel e={ge.priceEvidence}/></CollapsibleSection>}</>:<>
+      {!isAuthBlocked && (quoteType==='crypto'?<><CryptoBreakdown compact showSource={false} onStamp={setCryptoStamp} symbol={sym} timeframe={timeframe} coinId={searchParams.get('id')??undefined}/>{ge?.priceEvidence&&!loading&&<CollapsibleSection title="Measured price and volatility" summary={ge.priceEvidence.summary[0]??`Completed bar ${ge.priceEvidence.basis.lastCompletedBar??'n/a'}`}><PriceEvidencePanel e={ge.priceEvidence}/></CollapsibleSection>}{ge?.timingEvidence&&!loading&&<CollapsibleSection title="Timing and events" summary={ge.timingEvidence.summary[1]??ge.timingEvidence.summary[0]}><TimingEvidencePanel t={ge.timingEvidence}/></CollapsibleSection>}</>:<>
         {ge&&!loading&&<EquityTop data={ge} pick={findSymbolPick(dailyPicks.data,sym,'equity')}/>}
-        {ge?.priceEvidence&&!loading&&<CollapsibleSection title="Measured price and volatility" summary={ge.priceEvidence.summary[0]??`Completed bar ${ge.priceEvidence.basis.lastCompletedBar??'n/a'}`}><PriceEvidencePanel e={ge.priceEvidence}/></CollapsibleSection>}
+        {ge?.priceEvidence&&!loading&&<CollapsibleSection title="Measured price and volatility" summary={ge.priceEvidence.summary[0]??`Completed bar ${ge.priceEvidence.basis.lastCompletedBar??'n/a'}`}><PriceEvidencePanel e={ge.priceEvidence}/></CollapsibleSection>}{ge?.timingEvidence&&!loading&&<CollapsibleSection title="Timing and events" summary={ge.timingEvidence.summary[1]??ge.timingEvidence.summary[0]}><TimingEvidencePanel t={ge.timingEvidence}/></CollapsibleSection>}
         {goldenEgg.error&&!loading&&<p role="alert" className="text-sm text-amber-300">Symbol data feed failed. <button className="min-h-10 underline" onClick={()=>goldenEgg.refetch()}>Retry</button></p>}
         {ge&&<>
         <CollapsibleSection deferMount title="Scenario map" summary={`${ge.layer2.setup.keyLevels.length} recorded levels`}><p>{symbolText(ge.layer2.scenario.referenceTrigger)}</p><p>{symbolText(ge.layer2.scenario.invalidationLevel.logic)}</p></CollapsibleSection>

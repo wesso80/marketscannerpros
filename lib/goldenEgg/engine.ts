@@ -1,4 +1,6 @@
 import { describeMultiple } from '@/lib/goldenEgg/fundamentalsContext';
+import { buildTimingEvidence, TIMING_EVIDENCE } from '@/lib/research/timingEvidence';
+import { buildCalendarFeed } from '@/lib/macro/calendar/feed';
 import { buildPriceEvidence, type PriceEvidence } from '@/lib/research/priceEvidence';
 import { oiBasisLabel } from '@/lib/options/oiSummary';
 import { valuationAtPrice } from '@/lib/market/valuationIntegrity';
@@ -1025,6 +1027,8 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
     fetchMacroRegime(),
   ]);
   const mpeData = await fetchMPE(symbol, assetClass, tcData);
+  // Scheduled high-importance US releases for the timing section (providers cache ~10 min; a failure is reported, not fatal).
+  const calendarFeed = assetClass === 'forex' ? null : await buildCalendarFeed({ nowMs: Date.now(), days: TIMING_EVIDENCE.eventHorizonDays, countries: ['US'], importance: 'high' }).catch(() => null);
 
   if (!priceData) {
     if (isLocalGoldenEggDemoAllowed()) {
@@ -1103,6 +1107,13 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
     }).catch(() => {});
   }
 
+  if (assetClass !== 'forex') {
+    payload = { ...payload, timingEvidence: buildTimingEvidence({
+      assetClass, nowMs: Date.now(),
+      earnings: assetClass === 'equity' ? { date: fundamentals?.nextEarningsDate ?? null, status: fundamentals?.nextEarningsStatus ?? (fundamentals ? null : 'UNKNOWN'), lastReportedQuarter: fundamentals?.lastReportedQuarter ?? null } : null,
+      releases: calendarFeed ? { events: calendarFeed.events.filter((e) => !e.isReleased), source: `Economic calendar (${calendarFeed.meta?.providers?.map((p: { id: string }) => p.id).join(', ') || 'providers'})` } : null,
+    }) };
+  }
   cache.set(cacheKey, { data: payload, ts: Date.now() });
   return { payload, cached: false, localDemo: false, warnings: [], dataQuality: goldenEggLiveDataQuality(assetClass) };
 }
