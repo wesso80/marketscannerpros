@@ -2,12 +2,16 @@ import type {PaperExitCandle} from './portfolio-lab/paperExitPath';
 const STEP=900000,H=3600000,F=4*H;
 /** Default plan for single-plan callers; earlier states keep the rules they started with. v1/v2 share a legacy journal title. */
 export const SHADOW_PLAN='partial-trail-v2' as const,SHADOW_TITLE='Crypto shadow exit plan partial-trail-v1';
-export type ShadowPlan='partial-trail-v1'|'partial-trail-v2'|'failed-breakout-trail-v3'|'trail-only-v4';
+export type ShadowPlan='partial-trail-v1'|'partial-trail-v2'|'failed-breakout-trail-v3'|'trail-only-v4'|'ratchet-v5'|'half2r-trail3-v6'|'chandelier3-v7';
 /** Plans replayed on every open position. Each is stored under its own journal title so rule versions never mix. */
-export const SHADOW_PLANS_ACTIVE:readonly ShadowPlan[]=['partial-trail-v2','failed-breakout-trail-v3','trail-only-v4'];
+export const SHADOW_PLANS_ACTIVE:readonly ShadowPlan[]=['partial-trail-v2','failed-breakout-trail-v3','trail-only-v4','ratchet-v5','half2r-trail3-v6','chandelier3-v7'];
 export const shadowTitle=(plan:ShadowPlan)=>plan==='partial-trail-v1'||plan==='partial-trail-v2'?SHADOW_TITLE:`Crypto shadow exit plan ${plan}`;
 export const SHADOW_TITLES=[...new Set(SHADOW_PLANS_ACTIVE.map(shadowTitle))];
-export type ShadowRules={partialR:number|null;partialFraction:number;trailAtr:number;trailFromStart:boolean;failedBreakoutExit:boolean;timeStopHours:number;timeStopMinR:number};
+/**
+ * timeStopHours null: no time stop. partialToBreakeven false: the stop stays where it is after the partial.
+ * ratchet: once the best completed high reaches +beAtR the stop moves to breakeven; at +lockAtR it moves to +lockR.
+ */
+export type ShadowRules={partialR:number|null;partialFraction:number;trailAtr:number;trailFromStart:boolean;failedBreakoutExit:boolean;timeStopHours:number|null;timeStopMinR:number;partialToBreakeven?:boolean;ratchet?:{beAtR:number;lockAtR:number;lockR:number}};
 /**
  * Research-only alternative exits, replayed on the same candles as the ledger. They never change a paper position.
  * v2: half at +1.5R, breakeven, 2-ATR trail on the rest, 72h time stop (18 completed 4h candles) if +1R never reached.
@@ -16,16 +20,22 @@ export type ShadowRules={partialR:number|null;partialFraction:number;trailAtr:nu
  *     breakouts early beats holding to the structural stop.
  * v4: no partial; the whole position trails 2 ATR below the highest completed high from entry, same 72h time stop.
  *     Tests whether the fixed 2R target (and the v2 partial) give up the momentum tail.
- * Rules are fixed a priori from the 4h timeframe, not fitted to results.
+ * v5 (Phase 2): profit ratchet, no partial, no trail, no time stop: breakeven once +1.5R is reached, +1R locked at +2R.
+ * v6 (Phase 2): half off at +2R; the rest trails 3 ATR below the highest completed high; no breakeven move, no time stop.
+ * v7 (Phase 2): pure chandelier: the whole position trails 3 ATR below the highest completed high from entry; no time stop.
+ * The fixed 2R ledger plan itself is the comparison baseline. Rules are fixed a priori, not fitted to results.
  */
 export const SHADOW_RULES_BY_PLAN:Record<ShadowPlan,ShadowRules>={
  'partial-trail-v1':{partialR:1.5,partialFraction:.5,trailAtr:2,trailFromStart:false,failedBreakoutExit:false,timeStopHours:24,timeStopMinR:1},
  'partial-trail-v2':{partialR:1.5,partialFraction:.5,trailAtr:2,trailFromStart:false,failedBreakoutExit:false,timeStopHours:72,timeStopMinR:1},
  'failed-breakout-trail-v3':{partialR:1.5,partialFraction:.5,trailAtr:2,trailFromStart:false,failedBreakoutExit:true,timeStopHours:72,timeStopMinR:1},
  'trail-only-v4':{partialR:null,partialFraction:0,trailAtr:2,trailFromStart:true,failedBreakoutExit:false,timeStopHours:72,timeStopMinR:1},
+ 'ratchet-v5':{partialR:null,partialFraction:0,trailAtr:0,trailFromStart:false,failedBreakoutExit:false,timeStopHours:null,timeStopMinR:1,ratchet:{beAtR:1.5,lockAtR:2,lockR:1}},
+ 'half2r-trail3-v6':{partialR:2,partialFraction:.5,trailAtr:3,trailFromStart:false,failedBreakoutExit:false,timeStopHours:null,timeStopMinR:1,partialToBreakeven:false},
+ 'chandelier3-v7':{partialR:null,partialFraction:0,trailAtr:3,trailFromStart:true,failedBreakoutExit:false,timeStopHours:null,timeStopMinR:1},
 };
 export const SHADOW_RULES=SHADOW_RULES_BY_PLAN[SHADOW_PLAN];
-export type ShadowLeg={fraction:number;price:number;at:string;reason:'PARTIAL_TARGET'|'STOP'|'BREAKEVEN_STOP'|'TRAIL_STOP'|'TIME_STOP'|'FAILED_BREAKOUT'|'HORIZON'};
+export type ShadowLeg={fraction:number;price:number;at:string;reason:'PARTIAL_TARGET'|'STOP'|'BREAKEVEN_STOP'|'TRAIL_STOP'|'RATCHET_STOP'|'TIME_STOP'|'FAILED_BREAKOUT'|'HORIZON'};
 export type ShadowState={version:1;plan:ShadowPlan;positionId:string;symbol:string;instrumentType:string;entry:number;entryAt:string;stop0:number;atr:number;entryFloor?:number|null;costRate:number;entryFeePerUnit:number;through:string;status:'OPEN'|'CLOSED'|'UNAVAILABLE';stop:number;highest:number|null;remaining:number;legs:ShadowLeg[];r:number|null;reason?:string};
 export function initShadow(p:{id:string;symbol:string;instrumentType:string;averageEntry:number;openedAt:string;initialStopLoss?:number|null;quantity:number;entryFee?:number},atr:number,costRate:number,plan:ShadowPlan=SHADOW_PLAN,entryFloor?:number|null):ShadowState{
  const stop0=p.initialStopLoss,entryAt=Date.parse(p.openedAt);
@@ -61,19 +71,21 @@ export function advanceShadow(state:ShadowState,candles:PaperExitCandle[],now=Da
   const partialEntry=b.openAt<entryAt,partialDone=s.remaining<1;
   if(b.low<=s.stop){
    const price=b.open<=s.stop&&!partialEntry?b.open:s.stop;
-   return close(s,price,b.closeAt,s.stop>s.entry?'TRAIL_STOP':partialDone&&s.stop===s.entry?'BREAKEVEN_STOP':s.stop>s.stop0?'TRAIL_STOP':'STOP');
+   return close(s,price,b.closeAt,rules.ratchet&&s.stop>=s.entry?(s.stop===s.entry?'BREAKEVEN_STOP':'RATCHET_STOP'):s.stop>s.entry?'TRAIL_STOP':partialDone&&s.stop===s.entry?'BREAKEVEN_STOP':s.stop>s.stop0?'TRAIL_STOP':'STOP');
   }
   if(!partialEntry){
    if(rules.partialR!=null&&!partialDone&&b.high>=s.entry+rules.partialR*risk){
     s.legs.push({fraction:rules.partialFraction,price:s.entry+rules.partialR*risk,at:new Date(b.closeAt).toISOString(),reason:'PARTIAL_TARGET'});
-    s.remaining=1-rules.partialFraction;s.stop=Math.max(s.stop,s.entry);
-    if(b.low<=s.entry)return close(s,s.entry,b.closeAt,'BREAKEVEN_STOP');
+    s.remaining=1-rules.partialFraction;
+    if(rules.partialToBreakeven!==false){s.stop=Math.max(s.stop,s.entry);if(b.low<=s.entry)return close(s,s.entry,b.closeAt,'BREAKEVEN_STOP');}
    }
    s.highest=Math.max(s.highest??-Infinity,b.high);
-   if(s.remaining===1&&b.closeAt>=entryAt+rules.timeStopHours*H&&s.highest<s.entry+rules.timeStopMinR*risk)return close(s,b.close,b.closeAt,'TIME_STOP');
+   if(rules.timeStopHours!=null&&s.remaining===1&&b.closeAt>=entryAt+rules.timeStopHours*H&&s.highest<s.entry+rules.timeStopMinR*risk)return close(s,b.close,b.closeAt,'TIME_STOP');
+   // Ratchet: raised only from completed highs, so the new stop applies from the next candle.
+   if(rules.ratchet){if(s.highest>=s.entry+rules.ratchet.lockAtR*risk)s.stop=Math.max(s.stop,s.entry+rules.ratchet.lockR*risk);else if(s.highest>=s.entry+rules.ratchet.beAtR*risk)s.stop=Math.max(s.stop,s.entry);}
    // Failed breakout: a completed 4h candle that began after entry closes below the signal's entry floor.
    if(rules.failedBreakoutExit&&s.entryFloor!=null&&b.closeAt%F===0&&b.closeAt-F>=entryAt&&b.close<s.entryFloor)return close(s,b.close,b.closeAt,'FAILED_BREAKOUT');
-   if(s.remaining<1||rules.trailFromStart)s.stop=Math.max(s.stop,s.highest-rules.trailAtr*s.atr);
+   if(rules.trailAtr>0&&(s.remaining<1||rules.trailFromStart))s.stop=Math.max(s.stop,s.highest-rules.trailAtr*s.atr);
   }
   expected=b.closeAt;s.through=new Date(b.closeAt).toISOString();
  }

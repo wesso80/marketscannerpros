@@ -29,6 +29,8 @@ import {unavailableCatalyst} from './cryptoJevCatalyst';
 import {unavailableChart} from './cryptoJevChart';
 import {fillTrailingNoTrade,type TrailingAnchor} from './cryptoCandleGaps';
 import {paperTradeLog,type PaperLogRow} from './cryptoTradeLog';
+import {LOCK,loadLock,saveLock,newLockState,markLock,advanceLockPosition,settleWithLedger,finishEpisodeIfDone} from './cryptoPaperLock';
+import {ledgerRecords,recordSignals,signalLedgerView,ensureSignalLedger} from './cryptoSignalLedger';
 import {trackExcursions,giveBackView,ensureExcursionTables,excursionTablesReady} from './cryptoPaperExcursion';
 import {fetchPaperQuote,fetchPaperPath,planCryptoPaper,PaperMarketError,CRYPTO_TIME_STOP} from './cryptoPaperMarket';
 export const CRYPTO_PAPER_NAME='Crypto Markets Paper';
@@ -94,6 +96,48 @@ async function advanceShadows(workspaceId:string,portfolioId:string,notes:string
   }
  }
 }
+/**
+ * Shadow portfolio lock (research only): marks the book each cycle, triggers on a 40% fall from the armed open-P&L
+ * peak, then replays each locked position against the ledger. Never changes a stop; failures are notes only.
+ */
+async function runPortfolioLock(workspaceId:string,bookId:string,equity:number,positions:Awaited<ReturnType<typeof listOpenPositions>>,paths:Map<string,{openAt:number;closeAt:number;high:number;low:number;open?:number;close?:number}[]>,notes:string[]){
+ try{
+  const now=Date.now(),until=Math.floor(now/900000)*900000,openPnl=positions.reduce((a,p)=>a+(p.unrealisedPnl||0),0);
+  const armUsd=LOCK.armR*equity*L.riskPerTradePct/100;
+  let st=await loadLock(bookId)??newLockState(bookId,now,openPnl,armUsd);
+  if(st.phase==='WATCHING'){
+   st={...st,armUsd};
+   const inputs=[];
+   for(const p of positions){
+    const [order]=p.sourceOrderId?await q<{created_reason:string|null}>('SELECT created_reason FROM arca_simulated_orders WHERE workspace_id=$1 AND id=$2',[workspaceId,p.sourceOrderId]):[];
+    let atr:number|null=null;try{const r=order?.created_reason??'';const a=Number(JSON.parse(r.slice(r.indexOf('{'))).signal?.atr);atr=Number.isFinite(a)&&a>0?a:null;}catch{}
+    const last=paths.get(p.id)?.at(-1);
+    inputs.push({positionId:p.id,symbol:p.symbol,instrumentType:p.instrumentType,entry:p.averageEntry,stop:p.stopLoss??p.initialStopLoss??0,stop0:p.initialStopLoss??p.stopLoss??0,target:p.takeProfit1??null,lastClose:last?.close??p.currentPrice??null,atr});
+   }
+   const before=st.phase;
+   st=markLock(st,now,openPnl,inputs,i=>i.startsWith('okx-usd-v1:')?.001:.0005,()=>until);
+   if(before==='WATCHING'&&st.phase==='TRIGGERED')notes.push(`Shadow portfolio lock triggered: open P&L ${openPnl.toFixed(2)} is ${Math.round(LOCK.dropFromPeak*100)}% or more below its peak ${st.episode!.peakOpenPnl.toFixed(2)}; stops tightened in shadow only`);
+  }
+  if(st.phase==='TRIGGERED'&&st.episode){
+   const openIds=new Set(positions.map(p=>p.id)),closedIds=st.episode.positions.filter(p=>!openIds.has(p.positionId)).map(p=>p.positionId);
+   const trades=closedIds.length?await q<{position_id:string;r_multiple:string|number|null;exit_time:string|Date}>('SELECT position_id::text AS position_id,r_multiple,exit_time FROM arca_trades WHERE workspace_id=$1 AND portfolio_id=$2 AND position_id::text = ANY($3::text[])',[workspaceId,bookId,closedIds]):[];
+   const tradeOf=new Map(trades.map(t=>[t.position_id,t]));
+   const next=[];
+   for(const lp of st.episode.positions){
+    let cur=lp;const t=tradeOf.get(lp.positionId),exitAt=t?new Date(t.exit_time).getTime():null;
+    try{
+     const bars=paths.get(lp.positionId)??(cur.status==='OPEN'?(lp.instrumentType.startsWith('okx-usd-v1:')?await fetchOkxUsdPath(lp.symbol,lp.instrumentType.slice(11),new Date(lp.through).toISOString()):await fetchPaperPath(lp.symbol,lp.instrumentType.slice(9),new Date(lp.through).toISOString())).candles:[]);
+     // Up to and including the ledger's exit candle: inside it the (higher) lock stop is checked first, as everywhere else.
+     cur=advanceLockPosition(cur,bars,exitAt!=null?Math.min(until,Math.ceil(exitAt/900000)*900000):until);
+    }catch(error){notes.push(`Shadow portfolio lock ${lp.symbol}: ${error instanceof Error?error.message:'request failed'}; retried next cycle`);}
+    if(t&&exitAt!=null)cur=settleWithLedger(cur,{r:t.r_multiple==null?null:Number(t.r_multiple),exitAt});
+    next.push(cur);
+   }
+   st=finishEpisodeIfDone({...st,episode:{...st.episode,positions:next}},now,openPnl);
+  }
+  await saveLock(st);
+ }catch{notes.push('Shadow portfolio lock skipped this cycle; paper exits unaffected');}
+}
 /** CSV of every filled paper order with its entry evidence and outcome. Read-only; null when the account does not exist. */
 export async function cryptoPaperTradeLog(workspaceId:string):Promise<string|null>{
  const portfolio=await getDefaultPortfolio(workspaceId,CRYPTO_PAPER_NAME);if(!portfolio)return null;
@@ -109,6 +153,7 @@ export async function cryptoPaperTradeLog(workspaceId:string):Promise<string|nul
 export async function cryptoPaperState(workspaceId:string){
  // Outside the transaction: give-back tables are read below only when this succeeded.
  await ensureExcursionTables().catch(()=>undefined);
+ await ensureSignalLedger().catch(()=>undefined);
  return atomicQueries(async()=>{
  let portfolio=await getDefaultPortfolio(workspaceId,CRYPTO_PAPER_NAME);
  if(!portfolio)return {portfolio:null,positions:[],trades:[],journal:[],limits:{...L,clusterRiskPct:CORRELATION.clusterRiskPct},btcRegime:await savedBtcRegime(),stats:null,exitPlans:null,research:{mode:'SIMULATED' as const},live:{mode:'SIMULATED' as const,portfolio:null,positions:[]}};
@@ -126,7 +171,7 @@ export async function cryptoPaperState(workspaceId:string){
  try{const tracked=excursionTablesReady();const rows=await q<CryptoStatsRow>('SELECT t.position_id,t.r_multiple,t.realised_pnl,t.outcome,t.exit_reason,t.instrument_type,t.entry_time,t.exit_time,t.entry_price,t.exit_price,t.quantity,t.stop_loss,o.created_reason'+(tracked?',x.mfe_r,x.mae_r':'')+' FROM arca_trades t LEFT JOIN arca_positions p ON p.id=t.position_id AND p.workspace_id=t.workspace_id LEFT JOIN arca_simulated_orders o ON o.id=p.source_order_id AND o.workspace_id=t.workspace_id'+(tracked?" LEFT JOIN crypto_trade_excursions x ON x.position_id=t.position_id::text AND x.status='CLOSED'":'')+' WHERE t.workspace_id=$1 AND t.portfolio_id=$2',[workspaceId,portfolio.id]);stats=summarizeCryptoPaper(rows);const shadows=[...(await shadowStates(workspaceId,portfolio.id)).values()];exitPlans=SHADOW_PLANS_ACTIVE.map(plan=>compareExitPlans(rows,shadows,plan));}catch{stats=null;exitPlans=null;}
  const livePortfolio=await getDefaultPortfolio(workspaceId,CRYPTO_PAPER_LIVE_NAME);
  const livePositions=livePortfolio?await listOpenPositions(workspaceId,livePortfolio.id):[];
- return {portfolio,positions,trades,journal,reconciliation,limits:{...L,clusterRiskPct:CORRELATION.clusterRiskPct},btcRegime:await savedBtcRegime(),stats,exitPlans,trending:await savedTrending().catch(()=>null),research:{mode:'SIMULATED' as const},live:{mode:'SIMULATED' as const,portfolio:livePortfolio,positions:livePositions,giveBack:livePortfolio?await giveBackView(livePortfolio.id,livePositions):null},giveBack:await giveBackView(portfolio.id,positions)};
+ return {portfolio,positions,trades,journal,reconciliation,limits:{...L,clusterRiskPct:CORRELATION.clusterRiskPct},btcRegime:await savedBtcRegime(),stats,exitPlans,trending:await savedTrending().catch(()=>null),research:{mode:'SIMULATED' as const},live:{mode:'SIMULATED' as const,portfolio:livePortfolio,positions:livePositions,giveBack:livePortfolio?await giveBackView(livePortfolio.id,livePositions):null,lock:livePortfolio?await loadLock(livePortfolio.id):null},giveBack:await giveBackView(portfolio.id,positions),lock:await loadLock(portfolio.id),signalLedger:await signalLedgerView()};
  });
 }
 export async function setCryptoPaperActive(workspaceId:string,active:boolean){
@@ -212,7 +257,9 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
  await advanceShadows(workspaceId,book.id,notes);
  // Research only: MFE/MAE and give-back on the same candles; never changes a position and never blocks entries.
  {const fresh=await getPortfolioById(workspaceId,book.id).catch(()=>null);
-  await trackExcursions(workspaceId,{id:book.id,totalEquity:fresh?.totalEquity??book.totalEquity},await listOpenPositions(workspaceId,book.id).catch(()=>[]),paths,notes);}
+  const openNow=await listOpenPositions(workspaceId,book.id).catch(()=>[]);
+  await trackExcursions(workspaceId,{id:book.id,totalEquity:fresh?.totalEquity??book.totalEquity},openNow,paths,notes);
+  await runPortfolioLock(workspaceId,book.id,fresh?.totalEquity??book.totalEquity,openNow,paths,notes);}
  // Every cycle: correlation across ALL open positions. Over-cap clusters are logged; positions are never resized here.
  try{
   const opens=await listOpenPositions(workspaceId,book.id),withBars=[];
@@ -332,6 +379,18 @@ export async function runCryptoPaperCycle(workspaceId:string,trigger:'manual'|'c
    });
   }catch(error){decide(candidate,'BLOCKED',error instanceof Error?error.message:'Entry validation failed',checkedQuote);notes.push(`${candidate.id}: ${error instanceof Error?error.message:'entry validation failed'}`);}
  }
+ // Research only: every signal this cycle (taken or skipped, with reasons) goes to the signal ledger. Never blocks.
+ try{
+  const ts=Date.now(),rows=recent?scan!.rows:[];
+  const records=ledgerRecords(decisions,rows,(row,coin)=>({btcRegime:btcRegime?.state??null,btc200:btcRegime?.longTrend??null,relativeStrength:rsSnap?rsEvidence(rsSnap,coin,ts):null,
+   jev:(row as {jev?:unknown}|undefined)?.jev??null,chart:(row as {chart?:unknown}|undefined)?.chart??null,flowStamp:(row as {flowStamp?:unknown}|undefined)?.flowStamp??null,recordedAt:new Date(ts).toISOString()}));
+  const links=new Map<string,string[]>();
+  for(const r of records.filter(x=>x.decision==='TAKEN')){
+   const key=`crypto-v1|${r.coin}|${r.product}|${r.signalAt}|`;
+   links.set(r.signalId,(await q<{id:string}>('SELECT p.id::text AS id FROM arca_positions p JOIN arca_simulated_orders o ON o.id=p.source_order_id AND o.workspace_id=p.workspace_id WHERE p.workspace_id=$1 AND left(o.created_reason,length($2))=$2',[workspaceId,key])).map(x=>x.id));
+  }
+  await recordSignals(records,links);
+ }catch{notes.push('Signal ledger not updated this cycle; entries unaffected');}
  const report={trigger,at:new Date().toISOString(),opened,closed,marked,monitorHealthy,notes,decisions,btcRegime,clusters};
  await writeJournal({workspaceId,portfolioId:portfolio.id,journalType:'REVIEW',title:STATUS,reasoning:trigger+': '+(notes.join('; ')||'Paper cycle completed'),evidence:[JSON.stringify(report)]});
  return report;

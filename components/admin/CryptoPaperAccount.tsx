@@ -7,12 +7,14 @@ import type {CryptoPaperStats as Stats,ExitPlanComparison} from '@/lib/admin/cry
 import type {BtcRegime} from '@/lib/admin/cryptoBtcRegime';
 import CryptoPaperStats from './CryptoPaperStats';
 import type {GiveBackView} from '@/lib/admin/cryptoPaperExcursion';
+import type {LockState} from '@/lib/admin/cryptoPaperLock';
+type LedgerView={rule:string;horizonDays:number;counts:{decision:string;status:string;n:number}[];skippedByReason:{reason:string;signals:number;avgR:number;winRate:number}[];variantE?:{signals:number;closed:number;open:number;avgR:number|null;winRate:number|null;openMarkR:number}};
 import {publishPaperSnapshot,usePaperSnapshot} from './cryptoPaperSnapshot';
 import {latestCryptoCycle} from '@/lib/admin/cryptoCycleReport';
 type Limits={clusterRiskPct?:number;riskPerTradePct:number;notionalPct:number;maxPairVolumePct:number;maxVolumeAgeHours:number;positions:number;openRiskPct:number;dailyEntries:number;lossFromStartPct:number};
-type Sleeve={mode:'SIMULATED';portfolio?:ArcaPortfolio|null;positions?:ArcaPosition[];giveBack?:GiveBackView|null};
+type Sleeve={mode:'SIMULATED';portfolio?:ArcaPortfolio|null;positions?:ArcaPosition[];giveBack?:GiveBackView|null;lock?:LockState|null};
 type BaseSleeve=Sleeve&{trades?:ArcaTrade[];limits?:{positions:number;openRiskPct:number;dailyEntries:number;timeStopHours:number;timeStopMinR:number;riskPerTradePct:number}};
-type State={trending?:{at:string;ids:string[];source:string}|null;limits?:Limits;btcRegime?:BtcRegime|null;stats?:Stats|null;exitPlans?:ExitPlanComparison[]|null;reconciliation?:CryptoReconciliation;automation?:{enabled:boolean;last?:{ok:boolean;at:string;error?:string}};portfolio:ArcaPortfolio|null;positions:ArcaPosition[];trades:ArcaTrade[];journal:ArcaJournalEntry[];research?:Sleeve;live?:Sleeve;base?:BaseSleeve;giveBack?:GiveBackView|null};
+type State={trending?:{at:string;ids:string[];source:string}|null;limits?:Limits;btcRegime?:BtcRegime|null;stats?:Stats|null;exitPlans?:ExitPlanComparison[]|null;reconciliation?:CryptoReconciliation;automation?:{enabled:boolean;last?:{ok:boolean;at:string;error?:string}};portfolio:ArcaPortfolio|null;positions:ArcaPosition[];trades:ArcaTrade[];journal:ArcaJournalEntry[];research?:Sleeve;live?:Sleeve;base?:BaseSleeve;giveBack?:GiveBackView|null;lock?:LockState|null;signalLedger?:LedgerView|null};
 const money=(n:number)=>n.toLocaleString(undefined,{style:'currency',currency:'USD',maximumFractionDigits:2});
 const qty=(n:number)=>n.toLocaleString(undefined,{maximumSignificantDigits:6});
 const when=(iso:string|null|undefined)=>{const t=iso?Date.parse(iso):NaN;return Number.isFinite(t)?new Date(t).toLocaleString():iso??'Not yet checked';};
@@ -26,6 +28,22 @@ function BookGiveBack({view}:{view?:GiveBackView|null}){
  if(!view)return <p className="text-xs text-slate-400">Give-back tracking: not available yet (tables are created on the next paper cycle).</p>;
  const b=view.book,pk=view.openPnlPeak;
  return <p className="text-xs text-slate-300 tabular-nums">Give-back · open positions have given back {b.givenBackPct==null?'—':`${Math.round(b.givenBackPct*100)}%`} of their best open profit ({money(b.givenBackUsd)} of {money(b.peakOpenProfitUsd)}). Book open P&amp;L peak {pk.peak?`${money(pk.peak.value)} at ${new Date(pk.peak.at).toLocaleString()}`:'—'}; now {pk.last?money(pk.last.value):'—'}{pk.fromPeak!=null?` (${money(pk.fromPeak)} from peak)`:''}. Tracked since {pk.trackedSince?new Date(pk.trackedSince).toLocaleString():'—'} at 15-minute cycle marks; {view.counts.closed} closed trades measured, {view.counts.unavailable} unavailable. Research only.</p>;
+}
+/** Signal ledger: every 4h signal, taken or skipped; skipped ones replayed after the horizon (research only). */
+function SignalLedger({view}:{view?:LedgerView|null}){
+ if(!view)return <p className="text-xs text-slate-400">Signal ledger: starts recording on the next entry cycle.</p>;
+ const n=(d:string,st?:string)=>view.counts.filter(c=>c.decision===d&&(!st||c.status===st)).reduce((a,c)=>a+c.n,0);
+ return <details className="text-xs"><summary>Signal ledger · {n('TAKEN')} taken · {n('SKIPPED')} skipped ({n('SKIPPED','RESOLVED')} replayed, {n('SKIPPED','PENDING')} waiting {view.horizonDays} days, {n('SKIPPED','UNAVAILABLE')} unavailable)</summary>
+  {view.variantE&&<p className="mt-1">Variant E in shadow (daily signals, BTC above its 200-day average, daily trend exits; no paper orders): {view.variantE.signals} signals · {view.variantE.closed} closed{view.variantE.avgR!=null?` · avg ${view.variantE.avgR>=0?'+':''}${view.variantE.avgR.toFixed(2)}R · win ${Math.round((view.variantE.winRate??0)*100)}%`:''} · {view.variantE.open} open (marked {view.variantE.openMarkR>=0?'+':''}{view.variantE.openMarkR.toFixed(2)}R total).{view.variantE.closed<30?' Under 30 closed: not yet meaningful.':''}</p>}
+  <p className="mt-1 text-slate-400">Skipped signals are replayed as if entered at the decision quote (or the next 15m open) through the same fixed-2R plan and every shadow plan. Entry-zone and chase checks are bypassed so filters can be judged; each row records whether the zone would have passed. Research only.</p>
+  {view.skippedByReason.length?<div className="overflow-auto"><table className="w-full min-w-[520px] text-left tabular-nums"><thead><tr>{['Skip reason','Replayed','Avg R (fixed 2R)','Win rate'].map(h=><th className="p-1" key={h}>{h}</th>)}</tr></thead><tbody>{view.skippedByReason.map(g=><tr key={g.reason} className="border-t border-slate-700"><td className="p-1">{g.reason}</td><td className="p-1">{g.signals}{g.signals<10?<span className="text-amber-300"> · few</span>:null}</td><td className={`p-1 ${g.avgR>0?'text-emerald-300':'text-red-300'}`}>{g.avgR>=0?'+':''}{g.avgR.toFixed(2)}R</td><td className="p-1">{Math.round(g.winRate*100)}%</td></tr>)}</tbody></table></div>:<p className="mt-1 text-slate-400">No skipped signals replayed yet.</p>}
+ </details>;
+}
+/** Shadow portfolio lock: research only; it never moves a paper stop. */
+function ShadowLock({lock}:{lock?:LockState|null}){
+ if(!lock)return <p className="text-xs text-slate-400">Shadow portfolio lock: starts on the next paper cycle.</p>;
+ const e=lock.episode,done=lock.completed,lockSum=done.reduce((a,c)=>a+c.lockTotalR,0),ledgerSum=done.reduce((a,c)=>a+c.ledgerTotalR,0);
+ return <p className="text-xs text-slate-300 tabular-nums">Shadow portfolio lock (arms at open P&amp;L {money(lock.armUsd)}, triggers on a 40% fall from peak; tightens stops in shadow only): {lock.phase==='TRIGGERED'&&e?<>triggered {new Date(e.triggeredAt).toLocaleString()} (peak {money(e.peakOpenPnl)} → {money(e.triggerOpenPnl)}); {e.positions.filter(p=>p.status!=='OPEN').length} of {e.positions.length} locked positions resolved.</>:<>watching · peak {money(lock.peakOpenPnl)} since {new Date(lock.since).toLocaleString()} · {lock.peakOpenPnl>=lock.armUsd?'armed':'not armed'}.</>} {done.length?<>Completed episodes: {done.length} · lock {lockSum>=0?'+':''}{lockSum.toFixed(2)}R vs ledger {ledgerSum>=0?'+':''}{ledgerSum.toFixed(2)}R on the same positions.</>:'No completed episodes yet.'}</p>;
 }
 export default function CryptoPaperAccount({now,refreshVersion=0,onRefresh}:{now:number;refreshVersion?:number;onRefresh?:()=>void}){
  const [data,setData]=useState<State|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
@@ -93,10 +111,10 @@ export default function CryptoPaperAccount({now,refreshVersion=0,onRefresh}:{now
    </details>
    <h3 className="font-semibold">Research sleeve · SIMULATED · open positions ({data!.positions.length})</h3>
    {!data!.positions.length?<p>No open paper positions. Entries require a qualifying setup and a valid current entry price.</p>:<PositionsTable positions={data!.positions} trending={data!.trending} giveBack={data!.giveBack}/>}
-   <BookGiveBack view={data?.giveBack}/>
+   <BookGiveBack view={data?.giveBack}/><ShadowLock lock={data?.lock}/><SignalLedger view={data?.signalLedger}/>
    <p><a href="/api/admin/crypto-markets/paper?format=csv" className="underline">Download full trade log (CSV)</a> <span className="text-xs text-slate-400">Every paper entry: why it was taken (setup, signal, volume, BTC trend, funding, correlation, liquidity cap), its levels and size, and the outcome, including the shadow exit plan. SIMULATED.</span></p>
    <h3 className="font-semibold">Live sleeve · SIMULATED · open positions ({data?.live?.positions?.length??0})</h3>
-   {!data?.live?.portfolio?<p>Live sleeve is created with the research account. It stays empty until a cycle accepts an entry.</p>:!data.live.positions?.length?<p>No open live-sleeve positions. Equity {money(data.live.portfolio.totalEquity)} · Cash {money(data.live.portfolio.currentCash)}. SIMULATED. No exchange orders.</p>:<><p>Equity {money(data.live.portfolio.totalEquity)} · Cash {money(data.live.portfolio.currentCash)} · SIMULATED</p><PositionsTable positions={data.live.positions} giveBack={data.live.giveBack}/><BookGiveBack view={data.live.giveBack}/></>}
+   {!data?.live?.portfolio?<p>Live sleeve is created with the research account. It stays empty until a cycle accepts an entry.</p>:!data.live.positions?.length?<p>No open live-sleeve positions. Equity {money(data.live.portfolio.totalEquity)} · Cash {money(data.live.portfolio.currentCash)}. SIMULATED. No exchange orders.</p>:<><p>Equity {money(data.live.portfolio.totalEquity)} · Cash {money(data.live.portfolio.currentCash)} · SIMULATED</p><PositionsTable positions={data.live.positions} giveBack={data.live.giveBack}/><BookGiveBack view={data.live.giveBack}/><ShadowLock lock={data.live.lock}/></>}
    <h3 className="font-semibold">Base-breakout sleeve · SIMULATED · open positions ({data?.base?.positions?.length??0})</h3>
    <p className="text-xs text-slate-400">The early setup: first confirmed 4h breakout closing 0–3% above a saved daily base high. Separate $200,000 ledger. Exit is a 2-ATR trailing stop ratcheted on completed candles, the structural initial stop, and a {data?.base?.limits?.timeStopHours??168}h time stop only if +1R was never reached; there is no fixed target. Stops shown are the initial stops; the trail is applied by the cycle from stored candles. Jev shadow, chart confirmer and catalyst are recorded with each entry, never gates.</p>
    {!data?.base?.portfolio?<p>Base sleeve is created when the paper account is enabled. It stays empty until a daily base breaks out on a confirmed 4h candle.</p>:<>
