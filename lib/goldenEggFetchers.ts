@@ -4,6 +4,7 @@ import { isMeasuredLevel } from '@/lib/confluenceMeasured';
  * Used by: app/api/golden-egg/route.ts, app/api/dve/route.ts
  */
 
+import { partialBarDate } from '@/lib/research/priceEvidence';
 import { avFetch, avTakeToken } from '@/lib/avRateGovernor';
 import { getIndicators, getQuote } from '@/lib/onDemandFetch';
 import { calculateAllIndicators, detectSqueeze, type OHLCVBar } from '@/lib/indicators';
@@ -359,7 +360,8 @@ export async function fetchPrice(
         volumes: indicatorDates.map(d => { const v = parseFloat(ts[d]['6. volume'] ?? ts[d]['5. volume']); const f = splitFactor.get(d) ?? 1; return Number.isFinite(v) && v > 0 ? v * f : null; }),
       },
       barInterval,
-      lastCompletedBarAt: lastKey ?? null,
+      // A daily bar dated today (New York) is still forming until after the close: it is the price, not a completed bar.
+      lastCompletedBarAt: interval === 'daily' && lastKey && partialBarDate(lastKey, 'equity', Date.now()) ? (dates[1] ?? null) : (lastKey ?? null),
       priceTs: lastKey,
       source: isIntraday ? `alpha_vantage TIME_SERIES_INTRADAY ${interval}` : `alpha_vantage TIME_SERIES_${interval === 'weekly' ? 'WEEKLY' : 'DAILY'}_ADJUSTED (O/H/L/C split-adjusted via coefficients${splitsApplied ? `, ${splitsApplied} split${splitsApplied === 1 ? '' : 's'} applied` : ''})`,
       volumeBasis: avgVol && avgVol > 0 ? 'exchange_volume_20_bars' : 'unavailable',
