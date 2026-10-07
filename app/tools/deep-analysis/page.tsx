@@ -1581,6 +1581,10 @@ export default function DeepAnalysisPage({
                       {/* 52-Week Range Visual Bar */}
                       <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center", gridColumn: "span 2" }}>
                         <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase", marginBottom: "0.5rem" }}>52-Week Position</div>
+                        {/* Missing range or price: say so instead of leaving an empty tile. */}
+                        {!(result.company.week52Low && result.company.week52High && result.price?.price) && (
+                          <div data-week52-missing style={{ fontSize: "0.75rem", color: "#94A3B8" }}>Not collected: 52-week high, low or current price unavailable</div>
+                        )}
                         {result.company.week52Low && result.company.week52High && result.price?.price && (
                           <>
                             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", marginBottom: "0.25rem" }}>
