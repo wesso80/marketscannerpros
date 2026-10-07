@@ -6,6 +6,9 @@ import type { TickerContext } from '../types';
 import { SentimentBadge } from '@/components/NewsSentiment';
 import type { InteractiveChartCandle } from '@/components/scanner/InteractiveChart';
 
+/** Missing reference levels read "Not available", never $0.00. */
+const lvl = (v: number | null | undefined) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? `$${v.toFixed(2)}` : 'Not available');
+
 const InteractiveChart = dynamic(
   () => import('@/components/scanner/InteractiveChart'),
   { ssr: false, loading: () => <div className="h-[420px] animate-pulse rounded-md bg-[var(--msp-panel-2)]" /> }
@@ -128,9 +131,9 @@ export default function OverviewTab({ ctx }: { ctx: TickerContext }) {
           <div className="grid grid-cols-2 gap-2 text-[11px] md:grid-cols-5">
             <div><span className="text-[var(--msp-text-faint)]">Setup:</span> <span className="text-[var(--msp-text)] font-medium">{scanner.setup}</span></div>
             <div><span className="text-[var(--msp-text-faint)]">Direction:</span> <span className={scanner.direction === 'LONG' ? 'text-emerald-400' : 'text-rose-400'}>{scanner.direction}</span></div>
-            <div><span className="text-[var(--msp-text-faint)]">Score:</span> <span className="text-[var(--msp-text)]">{scanner.score}/100</span></div>
-            <div><span className="text-[var(--msp-text-faint)]">Reference:</span> <span className="text-[var(--msp-text)]">${(scanner.entry ?? 0).toFixed(2)}</span></div>
-            <div><span className="text-[var(--msp-text-faint)]">R-Multiple:</span> <span className={(scanner.rMultiple ?? 0) >= 2 ? 'text-emerald-400' : 'text-amber-400'}>{(scanner.rMultiple ?? 0).toFixed(1)}R</span></div>
+            <div><span className="text-[var(--msp-text-faint)]" title="Indicator agreement, 0–100. Not a probability or a forecast.">Agreement:</span> <span className="text-[var(--msp-text)]">{scanner.score}/100</span></div>
+            <div><span className="text-[var(--msp-text-faint)]">Reference:</span> <span className="text-[var(--msp-text)]">{lvl(scanner.entry)}</span></div>
+            <div><span className="text-[var(--msp-text-faint)]" title="Ratio of the scanner's reference levels, not an expected result.">Level ratio:</span> <span className="text-[var(--msp-text)]">{Number.isFinite(scanner.rMultiple) && (scanner.rMultiple as number) > 0 ? `${(scanner.rMultiple as number).toFixed(1)} : 1` : 'Not available'}</span></div>
           </div>
         </div>
       )}

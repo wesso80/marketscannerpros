@@ -3,6 +3,9 @@
 import dynamic from 'next/dynamic';
 import type { TickerContext } from './types';
 
+/** Missing reference levels read "Not available", never $0.00. */
+const lvl = (v: number | null | undefined) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? `$${v.toFixed(2)}` : 'Not available');
+
 const WatchlistWidget = dynamic(() => import('@/components/WatchlistWidget'), {
   ssr: false,
   loading: () => <div className="h-[200px] animate-pulse rounded-md bg-[var(--msp-panel-2)]" />,
@@ -40,7 +43,7 @@ export default function RightRail({ ctx }: { ctx: TickerContext }) {
             )}
             {ctx.scanner && (
               <QuickStat
-                label="Score"
+                label="Agreement"
                 value={`${ctx.scanner.score}/100`}
                 color={ctx.scanner.score >= 70 ? 'text-emerald-400' : ctx.scanner.score >= 40 ? 'text-amber-400' : 'text-slate-400'}
               />
@@ -68,22 +71,21 @@ export default function RightRail({ ctx }: { ctx: TickerContext }) {
             </div>
             <div className="flex justify-between">
               <span className="text-[var(--msp-text-faint)]">Reference</span>
-              <span className="text-[var(--msp-text)]">${(ctx.scanner.entry ?? 0).toFixed(2)}</span>
+              <span className="text-[var(--msp-text)]">{lvl(ctx.scanner.entry)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-[var(--msp-text-faint)]">Invalidation</span>
-              <span className="text-rose-400">${(ctx.scanner.stop ?? 0).toFixed(2)}</span>
+              <span className="text-rose-400">{lvl(ctx.scanner.stop)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-[var(--msp-text-faint)]">Key Level</span>
-              <span className="text-emerald-400">${(ctx.scanner.target ?? 0).toFixed(2)}</span>
+              <span className="text-emerald-400">{lvl(ctx.scanner.target)}</span>
             </div>
             <div className="flex justify-between border-t border-[var(--msp-divider)] pt-1">
-              <span className="text-[var(--msp-text-faint)]">R-Multiple</span>
-              <span className={`font-black ${(ctx.scanner.rMultiple ?? 0) >= 2 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                {(ctx.scanner.rMultiple ?? 0).toFixed(1)}R
-              </span>
+              <span className="text-[var(--msp-text-faint)]" title="Distance to the key level divided by distance to invalidation, from the scanner's reference levels. A ratio of levels, not an expected result.">Level ratio</span>
+              <span className="text-[var(--msp-text)]">{Number.isFinite(ctx.scanner.rMultiple) && (ctx.scanner.rMultiple as number) > 0 ? `${(ctx.scanner.rMultiple as number).toFixed(1)} : 1` : 'Not available'}</span>
             </div>
+            <p className="pt-1 text-[10px] text-[var(--msp-text-faint)]">Reference levels for research. Not instructions; historical validation not established.</p>
           </div>
         </div>
       )}

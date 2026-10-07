@@ -105,7 +105,7 @@ export const SCAN_TEMPLATES: ScanTemplate[] = [
     id: 'high_conviction',
     label: 'High Alignment',
     icon: 'ALN',
-    description: 'Only A-setups: 70%+ confidence, 3+ MTF alignment, high quality',
+    description: 'Indicator agreement 70+, 3+ timeframes aligned, high data quality',
     config: {
       minConfidence: 70,
       mtfAlignment: 3,

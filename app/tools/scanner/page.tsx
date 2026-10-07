@@ -149,7 +149,7 @@ function summarizeRankedReason(r: ScanResult, lifecycle: LifecycleState, regimeC
   if (r.dveFlags?.includes('COMPRESSED')) return `${lifecycle === 'READY' ? 'Multi-factor' : 'Watch'} compression`;
   if (r.dveFlags?.includes('MOMENTUM_ACCEL')) return 'Momentum accel';
   if (r.dveFlags?.includes('CLIMAX')) return 'Volatility risk';
-  if (r.confidence != null && r.confidence >= 70) return 'Strong confluence';
+  if (r.confidence != null && r.confidence >= 70) return 'High indicator agreement';
   if (r.direction === 'bullish') return 'Bullish alignment';
   if (r.direction === 'bearish') return 'Bearish alignment';
   return 'Mixed evidence';
@@ -196,11 +196,11 @@ function rankedTrustDetail(r: ScanResult): string {
   ].filter(Boolean) as string[];
   if (qualityWarnings.length) return qualityWarnings.join(' · ');
   const missing = [
-    r.confidence == null ? 'confidence' : null,
+    r.confidence == null ? 'indicator agreement' : null,
     r.score == null ? 'raw score' : null,
     r.dveBbwp == null && !r.dveSignalType && !r.dveFlags?.length ? 'DVE context' : null,
   ].filter(Boolean) as string[];
-  return missing.length ? `Missing or weak: ${missing.join(', ')}.` : 'Price, score, confidence, and volatility context are available.';
+  return missing.length ? `Missing or weak: ${missing.join(', ')}.` : 'Price, indicator agreement, and volatility context are available.';
 }
 
 /**
@@ -342,7 +342,7 @@ function ScannerRowStamp({row}:{row:ScanResult}) { return <span>{row.price == nu
 function ProScannerCards({ rows, onRowClick }: { rows: ScreenerRow[]; onRowClick: (row: ScreenerRow) => void }) {
  return <div className="space-y-2" data-scanner-results>{rows.map(row=><button key={row.symbol} onClick={()=>onRowClick(row)} className="min-h-10 w-full rounded-lg border border-slate-700 p-3 text-left">
  <span className="flex justify-between gap-3"><strong>{row.displaySymbol ?? row.symbol}</strong><span>{row.price != null ? formatScannerPrice(row.price) : 'Not collected'}</span></span>
- <span className="mt-1 flex justify-between gap-2 text-xs text-slate-400"><span>{scannerCopy(row.reason || 'Mixed evidence')}</span>{Number.isFinite(row.confidence)&&<span className="shrink-0">Score {Math.round(row.confidence)}</span>}</span>
+ <span className="mt-1 flex justify-between gap-2 text-xs text-slate-400"><span>{scannerCopy(row.reason || 'Mixed evidence')}</span>{Number.isFinite(row.confidence)&&<span className="shrink-0" title="Indicator agreement, 0–100: how strongly the indicators point the same way. Not a probability or a forecast; historical validation not established.">Agreement {Math.round(row.confidence)}</span>}</span>
  </button>)}</div>;
 }
 
@@ -913,9 +913,10 @@ function ScannerContent() {
           <div className="flex flex-wrap gap-3 text-xs">
           <label>Timeframe<select value={v2Timeframe} onChange={e=>setV2Timeframe(e.target.value as ScanTimeframe)} className="ml-2 rounded bg-slate-900 p-2">{SCAN_TIMEFRAMES.map(tf=><option key={tf.value} value={tf.value}>{tf.label}</option>)}</select></label>
           <label>Evidence<select value={activeTab} onChange={e=>setActiveTab(e.target.value as typeof activeTab)} className="ml-2 rounded bg-slate-900 p-2">{TABS.map(tab=><option key={tab} value={tab}>{scannerCopy(tab)} ({tabCounts[tab]})</option>)}</select></label>
-          <label>Sort<select value={sortKey} onChange={e=>setSortKey(e.target.value as SortKey)} className="ml-2 rounded bg-slate-900 p-2"><option value="mspScore">Score</option><option value="symbol">Symbol</option><option value="price">Price</option></select></label>
+          <label>Sort<select value={sortKey} onChange={e=>setSortKey(e.target.value as SortKey)} className="ml-2 rounded bg-slate-900 p-2"><option value="mspScore">Score (unvalidated)</option><option value="symbol">Symbol</option><option value="price">Price</option></select></label>
           <button onClick={()=>setSortDir(sortDir==='asc'?'desc':'asc')}>{sortDir==='asc'?'Ascending':'Descending'}</button>
           </div></CollapsibleSection>
+          <p data-scanner-ordering-note className="text-xs text-slate-400">Ordering uses the scanner&apos;s indicator and setup scores. They describe how strongly current conditions line up; they are not probabilities or forecasts, and historical validation on unseen data is not established. Educational research only.</p>
           {rankedLocalDemo && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-200">
               <strong>Local demo scanner rows:</strong> live market data keys/cache are unavailable in this local environment, so these rows are sample data for workflow testing only. Do not treat them as live scanner output.
@@ -1057,7 +1058,7 @@ function ScannerContent() {
                 <label htmlFor="pro-filter-sort" className="text-[11px] uppercase text-slate-500">Sort:</label>
                 <select id="pro-filter-sort" value={proSort} onChange={e => setProSort(e.target.value as any)}
                   className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200">
-                  <option value="rank">Rank</option><option value="confidence">Confluence</option><option value="volatility">Volatility</option><option value="trend">Trend</option>
+                  <option value="rank">Rank</option><option value="confidence">Data coverage</option><option value="volatility">Volatility</option><option value="trend">Trend</option>
                 </select>
               </div>
 
