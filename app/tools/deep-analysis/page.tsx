@@ -77,6 +77,9 @@ interface NewsItem {
   relevance?: number;
   catalyst?: 'POSITIVE' | 'NEGATIVE' | 'MIXED' | 'NEUTRAL' | 'EVENT_RISK';
   catalystReason?: string;
+  /** Same-event grouping from the API: articles sharing an eventId report one event. */
+  eventId?: string;
+  eventSize?: number;
 }
 
 interface GoldenEggSummary {
@@ -217,7 +220,7 @@ interface AnalysisResult {
   aiAnalysis: string | null;
   goldenEgg?: GoldenEggSummary;
   analyst?: AnalystOutput;
-  newsMeta?: { considered: number; relevant: number; provider: string; headline: string; positive: number; negative: number; eventRisk: number };
+  newsMeta?: { considered: number; relevant: number; provider: string; headline: string; positive: number; negative: number; eventRisk: number; events?: number; rule?: string };
   error?: string;
 }
 
@@ -1156,8 +1159,10 @@ export default function DeepAnalysisPage({
                       <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>News Sentiment</div>
                       <div style={{ fontSize: "1rem", fontWeight: "600", color: "#fff" }}>
                         {(() => {
-                          const positive = result.news.filter((n: any) => n.sentiment === 'Bullish').length;
-                          const negative = result.news.filter((n: any) => n.sentiment === 'Bearish').length;
+                          // One vote per event (its first article), so repeated coverage of one story does not count several times.
+                          const perEvent = result.news.filter((n: any, i: number, all: any[]) => !n.eventId || all.findIndex((m: any) => m.eventId === n.eventId) === i);
+                          const positive = perEvent.filter((n: any) => n.sentiment === 'Bullish').length;
+                          const negative = perEvent.filter((n: any) => n.sentiment === 'Bearish').length;
                           if (positive > negative * 2) return 'Very Positive';
                           if (positive > negative) return 'Positive';
                           if (negative > positive * 2) return 'Very Negative';
@@ -2077,6 +2082,7 @@ export default function DeepAnalysisPage({
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#64748B", fontSize: "0.75rem" }}>
                             <span style={{ fontWeight: "500" }}>{item.source}</span>
+                            {(item.eventSize ?? 1) > 1 && <><span>•</span><span data-news-event title="Articles about the same event (same catalyst, within 72 hours, matching headline wording) count once in the summary.">one of {item.eventSize} articles on this event</span></>}
                             {item.publishedAt && (
                               <>
                                 <span>•</span>

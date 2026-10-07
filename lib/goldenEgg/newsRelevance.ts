@@ -31,6 +31,53 @@ export interface RelevantArticle {
   relevance: number;
   catalyst: CatalystClass;
   catalystReason: string;
+  /** Articles about the same event share an id (see groupNewsEvents); several reports are one catalyst, not several. */
+  eventId?: string;
+  /** Number of relevant articles about this event. */
+  eventSize?: number;
+}
+
+export const NEWS_EVENTS = { version: 'news-events-v1', windowHours: 72, minHeadlineOverlap: 0.35, maxEvents: 8, maxArticles: 16 } as const;
+export interface NewsEvent { id: string; catalyst: CatalystClass; catalystReason: string; headline: string; firstPublishedAt: string | null; lastPublishedAt: string | null; articles: number; sources: string[]; maxRelevance: number }
+
+const STOP = new Set(['about','after','again','against','also','amid','analyst','analysts','another','because','before','being','could','down','from','have','into','just','more','most','over','says','said','shares','stock','stocks','than','that','their','there','these','they','this','what','when','where','which','while','will','with','would','your','inc','corp','company','report','reports','today','week','year']);
+function headlineTokens(title: string): Set<string> {
+  return new Set(title.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter((w) => w.length >= 4 && !STOP.has(w)));
+}
+const normTitle = (t: string) => t.normalize('NFKC').toLowerCase().replace(/[\s\p{P}]+/gu, '');
+function overlap(a: Set<string>, b: Set<string>): number {
+  if (!a.size || !b.size) return 0;
+  let n = 0; for (const w of a) if (b.has(w)) n++;
+  return n / (a.size + b.size - n);
+}
+/**
+ * Groups articles that report the same event: same catalyst class and reason, published within 72 hours of each
+ * other, and the same headline or overlapping headline wording (Jaccard >= 0.35 on content words). Transitive
+ * (single linkage). Returns the events (newest-relevant first) and the articles tagged with eventId / eventSize.
+ */
+export function groupNewsEvents(items: RelevantArticle[]): { events: NewsEvent[]; articles: RelevantArticle[] } {
+  const n = items.length, parent = items.map((_, i) => i);
+  const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  const tok = items.map((a) => headlineTokens(a.title)), norm = items.map((a) => normTitle(a.title));
+  const t = items.map((a) => (a.publishedAt ? Date.parse(a.publishedAt) : NaN));
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+    if (items[i].catalyst !== items[j].catalyst || items[i].catalystReason !== items[j].catalystReason) continue;
+    const close = Number.isFinite(t[i]) && Number.isFinite(t[j]) ? Math.abs(t[i] - t[j]) <= NEWS_EVENTS.windowHours * 3_600_000 : true;
+    if (!close) continue;
+    if ((norm[i] && norm[i] === norm[j]) || overlap(tok[i], tok[j]) >= NEWS_EVENTS.minHeadlineOverlap) parent[find(i)] = find(j);
+  }
+  const groups = new Map<number, number[]>();
+  for (let i = 0; i < n; i++) { const r = find(i); groups.set(r, [...(groups.get(r) ?? []), i]); }
+  const events: (NewsEvent & { idx: number[] })[] = [...groups.values()].map((idx) => {
+    const arts = idx.map((i) => items[i]).sort((a, b) => (a.publishedAt ?? '').localeCompare(b.publishedAt ?? ''));
+    const lead = [...arts].sort((a, b) => b.relevance - a.relevance)[0];
+    const dates = arts.map((a) => a.publishedAt).filter((d): d is string => !!d).sort();
+    return { id: '', catalyst: lead.catalyst, catalystReason: lead.catalystReason, headline: lead.title, firstPublishedAt: dates[0] ?? null, lastPublishedAt: dates[dates.length - 1] ?? null,
+      articles: arts.length, sources: [...new Set(arts.map((a) => a.source).filter(Boolean))], maxRelevance: lead.relevance, idx };
+  }).sort((a, b) => b.maxRelevance - a.maxRelevance || (b.lastPublishedAt ?? '').localeCompare(a.lastPublishedAt ?? ''));
+  events.forEach((e, k) => { e.id = `e${k + 1}`; });
+  const tagged = items.map((a, i) => { const e = events.find((x) => x.idx.includes(i))!; return { ...a, eventId: e.id, eventSize: e.articles }; });
+  return { events: events.map(({ idx: _idx, ...e }) => e), articles: tagged };
 }
 
 /**
@@ -86,7 +133,11 @@ export function filterRelevantNews(
     });
   }
   out.sort((x, y) => y.relevance - x.relevance);
-  return out.slice(0, opts.limit ?? 8);
+  // Limit by EVENTS, so repeated reports of one story cannot crowd out other events; keep their articles as sources.
+  const { events, articles } = groupNewsEvents(out);
+  const keep = new Set(events.slice(0, opts.limit ?? NEWS_EVENTS.maxEvents).map((e) => e.id));
+  // Default: 8 events / 16 articles. A caller's larger limit raises both (two articles per event on average).
+  return articles.filter((a) => keep.has(a.eventId!)).slice(0, opts.limit ? Math.max(NEWS_EVENTS.maxArticles, opts.limit * 2) : NEWS_EVENTS.maxArticles);
 }
 
 const NEGATIVE_PATTERNS: Array<[RegExp, string]> = [
@@ -142,12 +193,17 @@ export function classifyCatalyst(text: string, assetClass: 'equity' | 'crypto' |
   return { klass: 'NEUTRAL', reason: NO_CATALYST_REASON };
 }
 
-export function summarizeNews(items: RelevantArticle[]): { headline: string; positive: number; negative: number; eventRisk: number; neutral: number } {
-  const positive = items.filter((i) => i.catalyst === 'POSITIVE').length;
-  const negative = items.filter((i) => i.catalyst === 'NEGATIVE').length;
-  const eventRisk = items.filter((i) => i.catalyst === 'EVENT_RISK').length;
-  const neutral = items.length - positive - negative - eventRisk;
-  if (items.length === 0) return { headline: 'No material symbol-specific news identified.', positive, negative, eventRisk, neutral };
+/** Counts EVENTS, not articles: several reports of the same story are one catalyst (Phase 1, research page). */
+export function summarizeNews(items: RelevantArticle[]): { headline: string; positive: number; negative: number; eventRisk: number; neutral: number; articles: number; events: NewsEvent[] } {
+  const { events } = groupNewsEvents(items);
+  const positive = events.filter((e) => e.catalyst === 'POSITIVE').length;
+  const negative = events.filter((e) => e.catalyst === 'NEGATIVE').length;
+  const eventRisk = events.filter((e) => e.catalyst === 'EVENT_RISK').length;
+  const neutral = events.length - positive - negative - eventRisk;
+  if (items.length === 0) return { headline: 'No material symbol-specific news identified.', positive, negative, eventRisk, neutral, articles: 0, events };
   const parts = [positive ? `${positive} positive` : null, negative ? `${negative} negative` : null, eventRisk ? `${eventRisk} event-risk` : null, neutral ? `${neutral} neutral` : null].filter(Boolean);
-  return { headline: `${items.length} symbol-specific article${items.length === 1 ? '' : 's'}: ${parts.join(', ')}.`, positive, negative, eventRisk, neutral };
+  const evWord = `${events.length} event${events.length === 1 ? '' : 's'}`;
+  return { headline: events.length === items.length
+    ? `${evWord} in symbol-specific news: ${parts.join(', ')}.`
+    : `${items.length} symbol-specific articles about ${evWord}: ${parts.join(', ')}. Articles about the same event count once.`, positive, negative, eventRisk, neutral, articles: items.length, events };
 }
