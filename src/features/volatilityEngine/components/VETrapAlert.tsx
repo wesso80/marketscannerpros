@@ -21,8 +21,7 @@ export default function VETrapAlert({ trap }: { trap: VolatilityTrap }) {
         <span className={`h-2.5 w-2.5 rounded-full ${isTrap ? 'bg-red-400' : 'bg-amber-400'}`} aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <p className={`text-sm font-bold tracking-wide ${isTrap ? 'text-red-400' : 'text-amber-400'}`}>
-            {isTrap ? 'Volatility trap detected' : 'Trap candidate'}{' '}
-            <span className="text-amber-400">— Score: {trap.score.toFixed(0)}/100</span>
+            {isTrap ? 'Volatility trap detected' : 'Trap candidate'}
           </p>
           <div className="mt-1 flex flex-wrap gap-1.5">
             {trap.components.map((c, i) => (
@@ -32,8 +31,8 @@ export default function VETrapAlert({ trap }: { trap: VolatilityTrap }) {
             ))}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-3 text-[0.7rem] text-white/40">
-            <span>Compression: {trap.compressionLevel.toFixed(0)}%</span>
-            <span>Gamma Lock: {trap.gammaLockDetected ? 'Yes' : 'No'}</span>
+            <span>Compression level: {trap.compressionLevel.toFixed(0)}</span>
+            <span>Near a large open-interest strike: {trap.gammaLockDetected ? 'Yes' : 'No'}</span>
             <span>Time Cluster: {trap.timeClusterApproaching ? 'Yes' : 'No'}</span>
           </div>
         </div>

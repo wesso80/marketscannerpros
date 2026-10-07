@@ -3,6 +3,7 @@ import { volatilityText } from '../displayText';
 import { volatilityBadgeLabel } from '@/lib/presentation/volatilityLayerLabel';
 
 import type { VolatilityState } from '@/src/features/volatilityEngine/types';
+import { bbwpDisplay } from '@/lib/research/volatilityDescriptions';
 
 const ZONES = [
   { max: 15, label: 'COMPRESSION', color: 'var(--msp-panel)', text: 'var(--msp-text-muted)' },
@@ -27,6 +28,7 @@ function regimeColor(regime: string): string {
 
 export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
   const bbwp = vol.bbwp;
+  const shown = bbwpDisplay(vol);
   const zone = getZone(bbwp);
 
   // SVG semicircle gauge — identical geometry to GE gauge
@@ -75,8 +77,8 @@ export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
               />
             );
           })}
-          {/* Needle */}
-          {(() => {
+          {/* Needle (none when BBWP could not be computed: the engine's 50 is a placeholder) */}
+          {shown.value != null && (() => {
             const angle = Math.PI * (1 - bbwp / 100);
             const needleLen = radius - stroke;
             const nx = cx - needleLen * Math.cos(angle);
@@ -96,8 +98,8 @@ export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
 
         {/* BBWP value */}
         <div className="-mt-1 text-center">
-          <span className="text-lg font-black sm:text-xl" style={{ color: zone.text }}>
-            {bbwp.toFixed(1)}
+          <span className="text-lg font-black sm:text-xl" style={{ color: shown.value != null ? zone.text : undefined }}>
+            {shown.value ?? 'Not available'}
           </span>
           <span className="ml-1 text-[11px] text-white/40">BBWP</span>
         </div>
@@ -127,7 +129,7 @@ export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
               {vol.extremeAlert === 'low' ? 'Extreme Low' : 'Extreme High'}
             </div>
           )}
-          <div>Confluence: <span className="font-semibold text-white/70">{vol.regimeConfidence.toFixed(0)}%</span></div>
+          {shown.note && <div data-bbwp-note className="text-amber-300/90">{shown.note}</div>}
         </div>
       </div>
     </div>

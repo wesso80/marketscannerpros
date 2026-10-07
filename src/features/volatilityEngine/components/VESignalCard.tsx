@@ -132,12 +132,8 @@ export default function VESignalCard({ signal, volatility, direction, exhaustion
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-bold" style={{ color }}>{typeLabel(signal.type)}</span>
-            <span className="text-lg font-black" style={{ color }}>{signal.strength.toFixed(0)}/100</span>
           </div>
 
-          <div className="h-2 overflow-hidden rounded-full bg-white/10">
-            <div className="h-full rounded-full transition-all" style={{ width: `${signal.strength}%`, background: color }} />
-          </div>
 
           {signal.triggerBarPrice != null && (
             <div className="grid grid-cols-1 gap-y-1 text-[0.75rem] sm:grid-cols-2 sm:gap-x-4">

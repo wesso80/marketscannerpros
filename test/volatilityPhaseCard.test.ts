@@ -10,10 +10,11 @@ describe('volatility phase card', () => {
     const card = read('src/features/volatilityEngine/components/VEVolatilityPhaseCard.tsx');
 
     expect(card).toContain('Volatility Phase Read');
-    expect(card).toContain('Phase Age');
-    expect(card).toContain('Continuation');
-    expect(card).toContain('Exit Risk');
-    expect(card).toContain('Breakout');
+    // Phase 4: phase length against past phases, not continuation / exit "probabilities"; breakout setting
+    // conditions, not a readiness score.
+    expect(card).toContain('phaseDuration(active.label.toLowerCase(), active.stats)');
+    expect(card).not.toMatch(/continuationProbability|exitProbability|Exit Risk|breakout\.score|\/100/);
+    expect(card).toContain('Breakout setting');
     expect(card).toContain('Trap');
     expect(card).toContain('Exhaustion');
     expect(card).toContain('Invalidation');
@@ -49,9 +50,13 @@ describe('volatility phase card', () => {
     expect(engineTypes).toContain('projectionQuality');
     expect(engineTypes).toContain('dispersionPct');
     expect(engineTypes).toContain('projectionWarning');
-    expect(projectionCard).toContain('qualityLabel');
-    expect(projectionCard).toContain('Dispersion');
-    expect(projectionCard).toContain('projectionWarning');
+    // Phase 4: the past-case study is described with its sample and method, not a hit rate or a quality score.
+    const study = read('lib/research/volatilityDescriptions.ts');
+    expect(projectionCard).toContain('projectionStudy(proj, PROJECTION.FORWARD_BARS)');
+    expect(projectionCard).not.toMatch(/hitRate|projectionQualityScore|\/100/);
+    expect(study).toContain('spread (standard deviation)');
+    expect(study).toContain('p.projectionWarning');
+    expect(study).toContain('not a forecast or a win rate');
     expect(audit).toContain('projectionQuality');
   });
 });

@@ -97,9 +97,11 @@ export function computeBBWP(
   closes: number[],
   bbLen: number = BBWP.BB_LENGTH,
   lookback: number = BBWP.LOOKBACK,
-): { bbwp: number; bbwpSeries: number[] } {
+): { bbwp: number; bbwpSeries: number[]; available: boolean; window: number } {
+  // `bbwp` stays 50 (mid-range) when it cannot be computed, so the engine's internal rules stay neutral; `available`
+  // and `window` say how the value was obtained, and readers must not show the placeholder as a measurement.
   if (closes.length < bbLen + 1) {
-    return { bbwp: 50, bbwpSeries: [] };
+    return { bbwp: 50, bbwpSeries: [], available: false, window: 0 };
   }
 
   // Step 1: Compute BB width series
@@ -130,6 +132,9 @@ export function computeBBWP(
   return {
     bbwp: bbwpSeries.length > 0 ? bbwpSeries[bbwpSeries.length - 1] : 50,
     bbwpSeries,
+    available: bbwpSeries.length > 0,
+    // Number of band widths the latest value is ranked against (a full year = lookback).
+    window: Math.min(widths.length, lookback),
   };
 }
 
@@ -1086,7 +1091,7 @@ export function detectVolatilityTrap(
         if (proximity < TRAP.GAMMA_PROXIMITY_PCT) {
           gammaScore = Math.max(gammaScore, 20);
           gammaLockDetected = true;
-          components.push(`Price ${proximity.toFixed(1)}% from gamma wall at ${strike}`);
+          components.push(`Price ${proximity.toFixed(1)}% from a large open-interest strike (max pain or highest call/put open interest) at ${strike}`);
           break;
         }
       }
@@ -1294,6 +1299,10 @@ function assessDataQuality(input: DVEInput): DVEDataQuality {
   const warnings: string[] = [];
   let score = 100;
 
+  if (input.price.closes.length < BBWP.BB_LENGTH + 1) missing.push('bbwp');
+  else if (input.price.closes.length - BBWP.BB_LENGTH + 1 < BBWP.LOOKBACK) {
+    warnings.push(`BBWP is ranked over ${input.price.closes.length - BBWP.BB_LENGTH + 1} band widths, not a full year (${BBWP.LOOKBACK})`);
+  }
   if (input.price.closes.length < MIN_DATA.CLOSES_FOR_PERCENTILE) {
     score -= 30;
     warnings.push(`Only ${input.price.closes.length} closes — need ${MIN_DATA.CLOSES_FOR_PERCENTILE}+ for reliable BBWP`);
@@ -1333,7 +1342,9 @@ function buildSummary(
 ): string {
   const parts: string[] = [];
 
-  parts.push(`${symbol} BBWP at ${volState.bbwp.toFixed(1)} (${volState.regime}).`);
+  parts.push(volState.bbwpBasis && !volState.bbwpBasis.available
+    ? `${symbol} BBWP not available (too few closes).`
+    : `${symbol} BBWP at ${volState.bbwp.toFixed(1)} (${volState.regime})${volState.bbwpBasis && !volState.bbwpBasis.fullYear ? `, ranked over ${volState.bbwpBasis.window} band widths rather than a full year` : ''}.`);
 
   if (direction.components.stochasticMomentum !== 0) {
     const dir = direction.components.stochasticMomentum > 0 ? 'bullish' : 'bearish';
@@ -1341,17 +1352,17 @@ function buildSummary(
   }
 
   if (phasePersistence.contraction.active) {
-    parts.push(`Contraction episode at ${phasePersistence.contraction.stats.agePercentile.toFixed(0)}th percentile age.`);
+    parts.push(`Contraction phase ${phasePersistence.contraction.stats.currentBars} bars long; ${phasePersistence.contraction.stats.agePercentile.toFixed(0)}% of earlier contraction phases were this long or shorter.`);
   } else if (phasePersistence.expansion.active) {
-    parts.push(`Expansion episode at ${phasePersistence.expansion.stats.agePercentile.toFixed(0)}th percentile age.`);
+    parts.push(`Expansion phase ${phasePersistence.expansion.stats.currentBars} bars long; ${phasePersistence.expansion.stats.agePercentile.toFixed(0)}% of earlier expansion phases were this long or shorter.`);
   }
 
   if (signal.active && signal.type !== 'none') {
     const typeLabel = signal.type.replace(/_/g, ' ');
-    parts.push(`${typeLabel.charAt(0).toUpperCase() + typeLabel.slice(1)} signal fired — strength ${signal.strength}/100.`);
+    parts.push(`${typeLabel.charAt(0).toUpperCase() + typeLabel.slice(1)} signal recorded on the latest closed bar.`);
 
     if (projection.sampleSize >= PROJECTION.MIN_SAMPLE_SIZE) {
-      parts.push(`Historical: ${projection.expectedMovePct > 0 ? '+' : ''}${projection.expectedMovePct}% mean move, ${projection.hitRate}% observed hit rate (${projection.sampleSize} samples).`);
+      parts.push(`In ${projection.sampleSize} past cases on this symbol, the close ${PROJECTION.FORWARD_BARS} bars later moved ${projection.expectedMovePct > 0 ? '+' : ''}${projection.expectedMovePct}% on average; ${Math.round((projection.hitRate / 100) * projection.sampleSize)} of ${projection.sampleSize} moved in the signal's direction. In-sample history, not a forecast.`);
     }
 
     if (invalidation.priceInvalidation != null) {
@@ -1414,6 +1425,7 @@ export function computeDVE(rawInput: DVEInput, symbol: string): DVEReading {
     squeezeStrength: input.indicators?.squeezeStrength ?? 0,
     atr: input.indicators?.atr ?? undefined,
     extremeAlert: bbwpResult.bbwp < VOL_REGIME.EXTREME_LOW ? 'low' : bbwpResult.bbwp > VOL_REGIME.EXTREME_HIGH ? 'high' : null,
+    bbwpBasis: { available: bbwpResult.available, window: bbwpResult.window, lookback: BBWP.LOOKBACK, fullYear: bbwpResult.window >= BBWP.LOOKBACK },
   };
 
   // LAYER 2: Directional Bias

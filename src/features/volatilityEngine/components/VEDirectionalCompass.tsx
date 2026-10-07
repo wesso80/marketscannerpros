@@ -48,7 +48,6 @@ export default function VEDirectionalCompass({ dir, missingInputs = [] }: { dir:
   // Compass needle position: map score from [-100, +100] → [0, 100]
   const needlePct = Math.max(0, Math.min(100, ((dir.score / MAX_DIR_SCORE) + 1) * 50));
   const color = biasColor(dir.bias);
-  const confLabel = dir.confidence >= 70 ? 'High' : dir.confidence >= 40 ? 'Moderate' : 'Low';
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-5">
@@ -58,7 +57,7 @@ export default function VEDirectionalCompass({ dir, missingInputs = [] }: { dir:
             Directional Bias
           </h3>
         </div>
-        <span className="text-[11px] text-white/40">{dir.confidence.toFixed(0)}% confluence</span>
+        <span className="text-[11px] text-white/40">Engine pressure reading, not a forecast</span>
       </div>
 
       {/* ── Compass Pressure Bar ── */}
@@ -85,16 +84,10 @@ export default function VEDirectionalCompass({ dir, missingInputs = [] }: { dir:
         </div>
         {/* Big score + conclusion */}
         <div className="mt-3 flex items-center justify-center gap-3">
-          <span className="text-3xl font-black" style={{ color }}>
-            {dir.score > 0 ? '+' : ''}{dir.score.toFixed(0)}
-          </span>
           <div className="text-left">
             <span className="text-sm font-bold" style={{ color }}>
               {volatilityText(dir.bias)}
             </span>
-            <div className="text-[11px] text-white/40">
-              Confluence: {confLabel}
-            </div>
           </div>
         </div>
       </div>

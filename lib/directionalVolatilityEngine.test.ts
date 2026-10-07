@@ -940,7 +940,7 @@ describe('detectVolatilityTrap', () => {
     );
 
     expect(trap.gammaLockDetected).toBe(true);
-    expect(trap.components.some(component => component.includes('from gamma wall at'))).toBe(true);
+    expect(trap.components.some(component => component.includes('from a large open-interest strike'))).toBe(true);
     expect(trap.detected).toBe(true);
   });
 

@@ -1,89 +1,32 @@
 'use client';
 import { volatilityText } from '../displayText';
-
 import type { BreakoutReadiness } from '@/src/features/volatilityEngine/types';
+import { breakoutConditions } from '@/lib/research/volatilityDescriptions';
 
-function scoreColor(score: number): string {
-  if (score >= 60) return 'var(--msp-bull)';
-  if (score >= 40) return 'var(--msp-warn)';
-  return 'var(--msp-bear)';
-}
-
-const BARS: { key: keyof BreakoutReadiness['components']; label: string; max: number; color: string }[] = [
-  { key: 'volCompression', label: 'Vol Compression', max: 40, color: 'var(--msp-text-muted)' },
-  { key: 'timeAlignment', label: 'Time Alignment', max: 30, color: '#94A3B8' },
-  { key: 'gammaWall', label: 'Gamma Wall', max: 20, color: 'var(--msp-warn)' },
-  { key: 'adxRising', label: 'ADX Rising', max: 10, color: 'var(--msp-bull)' },
-];
-
-// Map missing data sources to which breakout component keys become N/A
-const MISSING_MAP: Record<string, string[]> = {
-  options: ['gammaWall'],
-  time: ['timeAlignment'],
-};
-
+/**
+ * Breakout setting conditions (Phase 4). The engine's readiness points are not shown as a score: a 100/100 read like
+ * a confirmed breakout while no signal was active (AAPL review). Each condition is present, absent or not collected.
+ */
 export default function VEBreakoutPanel({ breakout, missingInputs = [] }: { breakout: BreakoutReadiness; missingInputs?: string[] }) {
-  const total = breakout.score;
-  const color = scoreColor(total);
-
-  // Build set of component keys that are N/A due to missing inputs
-  const naKeys = new Set<string>();
-  for (const m of missingInputs) {
-    for (const key of (MISSING_MAP[m] ?? [])) naKeys.add(key);
-  }
-
+  const b = breakoutConditions(breakout, missingInputs);
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-5">
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="text-xs font-semibold tracking-widest text-amber-400">
-            Breakout Readiness
-          </h3>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <span className="text-xl font-black" style={{ color }}>{total.toFixed(0)}</span>
-            <span className="text-[11px] text-white/30">/100</span>
-          </div>
-          <div className="flex flex-col items-center">
-            <span className="rounded-full px-2 py-0.5 text-[11px] font-bold" style={{ background: color + '22', color }}>
-              {volatilityText(breakout.label)}
-            </span>
-            <span className="mt-0.5 text-[11px] text-white/40">Heuristic score · not a probability</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-2.5">
-        {BARS.map(({ key, label, max, color: barColor }) => {
-          const value = breakout.components[key];
-          const isNA = naKeys.has(key) && value === 0;
-          const pct = isNA ? 0 : max > 0 ? Math.min(100, (value / max) * 100) : 0;
-          return (
-            <div key={key} className="space-y-0.5">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className={isNA ? 'text-white/25' : 'text-white/60'}>{label}</span>
-                {isNA ? (
-                  <span className="text-[11px] text-white/20">Not collected</span>
-                ) : (
-                  <span className="font-semibold text-white/80">{value.toFixed(0)}/{max}</span>
-                )}
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                {!isNA && (
-                  <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: barColor }} />
-                )}
-              </div>
+    <div data-breakout-conditions className="rounded-xl border border-white/10 bg-white/5 p-5">
+      <h3 className="mb-1 text-xs font-semibold tracking-widest text-amber-400">Breakout setting conditions</h3>
+      <p className="mb-3 text-[11px] text-white/60">{b.headline}</p>
+      <ul className="space-y-2">
+        {b.conditions.map((c) => (
+          <li key={c.id} data-condition={c.id} className="min-w-0">
+            <div className="flex items-center justify-between gap-2 text-[11px]">
+              <span className="text-white/70">{c.label}</span>
+              <span className={c.present === null ? 'text-white/30' : c.present ? 'font-semibold text-amber-300' : 'text-white/50'}>{c.present === null ? 'Not collected' : c.present ? 'Present' : 'Not present'}</span>
             </div>
-          );
-        })}
-      </div>
-
-      {breakout.componentDetails.length > 0 && (
+            <p className="break-words text-[10px] text-white/35">{c.definition}</p>
+          </li>
+        ))}
+      </ul>
+      {b.details.length > 0 && (
         <div className="mt-3 space-y-0.5 border-t border-white/10 pt-2">
-          {breakout.componentDetails.slice(0, 3).map((d, i) => (
-            <p key={i} className="text-[11px] text-white/40">{volatilityText(d)}</p>
-          ))}
+          {b.details.slice(0, 4).map((d, i) => <p key={i} className="text-[11px] text-white/40">{volatilityText(d)}</p>)}
         </div>
       )}
     </div>

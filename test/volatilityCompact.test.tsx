@@ -23,11 +23,11 @@ describe('Volatility compact layout',()=>{
   expect(container.querySelector('[data-source-line]')?.textContent).toContain('Price bar session 2026-10-02');
   expect(container.textContent).not.toMatch(/\bbullish\b|\bbearish\b|\bN\/A\b|\bUnavailable\b|[A-Z]+_[A-Z_]+/);
  });
- it('keeps missing-input/date warnings and distinguishes a BBWP fallback from ATR',async()=>{
+ it('keeps missing-input/date warnings and invents no range without ATR (Phase 4: no BBWP-based estimate)',async()=>{
   const partial=structuredClone(fixtures.partial);partial.data.volatility.atr=0;partial.data.projection.signalType='none';
   fetcher.mockResolvedValue({json:async()=>partial});await act(async()=>root.render(<Page/>));
   expect(container.textContent).toContain('Price bar date not collected.');expect(container.textContent).toContain('3 inputs not collected.');
-  expect(container.textContent).toContain('BBWP-based estimate');expect(container.textContent).not.toContain('Model range (1 ATR)');
+  expect(container.textContent).not.toContain('BBWP-based estimate');expect(container.textContent).not.toContain('Model range (1 ATR)');expect(container.textContent).toContain('ATR not available, so no range size is shown.');
  });
  it('maps display words without changing numeric values or source objects',()=>{
   expect(volatilityText('EXPANSION_UP')).toBe('Expansion Up');expect(volatilityText('Momentum bullish (+15)')).toBe('Momentum upward (+15)');expect(volatilityText('Unknown')).toBe('not collected');

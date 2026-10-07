@@ -61,6 +61,6 @@ describe('views read the shared snapshot', () => {
   });
   it('Volatility returns and shows the shared evidence', () => {
     expect(readFileSync('app/api/dve/route.ts', 'utf8')).toContain('priceEvidenceFromSeries(symbol, assetClass, priceData, computedAtMs)');
-    expect(readFileSync('src/features/volatilityEngine/VolatilityEnginePage.tsx', 'utf8')).toContain('bbwpBasisNote(reading.volatility.bbwp, priceEvidence)');
+    expect(readFileSync('src/features/volatilityEngine/VolatilityEnginePage.tsx', 'utf8')).toContain('bbwpBasisNote(measuredBbwp(reading.volatility), priceEvidence)');
   });
 });
