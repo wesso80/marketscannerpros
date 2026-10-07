@@ -12,22 +12,44 @@ import {sourcesAgree,type SourcePrice} from './sourcesAgree';
 import {cachedPart,dayTtl,timebox} from './cache';
 import {budgetStatus} from './budget';
 import {loadOkx,okxSpot,metric,section,iso} from './okx';
-import type {Breakdown,Metric,Section,FreshnessKind,DailyBar,Point,SectionKey} from './types';
+import type {Breakdown,Metric,Section,FreshnessKind,DailyBar,Point,SectionKey,IdentityCheck} from './types';
 import {SECTION_KEYS} from './types';
-interface Identity {id:string;matches:number|null;name:string|null;rank:number|null}
+interface Identity {id:string;matches:number|null;name:string|null;rank:number|null;source?:IdentityCheck['source']}
 interface Chart {prices:[number,number][];market_caps?:[number,number][];total_volumes?:[number,number][]}
 const errorText=(e:unknown)=>e instanceof Error?e.message:'Source unavailable';
 const unavailable=(reason:string):Section=>({value:null,source:'unavailable',asOf:null,basis:'unavailable',status:'Unknown',reason});
 export async function resolveIdentity(symbol:string,id?:string):Promise<Identity>{
- if(id)return {id,matches:null,name:null,rank:null};
- if(COINGECKO_ID_MAP[symbol])return {id:(await resolveSymbolToId(symbol))!,matches:null,name:null,rank:null};
+ if(id)return {id,matches:null,name:null,rank:null,source:'explicit id'};
+ if(COINGECKO_ID_MAP[symbol])return {id:(await resolveSymbolToId(symbol))!,matches:null,name:null,rank:null,source:'symbol map'};
  return cachedPart(`identity:${symbol}`,86400,4,async()=>{
   // The legacy resolver strips bare USD and would misresolve CRVUSD. Exact-symbol search here retains identity.
   const search=await searchCoins(symbol);if(!search)throw Error('CoinGecko identity search unavailable');
   const exact=search.coins.filter(c=>c.symbol.toUpperCase()===symbol).sort((a,b)=>(a.market_cap_rank||Infinity)-(b.market_cap_rank||Infinity));
   if(!exact.length)throw Error('No exact CoinGecko symbol found');
-  return {id:exact[0].id,matches:exact.length,name:exact[0].name,rank:exact[0].market_cap_rank};
+  return {id:exact[0].id,matches:exact.length,name:exact[0].name,rank:exact[0].market_cap_rank,source:'symbol search' as const};
  });
+}
+/**
+ * W2 / C02: bind the ticker-matched sources to the CoinGecko id. The id is verified only when CoinGecko's coin detail
+ * returns the requested ticker (a failed detail request is "not verified", never assumed). OKX is bound only when the
+ * verified, unambiguous coin's own CoinGecko ticker list shows an OKX market for that base; the first ticker page can
+ * miss a listing, which then reads "not confirmed" rather than guessed. Yahoo is ticker-only and needs a verified,
+ * unambiguous id.
+ */
+export function bindIdentity(symbol:string,identity:Identity,detail:{symbol?:string|null}|null,tickers:{tickers:CoinTicker[]}|null,detailError:string|null,tickersError:string|null):IdentityCheck{
+ const source=identity.source??'explicit id',ambiguous=source==='symbol search'&&(identity.matches??0)>1;
+ const verified=!!detail?.symbol&&String(detail.symbol).toUpperCase()===symbol;
+ const reason=verified?(ambiguous?`${identity.matches} coins share ${symbol}; the highest-ranked (${identity.id}) was used`:`CoinGecko coin detail confirms ${identity.id} is ${symbol}`)
+  :detail?`CoinGecko id ${identity.id} is ${String(detail.symbol??'unknown').toUpperCase()}, not ${symbol}`:`Coin identity not verified: CoinGecko coin detail unavailable (${detailError??'no data'})`;
+ const instrument=`${symbol}-USDT-SWAP`;
+ const okxListed=tickers?.tickers.some(t=>(t.market?.identifier==='okex'||/^okx$/i.test(t.market?.name??''))&&String(t.base).toUpperCase()===symbol&&(!t.coin_id||t.coin_id===identity.id))??false;
+ const okxReason=!verified?'coin identity not verified':ambiguous?`${identity.matches} coins share ${symbol}, so the OKX ${symbol} contract cannot be tied to ${identity.id}`
+  :!tickers?`could not confirm OKX lists ${identity.id} (CoinGecko tickers unavailable: ${tickersError??'no data'})`
+  :okxListed?`CoinGecko lists an OKX ${symbol} market for ${identity.id}`:`OKX ${symbol} market not confirmed for ${identity.id} on the first CoinGecko ticker page`;
+ const yahooBound=verified&&!ambiguous;
+ return {coinId:identity.id,source,matches:identity.matches,verified,ambiguous,reason,
+  okx:{instrument,bound:verified&&!ambiguous&&okxListed,reason:okxReason},
+  yahoo:{bound:yahooBound,reason:yahooBound?`Yahoo ${symbol}-USD matched by ticker for a verified, unambiguous coin`:verified?`${identity.matches} coins share ${symbol}`:'coin identity not verified'}};
 }
 const longHistory=(id:string,ttl:number)=>cachedPart<Chart>(`history:${id}`,ttl,1,async()=>{const r=await getMarketChartHistory(id,'max',{retries:0,timeoutMs:7000});if(!r)throw Error('Long history unavailable');return r;});
 async function marketSet(now:number){
@@ -50,6 +72,7 @@ export async function loadBreakdown(input:string,id?:string,now=Date.now()):Prom
   cachedPart(`daily:${coinId}`,ttl,3,()=>fetchCryptoSeries(symbol,'daily',now,{coinId,requestOptions:{retries:0,timeoutMs:7000}})),
   longHistory(coinId,ttl),cachedPart(`detail:${coinId}`,21600,4,()=>getCoinDetail(coinId)),
   cachedPart(`tickers:${coinId}`,600,4,()=>getCoinTickers(coinId,{page:1,depth:true})),
+  // OKX and Yahoo are matched by ticker; their results are attached below only if bound to this coin id.
   marketSet(now),timebox(loadOkx(symbol,now)),okxSpot(symbol),
   cachedPart(`yahoo:${symbol}`,60,0,async()=>{const q=await getQuote(`${symbol}-USD`);if(!q)throw Error('Yahoo unavailable');return {name:'Yahoo',price:q.price,asOf:null,basis:'USD; helper does not expose observation time'} satisfies SourcePrice;}),
  ]);
@@ -57,8 +80,9 @@ export async function loadBreakdown(input:string,id?:string,now=Date.now()):Prom
  const value=<T,>(i:number):T|null=>results[i].status==='fulfilled'?results[i].value as T:null;
  const fail=(i:number)=>results[i].status==='rejected'?errorText(results[i].reason):'Provider returned no data';
  const prices=value<Awaited<ReturnType<typeof getSimplePrices>>>(0),series=value<Awaited<ReturnType<typeof fetchCryptoSeries>>>(1),history=value<Chart>(2),detail=value<NonNullable<Awaited<ReturnType<typeof getCoinDetail>>>>(3),tickers=value<{tickers:CoinTicker[]}>(4),market=value<Awaited<ReturnType<typeof marketSet>>>(5);
+ const identityCheck=bindIdentity(symbol,identity,detail,tickers,results[3].status==='rejected'?fail(3):null,results[4].status==='rejected'?fail(4):null);
  // An explicitly requested id must still denote the requested ticker; don't attach another asset's derivatives.
- if(detail?.symbol&&String(detail.symbol).toUpperCase()!==symbol){for(const key of SECTION_KEYS)sections[key]=unavailable('CoinGecko id and symbol do not match');return {symbol,coinId,name:detail.name??null,rank:detail.market_cap_rank??null,identityMatches:identity.matches,generatedAt,sections,budget:await budgetStatus()};}
+ if(detail?.symbol&&String(detail.symbol).toUpperCase()!==symbol){for(const key of SECTION_KEYS)sections[key]=unavailable('CoinGecko id and symbol do not match');return {symbol,coinId,name:detail.name??null,rank:detail.market_cap_rank??null,identityMatches:identity.matches,identity:identityCheck,generatedAt,sections,budget:await budgetStatus()};}
  const spot=prices?.[coinId],bars=series?completedBars(series.bars,now):[],asOf=bars.at(-1)?.t??null;
  const dailySource='CoinGecko aggregate daily OHLC',dailyBasis='Completed UTC day (open-date label); daily rule';
  const dm=(label:string,v:Metric['value'],unit?:Metric['unit'])=>metric(label,v,dailySource,asOf,dailyBasis,'daily',unit,now);
@@ -91,7 +115,7 @@ export async function loadBreakdown(input:string,id?:string,now=Date.now()):Prom
   cm('BTC dominance',context?.dom,context?.dominance,'percent'),cm('BTC.D 20-day average',context?.dom20,context?.dominance,'percent'),cm('BTC.D 10 days earlier',context?.dom10,context?.dominance,'percent'),cm('BTC.D 20-day average, 10 days earlier',context?.dom20Prior,context?.dominance,'percent'),
   cm('TOTAL3',context?.total,context?.total3,'usd'),cm('TOTAL3 50-day average',context?.total50,context?.total3,'usd'),cm('TOTAL3 change, 30d',context?.totalChange30,context?.total3,'percent'),cm('Rule 6: BTC above 200-day average',context?.rule6,context?.btcPrice),cm('Rule 7: BTC.D below mean, mean below 10 days earlier',context?.rule7,context?.dominance),
  ],[...market?.errors??[],'Context only. Bull-gate test (BTC bull + breadth): REJECTED on 4 Oct 2026; random-entry p = 0.34. TOTAL3 above its 50-day average with falling BTC.D did not help in 2023–2024 (universe 20-day return: -5.1%). Do not read this as a signal.',"The 'Market regime' bar at the top of the site is the STOCK market (VIX, SPY, QQQ)."]);
- sections.derivatives=value<Section>(6)??unavailable(fail(6));
+ sections.derivatives=identityCheck.okx.bound?(value<Section>(6)??unavailable(fail(6))):unavailable(`Not combined: ${identityCheck.okx.reason}`);
  const rows=tickers?.tickers??[],freshRows=rows.filter(t=>!t.is_stale&&!t.is_anomaly&&Date.parse(t.last_traded_at||t.timestamp)<=now&&now-Date.parse(t.last_traded_at||t.timestamp)<=15*60000);
  const freshVolume=freshRows.reduce((sum,t)=>sum+(t.converted_volume?.usd??0),0);
  const vm=(t:CoinTicker,label:string,v:Metric['value'],unit?:Metric['unit'])=>metric(`${t.market.name} ${t.base}/${t.target}: ${label}`,v,'CoinGecko tickers',t.last_traded_at||t.timestamp||null,'First page only; venue observation','venue',unit,now);
@@ -114,7 +138,8 @@ export async function loadBreakdown(input:string,id?:string,now=Date.now()):Prom
   ...l.distances.flatMap(d=>[dm(d.name,d.value,'price'),dm(`${d.name}: distance in USD`,d.dollars,'usd'),dm(`${d.name}: distance in %`,d.pct,'percent'),dm(`${d.name}: distance in ATR`,d.atr,'ratio')]),
  ],['ATR from CoinGecko aggregate daily OHLC; venue candles can differ.','Rule stop = max(base midpoint, 85% of last close). This is the rule definition, not a recommendation.','The v1 idea is invalid if a daily close is at or below that stop, or if, within 5 days after a breakout, a daily close falls back below the base high.','Existing Verdict levels below use a different model.']);
  const cg:SourcePrice={name:'CoinGecko',price:spot?.usd??null,asOf:iso(spot?.last_updated_at?spot.last_updated_at*1000:null),basis:'USD spot'};
- const yahoo=value<SourcePrice>(8),okx=value<SourcePrice>(7);const checkPrices=[cg,yahoo??{name:'Yahoo',price:null,asOf:null,basis:fail(8)},okx??{name:'OKX',price:null,asOf:null,basis:fail(7)}];
+ const yahoo=identityCheck.yahoo.bound?value<SourcePrice>(8):null,okx=identityCheck.okx.bound?value<SourcePrice>(7):null;
+ const checkPrices=[cg,yahoo??{name:'Yahoo',price:null,asOf:null,basis:identityCheck.yahoo.bound?fail(8):`Not combined: ${identityCheck.yahoo.reason}`},okx??{name:'OKX',price:null,asOf:null,basis:identityCheck.okx.bound?fail(7):`Not combined: ${identityCheck.okx.reason}`}];
  const check=sourcesAgree(checkPrices,now);
  sections.sourcesCheck=section(checkPrices.map(p=>metric(p.name,p.price,p.name,p.asOf,p.basis,'spot',p.name==='OKX'?undefined:'price',now)),[check.label,`Fresh-source spread: ${check.spreadPct==null?'unavailable':check.spreadPct.toFixed(3)+'%'}; largest pair: ${check.pair??'unavailable'}.`,'OKX is a USDT pair, not USD. This compares raw displayed numbers, not FX-adjusted equivalents.','Yahoo helper omits observation time; its value is excluded from freshness agreement.']);
  if(check.label==='Sources differ')sections.sourcesCheck.status='Degraded';if(check.freshCount<2)sections.sourcesCheck.status='Unknown';
@@ -124,7 +149,9 @@ export async function loadBreakdown(input:string,id?:string,now=Date.now()):Prom
  if(freshRows.length&&!freshRows.some(t=>(t.converted_volume?.usd??0)>=250000&&t.bid_ask_spread_percentage!=null&&t.bid_ask_spread_percentage<=.5))risks.push(dm('Venue liquidity','No returned fresh pair has $250k volume and spread at most 0.5%.'));
  for(const note of network?.notes??[])risks.push(sm('Supply / turnover',note));
  if((identity.matches??0)>1)risks.push(sm('Coin identity',`${identity.matches} coins share this symbol.`));
+ if(!identityCheck.verified)risks.push(sm('Coin identity',identityCheck.reason));
+ if(!identityCheck.okx.bound)risks.push(sm('Derivatives identity',`OKX not combined: ${identityCheck.okx.reason}`));
  if(history?.market_caps?.some(p=>p[1]===0))risks.push(hm('History','Market-cap history includes zero values; they are excluded from calculations.'));
  sections.risks=section(risks,['Price-discontinuity flag is unavailable in this endpoint; the existing Verdict data-trust panel remains separate.','No early-signal rule has a proven edge. See Rule status.']);
- return {top:buildTop({name:detail?.name??identity.name,symbol,rank:detail?.market_cap_rank??identity.rank,rule,levels:l,bars,sections}),symbol,coinId,name:detail?.name??identity.name,rank:detail?.market_cap_rank??identity.rank,identityMatches:identity.matches,generatedAt,sections,budget:await budgetStatus()};
+ return {top:buildTop({name:detail?.name??identity.name,symbol,rank:detail?.market_cap_rank??identity.rank,rule,levels:l,bars,sections}),symbol,coinId,name:detail?.name??identity.name,rank:detail?.market_cap_rank??identity.rank,identityMatches:identity.matches,identity:identityCheck,generatedAt,sections,budget:await budgetStatus()};
 }
