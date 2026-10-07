@@ -1,7 +1,8 @@
+import type { PriceChart } from './symbolPriceChart';
 import { lastCompletedUsSessionDate } from '@/lib/time/usSession';
 export type ComparisonInput = { symbol: string; source: string; closes: number[]; dates: string[] };
 export type SymbolComparison = {
-  symbol: string; type: 'equity' | 'crypto'; requestedDays: number; from: string | null; to: string | null;
+  price?: PriceChart; symbol: string; type: 'equity' | 'crypto'; requestedDays: number; from: string | null; to: string | null;
   dates: string[]; series: Array<{ symbol: string; source: string; values: number[]; changePct: number; correlation: number | null }>;
   returnPairs: number; missing: string[]; basis: string;
 };

@@ -17,3 +17,13 @@ Six focused component tests passed after the final style adjustment. The precedi
 This verifies isolated production components using synthetic data, not the complete signed-in Symbol page, live provider histories or production operation. Next: run the complete Symbol page with mocked network responses at both widths, checking tab navigation, authentication states and surrounding layout. No merges, deployments or production/provider requests were performed.
 
 Local artifacts are in the workspace outputs directory: Symbol research comparison preview.html, summary-browser-results.json and summary-{equity|crypto}-{1280|390}-{state}.png. The local fixture runner is in the external w6-test-runtime/summary-preview directory; it is not a committed CI harness.
+
+## Price and indicators follow-up
+
+Added a second mode sharing the symbol and 1M/3M/1Y selection with Compare. It renders valid OHLC candles, with a close-line fallback when OHLC is unavailable. Moving averages (SMA20/50) and provider volume start enabled. Bollinger Bands (20, 2 population standard deviations), Wilder RSI14 and MACD12/26 with a 9-period signal are selectable. Available history before the visible window supplies warm-up; insufficient values remain null. All methods are public descriptive measurements and do not affect shared/admin calculations.
+
+The additive price projection uses the selected symbol's already-fetched history, without extra provider requests. Invalid OHLC and misaligned arrays are withheld; zero volume is preserved when the upstream helper supplies it. Existing shared fetchPrice may normalize zero volume to null; this change does not alter that helper. Price history is independent of benchmark date intersection. Compare and price coverage can therefore differ, and both disclose dates.
+
+21 tests passed across five relevant suites after this change, including warm-up mathematics, null/zero handling, stale identity, shared period selection and response projection. The 20 browser cases passed again; all four ready asset/width combinations additionally exercised mode switching, all optional indicators, keyboard price-date inspection and preservation of the selected 1Y period. No browser errors or horizontal overflow. Desktop equity and mobile crypto indicator screenshots were visually reviewed. TypeScript still reports the same six unrelated baseline errors.
+
+This remains isolated component/fixture verification; the complete signed-in page and real provider behaviour are unverified. No provider calls, merges or deployments were made. Next task remains complete-page verification with mocked responses.

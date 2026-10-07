@@ -28,3 +28,9 @@ it('does not echo provider errors', async () => {
   h.fetch.mockRejectedValue(new Error('private diagnostic'));
   const r = await call(); expect(JSON.stringify(await r.json())).not.toContain('private diagnostic');
 });
+
+it('projects only price observations and indicators from the selected history',async()=>{
+ h.fetch.mockResolvedValue({historicalCloses:[100,102],historicalDates:['2026-10-05','2026-10-06'],source:'fixture',privateScore:99,verdict:'BUY'});
+ const body=await (await call()).json();expect(body.price.points[0].close).toBe(100);
+ expect(JSON.stringify(body)).not.toContain('privateScore');expect(JSON.stringify(body)).not.toContain('BUY');
+});

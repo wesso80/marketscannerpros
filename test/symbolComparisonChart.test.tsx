@@ -27,3 +27,15 @@ it('shows unavailable instead of drawing an invalid response', async () => {
   render(<SymbolComparisonChart symbol="ETH" type="crypto" />);
   await screen.findByText('Matching comparison data unavailable');
 });
+
+it('retains the selected period across modes and does not fabricate missing price history', async () => {
+ const fetcher=vi.fn(async()=>({ok:true,json:async()=>model()}));vi.stubGlobal('fetch',fetcher);
+ render(<SymbolComparisonChart symbol="AAPL" type="equity"/>);await screen.findByRole('img');
+ fireEvent.click(screen.getByRole('button',{name:'1M'}));await waitFor(()=>expect(fetcher).toHaveBeenCalledTimes(2));
+ fireEvent.click(screen.getByRole('button',{name:'Price & indicators'}));
+ expect(await screen.findByText('Price history unavailable.')).toBeTruthy();
+ expect(screen.getByRole('checkbox',{name:'Moving averages'}).getAttribute('checked')).not.toBeNull();
+ expect(screen.getByRole('button',{name:'1M'}).getAttribute('aria-pressed')).toBe('true');
+ fireEvent.click(screen.getByRole('button',{name:'Compare',exact:true}));expect(screen.getByRole('img')).toBeTruthy();
+ expect(fetcher).toHaveBeenCalledTimes(2);
+});

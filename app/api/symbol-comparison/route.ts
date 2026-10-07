@@ -1,3 +1,4 @@
+import { buildPriceChart } from '@/lib/research/symbolPriceChart';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
@@ -24,6 +25,8 @@ export async function GET(request: NextRequest) {
     const names = [...new Set([symbol, ...(asset === 'equity' ? ['SPY', 'QQQ'] : ['BTC'])])];
     const results = await Promise.allSettled(names.map(name => fetchPrice(name, asset, { requireHistoricals: true, avInterval: 'daily' })));
     const inputs = results.flatMap((result, i) => result.status === 'fulfilled' && result.value ? [{ symbol: names[i], source: result.value.source || 'source unavailable', closes: result.value.historicalCloses || [], dates: result.value.historicalDates || [] }] : []);
-    return reply(buildSymbolComparison(symbol, asset, inputs, days, Date.now()));
+    const now = Date.now();
+    const selected = results[0]?.status === 'fulfilled' ? results[0].value : null;
+    return reply({ ...buildSymbolComparison(symbol, asset, inputs, days, now), price: buildPriceChart(selected, asset, days, now) });
   } catch { return reply({ error: 'Comparison temporarily unavailable' }, 503); }
 }
