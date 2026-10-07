@@ -26,13 +26,14 @@ import { computeDVE } from '@/lib/directionalVolatilityEngine';
 import type { DVEInput } from '@/lib/directionalVolatilityEngine.types';
 import type { DVEReading } from '@/lib/directionalVolatilityEngine.types';
 import { evaluateDataTrust } from '@/lib/scanner/dataTrust';
+import { priceEvidenceFromSeries, type PriceEvidence } from '@/lib/research/priceEvidence';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // ── In-memory cache (3 min) ─────────────────────────────────────────────
 type BarAge = { assetClass: 'equity' | 'crypto' | 'forex'; timeframe: string; lastBarAt: string | null; barInterval: string | null };
-const dveCache = new Map<string, { data: DVEReading; price: number; ts: number; barAge: BarAge }>();
+const dveCache = new Map<string, { data: DVEReading; price: number; ts: number; barAge: BarAge; priceEvidence: PriceEvidence | null }>();
 const DVE_CACHE_TTL = 3 * 60 * 1000;
 
 /**
@@ -72,7 +73,7 @@ export async function GET(request: NextRequest) {
     const cacheKey = `${symbol}_${timeframe}`;
     const cached = dveCache.get(cacheKey);
     if (cached && Date.now() - cached.ts < DVE_CACHE_TTL) {
-      return NextResponse.json({ success: true, data: cached.data, price: cached.price, cached: true, ...freshnessMeta(cached.barAge, cached.ts) });
+      return NextResponse.json({ success: true, data: cached.data, price: cached.price, priceEvidence: cached.priceEvidence, cached: true, ...freshnessMeta(cached.barAge, cached.ts) });
     }
 
     // 4. Detect asset class
@@ -182,8 +183,11 @@ export async function GET(request: NextRequest) {
     // 12. Cache + return
     const computedAtMs = Date.now();
     const barAge: BarAge = { assetClass, timeframe, lastBarAt: priceData.lastCompletedBarAt ?? null, barInterval: priceData.barInterval ?? null };
-    dveCache.set(cacheKey, { data: reading, price: priceData.price, ts: computedAtMs, barAge });
-    return NextResponse.json({ success: true, data: reading, price: priceData.price, cached: false, ...freshnessMeta(barAge, computedAtMs) });
+    // The Symbol page's measured values (completed daily bars only, dated) from the same bars, so the two views can be
+    // compared on one basis. Daily timeframe only; forex has no evidence definition yet.
+    const priceEvidence = timeframe === 'daily' && assetClass !== 'forex' ? priceEvidenceFromSeries(symbol, assetClass, priceData, computedAtMs) : null;
+    dveCache.set(cacheKey, { data: reading, price: priceData.price, ts: computedAtMs, barAge, priceEvidence });
+    return NextResponse.json({ success: true, data: reading, price: priceData.price, priceEvidence, cached: false, ...freshnessMeta(barAge, computedAtMs) });
   } catch (error) {
     console.error('[DVE API] Error:', error);
     return NextResponse.json(

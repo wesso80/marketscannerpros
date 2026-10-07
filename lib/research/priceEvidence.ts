@@ -136,3 +136,33 @@ export function buildPriceEvidence(input: {
     summary, missing,
   };
 }
+
+/** Series as returned by the price fetchers (lib/goldenEggFetchers PriceData), structurally typed so this stays client-safe. */
+export type PriceSeriesInput = {
+  price: number; priceTs?: string | null; source?: string | null;
+  historicalCloses?: number[]; historicalHighs?: number[]; historicalLows?: number[]; historicalDates?: string[]; historicalVolumes?: Array<number | null>;
+  indicatorHistory?: { closes: number[]; highs: number[]; lows: number[]; dates?: string[]; volumes?: Array<number | null> } | null;
+};
+/**
+ * Price evidence from fetched series, used by every view (Symbol, Deep analysis, Volatility) so all show the same dated
+ * values. Prefers the longer indicator history; null when the bars carry no dates (no dated evidence without dates).
+ */
+export function priceEvidenceFromSeries(symbol: string, assetClass: 'equity' | 'crypto', price: PriceSeriesInput, nowMs: number): PriceEvidence | null {
+  const ih = price.indicatorHistory;
+  const src = ih && ih.dates && ih.dates.length === ih.closes.length ? { closes: ih.closes, highs: ih.highs, lows: ih.lows, dates: ih.dates, volumes: ih.volumes }
+    : price.historicalDates && price.historicalCloses && price.historicalDates.length === price.historicalCloses.length ? { closes: price.historicalCloses, highs: price.historicalHighs ?? [], lows: price.historicalLows ?? [], dates: price.historicalDates, volumes: price.historicalVolumes }
+    : null;
+  if (!src || !src.closes.length) return null;
+  const bars = src.closes.map((close, i) => ({ date: String(src.dates[i] ?? ''), high: src.highs[i] ?? close, low: src.lows[i] ?? close, close, volume: src.volumes?.[i] ?? null }));
+  return buildPriceEvidence({ symbol, assetClass, bars, nowMs, quote: { price: price.price, at: price.priceTs ?? null, source: price.source ?? null }, source: price.source ?? null });
+}
+
+/**
+ * Note for a view whose own BBWP differs from the shared completed-bar value by more than `tolerance` points, so the
+ * two numbers are never shown side by side unexplained. Null when they agree or the shared value is unavailable.
+ */
+export function bbwpBasisNote(otherBbwp: number | null | undefined, e: Pick<PriceEvidence, 'bbwp' | 'basis'> | null | undefined, tolerance = 1): string | null {
+  if (!e || e.bbwp == null || otherBbwp == null || !Number.isFinite(otherBbwp) || Math.abs(otherBbwp - e.bbwp) <= tolerance) return null;
+  return `This reading's BBWP is ${Math.round(otherBbwp * 10) / 10}; the Symbol page's BBWP on the completed ${e.basis.lastCompletedBar ?? 'daily'} bar is ${e.bbwp}. `
+    + `The difference comes from the bars used (this reading uses every fetched close${e.basis.excludedPartialBar ? `, including the unfinished ${e.basis.excludedPartialBar} bar` : ''}).`;
+}

@@ -34,5 +34,7 @@ export interface DVEApiResponse {
   dataAsOf?: string | null;
   /** Session-aware age of that bar (same rule as the scanner's data trust). */
   dataFreshness?: 'fresh' | 'delayed' | 'stale' | 'unknown';
+  /** Symbol page's measured values from the same bars (completed daily bars only); null off the daily timeframe. */
+  priceEvidence?: import('@/lib/research/priceEvidence').PriceEvidence | null;
   error?: string;
 }

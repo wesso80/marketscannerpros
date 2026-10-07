@@ -1,7 +1,7 @@
 import { describeMultiple } from '@/lib/goldenEgg/fundamentalsContext';
 import { buildTimingEvidence, TIMING_EVIDENCE } from '@/lib/research/timingEvidence';
 import { buildCalendarFeed } from '@/lib/macro/calendar/feed';
-import { buildPriceEvidence, type PriceEvidence } from '@/lib/research/priceEvidence';
+import { priceEvidenceFromSeries as evidenceFromPrice } from '@/lib/research/priceEvidence';
 import { oiBasisLabel } from '@/lib/options/oiSummary';
 import { valuationAtPrice } from '@/lib/market/valuationIntegrity';
 /**
@@ -240,16 +240,6 @@ function fmtLevel(v: number): string { return `$${fmtPriceStr(v)}`; }
 
 // ── Build GoldenEggPayload from live data ───────────────────────────────
 /** Completed-bar evidence from the fetcher's longest dated history (indicator history first, else the display bars). */
-function evidenceFromPrice(symbol: string, assetClass: 'equity' | 'crypto', price: PriceData, nowMs: number): PriceEvidence | null {
-  const ih = price.indicatorHistory;
-  const src = ih && ih.dates && ih.dates.length === ih.closes.length ? { closes: ih.closes, highs: ih.highs, lows: ih.lows, dates: ih.dates, volumes: ih.volumes }
-    : price.historicalDates && price.historicalCloses && price.historicalDates.length === price.historicalCloses.length ? { closes: price.historicalCloses, highs: price.historicalHighs ?? [], lows: price.historicalLows ?? [], dates: price.historicalDates!, volumes: price.historicalVolumes }
-    : null;
-  if (!src || !src.closes.length) return null;
-  const bars = src.closes.map((close, i) => ({ date: String(src.dates[i] ?? ''), high: src.highs[i] ?? close, low: src.lows[i] ?? close, close, volume: src.volumes?.[i] ?? null }));
-  return buildPriceEvidence({ symbol, assetClass, bars, nowMs, quote: { price: price.price, at: price.priceTs ?? null, source: price.source ?? null }, source: price.source ?? null });
-}
-
 export function buildPayload(
   symbol: string,
   assetClass: 'equity' | 'crypto' | 'forex',

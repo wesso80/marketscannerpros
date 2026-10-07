@@ -20,6 +20,8 @@ import { volatilityText } from './displayText';
 import { volatilityBadgeLabel, volatilityHeadingLabel } from '@/lib/presentation/volatilityLayerLabel';
 import { type RiskFlag } from '@/components/market/RiskFlagPanel';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
+import PriceEvidencePanel from '@/components/research/PriceEvidencePanel';
+import { bbwpBasisNote, type PriceEvidence } from '@/lib/research/priceEvidence';
 
 const QUICK_SYMBOLS = ['BTC', 'ETH', 'AAPL', 'TSLA', 'NVDA', 'SPX', 'GOLD'];
 
@@ -53,6 +55,7 @@ export default function VolatilityEnginePage() {
   const [error, setError] = useState('');
   const [cached, setCached] = useState(false);
   const [freshness, setFreshness] = useState<Pick<DVEApiResponse, 'computedAt' | 'dataAsOf' | 'dataFreshness'>>({});
+  const [priceEvidence, setPriceEvidence] = useState<PriceEvidence | null>(null);
 
   const analyze = useCallback(async (sym?: string) => {
     const s = (sym || symbol).trim().toUpperCase();
@@ -64,6 +67,7 @@ export default function VolatilityEnginePage() {
     setCurrentPrice(0);
     setCached(false);
     setFreshness({});
+    setPriceEvidence(null);
     try {
       const res = await fetch(`/api/dve?symbol=${encodeURIComponent(s)}`);
       const json: DVEApiResponse = await res.json();
@@ -75,6 +79,7 @@ export default function VolatilityEnginePage() {
       setCurrentPrice(json.price ?? 0);
       setCached(!!json.cached);
       setFreshness({ computedAt: json.computedAt, dataAsOf: json.dataAsOf, dataFreshness: json.dataFreshness });
+      setPriceEvidence(json.priceEvidence ?? null);
     } catch {
       setError('Network error — please try again');
     } finally {
@@ -321,6 +326,12 @@ export default function VolatilityEnginePage() {
                 phase={reading.phasePersistence}
               />
             </CollapsibleSection>
+            {priceEvidence && (
+              <CollapsibleSection title="Measured price and volatility (shared with Symbol)" summary={priceEvidence.summary[0] ?? `Completed bar ${priceEvidence.basis.lastCompletedBar ?? 'n/a'}`}>
+                {(() => { const note = bbwpBasisNote(reading.volatility.bbwp, priceEvidence); return note ? <p data-bbwp-basis-note className="mb-2 text-xs text-amber-300">{note}</p> : null; })()}
+                <PriceEvidencePanel e={priceEvidence} />
+              </CollapsibleSection>
+            )}
             <SourceLine source="Volatility calculation" asOf={freshness.dataAsOf?.includes('T') ? freshness.dataAsOf : undefined} tradingDay={freshness.dataAsOf ? `Price bar session ${freshness.dataAsOf}` : 'Price bar date not collected'} basis={cached ? 'Cached reading; freshness based on price bars' : 'Calculated from price bars'} />
           </div>
         )}
