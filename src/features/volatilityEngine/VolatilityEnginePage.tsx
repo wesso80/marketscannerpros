@@ -22,6 +22,8 @@ import { type RiskFlag } from '@/components/market/RiskFlagPanel';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
 import PriceEvidencePanel from '@/components/research/PriceEvidencePanel';
 import { bbwpBasisNote, type PriceEvidence } from '@/lib/research/priceEvidence';
+import { bbwpDisplay, measuredBbwp, breakoutConditions, exhaustionDescription, phaseDuration, projectionStudy } from '@/lib/research/volatilityDescriptions';
+import { PROJECTION } from '@/lib/directionalVolatilityEngine.constants';
 
 const QUICK_SYMBOLS = ['BTC', 'ETH', 'AAPL', 'TSLA', 'NVDA', 'SPX', 'GOLD'];
 
@@ -34,9 +36,6 @@ function SectionTitle({ code }: { code: string }) {
   );
 }
 
-function evidenceStatus(value: boolean) {
-  return value ? 'supportive' as const : 'conflicting' as const;
-}
 
 function riskSeverity(label: string): RiskFlag['severity'] {
   const lower = label.toLowerCase();
@@ -143,33 +142,33 @@ export default function VolatilityEnginePage() {
         degraded: reading.projection.projectionQuality === 'low' || Boolean(reading.projection.projectionWarning),
         warnings: reading.projection.projectionWarning ? [reading.projection.projectionWarning] : [],
       }),
-      coverageScore: reading.projection.projectionQualityScore ?? null,
+      coverageScore: null,
     },
   ] : [];
   const dveEvidenceItems = reading ? [
     {
       label: 'Volatility Regime',
       value: reading.volatility.regime.toUpperCase(),
-      status: evidenceStatus(reading.volatility.regimeConfidence >= 50),
-      detail: `${reading.volatility.regimeConfidence.toFixed(0)}% confluence with BBWP ${reading.volatility.bbwp.toFixed(0)}.`
+      status: 'neutral' as const,
+      detail: (() => { const b = bbwpDisplay(reading.volatility); return `BBWP ${b.value ?? 'not available'}.${b.note ? ` ${b.note}` : ''}`; })()
     },
     {
       label: 'Directional Pressure',
       value: reading.direction.bias.toUpperCase(),
-      status: evidenceStatus(reading.direction.confidence >= 40),
-      detail: `${reading.direction.confidence.toFixed(0)}% confluence, score ${reading.direction.score.toFixed(0)}.`
+      status: 'neutral' as const,
+      detail: 'Engine pressure reading from momentum, trend and options inputs; not a forecast.'
     },
     {
       label: 'Phase State',
       value: reading.phasePersistence.contraction.active ? 'CONTRACTION' : reading.phasePersistence.expansion.active ? 'EXPANSION' : 'MIXED',
       status: reading.phasePersistence.contraction.active || reading.phasePersistence.expansion.active ? 'supportive' as const : 'neutral' as const,
-      detail: `Contraction exit ${reading.phasePersistence.contraction.exitProbability.toFixed(0)}%, expansion exit ${reading.phasePersistence.expansion.exitProbability.toFixed(0)}%.`
+      detail: reading.phasePersistence.contraction.active ? phaseDuration('contraction', reading.phasePersistence.contraction.stats) : reading.phasePersistence.expansion.active ? phaseDuration('expansion', reading.phasePersistence.expansion.stats) : 'No contraction or expansion phase is active.'
     },
     {
-      label: 'Signal Projection',
-      value: (reading.projection.projectionQuality ?? 'unavailable').toUpperCase(),
-      status: reading.projection.projectionQuality === 'high' ? 'supportive' as const : reading.projection.projectionQuality === 'low' ? 'conflicting' as const : 'neutral' as const,
-      detail: reading.projection.projectionWarning || `${reading.projection.projectionQualityScore ?? 0}/100 projection quality score.`
+      label: 'Past-case study',
+      value: reading.projection.signalType === 'none' ? 'NO SIGNAL' : `${reading.projection.sampleSize} CASES`,
+      status: 'neutral' as const,
+      detail: projectionStudy(reading.projection, PROJECTION.FORWARD_BARS)?.lines[0] ?? 'No active signal, so no past-case study.'
     },
   ] : [];
   const dveRiskFlags = reading ? [
@@ -252,9 +251,9 @@ export default function VolatilityEnginePage() {
         {reading && (
           <div className="mt-4 space-y-3">
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-              <StatCard label="BBWP percentile" value={reading.volatility.bbwp.toFixed(1)} />
-              <StatCard label="Pressure score" value={reading.direction.score.toFixed(0)} />
-              <StatCard label="Breakout score" value={`${reading.breakout.score.toFixed(0)}/100`} />
+              <StatCard label="BBWP percentile" value={bbwpDisplay(reading.volatility).value ?? 'Not available'} />
+              <StatCard label="Directional pressure" value={volatilityText(reading.direction.bias)} />
+              <StatCard label="Breakout setting" value={(() => { const known = breakoutConditions(reading.breakout, reading.dataQuality.missing).conditions.filter((c) => c.present !== null); return `${known.filter((c) => c.present).length} of ${known.length} conditions`; })()} />
               <StatCard label="Data coverage" value={`${reading.dataQuality.score.toFixed(0)}%`} />
             </div>
             {(reading.dataQuality.missing.length > 0 || reading.dataQuality.warnings.length > 0 || freshness.dataFreshness !== 'fresh') && <p className="text-xs text-amber-300">{freshness.dataFreshness === 'stale' ? 'Price bars are stale. ' : freshness.dataFreshness === 'delayed' ? 'Price bars are delayed. ' : freshness.dataFreshness === 'unknown' ? 'Price bar date not collected. ' : ''}{reading.dataQuality.missing.length > 0 ? `${reading.dataQuality.missing.length} inputs not collected. ` : ''}{reading.dataQuality.warnings.map(volatilityText).join(' ')}</p>}
@@ -264,13 +263,13 @@ export default function VolatilityEnginePage() {
               {dveRiskFlags.length ? <ul className="list-disc pl-4">{dveRiskFlags.map((flag,i)=><li key={i}>{volatilityText(flag.label)}</li>)}</ul> : <p>No trap, exhaustion or data-quality flags recorded.</p>}
               {dveMarketStatusItems.map(item=><p key={item.label}>{volatilityText(item.label)} · {item.coverageScore == null ? 'Coverage not collected' : `${Math.round(item.coverageScore)}% coverage`}</p>)}</div>
             </CollapsibleSection>
-            <CollapsibleSection title="Phase detail" summary={`${volatilityText(reading.volatility.regime)} · ${reading.exhaustion.level.toFixed(0)}/100 exhaustion`}>
+            <CollapsibleSection title="Phase detail" summary={`${volatilityText(reading.volatility.regime)} · exhaustion ${exhaustionDescription(reading.exhaustion).split(' — ')[0]}`}>
               <VETrapAlert trap={reading.trap} />
               <VEVolatilityPhaseCard volatility={reading.volatility} phase={reading.phasePersistence} breakout={reading.breakout} trap={reading.trap} exhaustion={reading.exhaustion} invalidation={reading.invalidation} flags={reading.flags} dataQuality={reading.dataQuality} />
             </CollapsibleSection>
 
             {/* LAYER 1: Volatility State */}
-            <CollapsibleSection title="Breakout evidence" summary={`${reading.breakout.score.toFixed(0)}/100 · ${volatilityText(reading.breakout.label)}`}>
+            <CollapsibleSection title="Breakout evidence" summary={breakoutConditions(reading.breakout, reading.dataQuality.missing).headline.split('.')[0]}>
               <SectionTitle code="VOL" />
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <VEBreakoutPanel breakout={reading.breakout} missingInputs={reading.dataQuality.missing} />
@@ -278,7 +277,7 @@ export default function VolatilityEnginePage() {
             </CollapsibleSection>
 
             {/* LAYER 2: Directional Bias */}
-            <CollapsibleSection title="Directional pressure" summary={`${volatilityText(reading.direction.bias)} · ${reading.direction.confidence.toFixed(0)}% confluence`}>
+            <CollapsibleSection title="Directional pressure" summary={`${volatilityText(reading.direction.bias)} · engine pressure reading`}>
               <SectionTitle code="DIR" />
               <VEDirectionalCompass dir={reading.direction} missingInputs={reading.dataQuality.missing} />
             </CollapsibleSection>
@@ -290,7 +289,7 @@ export default function VolatilityEnginePage() {
             </CollapsibleSection>
 
             {/* LAYER 4: Signal + Invalidation */}
-            <CollapsibleSection title="Signal and invalidation" summary={reading.signal.type === 'none' ? 'No active signal' : `${volatilityText(reading.signal.state)} · ${reading.signal.strength.toFixed(0)}/100`}>
+            <CollapsibleSection title="Signal and invalidation" summary={reading.signal.type === 'none' ? 'No active signal' : `${volatilityText(reading.signal.type)} · ${volatilityText(reading.signal.state)}`}>
               <SectionTitle code="SIG" />
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <VESignalCard
@@ -304,7 +303,7 @@ export default function VolatilityEnginePage() {
             </CollapsibleSection>
 
             {/* LAYER 5: Outcome Projection */}
-            <CollapsibleSection title="Projection" summary={reading.projection.signalType === 'none' ? 'Volatility range · no active signal' : `${reading.projection.projectionQualityScore == null ? 'Quality not collected' : `${Math.round(reading.projection.projectionQualityScore)}/100 quality`}`}>
+            <CollapsibleSection title="Projection" summary={reading.projection.signalType === 'none' ? 'Daily range size · no active signal' : `Past-case study · ${reading.projection.sampleSize} cases`}>
               <SectionTitle code="PROJ" />
               <VEProjectionCard
                 proj={reading.projection}
@@ -328,7 +327,7 @@ export default function VolatilityEnginePage() {
             </CollapsibleSection>
             {priceEvidence && (
               <CollapsibleSection title="Measured price and volatility (shared with Symbol)" summary={priceEvidence.summary[0] ?? `Completed bar ${priceEvidence.basis.lastCompletedBar ?? 'n/a'}`}>
-                {(() => { const note = bbwpBasisNote(reading.volatility.bbwp, priceEvidence); return note ? <p data-bbwp-basis-note className="mb-2 text-xs text-amber-300">{note}</p> : null; })()}
+                {(() => { const note = bbwpBasisNote(measuredBbwp(reading.volatility), priceEvidence); return note ? <p data-bbwp-basis-note className="mb-2 text-xs text-amber-300">{note}</p> : null; })()}
                 <PriceEvidencePanel e={priceEvidence} />
               </CollapsibleSection>
             )}

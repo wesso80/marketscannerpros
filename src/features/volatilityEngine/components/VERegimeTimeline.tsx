@@ -38,45 +38,6 @@ const REGIME_POS: Record<string, number> = {
 
 const REGIMES_ORDER: VolRegime[] = ['compression', 'neutral', 'transition', 'expansion', 'climax'];
 
-// Compute all possible next-regime probabilities from current state
-function computeRegimeForecast(current: VolRegime, rateDir: RateDirection, bbwp: number): { regime: VolRegime; probability: number }[] {
-  const forecast: { regime: VolRegime; probability: number }[] = [];
-
-  if (current === 'compression') {
-    const exitProb = rateDir === 'accelerating' ? 65 : rateDir === 'flat' ? 20 : 10;
-    forecast.push({ regime: 'compression', probability: 100 - exitProb });
-    forecast.push({ regime: 'transition', probability: exitProb * 0.7 });
-    forecast.push({ regime: 'expansion', probability: exitProb * 0.3 });
-  } else if (current === 'neutral') {
-    const toCompression = rateDir === 'decelerating' ? 45 : 20;
-    const toExpansion = rateDir === 'accelerating' ? 40 : 15;
-    forecast.push({ regime: 'compression', probability: toCompression });
-    forecast.push({ regime: 'neutral', probability: Math.max(0, 100 - toCompression - toExpansion - 10) });
-    forecast.push({ regime: 'transition', probability: 10 });
-    forecast.push({ regime: 'expansion', probability: toExpansion });
-  } else if (current === 'transition') {
-    const toExpansion = rateDir === 'accelerating' ? 55 : 25;
-    const toCompression = rateDir === 'decelerating' ? 40 : 15;
-    forecast.push({ regime: 'compression', probability: toCompression });
-    forecast.push({ regime: 'transition', probability: Math.max(0, 100 - toExpansion - toCompression) });
-    forecast.push({ regime: 'expansion', probability: toExpansion });
-  } else if (current === 'expansion') {
-    const toClimax = rateDir === 'accelerating' && bbwp > 75 ? 50 : rateDir === 'accelerating' ? 30 : 10;
-    const toTransition = rateDir === 'decelerating' ? 35 : 15;
-    forecast.push({ regime: 'expansion', probability: Math.max(0, 100 - toClimax - toTransition) });
-    forecast.push({ regime: 'climax', probability: toClimax });
-    forecast.push({ regime: 'transition', probability: toTransition });
-  } else if (current === 'climax') {
-    const toExpansion = rateDir === 'decelerating' ? 50 : 30;
-    const toClimax = rateDir === 'accelerating' ? 40 : 20;
-    forecast.push({ regime: 'climax', probability: toClimax });
-    forecast.push({ regime: 'expansion', probability: toExpansion });
-    forecast.push({ regime: 'transition', probability: Math.max(0, 100 - toClimax - toExpansion) });
-  }
-
-  return forecast.filter(f => f.probability > 0).sort((a, b) => b.probability - a.probability);
-}
-
 export default function VERegimeTimeline({
   transition,
   exhaustion,
@@ -95,16 +56,11 @@ export default function VERegimeTimeline({
   const currentRegime = transition.from;
   const currentPos = REGIME_POS[currentRegime] ?? 50;
 
-  // Compute regime forecast
-  const forecast = volatility
-    ? computeRegimeForecast(currentRegime, volatility.rateDirection, volatility.bbwp)
-    : [];
-
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-5">
       <div className="mb-4 flex items-center gap-2">
         <h3 className="text-xs font-semibold tracking-widest text-amber-400">
-          Regime &amp; Outlook
+          Regime context
         </h3>
       </div>
 
@@ -195,38 +151,18 @@ export default function VERegimeTimeline({
         <span className="rounded-full px-3 py-1 text-[0.75rem] font-bold" style={{ background: regimeColor(transition.to) + '30', color: regimeColor(transition.to) }}>
           {transition.to}
         </span>
-        <span className="text-[0.7rem] text-white/40">{transition.probability.toFixed(0)}/100 weight</span>
       </div>
       {transition.trigger && (
         <p className="mb-3 text-[0.7rem] text-white/40">Trigger: {volatilityText(transition.trigger)}</p>
       )}
 
-      {/* ── Next regime weights · heuristic Forecast ── */}
-      {forecast.length > 0 && (
-        <div className="mb-4 rounded-lg border border-white/10 bg-white/[0.03] p-3">
-          <div className="text-[0.65rem] text-white/40 mb-2">Next regime weights · heuristic</div>
-          <div className="space-y-1.5">
-            {forecast.map((f) => {
-              const c = regimeColor(f.regime);
-              return (
-                <div key={f.regime} className="flex items-center gap-2">
-                  <span className="w-20 text-[0.65rem] font-bold" style={{ color: c }}>{f.regime}</span>
-                  <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${f.probability}%`, background: c }} />
-                  </div>
-                  <span className="w-10 text-right text-[0.65rem] font-bold" style={{ color: c }}>{f.probability.toFixed(0)}%</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* Phase 4: no next-regime "weights": they were fixed heuristic numbers presented like probabilities. */}
 
       {/* Exhaustion */}
       <div className="mb-4 flex items-center gap-3">
         <span className="text-[0.72rem] text-white/50">Exhaustion:</span>
         <span className={`text-sm font-bold ${exhaustion.level >= 70 ? 'text-red-400' : exhaustion.level >= 40 ? 'text-amber-400' : 'text-emerald-400'}`}>
-          {exhaustion.level.toFixed(0)}/100 ({volatilityText(exhaustion.label)})
+          {volatilityText(exhaustion.label)}
         </span>
       </div>
       {exhaustion.signals.length > 0 && (

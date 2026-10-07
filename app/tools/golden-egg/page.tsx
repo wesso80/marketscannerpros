@@ -46,6 +46,7 @@ import EvidenceSummaryPanel from '@/components/research/EvidenceSummaryPanel';
 import DescriptiveStates from '@/components/research/DescriptiveStates';
 import { describeStates } from '@/lib/research/descriptiveStates';
 import { bbwpBasisNote } from '@/lib/research/priceEvidence';
+import { measuredBbwp } from '@/lib/research/volatilityDescriptions';
 import { buildEvidenceSummary } from '@/lib/research/evidenceSummary';
 import { buildVolatilityEvidence } from '@/lib/research/volatilityEvidence';
 import { buildResearchSnapshot } from '@/lib/research/researchSnapshot';
@@ -657,7 +658,7 @@ export default function GoldenEggPage() {
     assetClass: geCanonical.assetClass, priceEvidence: ge.priceEvidence,
     options: geCanonical.options ? { expiry: geCanonical.options.expiry, snapshotTs: geCanonical.options.snapshotTs, daysToExpiry: geCanonical.options.daysToExpiry, avgIvPct: geCanonical.options.avgIvPct, expectedMovePct: geCanonical.options.expectedMovePct } : null,
     release: dve.loading ? undefined : d?.signal ? { type: d.signal.type, state: d.signal.state } : null,
-    dveBbwp: d?.volatility?.bbwp ?? null,
+    dveBbwp: measuredBbwp(d?.volatility),
   }) : null;
   const volatilityFold = volatilityEvidence && !loading ? <CollapsibleSection title="Volatility" summary={volatilityEvidence.summary[0] ?? 'ATR, realised and implied volatility'}><VolatilityEvidencePanel v={volatilityEvidence}/></CollapsibleSection> : null;
   const evidenceSummary = geCanonical && researchSnapshot ? buildEvidenceSummary({
@@ -1322,7 +1323,7 @@ export default function GoldenEggPage() {
                                 })()}
                                 <circle cx={cx} cy={cy} r={3} fill={zone.text} />
                               </svg>
-                              <div className="text-sm font-bold -mt-1" style={{ color: zone.text }}>{symbolText(bbwp.toFixed(1))}</div>
+                              <div className="text-sm font-bold -mt-1" style={{ color: zone.text }}>{symbolText(measuredBbwp(d.volatility) == null ? 'Not available' : bbwp.toFixed(1))}</div>
                             </>
                           );
                         })()}
@@ -1330,7 +1331,7 @@ export default function GoldenEggPage() {
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded p-2 text-[11px] text-slate-400">
                       <div className="text-slate-500">BBWP basis</div>
-                      {symbolText(bbwpBasisNote(d.volatility.bbwp, ge.priceEvidence) ?? 'BBWP from the Volatility engine (BB 13, one-year percentile).')}
+                      {symbolText(measuredBbwp(d.volatility) == null ? 'BBWP not available: too few closes.' : bbwpBasisNote(d.volatility.bbwp, ge.priceEvidence) ?? 'BBWP from the Volatility engine (BB 13, one-year percentile).')}
                     </div>
                   </div>
                   {d.signal.active && d.signal.type !== 'none' && (

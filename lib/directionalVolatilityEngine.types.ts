@@ -96,6 +96,8 @@ export interface VolatilityState {
   squeezeStrength: number;
   atr?: number;
   extremeAlert?: 'low' | 'high' | null;
+  /** How `bbwp` was obtained. When `available` is false, `bbwp` is a neutral placeholder (50), not a measurement. */
+  bbwpBasis?: { available: boolean; window: number; lookback: number; fullYear: boolean };
 }
 
 // ── LAYER 2: DIRECTIONAL BIAS ────────────────────────────────────────────

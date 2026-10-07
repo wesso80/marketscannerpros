@@ -1,4 +1,5 @@
 'use client';
+import { breakoutConditions, exhaustionDescription, phaseDuration, trapDescription } from '@/lib/research/volatilityDescriptions';
 import { volatilityText } from '../displayText';
 
 import type {
@@ -46,8 +47,8 @@ function ageLabel(percentile: number) {
 
 function riskLevel(args: { trap: VolatilityTrap; exhaustion: ExhaustionRisk; breakout: BreakoutReadiness; flags: DVEFlag[] }) {
   if (args.trap.detected || args.exhaustion.label === 'EXTREME' || args.flags.includes('CLIMAX_WARNING')) return 'High Friction';
-  if (args.trap.candidate || args.exhaustion.label === 'HIGH' || args.breakout.score >= 60) return 'Elevated';
-  if (args.exhaustion.label === 'MEDIUM' || args.breakout.score >= 40) return 'Moderate';
+  if (args.trap.candidate || args.exhaustion.label === 'HIGH') return 'Elevated';
+  if (args.exhaustion.label === 'MEDIUM') return 'Moderate';
   return 'Low';
 }
 
@@ -61,14 +62,6 @@ function Fact({ label, value, detail, tone = 'text-slate-100' }: { label: string
   );
 }
 
-function ProgressBar({ value, color }: { value: number; color: string }) {
-  const width = Math.max(0, Math.min(100, value));
-  return (
-    <div className="h-2 overflow-hidden rounded-full bg-white/10">
-      <div className="h-full rounded-full transition-all" style={{ width: `${width}%`, background: color }} />
-    </div>
-  );
-}
 
 export default function VEVolatilityPhaseCard({ volatility, phase, breakout, trap, exhaustion, invalidation, flags, dataQuality }: PhaseCardProps) {
   const tone = phaseTone(volatility.regime);
@@ -101,26 +94,14 @@ export default function VEVolatilityPhaseCard({ volatility, phase, breakout, tra
               Risk: {risk}
             </span>
           </div>
-          <div className="mt-3 grid max-w-3xl gap-2 text-xs text-slate-300 md:grid-cols-3">
-            <div>
-              <div className="mb-1 flex justify-between"><span>Phase Age</span><span className="font-bold text-white">{active.stats.agePercentile.toFixed(0)}%</span></div>
-              <ProgressBar value={active.stats.agePercentile} color={tone.accent} />
-            </div>
-            <div>
-              <div className="mb-1 flex justify-between"><span>Continuation</span><span className="font-bold text-white">{active.continuationProbability.toFixed(0)}%</span></div>
-              <ProgressBar value={active.continuationProbability} color="#10B981" />
-            </div>
-            <div>
-              <div className="mb-1 flex justify-between"><span>Exit Risk</span><span className="font-bold text-white">{active.exitProbability.toFixed(0)}%</span></div>
-              <ProgressBar value={active.exitProbability} color="#F59E0B" />
-            </div>
-          </div>
+          {/* Phase 4: duration facts, not continuation / exit "probabilities" (additive heuristic points). */}
+          <p data-phase-duration className="mt-3 max-w-3xl text-xs leading-5 text-slate-300">{phaseDuration(active.label.toLowerCase(), active.stats)}</p>
         </div>
 
         <div className="grid min-w-[min(100%,520px)] gap-3 md:grid-cols-3">
-          <Fact label="Breakout" value={`${breakout.score.toFixed(0)}/100`} detail={volatilityText(breakout.label)} tone={breakout.score >= 60 ? 'text-emerald-200' : breakout.score >= 40 ? 'text-amber-200' : 'text-slate-200'} />
-          <Fact label="Trap" value={trap.detected ? 'Detected' : trap.candidate ? 'Candidate' : 'Clear'} detail={`${trap.score.toFixed(0)}/100 score`} tone={trap.detected ? 'text-red-200' : trap.candidate ? 'text-amber-200' : 'text-emerald-200'} />
-          <Fact label="Exhaustion" value={volatilityText(exhaustion.label)} detail={`${exhaustion.level.toFixed(0)}/100 risk`} tone={exhaustion.level >= 70 ? 'text-red-200' : exhaustion.level >= 40 ? 'text-amber-200' : 'text-emerald-200'} />
+          {(() => { const b = breakoutConditions(breakout, dataQuality.missing); const known = b.conditions.filter((c) => c.present !== null); return <Fact label="Breakout setting" value={`${known.filter((c) => c.present).length} of ${known.length} conditions`} detail="Setting only; not a breakout or a signal." />; })()}
+          <Fact label="Trap" value={trap.detected ? 'Detected' : trap.candidate ? 'Candidate' : 'Clear'} detail={trapDescription(trap)} tone={trap.detected ? 'text-red-200' : trap.candidate ? 'text-amber-200' : 'text-emerald-200'} />
+          <Fact label="Exhaustion" value={volatilityText(exhaustion.label)} detail={exhaustion.signals.length ? exhaustionDescription(exhaustion) : 'No exhaustion observations recorded.'} tone={exhaustion.level >= 70 ? 'text-red-200' : exhaustion.level >= 40 ? 'text-amber-200' : 'text-emerald-200'} />
         </div>
       </div>
 
