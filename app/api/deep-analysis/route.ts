@@ -9,6 +9,7 @@
  * directional engine.
  */
 import { putCallTilt } from '@/lib/options/oiSummary';
+import { independence, type EvidenceInput, type Independence, type TaggedPoint } from '@/lib/research/evidenceInputs';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
@@ -74,6 +75,10 @@ interface AnalystSections {
   catalysts: string[];
   changesView: string[];
   reading: string; // 1–2 sentence conditional summary
+  /** Input behind each supports / against line (same order); lines sharing an input are one source of evidence. */
+  supportInputs: EvidenceInput[];
+  againstInputs: EvidenceInput[];
+  independence: { supports: Independence; against: Independence };
 }
 
 function fmtNum(v: number | null | undefined, d = 2): string { return v == null || !Number.isFinite(v) ? 'n/a' : v.toFixed(d); }
@@ -83,27 +88,28 @@ function fmtPx(v: number | null | undefined): string { if (v == null || !Number.
 function buildDeterministicAnalyst(c: GoldenEggCanonical, ge: GoldenEggPayload, news: RelevantArticle[], fundamentals: FundamentalsSummary | null): AnalystSections {
   const dir = c.verdict.direction;
   const dirWord = dir === 'LONG' ? 'bullish' : dir === 'SHORT' ? 'bearish' : 'neutral';
-  const supports: string[] = [];
-  const against: string[] = [];
-  if (c.scores.structure >= 65) supports.push(`Structure ${c.scores.structure}/100 — ${c.scores.notes.structure[0] ?? 'price aligned with the 20/50-bar means'}`);
-  else against.push(`Structure ${c.scores.structure}/100 — ${c.scores.notes.structure[0] ?? 'alignment mixed'}`);
-  if (c.scores.momentum >= 65) supports.push(`Momentum ${c.scores.momentum}/100 — RSI ${fmtNum(c.indicators.rsi, 1)}, MACD hist ${fmtNum(c.indicators.macdHist, 3)}`);
-  else if (c.scores.momentum < 45) against.push(`Momentum ${c.scores.momentum}/100 — RSI ${fmtNum(c.indicators.rsi, 1)}`);
-  if (c.scores.flow >= 60) supports.push(`Flow ${c.scores.flow}/100 — ${c.scores.notes.flow[0] ?? 'positioning supportive'}`);
-  else if (c.scores.flow < 50) against.push(`Flow ${c.scores.flow}/100 — ${c.scores.notes.flow[0] ?? 'positioning not supportive'}`);
-  if (c.indicators.ema200 != null) (c.price > c.indicators.ema200 === (dir !== 'SHORT') ? supports : against).push(`Price ${c.price > c.indicators.ema200 ? 'above' : 'below'} EMA200 ${fmtPx(c.indicators.ema200)}`);
-  if (c.extension.label !== 'normal') against.push(`Extension ${c.extension.label} — RSI ${fmtNum(c.indicators.rsi, 1)}, stochastic ${fmtNum(c.indicators.stochK, 0)}${c.extension.dveExhaustion != null && c.extension.dveExhaustion >= 60 ? `, DVE exhaustion ${Math.round(c.extension.dveExhaustion)}/100` : ''}`);
-  if (c.timing.relation === 'conflict') against.push(`Time confluence ${c.timing.direction} (${c.timing.signalStrength}) opposes the ${dirWord} read — display only, never gates the verdict`);
-  if (c.timing.relation === 'supportive') supports.push(`Time confluence ${c.timing.direction} (${c.timing.signalStrength}) agrees`);
-  if (c.crossMarket.alignment === 'supportive') supports.push(`Cross-market supportive — ${c.crossMarket.summary}`);
-  if (c.crossMarket.alignment === 'headwind') against.push(`Cross-market headwind — ${c.crossMarket.summary}`);
-  if (c.dataTrust.level !== 'GOOD') against.push(`Data trust ${c.dataTrust.label}: ${c.dataTrust.reasons.join('; ')}`);
-  for (const r of c.scores.notes.risk) if (!/no material risk flags/.test(r)) against.push(`Risk: ${r}`);
-  if (c.options && c.options.quality.level !== 'GOOD') against.push(`Options chain ${c.options.quality.level.toLowerCase()} on ${c.options.expiry}: ${c.options.quality.reasons[0]}`);
+  const supports: TaggedPoint[] = [];
+  const against: TaggedPoint[] = [];
+  const flowInput: EvidenceInput = c.assetClass === 'crypto' ? 'derivatives' : 'options';
+  if (c.scores.structure >= 65) supports.push({ text: `Structure ${c.scores.structure}/100 — ${c.scores.notes.structure[0] ?? 'price aligned with the 20/50-bar means'}`, input: 'price-history' });
+  else against.push({ text: `Structure ${c.scores.structure}/100 — ${c.scores.notes.structure[0] ?? 'alignment mixed'}`, input: 'price-history' });
+  if (c.scores.momentum >= 65) supports.push({ text: `Momentum ${c.scores.momentum}/100 — RSI ${fmtNum(c.indicators.rsi, 1)}, MACD hist ${fmtNum(c.indicators.macdHist, 3)}`, input: 'price-history' });
+  else if (c.scores.momentum < 45) against.push({ text: `Momentum ${c.scores.momentum}/100 — RSI ${fmtNum(c.indicators.rsi, 1)}`, input: 'price-history' });
+  if (c.scores.flow >= 60) supports.push({ text: `Flow ${c.scores.flow}/100 — ${c.scores.notes.flow[0] ?? 'positioning supportive'}`, input: flowInput });
+  else if (c.scores.flow < 50) against.push({ text: `Flow ${c.scores.flow}/100 — ${c.scores.notes.flow[0] ?? 'positioning not supportive'}`, input: flowInput });
+  if (c.indicators.ema200 != null) (c.price > c.indicators.ema200 === (dir !== 'SHORT') ? supports : against).push({ text: `Price ${c.price > c.indicators.ema200 ? 'above' : 'below'} EMA200 ${fmtPx(c.indicators.ema200)}`, input: 'price-history' });
+  if (c.extension.label !== 'normal') against.push({ text: `Extension ${c.extension.label} — RSI ${fmtNum(c.indicators.rsi, 1)}, stochastic ${fmtNum(c.indicators.stochK, 0)}${c.extension.dveExhaustion != null && c.extension.dveExhaustion >= 60 ? `, DVE exhaustion ${Math.round(c.extension.dveExhaustion)}/100` : ''}`, input: 'price-history' });
+  if (c.timing.relation === 'conflict') against.push({ text: `Time confluence ${c.timing.direction} (${c.timing.signalStrength}) opposes the ${dirWord} read — display only, never gates the verdict`, input: 'price-history' });
+  if (c.timing.relation === 'supportive') supports.push({ text: `Time confluence ${c.timing.direction} (${c.timing.signalStrength}) agrees`, input: 'price-history' });
+  if (c.crossMarket.alignment === 'supportive') supports.push({ text: `Cross-market supportive — ${c.crossMarket.summary}`, input: 'cross-market' });
+  if (c.crossMarket.alignment === 'headwind') against.push({ text: `Cross-market headwind — ${c.crossMarket.summary}`, input: 'cross-market' });
+  if (c.dataTrust.level !== 'GOOD') against.push({ text: `Data trust ${c.dataTrust.label}: ${c.dataTrust.reasons.join('; ')}`, input: 'data-quality' });
+  for (const r of c.scores.notes.risk) if (!/no material risk flags/.test(r)) against.push({ text: `Risk: ${r}`, input: 'risk-flags' });
+  if (c.options && c.options.quality.level !== 'GOOD') against.push({ text: `Options chain ${c.options.quality.level.toLowerCase()} on ${c.options.expiry}: ${c.options.quality.reasons[0]}`, input: 'data-quality' });
   if (fundamentals) {
-    if (fundamentals.earningsGrowthYoy != null && fundamentals.earningsGrowthYoy < 0) against.push(`Earnings −${Math.abs(fundamentals.earningsGrowthYoy * 100).toFixed(1)}% YoY (latest quarter) — fundamental headwind for a ${dirWord} read`);
-    if (fundamentals.revenueGrowthYoy != null && fundamentals.revenueGrowthYoy > 0.1) supports.push(`Revenue +${(fundamentals.revenueGrowthYoy * 100).toFixed(1)}% YoY (latest quarter)`);
-    if (fundamentals.daysToEarnings != null && fundamentals.daysToEarnings >= 0 && fundamentals.daysToEarnings <= 14) against.push(`Earnings ${fundamentals.nextEarningsDate} in ${fundamentals.daysToEarnings} days — event risk`);
+    if (fundamentals.earningsGrowthYoy != null && fundamentals.earningsGrowthYoy < 0) against.push({ text: `Earnings −${Math.abs(fundamentals.earningsGrowthYoy * 100).toFixed(1)}% YoY (latest quarter) — fundamental headwind for a ${dirWord} read`, input: 'fundamentals' });
+    if (fundamentals.revenueGrowthYoy != null && fundamentals.revenueGrowthYoy > 0.1) supports.push({ text: `Revenue +${(fundamentals.revenueGrowthYoy * 100).toFixed(1)}% YoY (latest quarter)`, input: 'fundamentals' });
+    if (fundamentals.daysToEarnings != null && fundamentals.daysToEarnings >= 0 && fundamentals.daysToEarnings <= 14) against.push({ text: `Earnings ${fundamentals.nextEarningsDate} in ${fundamentals.daysToEarnings} days — event risk`, input: 'calendar' });
   }
   const catalysts: string[] = news.length
     ? news.slice(0, 5).map((n) => `[${n.catalyst}] ${n.title} — ${n.catalystReason} (${n.source}, relevance ${n.relevance.toFixed(2)})`)
@@ -118,8 +124,11 @@ function buildDeterministicAnalyst(c: GoldenEggCanonical, ge: GoldenEggPayload, 
   const assess = c.verdict.assessment === 'ALIGNED' ? 'aligned' : c.verdict.assessment === 'NOT_ALIGNED' ? 'not aligned' : 'in watch mode';
   return {
     thesis: `${c.symbol} (${c.assetClass}, ${c.timeframe}) is ${assess} with a ${dirWord} bias: ${c.verdict.setupType.replace('_', ' ')} setup — ${c.verdict.setupNote}. Indicator composite ${c.verdict.confluence}/100 (evidence alignment, not a probability).`,
-    supports: supports.length ? supports : ['No component clears the supportive threshold.'],
-    against: against.length ? against : ['No material evidence against the read at current inputs.'],
+    supports: supports.length ? supports.map((p) => p.text) : ['No component clears the supportive threshold.'],
+    against: against.length ? against.map((p) => p.text) : ['No material evidence against the read at current inputs.'],
+    supportInputs: supports.map((p) => p.input),
+    againstInputs: against.map((p) => p.input),
+    independence: { supports: independence(supports, 'supporting points'), against: independence(against, 'points against') },
     primaryBlocker: c.verdict.primaryBlocker ?? 'None flagged by the Golden Egg engine.',
     confirms: c.confirmation,
     invalidates: c.invalidation,
@@ -177,6 +186,16 @@ function buildPacketPrompt(c: GoldenEggCanonical, ge: GoldenEggPayload, news: Re
     L.push(`NETWORK / MARKET STRUCTURE: market cap ${c.network.marketCap != null ? formatUsdShort(c.network.marketCap) : 'n/a'} (rank #${c.network.marketCapRank ?? 'n/a'}); circulating ${c.network.circulatingSupply?.toLocaleString() ?? 'n/a'} / max ${c.network.maxSupply?.toLocaleString() ?? 'uncapped or unknown'}; FDV ${c.network.fdv != null ? formatUsdShort(c.network.fdv) : 'n/a'} (${c.network.fdvBasis}); spot volume 24h ${c.network.spotVolume24h != null ? formatUsdShort(c.network.spotVolume24h) : 'n/a'}; distance from ATH ${c.network.distanceFromAthPct ?? 'n/a'}%; 7d ${c.network.change7dPct?.toFixed(1) ?? 'n/a'}%, 30d ${c.network.change30dPct?.toFixed(1) ?? 'n/a'}%. Relative strength: ${c.network.relative.map((r) => `${r.benchmark} ${r.ratio} (${r.label}, ${r.window})`).join(', ') || 'n/a'}. ${c.network.notes.join(' ')}`);
     if (cryptoSentiment) L.push(`Crypto market sentiment proxy: ${cryptoSentiment.value} (${cryptoSentiment.classification}) — ${cryptoSentiment.basis}. Treat as context, not a contrarian signal.`);
   }
+  const pe = ge.priceEvidence;
+  if (pe) {
+    L.push(`MEASURED PRICE EVIDENCE (shared with the Symbol page; completed daily bars only, last completed bar ${pe.basis.lastCompletedBar ?? 'n/a'}${pe.basis.excludedPartialBar ? `, unfinished bar ${pe.basis.excludedPartialBar} excluded` : ''}): ${pe.summary.join(' ') || 'no summary'}`);
+    L.push(`  RSI14 ${pe.rsi14 ?? 'n/a'}, ADX ${pe.adx.adx ?? 'n/a'}, ATR ${pe.atrPct ?? 'n/a'}% of close, BBWP ${pe.bbwp ?? 'n/a'}, volume ${pe.volumeRatio ?? 'n/a'}× its 20-session average, 20-day realised volatility ${pe.realisedVol20 ?? 'n/a'}%.${pe.missing.length ? ` Missing: ${pe.missing.join('; ')}.` : ''}`);
+  }
+  const te = ge.timingEvidence;
+  if (te) L.push(`TIMING AND SCHEDULED EVENTS (as of ${te.asOfUtc}): ${te.summary.join(' ')}`);
+  // Agreement between readings of the same input (e.g. several indicators of one price series) is one source of evidence.
+  const dIndep = buildDeterministicAnalyst(c, ge, news, fundamentals).independence;
+  L.push(`INDEPENDENCE OF EVIDENCE: for — ${dIndep.supports.note} Against — ${dIndep.against.note}`);
   const ns = summarizeNews(news);
   L.push(`NEWS (symbol-specific only): ${ns.headline}`);
   // One line per EVENT: several articles about one story are one catalyst, not independent confirmation.
@@ -196,6 +215,7 @@ HARD RULES
 - Indicator composite is evidence alignment, not a probability. Never use "high probability", "likely to rally", "should break out", "expected to rise", "strong chance" or any win-rate language.
 - No trade instructions, no BUY/SELL/HOLD, no "traders should". Conditional research language only ("if X prints, the read strengthens").
 - Analyst targets and consensus are context, not signals. Catalysts keep the class given in the packet (POSITIVE / NEGATIVE / MIXED / NEUTRAL / EVENT_RISK); a capital raise is not bullish because it is news.
+- Points that come from the same input (see INDEPENDENCE OF EVIDENCE) are ONE source of evidence. Never describe several indicators of the same price series as separate confirmations.
 - When the packet says data trust is not GOOD, say so in the thesis and keep every conclusion tentative.
 
 OUTPUT — exactly these headings, in this order, plain text, ≤ 420 words total:
@@ -351,6 +371,9 @@ export async function GET(request: NextRequest) {
         barInterval: c.barInterval,
         timeframe: c.timeframe,
         flipConditions: ge.layer1.flipConditions,
+        // The Symbol page's shared, dated evidence (same cache entry, same numbers).
+        priceEvidence: ge.priceEvidence ?? null,
+        timingEvidence: ge.timingEvidence ?? null,
         // Canonical engine verdict (primary). `verdict` above already carries its assessment/direction/grade; the
         // confluence number there is the secondary legacy read (see legacyConfluence).
         canonicalVerdict: ge.canonicalVerdict ? {

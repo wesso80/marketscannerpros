@@ -14,6 +14,11 @@ import SignalRail from "@/components/terminal/SignalRail";
 import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
 import { calibrationSummary, cautionTags, gradeRelativeNote, noSetupDisplay, priceChangeBasisLabel, scoreLabel } from "@/lib/scoring/canonical/display";
 import { readerLabel } from "@/lib/presentation/symbolDisplay";
+import PriceEvidencePanel from "@/components/research/PriceEvidencePanel";
+import TimingEvidencePanel from "@/components/research/TimingEvidencePanel";
+import { INPUT_LABEL, type EvidenceInput } from "@/lib/research/evidenceInputs";
+import type { PriceEvidence } from "@/lib/research/priceEvidence";
+import type { TimingEvidence } from "@/lib/research/timingEvidence";
 
 interface PriceData {
   price: number;
@@ -101,10 +106,16 @@ interface GoldenEggSummary {
   canonicalVerdict?: { permission: 'PASS' | 'WATCH' | 'BLOCK'; grade: string; setupType: string; direction: string; score: number; coverage: number; blockReasons?: Array<{ code: string; message: string }>; watchReasons?: Array<{ code: string; message: string }> } | null;
   /** Indicator composite read (secondary). */
   legacyConfluence?: { assessment: string; direction: string; grade: string; confluenceScore: number } | null;
+  /** Symbol page's shared, dated evidence (same packet). */
+  priceEvidence?: PriceEvidence | null;
+  timingEvidence?: TimingEvidence | null;
 }
 
 interface AnalystOutput {
-  sections: { thesis: string; supports: string[]; against: string[]; primaryBlocker: string; confirms: string[]; invalidates: string[]; catalysts: string[]; changesView: string[]; reading: string };
+  sections: { thesis: string; supports: string[]; against: string[]; primaryBlocker: string; confirms: string[]; invalidates: string[]; catalysts: string[]; changesView: string[]; reading: string;
+    /** Input behind each supports / against line; lines sharing an input are one source of evidence. */
+    supportInputs?: EvidenceInput[]; againstInputs?: EvidenceInput[];
+    independence?: { supports: { note: string }; against: { note: string } } };
   narrative: string | null;
   narrativeSource: string;
   removedLines: number;
@@ -2165,14 +2176,29 @@ export default function DeepAnalysisPage({
                     ['What invalidates', result.analyst.sections.invalidates],
                     ['Catalysts / event risk', result.analyst.sections.catalysts],
                     ['What would change the view', result.analyst.sections.changesView],
-                  ] as Array<[string, string[]]>).map(([title, lines]) => (
+                  ] as Array<[string, string[]]>).map(([title, lines]) => {
+                    const sec = result.analyst!.sections;
+                    const inputs = title === 'What supports it' ? sec.supportInputs : title === 'What argues against it' ? sec.againstInputs : undefined;
+                    const indep = title === 'What supports it' ? sec.independence?.supports : title === 'What argues against it' ? sec.independence?.against : undefined;
+                    return (
                     <div key={title} style={{ padding: "0.6rem 0.75rem", background: "rgba(30,41,59,0.35)", borderRadius: 8 }}>
                       <div style={{ fontSize: "0.7rem", color: "#F59E0B", textTransform: "uppercase", fontWeight: 700, marginBottom: 4 }}>{title}</div>
-                      {lines.length === 0 ? <div style={{ fontSize: "0.8rem", color: "#94A3B8" }}>Nothing recorded.</div> : lines.map((l, i) => <div key={i} style={{ fontSize: "0.82rem", color: "#E2E8F0", lineHeight: 1.5 }}>{lines.length > 1 ? '• ' : ''}{readerLabel(l)}</div>)}
+                      {lines.length === 0 ? <div style={{ fontSize: "0.8rem", color: "#94A3B8" }}>Nothing recorded.</div> : lines.map((l, i) => <div key={i} style={{ fontSize: "0.82rem", color: "#E2E8F0", lineHeight: 1.5 }}>{lines.length > 1 ? '• ' : ''}{readerLabel(l)}{inputs?.[i] && <span data-evidence-input={inputs[i]} style={{ marginLeft: 6, fontSize: "0.68rem", color: "#94A3B8", border: "1px solid rgba(148,163,184,0.35)", borderRadius: 4, padding: "0 4px" }}>{INPUT_LABEL[inputs[i]]}</span>}</div>)}
+                      {indep && lines.length > 0 && inputs && inputs.length > 0 && <div data-evidence-independence style={{ fontSize: "0.72rem", color: "#94A3B8", marginTop: 4 }}>{indep.note}</div>}
                     </div>
-                  ))}
+                    );
+                  })}
                   <div style={{ fontSize: "0.8rem", color: "#CBD5E1", fontStyle: "italic" }}>{readerLabel(result.analyst.sections.reading)}</div>
                 </div>
+              </div>
+            )}
+
+            {/* Shared evidence: the same dated values the Symbol page shows */}
+            {(result.goldenEgg?.priceEvidence || result.goldenEgg?.timingEvidence) && (
+              <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-borderStrong)", padding: "1.5rem", display: "grid", gap: "1rem" }}>
+                <div style={{ fontSize: "0.75rem", color: "#64748B" }}>Same measured values and dates as the Symbol page.</div>
+                {result.goldenEgg.priceEvidence && <PriceEvidencePanel e={result.goldenEgg.priceEvidence} />}
+                {result.goldenEgg.timingEvidence && <TimingEvidencePanel t={result.goldenEgg.timingEvidence} />}
               </div>
             )}
 
