@@ -58,7 +58,7 @@ it('closes a trade that never reaches +1R at the 72h time stop, and marks one th
  const timed=await backtestCoin({id:'coin',product:'COIN-USD'},T0+30*F,m.signalAt+8*D,btc,flat(false));
  expect(timed.trades[0].fixed).toMatchObject({status:'CLOSED',exit:'TIME_EXIT',at:new Date(m.signalAt+72*H).toISOString()});
  expect(timed.trades[0].fixed.marked).toBeUndefined();
- expect(Object.keys(timed.trades[0].shadows!)).toEqual(['partial-trail-v2','failed-breakout-trail-v3','trail-only-v4']);
+ expect(Object.keys(timed.trades[0].shadows!)).toEqual(['partial-trail-v2','failed-breakout-trail-v3','trail-only-v4','ratchet-v5','half2r-trail3-v6','chandelier3-v7']);
  const r=await backtestCoin({id:'coin',product:'COIN-USD'},T0+30*F,m.signalAt+8*D,btc,flat(true));
  expect(r.trades[0].fixed).toMatchObject({status:'CLOSED',marked:true,exit:'HORIZON',at:new Date(m.signalAt+7*D).toISOString()});
  expect(Math.abs(r.trades[0].fixed.r!)).toBeLessThan(.2);

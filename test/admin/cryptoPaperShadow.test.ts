@@ -85,7 +85,7 @@ it('v4 trails the whole position from entry with no partial, labelling a stop ra
  expect(s4).toMatchObject({status:'CLOSED',legs:[{price:97,reason:'TRAIL_STOP'}]});
 });
 it('stores v3 and v4 under their own journal titles and compares each plan separately',()=>{
- expect(SHADOW_PLANS_ACTIVE).toEqual(['partial-trail-v2','failed-breakout-trail-v3','trail-only-v4']);
+ expect(SHADOW_PLANS_ACTIVE).toEqual(['partial-trail-v2','failed-breakout-trail-v3','trail-only-v4','ratchet-v5','half2r-trail3-v6','chandelier3-v7']);
  expect(shadowTitle('partial-trail-v2')).toBe(shadowTitle('partial-trail-v1'));
  expect(shadowTitle('failed-breakout-trail-v3')).toBe('Crypto shadow exit plan failed-breakout-trail-v3');
  const rows=[{position_id:'a',r_multiple:'2'},{position_id:'b',r_multiple:'-1'}] as never;
@@ -103,4 +103,36 @@ it('recomputes ledger R at higher per-side costs from the slippage-free quote, e
  expect(at(0.1).avgR).toBeCloseTo((110*.999-100*1.001)/5.05,4);
  expect(at(0.6).avgR).toBeCloseTo((110*.994-100*1.006)/5.05,4);
  expect(at(0.6).avgR!).toBeLessThan(at(0.1).avgR!);
+});
+// ── Phase 2 plans (entry 100, stop 95 => 1R = 5; ATR 2) ──
+it('v5 ratchet: breakeven after +1.5R, +1R locked after +2R, raised only from completed highs, no time stop',()=>{
+ const s0=initShadow(pos(),2,c,'ratchet-v5');
+ const s1=advanceShadow(s0,[bar(0,100,107.6,100.5,107)],now); // high +1.52R -> stop to breakeven for later candles
+ expect(s1).toMatchObject({status:'OPEN',stop:100,remaining:1,legs:[]});
+ const s2=advanceShadow(s1,[bar(1,107,110.2,104,110)],now); // high +2.04R -> lock +1R (105)
+ expect(s2.stop).toBe(105);
+ const s3=advanceShadow(s2,[bar(2,110,110,104,104)],now);
+ expect(s3).toMatchObject({status:'CLOSED',legs:[{fraction:1,price:105,reason:'RATCHET_STOP'}]});
+ expect(s3.r).toBeCloseTo(net(105)/5,3);
+ // No time stop: 100 hours flat below +1R stays open.
+ const flat=Array.from({length:400},(_,i)=>bar(i,100,101,99,100));
+ expect(advanceShadow(initShadow(pos(),2,c,'ratchet-v5'),flat,now+400*step).status).toBe('OPEN');
+});
+it('v6: half at +2R without a breakeven move, the rest trails 3 ATR; v7: whole position trails 3 ATR from entry',()=>{
+ const v6=advanceShadow(initShadow(pos(),2,c,'half2r-trail3-v6'),[bar(0,100,110.5,99,110)],now);
+ // Half filled at 110 (+2R); stop stays at 95 (no breakeven), trail = 110.5 - 6 = 104.5 applies from the next candle.
+ expect(v6).toMatchObject({status:'OPEN',remaining:.5,stop:104.5,legs:[{fraction:.5,price:110,reason:'PARTIAL_TARGET'}]});
+ const v6b=advanceShadow(v6,[bar(1,110,111,104,104.2)],now);
+ expect(v6b).toMatchObject({status:'CLOSED',legs:[{reason:'PARTIAL_TARGET'},{fraction:.5,price:104.5,reason:'TRAIL_STOP'}]});
+ const v7=advanceShadow(initShadow(pos(),2,c,'chandelier3-v7'),[bar(0,100,103,99,102)],now);
+ expect(v7).toMatchObject({status:'OPEN',stop:97,remaining:1}); // max(95, 103 - 6)
+ expect(advanceShadow(v7,[bar(1,102,102,96.5,97)],now)).toMatchObject({status:'CLOSED',legs:[{fraction:1,price:97,reason:'TRAIL_STOP'}]});
+});
+it('Phase 2 plans never use a later candle: changing candles after the exit leaves every result unchanged',()=>{
+ for(const plan of ['ratchet-v5','half2r-trail3-v6','chandelier3-v7'] as const){
+  const head=[bar(0,100,107.6,100.5,107),bar(1,107,110.2,104,110),bar(2,110,110,94,94)];
+  const a=advanceShadow(initShadow(pos(),2,c,plan),[...head,bar(3,94,500,1,200)],now);
+  const b=advanceShadow(initShadow(pos(),2,c,plan),[...head,bar(3,94,90,80,85)],now);
+  expect(a.status).toBe('CLOSED');expect(a.r).toBe(b.r);expect(a.legs).toEqual(b.legs);
+ }
 });
