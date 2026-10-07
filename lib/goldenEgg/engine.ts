@@ -1,4 +1,5 @@
 import { describeMultiple } from '@/lib/goldenEgg/fundamentalsContext';
+import { buildPriceEvidence, type PriceEvidence } from '@/lib/research/priceEvidence';
 import { oiBasisLabel } from '@/lib/options/oiSummary';
 import { valuationAtPrice } from '@/lib/market/valuationIntegrity';
 /**
@@ -236,6 +237,17 @@ function barsPerDayFor(tfLabel: string, assetClass: 'equity' | 'crypto' | 'forex
 function fmtLevel(v: number): string { return `$${fmtPriceStr(v)}`; }
 
 // ── Build GoldenEggPayload from live data ───────────────────────────────
+/** Completed-bar evidence from the fetcher's longest dated history (indicator history first, else the display bars). */
+function evidenceFromPrice(symbol: string, assetClass: 'equity' | 'crypto', price: PriceData, nowMs: number): PriceEvidence | null {
+  const ih = price.indicatorHistory;
+  const src = ih && ih.dates && ih.dates.length === ih.closes.length ? { closes: ih.closes, highs: ih.highs, lows: ih.lows, dates: ih.dates, volumes: ih.volumes }
+    : price.historicalDates && price.historicalCloses && price.historicalDates.length === price.historicalCloses.length ? { closes: price.historicalCloses, highs: price.historicalHighs ?? [], lows: price.historicalLows ?? [], dates: price.historicalDates!, volumes: price.historicalVolumes }
+    : null;
+  if (!src || !src.closes.length) return null;
+  const bars = src.closes.map((close, i) => ({ date: String(src.dates[i] ?? ''), high: src.highs[i] ?? close, low: src.lows[i] ?? close, close, volume: src.volumes?.[i] ?? null }));
+  return buildPriceEvidence({ symbol, assetClass, bars, nowMs, quote: { price: price.price, at: price.priceTs ?? null, source: price.source ?? null }, source: price.source ?? null });
+}
+
 export function buildPayload(
   symbol: string,
   assetClass: 'equity' | 'crypto' | 'forex',
@@ -257,6 +269,8 @@ export function buildPayload(
     extras = { ...extras, fundamentals: { ...f, pe: v.pe, marketCap: v.marketCap,
       currentPrice: p, valuationBasis: v.basis, multiple: describeMultiple(v.pe, f.forwardPe, f.peg) } };
   }
+  // Measured price/volatility evidence (shared definitions, completed daily bars only, dated). Daily timeframe only.
+  const priceEvidence = (extras.timeframeKey ?? 'daily') === 'daily' && assetClass !== 'forex' ? evidenceFromPrice(symbol, assetClass, price, nowMs) : null;
   const atr = ind?.atr != null && Number.isFinite(ind.atr) && ind.atr > 0 ? ind.atr : 0;
   const hasAtr = atr > 0;
   const atrPct = p > 0 ? (atr / p) * 100 : 0;
@@ -638,7 +652,8 @@ export function buildPayload(
       breakoutScore: dveReading?.breakout.score, rsi: ind?.rsi ?? null, macdHist: ind?.macdHist ?? null, adx: ind?.adx ?? null, stochK: ind?.stochK ?? null,
       priceVsSma20Pct: ind?.sma20 != null && p > 0 ? ((p - ind.sma20) / ind.sma20) * 100 : null,
       priceVsSma50Pct: ind?.sma50 != null && p > 0 ? ((p - ind.sma50) / ind.sma50) * 100 : null,
-      volumeRatio: price.avgVolume && price.avgVolume > 0 ? price.volume / price.avgVolume : null,
+      // Shared definition: last completed bar vs the 20 completed bars before it (was the latest, possibly unfinished, bar vs a 20-bar mean that included it).
+      volumeRatio: priceEvidence ? priceEvidence.volumeRatio : (price.avgVolume && price.avgVolume > 0 ? price.volume / price.avgVolume : null),
       permission, direction, confidence, setupType: setup.setupType, optionsVerdict: optionsEvidence?.verdict, inSqueeze: ind?.inSqueeze ?? undefined,
       structureVerdict, directionalBias: dveReading?.direction.bias, trapDetected: dveReading?.trap.detected, exhaustionRisk: dveReading?.exhaustion.level,
     };
@@ -724,6 +739,7 @@ export function buildPayload(
 
   return {
     meta: { symbol, assetClass, price: p, asOfTs: new Date(nowMs).toISOString(), timeframe: tfLabel },
+    priceEvidence,
     layer1: {
       assessment: toPublicAssessment(permission),
       direction,
