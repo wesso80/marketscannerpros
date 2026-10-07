@@ -7,9 +7,10 @@ const CryptoMarketData = dynamic(()=>import('@/components/admin/CryptoMarketData
 const CryptoHistoryData = dynamic(()=>import('@/components/admin/CryptoHistoryData'), {ssr:false});
 const CryptoHarness = dynamic(()=>import('@/components/admin/CryptoHarness'), {ssr:false});
 const CryptoReplay = dynamic(()=>import('@/components/admin/CryptoReplay'), {ssr:false});
+const CryptoMetaModel = dynamic(()=>import('@/components/admin/CryptoMetaModel'), {ssr:false});
 const CryptoAttentionStrip = dynamic(()=>import('@/components/admin/CryptoAttentionStrip'), {ssr:false});
 const CryptoBreakoutVerdicts = dynamic(()=>import('@/components/admin/CryptoBreakoutVerdicts'), {ssr:false});
-const TABS = [['paper','Paper account'],['setups','Setups'],['jev','Jev'],['learning','Learning'],['recommendations','Recommendations'],['watchlists','Watchlists & discovery'],['backtest','Backtest'],['rotation','Rotation lab'],['marketdata','Market data'],['history','History data'],['harness','Strategy harness'],['replay','History replay'],['alerts','Alerts']] as const;
+const TABS = [['paper','Paper account'],['setups','Setups'],['jev','Jev'],['learning','Learning'],['recommendations','Recommendations'],['watchlists','Watchlists & discovery'],['backtest','Backtest'],['rotation','Rotation lab'],['marketdata','Market data'],['history','History data'],['harness','Strategy harness'],['replay','History replay'],['metamodel','Shadow model'],['alerts','Alerts']] as const;
 type Tab = typeof TABS[number][0];
 const CryptoMomentumScanner = dynamic(()=>import('@/components/admin/CryptoMomentumScanner'), {ssr:false});
 const CryptoForwardScore = dynamic(()=>import('@/components/admin/CryptoForwardScore'), {ssr:false});
@@ -107,6 +108,7 @@ export default function CryptoMarketsPage() {
     {tab==='history' && <CryptoHistoryData refreshVersion={refreshVersion} />}
     {tab==='harness' && <CryptoHarness refreshVersion={refreshVersion} />}
     {tab==='replay' && <CryptoReplay refreshVersion={refreshVersion} />}
+    {tab==='metamodel' && <CryptoMetaModel refreshVersion={refreshVersion} />}
     {tab==='recommendations' && <CryptoRecommendations refreshVersion={refreshVersion} />}
     {tab==='learning' && <CryptoLearning refreshVersion={refreshVersion} />}
     {tab==='jev' && <CryptoJevBoard refreshVersion={refreshVersion} />}
