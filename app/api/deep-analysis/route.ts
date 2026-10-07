@@ -179,7 +179,11 @@ function buildPacketPrompt(c: GoldenEggCanonical, ge: GoldenEggPayload, news: Re
   }
   const ns = summarizeNews(news);
   L.push(`NEWS (symbol-specific only): ${ns.headline}`);
-  for (const n of news.slice(0, 6)) L.push(`  [${n.catalyst}: ${n.catalystReason}] ${n.title} — ${n.source}, ${n.publishedAt ?? 'n/a'}, ticker sentiment ${n.sentiment} (relevance ${n.relevance.toFixed(2)}). ${n.summary.slice(0, 160)}`);
+  // One line per EVENT: several articles about one story are one catalyst, not independent confirmation.
+  for (const e of ns.events.slice(0, 6)) {
+    const lead = news.find((n) => n.eventId === e.id && n.title === e.headline) ?? news.find((n) => n.eventId === e.id);
+    L.push(`  [${e.catalyst}: ${e.catalystReason}] ${e.headline} — ${e.articles} article${e.articles === 1 ? '' : 's'} (${e.sources.join(', ') || 'source n/a'}), first ${e.firstPublishedAt ?? 'n/a'}${lead ? `, ticker sentiment ${lead.sentiment}. ${lead.summary.slice(0, 160)}` : ''}`);
+  }
   return L.join('\n');
 }
 
@@ -379,7 +383,7 @@ export async function GET(request: NextRequest) {
         multiple: fundamentals.multiple, period: fundamentals.period, revenueGrowthYoy: fundamentals.revenueGrowthYoy, earningsGrowthYoy: fundamentals.earningsGrowthYoy, profitMargin: fundamentals.profitMargin,
       } : null,
       news: news.map((n) => ({ title: n.title, summary: n.summary, source: n.source, sentiment: n.sentiment, sentimentScore: n.sentimentScore, url: n.url, publishedAt: n.publishedAt, relevance: n.relevance, catalyst: n.catalyst, catalystReason: n.catalystReason })),
-      newsMeta: { considered: newsRes.feed.length, relevant: news.length, provider: newsRes.provider, headline: newsSummary.headline, positive: newsSummary.positive, negative: newsSummary.negative, eventRisk: newsSummary.eventRisk },
+      newsMeta: { considered: newsRes.feed.length, relevant: news.length, provider: newsRes.provider, headline: newsSummary.headline, positive: newsSummary.positive, negative: newsSummary.negative, eventRisk: newsSummary.eventRisk, events: newsSummary.events.length, rule: 'Articles about the same event (same catalyst, within 72 hours, matching headline wording) count once.' },
       cryptoData: assetClass === 'crypto' ? { fearGreed: cryptoSentiment ? { value: cryptoSentiment.value, classification: cryptoSentiment.classification, basis: cryptoSentiment.basis } : null, marketData: c.network ? { marketCapRank: c.network.marketCapRank, marketCap: c.network.marketCap, totalVolume: c.network.spotVolume24h, circulatingSupply: c.network.circulatingSupply, maxSupply: c.network.maxSupply, fdv: c.network.fdv, ath: c.network.ath, athChangePercent: c.network.distanceFromAthPct } : null } : null,
       earnings: earnings ? {
         nextEarningsDate: fundamentals?.nextEarningsDate ?? null, daysToEarnings: fundamentals?.daysToEarnings ?? null,
