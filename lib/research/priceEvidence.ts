@@ -94,12 +94,14 @@ export function buildPriceEvidence(input: {
   if (atr14 == null) missing.push('ATR14: fewer than 15 completed bars');
   const atrPct = atr14 != null && close ? r((atr14 / close) * 100) : null;
 
-  const vols = bars.map((b) => (fin(b.volume) && b.volume > 0 ? b.volume : null));
+  const vols = bars.map((b) => (fin(b.volume) && b.volume >= 0 ? b.volume : null));
   const lastVol = vols[vols.length - 1];
   const prior = vols.slice(-1 - P.volumeLookback, -1);
-  const volumeRatio = lastVol != null && prior.length === P.volumeLookback && prior.every((v) => v != null)
-    ? r(lastVol / (prior.reduce((s, v) => s + (v as number), 0) / P.volumeLookback)) : null;
-  if (volumeRatio == null) missing.push(`Volume vs average: needs volume on the last completed bar and the ${P.volumeLookback} before it`);
+  const priorMean = prior.length === P.volumeLookback && prior.every((v) => v != null && v >= 0)
+    ? prior.reduce<number>((s, v) => s + (v as number), 0) / P.volumeLookback : null;
+  const volumeRatio = lastVol != null && lastVol >= 0 && priorMean != null && priorMean > 0
+    ? orNull(r(lastVol / priorMean)) : null;
+  if (volumeRatio == null) missing.push(`Volume vs average: needs non-negative volume on the last completed bar and a positive mean over the ${P.volumeLookback} before it`);
 
   const bbwp = c.length >= P.bbwpMinCloses ? r(computeBBWP(c).bbwp, 1) : null;
   if (bbwp == null) missing.push(`BBWP: fewer than ${P.bbwpMinCloses} completed closes (one year of band widths)`);
@@ -117,7 +119,7 @@ export function buildPriceEvidence(input: {
   const summary: string[] = [];
   const sym = input.symbol, bar = bars.length ? bars[bars.length - 1].date.slice(0, 10) : null;
   if (longerAverages) summary.push(longerAverages === 'mixed'
-    ? `${sym} closed between its 50-day and 200-day simple averages on ${bar}.`
+    ? `${sym} closed with mixed or at-average relations to its 50-day and 200-day simple averages on ${bar}.`
     : `${sym} closed ${longerAverages} its 50-day and 200-day simple averages on ${bar}.`);
   const parts: string[] = [];
   if (volatility) parts.push(`daily volatility is ${volatility} (BBWP ${bbwp})`);

@@ -61,7 +61,7 @@ export function buildResearchSnapshot(input: {
   // 1. Price position and state, in the words of the measured evidence.
   if (pe) {
     const la = pe.states.longerAverages;
-    if (la) summary.push(la === 'mixed' ? `${sym} is between its 50-day and 200-day averages.` : `${sym} is ${la} its longer-term (50- and 200-day) averages.`);
+    if (la) summary.push(la === 'mixed' ? `${sym} has mixed or at-average relations to its 50-day and 200-day averages.` : `${sym} is ${la} its longer-term (50- and 200-day) averages.`);
     const s = pe.states, rest: string[] = [];
     if (s.volume) rest.push(`${s.volume} volume`);
     if (s.trend) rest.push(`${s.trend} trend strength`);
@@ -87,7 +87,7 @@ export function buildResearchSnapshot(input: {
   // Dates: retrieval time, market observation time, bar date and reporting period are different things.
   const dates: ObservationDate[] = [
     { id: 'quote', label: 'Latest price', value: c.priceTs, basis: c.source ? `quote, ${c.source}` : 'quote' },
-    { id: 'bar', label: 'Last completed daily bar', value: pe?.basis.lastCompletedBar ?? day(c.lastCompletedBarAt), basis: pe?.basis.excludedPartialBar ? `unfinished ${pe.basis.excludedPartialBar} bar excluded` : 'daily analysis' },
+    { id: 'bar', label: 'Last completed daily bar', value: pe?.basis.lastCompletedBar ?? null, basis: !pe ? 'daily evidence unavailable' : pe.basis.excludedPartialBar ? `unfinished ${pe.basis.excludedPartialBar} bar excluded` : 'daily analysis' },
   ];
   if (equity) dates.push({ id: 'options', label: 'Options quotes', value: c.options?.snapshotTs ?? null, basis: c.options ? `expiry ${c.options.expiry}` : 'not collected' });
   if (equity) dates.push({ id: 'fundamentals', label: 'Company reports', value: c.fundamentals?.lastReportedQuarter ?? null, basis: 'latest reported quarter' });
@@ -106,7 +106,7 @@ export function buildResearchSnapshot(input: {
   sections.push(!pe ? { id: 'price', label: 'Price and structure', status: 'missing', note: 'No dated daily bars on this timeframe.' }
     : pe.missing.some((m) => /^(SMA|EMA|ADX|RSI|ATR)/.test(m)) ? { id: 'price', label: 'Price and structure', status: 'partial', note: `${pe.basis.barsUsed} completed bars; some measures need more history.` }
     : { id: 'price', label: 'Price and structure', status: 'available', note: `${pe.basis.barsUsed} completed daily bars.` });
-  const volParts = [pe?.atr14 != null, pe?.bbwp != null, pe?.realisedVol20 != null, equity ? c.options?.avgIvPct != null : true];
+  const volParts = [pe?.atr14 != null, pe?.bbwp != null, pe?.realisedVol20 != null, ...(equity ? [c.options?.avgIvPct != null] : [])];
   sections.push({ id: 'volatility', label: 'Volatility', status: volParts.every(Boolean) ? 'available' : volParts.some(Boolean) ? 'partial' : 'missing',
     note: [pe?.bbwp == null ? 'BBWP needs a year of bars' : null, equity && c.options?.avgIvPct == null ? 'options IV not collected' : null].filter(Boolean).join('; ') || 'ATR, BBWP and realised volatility measured.' });
   sections.push(!equity ? { id: 'options', label: 'Options', status: 'not applicable', note: c.assetClass === 'crypto' ? 'No listed options feed for crypto; derivatives are shown separately.' : 'No options feed for this asset.' }

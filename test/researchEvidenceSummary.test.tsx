@@ -31,15 +31,15 @@ const build = () => {
 };
 
 describe('Evidence summary', () => {
-  it('groups observations by input and counts independent inputs, not lines', () => {
+  it('groups observations by input and counts distinct input families, not lines', () => {
     const s = build();
     expect(s.groups.map((g) => g.input)).toEqual(['price-history', 'volume', 'options', 'fundamentals', 'calendar']);
     expect(s.groups[0].observations).toHaveLength(5);
     expect(s.groups[2].observations[0]).toBe('Put/call open interest 0.58, call-heavy (2026-10-09 expiry, strikes within ±30% of spot, quotes 2026-10-05)');
     expect(s.groups[3].observations[0]).toBe('Revenue +8.1% and earnings +12.0% year on year (quarter 2026-06-30)');
-    expect(s.independenceNote).toContain('10 observations from 5 independent inputs');
+    expect(s.independenceNote).toContain('10 observations from 5 distinct input families');
     expect(s.independenceNote).toContain('not separate confirmations');
-    expect(s.headline).toBe('10 observations from 5 independent inputs · 3 differences · 0 missing or partial');
+    expect(s.headline).toBe('10 observations from 5 distinct input families · 3 differences · 0 missing or partial');
   });
   it('records where dates and methods differ, and what to check again', () => {
     const s = build();

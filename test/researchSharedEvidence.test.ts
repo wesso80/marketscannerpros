@@ -13,7 +13,7 @@ describe('evidence independence', () => {
     ], 'supporting points');
     expect(r.points).toBe(4);
     expect(r.independentInputs).toBe(2);
-    expect(r.note).toContain('4 supporting points from 2 independent inputs (price history 3, other markets 1)');
+    expect(r.note).toContain('4 supporting points from 2 distinct input families (price history 3, other markets 1)');
     expect(r.note).toContain('not separate confirmations');
   });
   it('does not count data-quality or risk checks as market inputs', () => {

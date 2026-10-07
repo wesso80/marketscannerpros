@@ -12,7 +12,7 @@ import type { VolatilityEvidence } from '@/lib/research/volatilityEvidence';
  */
 export type EvidenceGroup = { input: EvidenceInput; label: string; observations: string[] };
 export type EvidenceSummary = { groups: EvidenceGroup[]; independenceNote: string;
-  /** Short line for the closed fold: observations, independent inputs, differences and missing items. */
+  /** Short line for the closed fold: observations, distinct input families, differences and missing items. */
   headline: string; differences: string[]; missing: string[]; recheck: string[] };
 
 const fmtUtc = (iso: string) => `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
@@ -34,7 +34,7 @@ export function buildEvidenceSummary(input: {
   if (pe) {
     const bar = pe.basis.lastCompletedBar;
     const la = pe.states.longerAverages;
-    add('price-history', la && (la === 'mixed' ? `Close between the 50- and 200-day averages (${bar})` : `Close ${la} the 50- and 200-day averages (${bar})`));
+    add('price-history', la && (la === 'mixed' ? `Close has mixed or at-average relations to the 50- and 200-day averages (${bar})` : `Close ${la} the 50- and 200-day averages (${bar})`));
     add('price-history', pe.states.trend && `Trend strength ${pe.states.trend} (ADX ${pe.adx.adx})`);
     add('price-history', pe.rsi14 != null && `RSI14 ${pe.rsi14}`);
     add('price-history', pe.states.volatility && `Volatility ${pe.states.volatility} (BBWP ${pe.bbwp})`);
@@ -77,7 +77,7 @@ export function buildEvidenceSummary(input: {
 
   const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
   const headline = ind.points
-    ? `${plural(ind.points, 'observation')} from ${plural(ind.independentInputs, 'independent input')} · ${plural(differences.length, 'difference')} · ${missing.length} missing or partial`
+    ? `${plural(ind.points, 'observation')} from ${ind.independentInputs} distinct input ${ind.independentInputs === 1 ? 'family' : 'families'} · ${plural(differences.length, 'difference')} · ${missing.length} missing or partial`
     : `No observations · ${missing.length} missing or partial`;
   return { groups, independenceNote: ind.note, headline, differences, missing, recheck };
 }
