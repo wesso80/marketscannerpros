@@ -8,6 +8,9 @@ vi.mock('@/lib/adminAuth',()=>({requireAdmin:vi.fn(async()=>({ok:false}))}));
 vi.mock('@/lib/admin/cryptoPaper',()=>({runCryptoPaperAll:vi.fn(async()=>({ok:true,accounts:0}))}));
 vi.mock('@/lib/admin/cryptoPaperBase',()=>({runCryptoBaseSleeveAll:vi.fn(async()=>({ok:true,accounts:0}))}));
 vi.mock('@/lib/db',()=>({q:vi.fn(async()=>[])}));
+// Research-only cron steps (signal ledger replay, Variant E shadow) own their tables; mocked here like the paper cycle.
+vi.mock('@/lib/admin/cryptoSignalLedger',()=>({resolveSkippedSignals:vi.fn(async()=>({ok:true,due:0,resolved:0}))}));
+vi.mock('@/lib/admin/cryptoVariantE',()=>({runVariantEStep:vi.fn(async()=>({ok:true,skipped:'test'}))}));
 vi.mock('@/lib/admin/portfolio-lab/simulateCycle',()=>({simulateArcaCycle:vi.fn()}));
 vi.mock('@/lib/admin/notifyAdmin',()=>({notifyAdmin:vi.fn()}));
 import {runCryptoAutomation} from '@/lib/admin/cryptoAutomation';

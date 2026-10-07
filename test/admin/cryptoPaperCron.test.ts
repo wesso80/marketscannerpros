@@ -7,6 +7,9 @@ vi.mock('@/lib/adminAuth',()=>({requireAdmin:vi.fn(async()=>({ok:false}))}));
 vi.mock('@/lib/admin/cryptoPaper',()=>({runCryptoPaperAll:vi.fn(async()=>({ok:true,accounts:0}))}));
 vi.mock('@/lib/admin/cryptoPaperBase',()=>({runCryptoBaseSleeveAll:vi.fn(async()=>({ok:true,accounts:0}))}));
 vi.mock('@/lib/db',()=>({q:vi.fn(async()=>[])}));
+// Research-only cron steps (signal ledger replay, Variant E shadow) own their tables; mocked here like the paper cycle.
+vi.mock('@/lib/admin/cryptoSignalLedger',()=>({resolveSkippedSignals:vi.fn(async()=>({ok:true,due:0,resolved:0}))}));
+vi.mock('@/lib/admin/cryptoVariantE',()=>({runVariantEStep:vi.fn(async()=>({ok:true,skipped:'test'}))}));
 vi.mock('@/lib/admin/portfolio-lab/simulateCycle',()=>({simulateArcaCycle:vi.fn()}));
 vi.mock('@/lib/admin/notifyAdmin',()=>({notifyAdmin:vi.fn()}));
 import {runCryptoAutomation} from '@/lib/admin/cryptoAutomation';
@@ -15,6 +18,8 @@ import {runCryptoBaseSleeveAll} from '@/lib/admin/cryptoPaperBase';
 import {q} from '@/lib/db';
 import {simulateArcaCycle} from '@/lib/admin/portfolio-lab/simulateCycle';
 import {POST} from '@/app/api/cron/arca-cycle/route';
+import {resolveSkippedSignals} from '@/lib/admin/cryptoSignalLedger';
+import {runVariantEStep} from '@/lib/admin/cryptoVariantE';
 beforeEach(()=>{vi.clearAllMocks();vi.stubEnv('ADMIN_DISCOVERY_ONLY','true');vi.stubEnv('CRON_SECRET','test-only-secret');});
 afterEach(()=>vi.unstubAllEnvs());
 it('rejects unauthenticated cron before any work',async()=>{
@@ -23,6 +28,8 @@ it('rejects unauthenticated cron before any work',async()=>{
 it('runs only the crypto paper cycle while other admin jobs are paused',async()=>{
  expect((await POST(new NextRequest('https://example.test/api/cron/arca-cycle',{method:'POST',headers:{'x-cron-secret':'test-only-secret'}}))).status).toBe(200);
  expect(runCryptoPaperAll).toHaveBeenCalledTimes(2);expect(runCryptoPaperAll).toHaveBeenNthCalledWith(1,true);expect(vi.mocked(runCryptoPaperAll).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(runCryptoAutomation).mock.invocationCallOrder[0]);expect(vi.mocked(runCryptoAutomation).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(runCryptoPaperAll).mock.invocationCallOrder[1]);expect(q).not.toHaveBeenCalled();expect(simulateArcaCycle).not.toHaveBeenCalled();
+ // Research-only steps run after the paper entry cycle.
+ expect(vi.mocked(runCryptoPaperAll).mock.invocationCallOrder[1]).toBeLessThan(vi.mocked(resolveSkippedSignals).mock.invocationCallOrder[0]);expect(runVariantEStep).toHaveBeenCalledTimes(1);
  // The base-breakout sleeve follows the same shape: exits before the scan, entries after it.
  expect(runCryptoBaseSleeveAll).toHaveBeenCalledTimes(2);expect(runCryptoBaseSleeveAll).toHaveBeenNthCalledWith(1,true);expect(vi.mocked(runCryptoBaseSleeveAll).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(runCryptoAutomation).mock.invocationCallOrder[0]);expect(vi.mocked(runCryptoAutomation).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(runCryptoBaseSleeveAll).mock.invocationCallOrder[1]);
 });
