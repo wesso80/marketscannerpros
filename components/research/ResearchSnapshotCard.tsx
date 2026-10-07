@@ -14,7 +14,7 @@ const fmtWhen = (v: string | null) => (!v ? 'Not recorded' : /T\d{2}:\d{2}/.test
 export default function ResearchSnapshotCard({ s, links }: { s: ResearchSnapshot; links: Array<{ href: string; label: string }> }) {
   return (
     <section data-research-snapshot aria-label="Research snapshot" className="min-w-0 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-card)] p-3 sm:p-4">
-      <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Research snapshot</h2>
+      <h2 className="!text-xs font-semibold uppercase tracking-wide text-slate-400">Research snapshot</h2>
       <p data-snapshot-summary className="mt-1 break-words text-sm leading-6 text-slate-100">{s.summary.join(' ')}</p>
       <dl className="mt-3 grid grid-cols-2 gap-2 text-xs lg:grid-cols-3">
         {s.dates.map((d) => (

@@ -43,6 +43,8 @@ import TimingEvidencePanel from '@/components/research/TimingEvidencePanel';
 import ResearchSnapshotCard from '@/components/research/ResearchSnapshotCard';
 import SymbolNewsPanel from '@/components/research/SymbolNewsPanel';
 import VolatilityEvidencePanel from '@/components/research/VolatilityEvidencePanel';
+import EvidenceSummaryPanel from '@/components/research/EvidenceSummaryPanel';
+import { buildEvidenceSummary } from '@/lib/research/evidenceSummary';
 import { buildVolatilityEvidence } from '@/lib/research/volatilityEvidence';
 import { buildResearchSnapshot } from '@/lib/research/researchSnapshot';
 import ChipRow from '@/components/visual/ChipRow';
@@ -678,6 +680,12 @@ export default function GoldenEggPage() {
     dveBbwp: d?.volatility?.bbwp ?? null,
   }) : null;
   const volatilityFold = volatilityEvidence && !loading ? <CollapsibleSection title="Volatility" summary={volatilityEvidence.summary[0] ?? 'ATR, realised and implied volatility'}><VolatilityEvidencePanel v={volatilityEvidence}/></CollapsibleSection> : null;
+  const evidenceSummary = geCanonical && researchSnapshot ? buildEvidenceSummary({
+    symbol: sym, assetClass: geCanonical.assetClass, snapshot: researchSnapshot, priceEvidence: ge?.priceEvidence, volatility: volatilityEvidence, timing: ge?.timingEvidence,
+    options: geCanonical.options ? { expiry: geCanonical.options.expiry, snapshotTs: geCanonical.options.snapshotTs, putCallOi: geCanonical.options.putCallOi ?? null, avgIvPct: geCanonical.options.avgIvPct } : null,
+    fundamentals: geCanonical.fundamentals ? { lastReportedQuarter: geCanonical.fundamentals.lastReportedQuarter, revenueGrowthYoy: geCanonical.fundamentals.revenueGrowthYoy, earningsGrowthYoy: geCanonical.fundamentals.earningsGrowthYoy } : null,
+  }) : null;
+  const evidenceFold = evidenceSummary && !loading ? <CollapsibleSection deferMount title="Evidence summary" summary={evidenceSummary.headline}><EvidenceSummaryPanel s={evidenceSummary}/></CollapsibleSection> : null;
   const q = encodeURIComponent(sym);
   const specialistLinks = [
     ...(quoteType === 'crypto' ? [] : [{ href: optionsHref(sym), label: 'Options' }]),
@@ -717,7 +725,7 @@ export default function GoldenEggPage() {
         </Card>
       )}
 
-      {!isAuthBlocked && (quoteType==='crypto'?<><CryptoBreakdown compact showSource={false} onStamp={setCryptoStamp} symbol={sym} timeframe={timeframe} coinId={searchParams.get('id')??undefined}/>{ge?.priceEvidence&&!loading&&<CollapsibleSection title="Price and structure" summary={ge.priceEvidence.summary[0]??`Completed bar ${ge.priceEvidence.basis.lastCompletedBar??'n/a'}`}><PriceEvidencePanel e={ge.priceEvidence} section="price"/></CollapsibleSection>}{volatilityFold}{ge?.timingEvidence&&!loading&&<CollapsibleSection title="Timing and events" summary={ge.timingEvidence.summary[1]??ge.timingEvidence.summary[0]}><TimingEvidencePanel t={ge.timingEvidence}/></CollapsibleSection>}{ge&&!loading&&<CollapsibleSection deferMount title="News" summary="Symbol news grouped by event. Loads when opened."><SymbolNewsPanel symbol={sym} type="crypto"/></CollapsibleSection>}</>:<>
+      {!isAuthBlocked && (quoteType==='crypto'?<><CryptoBreakdown compact showSource={false} onStamp={setCryptoStamp} symbol={sym} timeframe={timeframe} coinId={searchParams.get('id')??undefined}/>{ge?.priceEvidence&&!loading&&<CollapsibleSection title="Price and structure" summary={ge.priceEvidence.summary[0]??`Completed bar ${ge.priceEvidence.basis.lastCompletedBar??'n/a'}`}><PriceEvidencePanel e={ge.priceEvidence} section="price"/></CollapsibleSection>}{volatilityFold}{ge?.timingEvidence&&!loading&&<CollapsibleSection title="Timing and events" summary={ge.timingEvidence.summary[1]??ge.timingEvidence.summary[0]}><TimingEvidencePanel t={ge.timingEvidence}/></CollapsibleSection>}{ge&&!loading&&<CollapsibleSection deferMount title="News" summary="Symbol news grouped by event. Loads when opened."><SymbolNewsPanel symbol={sym} type="crypto"/></CollapsibleSection>}{evidenceFold}</>:<>
         {ge&&!loading&&<EquityTop data={ge} pick={findSymbolPick(dailyPicks.data,sym,'equity')}/>}
         {ge?.priceEvidence&&!loading&&<CollapsibleSection title="Price and structure" summary={ge.priceEvidence.summary[0]??`Completed bar ${ge.priceEvidence.basis.lastCompletedBar??'n/a'}`}><PriceEvidencePanel e={ge.priceEvidence} section="price"/></CollapsibleSection>}{volatilityFold}
         {goldenEgg.error&&!loading&&<p role="alert" className="text-sm text-amber-300">Symbol data feed failed. <button className="min-h-10 underline" onClick={()=>goldenEgg.refetch()}>Retry</button></p>}
@@ -726,6 +734,7 @@ export default function GoldenEggPage() {
         {ge?.timingEvidence&&!loading&&<CollapsibleSection title="Timing and events" summary={ge.timingEvidence.summary[1]??ge.timingEvidence.summary[0]}><TimingEvidencePanel t={ge.timingEvidence}/></CollapsibleSection>}
         <CollapsibleSection deferMount title="Fundamentals" summary={geCanonical?.fundamentals?.marketCap!=null?`Market cap ${formatUsdShort(geCanonical.fundamentals.marketCap)}${geCanonical.fundamentals.lastReportedQuarter?` · latest reported quarter ${geCanonical.fundamentals.lastReportedQuarter}`:''}`:'Company overview and ownership'}><CompanyOverview symbol={sym}/></CollapsibleSection>
         <CollapsibleSection deferMount title="News and ownership" summary="Symbol news grouped by event, and dated ownership filings. Loads when opened."><SymbolNewsPanel symbol={sym} type="equity"/><div className="mt-3"><OwnershipFlowPanel symbol={sym}/></div></CollapsibleSection>
+        {evidenceFold}
         <CollapsibleSection deferMount title="Scenario map" summary={`${ge.layer2.setup.keyLevels.length} recorded levels`}><p>{symbolText(ge.layer2.scenario.referenceTrigger)}</p><p>{symbolText(ge.layer2.scenario.invalidationLevel.logic)}</p></CollapsibleSection>
         <ChipRow items={[{id:'evidence',label:`${geDataQuality==='GOOD'?'Evidence and data checks':'Some data checks failed'} · ${geEvidenceItems.length} checks`,warning:geDataQuality!=='GOOD',detail:<EvidenceStack title="Evidence" items={geEvidenceItems.map(item=>({...item,value:symbolText(item.value),detail:item.detail?symbolText(item.detail):undefined}))}/>}]} />
         </>}
