@@ -629,6 +629,11 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+    // Forex scanning is retired in the UI. Spot forex has no comparable volume, and this path scored MFI / OBV / VWAP
+    // on a constant placeholder volume, so it is refused here rather than returning invented volume evidence.
+    if ((type as string) === 'forex') {
+      return NextResponse.json({ error: 'Forex scanning is retired: spot forex has no comparable volume data, so volume-based evidence cannot be computed.' }, { status: 400 });
+    }
 
     const inputSymbols = Array.isArray(symbols)
       ? symbols.map(s => String(s).trim().toUpperCase()).filter(Boolean)
