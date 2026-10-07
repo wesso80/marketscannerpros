@@ -109,7 +109,7 @@ describe('Crypto Derivatives tab', () => {
     expect(screen.getByText('+0.0125%')).toBeTruthy();
     expect(screen.getByText('Open interest')).toBeTruthy();
     expect(screen.getByText('$30.00B')).toBeTruthy();
-    expect(screen.getByText('CoinGecko derivatives · 3 of the top 3 derivatives exchanges')).toBeTruthy();
+    expect(screen.getByText(/^Source · CoinGecko derivatives · 3 of the top 3 derivatives exchanges/)).toBeTruthy();
     expect(screen.getByText('Long/short')).toBeTruthy();
     expect(screen.getByText('55.0 / 45.0')).toBeTruthy();
     expect(screen.queryByText('Liquidations')).toBeNull();

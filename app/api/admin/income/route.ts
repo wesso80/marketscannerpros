@@ -18,16 +18,18 @@ const REVENUE_BASIS =
   'List-price estimate: active Stripe-linked subscriptions × Pro monthly list price. Legacy Pro Trader subs are billed as Pro. ' +
   'The database stores no charged amount, billing interval, discount or refund, so yearly plans, coupons and refunds are not reflected.';
 
-// Monthly fixed costs
+// Monthly fixed costs (USD). Approved figures as of 7 Oct 2026.
 const FIXED_COSTS = {
-  render: 40.00,        // Render hosting
-  github: 25.00,        // GitHub
-  neon_db: 20.00,       // Neon database
-  domain: 1.50,         // ~$18/year = $1.50/month
-  alpha_vantage: 350.00, // Alpha Vantage Premium
-  coingecko: 141.00,    // CoinGecko API
-  nasdaq: 100.00,       // Nasdaq data license
-  stripe_base: 0,       // No monthly fee
+  render: 90.00,         // Render hosting (estimate on the new plan)
+  github: 25.00,         // GitHub
+  neon_db: 47.99,        // Neon database
+  domain: 1.50,          // ~$18/year = $1.50/month
+  alpha_vantage: 750.00, // Alpha Vantage Premium
+  coingecko: 141.90,     // CoinGecko API
+  nasdaq: 100.00,        // Nasdaq data license
+  stripe_base: 0,        // No monthly fee
+  upstash: 8.69,         // Upstash (Redis)
+  cursor_team: 200.00,   // Assistant team (Cursor Ultra)
 };
 
 // Fetch GitHub billing if token available

@@ -126,25 +126,15 @@ export async function middleware(req: NextRequest) {
   // ── Global rate limit on API routes ──
   const { pathname } = req.nextUrl;
   const discoveryAction = discoveryOnlyAction(pathname, req.method);
-  if (discoveryAction === 'pause_page') {
-    const pausedUrl = req.nextUrl.clone();
-    pausedUrl.pathname = '/admin/paused';
-    return NextResponse.rewrite(pausedUrl);
-  }
-  if (discoveryAction === 'pause_api' || discoveryAction === 'skip_job') return NextResponse.json({
+  const discoveryPausedJson = () => NextResponse.json({
     ok: discoveryAction === 'skip_job', paused: true, skipped: true, started: false,
     reason: 'admin_discovery_only', error: ADMIN_DISCOVERY_ONLY_MESSAGE,
   }, { status: discoveryAction === 'skip_job' ? 200 : 503, headers: { 'Cache-Control': 'no-store' } });
-  if (pathname.startsWith('/api/admin/')) {
-    const values: Record<string, unknown> = Object.fromEntries(req.nextUrl.searchParams);
-    if (req.method === 'POST' && req.headers.get('content-type')?.includes('application/json')) {
-      const body = await req.clone().json().catch(() => null);
-      if (body && typeof body === 'object' && !Array.isArray(body)) Object.assign(values, body);
-    }
-    if (pausedAdminRequest(pathname, values)) return NextResponse.json({
-      ok: false, paused: true, reason: 'admin_equities_paused', error: ADMIN_EQUITIES_PAUSED_MESSAGE,
-    }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
-  }
+  // Admin pages and /api/admin/** answer "paused" only AFTER the admin session check below, so a signed-out
+  // visitor never learns the pause state (no-public-leakage). Cron jobs and the operator engine authenticate
+  // with secrets in their handlers, not sessions, so they keep this early skipped/paused answer.
+  const adminSessionApi = pathname.startsWith('/api/admin/');
+  if ((discoveryAction === 'pause_api' || discoveryAction === 'skip_job') && !adminSessionApi) return discoveryPausedJson();
   if (pathname.startsWith('/api/') && !pathname.startsWith('/api/webhooks') && !pathname.startsWith('/api/auth/') && !pathname.startsWith('/api/internal/') && !pathname.startsWith('/api/scanner/') && !pathname.startsWith('/api/jobs/') && !pathname.startsWith('/api/catalyst/') && !pathname.startsWith('/api/alerts/')) {
     const ip = getClientIP(req);
     const quota = consumeApiQuota(apiHits, ip);
@@ -189,6 +179,18 @@ export async function middleware(req: NextRequest) {
       );
     }
   }
+  // Pause answers for admin APIs, after the session check (the summary bot's key is checked in its handler).
+  if (adminSessionApi) {
+    if (discoveryAction === 'pause_api' || discoveryAction === 'skip_job') return discoveryPausedJson();
+    const values: Record<string, unknown> = Object.fromEntries(req.nextUrl.searchParams);
+    if (req.method === 'POST' && req.headers.get('content-type')?.includes('application/json')) {
+      const body = await req.clone().json().catch(() => null);
+      if (body && typeof body === 'object' && !Array.isArray(body)) Object.assign(values, body);
+    }
+    if (pausedAdminRequest(pathname, values)) return NextResponse.json({
+      ok: false, paused: true, reason: 'admin_equities_paused', error: ADMIN_EQUITIES_PAUSED_MESSAGE,
+    }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+  }
 
   if (pathname === '/admin' || pathname.startsWith('/admin/')) {
     const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value);
@@ -203,6 +205,13 @@ export async function middleware(req: NextRequest) {
       url.pathname = '/auth';
       url.searchParams.set('next', pathname);
       return withNoIndexHeaders(NextResponse.redirect(url));
+    }
+
+    // Signed-in admins on a paused page see the paused notice; signed-out visitors were sent to /auth above.
+    if (discoveryAction === 'pause_page') {
+      const pausedUrl = req.nextUrl.clone();
+      pausedUrl.pathname = '/admin/paused';
+      return withNoIndexHeaders(NextResponse.rewrite(pausedUrl));
     }
 
     return withNoIndexHeaders(NextResponse.next());
