@@ -13,7 +13,7 @@ const background = new Set([
 const cryptoScope = new Set([
   '/api/admin/crypto-markets/setup-email', '/api/admin/crypto-markets/backtest', '/api/admin/crypto-markets/rotation',
   '/api/admin/crypto-markets/market-data', '/api/admin/crypto-markets/new-listings', '/api/admin/crypto-markets/history',
-  '/api/admin/crypto-markets/harness', '/api/cron/arca-cycle', '/api/admin/crypto-markets/paper',
+  '/api/admin/crypto-markets/harness', '/api/admin/crypto-markets/replay', '/api/cron/arca-cycle', '/api/admin/crypto-markets/paper',
   '/api/admin/crypto-markets/early-momentum', '/api/admin/crypto-markets/momentum', '/api/admin/crypto-markets/bases',
   '/api/admin/crypto-markets/volume', '/api/admin/crypto-markets/context', '/api/admin/verify',
   '/api/admin/crypto-discovery', '/api/admin/crypto-discovery/analyze',
