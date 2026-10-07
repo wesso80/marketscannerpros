@@ -14,7 +14,7 @@ function List({ title, items, attr }: { title: string; items: string[]; attr: st
   if (!items.length) return null;
   return (
     <div data-summary-block={attr} className="min-w-0">
-      <h4 className="text-[11px] font-semibold uppercase text-slate-400">{title}</h4>
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-300">{title}</h4>
       <ul className="mt-1 space-y-0.5">{items.map((i) => <li key={i} className="break-words">• {i}</li>)}</ul>
     </div>
   );
@@ -38,31 +38,31 @@ export default function SymbolAiSummary({ symbol, type, timeframe, expiry }: { s
     return () => abort.abort();
   }, [symbol, type, timeframe, expiry]);
 
-  if (error) return <p role="alert" className="text-xs text-amber-300">AI summary unavailable: {error}</p>;
+  if (error) return <p role="alert" className="min-w-0 break-words text-sm text-amber-300">AI summary unavailable: {error}</p>;
   if (!data?.sections) return <p className="text-xs text-slate-500">Writing the summary from the evidence…</p>;
   const s = data.sections;
   return (
-    <div data-symbol-ai-summary className="min-w-0 space-y-3 text-xs text-slate-200">
+    <div data-symbol-ai-summary className="min-w-0 space-y-4 text-sm leading-6 text-slate-200">
       {s.summary.length > 0 && <p className="break-words text-sm leading-6 text-slate-100">{s.summary.join(' ')}</p>}
-      {data.narrative ? (
-        <div data-summary-narrative className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2">
-          <div className="mb-1 text-[10px] uppercase text-slate-500">AI-written summary ({data.narrativeSource}); it can be wrong, so check it against the evidence below</div>
-          <p className="whitespace-pre-wrap break-words leading-5">{data.narrative}</p>
-          {data.removedLines ? <p className="mt-1 text-[10px] text-slate-500">{data.removedLines} line{data.removedLines === 1 ? '' : 's'} removed for forecasting or recommending.</p> : null}
-        </div>
-      ) : <p className="text-[11px] text-slate-500">AI text unavailable; the evidence below is complete without it.</p>}
       {s.evidence.length > 0 && (
-        <div className="min-w-0">
-          <h4 className="text-[11px] font-semibold uppercase text-slate-400">Evidence by input</h4>
+        <div data-summary-block="evidence" className="min-w-0">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-300">Evidence by input</h4>
           {s.evidence.map((g) => <p key={g.input} className="mt-0.5 break-words"><span className="text-slate-400">{g.input}:</span> {g.observations.join('; ')}</p>)}
-          {data.independenceNote && <p className="mt-1 text-[11px] text-slate-500">{data.independenceNote}</p>}
+          {data.independenceNote && <p className="mt-1 text-xs text-slate-400">{data.independenceNote}</p>}
         </div>
       )}
       <List attr="events" title="News and events" items={s.events} />
       <List attr="differences" title="Where methods or dates differ" items={s.differences} />
       <List attr="missing" title="Missing or partial" items={s.missing} />
       <List attr="recheck" title="Check again when new data arrives" items={s.recheck} />
-      <p className="text-[10px] text-slate-500">Generated {data.generatedAt?.slice(0, 16).replace('T', ' ')} UTC. Educational research, not a recommendation.</p>
+      {data.narrative ? (
+        <div data-summary-narrative className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2">
+          <div className="mb-1 text-xs text-slate-400">AI-written summary ({data.narrativeSource}); it can be wrong, so check it against the evidence above</div>
+          <p className="whitespace-pre-wrap break-words leading-5">{data.narrative}</p>
+        </div>
+      ) : <p className="text-xs text-slate-400">AI text unavailable; the evidence above is complete without it.</p>}
+      {data.removedLines ? <p className="mt-1 text-xs text-slate-400">{data.removedLines} line{data.removedLines === 1 ? '' : 's'} removed for forecasting or recommending.</p> : null}
+      <p className="text-xs text-slate-400">Generated {data.generatedAt?.slice(0, 16).replace('T', ' ')} UTC. Educational research, not a recommendation.</p>
     </div>
   );
 }
