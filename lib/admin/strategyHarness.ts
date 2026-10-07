@@ -6,6 +6,7 @@ import type {ExchangeBar} from './cryptoExchangeVolume';
  * costs, the same point-in-time universe and the same data. Rules were written before the first run; changing any
  * of them is a new harness version and must be counted as another variant.
  */
+import {startExcursion,advanceExcursion,excursionR,giveBackSummary,type ExcursionBar,type GiveBackSummary} from './cryptoExcursion';
 export const HARNESS={
  version:'harness-v1',from:'2022-01-01',inSampleEnd:'2025-01-01',
  /** A coin may trade only on days it was in the top 100 by market cap ON THAT DAY (Phase 4 data, delisted included). */
@@ -50,7 +51,7 @@ export function dailyContext(daily:ExchangeBar[]){
   if(i>=Math.max(emaDays,atrDays))out.set(b.t,{ema,atr:tr.slice(-atrDays).reduce((s,x)=>s+x,0)/atrDays});});
  return out;
 }
-export type HarnessTrade={variant:VariantId;coin:string;kind:string;signalAt:string;entryAt:string;exitAt:string;fill:number;stop:number;exit:number;r:number;reason:string;marked:boolean};
+export type HarnessTrade={variant:VariantId;coin:string;kind:string;signalAt:string;entryAt:string;exitAt:string;fill:number;stop:number;exit:number;r:number;reason:string;marked:boolean;mfeR?:number|null;maeR?:number|null};
 export const netR=(price:number,fill:number,stop:number,c=HARNESS.cost)=>{const eff=price*(1-c);return (eff-fill-fill*c-eff*c)/(fill-stop);};
 type Pos={fill:number;stop:number;target:number|null;entryAt:number};
 /** Fixed plan on hourly bars: stop checked first in an ambiguous bar; gaps fill at the open; horizon marked at a close. */
@@ -98,6 +99,13 @@ export function exitDaily(p:Pos,daily:ExchangeBar[],ctx:Map<number,{ema:number;a
  }
  const last=daily.filter(b=>b.t<=dataEnd).at(-1);return last&&last.t>p.entryAt?{price:last.c,at:last.t,reason:'DATA_END',marked:true}:null;
 }
+/** Exits touched inside a bar (stop, trail, target) exclude that bar's extremes; gap/close/mark exits happen at a bar boundary. */
+export const INTRABAR_EXITS=new Set(['STOP','TRAIL_STOP','TARGET']);
+export function harnessExcursion(bars:ExcursionBar[],step:number,fill:number,stop:number,entryAt:number,x:{price:number;at:number;reason:string}){
+ const s0=startExcursion(fill,stop,HARNESS.cost,entryAt,step);if(!s0)return {mfeR:null,maeR:null};
+ try{return excursionR(advanceExcursion(s0,bars.filter(b=>b.openAt>=s0.through&&b.closeAt<=x.at+step),x.at,{price:x.price,at:x.at,insideBar:INTRABAR_EXITS.has(x.reason)},{allowGaps:true}));}
+ catch{return {mfeR:null,maeR:null};}
+}
 export type CoinContext={coin:string;product:string;universeDays:Set<string>;rankDays:Set<string>;btcBull:Map<string,boolean>};
 /** First hourly open inside the live entry zone within 4h of the signal, via the live planner (same costs for all variants). */
 function enter(sig:ReturnType<typeof assessVolumeMomentum>,hourly:ExchangeBar[],idxFrom:number,signalT:number,window:number){
@@ -110,8 +118,12 @@ function enter(sig:ReturnType<typeof assessVolumeMomentum>,hourly:ExchangeBar[],
 export function runCoin(ctx:CoinContext,hourly:ExchangeBar[],dataEnd:number):HarnessTrade[]{
  const trades:HarnessTrade[]=[],four=aggregate(hourly,F4),daily=aggregate(hourly,D),dctx=dailyContext(daily),start=Date.parse(HARNESS.from);
  const busy:Record<string,number>={A:0,B:0,C:0,D:0,E:0,F:0};
+ const hourBars=hourly.map(b=>({openAt:b.t-H,closeAt:b.t,high:b.h,low:b.l})),dayBars=daily.map(b=>({openAt:b.t-D,closeAt:b.t,high:b.h,low:b.l}));
  const push=(v:VariantId,kind:string,sigT:number,e:{plan:{fill:number;stop:number};at:number},x:{price:number;at:number;reason:string;marked:boolean}|null)=>{
-  if(!x)return;busy[v]=x.at;trades.push({variant:v,coin:ctx.coin,kind,signalAt:new Date(sigT).toISOString(),entryAt:new Date(e.at).toISOString(),exitAt:new Date(x.at).toISOString(),fill:e.plan.fill,stop:e.plan.stop,exit:x.price,r:netR(x.price,e.plan.fill,e.plan.stop),reason:x.reason,marked:x.marked});
+  if(!x)return;busy[v]=x.at;
+  // MFE/MAE on the same bars the variant's exits used (daily for E, hourly otherwise), completed bars only.
+  const ex=harnessExcursion(v==='E'?dayBars:hourBars,v==='E'?D:H,e.plan.fill,e.plan.stop,e.at,x);
+  trades.push({variant:v,coin:ctx.coin,kind,signalAt:new Date(sigT).toISOString(),entryAt:new Date(e.at).toISOString(),exitAt:new Date(x.at).toISOString(),fill:e.plan.fill,stop:e.plan.stop,exit:x.price,r:netR(x.price,e.plan.fill,e.plan.stop),reason:x.reason,marked:x.marked,...ex});
  };
  let hIdx=0;
  for(let i=24;i<four.length;i++){
@@ -150,12 +162,12 @@ export function verifyMapping(daily:ExchangeBar[],cgPrice:Map<string,number>){
  let n=0,ok=0;for(const b of daily){const p=cgPrice.get(dayKey(b.t));if(p==null||p<=0)continue;n++;if(Math.abs(b.c/p-1)<=HARNESS.mapping.maxDiff)ok++;}
  return {overlap:n,share:n?ok/n:0,accepted:n>=HARNESS.mapping.minOverlapDays&&ok/n>=HARNESS.mapping.minShare};
 }
-export type Stats={trades:number;winRate:number|null;expectancyR:number|null;profitFactor:number|null;maxDrawdownR:number;totalR:number;avgHoldDays:number|null;marked:number};
+export type Stats={giveBack?:GiveBackSummary;trades:number;winRate:number|null;expectancyR:number|null;profitFactor:number|null;maxDrawdownR:number;totalR:number;avgHoldDays:number|null;marked:number};
 /** Per-trade R statistics; drawdown on the cumulative R curve ordered by exit time (1R risk per trade, overlaps allowed). */
 export function stats(ts:HarnessTrade[]):Stats{
  const rs=ts.map(t=>t.r),wins=rs.filter(r=>r>0),losses=rs.filter(r=>r<0),gw=wins.reduce((s,r)=>s+r,0),gl=-losses.reduce((s,r)=>s+r,0);
  let eq=0,peak=0,dd=0;for(const t of [...ts].sort((a,b)=>a.exitAt.localeCompare(b.exitAt))){eq+=t.r;peak=Math.max(peak,eq);dd=Math.min(dd,eq-peak);}
- return {trades:ts.length,winRate:ts.length?wins.length/ts.length:null,expectancyR:ts.length?eq/ts.length:null,profitFactor:gl>0?gw/gl:null,maxDrawdownR:dd,totalR:eq,avgHoldDays:ts.length?ts.reduce((s,t)=>s+(Date.parse(t.exitAt)-Date.parse(t.entryAt))/D,0)/ts.length:null,marked:ts.filter(t=>t.marked).length};
+ return {trades:ts.length,winRate:ts.length?wins.length/ts.length:null,expectancyR:ts.length?eq/ts.length:null,profitFactor:gl>0?gw/gl:null,maxDrawdownR:dd,totalR:eq,avgHoldDays:ts.length?ts.reduce((s,t)=>s+(Date.parse(t.exitAt)-Date.parse(t.entryAt))/D,0)/ts.length:null,marked:ts.filter(t=>t.marked).length,giveBack:giveBackSummary(ts.map(t=>({mfeR:t.mfeR??null,maeR:t.maeR??null,finalR:t.r})))};
 }
 /** Relative-strength top third (volatility-adjusted 30/60/90-day return) AND above own 50-day, per day, from point-in-time prices. */
 export function rankTopThird(prices:Map<string,Map<string,number>>,universeByDay:Map<string,string[]>){

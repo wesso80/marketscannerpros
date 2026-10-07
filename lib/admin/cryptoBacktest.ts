@@ -9,6 +9,7 @@ import {coinbaseUniverse} from './cryptoRelativeStrength';
 import {summarizeCryptoPaper,compareExitPlans,type CryptoStatsRow} from './cryptoPaperStats';
 import type {DiscoveryRow,VenueEvidence} from './cryptoDiscovery';
 import type {ArcaPosition} from './portfolio-lab/types';
+import {startExcursion,advanceExcursion,excursionR,INTRABAR_PAPER_EXITS} from './cryptoExcursion';
 import {fillNoTradeGaps,NO_TRADE_MAX_BARS} from './cryptoCandleGaps';
 import {btcLongTrend,breadthAt,breadthBucket,bullGate,relativeStrengthAt,type RsTag} from './cryptoMarketRegime';
 import {backtestJevInput,stampBacktestJev,type BacktestJevInput} from './cryptoBacktestJev';
@@ -23,7 +24,9 @@ export type BacktestTrade={btc200?:string;filledBars?:number;id:string;coin:stri
  /** Every active shadow plan by plan id; `shadow` remains the v2 result for saved states written before this field existed. */
  shadows?:Record<string,ShadowResult>;
  /** Compact Jev inputs captured at signal time (no candles after the signal) and the stamps a later pass attaches. Evidence only. */
- jevInput?:BacktestJevInput;jev?:JevStamp;chart?:ChartStamp};
+ jevInput?:BacktestJevInput;jev?:JevStamp;chart?:ChartStamp;
+ /** Fixed-plan MFE/MAE in net R (completed 15m candles; see cryptoExcursion). Absent on runs made before it was recorded. */
+ excursion?:{mfeR:number|null;maeR:number|null}};
 export type BacktestCoin={id:string;symbol:string;product:string;status:'PENDING'|'DONE'|'FAILED';signals?:number;noEntry?:number;overlapping?:number;error?:string};
 export type BacktestState={version:1;status:'RUNNING'|'COMPLETE';startedAt:string;updatedAt:string;from:string;to:string;universeAt:string;coins:BacktestCoin[];trades:BacktestTrade[];btcDaily:ExchangeBar[];coinDaily?:Record<string,[number,number][]>;endDaysAgo?:number;requests:number;droppedRows:number};
 const sleep=(ms:number)=>new Promise(r=>setTimeout(r,ms));
@@ -81,6 +84,10 @@ export async function backtestCoin(coin:{id:string;product:string},from:number,t
     // Neither stop nor target by the horizon (or window end): marked at that completed close instead of dropped.
     ?{status:'CLOSED',marked:true,r:netR(path.at(-1)!.close,fill,stop,BACKTEST.cost),exit:pathEnd===entry.at+BACKTEST.horizonDays*D?'HORIZON':'WINDOW_END',at:new Date(pathEnd).toISOString()}
    :checked.status==='candle_path_checked'?{status:'OPEN_AT_HORIZON',r:null,exit:null,at:null}:{status:'DATA_GAP',r:null,exit:null,at:null};
+  let excursion:BacktestTrade['excursion']={mfeR:null,maeR:null};
+  const x0=startExcursion(fill,stop,BACKTEST.cost,entry.at,M15);
+  if(x0&&fixed.status==='CLOSED'&&fixed.at&&fixed.r!=null){const exitPrice=checked.exit?checked.exit.price:path.at(-1)!.close;
+   try{excursion=excursionR(advanceExcursion(x0,path,Date.parse(fixed.at),{price:exitPrice,at:Date.parse(fixed.at),insideBar:!fixed.marked&&INTRABAR_PAPER_EXITS.has(fixed.exit??'')},{allowGaps:true}));}catch{/* left null */}}
   const last=path.at(-1),shadows:Record<string,ShadowResult>={};
   for(const plan of SHADOW_PLANS_ACTIVE){
    let shadow:ShadowState=initShadow(pos as never,sig.atr??NaN,BACKTEST.cost,plan,sig.entryFloor);
@@ -91,7 +98,7 @@ export async function backtestCoin(coin:{id:string;product:string},from:number,t
   const day=Math.floor(four[i].t/D)*D;
   const btcState=assessBtcRegime(btcDaily.filter(b=>b.t<=day),four[i].t).state;
   trades.push({filledBars:bars15.filter(b=>b.filled).length,id,coin:coin.id,product:coin.product,kind:sig.kind??'UNKNOWN',signalAt:sig.asOf!,entryAt:new Date(entry.at).toISOString(),fill,stop,target,
-   btcRegime:btcState,btc200:btcLongTrend(btcDaily,four[i].t),half:four[i].t<from+(to-from)/2?'FIRST':'SECOND',fixed,
+   btcRegime:btcState,excursion,btc200:btcLongTrend(btcDaily,four[i].t),half:four[i].t<from+(to-from)/2?'FIRST':'SECOND',fixed,
    shadow:shadows['partial-trail-v2'],shadows,jevInput:backtestJevInput(sig,btcState)});
   busyUntil=fixed.at?Date.parse(fixed.at):pathEnd;
  }
@@ -138,7 +145,7 @@ export async function stampSavedBacktest(now=Date.now()){
 }
 /** Maps backtest trades onto the paper stats model: 1R = $500 (0.25% of $200k), so P&L columns read in paper-account dollars. */
 export function summarizeBacktest(state:BacktestState){
- const rows=(ts:BacktestTrade[]):CryptoStatsRow[]=>ts.filter(t=>t.fixed.r!=null).map(t=>({position_id:t.id,r_multiple:t.fixed.r,realised_pnl:t.fixed.r!*BACKTEST.riskUsd,outcome:t.fixed.r!>0?'WIN':'LOSS',exit_reason:t.fixed.exit!,instrument_type:`coinbase:${t.product}`,entry_time:t.entryAt,exit_time:t.fixed.at!,created_reason:'backtest|'+JSON.stringify({signal:{kind:t.kind},btcRegime:{state:t.btcRegime}})}));
+ const rows=(ts:BacktestTrade[]):CryptoStatsRow[]=>ts.filter(t=>t.fixed.r!=null).map(t=>({position_id:t.id,r_multiple:t.fixed.r,realised_pnl:t.fixed.r!*BACKTEST.riskUsd,outcome:t.fixed.r!>0?'WIN':'LOSS',exit_reason:t.fixed.exit!,instrument_type:`coinbase:${t.product}`,mfe_r:t.excursion?.mfeR??null,mae_r:t.excursion?.maeR??null,entry_time:t.entryAt,exit_time:t.fixed.at!,created_reason:'backtest|'+JSON.stringify({signal:{kind:t.kind},btcRegime:{state:t.btcRegime}})}));
  const all=rows(state.trades);
  const shadowRows=state.trades.flatMap(t=>Object.values(t.shadows??{'partial-trail-v2':t.shadow}).map(s=>({positionId:t.id,plan:s.plan,status:s.status,r:s.r,legs:s.legs})));
  const sub=(label:string,ts:BacktestTrade[])=>({...summarizeCryptoPaper(rows(ts)).overall,label});

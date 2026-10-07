@@ -19,5 +19,5 @@ it('writes one row per paper order with entry evidence, outcome and shadow resul
 });
 it('exports backtest trades with both exit plans',()=>{
  const csv=backtestTradeLog([{id:'x',coin:'sol',product:'SOL-USD',kind:'CONTINUATION',signalAt:'s',entryAt:'e',fill:1,stop:.9,target:1.2,btcRegime:'DOWN',btc200:'BEAR',half:'SECOND',filledBars:2,fixed:{status:'CLOSED',r:-1.03,exit:'STOP_LOSS',at:'z'},shadow:{plan:'partial-trail-v2',status:'CLOSED',r:-1.03,legs:[{reason:'STOP'}]}}],new Map([['x',{breadth:.35,gate:'OFF'}]]));
- expect(csv.trim().split('\r\n')[1]).toBe('true,true,sol,SOL-USD,CONTINUATION,s,e,1,0.9,1.2,DOWN,WOULD_SKIP,BEAR,0.35,OFF,,,,,SECOND,CLOSED,STOP_LOSS,z,-1.03,false,partial-trail-v2,CLOSED,-1.03,STOP,2,,,,,,,,');
+ expect(csv.trim().split('\r\n')[1]).toBe('true,true,sol,SOL-USD,CONTINUATION,s,e,1,0.9,1.2,DOWN,WOULD_SKIP,BEAR,0.35,OFF,,,,,SECOND,CLOSED,STOP_LOSS,z,-1.03,false,partial-trail-v2,CLOSED,-1.03,STOP,2,,,,,,,,,,,');
 });

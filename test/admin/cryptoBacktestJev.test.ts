@@ -86,8 +86,9 @@ it('the ledger grades backtest trades with real exits only, as its own outcome, 
  expect(ledger.source).toMatchObject({backtestTrades:4,backtestGraded:1,backtestWindow:'2026-07-01 → 2026-09-29'});
  expect(ledger.note).toMatch(/hypothesis/);
  const csv=backtestTradeLog(trades);
- expect(BACKTEST_LOG_HEADERS.slice(-8)).toEqual(['jev_status','jev_chase','jev_btc_headwind','chart_status','chart_clean_base','chart_strong_close','chart_volume_expansion','chart_overhead_supply']);
- expect(csv.split(/\r?\n/)[1]).toMatch(/,scored,0\.2,0\.1,scored,0\.8,0\.9,0\.85,0\.1$/);
+ expect(BACKTEST_LOG_HEADERS.slice(-3)).toEqual(['mfe_r','mae_r','give_back']);
+ expect(BACKTEST_LOG_HEADERS.slice(-11,-3)).toEqual(['jev_status','jev_chase','jev_btc_headwind','chart_status','chart_clean_base','chart_strong_close','chart_volume_expansion','chart_overhead_supply']);
+ expect(csv.split(/\r?\n/)[1]).toMatch(/,scored,0\.2,0\.1,scored,0\.8,0\.9,0\.85,0\.1,[^,]*,[^,]*,[^,]*$/);
 });
 it('backtest stamping is evidence only: it never alters a replayed result, never routes an order, and the ledger never imports the engine',()=>{
  const src=readFileSync('lib/admin/cryptoBacktestJev.ts','utf8');
