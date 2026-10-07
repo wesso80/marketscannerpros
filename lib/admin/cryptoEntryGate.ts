@@ -7,6 +7,8 @@ import type {VolumeMomentum} from './cryptoVolumeMomentum';
  * portfolio lock) and the history replay. Order and reason strings are the live ledger's; changing either changes
  * live behaviour and the replay together. No I/O: callers read the account, open positions and counts first.
  */
+/** Live paper limits (moved here from cryptoPaper so pure research code can share them without the live engine). */
+export const CRYPTO_PAPER_LIMITS={riskPerTradePct:.25,notionalPct:10,maxPairVolumePct:1,maxVolumeAgeHours:6,positions:20,openRiskPct:5,dailyEntries:30,cycleEntries:4,cycleValidations:8,lossFromStartPct:5};
 export type EntryGateLimits={positions:number;lossFromStartPct:number;dailyEntries:number;riskPerTradePct:number;openRiskPct:number};
 export type EntryGateInput={
  coin:string;alreadyTraded:boolean;

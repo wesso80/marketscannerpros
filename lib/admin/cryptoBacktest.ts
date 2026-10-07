@@ -52,6 +52,40 @@ function fourHour(hourly:ExchangeBar[]):ExchangeBar[]{
  return [...g].filter(([t,b])=>b.length===4&&b[0].t===t-3*H&&b[3].t===t).map(([t,b])=>({t,o:b[0].o,h:Math.max(...b.map(x=>x.h)),l:Math.min(...b.map(x=>x.l)),c:b[3].c,v:b.reduce((s,x)=>s+x.v,0)}));
 }
 const netR=(price:number,fill:number,stop:number,c:number)=>{const eff=price*(1-c);return Math.round((eff-fill-fill*c-eff*c)/(fill-stop)*1000)/1000;};
+export type ReplayExits={fixed:BacktestTrade['fixed'];excursion:NonNullable<BacktestTrade['excursion']>;shadows:Record<string,ShadowResult>;filledBars:number};
+/**
+ * The paper exits for one entry, on completed 15m candles: fixed 2R plan through the live exit evaluator (with the
+ * live time stop), MFE/MAE, and every active shadow plan. `m15` must start NO_TRADE_MAX_BARS candles before the entry
+ * candle (gap-fill anchor) and end at `pathEnd`. Shared by the backtest and the history replay.
+ */
+export function replayExits(coin:{id:string;product:string},sig:VolumeMomentum,entry:{at:number;plan:{fill:number;stop:number;target:number}},m15:ExchangeBar[],pathEnd:number):ReplayExits{
+ const entryOpen=Math.floor(entry.at/M15)*M15;
+ // Exactly the backtest's fetch window, so candles outside it (merged replay windows) cannot change gap filling.
+ const own=m15.filter(b=>b.t-M15>=entryOpen-NO_TRADE_MAX_BARS*M15&&b.t<=pathEnd);
+ let bars15:(ExchangeBar&{filled?:true})[]=own;try{bars15=fillNoTradeGaps(own,M15);}catch{/* longer gap: left in place so replay fails closed */}
+ bars15=bars15.filter(b=>b.t>entryOpen);
+ const path:PaperExitCandle[]=bars15.map(b=>({openAt:b.t-M15,closeAt:b.t,open:b.o,high:b.h,low:b.l,close:b.c}));
+ const {fill,stop,target}=entry.plan,id=`${coin.id}|${sig.asOf}`;
+ const pos={id,symbol:coin.id,assetClass:'crypto',side:'LONG',instrumentType:`coinbase:${coin.product}`,averageEntry:fill,stopLoss:stop,initialStopLoss:stop,takeProfit1:target,takeProfit2:null,takeProfit3:null,openedAt:new Date(entry.at).toISOString(),exitCheckpoint:null,quantity:1,entryFee:fill*BACKTEST.cost} as unknown as ArcaPosition;
+ const checked=evaluatePaperExitPath(pos,{symbol:coin.id,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:path},pathEnd,BACKTEST.exitRules);
+ const fixed:BacktestTrade['fixed']=checked.exit?{status:'CLOSED',r:netR(checked.exit.price,fill,stop,BACKTEST.cost),exit:checked.exit.reason,at:checked.exit.at}
+  :checked.status==='candle_path_checked'&&path.at(-1)?.closeAt===pathEnd
+   // Neither stop nor target by the horizon (or window end): marked at that completed close instead of dropped.
+   ?{status:'CLOSED',marked:true,r:netR(path.at(-1)!.close,fill,stop,BACKTEST.cost),exit:pathEnd===entry.at+BACKTEST.horizonDays*D?'HORIZON':'WINDOW_END',at:new Date(pathEnd).toISOString()}
+  :checked.status==='candle_path_checked'?{status:'OPEN_AT_HORIZON',r:null,exit:null,at:null}:{status:'DATA_GAP',r:null,exit:null,at:null};
+ let excursion:ReplayExits['excursion']={mfeR:null,maeR:null};
+ const x0=startExcursion(fill,stop,BACKTEST.cost,entry.at,M15);
+ if(x0&&fixed.status==='CLOSED'&&fixed.at&&fixed.r!=null){const exitPrice=checked.exit?checked.exit.price:path.at(-1)!.close;
+  try{excursion=excursionR(advanceExcursion(x0,path,Date.parse(fixed.at),{price:exitPrice,at:Date.parse(fixed.at),insideBar:!fixed.marked&&INTRABAR_PAPER_EXITS.has(fixed.exit??'')},{allowGaps:true}));}catch{/* left null */}}
+ const last=path.at(-1),shadows:Record<string,ShadowResult>={};
+ for(const plan of SHADOW_PLANS_ACTIVE){
+  let shadow:ShadowState=initShadow(pos as never,sig.atr??NaN,BACKTEST.cost,plan,sig.entryFloor);
+  try{shadow=advanceShadow(shadow,path,pathEnd);}catch{shadow={...shadow,status:'UNAVAILABLE',reason:'15m candle gap'};}
+  if(shadow.status==='OPEN'&&last&&last.closeAt===pathEnd&&Date.parse(shadow.through)===pathEnd)shadow=closeShadowAt(shadow,last.close,last.closeAt);
+  shadows[plan]={plan:shadow.plan,status:shadow.status,r:shadow.r,legs:shadow.legs.map(l=>({reason:l.reason}))};
+ }
+ return {fixed,excursion,shadows,filledBars:bars15.filter(b=>b.filled).length};
+}
 /** Finds each signal with only candles completed at that time, enters at the first hourly open inside the live entry zone, then replays exits. */
 export async function backtestCoin(coin:{id:string;product:string},from:number,to:number,btcDaily:ExchangeBar[],fetcher=candles){
  const hourly=await fetcher(coin.product,from-26*F,to,H),four=fourHour(hourly.bars);
@@ -73,31 +107,11 @@ export async function backtestCoin(coin:{id:string;product:string},from:number,t
   const pathEnd=Math.min(Math.floor(to/M15)*M15,entry.at+BACKTEST.horizonDays*D);
   // Same no-trade gap rule as live exits: anchored on a real earlier candle, bounded, never past the last real candle.
   const entryOpen=Math.floor(entry.at/M15)*M15,m15=await fetcher(coin.product,entryOpen-NO_TRADE_MAX_BARS*M15,pathEnd,M15);requests+=m15.requests;dropped+=m15.dropped;
-  let bars15:(ExchangeBar&{filled?:true})[]=m15.bars;try{bars15=fillNoTradeGaps(m15.bars,M15);}catch{/* longer gap: left in place so replay fails closed */}
-  bars15=bars15.filter(b=>b.t>entryOpen);
-  const path:PaperExitCandle[]=bars15.map(b=>({openAt:b.t-M15,closeAt:b.t,open:b.o,high:b.h,low:b.l,close:b.c}));
+  const {fixed,excursion,shadows,filledBars}=replayExits(coin,sig,entry,m15.bars,pathEnd);
   const {fill,stop,target}=entry.plan,id=`${coin.id}|${sig.asOf}`;
-  const pos={id,symbol:coin.id,assetClass:'crypto',side:'LONG',instrumentType:`coinbase:${coin.product}`,averageEntry:fill,stopLoss:stop,initialStopLoss:stop,takeProfit1:target,takeProfit2:null,takeProfit3:null,openedAt:new Date(entry.at).toISOString(),exitCheckpoint:null,quantity:1,entryFee:fill*BACKTEST.cost} as unknown as ArcaPosition;
-  const checked=evaluatePaperExitPath(pos,{symbol:coin.id,market:'CRYPTO',timeframe:'15m',source:'crypto_exchange',candles:path},pathEnd,BACKTEST.exitRules);
-  const fixed:BacktestTrade['fixed']=checked.exit?{status:'CLOSED',r:netR(checked.exit.price,fill,stop,BACKTEST.cost),exit:checked.exit.reason,at:checked.exit.at}
-   :checked.status==='candle_path_checked'&&path.at(-1)?.closeAt===pathEnd
-    // Neither stop nor target by the horizon (or window end): marked at that completed close instead of dropped.
-    ?{status:'CLOSED',marked:true,r:netR(path.at(-1)!.close,fill,stop,BACKTEST.cost),exit:pathEnd===entry.at+BACKTEST.horizonDays*D?'HORIZON':'WINDOW_END',at:new Date(pathEnd).toISOString()}
-   :checked.status==='candle_path_checked'?{status:'OPEN_AT_HORIZON',r:null,exit:null,at:null}:{status:'DATA_GAP',r:null,exit:null,at:null};
-  let excursion:BacktestTrade['excursion']={mfeR:null,maeR:null};
-  const x0=startExcursion(fill,stop,BACKTEST.cost,entry.at,M15);
-  if(x0&&fixed.status==='CLOSED'&&fixed.at&&fixed.r!=null){const exitPrice=checked.exit?checked.exit.price:path.at(-1)!.close;
-   try{excursion=excursionR(advanceExcursion(x0,path,Date.parse(fixed.at),{price:exitPrice,at:Date.parse(fixed.at),insideBar:!fixed.marked&&INTRABAR_PAPER_EXITS.has(fixed.exit??'')},{allowGaps:true}));}catch{/* left null */}}
-  const last=path.at(-1),shadows:Record<string,ShadowResult>={};
-  for(const plan of SHADOW_PLANS_ACTIVE){
-   let shadow:ShadowState=initShadow(pos as never,sig.atr??NaN,BACKTEST.cost,plan,sig.entryFloor);
-   try{shadow=advanceShadow(shadow,path,pathEnd);}catch{shadow={...shadow,status:'UNAVAILABLE',reason:'15m candle gap'};}
-   if(shadow.status==='OPEN'&&last&&last.closeAt===pathEnd&&Date.parse(shadow.through)===pathEnd)shadow=closeShadowAt(shadow,last.close,last.closeAt);
-   shadows[plan]={plan:shadow.plan,status:shadow.status,r:shadow.r,legs:shadow.legs.map(l=>({reason:l.reason}))};
-  }
   const day=Math.floor(four[i].t/D)*D;
   const btcState=assessBtcRegime(btcDaily.filter(b=>b.t<=day),four[i].t).state;
-  trades.push({filledBars:bars15.filter(b=>b.filled).length,id,coin:coin.id,product:coin.product,kind:sig.kind??'UNKNOWN',signalAt:sig.asOf!,entryAt:new Date(entry.at).toISOString(),fill,stop,target,
+  trades.push({filledBars,id,coin:coin.id,product:coin.product,kind:sig.kind??'UNKNOWN',signalAt:sig.asOf!,entryAt:new Date(entry.at).toISOString(),fill,stop,target,
    btcRegime:btcState,excursion,btc200:btcLongTrend(btcDaily,four[i].t),half:four[i].t<from+(to-from)/2?'FIRST':'SECOND',fixed,
    shadow:shadows['partial-trail-v2'],shadows,jevInput:backtestJevInput(sig,btcState)});
   busyUntil=fixed.at?Date.parse(fixed.at):pathEnd;

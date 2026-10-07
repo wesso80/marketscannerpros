@@ -29,7 +29,7 @@ import {unavailableCatalyst} from './cryptoJevCatalyst';
 import {unavailableChart} from './cryptoJevChart';
 import {fillTrailingNoTrade,type TrailingAnchor} from './cryptoCandleGaps';
 import {paperTradeLog,type PaperLogRow} from './cryptoTradeLog';
-import {paperEntryGate} from './cryptoEntryGate';
+import {paperEntryGate,CRYPTO_PAPER_LIMITS} from './cryptoEntryGate';
 import {LOCK,loadLock,saveLock,newLockState,markLock,advanceLockPosition,settleWithLedger,finishEpisodeIfDone} from './cryptoPaperLock';
 import {ledgerRecords,recordSignals,signalLedgerView,ensureSignalLedger} from './cryptoSignalLedger';
 import {trackExcursions,giveBackView,ensureExcursionTables,excursionTablesReady} from './cryptoPaperExcursion';
@@ -42,7 +42,7 @@ const PLAYBOOK='crypto-momentum-v1',STATUS='Crypto paper cycle completed';
 export const PLAYBOOK_V2='crypto-momentum-v2';
 export const exitRulesFor=(playbookId:string|null):PaperExitRules|null=>playbookId===PLAYBOOK_V2?CRYPTO_TIME_STOP:null;
 /** Beta data-collection limits: raised from 5 positions / 2% open risk / 10 daily entries so more setups reach an outcome. Per-trade risk is unchanged. */
-export const CRYPTO_PAPER_LIMITS={riskPerTradePct:.25,notionalPct:10,maxPairVolumePct:1,maxVolumeAgeHours:6,positions:20,openRiskPct:5,dailyEntries:30,cycleEntries:4,cycleValidations:8,lossFromStartPct:5};
+export {CRYPTO_PAPER_LIMITS};
 const L=CRYPTO_PAPER_LIMITS;
 const BUSY='Crypto paper cycle already running or cooling down',MANUAL_RECENT='Manual crypto paper cycle ran within the last three minutes';
 /** Latest saved shadow state per position and plan, keyed `${positionId}|${plan}`. Unparseable rows are skipped, never reconstructed. */
