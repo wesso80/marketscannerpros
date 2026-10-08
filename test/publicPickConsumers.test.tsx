@@ -33,3 +33,13 @@ it('Today and compact Scanner cards no longer display synthesized scores or dail
  expect(cards).not.toMatch(/row.confidence|computeMspScore|summarizeRankedReason|row.permission|row.canonical/);
  expect(cards).toContain('row.rsi != null');
 });
+
+import {topPicks,pickStamp,type PicksResponse} from '@/lib/market/overview';
+import {findSymbolPick} from '@/lib/market/symbolSnapshot';
+it('reads the #529 envelope and renamed fields without reviving scores',()=>{
+ const data:PicksResponse={contract:'public-daily-observations-v1',observations:{equity:[{symbol:'AAA',assetClass:'equity',scanDate:'2026-10-07',price:100,changePercent:1.5,priceBasis:'daily_bar_close',priceBasisLabel:'daily bar close',indicators:{rsi:0},dataQuality:{level:'GOOD',freshness:'fresh',dataAsOf:'2026-10-07T20:00:00Z'}}]}};
+ const rows=topPicks(data,'equity');expect(rows.map(r=>r.symbol)).toEqual(['AAA']);
+ expect(pickStamp(rows[0])).toMatchObject({price:100,data_as_of:'2026-10-07T20:00:00Z',priceBasis:'daily_bar_close'});
+ expect(findSymbolPick(data,'AAA','equity')).toEqual(rows[0]);expect(findSymbolPick(data,'AAA','crypto')).toBeNull();
+ expect(rows[0]).not.toHaveProperty('score');expect(rows[0]).not.toHaveProperty('canonical');
+});

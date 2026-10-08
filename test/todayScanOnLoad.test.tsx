@@ -208,7 +208,7 @@ describe('Today load does not run the scanner', () => {
 
     const view = render(<CommandCenterPage />);
     await waitFor(() => {
-      expect(view.container.textContent).toContain('New: none · Dropped: none');
+      expect(view.container.textContent).toContain('New in this displayed slice: none · No longer in this slice: none');
     });
     const current = dailyGets().filter((c) => !c.url.includes('date='));
     const previous = dailyGets().filter((c) => c.url.includes('date='));

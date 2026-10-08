@@ -1,3 +1,4 @@
+import { observationPick, type DailyObservation } from '@/lib/market/overview';
 import { PublicReportAccessError, parseReportAccessIssue, type ReportAccessIssue } from '@/lib/publicReportAccessError';
 import type { CanonicalResult } from '@/lib/scoring/canonical/types';
 import type { ScannerScorePayload } from '@/lib/scanner/scoreContract';
@@ -836,14 +837,16 @@ export function fetchDailyPicksBundle(): Promise<DailyPicksBundle> {
   if (dailyPicksInflight) return dailyPicksInflight;
   const promise = apiFetch<{
     success?: boolean;
+    contract?: string;
+    observations?: { equity?: DailyObservation[]; crypto?: DailyObservation[] };
     topPicks?: { equity?: unknown[]; crypto?: unknown[] };
     dataQuality?: ScannerResponse['metadata']['dataQuality'];
   } | null>(DAILY_PICKS_CURRENT_PATH).then((data) => {
     if (!data || typeof data !== 'object') return { success: false, equity: [], crypto: [] };
     return {
       success: data.success !== false,
-      equity: Array.isArray(data.topPicks?.equity) ? data.topPicks.equity : [],
-      crypto: Array.isArray(data.topPicks?.crypto) ? data.topPicks.crypto : [],
+      equity: data.contract==='public-daily-observations-v1' ? (data.observations?.equity??[]).map(row=>({...observationPick(row),indicators:row.indicators})) : Array.isArray(data.topPicks?.equity) ? data.topPicks.equity : [],
+      crypto: data.contract==='public-daily-observations-v1' ? (data.observations?.crypto??[]).map(row=>({...observationPick(row),indicators:row.indicators})) : Array.isArray(data.topPicks?.crypto) ? data.topPicks.crypto : [],
       dataQuality: data.dataQuality,
     };
   }).finally(() => {

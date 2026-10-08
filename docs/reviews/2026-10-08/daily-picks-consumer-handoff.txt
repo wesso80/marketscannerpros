@@ -41,3 +41,33 @@ The projection's proposed rank order still needs an explicit decision: order
 by a composite is a ranking even without visible reasons. Prefer a disclosed
 factual sort. This patch does not change backend selection/order.
 Nothing merged, deployed or changed in production.
+
+
+#529 compatibility follow-up
+Fetched and inspected claude/daily-picks-public at
+8207192beb9e99ec39238cb3e7c17354a8a73d1d. It replaces topPicks/bottomPicks
+with observations and renames dates, asset class, percent change and quality.
+The old #517 consumers would have shown empty lists. Fixed in the consumer
+branch using a shared measured-field adapter in lib/market/overview.ts:
+- v2 shared fetch supports public observations and unchanged legacy/admin lists.
+- Symbol lookup and previous-day lists accept the new envelope.
+- Price basis, quality and observation times survive the field rename.
+- Today queue no longer synthesizes score/direction/lifecycle from missing data.
+- Overview describes public A–Z order and labels changes as changes within the
+  displayed five-symbol slice, not changes to the entire scan universe.
+No edits to Claude's endpoint/projection/share/Free files in the published patch.
+
+Validation: local .reconcile-review combines the consumer changes and the four
+#529 files without a merge. 20 tests pass across w3PublicDailyObservations,
+publicPickHistory, publicPickConsumers, todayScanOnLoad and layoutOverview.
+The route test has one extra local integration case: real GET -> topPicks /
+findSymbolPick / fetchDailyPicksBundle, verifying AAA/MMM/ZZZ A–Z, BTC identity,
+price/date/RSI and no private fields. The persistent consumer test now includes
+an explicit #529-shaped fixture. Local combined fixture/test files are retained
+in .reconcile-review; that checkout is intentionally dirty for reproduction.
+Typecheck on the consumer branch retains only the six known baseline errors.
+No live data/model calls, deployment or browser visual validation in this pass.
+
+Remaining: Claude's own surfaces; full browser acceptance after both branches
+are integrated. The rank-order objection is resolved by #529's disclosed A–Z
+sort (selection is still scan-filtered, as its selection note explains).
