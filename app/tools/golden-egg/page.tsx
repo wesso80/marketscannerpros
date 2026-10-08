@@ -1,4 +1,5 @@
 'use client';
+import PublicUsageSummary from '@/components/research/PublicUsageSummary';
 
 /* ---------------------------------------------------------------------------
    SURFACE 3: SYMBOL — research page (evidence, chart, AI summary, fundamentals)
@@ -620,6 +621,7 @@ export default function GoldenEggPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-3">
+      <PublicUsageSummary refreshKey={`${sym}:${loading}:${goldenEgg.error || ''}`} />
       <SymbolSnapshotHeader name={geCanonical?.fundamentals?.name} symbol={sym} asset={snapshotAsset} timeframe={timeframe} stamp={symbolQuoteStamp(sym,snapshotAsset,quote.data)} pick={findSymbolPick(dailyPicks.data,sym,snapshotAsset)} rankLoading={dailyPicks.loading} rankError={dailyPicks.error} quiet={isAuthBlocked} compact/>
       {!isAuthBlocked && researchSnapshot && !loading && <ResearchSnapshotCard s={researchSnapshot} links={specialistLinks}/>}
 

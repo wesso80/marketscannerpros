@@ -22,6 +22,7 @@ describe.skipIf(!process.env.QUOTA_TEST_POSTGRES_PORT)('public quotas on isolate
   admin=new Pool({...config,database:'postgres'});await admin.query(`CREATE DATABASE "${database}"`);
   pool=new Pool({...config,database,max:8});
   const sql=readFileSync('migrations/126_public_daily_quotas.sql','utf8');await pool.query(sql);await pool.query(sql);
+  const replay=readFileSync('migrations/127_public_quota_replay.sql','utf8');await pool.query(replay);await pool.query(replay);
  });
  afterAll(async()=>{if(pool)await pool.end();if(admin){await admin.query(`DROP DATABASE IF EXISTS "${database}"`);await admin.end();}});
  beforeEach(async()=>{await pool.query('TRUNCATE public_daily_quota_entries,public_daily_quota_buckets');});
@@ -69,7 +70,22 @@ describe.skipIf(!process.env.QUOTA_TEST_POSTGRES_PORT)('public quotas on isolate
    expect(r.reset.toISOString()).toBe(expected);
   }
  });
- it('fails closed on storage errors',async()=>{
+ it('stores a private AI replay atomically with completion and rejects completion without output',async()=>{
+  const a=await service.reserve(req('question',{kind:'ai'}));if(a.status!=='reserved')throw Error('missing');
+  await expect(service.settle(a.reservation,'completed')).rejects.toThrow('durable response');
+  await service.settle(a.reservation,'completed',{answer:'fixture answer'});
+  const replay=await service.reserve(req('question',{kind:'ai'}));expect(replay.status).toBe('completed');
+  if(replay.status==='completed')expect(replay.replay).toEqual({answer:'fixture answer'});
+  const other=await service.reserve(req('question',{kind:'ai',subject:'account:other'}));expect(other.status).toBe('reserved');
+  const status=await service.status('account:fixture','free');expect(status.quotas.find(q=>q.kind==='ai')).toMatchObject({completed:1,pending:0,remaining:4});
+  expect(JSON.stringify(status)).not.toContain('fixture answer');expect(JSON.stringify(status)).not.toContain('account:fixture');
+ });
+ it('reserves exactly 100 Pro AI requests under contention',async()=>{
+  const results=await Promise.all(Array.from({length:102},(_,i)=>service.reserve(req('q'+i,{kind:'ai',plan:'pro'}))));
+  expect(results.filter(r=>r.status==='reserved')).toHaveLength(100);
+  expect((await service.status('account:fixture','pro')).quotas.find(q=>q.kind==='ai')).toMatchObject({remaining:0,pending:100});
+ });
+ it('fails closed on storage errors' ,async()=>{
   const broken=createPublicDailyQuota(async()=>{throw Error('offline');});
   await expect(broken.reserve(req('A'))).rejects.toThrow('offline');
  });
