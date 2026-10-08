@@ -62,11 +62,11 @@ describe('Evidence summary', () => {
     expect(container.querySelectorAll('[data-evidence-group]')).toHaveLength(5);
     expect(container.textContent).not.toMatch(/\b(buy|sell|bullish|bearish|likely|probability|score|grade)\b/i);
   });
-  it('is the last research section on Symbol, before the scenario map', () => {
+  it('is the last research section on Symbol, before the recorded levels', () => {
     const src = readFileSync('app/tools/golden-egg/page.tsx', 'utf8');
     const eq = src.lastIndexOf('{evidenceFold}');
     expect(eq).toBeGreaterThan(src.indexOf('title="News and ownership"'));
-    expect(eq).toBeLessThan(src.indexOf('title="Scenario map"'));
+    expect(eq).toBeLessThan(src.indexOf('title="Recorded levels"'));
     expect(src).toContain('<SymbolNewsPanel symbol={sym} type="crypto"/></CollapsibleSection>}{evidenceFold}');
   });
 });

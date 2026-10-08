@@ -8,6 +8,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { buildPayload } from '@/lib/goldenEgg/engine';
+import { toPublicSymbolPacket } from '@/lib/research/publicSymbolPacket';
 import { now, price, ind, tc } from './fixtures/goldenEggTiming';
 
 const h = vi.hoisted(() => ({ packet: null as any, session: { workspaceId: 'ws-a', tier: 'pro' } as any, paid: true, computeCalls: [] as any[] }));
@@ -27,6 +28,19 @@ function loadedPacket() {
   p.doctrine = { id: 'd', label: 'Trend pullback', confidence: 72, regime: 'trend', reasons: [], playbook: { description: 'x', direction: 'long', category: 'c', entryCriteria: ['buy the dip'], riskModel: { stopDescription: 's', targetDescription: 't', defaultRR: 2 }, failureSignals: [] } };
   p.layer2.scenario.hypotheticalRisk = { riskPct: 1, riskUsd: 250, sizeUnits: 40 };
   p.canonical.fundamentals = { name: 'Apple Inc', sector: 'Tech', industry: 'HW', marketCap: 3e12, pe: 30, forwardPe: 28, peg: 2, revenueGrowthYoy: 0.08, earningsGrowthYoy: 0.1, profitMargin: 0.25, multipleLabel: 'P/E', periodSummary: 'Q2', analystTarget: 260, analystCount: 40, nextEarningsDate: '2026-10-30', daysToEarnings: 25, lastReportedQuarter: '2026-06-30', lastEpsBeat: true };
+  // W3-R canaries: a private field added to any nested parent must not reach the response (no spreads, no references).
+  p.canonical.indicators.canaryScore = 'CANARY-IND';
+  p.canonical.liquidity.canaryScore = 'CANARY-LIQ';
+  p.canonical.options = { expiry: '2026-10-16', daysToExpiry: 9, snapshotTs: '2026-10-07', putCallOi: 0.8, avgIvPct: 30, ivRank: null, expectedMovePct: 4, maxPain: 100, callWall: { strike: 110, relation: 'above', canary: 'CANARY-WALL' }, putWall: null, dealerGamma: 'Unavailable', unusualActivity: 'Normal', topCall: { strike: 110, oi: 5, volume: 1, iv: 0.3, delta: 0.4, gamma: 0.01, theta: -0.1, vega: 0.2, canary: 'CANARY-TOP' }, topPut: null, totalCallOi: 10, totalPutOi: 8, quality: { level: 'GOOD', reasons: [], canary: 'CANARY-Q' }, notes: [], canaryScore: 'CANARY-OPT' };
+  p.canonical.crossMarket = { alignment: 'supportive', summary: '2 supportive (SPY, QQQ) · 0 headwind · 0 neutral for a long read.', items: [{ symbol: 'SPY', label: 'S&P 500', price: 500, changePct: 1, trend: 'up', detail: 'above SMA 20', relation: 'supportive', canary: 'CANARY-CM' }] };
+  p.layer2.setup.keyLevels = [{ label: 'SMA 50', price: 98, kind: 'support', canary: 'CANARY-KL' }];
+  p.layer3.structure.liquidity.canary = 'CANARY-SL';
+  p.layer3.structure.volatility.breakoutScore = 77;
+  p.layer3.momentum.indicators = [{ name: 'RSI(14)', value: '58', state: 'neutral', canary: 'CANARY-MOM' }];
+  p.layer3.timeConfluence.banners = ['EXTREME BULLISH', 'HIGH ALIGNMENT'];
+  p.layer3.timeConfluence.displayNote = "No timing signal: the agent's gates are not met. Direction score is shown for context only.";
+  p.layer3.timeConfluence.decompressionTarget = { price: 104, direction: 'up', totalWeight: 7.5, contributingTFs: ['1H', '4H'] };
+  p.layer3.timeConfluence.closeSchedule = p.layer3.timeConfluence.closeSchedule.map((r: any) => ({ ...r, canary: 'CANARY-CS' }));
   return p;
 }
 
@@ -51,22 +65,38 @@ describe('W3: /api/golden-egg serializes only the public Symbol contract', () =>
     const { status, body } = await call();
     expect(status).toBe(200);
     const d = body.data;
-    expect(d.contract).toBe('public-symbol-v1');
+    expect(d.contract).toBe('public-symbol-v2');
     expect(Object.keys(d).sort()).toEqual(['canonical', 'contract', 'layer2', 'layer3', 'meta', 'optionsRequest', 'priceEvidence', 'timingEvidence']);
-    expect(Object.keys(d.canonical).sort()).toEqual(['assetClass', 'barInterval', 'changePct', 'crossMarket', 'dataTrust', 'derivatives', 'fundamentals', 'historyBars', 'indicators', 'lastCompletedBarAt', 'levels', 'liquidity', 'network', 'options', 'price', 'priceTs', 'source', 'symbol', 'timeframe']);
-    expect(Object.keys(d.layer2.setup).sort()).toEqual(['invalidation', 'keyLevels', 'timeframeAlignment']);
-    expect(Object.keys(d.layer2.scenario).sort()).toEqual(['invalidationLevel', 'reactionZones', 'referenceLevel', 'referenceTrigger']);
+    expect(Object.keys(d.canonical).sort()).toEqual(['assetClass', 'barInterval', 'changePct', 'crossMarket', 'dataTrust', 'derivatives', 'fundamentals', 'historyBars', 'indicators', 'lastCompletedBarAt', 'liquidity', 'network', 'options', 'price', 'priceTs', 'source', 'symbol', 'timeframe']);
+    expect(Object.keys(d.layer2)).toEqual(['setup']);
+    expect(Object.keys(d.layer2.setup)).toEqual(['keyLevels']);
     expect(Object.keys(d.layer3).sort()).toEqual(['momentum', 'options', 'structure', 'timeConfluence']);
-    expect(Object.keys(d.layer3.timeConfluence).sort()).toEqual(['banners', 'closeSchedule', 'closes', 'decompression', 'decompressionTarget', 'displayNote', 'enabled', 'sessionState']);
+    expect(Object.keys(d.layer3.structure.trend).sort()).toEqual(['basis', 'closeVsSma20', 'closeVsSma50', 'lastBar']);
+    expect(Object.keys(d.layer3.timeConfluence).sort()).toEqual(['closeSchedule', 'closes', 'decompression', 'enabled', 'sessionState']);
     // Recursive scan of the whole serialized body (response envelope included).
     const forbidden = keyPaths(body).filter((p) => FORBIDDEN_KEYS.test(p.split('.').at(-1)!));
     expect(forbidden).toEqual([]);
     const wording = strings(body).filter((s) => /\b\d{1,3}\/100\b|\bGrade [A-F]\b|\bNO_TRADE\b|\bpermission\b|\bplaybook\b/i.test(s));
     expect(wording).toEqual([]);
+    // W3-R: nested canaries and direction-derived text (scenario plan, alignment, cross-market relation, banners).
+    expect(JSON.stringify(body)).not.toMatch(/CANARY|breakoutScore/);
+    const directional = strings(body).filter((s) => /supportive|headwind|for a (long|short) read|\bBullish\b|\bBearish\b|EXTREME|HIGH ALIGNMENT|scenario active|flip conditions|Scenario weakens|structure (aligned|opposing)|agent's gates|Direction score/i.test(s));
+    expect(directional).toEqual([]);
+    expect(d.canonical.crossMarket.summary).toBe('1 reference market read: SPY up. How they relate to this symbol is not assessed here.');
+    expect(d.layer2.setup.keyLevels).toEqual([{ label: 'SMA 50', price: 98, kind: 'support' }]);
+    expect(d.canonical.options.topCall).toEqual({ strike: 110, oi: 5, volume: 1, iv: 0.3, delta: 0.4, gamma: 0.01, theta: -0.1, vega: 0.2 });
     // Evidence that must remain.
     expect(d.canonical.fundamentals.lastReportedQuarter).toBe('2026-06-30');
-    expect(d.layer2.setup.timeframeAlignment).toEqual({ aligned: h.packet.layer2.setup.timeframeAlignment.score, of: h.packet.layer2.setup.timeframeAlignment.max, details: h.packet.layer2.setup.timeframeAlignment.details });
     expect(d.layer3.timeConfluence.closeSchedule.length).toBe(h.packet.layer3.timeConfluence.closeSchedule.length);
+  });
+  it('the projection shares no object with the cached internal packet (no aliases)', () => {
+    const packet = h.packet;
+    const pub: any = toPublicSymbolPacket(packet);
+    const internal = new Set<object>();
+    (function walk(v: any) { if (v && typeof v === 'object' && !internal.has(v)) { internal.add(v); Object.values(v).forEach(walk); } })(packet);
+    const shared: string[] = [];
+    (function walk(v: any, path: string) { if (v && typeof v === 'object') { if (internal.has(v)) shared.push(path); Object.entries(v).forEach(([k, x]) => walk(x, `${path}.${k}`)); } })(pub, '');
+    expect(shared).toEqual([]);
   });
   it('the internal packet is not mutated (it stays cached for private consumers)', async () => {
     const before = JSON.stringify(h.packet);

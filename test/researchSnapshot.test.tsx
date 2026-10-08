@@ -85,7 +85,7 @@ describe('research snapshot (Symbol page top)', () => {
     const src = readFileSync('app/tools/golden-egg/page.tsx', 'utf8');
     const at = (t: string) => { const i = src.indexOf(t); expect(i, t).toBeGreaterThan(-1); return i; };
     expect(at('<ResearchSnapshotCard')).toBeLessThan(at('<EquityTop'));
-    const order = ['<PriceEvidencePanel', 'title="Options"', '<TimingEvidencePanel', 'title="Fundamentals"', 'title="Scenario map"'];
+    const order = ['<PriceEvidencePanel', 'title="Options"', '<TimingEvidencePanel', 'title="Fundamentals"', 'title="Recorded levels"'];
     const idx = order.map((t) => src.indexOf(t, src.indexOf('<EquityTop')));
     idx.forEach((i, n) => expect(i, order[n]).toBeGreaterThan(-1));
     expect([...idx].sort((a, b) => a - b)).toEqual(idx);

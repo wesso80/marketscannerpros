@@ -86,11 +86,11 @@ type GETab = typeof GE_TABS[number];
 const GE_TAB_META: Record<GETab, { eyebrow: string; description: string }> = {
   Evidence: {
     eyebrow: '1. Measured evidence',
-    description: 'Measured states with their definitions, data trust, scenario levels and the next check.',
+    description: 'Measured states with their definitions, data trust, recorded levels and the next check.',
   },
   Chart: {
     eyebrow: '2. Price context',
-    description: 'Inspect price action and intraday structure around the scenario levels.',
+    description: 'Inspect price action and intraday structure around the recorded levels.',
   },
   'AI summary': {
     eyebrow: '3. AI summary',
@@ -205,8 +205,7 @@ function GoldenEggSubviewFrame({
 const GOLDEN_EGG_WORKFLOW_CHECKS = [
   'Measured evidence first',
   'Data trust',
-  'Reference level',
-  'Invalidation',
+  'Recorded levels',
   'Next check',
 ] as const;
 
@@ -266,10 +265,9 @@ function formatLevel(value: number | null | undefined): string {
   return `$${fmtP(value)}`;
 }
 
-function getGEDataQuality(input: { price?: number | null; reference?: number | null; invalidation?: number | null }) {
+function getGEDataQuality(input: { price?: number | null; levels: number }) {
   if (!isUsableNumber(input.price)) return 'MISSING';
-  const missing = [input.reference, input.invalidation].filter((value) => !isUsableNumber(value)).length;
-  return missing === 0 ? 'GOOD' : missing <= 1 ? 'DEGRADED' : 'MISSING';
+  return input.levels > 0 ? 'GOOD' : 'DEGRADED';
 }
 
 function geDataQualityColor(label: string): string {
@@ -278,24 +276,23 @@ function geDataQualityColor(label: string): string {
   return 'var(--msp-bear)';
 }
 
-function geMissingInputs(input: { price?: number | null; reference?: number | null; invalidation?: number | null }): string[] {
+function geMissingInputs(input: { price?: number | null; levels: number }): string[] {
   return [
     !isUsableNumber(input.price) ? 'price' : null,
-    !isUsableNumber(input.reference) ? 'reference level' : null,
-    !isUsableNumber(input.invalidation) ? 'invalidation level' : null,
+    input.levels === 0 ? 'recorded levels' : null,
   ].filter(Boolean) as string[];
 }
 
 function geDataQualityDetail(label: string, missing: string[]): string {
-  if (label === 'GOOD') return 'Price, reference level and invalidation level are available.';
+  if (label === 'GOOD') return 'Price and recorded levels are available.';
   if (missing.length === 0) return `${label} Golden Egg inputs.`;
   return `Missing or weak: ${missing.join(', ')}.`;
 }
 
-function summarizeGENextCheck(args: { dataQuality: string; hasScenarioLevels: boolean }) {
+function summarizeGENextCheck(args: { dataQuality: string; hasLevels: boolean }) {
   // Phase 4: no assessment, composite threshold or blocker score here; only what to look at next.
-  if (args.dataQuality !== 'GOOD') return 'Refresh the inputs before relying on reference levels.';
-  if (!args.hasScenarioLevels) return 'Reference and invalidation levels are not both available.';
+  if (args.dataQuality !== 'GOOD') return 'Refresh the inputs before relying on the recorded levels.';
+  if (!args.hasLevels) return 'No levels were recorded on this bar.';
   return 'Check the measured states again after the next completed bar.';
 }
 
@@ -305,15 +302,15 @@ function summarizeGEReason(args: { dataQuality: string; summary?: string | null 
   return args.summary || 'Measured daily evidence is not available for this timeframe.';
 }
 
-function summarizeGEResearchCaution(args: { dataQuality: string; hasScenarioLevels: boolean }) {
+function summarizeGEResearchCaution(args: { dataQuality: string; hasLevels: boolean }) {
   if (args.dataQuality !== 'GOOD') return 'Research caution: core inputs are incomplete or weak.';
-  if (!args.hasScenarioLevels) return 'Research caution: reference and invalidation levels are not both available.';
+  if (!args.hasLevels) return 'Research caution: no levels were recorded on this bar.';
   return 'Research caution: verify whether new bars confirm or change the measured states.';
 }
 
 function buildGEInvalidationConditions(args: { dataQuality: string; dveRegime?: string | null; timeVerdict?: string | null }) {
   return [
-    'Reference or invalidation level becomes unavailable.',
+    'Recorded levels become unavailable.',
     args.dataQuality !== 'GOOD' ? 'Data trust remains degraded or missing.' : null,
     args.dveRegime === 'climax' ? 'Volatility engine remains in its climax regime.' : 'Volatility engine moves into its climax regime.',
     args.timeVerdict === 'disagree' ? 'Timing note only: midpoint pull remains opposed.' : 'Timing note only: midpoint pull may change.',
@@ -393,26 +390,24 @@ export default function GoldenEggPage() {
   const ge: PublicSymbolPacket | undefined = goldenEgg.data?.data ?? undefined;
   const geLocalDemo = Boolean((goldenEgg.data as any)?.localDemo);
   const geWarnings = ((goldenEgg.data as any)?.warnings || []) as string[];
-  const geScenario = ge?.layer2?.scenario;
-  const geSafeScenario = geScenario ?? null;
   const d = dve.data?.data;
   const loading = goldenEgg.loading;
   const isAuthBlocked = goldenEgg.isAuthError && !loading;
-  const geReferencePrice = geSafeScenario?.referenceLevel?.price;
-  const geInvalidationPrice = geSafeScenario?.invalidationLevel?.price;
-  const geHasScenarioLevels = isUsableNumber(geReferencePrice) && isUsableNumber(geInvalidationPrice);
+  // W3-R: the scenario plan (reference, invalidation and reaction zones) is built from the private direction and is not public.
+  const geLevelCount = ge?.layer2.setup.keyLevels.length ?? 0;
+  const geHasLevels = geLevelCount > 0;
   const geCanonical = ge?.canonical ?? undefined;
   // Canonical trust (shared evaluator: freshness, interval, history, split guard, liquidity, indicators) wins over the presence-only legacy check.
-  const legacyDataQuality = getGEDataQuality({ price: quote.data?.price ?? ge?.meta?.price, reference: geReferencePrice, invalidation: geInvalidationPrice });
+  const legacyDataQuality = getGEDataQuality({ price: quote.data?.price ?? ge?.meta?.price, levels: geLevelCount });
   const geDataQuality = geCanonical ? geCanonical.dataTrust.label : legacyDataQuality;
   const geDataQualityTitle = geCanonical
     ? (geCanonical.dataTrust.reasons.length ? `${geCanonical.dataTrust.label}: ${geCanonical.dataTrust.reasons.join('; ')}` : `GOOD — fresh completed bar (${geCanonical.lastCompletedBarAt ?? 'Not recorded'}), ${geCanonical.historyBars} ${geCanonical.barInterval ?? ''} bars, indicators complete, liquidity ${geCanonical.liquidity.advUsd != null ? formatUsdShort(geCanonical.liquidity.advUsd) : 'Not recorded'}.`)
-    : geDataQualityDetail(geDataQuality, geMissingInputs({ price: quote.data?.price ?? ge?.meta?.price, reference: geReferencePrice, invalidation: geInvalidationPrice }));
+    : geDataQualityDetail(geDataQuality, geMissingInputs({ price: quote.data?.price ?? ge?.meta?.price, levels: geLevelCount }));
   // Reference-market reads only; their relation to a direction verdict is not public (W3).
   const crossMarketFactors = geCanonical ? geCanonical.crossMarket.items.map((i) => `${i.symbol}: ${i.trend}`) : [];
-  const geNextUsefulCheck = summarizeGENextCheck({ dataQuality: geDataQuality, hasScenarioLevels: geHasScenarioLevels });
+  const geNextUsefulCheck = summarizeGENextCheck({ dataQuality: geDataQuality, hasLevels: geHasLevels });
   const geReason = summarizeGEReason({ dataQuality: geDataQuality, summary: ge?.priceEvidence?.summary.join(' ') });
-  const geDoNothing = summarizeGEResearchCaution({ dataQuality: geDataQuality, hasScenarioLevels: geHasScenarioLevels });
+  const geDoNothing = summarizeGEResearchCaution({ dataQuality: geDataQuality, hasLevels: geHasLevels });
   const geInvalidationConditions = buildGEInvalidationConditions({ dataQuality: geDataQuality, dveRegime: d?.volatility?.regime });
   const geMarketStatusItems = [
     {
@@ -487,10 +482,10 @@ export default function GoldenEggPage() {
       detail: crossMarketFactors.slice(0, 3).join(' | ') || 'No cross-market data.',
     },
     {
-      label: 'Scenario Levels',
-      value: geHasScenarioLevels ? 'Available' : 'Incomplete',
-      status: evidenceStatus(geHasScenarioLevels, 'Scenario reference or invalidation is missing.'),
-      detail: geHasScenarioLevels ? `Reference ${formatLevel(geReferencePrice)} / invalidation ${formatLevel(geInvalidationPrice)}.` : 'Scenario reference and invalidation levels are not both available.',
+      label: 'Recorded Levels',
+      value: geHasLevels ? `${geLevelCount} recorded` : 'None recorded',
+      status: evidenceStatus(geHasLevels, 'No levels were recorded on this bar.'),
+      detail: geHasLevels ? (ge?.layer2.setup.keyLevels.slice(0, 3).map((lv) => `${lv.label} ${formatLevel(lv.price)}`).join(' | ') ?? '') : 'No levels were recorded on this bar.',
     },
     {
       label: 'Research Caution',
@@ -525,12 +520,10 @@ export default function GoldenEggPage() {
     priceEvidence: ge?.priceEvidence ?? null,
     timingEvidence: ge?.timingEvidence ?? null,
     bbwp: measuredBbwp(d?.volatility),
-    referenceZone: geSafeScenario?.referenceLevel,
-    invalidation: geSafeScenario?.invalidationLevel,
-    reactionZones: geSafeScenario?.reactionZones,
+    recordedLevels: ge?.layer2.setup.keyLevels ?? [],
     options: geCanonical?.options ?? null,
     dataTrust: geCanonical?.dataTrust ?? null,
-  }), [sym, timeframe, ge, geCanonical, geSafeScenario, d, quote.data]);
+  }), [sym, timeframe, ge, geCanonical, d, quote.data]);
 
   const geAiSummary = useMemo(() => {
     if (goldenEgg.error) return `Golden Egg: ${sym} unavailable — ${goldenEgg.error}`;
@@ -560,18 +553,14 @@ export default function GoldenEggPage() {
             whatWeKnow: [
               ...(researchSnapshot?.summary ?? []),
             ].filter(Boolean),
-            whatWeDoNotKnow: geMissingInputs({ price: quote.data?.price ?? ge?.meta?.price, reference: geReferencePrice, invalidation: geInvalidationPrice }),
+            whatWeDoNotKnow: geMissingInputs({ price: quote.data?.price ?? ge?.meta?.price, levels: geLevelCount }),
             dataQuality: geDataQuality,
             riskFlags: geInvalidationConditions.slice(0, 4),
-            invalidation: isUsableNumber(geInvalidationPrice) ? `Scenario invalidation reference: ${fmtP(geInvalidationPrice)}` : 'Scenario invalidation reference unavailable',
+            invalidation: 'No invalidation level is published on the Symbol page; recheck the measured states after the next completed bar.',
             nextUsefulCheck: geNextUsefulCheck,
             disclaimer: 'Educational market research only. Not financial advice.',
           },
-          scenarioPlan: geSafeScenario ? {
-            referenceLevel: geSafeScenario.referenceLevel,
-            invalidationLevel: geSafeScenario.invalidationLevel,
-            reactionZones: geSafeScenario.reactionZones,
-          } : null,
+          scenarioPlan: null,
           evidenceStack: {
             quote: quote.data,
             dve: d,
@@ -633,12 +622,12 @@ export default function GoldenEggPage() {
             <div className="mb-2 text-sm font-semibold text-amber-300">Sign in required</div>
             <h2 className="text-xl font-bold text-white">Unlock Symbol indicator analysis</h2>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
-              Symbol is a Pro workflow for reviewing one symbol across regime, indicators, volatility, and educational scenario context.
+              Symbol is a Pro workflow for reviewing one symbol across measured indicators, volatility, options and timing evidence.
             </p>
             <div className="mt-5 grid gap-2 text-left text-xs text-slate-300 sm:grid-cols-2">
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Regime and bias context</div>
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Measured states and data-quality checks</div>
-              <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Scenario reference and invalidation levels</div>
+              <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Recorded levels with their dates</div>
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Volatility, flow, and timing context</div>
             </div>
             <div className="mt-6 flex flex-col items-center justify-center gap-2 sm:flex-row">
@@ -659,7 +648,7 @@ export default function GoldenEggPage() {
         <CollapsibleSection deferMount title="Fundamentals" summary={geCanonical?.fundamentals?.marketCap!=null?`Market cap ${formatUsdShort(geCanonical.fundamentals.marketCap)}${geCanonical.fundamentals.lastReportedQuarter?` · latest reported quarter ${geCanonical.fundamentals.lastReportedQuarter}`:''}`:'Company overview and ownership'}><CompanyOverview symbol={sym}/></CollapsibleSection>
         <CollapsibleSection deferMount title="News and ownership" summary="Symbol news grouped by event, and dated ownership filings. Loads when opened."><SymbolNewsPanel symbol={sym} type="equity"/><div className="mt-3"><OwnershipFlowPanel symbol={sym}/></div></CollapsibleSection>
         {evidenceFold}
-        <CollapsibleSection deferMount title="Scenario map" summary={`${ge.layer2.setup.keyLevels.length} recorded levels`}><p>{symbolText(ge.layer2.scenario.referenceTrigger)}</p><p>{symbolText(ge.layer2.scenario.invalidationLevel.logic)}</p></CollapsibleSection>
+        <CollapsibleSection deferMount title="Recorded levels" summary={`${ge.layer2.setup.keyLevels.length} recorded levels`}><ul data-recorded-levels>{ge.layer2.setup.keyLevels.map((lv)=><li key={`${lv.label}-${lv.price}`}>{symbolText(lv.label)} ({symbolText(lv.kind)}): {symbolText(formatLevel(lv.price))}</li>)}</ul></CollapsibleSection>
         <ChipRow items={[{id:'evidence',label:`${geDataQuality==='GOOD'?'Evidence and data checks':'Some data checks failed'} · ${geEvidenceItems.length} checks`,warning:geDataQuality!=='GOOD',detail:<EvidenceStack title="Evidence" items={geEvidenceItems.map(item=>({...item,value:symbolText(item.value),detail:item.detail?symbolText(item.detail):undefined}))}/>}]} />
         </>}
       </>)}
@@ -826,8 +815,8 @@ export default function GoldenEggPage() {
                 <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4">
                   {[
                     ['Data Trust', geDataQuality, geDataQualityColor(geDataQuality), geDataQualityTitle],
-                    ['Reference', formatLevel(geReferencePrice), 'var(--msp-bull)', geSafeScenario?.referenceTrigger || 'Reference unavailable.'],
-                    ['Invalidation', formatLevel(geInvalidationPrice), 'var(--msp-bear)', geSafeScenario?.invalidationLevel?.logic || 'Invalidation unavailable.'],
+                    ['Recorded levels', `${ge.layer2.setup.keyLevels.length}`, 'var(--msp-text)', 'Moving averages, Bollinger bands and options strikes recorded on the completed bar. No entry, stop or target is derived from them.'],
+                    ['Completed bar', geCanonical?.lastCompletedBarAt ? symbolDate(geCanonical.lastCompletedBarAt) : 'Not recorded', 'var(--msp-text)', 'Date of the last completed bar the evidence uses.'],
                     ['Next Check', geNextUsefulCheck, 'var(--msp-info)', geNextUsefulCheck],
                   ].map(([label, value, color, title]) => (
                     <div key={label} title={symbolText(title)} className="rounded-md border border-slate-700/50 bg-[#0A101C]/50 px-2.5 py-2">
@@ -841,45 +830,6 @@ export default function GoldenEggPage() {
               <EvidenceStack title="Symbol Evidence Stack" items={geEvidenceItems.map(item=>({...item,value:symbolText(item.value),detail:item.detail?symbolText(item.detail):undefined}))} />
 
               <MarketStatusStrip friendly items={geMarketStatusItems.map(item=>({...item,warnings:item.warnings?.map(symbolText)}))} className="md:grid-cols-5" />
-
-              {/* Level of Interest / Invalidation / Key Levels row */}
-              <div className="pt-3 border-t border-slate-800/50">
-                <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
-                  <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-400">Scenario levels</div>
-                  <div className="text-[11px] text-slate-500">Canonical bars + structure-anchored levels where structure exists; model (ATR) levels are labelled as such. Scanner shows a faster preliminary ATR estimate; these supersede it.</div>
-                </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                  <div className="text-[11px] text-slate-500 uppercase">Level of Interest {symbolText(geCanonical ? `(${geCanonical.levels.reference.basis === 'structural' ? 'structural trigger' : 'model reference'})` : '(validated)')}</div>
-                  <div className="text-sm text-emerald-400 font-semibold">{symbolText(geSafeScenario?.referenceTrigger)}</div>
-                  {geSafeScenario?.referenceLevel.price && (
-                    <div className="text-xs font-mono text-white mt-0.5">{symbolText(formatLevel(geSafeScenario.referenceLevel.price))} ({symbolText(geSafeScenario.referenceLevel.type)})</div>
-                  )}
-                </div>
-                <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                  <div className="text-[11px] text-slate-500 uppercase">Invalidation {symbolText(geCanonical ? `(${geCanonical.levels.invalidation.basis}${geCanonical.levels.invalidation.distanceAtr != null ? ` · ${geCanonical.levels.invalidation.distanceAtr} ATR` : ''})` : '')}</div>
-                  <div className="text-sm text-red-400 font-semibold">{symbolText(formatLevel(geInvalidationPrice))}</div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">{symbolText(geSafeScenario?.invalidationLevel.logic)}</div>
-                </div>
-                <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                  <div className="text-[11px] text-slate-500 uppercase">Reaction Zones</div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {geSafeScenario?.reactionZones.map((t: any, i: number) => (
-                      <span key={i} className="text-sm font-mono text-emerald-400" title={symbolText(t.note ?? '')}>
-                        {symbolText(formatLevel(t.price))}{geCanonical?.levels.zones[i] && <span className="text-[10px] text-slate-500 ml-0.5">{symbolText(geCanonical.levels.zones[i].basis === 'structural' ? 'S' : 'M')}</span>}{i < geSafeScenario.reactionZones.length - 1 && <span className="text-slate-600 mx-1">›</span>}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">
-                    {geCanonical
-                      ? (geCanonical.levels.zones.some((z) => z.basis === 'structural')
-                        ? 'S = structural level, M = model zone (from the reference-to-invalidation distance, with price caps labelled). Levels are references, not targets.'
-                        : 'All zones are model zones from the reference-to-invalidation distance; price caps are labelled. No structural levels were found within range. Levels are references, not targets.')
-                      : 'Levels are references, not targets.'}
-                  </div>
-                </div>
-              </div>
-              </div>
 
               <RiskFlagPanel title="Research Case Invalidates If" flags={geRiskFlags.map(flag=>({...flag,label:symbolText(flag.label),detail:flag.detail?symbolText(flag.detail):flag.detail}))} />
               <div className="sr-only">
@@ -1025,18 +975,10 @@ export default function GoldenEggPage() {
             <Card>
               <h3 className="text-xs font-semibold text-emerald-400 mb-3">Timeframes</h3>
               <div className="space-y-3">
-                <div>
-                  <div className="text-[11px] text-slate-500 uppercase">Timeframe Alignment</div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-white">{symbolText(`${ge.layer2.setup.timeframeAlignment.aligned} of ${ge.layer2.setup.timeframeAlignment.of} timeframes point the same way`)}</span>
-                  </div>
-                  {ge.layer2.setup.timeframeAlignment.details.map((d: any, i: number) => (
-                    <div key={i} className="text-[11px] text-slate-500 mt-0.5">• {symbolText(d)}</div>
-                  ))}
-                </div>
-                <div>
-                  <div className="text-[11px] text-slate-500 uppercase">Invalidation</div>
-                  <div className="text-xs text-red-400">{symbolText(ge.layer2.setup.invalidation)}</div>
+                <div data-trend-relations>
+                  <div className="text-[11px] text-slate-500 uppercase">Close vs moving averages</div>
+                  <div className="text-xs text-white">{symbolText(`Close ${ge.layer3.structure.trend.closeVsSma50 === 'unknown' ? 'not compared with' : ge.layer3.structure.trend.closeVsSma50} SMA 50 · ${ge.layer3.structure.trend.closeVsSma20 === 'unknown' ? 'not compared with' : ge.layer3.structure.trend.closeVsSma20} SMA 20 · last bar ${ge.layer3.structure.trend.lastBar}`)}</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">{symbolText(ge.layer3.structure.trend.basis)}</div>
                 </div>
               </div>
             </Card>
@@ -1047,10 +989,10 @@ export default function GoldenEggPage() {
               <p className="mb-2 text-xs text-slate-500">All levels below are bar-close references · {symbolText(geCanonical?.lastCompletedBarAt?symbolDate(geCanonical.lastCompletedBarAt):'date not recorded')}</p>
               <div className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {['htf', 'mtf', 'ltf'].map((tf) => (
-                    <div key={tf} className="bg-[var(--msp-panel-2)] rounded p-2">
-                      <div className="text-[11px] text-slate-500 uppercase">{symbolText(tf)}</div>
-                      <div className="text-xs text-white">{symbolText((ge.layer3.structure.trend as any)[tf])}</div>
+                  {([['vs SMA 50', ge.layer3.structure.trend.closeVsSma50], ['vs SMA 20', ge.layer3.structure.trend.closeVsSma20], ['Last bar', ge.layer3.structure.trend.lastBar]] as const).map(([label, value]) => (
+                    <div key={label} className="bg-[var(--msp-panel-2)] rounded p-2">
+                      <div className="text-[11px] text-slate-500 uppercase">{symbolText(label)}</div>
+                      <div className="text-xs text-white">{symbolText(value === 'unknown' ? 'not recorded' : value)}</div>
                     </div>
                   ))}
                 </div>
@@ -1108,35 +1050,8 @@ export default function GoldenEggPage() {
                     {/* Signal Strength + Direction + Banners */}
                     <div className="flex items-center gap-2 flex-wrap">
                       {(tc as any).sessionState && <Badge label={symbolText((tc as any).sessionState === 'closed' ? 'session closed' : (tc as any).sessionState === 'always_open' ? '24/7 market' : 'session open')} color="var(--msp-flat)" small />}
-                      {tc.banners.map((b: string, i: number) => (
-                        <span key={i} className="text-[11px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-semibold">{symbolText(b)}</span>
-                      ))}
                     </div>
-                    {(tc as any).displayNote && <div className="rounded-md border border-slate-700/60 bg-slate-900/40 px-2.5 py-1.5 text-[11px] text-slate-400">{symbolText((tc as any).displayNote)}</div>}
-                    <div className="text-[11px] text-slate-500">Direction here is the weighted pull of price toward multi-timeframe mid-50 levels (a mean-reversion pressure). It only gates the verdict when the agent reports a moderate/strong, current signal in a live session.</div>
-
-                    {/* Weighted Decompression Level — PROMINENT */}
-                    {tc.decompressionTarget && tc.decompressionTarget.price > 0 && (
-                      <div className="rounded-lg p-3 border" style={{
-                        background: tc.decompressionTarget.direction === 'up' ? 'rgba(16,185,129,0.08)' : tc.decompressionTarget.direction === 'down' ? 'rgba(239,68,68,0.08)' : 'rgba(148,163,184,0.08)',
-                        borderColor: tc.decompressionTarget.direction === 'up' ? 'rgba(16,185,129,0.25)' : tc.decompressionTarget.direction === 'down' ? 'rgba(239,68,68,0.25)' : 'rgba(148,163,184,0.15)',
-                      }}>
-                        <div className="text-[11px] text-slate-500 uppercase mb-1">Weighted mid-50 level</div>
-                        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                          <span className="text-lg font-bold font-mono" style={{
-                            color: tc.decompressionTarget.direction === 'up' ? 'var(--msp-bull)' : tc.decompressionTarget.direction === 'down' ? 'var(--msp-bear)' : 'var(--msp-text)',
-                          }}>
-                            {symbolText(tc.decompressionTarget.direction === 'up' ? 'Up to ' : tc.decompressionTarget.direction === 'down' ? 'Down to ' : '')}{symbolText(fmtPrice(tc.decompressionTarget.price))}
-                          </span>
-                          <span className="text-[11px] text-slate-400 min-w-0 break-words">
-                            weighted from {symbolText(tc.decompressionTarget.contributingTFs.length)} TFs ({symbolText(tc.decompressionTarget.contributingTFs.join(', '))})
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-slate-500 mt-0.5">
-                          Total weight: {symbolText(tc.decompressionTarget.totalWeight.toFixed(1))} — Price is pulled {symbolText(tc.decompressionTarget.direction === 'up' ? 'ABOVE' : tc.decompressionTarget.direction === 'down' ? 'BELOW' : 'near')} current level
-                        </div>
-                      </div>
-                    )}
+                    <div className="text-[11px] text-slate-500">Each row is a timeframe's next bar close and its prior-candle midpoint (mid-50) relative to price. A calendar and measured distances only; no direction or target is derived from it here.</div>
 
                     {tc.decompression.unmeasuredTFs?.length ? <p className="text-xs text-slate-500">Not measured on this data: {symbolText(tc.decompression.unmeasuredTFs.join(', '))}. Excluded from counts and levels.</p> : null}
                     {/* Close Schedule Timeline — grouped by category */}
@@ -1316,32 +1231,17 @@ export default function GoldenEggPage() {
             </Card>
           </div>
 
-          {/* -- SCENARIO MAP --------------------------------- */}
+          {/* -- RECORDED LEVELS (W3-R: the direction-derived reference / risk / reaction-zone plan is not public) -- */}
           <Card>
-            <h3 className="text-xs font-semibold text-emerald-400 mb-3">Scenario Map</h3>
-              <p className="mb-2 text-xs text-slate-500">All levels below are bar-close references · {symbolText(geCanonical?.lastCompletedBarAt?symbolDate(geCanonical.lastCompletedBarAt):'date not recorded')}</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <div className="text-[11px] text-slate-500 uppercase">Reference Level</div>
-                <div className="text-sm text-white">{symbolText(geSafeScenario?.referenceTrigger)}</div>
-                {geSafeScenario?.referenceLevel.price && (
-                  <div className="text-xs font-mono text-emerald-400">{symbolText(formatLevel(geSafeScenario.referenceLevel.price))} ({symbolText(geSafeScenario.referenceLevel.type)})</div>
-                )}
-              </div>
-              <div>
-                <div className="text-[11px] text-slate-500 uppercase">Risk Level</div>
-                <div className="text-sm font-mono text-red-400">{symbolText(formatLevel(geInvalidationPrice))}</div>
-                <div className="text-[11px] text-slate-500">{symbolText(geSafeScenario?.invalidationLevel.logic)}</div>
-              </div>
-              <div>
-                <div className="text-[11px] text-slate-500 uppercase">Key Levels</div>
-                {geSafeScenario?.reactionZones.map((t: any, i: number) => (
-                  <div key={i} className="flex items-center gap-2 text-xs">
-                    <span className="text-emerald-400 font-mono">{symbolText(formatLevel(t.price))}</span>
-                    {t.note && <span className="text-slate-600">{symbolText(t.note)}</span>}
-                  </div>
-                ))}
-              </div>
+            <h3 className="text-xs font-semibold text-emerald-400 mb-3">Recorded levels</h3>
+              <p className="mb-2 text-xs text-slate-500">Bar-close references · {symbolText(geCanonical?.lastCompletedBarAt?symbolDate(geCanonical.lastCompletedBarAt):'date not recorded')}. No entry, stop or target is derived from them.</p>
+            <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+              {ge.layer2.setup.keyLevels.length === 0 ? <div className="text-xs text-slate-500">No levels recorded on this bar.</div> : ge.layer2.setup.keyLevels.map((lv) => (
+                <div key={`${lv.label}-${lv.price}`} className="flex min-w-0 items-center justify-between gap-2 text-xs">
+                  <span className="min-w-0 break-words text-slate-400">{symbolText(lv.label)} <span className="text-[11px] text-slate-600">({symbolText(lv.kind)})</span></span>
+                  <span className="font-mono text-white">{symbolText(formatLevel(lv.price))}</span>
+                </div>
+              ))}
             </div>
             <div className="flex items-center gap-4 mt-4 pt-3 border-t border-slate-800/50">
               <a href={canonicalTerminalHref} className="px-4 py-2 bg-slate-700/50 text-slate-400 rounded-lg text-xs hover:bg-slate-700/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50 no-underline">
