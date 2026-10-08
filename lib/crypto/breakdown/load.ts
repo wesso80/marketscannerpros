@@ -32,9 +32,12 @@ export async function resolveIdentity(symbol:string,id?:string):Promise<Identity
 /**
  * W2 / C02: bind the ticker-matched sources to the CoinGecko id. The id is verified only when CoinGecko's coin detail
  * returns the requested ticker (a failed detail request is "not verified", never assumed). OKX is bound only when the
- * verified, unambiguous coin's own CoinGecko ticker list shows an OKX market for that base; the first ticker page can
- * miss a listing, which then reads "not confirmed" rather than guessed. Yahoo is ticker-only and needs a verified,
- * unambiguous id.
+ * verified, unambiguous coin's own CoinGecko ticker list shows an OKX market for that base whose row carries exactly this
+ * coin id (a row with no coin_id does not count; W2-R2); the first ticker page can miss a listing, which then reads
+ * "not confirmed" rather than guessed. That evidence is an OKX spot listing: the ${symbol}-USDT-SWAP perpetual is
+ * matched to it by base ticker, which the reason says. Yahoo has no coin id at all, so a verified id is not enough
+ * (two coins can share a ticker and each be verified by explicit id): Yahoo ${symbol}-USD is bound only when the
+ * trusted static map (COINGECKO_ID_MAP) names this exact id for the ticker (W2-R1); otherwise it is withheld.
  */
 export function bindIdentity(symbol:string,identity:Identity,detail:{symbol?:string|null}|null,tickers:{tickers:CoinTicker[]}|null,detailError:string|null,tickersError:string|null):IdentityCheck{
  const source=identity.source??'explicit id',ambiguous=source==='symbol search'&&(identity.matches??0)>1;
@@ -42,14 +45,14 @@ export function bindIdentity(symbol:string,identity:Identity,detail:{symbol?:str
  const reason=verified?(ambiguous?`${identity.matches} coins share ${symbol}; the highest-ranked (${identity.id}) was used`:`CoinGecko coin detail confirms ${identity.id} is ${symbol}`)
   :detail?`CoinGecko id ${identity.id} is ${String(detail.symbol??'unknown').toUpperCase()}, not ${symbol}`:`Coin identity not verified: CoinGecko coin detail unavailable (${detailError??'no data'})`;
  const instrument=`${symbol}-USDT-SWAP`;
- const okxListed=tickers?.tickers.some(t=>(t.market?.identifier==='okex'||/^okx$/i.test(t.market?.name??''))&&String(t.base).toUpperCase()===symbol&&(!t.coin_id||t.coin_id===identity.id))??false;
+ const okxListed=tickers?.tickers.some(t=>(t.market?.identifier==='okex'||/^okx$/i.test(t.market?.name??''))&&String(t.base).toUpperCase()===symbol&&!!t.coin_id&&t.coin_id===identity.id)??false;
  const okxReason=!verified?'coin identity not verified':ambiguous?`${identity.matches} coins share ${symbol}, so the OKX ${symbol} contract cannot be tied to ${identity.id}`
   :!tickers?`could not confirm OKX lists ${identity.id} (CoinGecko tickers unavailable: ${tickersError??'no data'})`
-  :okxListed?`CoinGecko lists an OKX ${symbol} market for ${identity.id}`:`OKX ${symbol} market not confirmed for ${identity.id} on the first CoinGecko ticker page`;
- const yahooBound=verified&&!ambiguous;
+  :okxListed?`CoinGecko lists an OKX ${symbol} spot market for ${identity.id}; the ${instrument} perpetual is matched to it by base ticker`:`OKX ${symbol} market not confirmed for ${identity.id} on the first CoinGecko ticker page`;
+ const yahooMapped=COINGECKO_ID_MAP[symbol]===identity.id,yahooBound=verified&&!ambiguous&&yahooMapped;
  return {coinId:identity.id,source,matches:identity.matches,verified,ambiguous,reason,
   okx:{instrument,bound:verified&&!ambiguous&&okxListed,reason:okxReason},
-  yahoo:{bound:yahooBound,reason:yahooBound?`Yahoo ${symbol}-USD matched by ticker for a verified, unambiguous coin`:verified?`${identity.matches} coins share ${symbol}`:'coin identity not verified'}};
+  yahoo:{bound:yahooBound,reason:yahooBound?`Yahoo ${symbol}-USD is mapped to ${identity.id} by the static ticker map`:!verified?'coin identity not verified':ambiguous?`${identity.matches} coins share ${symbol}`:`no trusted mapping from Yahoo ${symbol}-USD to ${identity.id}`}};
 }
 const longHistory=(id:string,ttl:number)=>cachedPart<Chart>(`history:${id}`,ttl,1,async()=>{const r=await getMarketChartHistory(id,'max',{retries:0,timeoutMs:7000});if(!r)throw Error('Long history unavailable');return r;});
 async function marketSet(now:number){

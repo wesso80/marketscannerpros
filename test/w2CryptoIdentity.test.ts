@@ -37,8 +37,8 @@ beforeEach(() => {
       if (p.endsWith('/tickers')) {
         if (tickersFail) return response({ error: 'fixture unavailable' }, 400);
         const cid = p.split('/').at(-2)!, base = DETAIL_SYMBOL[cid];
-        const row = (name: string, identifier: string, coin: string) => ({ base, target: 'USDT', coin_id: coin, market: { name, identifier }, converted_volume: { usd: 1e7 }, bid_ask_spread_percentage: 0.1, trust_score: 'green', is_stale: false, is_anomaly: false, last_traded_at: new Date(now).toISOString(), timestamp: new Date(now).toISOString() });
-        return response({ tickers: [row('Coinbase', 'gdax', cid), ...(okxOwner[base] === cid ? [row('OKX', 'okex', cid)] : okxOwner[base] === 'other-coin-row' ? [row('OKX', 'okex', 'some-other-coin')] : [])] });
+        const row = (name: string, identifier: string, coin: string | undefined) => ({ base, target: 'USDT', ...(coin ? { coin_id: coin } : {}), market: { name, identifier }, converted_volume: { usd: 1e7 }, bid_ask_spread_percentage: 0.1, trust_score: 'green', is_stale: false, is_anomaly: false, last_traded_at: new Date(now).toISOString(), timestamp: new Date(now).toISOString() });
+        return response({ tickers: [row('Coinbase', 'gdax', cid), ...(okxOwner[base] === cid ? [row('OKX', 'okex', cid)] : okxOwner[base] === 'other-coin-row' ? [row('OKX', 'okex', 'some-other-coin')] : okxOwner[base] === 'missing-coin-row' ? [row('OKX', 'okex', undefined)] : [])] });
       }
       const id = p.split('/').at(-1)!;
       if (detailFails.has(id)) return response({ error: 'fixture detail unavailable' }, 400);
@@ -97,7 +97,12 @@ describe('W2: crypto identity binding', () => {
       for (const pass of ['cold', 'warm']) for (const id of order) {
         const b = await loadBreakdown('QNT', id, now);
         expect(b.identity!.verified, `${pass} ${id}`).toBe(true);
-        if (id === 'quant-network') { expect(b.identity!.okx.bound).toBe(true); expect(oiOf(b)).toBe(30000000); }
+        // W2-R1: Yahoo has no coin id and QNT has no trusted ticker mapping, so neither explicit id gets the Yahoo quote.
+        expect(b.identity!.yahoo, `${pass} ${id}`).toEqual({ bound: false, reason: `no trusted mapping from Yahoo QNT-USD to ${id}` });
+        expect(srcBasis(b, 'Yahoo')!.value, `${pass} ${id}`).toBeNull();
+        expect(srcBasis(b, 'Yahoo')!.basis).toBe(`Not combined: no trusted mapping from Yahoo QNT-USD to ${id}`);
+        expect(JSON.stringify(b.sections.sourcesCheck)).not.toContain('100.05');
+        if (id === 'quant-network') { expect(b.identity!.okx.bound).toBe(true); expect(b.identity!.okx.reason).toContain('perpetual is matched to it by base ticker'); expect(oiOf(b)).toBe(30000000); }
         else { expect(b.identity!.okx.bound).toBe(false); expect(b.identity!.okx.reason).toContain('not confirmed for fake-quant'); expect(b.sections.derivatives.value).toBeNull(); expect(srcBasis(b, 'OKX')!.value).toBeNull(); }
       }
     });
@@ -108,6 +113,22 @@ describe('W2: crypto identity binding', () => {
     expect(b.identity!.okx.bound).toBe(false);
     expect(b.identity!.okx.reason).toContain('CoinGecko tickers unavailable');
     expect(b.sections.derivatives.value).toBeNull();
+  });
+  it('W2-R1: an explicit id that the static ticker map names keeps the Yahoo comparison', async () => {
+    for (const pass of ['cold', 'warm']) {
+      const b = await loadBreakdown('LINK', 'chainlink', now);
+      expect(b.identity!.yahoo, pass).toEqual({ bound: true, reason: 'Yahoo LINK-USD is mapped to chainlink by the static ticker map' });
+      expect(srcBasis(b, 'Yahoo')!.value, pass).toBe(100.05);
+    }
+  });
+  it('W2-R2: an OKX row with no coin_id does not bind (the row must carry this exact id)', async () => {
+    okxOwner = { LINK: 'missing-coin-row' };
+    const b = await loadBreakdown('LINK', undefined, now);
+    expect(b.identity!.verified).toBe(true);
+    expect(b.identity!.okx.bound).toBe(false);
+    expect(b.identity!.okx.reason).toBe('OKX LINK market not confirmed for chainlink on the first CoinGecko ticker page');
+    expect(b.sections.derivatives.value).toBeNull();
+    expect(srcBasis(b, 'OKX')!.value).toBeNull();
   });
   it('an OKX row that belongs to another coin id does not bind', async () => {
     okxOwner = { LINK: 'other-coin-row' };
