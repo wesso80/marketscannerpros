@@ -45,14 +45,15 @@ function visiblePanel() {
   return screen.getByRole('tabpanel');
 }
 
-it('mounts Portfolio, Journal, and Alerts inside the active tabpanel', async () => {
+it('mounts only the active records destination and retains the Alerts panel', async () => {
   const { rerender } = render(<WorkspacePage />);
-  expect(visiblePanel().textContent).toContain('Portfolio records');
-  expect(visiblePanel().querySelector('[hidden]')).toBeNull();
+  expect(screen.getByRole('region', {name:'Portfolio records and controls'}).textContent).toContain('Portfolio records');
+  expect(screen.queryByText('Journal records')).toBeNull();
 
   nav.tab = 'journal';
   rerender(<WorkspacePage />);
-  await waitFor(() => expect(visiblePanel().textContent).toContain('Journal records'));
+  await waitFor(() => expect(screen.getByRole('region', {name:'Journal records and controls'}).textContent).toContain('Journal records'));
+  expect(screen.queryByText('Portfolio records')).toBeNull();
 
   nav.tab = 'alerts';
   rerender(<WorkspacePage />);

@@ -1,3 +1,4 @@
+import studio from '@/components/public-design/EditorialStudio.module.css';
 import {
   cloneElement,
   isValidElement,
@@ -106,11 +107,11 @@ export default function LegalPageLayout({ children }: { children: ReactNode }) {
   const { content, headings } = prepareLegalContent(children);
 
   return (
-    <main className="min-h-screen bg-[var(--msp-bg)] px-[8px] py-16 text-slate-200 min-[1280px]:px-[24px]">
-      <div className="mx-auto w-full min-w-0 min-[1280px]:grid min-[1280px]:max-w-[1048px] min-[1280px]:grid-cols-[220px_minmax(0,800px)] min-[1280px]:items-start min-[1280px]:gap-[28px]">
+    <main className={studio.legal}>
+      <div className={studio.legalGrid}>
         <aside
           data-legal-chrome="toc"
-          className="hidden min-w-0 min-[1280px]:sticky min-[1280px]:top-[72px] min-[1280px]:block min-[1280px]:max-h-[calc(100vh-96px)] min-[1280px]:overflow-y-auto"
+          className={studio.desktopToc}
         >
           <nav aria-label="On this page">
             <p className="mb-3 text-sm font-semibold text-emerald-400">On this page</p>
@@ -118,10 +119,10 @@ export default function LegalPageLayout({ children }: { children: ReactNode }) {
           </nav>
         </aside>
 
-        <div className="min-w-0 w-full rounded-3xl border border-emerald-500/20 bg-[var(--msp-card)] px-[10px] py-8 shadow-2xl min-[1280px]:w-[800px] min-[1280px]:max-w-[800px] min-[1280px]:p-12">
+        <div className={studio.document}>
           <details
             data-legal-chrome="toc"
-            className="mb-6 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 min-[1280px]:hidden"
+            className={studio.mobileToc}
           >
             <summary className="cursor-pointer text-sm font-semibold text-emerald-400">On this page</summary>
             <nav aria-label="On this page" className="mt-3">
@@ -129,7 +130,7 @@ export default function LegalPageLayout({ children }: { children: ReactNode }) {
             </nav>
           </details>
 
-          <div data-legal-prose className={PROSE}>
+          <div data-legal-prose className={`${PROSE} ${studio.prose}`}>
             {content}
           </div>
         </div>

@@ -1,6 +1,6 @@
 import { getSessionFromCookie } from '@/lib/auth';
 import { resolvePublicQuotaAccess } from '@/lib/publicQuotaAccess';
-import { publicDesignEnabled } from '@/lib/publicDesign';
+import { m2ResearchEnabled } from '@/lib/publicDesign';
 import { publicM2Summary } from '@/lib/research/publicM2Summary';
 import { NextRequest, NextResponse } from 'next/server';
 import { buildWave3Bundle } from '@/lib/intelligence/data/globalM2Pipeline';
@@ -100,7 +100,7 @@ function disabledDto(): GlobalM2Dto {
 
 const PRIVATE_HEADERS = { 'Cache-Control': 'private, no-store, max-age=0', Vary: 'Cookie' };
 export async function GET(request?: NextRequest) {
-  const redesigned = publicDesignEnabled();
+  const redesigned = m2ResearchEnabled();
   const summary = request?.nextUrl.searchParams.get('view') === 'summary';
   const json = (body: unknown, status = 200) => NextResponse.json(body, {status, headers: PRIVATE_HEADERS});
   // Auth and verified subscription checks always precede both cache reads and provider work.

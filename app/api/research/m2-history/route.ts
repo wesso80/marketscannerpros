@@ -1,7 +1,7 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {getSessionFromCookie} from '@/lib/auth';
 import {resolvePublicQuotaAccess} from '@/lib/publicQuotaAccess';
-import {publicDesignEnabled} from '@/lib/publicDesign';
+import {m2ResearchEnabled} from '@/lib/publicDesign';
 import {q} from '@/lib/db';
 import {M2_HISTORY_BLOCS,historyWindow,projectM2History,type M2HistoryRow} from '@/lib/research/publicM2History';
 export const runtime='nodejs';
@@ -9,7 +9,7 @@ export const dynamic='force-dynamic';
 const json=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{'Cache-Control':'private, no-store, max-age=0',Vary:'Cookie'}});
 export async function GET(request:NextRequest){
  try {
-  if(!publicDesignEnabled())return json({error:'History unavailable'},404);
+  if(!m2ResearchEnabled())return json({error:'History unavailable'},404);
   const session=await getSessionFromCookie();
   if(!session?.workspaceId)return json({error:'Please sign in'},401);
   const access=await resolvePublicQuotaAccess(session);

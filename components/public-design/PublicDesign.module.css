@@ -1,4 +1,4 @@
-.root{--research-bg:#0b141a;--research-panel:#111e26;--research-line:#293a42;--research-text:#edf1ed;--research-muted:#a8b9bf;--research-accent:#a5e8cf;background:var(--research-bg);color:var(--research-text);min-height:100dvh;font-family:Arial,sans-serif;isolation:isolate}
+.root{--msp-bg:#0b141a;--msp-card:#111e26;--research-bg:#0b141a;--research-panel:#111e26;--research-line:#293a42;--research-text:#edf1ed;--research-muted:#a8b9bf;--research-accent:#a5e8cf;background:var(--research-bg);color:var(--research-text);min-height:100dvh;font-family:Arial,sans-serif;isolation:isolate}
 .root a:focus-visible,.root button:focus-visible,.root summary:focus-visible{outline:2px solid var(--research-accent);outline-offset:4px}
 .skip{position:absolute;left:16px;top:-100px;z-index:100;padding:12px;background:var(--research-accent);color:#10241c}.skip:focus{top:12px}
 .header{display:flex;gap:25px;align-items:center;padding:22px clamp(20px,4vw,54px);border-bottom:1px solid var(--research-line);flex-wrap:wrap}

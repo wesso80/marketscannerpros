@@ -1,5 +1,8 @@
-/** Build-time, opt-in public redesign rollout. Endpoints enforce their own access policy. */
-export const publicDesignEnabled = () => process.env.NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED === 'true';
+/** The approved public design is standard; deployment flags must not restore the legacy UI. */
+export const publicDesignEnabled = () => true;
+
+/** Preserve the existing M2 service rollout independently of presentation. */
+export const m2ResearchEnabled = () => process.env.NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED === 'true';
 
 export const PUBLIC_DESTINATIONS = [
   { label: 'Overview', href: '/tools/command-center' },
@@ -19,10 +22,11 @@ export const PUBLIC_LEGAL_LINKS = [
 
 const matches = (path: string, root: string) => path === root || path.startsWith(root + '/');
 export function publicDesignScope(path: string): 'workspace' | 'website' | null {
-  if (['/admin', '/operator', '/v2'].some(root => matches(path, root))) return null;
-  if (matches(path, '/tools') || matches(path, '/intelligence') || path === '/learn') return 'workspace';
-  if (['/', '/pricing', '/auth', '/account', ...PUBLIC_LEGAL_LINKS.map(link => link.href)].includes(path)) return 'website';
-  return null;
+  if (!path || ['/admin', '/operator', '/v2', '/api', '/_next'].some(root => matches(path, root))) return null;
+  if (matches(path, '/tools') || matches(path, '/intelligence') || matches(path, '/learn')) return 'workspace';
+  // All other public routes, including auth steps, shared reports and legal aliases,
+  // use the website shell. New public pages cannot silently fall back to old chrome.
+  return 'website';
 }
 export function publicDestination(path: string, tab: string | null): string | null {
   if (path === '/tools/workspace') {
