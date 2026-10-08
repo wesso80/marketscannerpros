@@ -1,3 +1,21 @@
+FOLLOW-UP: selection-only answer contract closes the eight demonstrated gaps
+The model now selects existing evidence IDs and reviewed explanation keys. It cannot supply factual
+prose or rewrite values. Server rendering supplies symbol, timeframe, exact field path and scalar
+value; null is Not available, negative signs and zero are retained. Arbitrary string/structured values
+remain in the source disclosure rather than being echoed as educational prose. Unknown templates,
+extra properties, duplicate IDs, invented IDs and legacy free-form text are rejected.
+All eight former expected failures are ordinary rejection tests now. Added positive rendering,
+source-string injection and template/prototype validation checks. 65 focused tests pass across
+adversarial cases, signed evidence, route behavior and quota handling. Typecheck reports only the
+same six local baseline errors (four Stripe version literals, two timer unref types).
+Tradeoff: constrained evidence selection with a reviewed educational library, not free-form chat.
+The model can still choose irrelevant or incomplete evidence; selection quality needs live evaluation.
+String dates/units/qualifications remain in source disclosure; field paths are exact but technical.
+This fixes the demonstrated prose-invention mechanism; it does not prove source accuracy or complete
+page coverage. Next: readable field labels and grouped observation metadata, then model selection
+evaluation against held-out questions. Keep rollout disabled pending that and remaining release work.
+No admin/engine/Claude-owned files changed, no real model/provider calls, merges or deployments.
+
 FOLLOW-UP: adversarial answer validation audit
 Added test/publicCopilotAdversarial.test.ts: 12 ordinary checks plus EIGHT explicit expected
 failures (it.fails). The expected failures document missing protections, not successful rejection.

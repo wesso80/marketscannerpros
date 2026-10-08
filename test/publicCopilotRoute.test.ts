@@ -15,7 +15,7 @@ it('fails before model calls for Free, missing evidence or another symbol',async
  expect((await publicCopilot(request({symbol:'BTC'}))).status).toBe(409);expect(fetcher).not.toHaveBeenCalled();
 });
 it('sends signed evidence only, no client history, private data or tools',async()=>{
- fetcher.mockResolvedValue(Response.json({choices:[{message:{content:JSON.stringify({statements:[{kind:'explanation',text:'Missing data limits interpretation.',evidenceIds:[]}]})}}]}));
+ fetcher.mockResolvedValue(Response.json({choices:[{message:{content:JSON.stringify({statements:[{kind:'explanation',text:'missing',evidenceIds:[]}]})}}]}));
  const result=await publicCopilot(request({pageData:{score:'PRIVATE_SENTINEL'},conversationHistory:[{content:'HISTORY_SENTINEL'}]}));
  expect(result.status).toBe(200);
  const sent=JSON.parse(fetcher.mock.calls[0][1].body);expect(sent.tools).toBeUndefined();

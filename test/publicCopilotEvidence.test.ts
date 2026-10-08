@@ -48,10 +48,10 @@ it('requires real citations and rejects unsupported numbers, advice and missing 
  const e=verifyPageEvidence(issueSymbolEvidence(packet,'a',1000),'a',1001)!;
  const id=e.observations.find(o=>o.value===123)!.id;
  const answer=(text:string,ids=[id],kind='observation')=>({statements:[{kind,text,evidenceIds:ids}]});
- expect(validateCopilotAnswer(answer('The recorded price is 123.'),e)).toContain('123');
+ expect(validateCopilotAnswer(answer(''),e)).toContain('123');
  expect(validateCopilotAnswer(answer('The recorded price is 999.'),e)).toBeNull();
  expect(validateCopilotAnswer(answer('Price is recorded.',['made-up']),e)).toBeNull();
  expect(validateCopilotAnswer(answer('Price is recorded.',[]),e)).toBeNull();
  expect(validateCopilotAnswer(answer('You should buy now.'),e)).toBeNull();
- expect(validateCopilotAnswer(answer('Correlation describes co-movement.',[],'explanation'),e)).toContain('EXPLANATION');
+ expect(validateCopilotAnswer(answer('correlation',[],'explanation'),e)).toContain('EXPLANATION');
 });
