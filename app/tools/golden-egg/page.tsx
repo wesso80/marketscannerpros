@@ -403,6 +403,8 @@ export default function GoldenEggPage() {
   const isAuthBlocked = goldenEgg.isAuthError && !loading;
   // W3-R: the scenario plan (reference, invalidation and reaction zones) is built from the private direction and is not public.
   const geLevelCount = ge?.layer2.setup.keyLevels.length ?? 0;
+  // Session date of the last completed bar (not its close time in the viewer's zone, which can read as the next day).
+  const geBarSession = ge?.priceEvidence?.basis.lastCompletedBar ?? (ge?.canonical?.lastCompletedBarAt ? symbolDate(ge.canonical.lastCompletedBarAt) : null);
   const geHasLevels = geLevelCount > 0;
   const reportReady = Boolean(ge) && !loading && !goldenEgg.error && !isAuthBlocked;
   const geCanonical = ge?.canonical ?? undefined;
@@ -823,14 +825,15 @@ export default function GoldenEggPage() {
                   <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-500">Research packet</div>
                   <div className="text-[11px] text-slate-500">{symbolText(ge.meta.assetClass)} · {symbolText(ge.meta.timeframe)}</div>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4">
+                {/* grid-cols-1 / min-w-0: a truncated tile value must not size the column past the card on phones. */}
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4">
                   {[
                     ['Data Trust', geDataQuality, geDataQualityColor(geDataQuality), geDataQualityTitle],
                     ['Recorded levels', `${ge.layer2.setup.keyLevels.length}`, 'var(--msp-text)', 'Moving averages, Bollinger bands and options strikes recorded on the completed bar. No entry, stop or target is derived from them.'],
-                    ['Completed bar', geCanonical?.lastCompletedBarAt ? symbolDate(geCanonical.lastCompletedBarAt) : 'Not recorded', 'var(--msp-text)', 'Date of the last completed bar the evidence uses.'],
+                    ['Completed bar', geBarSession ?? 'Not recorded', 'var(--msp-text)', 'Session date of the last completed bar the evidence uses.'],
                     ['Next Check', geNextUsefulCheck, 'var(--msp-info)', geNextUsefulCheck],
                   ].map(([label, value, color, title]) => (
-                    <div key={label} title={symbolText(title)} className="rounded-md border border-slate-700/50 bg-[#0A101C]/50 px-2.5 py-2">
+                    <div key={label} title={symbolText(title)} className="min-w-0 rounded-md border border-slate-700/50 bg-[#0A101C]/50 px-2.5 py-2">
                       <div className="text-[11px] uppercase tracking-wide text-slate-500">{symbolText(label)}</div>
                       <div className="mt-1 truncate text-xs font-bold" style={{ color }}>{symbolText(value)}</div>
                     </div>
@@ -997,7 +1000,7 @@ export default function GoldenEggPage() {
             {/* -- STRUCTURE ------------------------------------------ */}
             <Card>
               <h3 className="text-xs font-semibold text-emerald-400 mb-3">Structure</h3>
-              <p className="mb-2 text-xs text-slate-500">All levels below are bar-close references · {symbolText(geCanonical?.lastCompletedBarAt?symbolDate(geCanonical.lastCompletedBarAt):'date not recorded')}</p>
+              <p className="mb-2 text-xs text-slate-500">All levels below are bar-close references · {symbolText(geBarSession ?? 'date not recorded')}</p>
               <div className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {([['vs SMA 50', ge.layer3.structure.trend.closeVsSma50], ['vs SMA 20', ge.layer3.structure.trend.closeVsSma20], ['Last bar', ge.layer3.structure.trend.lastBar]] as const).map(([label, value]) => (
@@ -1245,7 +1248,7 @@ export default function GoldenEggPage() {
           {/* -- RECORDED LEVELS (W3-R: the direction-derived reference / risk / reaction-zone plan is not public) -- */}
           <Card>
             <h3 className="text-xs font-semibold text-emerald-400 mb-3">Recorded levels</h3>
-              <p className="mb-2 text-xs text-slate-500">Bar-close references · {symbolText(geCanonical?.lastCompletedBarAt?symbolDate(geCanonical.lastCompletedBarAt):'date not recorded')}. No entry, stop or target is derived from them.</p>
+              <p className="mb-2 text-xs text-slate-500">Bar-close references · {symbolText(geBarSession ?? 'date not recorded')}. No entry, stop or target is derived from them.</p>
             <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
               {ge.layer2.setup.keyLevels.length === 0 ? <div className="text-xs text-slate-500">No levels recorded on this bar.</div> : ge.layer2.setup.keyLevels.map((lv) => (
                 <div key={`${lv.label}-${lv.price}`} className="flex min-w-0 items-center justify-between gap-2 text-xs">
