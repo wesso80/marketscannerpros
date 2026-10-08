@@ -38,6 +38,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 function visiblePanel() {
@@ -80,4 +81,22 @@ it('keeps a readable panel while the signed-in shell is up, and does not client-
   expect(page).not.toContain('next/dynamic');
   expect(readFileSync('app/tools/portfolio/page.tsx', 'utf8')).toContain('Loading saved records…');
   expect(readFileSync('app/tools/alerts/page.tsx', 'utf8')).toContain('Loading alerts…');
+});
+
+it('design mode makes records distinct destinations and preserves the active body',async()=>{
+ vi.stubEnv('NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED','true');
+ const {rerender}=render(<WorkspacePage/>);
+ expect(screen.getByRole('heading',{name:'Portfolio',exact:true})).toBeTruthy();
+ expect(screen.getByText('Portfolio records')).toBeTruthy();
+ expect(screen.queryByText('Journal records')).toBeNull();
+ expect(screen.queryByRole('tablist',{name:'Track tabs'})).toBeNull();
+ nav.tab='journal';rerender(<WorkspacePage/>);
+ await waitFor(()=>expect(screen.getByRole('heading',{name:'Journal',exact:true})).toBeTruthy());
+ expect(screen.getByText('Journal records')).toBeTruthy();
+ expect(screen.queryByText('Portfolio records')).toBeNull();
+ expect(screen.getByRole('button',{name:'Alerts'})).toBeTruthy();
+});
+it('design mode still refuses signed-out account records',()=>{
+ vi.stubEnv('NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED','true');nav.isLoggedIn=false;render(<WorkspacePage/>);
+ expect(screen.getByText('Sign in required')).toBeTruthy();expect(screen.queryByText('Portfolio records')).toBeNull();
 });

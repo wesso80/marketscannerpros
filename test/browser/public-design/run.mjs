@@ -27,6 +27,12 @@ try{
    if(u.pathname==='/api/golden-egg')return route.fulfill({contentType:'application/json',body:JSON.stringify({success:true,data:symbolFixture.packet,reportUnlocked:true,copilotEvidenceToken:symbolFixture.token})});
    if(u.pathname==='/api/symbol-comparison'){comparisonRequests++;return route.fulfill({contentType:'application/json',body:JSON.stringify(chartFixture)});}
   }
+  if(u.pathname==='/api/portfolio' || u.pathname==='/api/journal'){
+   if(route.request().method()!=='GET')throw Error('Unexpected record mutation during read-only design check');
+   const populated=page.url().includes('fixture=records');
+   if(u.pathname==='/api/journal')return route.fulfill({contentType:'application/json',body:JSON.stringify({entries:populated?[{id:1,symbol:'AAPL',side:'LONG',date:'2026-10-01',entryPrice:100,quantity:1,isOpen:false,exitPrice:110,exitDate:'2026-10-02',pl:10,plPercent:10,strategy:'manual',notes:'Synthetic record for layout verification'}]:[]})});
+   return route.fulfill({contentType:'application/json',body:JSON.stringify({syncRevision:'fixture',positions:populated?[{id:1,symbol:'AAPL',side:'LONG',quantity:2,entryPrice:100,currentPrice:110,pl:20,plPercent:10,entryDate:'2026-10-01',assetClass:'equity'}]:[],closedPositions:[],performanceHistory:[],cashState:{startingCapital:10000,cashLedger:[]}})});
+  }
   if(u.pathname==='/api/me')return route.fulfill({contentType:'application/json',body:JSON.stringify({authenticated:true,tier:'pro',isAdmin:false})});
   if(u.pathname==='/api/disclosure/status')return route.fulfill({contentType:'application/json',body:JSON.stringify({authenticated:true,accepted:true,version:'1'})});
   if(u.pathname==='/api/public-usage')return route.fulfill({contentType:'application/json',body:JSON.stringify({enabled:true,plan:'pro',quotas:[{kind:'ai',remaining:20,limit:20}]})});
@@ -44,7 +50,7 @@ try{
  });
  const out=resolve(process.env.MSP_BROWSER_OUTPUT);await mkdir(out,{recursive:true});
  const results=[];
- for(const width of [1280,390])for(const path of ['/','/learn','/tools/golden-egg?symbol=AAPL&type=equity','/tools/command-center','/tools/command-center?fixture=populated','/tools/golden-egg?symbol=AAPL&type=equity&fixture=symbol','/tools/macro','/tools/macro?fixture=populated','/intelligence/global-m2','/intelligence/global-m2?fixture=populated'].filter(path=>process.env.MSP_DESIGN_SCOPE!=='economic'||path.startsWith('/tools/macro')||path.startsWith('/intelligence/global-m2'))){
+ for(const width of [1280,390])for(const path of ['/','/learn','/tools/golden-egg?symbol=AAPL&type=equity','/tools/command-center','/tools/command-center?fixture=populated','/tools/golden-egg?symbol=AAPL&type=equity&fixture=symbol','/tools/macro','/tools/macro?fixture=populated','/intelligence/global-m2','/intelligence/global-m2?fixture=populated','/tools/workspace?tab=Portfolio','/tools/workspace?tab=Portfolio&fixture=records','/tools/workspace?tab=Journal','/tools/workspace?tab=Journal&fixture=records'].filter(path=>process.env.MSP_DESIGN_SCOPE==='records'?path.startsWith('/tools/workspace'):process.env.MSP_DESIGN_SCOPE!=='economic'||path.startsWith('/tools/macro')||path.startsWith('/intelligence/global-m2'))){
   await page.setViewportSize({width,height:1000});
   const response=await page.goto('http://127.0.0.1:5178'+path,{timeout:90000});
   await page.locator('[data-public-design]').waitFor();
@@ -78,9 +84,14 @@ try{
   if(path.startsWith('/intelligence/global-m2'))await page.locator('[data-economic-research="m2"]').waitFor();
   if(path.startsWith('/tools/macro')&&path.includes('populated'))await page.getByRole('img',{name:/Treasury yields/}).waitFor();
   if(path.startsWith('/intelligence/global-m2')&&path.includes('populated'))await page.getByText('United States',{exact:true}).waitFor();
+  if(path.startsWith('/tools/workspace')){
+   await page.locator('[data-records-studio]').waitFor();
+   if(path.includes('Journal')){await page.getByRole('button',{name:'New Trade',exact:true}).click();await page.getByRole('dialog',{name:'New trade drawer',exact:true}).waitFor();await page.getByRole('button',{name:'Close Panel',exact:true}).click();}
+   else await page.getByRole('button',{name:'Add Position',exact:true}).waitFor();
+  }
   const dimensions=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));
   if(response.status()!==200||dimensions.scroll>width||errors.length)throw Error(JSON.stringify({path,width,status:response.status(),dimensions,errors}));
-  await page.screenshot({path:out+'/public-design-'+(path.startsWith('/tools/macro')?'macro-'+(path.includes('populated')?'populated':'missing'):path.startsWith('/intelligence/global-m2')?'m2-'+(path.includes('populated')?'populated':'missing'):path.includes('fixture=symbol')?'symbol-populated':path==='/'?'home':path==='/learn'?'learning':path.includes('command-center')?(path.includes('populated')?'overview-populated':'overview-missing'):'symbol')+'-'+width+'.png',fullPage:true});
+  await page.screenshot({path:out+'/public-design-'+(path.startsWith('/tools/workspace')?'records-'+(path.includes('Portfolio')?'portfolio':'journal')+'-'+(path.includes('fixture=records')?'populated':'empty'):path.startsWith('/tools/macro')?'macro-'+(path.includes('populated')?'populated':'missing'):path.startsWith('/intelligence/global-m2')?'m2-'+(path.includes('populated')?'populated':'missing'):path.includes('fixture=symbol')?'symbol-populated':path==='/'?'home':path==='/learn'?'learning':path.includes('command-center')?(path.includes('populated')?'overview-populated':'overview-missing'):'symbol')+'-'+width+'.png',fullPage:true});
   results.push({path,width,status:response.status(),dimensions});
  }
  // Development mount lifecycle may replay effects; mode switches must not fetch again.

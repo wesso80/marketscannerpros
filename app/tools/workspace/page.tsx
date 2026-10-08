@@ -1,5 +1,8 @@
 'use client';
 
+import Link from 'next/link';
+import { publicDesignEnabled } from '@/lib/publicDesign';
+import records from '@/components/public-design/RecordsStudio.module.css';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 /* ---------------------------------------------------------------------------
@@ -91,6 +94,13 @@ function WorkspaceContent() {
     Alerts: <Panel label="Loading alerts…"><RiskPermissionProvider><AlertsContentV1 embeddedInWorkspace /></RiskPermissionProvider></Panel>,
     Settings: <p className="text-sm text-slate-400">Opening account settings…</p>,
   };
+
+  if (publicDesignEnabled() && (tab === 'Portfolio' || tab === 'Journal')) return <article className={records.page} data-records-studio={tab.toLowerCase()}>
+    <header className={records.hero}><p className={records.eyebrow}>{tab === 'Portfolio' ? 'Your recorded positions' : 'Your research, remembered'}</p><h1>{tab}</h1><p>{tab === 'Portfolio' ? 'Understand the composition of your simulation records, with valuation limits in view.' : 'Keep what you observed, what you expected and what happened distinct.'}</p><nav aria-label="Record connections"><Link href="/tools/golden-egg">Research a symbol ↗</Link><Link href={tab === 'Portfolio' ? '/tools/workspace?tab=Journal' : '/tools/workspace?tab=Portfolio'}>{tab === 'Portfolio' ? 'Open Journal ↗' : 'Open Portfolio ↗'}</Link></nav></header>
+    <details className={records.workflow}><summary>{tab === 'Portfolio' ? 'How to read your portfolio records' : 'A useful structure for reflection'}</summary><div className={records.steps}>{(tab === 'Portfolio' ? [['01','Composition','Review recorded positions and their priced allocation. Missing quotes reduce valuation coverage.'],['02','Measurement','Open P&L is different from today’s change. Deposits and withdrawals are not investment returns.'],['03','Reflection','Use Journal to record your reasoning. These are simulation records, not a connected brokerage account.']] : [['01','Observation','Record the symbol, dates, source and what the evidence actually showed.'],['02','Expectation','Keep your original reasoning separate from later outcomes. Avoid rewriting it with hindsight.'],['03','Review','Revisit your notes and recorded outcomes. Historical results do not establish what happens next.']]).map(([n,title,body])=><div key={n}><small>{n}</small><h2>{title}</h2><p>{body}</p></div>)}</div></details>
+    <section className={records.content} aria-label={`${tab} records and controls`}>{panels[tab]}</section>
+    <nav className={records.utilities} aria-label="Additional workspace tools">{(['Watchlists','Alerts','Backtest'] as const).map(item=><button key={item} onClick={()=>selectWorkspaceTab(item)}>{item}</button>)}<Link href="/account">Account & billing</Link></nav>
+  </article>;
 
   return (
     <div className="space-y-3">
