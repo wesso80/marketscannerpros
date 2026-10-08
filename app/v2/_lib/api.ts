@@ -742,21 +742,24 @@ export function fetchFuturesTerminal(
 export type CloseCalendarAnchor = 'NOW' | 'TODAY' | 'PRIOR_DAY' | 'EOW' | 'EOM' | 'CUSTOM';
 export type CloseCalendarScheduleModel = 'crypto_247' | 'equity_session' | 'forex_session';
 
+/** Public Close Calendar contract (public-close-calendar-v1): no timeframe weight or window score. */
 export interface ForwardCloseScheduleRow {
   tf: string;
+  tfMinutes: number;
   category: 'intraday' | 'daily' | 'weekly' | 'monthly' | 'yearly';
-  weight: number;
   firstCloseAtISO: string | null;
   minsToFirstClose: number | null;
   closesInHorizon: number;
   closesOnAnchorDay: boolean;
 }
 
+/** A 60-minute window in which two or more daily-or-longer timeframes close; listed in time order. */
 export interface ForwardCloseCluster {
   label: string;
+  windowStartISO: string;
+  windowEndISO: string;
   tfs: string[];
-  weight: number;
-  clusterScore: number;
+  timeframeCount: number;
 }
 
 export interface ForwardCloseCalendar {
@@ -775,6 +778,9 @@ export interface ForwardCloseCalendar {
   schedule: ForwardCloseScheduleRow[];
   closesOnAnchorDay: ForwardCloseScheduleRow[];
   forwardClusters: ForwardCloseCluster[];
+  contract: 'public-close-calendar-v1';
+  clusterRule: string;
+  generatedAt: string;
 }
 
 export function fetchCloseCalendar(

@@ -13,7 +13,18 @@ vi.mock('@/lib/proTraderAccess', () => ({ hasPaidSessionAccess: () => h.paid }))
 vi.mock('@/lib/confluence-learning-agent', () => ({
   confluenceLearningAgent: {
     detectAssetClass: (s: string) => (s.endsWith('USD') ? 'crypto' : 'equity'),
-    computeForwardCloseCalendar: vi.fn(() => ({ anchor: 'NOW', schedule: [], forwardClusters: [] })),
+    computeForwardCloseCalendar: vi.fn(() => ({
+      anchor: 'NOW', anchorTimeISO: '2026-10-08T00:00:00.000Z', horizonDays: 7, horizonEndISO: '2026-10-15T00:00:00.000Z', assetClass: 'crypto', scheduleModel: 'crypto_247', scheduleModelLabel: 'Crypto 24/7 UTC', scheduleBasis: 'UTC', timezone: 'UTC', sessionMode: 'extended', warnings: [],
+      schedule: [{ tf: '1D', tfMinutes: 1440, closesInHorizon: 7, firstCloseAtISO: '2026-10-09T00:00:00.000Z', minsToFirstClose: 600, closesOnAnchorDay: true, weight: 10, category: 'daily' }],
+      closesOnAnchorDay: [{ tf: '1D', tfMinutes: 1440, closesInHorizon: 7, firstCloseAtISO: '2026-10-09T00:00:00.000Z', minsToFirstClose: 600, closesOnAnchorDay: true, weight: 10, category: 'daily' }],
+      // Score-ranked as the engine used to return them, plus a single-close window admitted by weight.
+      forwardClusters: [
+        { windowStartISO: '2026-10-12T00:00:00.000Z', windowEndISO: '2026-10-12T01:00:00.000Z', tfs: ['1D', '1W', '2D'], weight: 42, clusterScore: 63, label: 'Mon Oct 12 00:00' },
+        { windowStartISO: '2026-10-09T00:00:00.000Z', windowEndISO: '2026-10-09T01:00:00.000Z', tfs: ['1D', '3D'], weight: 24, clusterScore: 24, label: 'Fri Oct 9 00:00' },
+        { windowStartISO: '2026-10-10T00:00:00.000Z', windowEndISO: '2026-10-10T01:00:00.000Z', tfs: ['1M'], weight: 30, clusterScore: 15, label: 'Sat Oct 10 00:00' },
+      ],
+      totalCloseEventsInHorizon: 12,
+    })),
     scanHierarchical: vi.fn(async (symbol: string, mode: string) => {
       h.scans++;
       if (h.fail) throw new Error('No price data for ZZZ. secret-internal-detail');
@@ -24,9 +35,9 @@ vi.mock('@/lib/confluence-learning-agent', () => ({
         clusters: [{ levels: [100, 99.6], tfs: ['1h', '2h'], avgLevel: 99.8 }],
         candleCloseConfluence: {
           closes: [{ tf: '1h', tfMinutes: 60, nextCloseAt: '2026-10-08T15:00:00.000Z', minsToClose: 12, weight: 3, mid50Level: 100, distanceToMid50: 1.5, pullDirection: 'down' }, { tf: '4h', tfMinutes: 240, nextCloseAt: '2026-10-08T16:00:00.000Z', minsToClose: 72, weight: 6 }],
-          closingNow: { count: 1, timeframes: ['30m'], highestTF: '30m', isRare: false },
+          closingNow: { count: 2, timeframes: ['30m', '1h'], highestTF: '30m', isRare: false },
           closingSoon: { count: 2, timeframes: [{ tf: '1h', minsAway: 12, weight: 3 }, { tf: '4h', minsAway: 72, weight: 6 }], peakConfluenceIn: 72, peakCount: 2 },
-          peakCloseCluster: { count: 2, timeframes: ['1h', '4h'], windowStartMins: 60, windowEndMins: 75, weightedScore: 91 },
+          peakCloseCluster: { count: 1, timeframes: ['1M'], windowStartMins: 5000, windowEndMins: 5000, weightedScore: 91 },
           specialEvents: { isMonthEnd: false, isWeekEnd: true, isQuarterEnd: false, isYearEnd: false, sessionClose: 'ny' },
           confluenceScore: 83, confluenceRating: 'high', isMarketOpen: true,
           bestEntryWindow: { startMins: 55, endMins: 80, reason: 'CANARY-ENTRYWINDOW' },
@@ -76,9 +87,11 @@ describe('W3: /api/confluence-scan publishes only measured timing evidence', () 
         { tf: '1h', tfMinutes: 60, nextCloseAt: '2026-10-08T15:00:00.000Z', minsToClose: 12, midpoint: 100, distanceToMidpointPct: 1.5 },
         { tf: '4h', tfMinutes: 240, nextCloseAt: '2026-10-08T16:00:00.000Z', minsToClose: 72, midpoint: null, distanceToMidpointPct: null },
       ]);
-      expect(d.closes.closingNow).toEqual({ count: 1, timeframes: ['30m'], highestTF: '30m', windowMins: 5 });
+      // Longest timeframe by length, not the engine's weighted pick ('30m' in the fake).
+      expect(d.closes.closingNow).toEqual({ count: 2, timeframes: ['30m', '1h'], highestTF: '1h', windowMins: 5 });
       expect(d.closes.closingSoon).toEqual({ count: 2, timeframes: [{ tf: '1h', minsAway: 12 }, { tf: '4h', minsAway: 72 }] });
-      expect(d.closes.densestWindow).toEqual({ count: 2, timeframes: ['1h', '4h'], startMins: 60, endMins: 75 });
+      // Recomputed by count over the schedule; the engine's weight-chosen peak (a lone '1M') is not published.
+      expect(d.closes.densestWindow).toEqual({ count: 2, timeframes: ['1h', '4h'], startMins: 12, endMins: 72, spanMins: 120 });
       expect(d.closes.calendarEvents).toEqual({ monthEnd: false, weekEnd: true, quarterEnd: false, yearEnd: false, sessionClose: 'ny' });
       // A zero midpoint is the engine's "unmeasured" sentinel, never a price.
       expect(d.midpoints.levels).toEqual([{ tf: '1h', level: 100, distancePct: 1.5 }, { tf: '2h', level: 99.6, distancePct: 1.91 }]);
@@ -93,10 +106,15 @@ describe('W3: /api/confluence-scan publishes only measured timing evidence', () 
     expect((await GET()).status).toBe(405);
     expect(h.scans).toBe(0);
   });
-  it('calendar mode still returns the schedule', async () => {
+  it('calendar mode returns the public calendar: no weight or score, windows in time order', async () => {
     const r = await post({ symbol: 'BTCUSD', mode: 'calendar', anchor: 'TODAY', horizonDays: 1 });
     expect(r.status).toBe(200);
-    expect(r.body.data).toEqual({ anchor: 'NOW', schedule: [], forwardClusters: [] });
+    const d = r.body.data;
+    expect(d.contract).toBe('public-close-calendar-v1');
+    expect(JSON.stringify(r.body)).not.toMatch(/"weight"|clusterScore/);
+    expect(d.schedule).toEqual([{ tf: '1D', tfMinutes: 1440, category: 'daily', firstCloseAtISO: '2026-10-09T00:00:00.000Z', minsToFirstClose: 600, closesInHorizon: 7, closesOnAnchorDay: true }]);
+    // Time order, not score order; the weight-admitted single close is not a window (it stays in the schedule).
+    expect(d.forwardClusters.map((w: any) => [w.label, w.timeframeCount])).toEqual([['Fri Oct 9 00:00', 2], ['Mon Oct 12 00:00', 3]]);
   });
   it('rejects unknown scan modes, returns a generic error, and checks access before scanning', async () => {
     expect((await post({ symbol: `ZZT${n++}`, mode: 'hierarchical', scanMode: 'everything' })).status).toBe(400);

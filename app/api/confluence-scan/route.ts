@@ -5,7 +5,8 @@
  * - "hierarchical": candle-close timing and prior-candle midpoints for one symbol, serialized through the public
  *   Time Confluence contract (lib/research/publicTimeConfluence). The internal scan's direction, confidence, target,
  *   trade setup, signal strength, scores, entry window and structure are not published.
- * - "calendar": forward candle-close calendar (pure schedule computation, no price data).
+ * - "calendar": forward candle-close calendar (pure schedule computation, no price data), serialized through the public
+ *   Close Calendar contract (lib/research/publicCloseCalendar): no timeframe weight or window score, windows in time order.
  *
  * The former "full" (AI forecast with levels and risk parameters), "quick", "state-only", "learn" and "forecast" modes
  * are not available on this public endpoint.
@@ -16,6 +17,7 @@ import { confluenceLearningAgent, type ScanMode, type CloseCalendarAnchor, type 
 import { getSessionFromCookie } from '@/lib/auth';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { toPublicTimeConfluence } from '@/lib/research/publicTimeConfluence';
+import { toPublicCloseCalendar } from '@/lib/research/publicCloseCalendar';
 
 export const maxDuration = 120;
 
@@ -64,8 +66,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const anchor = (body.anchor || 'NOW') as CloseCalendarAnchor;
       const horizonDays = Math.max(1, Math.min(30, Number(body.horizonDays) || 7));
       const calendarAsset = body.assetType || confluenceLearningAgent.detectAssetClass(normalizedSymbol);
-      const data = confluenceLearningAgent.computeForwardCloseCalendar(anchor, horizonDays, body.anchorTime || undefined, calendarAsset, sessionMode);
-      return json({ success: true, data, cached: false });
+      const calendar = confluenceLearningAgent.computeForwardCloseCalendar(anchor, horizonDays, body.anchorTime || undefined, calendarAsset, sessionMode);
+      return json({ success: true, data: toPublicCloseCalendar(calendar), cached: false });
     }
 
     const scanMode: ScanMode = body.scanMode ?? 'intraday_1h';
