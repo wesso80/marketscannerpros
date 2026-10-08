@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     assetClass === 'equity' ? getFundamentalsSummary(symbol).catch(() => null) : Promise.resolve(null),
   ]);
   const companyName = assetClass === 'equity' ? fundamentals?.name ?? null : cryptoNewsName(symbol);
-  const news=buildSymbolNews(symbol,assetClass,feed,companyName);
+  const news=buildSymbolNews(symbol, assetClass, feed, companyName);
   const evidence={symbol:news.symbol,status:news.status,provider:news.provider,rule:news.rule,fetchedAt:news.fetchedAt,reason:news.reason ?? null,events:news.events.map(e=>({headline:e.headline,articles:e.articles,sources:e.sources,firstPublishedAt:e.firstPublishedAt,lastPublishedAt:e.lastPublishedAt}))};
   return NextResponse.json({success:true,news,copilotEvidenceToken:await sectionEvidenceToken('news',symbol,assetClass,evidence)},{headers:{'Cache-Control':'private, no-store'}});
 }
