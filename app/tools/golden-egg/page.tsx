@@ -507,6 +507,7 @@ export default function GoldenEggPage() {
   const geAiData = useMemo(() => ({
     copilotEvidenceToken: goldenEgg.data?.copilotEvidenceToken ?? null,
     assetType: ge?.meta.assetClass,
+    expiry: geCanonical?.options?.expiry ?? null,
     symbol: sym,
     timeframe,
     price: quote.data?.price,

@@ -20,7 +20,7 @@ export default function OptionsChainEvidence({ symbol, expiry, embeddedInTermina
     if (!symbol.trim()) return;
     setLoading(true); setError(null); publishEvidence(null);
     try {
-      const res = await fetch('/api/options-scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ symbol: symbol.trim().toUpperCase(), scanMode: 'swing_1d', ...(expiry ? { expirationDate: expiry } : {}) }), signal });
+      const res = await fetch(`/api/research/options?${new URLSearchParams({symbol:symbol.trim().toUpperCase(),...(expiry?{expiry}:{})})}`, { signal });
       const json = await res.json().catch(() => null);
       if (signal?.aborted) return;
       if (!res.ok || !json?.success || !json.data) { setData(null); setError(json?.error || 'Options evidence request failed'); return; }

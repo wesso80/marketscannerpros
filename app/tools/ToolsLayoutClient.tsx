@@ -57,7 +57,7 @@ function CopilotWithContext({ fallbackSkill }: { fallbackSkill: PageSkill }) {
   useEffect(()=>{
     setSections({});
     const receive=(event:Event)=>{const detail=(event as CustomEvent<CopilotSectionEvent>).detail;
-      if(!detail || !['news','chart','options','ownership','crypto'].includes(detail.section))return;
+      if(!detail || !['news','chart','options','ownership','crypto','dve'].includes(detail.section))return;
       setSections(old=>({...old,[detail.section]:detail}));};
     window.addEventListener(COPILOT_SECTION_EVENT,receive);return()=>window.removeEventListener(COPILOT_SECTION_EVENT,receive);
   },[pathname]);
@@ -72,7 +72,7 @@ function CopilotWithContext({ fallbackSkill }: { fallbackSkill: PageSkill }) {
   },[pathname]);
   // Fail closed while entitlement is loading; only the explicit legacy/admin response selects the old panel.
   if(!usage)return null;
-  if(usage.enabled && !usage.bypass)return <PublicMSPCopilot usage={usage} pagePath={pathname} assetType={pageData?.data.assetType==='equity'||pageData?.data.assetType==='crypto'?pageData.data.assetType:undefined} sectionTokensByName={Object.fromEntries(Object.values(sections).filter(s=>s.symbol===pageData?.symbols[0] && s.token).map(s=>[s.section,s.token!]))}
+  if(usage.enabled && !usage.bypass)return <PublicMSPCopilot usage={usage} pagePath={pathname} timeframe={typeof pageData?.data.timeframe==='string'?pageData.data.timeframe:undefined} expiry={typeof pageData?.data.expiry==='string'?pageData.data.expiry:null} assetType={pageData?.data.assetType==='equity'||pageData?.data.assetType==='crypto'?pageData.data.assetType:undefined} sectionTokensByName={Object.fromEntries(Object.values(sections).filter(s=>s.symbol===pageData?.symbols[0] && s.token).map(s=>[s.section,s.token!]))}
     symbol={pageData?.symbols[0]} evidenceToken={typeof pageData?.data.copilotEvidenceToken==='string' ? pageData.data.copilotEvidenceToken : null} />;
 
   return (

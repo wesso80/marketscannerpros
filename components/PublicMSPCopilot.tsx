@@ -4,7 +4,7 @@ import { loadCopilotSections, type CopilotSectionLoad } from '@/lib/ai/loadCopil
 
 export type CopilotUsage = { enabled?: boolean; bypass?: boolean; plan?: string; resetsAt?: string; quotas?: Array<{ kind: string; remaining: number | null }> };
 type Answer = { content?: string; error?: string; capturedAt?: string; missing?: string[]; evidence?: Array<{id:string;field:string;value:unknown}>; quota?: { limit:number;used:number;resetsAt:string } };
-export default function PublicMSPCopilot({ usage, pagePath, symbol, evidenceToken, sectionTokens = [], sectionTokensByName = {}, assetType }: { usage: CopilotUsage; pagePath: string; symbol?: string; evidenceToken?: string | null; sectionTokens?: string[]; sectionTokensByName?:Record<string,string>; assetType?:'equity'|'crypto' }) {
+export default function PublicMSPCopilot({ usage, pagePath, symbol, evidenceToken, sectionTokens = [], sectionTokensByName = {}, assetType, timeframe, expiry }: { usage: CopilotUsage; pagePath: string; symbol?: string; evidenceToken?: string | null; sectionTokens?: string[]; sectionTokensByName?:Record<string,string>; assetType?:'equity'|'crypto';timeframe?:string;expiry?:string|null }) {
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState('');
   const [answers, setAnswers] = useState<Answer[]>([]);
@@ -14,15 +14,15 @@ export default function PublicMSPCopilot({ usage, pagePath, symbol, evidenceToke
   const retry = useRef<{id:string;message:string} | null>(null);
   const generation = useRef(0);
   const [preloaded,setPreloaded]=useState<{key:string;data:CopilotSectionLoad}|null>(null);
-  const loadKey=JSON.stringify([evidenceToken,symbol,assetType]);
+  const loadKey=JSON.stringify([evidenceToken,symbol,assetType,timeframe,expiry]);
   const shouldLoad=usage.plan==='pro' && pagePath==='/tools/golden-egg' && Boolean(evidenceToken && symbol && assetType);
   const loadingSections=open && shouldLoad && preloaded?.key!==loadKey;
   useEffect(()=>{
     if(!open || !shouldLoad || preloaded?.key===loadKey)return;
     const abort=new AbortController();
-    void loadCopilotSections(symbol!,assetType!,abort.signal).then(data=>{if(!abort.signal.aborted)setPreloaded({key:loadKey,data});});
+    void loadCopilotSections(symbol!,assetType!,abort.signal,fetch,{timeframe,expiry}).then(data=>{if(!abort.signal.aborted)setPreloaded({key:loadKey,data});});
     return ()=>abort.abort();
-  },[open,shouldLoad,loadKey,symbol,assetType,preloaded?.key]);
+  },[open,shouldLoad,loadKey,symbol,assetType,timeframe,expiry,preloaded?.key]);
   const combinedTokens=Object.values({...(preloaded?.key===loadKey?preloaded.data.tokens:{}),...sectionTokensByName});
   const activeTokens=combinedTokens.length?combinedTokens:sectionTokens;
   const sectionKey=activeTokens.join('|');
@@ -54,7 +54,7 @@ export default function PublicMSPCopilot({ usage, pagePath, symbol, evidenceToke
         <p className="my-3 text-xs">{remaining} of 20 questions remaining{reset ? ` · Resets ${new Date(reset).toLocaleString()}` : ''}</p>
         {!evidenceToken && <p role="status">Verified evidence is not available here yet. Open or reload a Symbol report.</p>}
         {loadingSections && <p role="status">Loading connected page evidence…</p>}
-        {!loadingSections && preloaded?.key===loadKey && <p className="mb-2 text-xs text-slate-400">Chart context defaults to 90 days unless a loaded chart supplies another selection. {preloaded.data.unavailable.length?`Unavailable: ${preloaded.data.unavailable.join(', ')}.`:''} Volatility is not connected yet; equity options still require opening the Options section.</p>}
+        {!loadingSections && preloaded?.key===loadKey && <p className="mb-2 text-xs text-slate-400">Chart context defaults to 90 days unless a loaded chart supplies another selection. {preloaded.data.unavailable.length?`Unavailable: ${preloaded.data.unavailable.join(', ')}.`:''} Sources that fail remain unavailable.</p>}
         <div aria-live="polite" className="max-h-[45vh] space-y-3 overflow-y-auto">
           {answers.map((answer,index)=><article key={index} className="rounded-lg bg-slate-900 p-3">
             {answer.error ? <p role="alert">{answer.error}</p> : <>

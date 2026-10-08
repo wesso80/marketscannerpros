@@ -6,7 +6,7 @@ export interface PageEvidence {
   page: string;
   symbol: string;
   timeframe: string;
-  section?: 'core' | 'chart' | 'news' | 'options' | 'ownership' | 'crypto';
+  section?: 'core' | 'chart' | 'news' | 'options' | 'ownership' | 'crypto' | 'dve';
   assetType?: string;
   expiry?: string | null;
   capturedAt: string;
@@ -42,7 +42,7 @@ export function issueSymbolEvidence(packet: PublicSymbolPacket, subject: string,
   try { return `${body}.${sign(body).toString('base64url')}`; } catch { return null; }
 }
 /** Only server-built public response adapters may call this. Never sign a request body. */
-export function issueSectionEvidence(section: 'chart' | 'news' | 'options' | 'ownership' | 'crypto', symbol: string, assetType: string, data: unknown, subject: string, expiry: string | null = null, now = Date.now()): string | null {
+export function issueSectionEvidence(section: 'chart' | 'news' | 'options' | 'ownership' | 'crypto' | 'dve', symbol: string, assetType: string, data: unknown, subject: string, expiry: string | null = null, now = Date.now()): string | null {
   const observations: PageEvidence['observations'] = [];
   const visit = (value: unknown, field: string): void => {
     // Compact long, already-public series without dropping observations or duplicating their field paths.
@@ -58,16 +58,17 @@ export function issueSectionEvidence(section: 'chart' | 'news' | 'options' | 'ow
   try{return `${body}.${sign(body).toString('base64url')}`;}catch{return null;}
 }
 export function combinePageEvidence(core:PageEvidence,tokens:unknown,subject:string,now=Date.now()):PageEvidence|null {
-  if(core.section!=='core' || !Array.isArray(tokens) || tokens.length>5)return null;
+  if(core.section!=='core' || !Array.isArray(tokens) || tokens.length>6)return null;
   const sections:PageEvidence[]=[];
   for(const token of tokens){
     const s=verifyPageEvidence(token,subject,now);
     if(!s || !s.section || s.section==='core' || s.page!==core.page || s.symbol!==core.symbol || s.assetType!==core.assetType || sections.some(x=>x.section===s.section))return null;
-    if(s.section==='options' && s.expiry!==core.expiry)return null;
+    if((s.section==='options'||s.section==='dve') && s.expiry!==core.expiry)return null;
+    if(s.section==='dve' && String(s.observations.find(o=>o.field==='dve.timeframe')?.value).toLowerCase()!==core.timeframe.toLowerCase())return null;
     sections.push(s);
   }
-  const missing=['Volatility section is not connected yet. Do not infer its contents.'];
-  for(const name of ['chart','news',...(core.assetType==='crypto'?['crypto']:['options','ownership'])])if(!sections.some(s=>s.section===name))missing.push(`${name}: not loaded or unavailable in this snapshot.`);
+  const missing:string[]=[];
+  for(const name of ['chart','news','dve',...(core.assetType==='crypto'?['crypto']:['options','ownership'])])if(!sections.some(s=>s.section===name))missing.push(`${name}: not loaded or unavailable in this snapshot.`);
   return {...core,observations:[...core.observations,...sections.flatMap(s=>[{id:`${s.section}_captured`,field:`${s.section}.capturedAt (not observation time)`,value:s.capturedAt},...s.observations])],missing};
 }
 export function verifyPageEvidence(token: unknown, subject: string, now = Date.now()): PageEvidence | null {

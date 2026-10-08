@@ -27,6 +27,15 @@ it('preserves a full year of chart rows in a bounded token without sampling away
  const section=verifyPageEvidence(token,'a',1001)!;
  expect(JSON.parse(section.observations[0].value as string)).toEqual(rows);
 });
+it('binds Volatility to the selected timeframe and preserves zero and missing values',()=>{
+ const p={...packet,meta:{...packet.meta,assetClass:'equity'},canonical:{options:{expiry:'2026-10-09'}}};
+ const core=verifyPageEvidence(issueSymbolEvidence(p,'a',1000),'a',1001)!;
+ const make=(timeframe:string)=>issueSectionEvidence('dve','AAPL','equity',{timeframe,reading:{bbwp:0,rate:null}},'a','2026-10-09',1000)!;
+ const combined=combinePageEvidence(core,[make('daily')],'a',1001)!;
+ expect(combined.observations.find(o=>o.field==='dve.reading.bbwp')?.value).toBe(0);
+ expect(combined.observations.find(o=>o.field==='dve.reading.rate')?.value).toBeNull();
+ expect(combinePageEvidence(core,[make('weekly')],'a',1001)).toBeNull();
+});
 it('keeps null values and declares disconnected sections; never signs a demo or absent contract',()=>{
  const e=verifyPageEvidence(issueSymbolEvidence(packet,'a',1000),'a',1001)!;
  expect(e.observations.some(o=>o.value===null)).toBe(true);

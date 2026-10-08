@@ -1,3 +1,19 @@
+FOLLOW-UP: DVE #511 and read-only options integration
+Cherry-picked Claude 5d0f0f7 as 2cca75ed on this branch; #511 itself remains unmerged.
+Cold and cached DVE v2 public readings receive optional account-bound signed tokens. Combination
+requires matching symbol, asset, expiry and timeframe. No engine/admin/Free entitlement changes.
+New GET /api/research/options checks paid access and input before the analyzer and projects the
+public contract directly. It never invokes options-scan orchestration, adaptive profiles or state-machine
+updates. OptionsChainEvidence now uses this read-only endpoint too. Supplementary quoted-contract
+quality counts are explicitly not collected here (no second raw-chain request).
+Pro Copilot now automatically loads DVE for the selected timeframe/expiry and read-only options for
+equities, along with the existing chart/news/ownership-or-crypto sections. Missing signatures or failed
+sources remain unavailable. No automatic AI call/question debit. Live page data still needs browser
+verification and live model evaluation; summary unification/legacy routes/pricing/cost controls remain.
+Validation: 35 distinct focused checks passed across DVE contracts/access, hook types, loader, panel,
+read-only options route, evidence binding and public Copilot route. Typecheck remains six baseline
+local runtime errors only. No real provider/model calls, production DB changes, merges or deployments.
+
 FOLLOW-UP: on-open evidence loading
 Opening the Pro Copilot on a verified Symbol report loads chart (90-day default), news and ownership
 or crypto through existing public endpoints, without requiring the tabs to be opened. Loaded tab
