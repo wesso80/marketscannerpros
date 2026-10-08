@@ -1,10 +1,11 @@
 import { withPublicAiQuota, publicAiScope, markPublicAiProviderStarted } from '@/lib/publicAiQuota';
+import { privateAnalystHandler } from '@/lib/ai/legacyAnalystAccess';
 /**
  * MSP Analyst AI Chat API
  * 
  * @route POST /api/msp-analyst
  * @description OpenAI-powered market analysis chatbot with tier-based rate limits
- * @authentication Required (ms_auth cookie)
+ * @authentication Verified admin/operator session required (ms_auth cookie)
  * 
  * @body {object} request
  * @body {string} request.query - User's question or command
@@ -1137,4 +1138,4 @@ Always mention which derivatives signals support or contradict your analysis.
     );
   }
 }
-export const POST = withPublicAiQuota(handlePost, 'msp-analyst');
+export const POST = privateAnalystHandler(withPublicAiQuota(handlePost, 'msp-analyst'));
