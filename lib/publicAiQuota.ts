@@ -20,6 +20,7 @@ function hasUsableAnswer(feature: string, value: unknown): value is Record<strin
  if (body.error || body.success === false || body.ok === false) return false;
  const text = (v: unknown) => typeof v === 'string' && v.trim().length > 0;
  switch (feature) {
+  case 'journal/analyze': return body.contract === 'journal-education-v1' && text(body.analysis);
   case 'ai/copilot': return text(body.content);
   case 'msp-analyst': return text(body.text);
   case 'ai/explain':

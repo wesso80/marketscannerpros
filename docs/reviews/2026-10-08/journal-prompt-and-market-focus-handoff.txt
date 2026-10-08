@@ -54,3 +54,49 @@ No Journal prompt overlap in their inspected file lists. None integrated here.
 Old options/Symbol code deletion should wait for dependent tests to migrate.
 Legacy analyst/explain routes and shared trade-plan prompts remain separate
 work after Copilot integration; preserve admin consumers when changing them.
+
+
+Public Journal follow-up — supersedes the three implementation gaps above
+The public /api/journal/analyze path now shares the paid Copilot ledger through
+withPublicAiQuota (journal/analyze). Verified subscription lookup precedes
+record/model work. It uses the existing 20/day limit and Eastern reset,
+reservation/replay, definite-failure release and interrupted-outcome retention.
+Rollout flag PUBLIC_DAILY_QUOTAS_ENABLED remains required; disabled public
+access fails closed rather than reverting to the old route. Signed admin and
+operator access keeps the previous handler in lib/ai/legacyJournalAnalysis.ts.
+No changes to its calculations, access policy or AI prompt in this follow-up.
+
+Evidence is read using a parameterized workspace-owned journal_entries SELECT.
+Browser-supplied records are ignored. Only status, outcome, P&L and dates are
+read; free-text notes/strategy/emotions never reach the public model. A maximum
+of the latest 2,000 records is summarized, explicitly disclosed when truncated.
+Closed positive/negative/zero/missing counts are disjoint; inconsistent labels
+are disclosed. Open records do not count as closed results. Dates and missing
+dates are explicit. We deliberately omit monetary totals/profit factor because
+currency and costs are not verified; we do not invent strategy/emotion metrics.
+These are saved user records, not broker-verified outcomes.
+
+The model can return only evidence IDs and reviewed explanation keys. Server
+validation rejects invented IDs, arbitrary prose and extra fields. The server
+renders all sample facts and limitations, so the model cannot hide missing data
+or author recommendations. This is a deliberately constrained educational
+summary, not an unrestricted conversational Journal analyst. No new model API
+or SDK is introduced; it uses the existing public Copilot model configuration.
+
+Checks
+- 44 tests pass across publicJournalAnalysis, journalAnalysisPrompt,
+  publicAiQuota and publicQuotaAccess.
+- 12 isolated PostgreSQL quota tests pass, including Journal/Copilot contenders
+  for the final shared AI credit. Local temporary test DB only; server stopped.
+- Typecheck has only the six already recorded Stripe-version/timer errors.
+- No real OpenAI/provider calls, full-suite run, browser test or production DB.
+
+Remaining integration
+No app/component caller of /api/journal/analyze was found by repository search.
+This changes the API boundary; it does not claim that the Journal screen now
+has a working analysis button. UI integration must show the saved-record scope,
+AI selection label, sample/missing notes, allowance/reset time, preserve the
+same Idempotency-Key on retry and create a new key for a fresh summary. The
+existing Copilot page-evidence flow is separate and is not rewired here.
+Migrations for the existing shared quota ledger must be present before rollout.
+A live model smoke test and full application acceptance remain release checks.

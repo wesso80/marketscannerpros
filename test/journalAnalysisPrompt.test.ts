@@ -5,7 +5,7 @@ vi.mock('openai',()=>({default:class {chat={completions:{create:h.create}}}}));
 vi.mock('@/lib/auth',()=>({getSessionFromCookie:async()=>({workspaceId:'fixture',tier:'pro'})}));
 vi.mock('@/lib/db',()=>({q:h.q}));
 vi.mock('@/lib/entitlements',()=>({getDailyAiLimit:()=>20,isFreeForAllMode:()=>false,normalizeTier:()=> 'pro'}));
-import {POST} from '@/app/api/journal/analyze/route';
+import {legacyJournalAnalysis as POST} from '@/lib/ai/legacyJournalAnalysis';
 import {JOURNAL_ANALYST_PROMPT} from '@/lib/ai/journalAnalysisPrompt';
 beforeEach(()=>{vi.stubEnv('OPENAI_API_KEY','synthetic-only');h.q.mockReset().mockResolvedValue([{count:0}]);h.create.mockReset().mockResolvedValue({choices:[{message:{content:'Historical sample only.'}}]});});
 afterEach(()=>vi.unstubAllEnvs());

@@ -35,6 +35,11 @@ describe.skipIf(!process.env.QUOTA_TEST_POSTGRES_PORT)('public quotas on isolate
   expect(results.map(r=>r.status).sort()).toEqual(['limited','reserved']);
   expect((await service.reserve(req('E',{subject:'account:other'}))).status).toBe('reserved');
  });
+ it('shares the final AI allowance between Journal and Copilot contenders',async()=>{
+  for(let i=0;i<19;i++) await service.reserve(req('ai/copilot:'+i,{kind:'ai',plan:'pro'}));
+  const results=await Promise.all(['journal/analyze:last','ai/copilot:last'].map(resource=>service.reserve(req(resource,{kind:'ai',plan:'pro'}))));
+  expect(results.map(r=>r.status).sort()).toEqual(['limited','reserved']);
+ });
  it('deduplicates pending and completed reports and fingerprints AI retries',async()=>{
   const results=await Promise.all([service.reserve(req('A')),service.reserve(req('A'))]);
   expect(results.map(r=>r.status).sort()).toEqual(['pending','reserved']);
