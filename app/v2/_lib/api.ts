@@ -872,8 +872,8 @@ export interface UseApiResult<T> {
   refetch: () => void;
 }
 
-function useApi<T>(fetcher: () => Promise<T>, deps: any[] = []): UseApiResult<T> {
-  const requestKey = JSON.stringify(deps);
+function useApi<T>(fetcher: () => Promise<T>, deps: any[] = [], enabled = true): UseApiResult<T> {
+  const requestKey = JSON.stringify([enabled, ...deps]);
   const [settledKey, setSettledKey] = useState<string | null>(null);
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -894,6 +894,7 @@ function useApi<T>(fetcher: () => Promise<T>, deps: any[] = []): UseApiResult<T>
     setReportAccessIssue(null);
     setIsAuthError(false);
     setIsUpgradeRequired(false);
+    if (!enabled) { setLoading(false); return () => { cancelled = true; }; }
     fetcher()
       .then(res => { if (!cancelled) { setData(res); setSettledKey(requestKey); setLoading(false); } })
       .catch(err => {
@@ -909,16 +910,16 @@ function useApi<T>(fetcher: () => Promise<T>, deps: any[] = []): UseApiResult<T>
       });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trigger, ...deps]);
+  }, [trigger, enabled, ...deps]);
 
-  const matchesRequest = settledKey === requestKey;
-  return { reportAccessIssue: matchesRequest ? reportAccessIssue : null, data: matchesRequest ? data : null, error: matchesRequest ? error : null, loading: loading || !matchesRequest, isAuthError: matchesRequest && isAuthError, isUpgradeRequired: matchesRequest && isUpgradeRequired, refetch };
+  const matchesRequest = enabled && settledKey === requestKey;
+  return { reportAccessIssue: matchesRequest ? reportAccessIssue : null, data: matchesRequest ? data : null, error: matchesRequest ? error : null, loading: enabled && (loading || !matchesRequest), isAuthError: matchesRequest && isAuthError, isUpgradeRequired: matchesRequest && isUpgradeRequired, refetch };
 }
 
 // --- Typed hooks ---
 
-export function useRegime() {
-  return useApi(fetchRegime);
+export function useRegime(enabled = true) {
+  return useApi(fetchRegime, [], enabled);
 }
 
 /** One GET of the stored daily snapshot for Today. Does not POST /api/scanner/run. */
@@ -968,12 +969,12 @@ export function useGoldenEgg(symbol: string | null, timeframe: ScanTimeframe = '
   return useApi(() => symbol ? fetchGoldenEgg(symbol, timeframe, assetType, expiry) : Promise.resolve(null as any), [symbol, timeframe, assetType, expiry ?? null]);
 }
 
-export function useDVE(symbol: string | null, timeframe: ScanTimeframe = 'daily', assetType?: string, expiry?: string | null) {
-  return useApi(() => symbol ? fetchDVE(symbol, timeframe, assetType, expiry) : Promise.resolve(null as any), [symbol, timeframe, assetType, expiry ?? null]);
+export function useDVE(symbol: string | null, timeframe: ScanTimeframe = 'daily', assetType?: string, expiry?: string | null, enabled = true) {
+  return useApi(() => symbol ? fetchDVE(symbol, timeframe, assetType, expiry) : Promise.resolve(null as any), [symbol, timeframe, assetType, expiry ?? null], enabled);
 }
 
-export function useQuote(symbol: string | null, type: 'stock' | 'crypto' = 'stock') {
-  return useApi(() => symbol ? fetchQuote(symbol, type) : Promise.resolve(null as any), [symbol, type]);
+export function useQuote(symbol: string | null, type: 'stock' | 'crypto' = 'stock', enabled = true) {
+  return useApi(() => symbol ? fetchQuote(symbol, type) : Promise.resolve(null as any), [symbol, type], enabled);
 }
 
 export function useNews(tickers?: string) {
