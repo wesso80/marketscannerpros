@@ -140,7 +140,9 @@ describe('alert_history price columns', () => {
       if (sql.includes('INSERT INTO alert_history')) throw dbError;
       return [];
     });
-    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({}) })));
+    // A real quote: since the self-test no longer invents a fallback price, an empty quote would stop it before the
+    // history insert this case is about.
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ 'Global Quote': { '05. price': '231.45' } }) })));
     const err = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       const body = await (await testTrigger(new NextRequest('https://example.test/api/alerts/test-trigger'))).json();
