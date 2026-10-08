@@ -1,3 +1,23 @@
+FOLLOW-UP: adversarial answer validation audit
+Added test/publicCopilotAdversarial.test.ts: 12 ordinary checks plus EIGHT explicit expected
+failures (it.fails). The expected failures document missing protections, not successful rejection.
+Existing checker accepts: wrong symbol, wrong field, reversed numeric sign, changed numeric unit,
+an invented event, indirect portfolio advice, an unsupported forecast, and a claim from null data.
+A matching citation and matching digits do not establish that a sentence follows from that evidence.
+The numeric extractor discards sign; cited digits can be relabelled as another measurement.
+Instruction text forbids these outputs but the deterministic validator does not enforce that fully.
+This is a release blocker for the promised page-only educational experience. Keep rollout disabled.
+No application code changed. No live model evaluation was performed. These synthetic adversarial
+outputs demonstrate validator behavior, not their frequency in actual model responses.
+Added three route rejection checks: unsafe output is withheld with 422/private no-store and no
+content field. Ledger release is covered separately by quota tests, not by these route mocks.
+Next implementation: render symbol/field/value/unit/date observations from server evidence IDs,
+not model-authored factual prose; constrain explanations to reviewed educational content or add
+an evaluated semantic verification layer. Regex additions alone cannot establish grounding.
+Acceptance: convert all eight expected failures to ordinary passing rejection tests; retain valid
+zero/missing distinctions and useful educational explanations; evaluate indirect advice and prompt
+injection using held-out cases before enabling. Preserve admin and coordinate shared-file ownership.
+
 FOLLOW-UP: Copilot browser fixture verification
 14 Chromium checks passed: seven scenarios each at 1280x900 and 390x900.
 Scenarios: Free access, successful Pro question and source disclosure, failed news source,

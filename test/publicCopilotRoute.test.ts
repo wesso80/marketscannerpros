@@ -27,3 +27,15 @@ it('reports missing key, rejected output and interrupted provider truthfully',as
  vi.stubEnv('OPENAI_API_KEY','fake');fetcher.mockResolvedValueOnce(Response.json({choices:[{message:{content:'{}'}}]}));expect((await publicCopilot(request())).status).toBe(422);
  fetcher.mockRejectedValueOnce(Error('timeout'));expect((await publicCopilot(request())).status).toBe(503);
 });
+
+it.each(['You should buy now.', 'The recorded price is 987.65.', 'Read https://example.com.'])(
+ 'withholds rejected model output: %s', async text => {
+  fetcher.mockResolvedValue(Response.json({choices:[{message:{content:JSON.stringify({statements:[{kind:'explanation',text,evidenceIds:[]}]})}}]}));
+  const result=await publicCopilot(request());
+  expect(result.status).toBe(422);
+  expect(result.headers.get('cache-control')).toBe('private, no-store');
+  const body=await result.json();
+  expect(body.content).toBeUndefined();
+  expect(body.error).toContain('No question credit was used');
+  expect(JSON.stringify(body)).not.toContain(text);
+ });
