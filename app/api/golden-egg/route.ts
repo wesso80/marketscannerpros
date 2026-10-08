@@ -85,6 +85,8 @@ export async function GET(request: NextRequest) {
       success: true,
       // W3: the public contract is built from an allow-list; the internal packet (cached, private consumers) is untouched.
       data: publicData,
+      copilotEvidenceToken: quotaOn && access && !access.bypass && access.plan === 'pro' && !result.localDemo
+        ? issueSymbolEvidence(publicData, access.subject) : null,
       quota: quotaMeta,
       reportUnlocked: quotaOn && Boolean(access) && !result.localDemo && Boolean(publicData.canonical),
       cached: result.cached || undefined,
@@ -120,3 +122,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
+import { issueSymbolEvidence } from '@/lib/ai/publicCopilotEvidence';

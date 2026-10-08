@@ -1,3 +1,4 @@
+import { sectionEvidenceToken } from '@/lib/ai/sectionEvidenceAccess';
 import { NextRequest, NextResponse } from 'next/server';
 import { optionsAnalyzer, OptionsSetup } from '@/lib/options-confluence-analyzer';
 import { measuredIvRank } from '@/lib/options/ivRank';
@@ -316,15 +317,18 @@ export async function POST(request: NextRequest) {
     // W3 (product decision 8 Oct): the response is the measured chain evidence only (lib/research/publicOptionsScan).
     // The analyzer's setup, the institutional filter, scored candidates, the capital-flow engine and the adaptive
     // profile were computed above for the server-side state machine; none of them is serialized.
+    const publicEvidence=toPublicOptionsEvidence(analysis, { chainQuality: optionsChainQuality, providerWarnings: optionsProviderStatus.warnings ?? providerWarnings });
+    const copilotEvidenceToken=await sectionEvidenceToken('options',analysis.symbol,analysis.assetType === 'crypto' ? 'crypto' : 'equity',publicEvidence,publicEvidence.chain.expiry);
     return NextResponse.json({
       success: true,
-      data: toPublicOptionsEvidence(analysis, { chainQuality: optionsChainQuality, providerWarnings: optionsProviderStatus.warnings ?? providerWarnings }),
+      ...(copilotEvidenceToken ? {copilotEvidenceToken} : {}),
+      data: publicEvidence,
       dataSources: {
         underlyingPrice: analysis.assetType === 'crypto' ? 'coingecko' : 'alpha_vantage',
         optionsChain: analysis.dataQuality?.optionsChainSource || 'none',
       },
       timestamp: new Date().toISOString(),
-    });
+    },{headers:{'Cache-Control':'private, no-store'}});
     
   } catch (error) {
     console.error('Options scan error:', error);

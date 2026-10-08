@@ -1,22 +1,24 @@
 'use client';
+import { useCopilotSection } from '@/lib/ai/useCopilotSection';
 import { useEffect, useRef, useState } from 'react';
 import type { SymbolComparison } from '@/lib/research/symbolComparison';
 import SymbolPriceChart from './SymbolPriceChart';
 const COLORS = ['#5eead4', '#fbbf24', '#a5b4fc'];
 const pct = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
 export default function SymbolComparisonChart({ symbol, type }: { symbol: string; type: 'equity' | 'crypto' }) {
+  const publishEvidence=useCopilotSection('chart',symbol);
   const [mode, setMode] = useState<'compare' | 'price'>('compare');
   const [days, setDays] = useState(90), [cursor, setCursor] = useState<number | null>(null);
   const key = `${symbol}:${type}:${days}`;
   const [result, setResult] = useState<{ key: string; data?: SymbolComparison; error?: string } | null>(null);
   const host = useRef<HTMLDivElement>(null), [width, setWidth] = useState(500);
   useEffect(() => {
-    const abort = new AbortController(); setCursor(null);
+    const abort = new AbortController(); setCursor(null); publishEvidence(null);
     fetch(`/api/symbol-comparison?${new URLSearchParams({ symbol, type, days: String(days) })}`, { signal: abort.signal })
-      .then(async r => { const body = await r.json(); if (!r.ok) throw Error(body.error || 'Comparison unavailable'); if (body.symbol !== symbol || !Array.isArray(body.series) || !Array.isArray(body.dates) || !Array.isArray(body.missing)) throw Error('Matching comparison data unavailable'); if (!abort.signal.aborted) setResult({ key, data: body }); })
+      .then(async r => { const body = await r.json(); if (!r.ok) throw Error(body.error || 'Comparison unavailable'); if (body.symbol !== symbol || !Array.isArray(body.series) || !Array.isArray(body.dates) || !Array.isArray(body.missing)) throw Error('Matching comparison data unavailable'); if (!abort.signal.aborted) {setResult({ key, data: body });publishEvidence(body.copilotEvidenceToken);} })
       .catch(e => { if (!abort.signal.aborted) setResult({ key, error: e instanceof Error ? e.message : 'Comparison unavailable' }); });
     return () => abort.abort();
-  }, [key, symbol, type, days]);
+  }, [key, symbol, type, days, publishEvidence]);
   useEffect(() => {
     if (!host.current || typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(([entry]) => setWidth(Math.max(250, entry.contentRect.width)));

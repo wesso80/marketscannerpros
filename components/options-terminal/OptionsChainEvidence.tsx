@@ -1,4 +1,5 @@
 'use client';
+import { useCopilotSection } from '@/lib/ai/useCopilotSection';
 
 import { useCallback, useEffect, useState } from 'react';
 import type { PublicOptionsEvidence } from '@/lib/research/publicOptionsScan';
@@ -10,25 +11,26 @@ import { ResearchFold, ResearchMetric, researchDate, researchLabel, researchNumb
  * interest and the chain's data quality, each with its basis. No grade, direction, strategy, strike pick or trade level.
  */
 export default function OptionsChainEvidence({ symbol, expiry, embeddedInTerminal }: { symbol: string; expiry?: string | null; timeframe?: string | null; embeddedInTerminal?: boolean }) {
+  const publishEvidence=useCopilotSection('options',symbol);
   const [data, setData] = useState<PublicOptionsEvidence | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (signal?: AbortSignal) => {
     if (!symbol.trim()) return;
-    setLoading(true); setError(null);
+    setLoading(true); setError(null); publishEvidence(null);
     try {
-      const res = await fetch('/api/options-scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ symbol: symbol.trim().toUpperCase(), scanMode: 'swing_1d', ...(expiry ? { expirationDate: expiry } : {}) }), signal });
+      const res = await fetch(`/api/research/options?${new URLSearchParams({symbol:symbol.trim().toUpperCase(),...(expiry?{expiry}:{})})}`, { signal });
       const json = await res.json().catch(() => null);
       if (signal?.aborted) return;
       if (!res.ok || !json?.success || !json.data) { setData(null); setError(json?.error || 'Options evidence request failed'); return; }
-      setData(json.data as PublicOptionsEvidence);
+      setData(json.data as PublicOptionsEvidence); publishEvidence(json.copilotEvidenceToken);
     } catch (e) {
       if (!signal?.aborted) { setData(null); setError(e instanceof Error ? e.message : 'Options evidence request failed'); }
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
-  }, [symbol, expiry]);
+  }, [symbol, expiry, publishEvidence]);
 
   useEffect(() => { const c = new AbortController(); void load(c.signal); return () => c.abort(); }, [load]);
 

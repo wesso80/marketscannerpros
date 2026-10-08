@@ -30,8 +30,17 @@ describe('Volatility compact layout',()=>{
  it('keeps missing-input/date warnings and invents no range without ATR (Phase 4: no BBWP-based estimate)',async()=>{
   const raw=structuredClone(fixtures.partial);raw.data.volatility.atr=0;raw.data.projection.signalType='none';const partial=asApi(raw);
   fetcher.mockResolvedValue({json:async()=>partial});await act(async()=>root.render(<Page/>));
-  expect(container.textContent).toContain('Price bar date not collected.');expect(container.textContent).toContain('3 inputs not collected.');
+  expect(container.textContent).toContain('Price bar date not collected.');expect(container.textContent).toContain('Not fully collected: Indicators (stochastic, ADX, ATR), Options chain, Funding and open interest, Timeframe closes.');expect(container.textContent).not.toMatch(/coverage|72%/);
   expect(container.textContent).not.toContain('BBWP-based estimate');expect(container.textContent).not.toContain('Model range (1 ATR)');expect(container.textContent).toContain('ATR not available, so no range size is shown.');
+ });
+ it('shows missing BBWP as unavailable everywhere and never as a met condition (W3 DVE v2)',async()=>{
+  const raw=structuredClone(fixtures.AAPL);raw.data.volatility.bbwp=50;raw.data.volatility.bbwpSma5=50;raw.data.volatility.bbwpBasis={available:false,window:0,lookback:252,fullYear:false};raw.data.signal={...raw.data.signal,type:'none',state:'idle',active:false};
+  fetcher.mockResolvedValue({json:async()=>asApi(raw)});await act(async()=>root.render(<Page/>));
+  container.querySelectorAll('details').forEach(d=>d.setAttribute('open',''));
+  const gauge=container.querySelector('[data-volatility-chart]')!;
+  expect(gauge.querySelector('line')).toBeNull();expect(gauge.textContent).toContain('Not available');expect(gauge.textContent).toContain('Regime not available');
+  expect(container.textContent).toContain('BBWP not available');expect(container.textContent).not.toMatch(/BBWP 50|50\.0/);
+  expect(container.textContent).toContain('(not collected)');
  });
  it('maps display words without changing numeric values or source objects',()=>{
   expect(volatilityText('EXPANSION_UP')).toBe('Expansion Up');expect(volatilityText('Momentum bullish (+15)')).toBe('Momentum upward (+15)');expect(volatilityText('Unknown')).toBe('not collected');

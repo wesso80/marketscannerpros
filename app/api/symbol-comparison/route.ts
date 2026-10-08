@@ -1,3 +1,4 @@
+import { sectionEvidenceToken } from '@/lib/ai/sectionEvidenceAccess';
 import { publicQuotaEnabled, publicQuota, resolvePublicActor, publicInstrumentKey } from '@/lib/publicQuotaAccess';
 import { buildPriceChart } from '@/lib/research/symbolPriceChart';
 import { NextRequest, NextResponse } from 'next/server';
@@ -34,6 +35,9 @@ export async function GET(request: NextRequest) {
     const inputs = results.flatMap((result, i) => result.status === 'fulfilled' && result.value ? [{ symbol: names[i], source: result.value.source || 'source unavailable', closes: result.value.historicalCloses || [], dates: result.value.historicalDates || [] }] : []);
     const now = Date.now();
     const selected = results[0]?.status === 'fulfilled' ? results[0].value : null;
-    return reply({ ...buildSymbolComparison(symbol, asset, inputs, days, now), price: buildPriceChart(selected, asset, days, now) });
+    const data = { ...buildSymbolComparison(symbol, asset, inputs, days, now), price: buildPriceChart(selected, asset, days, now) };
+    const columns=['date','close','open','high','low','volume','sma20','sma50','upper','lower','rsi','macd','signal'] as const;
+    const evidence={...data,price:{source:data.price.source,basis:data.price.basis,columns,rows:data.price.points.map(point=>columns.map(column=>point[column]))}};
+    return reply({...data,copilotEvidenceToken:await sectionEvidenceToken('chart',symbol,asset,evidence)});
   } catch { return reply({ error: 'Comparison temporarily unavailable' }, 503); }
 }

@@ -39,7 +39,7 @@ export default function SymbolAiSummary({ symbol, type, timeframe, expiry }: { s
   }, [symbol, type, timeframe, expiry]);
 
   if (error) return <div className="space-y-5"><p role="alert" className="min-w-0 break-words rounded-xl border border-amber-300/20 bg-amber-300/5 p-5 text-sm text-amber-200">AI summary unavailable: {error}</p></div>;
-  if (!data?.sections) return <div className="space-y-5"><p className="p-5 text-sm text-slate-400">Reading the evidence…</p></div>;
+  if (!data?.sections) return <div className="space-y-5"><p className="p-5 text-sm text-slate-400">Reading the evidenceâ€¦</p></div>;
   const s = data.sections;
   return (
     <div data-symbol-ai-summary className="min-w-0 space-y-5 text-sm leading-6 text-slate-200">

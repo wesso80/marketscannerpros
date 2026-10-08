@@ -9,7 +9,7 @@ import { reportSummary } from '@/lib/publicReportSummary';
 import { publicDailyLimit, symbolQuotaKey } from '@/lib/publicPlans';
 it('defines the approved public limits and separates asset identities',()=>{
  expect(publicDailyLimit('visitor','symbol')).toBe(1);expect(publicDailyLimit('free','symbol')).toBe(3);
- expect(publicDailyLimit('free','ai')).toBe(5);expect(publicDailyLimit('pro','ai')).toBe(100);
+ expect(publicDailyLimit('free','ai')).toBe(0);expect(publicDailyLimit('pro','ai')).toBe(20);
  expect(publicDailyLimit('pro','symbol')).toBeNull();expect(publicDailyLimit('visitor','ai')).toBe(0);
  expect(symbolQuotaKey('crypto','aapl')).not.toBe(symbolQuotaKey('equity','aapl'));
 });
@@ -53,8 +53,8 @@ describe.skipIf(!process.env.QUOTA_TEST_POSTGRES_PORT)('public quotas on isolate
   expect(await service.settle(retry.reservation,'completed')).toBe(true);
  });
  it('enforces shared AI capacity, visitor limits and unlimited Pro reports',async()=>{
-  const ai=await Promise.all(Array.from({length:7},(_,i)=>service.reserve(req('q'+i,{kind:'ai'}))));
-  expect(ai.filter(r=>r.status==='reserved')).toHaveLength(5);
+  const ai=await Promise.all(Array.from({length:22},(_,i)=>service.reserve(req('q'+i,{kind:'ai',plan:'pro'}))));
+  expect(ai.filter(r=>r.status==='reserved')).toHaveLength(20);
   expect((await service.reserve(req('v',{plan:'visitor',kind:'ai',subject:'visitor:test'}))).status).toBe('limited');
   await service.reserve(req('v',{plan:'visitor',subject:'visitor:test'}));
   expect((await service.reserve(req('v2',{plan:'visitor',subject:'visitor:test'}))).status).toBe('limited');
@@ -74,19 +74,19 @@ describe.skipIf(!process.env.QUOTA_TEST_POSTGRES_PORT)('public quotas on isolate
   }
  });
  it('stores a private AI replay atomically with completion and rejects completion without output',async()=>{
-  const a=await service.reserve(req('question',{kind:'ai'}));if(a.status!=='reserved')throw Error('missing');
+  const a=await service.reserve(req('question',{kind:'ai',plan:'pro'}));if(a.status!=='reserved')throw Error('missing');
   await expect(service.settle(a.reservation,'completed')).rejects.toThrow('durable response');
   await service.settle(a.reservation,'completed',{answer:'fixture answer'});
-  const replay=await service.reserve(req('question',{kind:'ai'}));expect(replay.status).toBe('completed');
+  const replay=await service.reserve(req('question',{kind:'ai',plan:'pro'}));expect(replay.status).toBe('completed');
   if(replay.status==='completed')expect(replay.replay).toEqual({answer:'fixture answer'});
-  const other=await service.reserve(req('question',{kind:'ai',subject:'account:other'}));expect(other.status).toBe('reserved');
-  const status=await service.status('account:fixture','free');expect(status.quotas.find(q=>q.kind==='ai')).toMatchObject({completed:1,pending:0,remaining:4});
+  const other=await service.reserve(req('question',{kind:'ai',plan:'pro',subject:'account:other'}));expect(other.status).toBe('reserved');
+  const status=await service.status('account:fixture','pro');expect(status.quotas.find(q=>q.kind==='ai')).toMatchObject({completed:1,pending:0,remaining:19});
   expect(JSON.stringify(status)).not.toContain('fixture answer');expect(JSON.stringify(status)).not.toContain('account:fixture');
  });
- it('reserves exactly 100 Pro AI requests under contention',async()=>{
-  const results=await Promise.all(Array.from({length:102},(_,i)=>service.reserve(req('q'+i,{kind:'ai',plan:'pro'}))));
-  expect(results.filter(r=>r.status==='reserved')).toHaveLength(100);
-  expect((await service.status('account:fixture','pro')).quotas.find(q=>q.kind==='ai')).toMatchObject({remaining:0,pending:100});
+ it('reserves exactly 20 Pro AI requests under contention',async()=>{
+  const results=await Promise.all(Array.from({length:22},(_,i)=>service.reserve(req('q'+i,{kind:'ai',plan:'pro'}))));
+  expect(results.filter(r=>r.status==='reserved')).toHaveLength(20);
+  expect((await service.status('account:fixture','pro')).quotas.find(q=>q.kind==='ai')).toMatchObject({remaining:0,pending:20});
  });
  it('allows report sections only after successful unlock and generates one automatic summary',async()=>{
   expect(await service.isUnlocked('account:fixture','A')).toBe(false);
@@ -98,7 +98,7 @@ describe.skipIf(!process.env.QUOTA_TEST_POSTGRES_PORT)('public quotas on isolate
   expect(generate).toHaveBeenCalledTimes(1);
   expect(await reportSummary('account:fixture','A','evidence',generate)).toBe('synthetic prose');
   expect(await reportSummary('account:fixture','A','changed evidence',generate)).toBeNull();expect(generate).toHaveBeenCalledTimes(1);
-  expect((await service.status('account:fixture','free')).quotas.find(q=>q.kind==='ai')?.completed).toBe(0);
+  expect((await service.status('account:fixture','pro')).quotas.find(q=>q.kind==='ai')?.completed).toBe(0);
  });
  it('fails closed on storage errors'  ,async()=>{
   const broken=createPublicDailyQuota(async()=>{throw Error('offline');});
