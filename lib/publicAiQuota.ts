@@ -41,8 +41,9 @@ export function withPublicAiQuota(handler:(req:NextRequest)=>Promise<Response>, 
   try {
    const session=await getSessionFromCookie();if(!session?.workspaceId)return reply({error:'Please log in'},401);
    const access=await resolvePublicQuotaAccess(session);if(access.bypass)return handler(req);
+   if(access.plan !== 'pro')return reply({code:'COPILOT_PRO_REQUIRED',error:'MSP Copilot requires Pro. Pro includes 20 questions per day.'},403);
    const rate=aiLimiter.check(getClientIP(req));if(!rate.allowed)return reply({error:'Please slow down'},429);
-   const raw=await req.clone().text();if(Buffer.byteLength(raw)>65536)return reply({error:'Question context is too large'},413);
+   const raw=await req.clone().text();if(Buffer.byteLength(raw)>180000)return reply({error:'Question context is too large'},413);
    let input: unknown;try{input=JSON.parse(raw);}catch{return reply({error:'Invalid JSON'},400);}
    if(!input||typeof input!=='object'||Array.isArray(input))return reply({error:'Question object required'},400);
    const fingerprint=publicRequestFingerprint(feature+':'+canonical(input));

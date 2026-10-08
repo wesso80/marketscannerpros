@@ -1,6 +1,7 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import PublicMSPCopilot, { type CopilotUsage } from '@/components/PublicMSPCopilot';
 import SignedOutBanner from '@/components/free/SignedOutBanner';
 import MSPCopilot from '@/components/MSPCopilot';
 import RegimeBar from '@/app/v2/_components/RegimeBar';
@@ -50,6 +51,20 @@ function getSkillFromPath(pathname: string): PageSkill {
 
 function CopilotWithContext({ fallbackSkill }: { fallbackSkill: PageSkill }) {
   const { pageData } = useAIPageContext();
+  const pathname = usePathname();
+  const [usage,setUsage] = useState<CopilotUsage | null>(null);
+  useEffect(()=>{const abort=new AbortController();let timer:ReturnType<typeof setTimeout>;setUsage(null);
+    const load=()=>{clearTimeout(timer);fetch('/api/public-usage',{signal:abort.signal,cache:'no-store'}).then(async r=>{
+      if(!r.ok)throw Error('usage');const data=await r.json();if(abort.signal.aborted)return;setUsage(data);
+      const delay=Date.parse(data.resetsAt)-Date.now()+1000;if(Number.isFinite(delay)&&delay>0)timer=setTimeout(load,Math.min(delay,2147483647));
+    }).catch(()=>{});};
+    window.addEventListener('public-usage-changed',load);window.addEventListener('focus',load);load();
+    return ()=>{abort.abort();clearTimeout(timer);window.removeEventListener('public-usage-changed',load);window.removeEventListener('focus',load);};
+  },[pathname]);
+  // Fail closed while entitlement is loading; only the explicit legacy/admin response selects the old panel.
+  if(!usage)return null;
+  if(usage.enabled && !usage.bypass)return <PublicMSPCopilot usage={usage} pagePath={pathname}
+    symbol={pageData?.symbols[0]} evidenceToken={typeof pageData?.data.copilotEvidenceToken==='string' ? pageData.data.copilotEvidenceToken : null} />;
 
   return (
     <MSPCopilot

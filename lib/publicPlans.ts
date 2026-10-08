@@ -4,8 +4,8 @@ export type PublicPlan = 'visitor' | 'free' | 'pro';
 export type PublicQuotaKind = 'symbol' | 'ai';
 export const PUBLIC_DAILY_LIMITS = {
   visitor: { symbol: 1, ai: 0 },
-  free: { symbol: 3, ai: 5 },
-  pro: { symbol: null, ai: 100 },
+  free: { symbol: 3, ai: 0 },
+  pro: { symbol: null, ai: 20 },
 } as const;
 export function publicDailyLimit(plan: PublicPlan, kind: PublicQuotaKind): number | null {
   if (!Object.prototype.hasOwnProperty.call(PUBLIC_DAILY_LIMITS, plan) || !['symbol','ai'].includes(kind)) throw new Error('Invalid public quota policy');

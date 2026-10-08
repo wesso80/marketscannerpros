@@ -1,14 +1,14 @@
 import {beforeEach,it,expect,vi} from 'vitest';
 import {NextRequest,NextResponse} from 'next/server';
-const h=vi.hoisted(()=>({enabled:true,session:{workspaceId:'w'},access:{bypass:false,subject:'account:w',plan:'free'},reserve:vi.fn(),settle:vi.fn()}));
+const h=vi.hoisted(()=>({enabled:true,session:{workspaceId:'w'},access:{bypass:false,subject:'account:w',plan:'pro'},reserve:vi.fn(),settle:vi.fn()}));
 vi.mock('@/lib/auth',()=>({getSessionFromCookie:async()=>h.session}));
 vi.mock('@/lib/publicQuotaAccess',()=>({publicQuotaEnabled:()=>h.enabled,resolvePublicQuotaAccess:async()=>h.access,publicRequestFingerprint:(s:string)=>s,publicQuota:{reserve:h.reserve,settle:h.settle}}));
 vi.mock('@/lib/rateLimit',()=>({aiLimiter:{check:()=>({allowed:true})},getClientIP:()=> 'fixture'}));
 import {withPublicAiQuota,publicAiScope,markPublicAiProviderStarted} from '@/lib/publicAiQuota';
 const req=(body:unknown={message:'hello'},id='fixture-id')=>new NextRequest('http://localhost/api/ai/copilot',{method:'POST',headers:{'Idempotency-Key':id},body:JSON.stringify(body)});
-beforeEach(()=>{vi.clearAllMocks();h.enabled=true;h.access={bypass:false,subject:'account:w',plan:'free'};h.reserve.mockResolvedValue({status:'reserved',reservation:{token:'a'},limit:5,used:1});h.settle.mockResolvedValue(true);});
+beforeEach(()=>{vi.clearAllMocks();h.enabled=true;h.access={bypass:false,subject:'account:w',plan:'pro'};h.reserve.mockResolvedValue({status:'reserved',reservation:{token:'a'},limit:20,used:1});h.settle.mockResolvedValue(true);});
 it('reserves before execution, scopes verified plan and stores the replay before returning',async()=>{
- const run=vi.fn(async()=>{expect(h.reserve).toHaveBeenCalled();expect(publicAiScope()?.plan).toBe('free');return NextResponse.json({content:'fixture answer'});});
+ const run=vi.fn(async()=>{expect(h.reserve).toHaveBeenCalled();expect(publicAiScope()?.plan).toBe('pro');return NextResponse.json({content:'fixture answer'});});
  const r=await withPublicAiQuota(run,'ai/copilot')(req());expect(r.status).toBe(200);expect(h.settle).toHaveBeenCalledWith({token:'a'},'completed',{content:'fixture answer'});expect(r.headers.get('cache-control')).toBe('private, no-store');expect(publicAiScope()).toBeUndefined();
 });
 it('replays without executing and rejects pending, conflicting and over-limit requests',async()=>{
@@ -93,4 +93,11 @@ it('preserves admin bypass for answer shapes outside the public contract',async(
  h.access.bypass=true;
  const response=await withPublicAiQuota(async()=>NextResponse.json({privateResult:true}),'ai/copilot')(req());
  expect(response.status).toBe(200);expect(h.reserve).not.toHaveBeenCalled();expect(h.settle).not.toHaveBeenCalled();
+});
+
+it('rejects Free before reservation or handler execution',async()=>{
+ h.access.plan='free';const run=vi.fn();
+ const response=await withPublicAiQuota(run,'ai/copilot')(req());
+ expect(response.status).toBe(403);expect((await response.json()).code).toBe('COPILOT_PRO_REQUIRED');
+ expect(run).not.toHaveBeenCalled();expect(h.reserve).not.toHaveBeenCalled();
 });

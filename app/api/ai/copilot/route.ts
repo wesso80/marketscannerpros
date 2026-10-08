@@ -1,4 +1,5 @@
 import { withPublicAiQuota, publicAiScope, markPublicAiProviderStarted } from '@/lib/publicAiQuota';
+import { publicCopilot } from '@/lib/ai/publicCopilot';
 // =====================================================
 // MSP AI COPILOT API - Main AI chat endpoint with tools
 // POST /api/ai/copilot
@@ -26,9 +27,7 @@ import { computeSessionPhaseOverlay } from '@/lib/ai/sessionPhase';
 import { AI_MODEL_BY_TIER, normalizeTier, getDailyAiLimit } from '@/lib/entitlements';
 import { getVerifiedTier } from '@/lib/apiMiddleware';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+
 
 // Check daily usage against canonical tier limit (database-backed)
 async function checkTierQuota(workspaceId: string, tier: string): Promise<{
@@ -83,6 +82,8 @@ async function logAIUsage(
 }
 
 async function handlePost(req: NextRequest) {
+  if (publicAiScope()) return publicCopilot(req);
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const startTime = Date.now();
   
   try {

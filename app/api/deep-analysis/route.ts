@@ -72,6 +72,7 @@ export async function GET(request: NextRequest) {
       publicAccess=await resolvePublicActor(request,session);
       if(!publicAccess)return NextResponse.json({success:false,error:'Open a Symbol report first'},{status:401,headers:{'Cache-Control':'private, no-store'}});
       if(!publicAccess.bypass){
+        if(publicAccess.plan !== 'pro')return NextResponse.json({success:false,code:'COPILOT_PRO_REQUIRED',error:'The AI summary requires Pro.'},{status:403,headers:{'Cache-Control':'private, no-store'}});
         try{resource=publicInstrumentKey(symbol,assetClass);}catch{return NextResponse.json({success:false,error:'Invalid or unmapped symbol'},{status:400});}
         if(!await publicQuota.isUnlocked(publicAccess.subject,resource))return NextResponse.json({success:false,error:'Open this Symbol report before its AI summary'},{status:403,headers:{'Cache-Control':'private, no-store'}});
       }

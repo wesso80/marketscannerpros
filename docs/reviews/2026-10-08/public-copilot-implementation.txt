@@ -1,0 +1,48 @@
+MSP Copilot implementation checkpoint — 8 October 2026
+
+Branch: codex/public-copilot-education
+Foundation: Codex integration plus Claude #508/#509 (research-page-phase4 717bfdbe).
+No merges, deployments, production data changes or provider/OpenAI calls.
+
+Implemented behind existing PUBLIC_DAILY_QUOTAS_ENABLED rollout:
+- Public Free/visitor AI allowance zero; Pro 20 across shared question ledger.
+- Verified subscription gate precedes reservation and provider execution; admin bypass unchanged.
+- Automatic Symbol AI summary requires Pro when the public rollout is enabled.
+- Public Copilot bypasses legacy internal context, intelligence retrieval, tools and trading prompts.
+- Core Symbol public packet signed server-side, account-bound, 30-minute expiry, no-store response.
+- Missing signing configuration preserves the report but leaves Copilot unavailable.
+- Public model receives only that signed snapshot plus a bounded question, no arbitrary pageData or history.
+- Educational prompt, strict JSON output, checked evidence IDs and numerical claims, basic advisory-text rejection.
+- Public model default gpt-6-luna, configurable with PUBLIC_COPILOT_MODEL. Not live evaluated.
+- Pro panel with remaining allowance, localized reset, explicit missing sections and expandable source fields.
+- Account plan/allowance rechecks on window focus, successful responses and Eastern reset.
+- Pending interrupted requests retain reservation; same request ID does not rerun. Definite failures release credit.
+
+Limits / release blockers (do not enable rollout yet):
+1. Snapshot contains the core public Symbol packet ONLY. Full chart series/comparison, separately loaded news,
+   options chain and DVE need explicit server-issued evidence adapters. Other destinations intentionally
+   show unavailable rather than read stale or arbitrary client context. This is not whole-page completion.
+2. User follow-up messages are independent against the same snapshot; conversation history is not yet trusted/stored.
+3. Other legacy public AI endpoints retain their existing behaviour under the shared paid gate. They need
+   educational routing or retirement before release; admin consumers must remain intact.
+4. Automatic summary remains on existing generator/model and once-per-report/day cache, separate from 20 questions.
+   Unify signed evidence and summary generation after adapters; no extra automatic generation added here.
+5. Pricing/marketing copy and legacy free AI claims are not updated yet; update with rollout-aware policy.
+6. Regex/numeric checks are conservative filters, not proof of semantic grounding. Run representative
+   adversarial/educational evaluations before choosing model and enabling it. No live account verification yet.
+7. No aggregate dollar budget or token-cost observability implemented yet. Output/request caps and daily quota
+   exist; private replay stores model usage. Add durable aggregate spend admission before broad release.
+8. Panel unit-tested; visual browser check at 390/1280 still required.
+
+Validation:
+- 36 focused evidence/route/quota tests passed; 25 existing route/access/summary/usage checks passed.
+- 3 new panel tests passed.
+- 11 isolated real PostgreSQL tests passed, including 20-request contention and DST reset instants;
+  local test database removed and PostgreSQL stopped by harness. No production database accessed.
+- Typecheck reports only the six previously recorded local runtime baseline errors:
+  four Stripe API literal versions, and two timer.unref types. No new errors found.
+- git diff --check passed.
+
+Claude ownership: public DVE fields and access reconciliation; avoid Copilot/policy/quota files.
+Next Codex task: signed evidence adapters for all Symbol tabs, then remaining seven destinations,
+summary unification, legacy AI retirement, pricing and model evaluation. Report shared page overlap first.

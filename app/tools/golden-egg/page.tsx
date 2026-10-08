@@ -505,6 +505,7 @@ export default function GoldenEggPage() {
   /* ─── Register Golden Egg data for Arca AI context ─── */
   // W3: the copilot receives the public evidence only (no verdict, score, playbook or hypothetical R:R).
   const geAiData = useMemo(() => ({
+    copilotEvidenceToken: goldenEgg.data?.copilotEvidenceToken ?? null,
     symbol: sym,
     timeframe,
     price: quote.data?.price,
@@ -515,7 +516,7 @@ export default function GoldenEggPage() {
     recordedLevels: ge?.layer2.setup.keyLevels ?? [],
     options: geCanonical?.options ?? null,
     dataTrust: geCanonical?.dataTrust ?? null,
-  }), [sym, timeframe, ge, geCanonical, d, quote.data]);
+  }), [sym, timeframe, ge, geCanonical, d, quote.data, goldenEgg.data?.copilotEvidenceToken]);
 
   const geAiSummary = useMemo(() => {
     if (goldenEgg.error) return `Golden Egg: ${sym} unavailable — ${goldenEgg.error}`;
