@@ -34,4 +34,16 @@ describe('/api/midpoints', () => {
     expect(r.status).toBe(500);
     expect(JSON.stringify(await r.json())).not.toMatch(/ECONNREFUSED|internal-db/);
   });
+  it('every response (401, 200, 500) is private, no-store and varies by cookie', async () => {
+    const anon = await GET(req('GET'));
+    h.admin = true;
+    const ok = await GET(req('GET'));
+    h.fail = true;
+    const err = await GET(req('GET'));
+    expect([anon.status, ok.status, err.status]).toEqual([401, 200, 500]);
+    for (const r of [anon, ok, err]) {
+      expect(r.headers.get('cache-control')).toBe('private, no-store, max-age=0');
+      expect(r.headers.get('vary')).toBe('Cookie');
+    }
+  });
 });
