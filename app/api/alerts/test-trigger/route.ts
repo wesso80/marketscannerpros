@@ -13,7 +13,7 @@ import { historyPriceInsert } from '@/lib/alerts/historyPrice';
  *
  * Requires auth (session cookie). Steps:
  * 1. Creates a temporary "AAPL price_below $99999" alert (guaranteed to trigger)
- * 2. Fetches the live AAPL price from Alpha Vantage
+ * 2. Fetches the live AAPL price from Alpha Vantage (stops if none is collected; no price is invented)
  * 3. Evaluates the condition
  * 4. Sends the alert email via Resend
  * 5. Cleans up the test alert
@@ -69,14 +69,17 @@ export async function GET(_req: NextRequest) {
         step(`✅ AAPL price: $${price.toFixed(2)}`);
       } else {
         step(`⚠️ Alpha Vantage returned no price. Full response keys: ${Object.keys(data).join(', ')}`);
-        // Use a fallback price so we can still test email
-        price = 150;
-        step(`ℹ️  Using fallback price $${price} to continue test`);
       }
     } catch (err: any) {
       console.error('[alerts/test-trigger] AV fetch failed', err);
-      step('⚠️ Price fetch failed (details logged on the server). Using fallback price $150');
-      price = 150;
+      step('⚠️ Price fetch failed (details logged on the server).');
+      price = null;
+    }
+
+    // No invented price: without a collected quote the test stops here (nothing created, no email sent).
+    if (price == null || !Number.isFinite(price)) {
+      step('❌ TEST STOPPED — no AAPL price was collected, so no test alert was created and no email was sent. Try again shortly.');
+      return NextResponse.json({ success: false, log, email, price: null, emailId: null }, { status: 503 });
     }
 
     // 5. Insert test alert
