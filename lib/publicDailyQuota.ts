@@ -10,6 +10,14 @@ export type QuotaReservation = { subject: string; day: string; kind: PublicQuota
  * A completed retry must replay a stored answer, never run the model again. */
 export function createPublicDailyQuota(transaction: Transaction = tx) {
   return {
+    async isUnlocked(subject:string, resource:string) {
+      return transaction(async client => {
+        const {rows}=await client.query(`SELECT 1 FROM public_daily_quota_entries WHERE subject_key=$1
+          AND quota_day=(now() AT TIME ZONE 'America/New_York')::date AND kind='symbol'
+          AND resource_key=$2 AND status='completed'`,[subject,resource]);
+        return rows.length>0;
+      });
+    },
     async status(subject: string, plan: PublicPlan) {
       if (!subject || subject.length > 256) throw new Error('Invalid quota identity');
       return transaction(async client => {
