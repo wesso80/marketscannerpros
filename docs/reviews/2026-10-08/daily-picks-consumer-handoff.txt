@@ -136,3 +136,30 @@ checks and real-route adapter tests pass, but do not replace this unresolved
 full-app acceptance. Preserve the runner log under
 outputs/daily-consumers-full-browser; do not describe those pages as passed.
 No shared branch merges, deployment, production mutation or key rotation.
+
+
+Consumer browser acceptance completed — supersedes the stall above
+All six actual Next-page checks pass: /tools/start, /tools/command-center and
+/tools/golden-egg?symbol=AAPL&type=equity at 1280 and 390. HTTP 200, no horizontal
+document overflow, no browser exceptions and no private canaries visible.
+Today loads the Free A–Z widget. Command-center opens Market evidence, selects
+Stocks and displays AAPL. Symbol loads AAPL and reads the same daily endpoint.
+Daily-picks uses real route/SQL against disposable loopback PostgreSQL; core
+Symbol and login/disclosure state are synthetic, other feeds unavailable.
+This is not production authentication/provider or exhaustive Symbol validation.
+
+Webpack tracing stopped after code generation. Turbopack hit native path/lock
+access errors despite grants. Disabling package-import optimization alone did
+not help. A scratch-only Webpack run with devtool=false, cache=false and 4GB
+heap compiled in nine seconds and completed the checks. This is a local build
+workaround, not a proven single root cause. No compiler change in the PR.
+Scratch next.config/next-env restored; own generated AGENTS file removed.
+
+Artifacts: outputs/daily-consumers-no-cache-browser/results.json, six PNGs,
+next.log and runner.mjs. Mobile Symbol image inspected; cookie banner remains
+visible in screenshots. Together with the earlier 11 route/image checks, the
+17 scoped daily-scan browser checks now pass. DB dropped, PostgreSQL stopped.
+Nothing merged/deployed; no production/provider calls or credential rotation.
+Next recommended: review draft safety changes #525–#528, then separate public
+Scanner ranking/levels removal while preserving admin. Credential rotation
+remains an external owner action.
