@@ -663,33 +663,13 @@ export type FuturesSessionState = {
 
 export type FuturesAnchorMode = 'globex' | 'rth' | 'cash_bridge';
 
-export type FuturesCloseCalendarRow = {
-  timeframe: string;
-  category: 'intraday' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
-  nextCloseISO: string;
-  minutesToClose: number;
-  weight: number;
-};
-
-export type FuturesCloseCluster = {
-  label: string;
-  timeISO: string;
-  timeEtLabel: string;
-  timeframes: string[];
-  weight: number;
-  clusterScore: number;
-};
-
-export type FuturesCloseCalendarResponse = {
-  symbol: string;
-  anchorMode: FuturesAnchorMode;
-  timezone: 'America/New_York';
-  horizonDays: number;
-  schedule: FuturesCloseCalendarRow[];
-  clusters: FuturesCloseCluster[];
-  timeline: string[];
-  warnings: string[];
-};
+/** Public futures close calendar (public-futures-close-calendar-v1): close times and counts; no weight or score. */
+export type {
+  PublicFuturesCloseRow as FuturesCloseCalendarRow,
+  PublicFuturesCloseGroup as FuturesCloseCluster,
+  PublicFuturesCloseCalendar as FuturesCloseCalendarResponse,
+} from '@/lib/research/publicFuturesCloseCalendar';
+import type { PublicFuturesCloseCalendar as FuturesCloseCalendarResponse } from '@/lib/research/publicFuturesCloseCalendar';
 
 export type PhantomTimeState = {
   symbol: string;

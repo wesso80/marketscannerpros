@@ -16,12 +16,14 @@ import {
   type CashBridgeState,
 } from '@/lib/terminal/futures/cashBridgeMap';
 import { buildPhantomTimeState, type PhantomTimeState } from '@/lib/terminal/futures/phantomTimeEngine';
+import { toPublicFuturesCloseCalendar, type PublicFuturesCloseCalendar } from '@/lib/research/publicFuturesCloseCalendar';
 
 export type FuturesTerminalResponse = {
   symbol: string;
   marketPath: 'futures';
   session: FuturesSessionState;
-  closeCalendar: FuturesCloseCalendarResponse;
+  /** Public close calendar: close times and counts only (no category weight or stack score). */
+  closeCalendar: PublicFuturesCloseCalendar;
   phantomTime?: PhantomTimeState;
   cashBridge?: CashBridgeState;
   riskNotice: string;
@@ -80,6 +82,12 @@ function fallbackCalendar(symbol: string, anchorMode: FuturesAnchorMode, horizon
   };
 }
 
+/** Logs the internal error server-side; the public response only names the part that could not be computed. */
+function reportPartFailure(errors: string[], part: 'session' | 'closeCalendar' | 'cashBridge' | 'phantomTime', error: unknown) {
+  console.error(`[terminal/futures] ${part} failed`, error);
+  errors.push(`${part}: could not be computed`);
+}
+
 export async function GET(request: NextRequest) {
   const session = await getSessionFromCookie();
   if (!session?.workspaceId) {
@@ -104,13 +112,13 @@ export async function GET(request: NextRequest) {
   try {
     sessionState = buildFuturesSessionState(symbol);
   } catch (error) {
-    errors.push(error instanceof Error ? `session: ${error.message}` : 'session: unknown error');
+    reportPartFailure(errors, 'session', error);
   }
 
   try {
     closeCalendar = buildFuturesCloseCalendar(symbol, anchorMode, horizon);
   } catch (error) {
-    errors.push(error instanceof Error ? `closeCalendar: ${error.message}` : 'closeCalendar: unknown error');
+    reportPartFailure(errors, 'closeCalendar', error);
   }
 
   try {
@@ -119,7 +127,7 @@ export async function GET(request: NextRequest) {
       cashBridge = bridge;
     }
   } catch (error) {
-    errors.push(error instanceof Error ? `cashBridge: ${error.message}` : 'cashBridge: unknown error');
+    reportPartFailure(errors, 'cashBridge', error);
   }
 
   try {
@@ -128,7 +136,7 @@ export async function GET(request: NextRequest) {
       phantomTime = phantom;
     }
   } catch (error) {
-    errors.push(error instanceof Error ? `phantomTime: ${error.message}` : 'phantomTime: unknown error');
+    reportPartFailure(errors, 'phantomTime', error);
   }
 
   if (!cashBridge && (symbol === '/ES' || symbol === '/NQ' || symbol === '/YM' || symbol === '/RTY')) {
@@ -146,7 +154,7 @@ export async function GET(request: NextRequest) {
     symbol,
     marketPath: 'futures',
     session: sessionState,
-    closeCalendar,
+    closeCalendar: toPublicFuturesCloseCalendar(closeCalendar),
     ...(phantomTime ? { phantomTime } : {}),
     ...(cashBridge ? { cashBridge } : {}),
     riskNotice: RISK_NOTICE,
