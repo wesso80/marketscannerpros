@@ -167,32 +167,19 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
     return { level: "Value", color: "var(--msp-bull)", bg: "var(--msp-bull-tint)", border: "var(--msp-bull)" };
   };
 
-  const getTechnicalBias = () => {
+  // W3: measured relations only (provider overview fields), not a "Bullish / Bearish" bias.
+  const getPricePosition = () => {
     if (!data || !data.currentPrice) return null;
     const price = parseFloat(data.currentPrice);
     const ma50 = parseFloat(data.day50MA);
     const ma200 = parseFloat(data.day200MA);
     const high52 = parseFloat(data.week52High);
     const low52 = parseFloat(data.week52Low);
-    
     if (isNaN(price) || isNaN(ma50) || isNaN(ma200)) return null;
-    
-    const aboveBothMAs = price > ma50 && price > ma200;
-    const belowBothMAs = price < ma50 && price < ma200;
-    const nearHigh = high52 > 0 && (price / high52) > 0.95;
-    const nearLow = low52 > 0 && (price / low52) < 1.05;
-    
-    if (aboveBothMAs && nearHigh) {
-      return { bias: "Bullish", detail: `Strong uptrend, near 52-week high`, color: "var(--msp-bull)", bg: "var(--msp-bull-tint)", border: "var(--msp-bull)", icon: "UP" };
-    } else if (aboveBothMAs) {
-      return { bias: "Bullish", detail: `Trading above key moving averages ($${ma50.toFixed(0)} / $${ma200.toFixed(0)})`, color: "var(--msp-bull)", bg: "var(--msp-bull-tint)", border: "var(--msp-bull)", icon: "UP" };
-    } else if (belowBothMAs && nearLow) {
-      return { bias: "Bearish", detail: `Downtrend, near 52-week low`, color: "var(--msp-bear)", bg: "var(--msp-bear-tint)", border: "var(--msp-bear)", icon: "DN" };
-    } else if (belowBothMAs) {
-      return { bias: "Bearish", detail: `Trading below key moving averages`, color: "var(--msp-bear)", bg: "var(--msp-bear-tint)", border: "var(--msp-bear)", icon: "DN" };
-    } else {
-      return { bias: "Neutral", detail: `Mixed signals between 50 & 200 MA`, color: "var(--msp-warn)", bg: "var(--msp-warn-tint)", border: "var(--msp-warn)", icon: "MID" };
-    }
+    const rel = (ma: number) => (price > ma ? 'above' : price < ma ? 'below' : 'at');
+    const parts = [`Price ${rel(ma50)} the 50-day average ($${ma50.toFixed(2)}) and ${rel(ma200)} the 200-day ($${ma200.toFixed(2)})`];
+    if (high52 > 0 && low52 > 0) parts.push(`${((1 - price / high52) * 100).toFixed(1)}% below the 52-week high, ${((price / low52 - 1) * 100).toFixed(1)}% above the 52-week low`);
+    return { text: parts.join('; ') + '.' };
   };
 
   const getAnalystContext = () => {
@@ -335,7 +322,7 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
   };
 
   const valuation = getValuationAssessment();
-  const technicalBias = getTechnicalBias();
+  const pricePosition = getPricePosition();
   const analystContext = getAnalystContext();
   const decisionLens = generateDecisionLens();
   const bullCase = generateBullCase();
@@ -518,27 +505,17 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
               </div>
             )}
 
-            {/* Technical Bias Banner */}
-            {technicalBias && (
-              <div style={{ 
-                background: technicalBias.bg,
-                borderRadius: "12px", 
-                border: `1px solid ${technicalBias.border}`,
+            {/* Price position (measured relations; W3) */}
+            {pricePosition && (
+              <div data-price-position style={{
+                background: "var(--msp-panel)",
+                borderRadius: "12px",
+                border: "1px solid var(--msp-border)",
                 padding: "16px 20px",
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                flexWrap: "wrap"
               }}>
-                <span aria-hidden="true" style={{ fontSize: "1.5rem" }}>{technicalBias.icon}</span>
-                <div>
-                  <span style={{ color: technicalBias.color, fontWeight: "bold", fontSize: "15px" }}>
-                    Technical Bias: {technicalBias.bias}
-                  </span>
-                  <span style={{ color: "var(--msp-text-muted)", fontSize: "14px", marginLeft: "12px" }}>
-                    {technicalBias.detail}
-                  </span>
-                </div>
+                <span style={{ color: "var(--msp-text)", fontWeight: "bold", fontSize: "15px" }}>Price position</span>
+                <span style={{ color: "var(--msp-text-muted)", fontSize: "14px", marginLeft: "12px" }}>{pricePosition.text}</span>
+                <div style={{ color: "var(--msp-text-faint)", fontSize: "12px", marginTop: "4px" }}>Provider overview fields (moving averages and 52-week range); a description, not a direction.</div>
               </div>
             )}
 

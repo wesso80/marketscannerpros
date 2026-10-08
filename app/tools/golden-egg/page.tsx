@@ -220,25 +220,6 @@ function FlagshipMetric({ label, value, tone = 'var(--msp-flat)', ariaLabel }: {
 }
 
 /* ─── Phase 5: Cross-Market Alignment ─── */
-function deriveCrossMarketAlignment(signals?: Array<{ source: string; regime: string; weight: number; stale: boolean; counted?: boolean }>): { alignment: 'supportive' | 'neutral' | 'headwind'; factors: string[] } {
-  const deciding = (signals ?? []).filter((s) => s.counted !== false);
-  if (deciding.length === 0) return { alignment: 'neutral', factors: ['No cross-market data'] };
-  const factors: string[] = [];
-  let headwinds = 0;
-  let tailwinds = 0;
-  for (const s of deciding) {
-    if (s.stale) continue;
-    const r = s.regime?.toLowerCase() || '';
-    if (r === 'risk_off' || r === 'compression') { headwinds += s.weight; factors.push(`${s.source}: ${s.regime} (headwind)`); }
-    else if (r === 'trend' || r === 'expansion' || r === 'risk_on') { tailwinds += s.weight; factors.push(`${s.source}: ${s.regime} (supportive)`); }
-    else { factors.push(`${s.source}: ${s.regime} (neutral)`); }
-  }
-  if (headwinds > tailwinds + 0.2) return { alignment: 'headwind', factors };
-  if (tailwinds > headwinds + 0.2) return { alignment: 'supportive', factors };
-  return { alignment: 'neutral', factors };
-}
-
-const ALIGNMENT_COLOR: Record<string, string> = { supportive: 'var(--msp-bull)', neutral: 'var(--msp-warn)', headwind: 'var(--msp-bear)' };
 
 import { useUserTier } from '@/lib/useUserTier';
 
@@ -718,11 +699,11 @@ export default function GoldenEggPage() {
               {ge?.layer3?.options?.enabled ? (
                 <div className="space-y-2 mt-1">
                   <div className="grid gap-1 sm:grid-cols-2">
-                    {ge.layer3.options.highlights.map((h: any, i: number) => (
+                    {ge.layer3.options.highlights.map((h, i) => (
                       <div key={i} className="flex justify-between text-xs rounded-md bg-[var(--msp-panel-2)] px-2 py-1.5"><span className="text-slate-400">{symbolText(h.label)}</span><span className="text-white font-mono">{symbolText(h.value)}</span></div>
                     ))}
                   </div>
-                  {ge.layer3.options.notes?.map((n: any, i: number) => <div key={i} className="text-[11px] text-slate-500">• {symbolText(n)}</div>)}
+                  {ge.layer3.options.notes?.map((n, i) => <div key={i} className="text-[11px] text-slate-500">• {symbolText(n)}</div>)}
                 </div>
               ) : (
                 <div className="text-xs text-slate-500 py-3">Derivatives evidence is not available for this asset right now.</div>
@@ -922,38 +903,20 @@ export default function GoldenEggPage() {
             {/* Dynamic signals from regime API. Account context is the card above, not one of these setups. */}
             {!geCanonical?.crossMarket && regime.data?.signals && regime.data.signals.some((sig) => sig.counted !== false) && (
               <div className="mb-4">
-                <div className="text-[11px] text-slate-500 uppercase mb-2">Live Market Setups</div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {regime.data.signals.filter((sig) => sig.counted !== false).map((sig: any, i: number) => {
-                    const r = sig.regime?.toLowerCase() || '';
-                    const isHeadwind = r === 'risk_off' || r === 'compression';
-                    const isTailwind = r === 'trend' || r === 'expansion' || r === 'risk_on';
-                    const color = isHeadwind ? 'var(--msp-bear)' : isTailwind ? 'var(--msp-bull)' : 'var(--msp-flat)';
-                    return (
-                      <div key={i} className="bg-[var(--msp-panel-2)] rounded-lg p-2.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-white">{symbolText(sig.source)}</span>
-                          {sig.stale && <span className="text-[11px] text-yellow-500">stale</span>}
-                        </div>
-                        <div className="flex items-center gap-1 mt-1">
-                          <span className="text-[11px] font-semibold" style={{ color }}>{symbolText(sig.regime)}</span>
-                          <span className="text-[11px] text-slate-600">w:{symbolText(sig.weight)}</span>
-                        </div>
-                        <div className="text-[11px] mt-0.5" style={{ color }}>{symbolText(isHeadwind ? 'Headwind' : isTailwind ? 'Supportive' : 'Neutral')}</div>
+                <div className="text-[11px] text-slate-500 uppercase mb-2">Market regime reads</div>
+                <div data-regime-reads className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {regime.data.signals.filter((sig) => sig.counted !== false).map((sig: any, i: number) => (
+                    <div key={i} className="min-w-0 bg-[var(--msp-panel-2)] rounded-lg p-2.5">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="min-w-0 break-words text-xs font-semibold text-white">{symbolText(sig.source)}</span>
+                        {sig.stale && <span className="text-[11px] text-yellow-500">stale</span>}
                       </div>
-                    );
-                  })}
-                </div>
-                {(() => {
-                  const cm = deriveCrossMarketAlignment(regime.data.signals);
-                  return (
-                    <div className="mt-2 p-2 rounded-lg border" style={{ borderColor: ALIGNMENT_COLOR[cm.alignment] + '40', backgroundColor: ALIGNMENT_COLOR[cm.alignment] + '10' }}>
-                      <span className="text-xs font-bold" style={{ color: ALIGNMENT_COLOR[cm.alignment] }}>
-                        Overall: {symbolText(cm.alignment.charAt(0).toUpperCase() + cm.alignment.slice(1))}
-                      </span>
+                      <div className="mt-1 text-[11px] font-semibold text-slate-300">{symbolText(humanizeEnum(sig.regime))}</div>
                     </div>
-                  );
-                })()}
+                  ))}
+                </div>
+                {/* W3: each source's regime read only; no "supportive / headwind" relation, model weights or overall verdict. */}
+                <p className="mt-2 text-[11px] text-slate-500">Each source's regime classification. How it relates to this symbol is not assessed here.</p>
               </div>
             )}
 
@@ -1004,7 +967,7 @@ export default function GoldenEggPage() {
                 <div>
                   <div className="text-[11px] text-slate-500 uppercase">Key Levels</div>
                   <div className="space-y-1 mt-1">
-                    {ge.layer2.setup.keyLevels.map((lv: any, i: number) => (
+                    {ge.layer2.setup.keyLevels.map((lv, i) => (
                       <div key={i} className="flex items-center justify-between text-xs">
                         <span className="text-slate-400">{symbolText(lv.label)} <span className="text-[11px] text-slate-600">({symbolText(lv.kind)})</span></span>
                         <span className="font-mono text-white">{symbolText(formatLevel(lv.price))}</span>
@@ -1017,7 +980,7 @@ export default function GoldenEggPage() {
                   <div>
                     <div className="text-[11px] text-slate-500 uppercase">Momentum</div>
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {ge.layer3.momentum.indicators.map((ind: any, i: number) => (
+                      {ge.layer3.momentum.indicators.map((ind, i) => (
                         <Badge key={i} label={symbolText(`${ind.name}: ${ind.value}`)} color={ind.state === 'bull' ? 'var(--msp-bull)' : ind.state === 'bear' ? 'var(--msp-bear)' : ind.state === 'extended' ? 'var(--msp-warn)' : 'var(--msp-flat)'} small />
                       ))}
                     </div>
@@ -1072,14 +1035,13 @@ export default function GoldenEggPage() {
                               <div key={cat}>
                                 <div className="text-[11px] font-semibold uppercase mb-0.5" style={{ color: catColor[cat] }}>{symbolText(catLabel[cat])}</div>
                                 <div className="space-y-0.5">
-                                  {rows.map((row: any, i: number) => (
+                                  {rows.map((row, i) => (
                                     <div key={i} className="flex items-center gap-2 text-[11px] py-0.5 px-1.5 rounded bg-[#0A101C]/40">
                                       <span className="text-slate-300 font-semibold w-10">{symbolText(row.tf)}</span>
                                       <span className="text-slate-500 w-16">{symbolText(fmtTime(row.nextCloseAt))}</span>
                                       <span className={`w-12 font-mono ${row.minsToClose <= 5 ? 'text-yellow-400 font-bold' : row.minsToClose <= 60 ? 'text-orange-400' : 'text-slate-400'}`}>
                                         {symbolText(fmtCountdown(row.minsToClose))}
                                       </span>
-                                      <span className="text-slate-600 w-8">w:{symbolText(row.weight)}</span>
                                       {row.mid50Level ? (
                                         <>
                                           <span className="font-mono text-white w-24 text-right">{symbolText(fmtPrice(row.mid50Level))}</span>
@@ -1209,14 +1171,14 @@ export default function GoldenEggPage() {
               {ge.layer3.options?.enabled ? (
                 <div className="space-y-2">
                   <div className="space-y-1">
-                    {ge.layer3.options.highlights.map((h: any, i: number) => (
+                    {ge.layer3.options.highlights.map((h, i) => (
                       <div key={i} className="flex justify-between text-xs">
                         <span className="text-slate-400">{symbolText(h.label)}</span>
                         <span className="text-white">{symbolText(h.value)}</span>
                       </div>
                     ))}
                   </div>
-                  {ge.layer3.options.notes?.map((n: any, i: number) => (
+                  {ge.layer3.options.notes?.map((n, i) => (
                     <div key={i} className="text-[11px] text-slate-500">• {symbolText(n)}</div>
                   ))}
                   {ge.meta.assetClass !== 'crypto' && (
