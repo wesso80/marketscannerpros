@@ -35,3 +35,11 @@ Remaining, in order
 
 Acceptance before rollout
 All pages pass desktop/mobile rendering with populated, missing and loading data; keyboard navigation and account flows work; public navigation has seven destinations; admin screenshots/behaviour unchanged; no unverified paid feature claims; Copilot remains paid and evidence-bound. Validate both flag states and production build in the integration branch before rollout.
+
+Overview follow-up (8 October)
+Implemented ResearchOverview behind the same flag. The legacy component remains the default and its hooks do not mount while the new view is active. Shared helpers and API contracts are unchanged.
+Sources: existing cached/bulk-quotes endpoint (seven explicit symbols), sectors/heatmap and economic-calendar. New view does not call regime, scanner daily-picks, funding or market-movers. No scores or verdicts shown.
+Daily Radar is a fixed benchmark filter, NOT full market discovery. Asset class and positive/negative/zero change filters operate on returned observations; missing values cannot pass change filters. Correct asset identity is preserved in Symbol links. Saved filters and broader discovery remain unimplemented.
+Sector chart uses reported daily changes in alphabetical order, retains missing readings, and separates provider observation from response time. Calendar only shows confirmed future releases and existing health warnings. Source/cache limitations are explicit.
+Validation now totals 13 focused tests and 10 real development-app browser checks. Populated and missing Overview fixtures pass at 1280/390 with no page errors or horizontal overflow. Both populated screenshots visually inspected. Zero/missing and filter behaviour tested. External browser requests blocked and APIs mocked; no live provider calls. Type check still only the six recorded baseline errors.
+Remaining Overview work: broader factual discovery coverage, saved Pro filters, signed Overview evidence for Copilot, and verification against production-shaped payloads. Copilot remains unavailable for page explanation until that adapter exists; this change does not send new evidence to AI.

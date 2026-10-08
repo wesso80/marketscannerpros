@@ -1,4 +1,7 @@
 'use client';
+import dynamic from 'next/dynamic';
+import { publicDesignEnabled } from '@/lib/publicDesign';
+const ResearchOverview = dynamic(() => import('@/components/public-design/ResearchOverview'));
 import { calendarDataWarning, upcomingConfirmedEvents } from '@/lib/calendarPresentation';
 
 /* ---------------------------------------------------------------------------
@@ -129,6 +132,10 @@ function SectionTitle({ n, title, hint }: { n: string; title: string; hint?: str
 }
 
 export default function CommandCenterPage() {
+  return publicDesignEnabled() ? <ResearchOverview /> : <LegacyCommandCenter />;
+}
+
+function LegacyCommandCenter() {
   const regime = useRegime();
   const sectors = useSectorsHeatmap();
   const crypto = useCryptoOverview();
