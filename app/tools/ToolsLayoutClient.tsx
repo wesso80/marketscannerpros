@@ -72,7 +72,7 @@ function CopilotWithContext({ fallbackSkill }: { fallbackSkill: PageSkill }) {
   },[pathname]);
   // Fail closed while entitlement is loading; only the explicit legacy/admin response selects the old panel.
   if(!usage)return null;
-  if(usage.enabled && !usage.bypass)return <PublicMSPCopilot usage={usage} pagePath={pathname} sectionTokens={Object.values(sections).filter(s=>s.symbol===pageData?.symbols[0] && s.token).map(s=>s.token!)}
+  if(usage.enabled && !usage.bypass)return <PublicMSPCopilot usage={usage} pagePath={pathname} assetType={pageData?.data.assetType==='equity'||pageData?.data.assetType==='crypto'?pageData.data.assetType:undefined} sectionTokensByName={Object.fromEntries(Object.values(sections).filter(s=>s.symbol===pageData?.symbols[0] && s.token).map(s=>[s.section,s.token!]))}
     symbol={pageData?.symbols[0]} evidenceToken={typeof pageData?.data.copilotEvidenceToken==='string' ? pageData.data.copilotEvidenceToken : null} />;
 
   return (

@@ -1,3 +1,12 @@
+FOLLOW-UP: on-open evidence loading
+Opening the Pro Copilot on a verified Symbol report loads chart (90-day default), news and ownership
+or crypto through existing public endpoints, without requiring the tabs to be opened. Loaded tab
+snapshots override those defaults. Three concurrent requests, 20-second per-request timeout, abort
+on close/context change, no automatic model call or question debit. Missing signatures and failed
+responses remain explicitly unavailable. Options intentionally is not prefetched because its existing
+endpoint writes state-machine data. A separate read-only options path is needed. DVE stays with Claude.
+14 focused loader, panel, route and evidence checks pass. No live calls were used for testing.
+
 FOLLOW-UP: ownership and crypto factual adapters
 Ownership now signs explicitly selected filing/transaction fields, preserving delayed reporting dates,
 amount ranges, zero values and unavailable sections. Crypto signs allowlisted measurements with their

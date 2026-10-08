@@ -506,6 +506,7 @@ export default function GoldenEggPage() {
   // W3: the copilot receives the public evidence only (no verdict, score, playbook or hypothetical R:R).
   const geAiData = useMemo(() => ({
     copilotEvidenceToken: goldenEgg.data?.copilotEvidenceToken ?? null,
+    assetType: ge?.meta.assetClass,
     symbol: sym,
     timeframe,
     price: quote.data?.price,
