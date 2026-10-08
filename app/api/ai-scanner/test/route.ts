@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
+import { POST as alertPost } from "../alert/route";
 
 const PRIVATE_HEADERS = { 'Cache-Control': 'private, no-store, max-age=0', Vary: 'Cookie' };
 
 /**
- * Sends one synthetic alert through /api/ai-scanner/alert to check the webhook. Admin only: it signs the request with
+ * Sends one synthetic alert through the /api/ai-scanner/alert handler (in-process) to check the webhook. Admin only: it signs the request with
  * the server's webhook secret and writes a row. The secret is never returned in the response.
  */
 export async function POST(req: Request) {
@@ -41,16 +42,13 @@ export async function POST(req: Request) {
       }
     };
 
-    // Call the alert endpoint
-    // Use APP_BASE_URL env var so the protocol is not sourced from the (potentially spoofed) request.
-    const baseUrl = process.env.APP_BASE_URL || `https://${req.headers.get('host')}`;
-    const alertUrl = `${baseUrl}/api/ai-scanner/alert`;
-
-    const response = await fetch(alertUrl, {
+    // Call the alert handler in-process. The signed test payload never leaves the server, so no URL is derived from the
+    // request (a spoofed Host header can no longer redirect the secret).
+    const response = await alertPost(new Request('http://internal.invalid/api/ai-scanner/alert', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(testPayload)
-    });
+    }));
 
     const result = await response.json().catch(() => null);
     const { secret: _secret, ...sentPayload } = testPayload;

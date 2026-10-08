@@ -5,7 +5,8 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const h = vi.hoisted(() => ({ admin: { ok: true } as any, queries: [] as any[][], fail: false }));
+const h = vi.hoisted(() => ({ admin: { ok: true } as any, queries: [] as any[][], fail: false, alertBodies: [] as any[] }));
+vi.mock('@/app/api/ai-scanner/alert/route', () => ({ POST: vi.fn(async (req: Request) => { h.alertBodies.push(await req.json()); return new Response(JSON.stringify({ ok: true, id: 1 }), { status: 200 }); }) }));
 vi.mock('@/lib/adminAuth', () => ({ requireAdmin: vi.fn(async () => h.admin) }));
 vi.mock('pg', () => ({
   Pool: class { async query(sql: string, params: any[]) { if (h.fail) throw new Error('relation "secret_internal" does not exist'); h.queries.push(params); return { rows: [] }; } },
@@ -16,8 +17,8 @@ import { POST as testAlert } from '@/app/api/ai-scanner/test/route';
 const SECRET = 'whsec-CANARY-123';
 const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
 beforeEach(() => {
-  h.admin = { ok: true }; h.queries = []; h.fail = false; fetchMock.mockClear();
-  vi.stubEnv('TRADINGVIEW_WEBHOOK_SECRET', SECRET); vi.stubEnv('APP_BASE_URL', 'https://msp.test');
+  h.admin = { ok: true }; h.queries = []; h.fail = false; h.alertBodies = []; fetchMock.mockClear();
+  vi.stubEnv('TRADINGVIEW_WEBHOOK_SECRET', SECRET);
   vi.stubGlobal('fetch', fetchMock);
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
@@ -33,6 +34,7 @@ describe('/api/ai-scanner private routes', () => {
       expect(r.headers.get('cache-control')).toContain('no-store');
     }
     expect(h.queries).toEqual([]);
+    expect(h.alertBodies).toEqual([]);
     expect(fetchMock).not.toHaveBeenCalled();
   });
   it('bound the alert list limit', async () => {
@@ -49,13 +51,12 @@ describe('/api/ai-scanner private routes', () => {
     expect(r.status).toBe(500);
     expect(JSON.stringify(await r.json())).not.toMatch(/secret_internal|relation/);
   });
-  it('the test route signs the webhook call but never returns the secret', async () => {
-    const r = await runTest();
+  it('the test route signs the alert in-process (no network call, no Host-derived URL) and never returns the secret', async () => {
+    const r = await testAlert(new Request('https://msp.test/api/ai-scanner/test', { method: 'POST', headers: { host: 'attacker.example' } }));
     expect(r.status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0] as any[];
-    expect(url).toBe('https://msp.test/api/ai-scanner/alert');
-    expect(JSON.parse(init.body).secret).toBe(SECRET);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(h.alertBodies).toHaveLength(1);
+    expect(h.alertBodies[0].secret).toBe(SECRET);
     const body = await r.json();
     expect(JSON.stringify(body)).not.toContain(SECRET);
     expect(body.testPayload).not.toHaveProperty('secret');
