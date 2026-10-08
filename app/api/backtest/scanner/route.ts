@@ -145,6 +145,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Scanner backtest error', { error: error?.message, stack: error?.stack });
-    return NextResponse.json({ error: error?.message || 'Scanner backtest failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Scanner backtest failed' }, { status: 500 });
   }
 }

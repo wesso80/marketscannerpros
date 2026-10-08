@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       stack: error?.stack,
     });
     return NextResponse.json(
-      { error: error?.message || 'Failed to run options signal replay backtest' },
+      { error: 'Failed to run options signal replay backtest' },
       { status: 500 }
     );
   }

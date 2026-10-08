@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
     console.error('[state-machine] API error:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to load state machine data',
+      error: 'Failed to load state machine data',
     }, { status: 500 });
   }
 }

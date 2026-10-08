@@ -269,7 +269,7 @@ export async function POST(req: NextRequest) {
     logger.error('Backtest error', new Error(diagnostic));
     
     return NextResponse.json(
-      { error: error.message || 'Failed to run backtest' },
+      { error: 'Failed to run backtest' },
       { status: 500 }
     );
   }

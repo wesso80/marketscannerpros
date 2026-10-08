@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('[push] Error saving subscription:', error);
     return NextResponse.json({ 
-      error: error.message,
+      error: 'Request failed',
       detail: error.code || 'unknown',
       hint: 'Check database connection and workspace_id format'
     }, { status: 500 });
@@ -78,7 +78,7 @@ export async function DELETE(req: NextRequest) {
 
   } catch (error: any) {
     console.error('[push] Error removing subscription:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Request failed' }, { status: 500 });
   }
 }
 
@@ -107,6 +107,6 @@ export async function GET(req: NextRequest) {
 
   } catch (error: any) {
     console.error('[push] Error checking subscription:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Request failed' }, { status: 500 });
   }
 }

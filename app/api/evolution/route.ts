@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     console.error('[evolution] GET error:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to load evolution status',
+      error: 'Failed to load evolution status',
     }, { status: 500 });
   }
 }
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
     console.error('[evolution] POST error:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Evolution cycle failed',
+      error: 'Evolution cycle failed',
     }, { status: 500 });
   }
 }

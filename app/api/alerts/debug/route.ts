@@ -111,6 +111,6 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('Alert debug error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Request failed' }, { status: 500 });
   }
 }

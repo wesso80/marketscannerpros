@@ -223,7 +223,7 @@ async function checkSignalAlerts(req: NextRequest) {
       ok: false,
       checked: 0,
       triggered: 0,
-      error: error?.message || 'Failed to check signal alerts',
+      error: 'Failed to check signal alerts',
       timestamp: new Date().toISOString(),
     });
   }

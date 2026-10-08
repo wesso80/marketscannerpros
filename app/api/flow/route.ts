@@ -452,6 +452,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('[flow] API error:', error);
-    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Failed to compute flow' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to compute flow' }, { status: 500 });
   }
 }

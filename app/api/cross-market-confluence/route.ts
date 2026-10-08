@@ -147,7 +147,6 @@ export async function GET(request: NextRequest) {
       {
         success: false,
         error: 'Failed to calculate cross-market confluence',
-        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );
