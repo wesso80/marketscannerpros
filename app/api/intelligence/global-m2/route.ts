@@ -1,4 +1,8 @@
-import { NextResponse } from 'next/server';
+import { getSessionFromCookie } from '@/lib/auth';
+import { resolvePublicQuotaAccess } from '@/lib/publicQuotaAccess';
+import { publicDesignEnabled } from '@/lib/publicDesign';
+import { publicM2Summary } from '@/lib/research/publicM2Summary';
+import { NextRequest, NextResponse } from 'next/server';
 import { buildWave3Bundle } from '@/lib/intelligence/data/globalM2Pipeline';
 import { GLOBAL_M2_EXCLUDED_BLOCS } from '@/lib/intelligence/engines/globalM2';
 
@@ -94,19 +98,32 @@ function disabledDto(): GlobalM2Dto {
   };
 }
 
-export async function GET() {
-  if (process.env.INTELLIGENCE_LIVE_DATA !== 'true') {
-    return NextResponse.json({ data: disabledDto(), source: 'disabled' });
+const PRIVATE_HEADERS = { 'Cache-Control': 'private, no-store, max-age=0', Vary: 'Cookie' };
+export async function GET(request?: NextRequest) {
+  const redesigned = publicDesignEnabled();
+  const summary = request?.nextUrl.searchParams.get('view') === 'summary';
+  const json = (body: unknown, status = 200) => NextResponse.json(body, {status, headers: PRIVATE_HEADERS});
+  // Auth and verified subscription checks always precede both cache reads and provider work.
+  if (redesigned || summary) {
+    try {
+      const session = await getSessionFromCookie();
+      if (!session?.workspaceId) return json({error:'Please sign in'},401);
+      if (summary && !redesigned) return json({error:'Summary unavailable'},404);
+      if (!summary) {
+        const access = await resolvePublicQuotaAccess(session);
+        if (!access.bypass && access.plan !== 'pro') return json({error:'Pro is required for detailed M2 research'},403);
+      }
+    } catch { return json({error:'Access could not be verified'},503); }
   }
-  if (cache && Date.now() - cache.at < TTL_MS) {
-    return NextResponse.json({ data: cache.dto, source: 'live-cached' });
-  }
+  const respond = (dto: GlobalM2Dto, source: string) => json({data:summary ? publicM2Summary(dto) : dto,source});
+  if (process.env.INTELLIGENCE_LIVE_DATA !== 'true') return respond(disabledDto(),'disabled');
+  if (cache && Date.now()-cache.at < TTL_MS) return respond(cache.dto,'live-cached');
   try {
     const dto = await computeDto();
-    cache = { at: Date.now(), dto };
-    return NextResponse.json({ data: dto, source: 'live-partial' });
-  } catch (e) {
-    if (cache) return NextResponse.json({ data: cache.dto, source: 'live-stale' });
-    return NextResponse.json({ data: disabledDto(), source: 'error', error: e instanceof Error ? e.message : String(e) }, { status: 200 });
+    cache = {at:Date.now(),dto};
+    return respond(dto,'live-partial');
+  } catch {
+    if (cache) return respond(cache.dto,'live-stale');
+    return json({data:summary ? publicM2Summary(disabledDto()) : disabledDto(),source:'error',error:'Global M2 observations unavailable'});
   }
 }

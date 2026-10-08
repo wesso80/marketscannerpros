@@ -1,4 +1,4 @@
-/** Build-time, opt-in presentation rollout. Never grants data or account access. */
+/** Build-time, opt-in public redesign rollout. Endpoints enforce their own access policy. */
 export const publicDesignEnabled = () => process.env.NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED === 'true';
 
 export const PUBLIC_DESTINATIONS = [

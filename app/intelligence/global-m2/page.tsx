@@ -1,6 +1,7 @@
 'use client';
 
 import { publicDesignEnabled } from '@/lib/publicDesign';
+import type { PublicM2Summary } from '@/lib/research/publicM2Summary';
 import M2Research from '@/components/public-design/M2Research';
 import { useEndpoint } from '@/components/intelligence/useEndpoint';
 import IntelligenceTable, { type IntelColumn, type IntelRow } from '@/components/intelligence/IntelligenceTable';
@@ -44,9 +45,14 @@ function blocRow(b: GlobalM2Dto['blocs'][number]): IntelRow {
 }
 
 export default function GlobalM2Page() {
+  return publicDesignEnabled() ? <SummaryM2Page /> : <LegacyM2Page />;
+}
+function SummaryM2Page() {
+  const {data,loading,error,retry} = useEndpoint<PublicM2Summary>('/api/intelligence/global-m2?view=summary');
+  return <M2Research data={data} loading={loading} error={Boolean(error)} retry={retry}/>;
+}
+function LegacyM2Page() {
   const { data, loading, error, retry } = useEndpoint<GlobalM2Dto>('/api/intelligence/global-m2');
-
-  if (publicDesignEnabled()) return <M2Research data={data} loading={loading} error={Boolean(error)} retry={retry}/>;
 
   return (
     <div>

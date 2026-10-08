@@ -1,0 +1,52 @@
+FREE GLOBAL M2 SUMMARY — 8 October 2026
+
+Branch: codex/public-redesign-integration, starting 55667a79; draft PR #517.
+Fetched origin before work; research-page-phase4 remains a7324bf1. Claude's
+#514/#515/#516/#518 remain separate. No overlapping M2 file changes found there
+in the inspected PR workstreams. No merges, deployments or production calls.
+
+IMPLEMENTATION
+Under NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED, signed-in Free users can enter exactly
+/intelligence/global-m2. Other Intelligence pages keep their existing tier gate.
+The redesigned page requests /api/intelligence/global-m2?view=summary.
+Server authentication precedes cache/provider work. Summary uses an explicit leaf
+allowlist of current total, current 1M/YoY changes, bloc amounts and classification,
+provider, observation month, stale state, coverage, exclusions and missing notes.
+It excludes acceleration/cycle/turn labels, 3M/annualised depth and any historical
+series. Raw provider failure text is replaced by a safe missing-observation note.
+Summary is the same evidence projection for both Free and Pro.
+
+With the redesign enabled, requests for the unprojected detailed response require
+verified Pro subscription or existing admin/operator bypass. Stale paid cookies
+alone do not grant this access. Auth failures are fail-closed. Query parameters
+cannot add history to the summary. Shared six-hour market cache remains shared;
+access is checked and summary projection applied after cache retrieval. All route
+responses now use private/no-store and Vary: Cookie; errors do not echo provider URLs.
+When redesign is off, the old default route's access behavior remains unchanged;
+new summary requests are unavailable. This is a staged rollout, not retroactive
+protection of the legacy route before enabling the redesign.
+
+Internal M2 engine, providers, workers and ingestion logic are unchanged. The existing
+live pipeline and six-hour cache are reused; future live page requests retain its
+provider/persistence behavior. This work executed only synthetic provider fixtures.
+Admin detailed data shape remains unchanged. No cache-isolation claim is made.
+
+PRICING / HISTORY
+Free pricing now lists Macro and Global M2 summaries. Removed the claim that all
+Global M2 Intelligence requires Pro. Historical-series delivery is still not built;
+this change neither invents a history API nor advertises one. Implement a separately
+paid, verified history contract before adding history UI or pricing promises.
+
+VERIFICATION
+30 tests pass: nine route access/cache/error cases, five UI gate cases, five economic
+display cases and eleven existing M2 exclusion-policy checks. Browser: four Free M2
+cases pass at 1280/390, populated/unavailable, no horizontal overflow or page errors.
+Mobile populated screenshot inspected. API is mocked for browser layout checks;
+route access/projection tests separately execute the real handler with fake providers.
+Typecheck has only the six previously recorded Stripe-version/timer errors.
+React checklist: separate summary/legacy components keep hook order stable; type-only
+DTO imports keep server code out of the client; summary renders existing loading/error
+states; no new client fetch effect or unsafe HTML introduced.
+
+Remaining: real DB/provider-connected verification, full release build/CI, Pro history
+implementation, and the dedicated Free Portfolio/Journal browser rerun noted earlier.

@@ -1,10 +1,10 @@
 import Link from 'next/link';
-import type {GlobalM2Dto} from '@/app/api/intelligence/global-m2/route';
+import type {PublicM2Summary} from '@/lib/research/publicM2Summary';
 import styles from './EconomicResearch.module.css';
 const finite=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n);
 const money=(n:number)=>finite(n)?`$${(n/1e12).toFixed(2)}T`:'Not available';
 const pct=(n:number|null)=>finite(n)?`${n>0?'+':''}${n.toFixed(2)}%`:'Not available';
-export default function M2Research({data,loading,error,retry}:{data:GlobalM2Dto|null;loading:boolean;error:boolean;retry:()=>void}){
+export default function M2Research({data,loading,error,retry}:{data:PublicM2Summary|null;loading:boolean;error:boolean;retry:()=>void}){
  const blocs=[...(data?.blocs??[])].sort((a,b)=>a.name.localeCompare(b.name));
  const largest=Math.max(1,...blocs.map(b=>finite(b.usdM2)?b.usdM2:0));
  return <article className={styles.page} data-economic-research="m2"><header className={styles.hero}><p className={styles.eyebrow}>Money supply in context</p><h1>Global M2 Intelligence</h1><p>Explore reported money supply across economic blocs, with the coverage and currency basis in view.</p><Link href="/tools/macro">Return to Macro Outlook ↗</Link></header>

@@ -29,7 +29,7 @@ export default function ResearchPricing({cycle,onCycle,onChoose,loading,error,ti
         <ul>
           <li>Overview and Daily Radar highlights</li>
           {quotasEnabled===true && <li>{PUBLIC_DAILY_LIMITS.free.symbol} Symbol reports per day</li>}
-          <li>Macro summary and Learning basics</li>
+          <li>Macro and Global M2 summaries, plus Learning basics</li>
           <li>Portfolio tracker: {PUBLIC_FREE_RECORD_LIMITS.positions} open positions</li>
           <li>Journal: {PUBLIC_FREE_RECORD_LIMITS.openJournalEntries} open entries</li>
           <li>Sources, observation dates and missing-data notes where supplied</li>
@@ -42,7 +42,7 @@ export default function ResearchPricing({cycle,onCycle,onChoose,loading,error,ti
         <p className={styles.fine}>Subscription details are shown at checkout.</p>
         <ul>
           {quotasEnabled===true && <li>Unlimited Symbol reports</li>}
-          <li>Options research and Global M2 Intelligence</li>
+          <li>Options research</li>
           <li>Portfolio and Journal advanced analysis</li>
           <li>Unlimited open portfolio positions and journal entries</li>
           <li>Exports and paid workspace tools</li>
