@@ -207,6 +207,8 @@ async function adminFullResponse(req: NextRequest) {
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// The same URL returns the admin variant or the public projection depending on the cookie, so no response may be
+// stored by a shared cache: every response (admin and public, success and error) is private, no-store, Vary: Cookie.
 const PRIVATE = { 'Cache-Control': 'private, no-store, max-age=0', Vary: 'Cookie' };
 
 export async function GET(req: NextRequest) {
@@ -228,7 +230,7 @@ async function publicObservations(req: NextRequest) {
     const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(Math.floor(rawLimit), 40)) : 20;
     const date = searchParams.get('date');
     if (date && (!DATE_RE.test(date) || !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date)) {
-      return NextResponse.json({ error: 'date must be a valid YYYY-MM-DD' }, { status: 400 });
+      return NextResponse.json({ error: 'date must be a valid YYYY-MM-DD' }, { status: 400, headers: PRIVATE });
     }
     const source = date ? `SELECT (jsonb_populate_record(NULL::daily_picks, pick)).* FROM daily_picks_history WHERE scan_date = $1::date` : `SELECT * FROM daily_picks`;
     // Every stored row of the latest scan per market (both stored sides), in symbol order. No score ordering or cut.
@@ -276,9 +278,9 @@ async function publicObservations(req: NextRequest) {
         oldestDataTimestamp: summary.oldestDataTimestamp,
       },
       attribution: { marketData: 'Powered by licensed market data providers' },
-    });
+    }, { headers: PRIVATE });
   } catch (error) {
     console.error('Daily observations error:', error);
-    return NextResponse.json({ success: false, contract: PUBLIC_DAILY_OBSERVATIONS_CONTRACT, error: 'Failed to fetch daily scan observations', observations: { equity: [], crypto: [] } }, { status: 500 });
+    return NextResponse.json({ success: false, contract: PUBLIC_DAILY_OBSERVATIONS_CONTRACT, error: 'Failed to fetch daily scan observations', observations: { equity: [], crypto: [] } }, { status: 500, headers: PRIVATE });
   }
 }

@@ -49,6 +49,17 @@ describe('public daily observations', () => {
     // No score ordering or score cut in the public query.
     expect(h.sqls[0]).not.toMatch(/ORDER BY[\s\S]*score|ROW_NUMBER/);
   });
+  it('every public response (200, 400, 500) is private, no-store and varies by cookie (the URL also serves the admin variant)', async () => {
+    const ok = await call('?limit=5');
+    const bad = await call('?date=2026-02-31');
+    h.rows = null as any; // makes the projection throw → 500
+    const err = await call('');
+    for (const r of [ok, bad, err]) {
+      expect(r.headers.get('cache-control')).toBe('private, no-store, max-age=0');
+      expect(r.headers.get('vary')).toBe('Cookie');
+    }
+    expect([ok.status, bad.status, err.status]).toEqual([200, 400, 500]);
+  });
   it('limit cuts the A–Z list, not a score ranking', async () => {
     const { body } = await call('?limit=2');
     expect(body.observations.equity.map((o: any) => o.symbol)).toEqual(['AAA', 'MMM']);
@@ -62,5 +73,6 @@ describe('public daily observations', () => {
     expect(body.topPicks.equity[0].canonical.levels.entry).toBe(123.45);
     expect(body.topPicks.equity[0].permission).toBe('PASS');
     expect(headers.get('cache-control')).toBe('private, no-store, max-age=0');
+    expect(headers.get('vary')).toBe('Cookie');
   });
 });
