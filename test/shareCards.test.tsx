@@ -168,15 +168,14 @@ describe('GET /api/share/setup/<SYMBOL>.png', () => {
     expect(res.status).toBe(404);
   });
 
-  it('model: verdict, score and reference levels from the stored canonical result', () => {
-    const m = setupModelFromRow(pickRow());
-    expect(m).toMatchObject({ symbol: 'NVDA', side: 'bullish', verdict: 'PASS · B · Pullback · uncalibrated', price: '187.42' });
-    expect(m.levels).toEqual({ entry: '186.90', invalidation: '181.35', target: '198.20', targetBasis: 'swing level', riskReward: '2.04R' });
-    expect(setupModelFromRow(pickRow({ canonical: null })).levels).toBeNull();
-    expect(m.priceLabel).toBe('Price at scan');
+  it('model: measured values only; the stored verdict, score, side and levels never reach the card (W3)', () => {
+    const m = setupModelFromRow(pickRow({ change_percent: '1.234', rsi: '61.27', adx: '24', atr_pct: null }));
+    expect(m).toMatchObject({ symbol: 'NVDA', price: '187.42', priceLabel: 'Price at scan', changePct: '+1.23%', rsi: '61.3', adx: '24.0', atrPct: 'Not collected' });
+    expect(Object.keys(m).sort()).toEqual(['adx', 'assetClass', 'atrPct', 'barDate', 'basisNote', 'changePct', 'price', 'priceLabel', 'rsi', 'scanDate', 'symbol']);
+    expect(JSON.stringify(m)).not.toMatch(/PASS|Pullback|bullish|186\.9|181\.35|198\.2|2\.04|74/);
   });
 
-  it('crypto: shows the completed daily bar close the levels use, not the scan-time spot quote', () => {
+  it('crypto: shows the completed daily bar close (with its date), not the scan-time spot quote', () => {
     const base = pickRow().canonical as Record<string, unknown>;
     const m = setupModelFromRow(pickRow({
       symbol: 'SOL', asset_class: 'crypto', price: '121.10000000',
