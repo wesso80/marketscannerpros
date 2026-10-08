@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { MARKET_FOCUS_SYSTEM_PROMPT, MARKET_FOCUS_UNAVAILABLE, buildMarketFocusPrompt, finalizeMarketFocusText } from "@/lib/marketFocus/prompt";
 import { getSessionFromCookie } from "@/lib/auth";
 import OpenAI from "openai";
 import { q } from "@/lib/db";
@@ -31,61 +32,22 @@ function todayKeyUTC(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function getScoreBias(score: number): { bias: string; stance: string } {
-  if (score >= 80) return { bias: "Bullish", stance: "Bullish continuation conditions" };
-  if (score >= 70) return { bias: "Bullish-Leaning", stance: "Constructive bullish scenario" };
-  if (score >= 55) return { bias: "Neutral", stance: "Range rotation observation" };
-  if (score >= 40) return { bias: "Bearish-Leaning", stance: "Cautious bearish scenario" };
-  return { bias: "Bearish", stance: "Risk-off conditions observed" };
-}
-
-function buildMSPPrompt(c: Candidate): string {
-  const { bias, stance } = getScoreBias(c.score);
-  const payload = c.scannerPayload || {};
-  const biasWord = c.score >= 70 ? "bullish" : c.score < 40 ? "bearish" : "neutral";
-  
-  return `
-MSP AI Analyst v2.1 — Concise Market Analysis
-
-ASSET: ${c.symbol} (${c.assetClass}) | Score: ${c.score} | Phase: ${payload.phase || "N/A"} | Structure: ${payload.structure || "N/A"}
-Support: ${c.keyLevels?.support ?? "N/A"} | Resistance: ${c.keyLevels?.resistance ?? "N/A"}
-
-BIAS LOCK: Score ${c.score} = ${bias.toUpperCase()}. Do NOT contradict this.
-
-OUTPUT (exactly this format, ~80 words max):
-
-**Scenario Stance:** ${stance}
-
-**Summary:** [1 sentence stating the ${biasWord} bias and primary driver.]
-
-**Context:** [1-2 sentences on WHY momentum/structure supports this view. No indicator lists.]
-
-**Key Levels:**
-- Support: ${c.keyLevels?.support ?? "N/A"} – break invalidates ${biasWord} thesis
-- Resistance: ${c.keyLevels?.resistance ?? "N/A"} – clear to accelerate move
-
-**Risk:** [1 sentence: reference condition + "A break below/above X invalidates the ${biasWord} thesis."]
-
-RULES: No buy/sell advice. No entry/exit instructions. No filler. Sound like an educational desk note, not a tutorial.
-`.trim();
-}
-
 async function generateExplanation(c: Candidate): Promise<string> {
   const client = getOpenAIClient();
   try {
     const resp = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: "You are MSP AI Analyst, a senior market structure analyst at an institutional trading desk. You write concise, internally consistent analysis. You never contradict your own data." },
-        { role: "user", content: buildMSPPrompt(c) }
+        { role: "system", content: MARKET_FOCUS_SYSTEM_PROMPT },
+        { role: "user", content: buildMarketFocusPrompt(c) }
       ],
-      max_tokens: 350,
-      temperature: 0.5,
+      max_tokens: 400,
+      temperature: 0.3,
     });
-    return resp.choices[0]?.message?.content ?? "";
+    return finalizeMarketFocusText(resp.choices[0]?.message?.content);
   } catch (err: any) {
-    console.error("[generate] OpenAI error:", err?.message);
-    return `Analysis unavailable: ${err?.message || "OpenAI error"}`;
+    console.error("[generate] OpenAI error:", err);
+    return MARKET_FOCUS_UNAVAILABLE;
   }
 }
 
@@ -241,6 +203,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("[generate] Error:", err);
-    return NextResponse.json({ status: "failed", error: err?.message || "Generation failed" }, { status: 500 });
+    console.error("[generate] failed:", err);
+    return NextResponse.json({ status: "failed", error: "Generation failed" }, { status: 500 });
   }
 }
