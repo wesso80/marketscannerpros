@@ -156,17 +156,6 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
   };
 
   // Analysis helper functions
-  const getValuationAssessment = () => {
-    if (!data) return null;
-    const pe = parseFloat(data.pe);
-    
-    if (isNaN(pe)) return { level: "Unknown", color: "var(--msp-text-muted)", bg: "var(--msp-panel-2)", border: "var(--msp-border)" };
-    if (pe > 50) return { level: "Premium", color: "var(--msp-warn)", bg: "var(--msp-warn-tint)", border: "var(--msp-warn)" };
-    if (pe > 25) return { level: "Elevated", color: "var(--msp-warn)", bg: "var(--msp-warn-tint)", border: "var(--msp-warn)" };
-    if (pe > 15) return { level: "Fair", color: "var(--msp-bull)", bg: "var(--msp-bull-tint)", border: "var(--msp-bull)" };
-    return { level: "Value", color: "var(--msp-bull)", bg: "var(--msp-bull-tint)", border: "var(--msp-bull)" };
-  };
-
   // W3: measured relations only (provider overview fields), not a "Bullish / Bearish" bias.
   const getPricePosition = () => {
     if (!data || !data.currentPrice) return null;
@@ -190,143 +179,12 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
     if (isNaN(current) || isNaN(target) || current === 0) return null;
     
     const diff = ((target - current) / current) * 100;
-    const isUpside = diff > 0;
-    
-    return {
-      diff: diff.toFixed(1),
-      isUpside,
-      label: isUpside ? "upside" : "downside"
-    };
+    // Where the third-party target sits relative to the current price, as a distance (not a gain or loss).
+    return { diff: diff.toFixed(1), isUpside: diff > 0 };
   };
 
-  const generateDecisionLens = () => {
-    if (!data) return null;
-    
-    const pe = parseFloat(data.pe);
-    const peg = parseFloat(data.peg);
-    const beta = parseFloat(data.beta);
-    const earningsGrowth = parseFloat(data.quarterlyEarningsGrowth) * 100;
-    const revenueGrowth = parseFloat(data.quarterlyRevenueGrowth) * 100;
-    
-    const valuationText = data.multiple?.label.toLowerCase() ?? 'multiple unavailable';
-    
-    // Growth assessment
-    let growthText = "";
-    if (!isNaN(earningsGrowth) && !isNaN(revenueGrowth)) {
-      if (earningsGrowth > 20 && revenueGrowth > 10) {
-        growthText = "strong growth momentum";
-      } else if (earningsGrowth > 0 && revenueGrowth > 0) {
-        growthText = "positive growth trajectory";
-      } else if (earningsGrowth < 0 && revenueGrowth > 0) {
-        growthText = "revenue growth but earnings compression";
-      } else if (earningsGrowth < 0 && revenueGrowth < 0) {
-        growthText = "declining fundamentals";
-      } else {
-        growthText = "mixed growth signals";
-      }
-    }
-    
-    // Risk assessment
-    let riskText = "";
-    if (!isNaN(beta)) {
-      if (beta > 1.5) riskText = "elevated volatility";
-      else if (beta > 1.0) riskText = "moderate volatility";
-      else riskText = "lower volatility";
-    }
-    
-    // Neutral metric profile — avoid suitability or investor-fit wording.
-    let fitText = "";
-    if (!isNaN(pe) && !isNaN(beta)) {
-      if (pe > 40 && beta > 1.3) {
-        fitText = "High valuation with elevated volatility versus value-oriented benchmarks.";
-      } else if (pe < 20 && beta < 1.0) {
-        fitText = "Lower valuation and lower beta versus broad market benchmarks.";
-      } else if (pe > 25 && beta > 1.0) {
-        fitText = "Growth-style valuation profile with above-average volatility.";
-      } else {
-        fitText = "Balanced valuation and volatility profile versus broad market benchmarks.";
-      }
-    }
-    
-    const parts = [valuationText, growthText, riskText].filter(Boolean);
-    if (parts.length === 0) return null;
-    
-    return {
-      summary: `${data.sector} stock with ${parts.join(", ")}.`,
-      fit: fitText
-    };
-  };
-
-  const generateBullCase = () => {
-    if (!data) return [];
-    const points: string[] = [];
-    
-    const revenueGrowth = parseFloat(data.quarterlyRevenueGrowth);
-    const earningsGrowth = parseFloat(data.quarterlyEarningsGrowth);
-    const profitMargin = parseFloat(data.profitMargin);
-    const roe = parseFloat(data.returnOnEquity);
-    const peg = parseFloat(data.peg);
-    
-    if (!isNaN(revenueGrowth) && revenueGrowth > 0.1) {
-      points.push(`Revenue growing ${(revenueGrowth * 100).toFixed(0)}% YoY`);
-    }
-    if (!isNaN(earningsGrowth) && earningsGrowth > 0.15) {
-      points.push(`Strong earnings growth (${(earningsGrowth * 100).toFixed(0)}% YoY)`);
-    }
-    if (!isNaN(profitMargin) && profitMargin > 0.15) {
-      points.push(`Healthy profit margins (${(profitMargin * 100).toFixed(0)}%)`);
-    }
-    if (!isNaN(roe) && roe > 0.15) {
-      points.push(`Strong return on equity (${(roe * 100).toFixed(0)}%)`);
-    }
-    if (data.sector) {
-      points.push(`${data.sector} sector positioning`);
-    }
-    if (!isNaN(peg) && peg < 1.5 && peg > 0) {
-      points.push(`Attractive PEG ratio (${peg.toFixed(2)})`);
-    }
-    
-    return points.slice(0, 4);
-  };
-
-  const generateBearCase = () => {
-    if (!data) return [];
-    const points: string[] = [];
-    
-    const pe = parseFloat(data.pe);
-    const peg = parseFloat(data.peg);
-    const beta = parseFloat(data.beta);
-    const earningsGrowth = parseFloat(data.quarterlyEarningsGrowth);
-    const revenueGrowth = parseFloat(data.quarterlyRevenueGrowth);
-    
-    if (!isNaN(pe) && pe > 40) {
-      points.push(`Elevated P/E ratio (${pe.toFixed(0)}x)`);
-    }
-    if (!isNaN(peg) && peg > 2) {
-      points.push(`High PEG suggests growth may not justify valuation`);
-    }
-    if (!isNaN(beta) && beta > 1.3) {
-      points.push(`Above-average volatility (β ${beta.toFixed(2)})`);
-    }
-    if (!isNaN(earningsGrowth) && earningsGrowth < 0) {
-      points.push(`Declining earnings (${(earningsGrowth * 100).toFixed(0)}% YoY)`);
-    }
-    if (!isNaN(revenueGrowth) && revenueGrowth < 0) {
-      points.push(`Revenue contraction`);
-    }
-    if (!isNaN(earningsGrowth) && !isNaN(revenueGrowth) && earningsGrowth < revenueGrowth - 0.1) {
-      points.push(`Margin pressure (earnings lagging revenue)`);
-    }
-    
-    return points.slice(0, 4);
-  };
-
-  const valuation = getValuationAssessment();
   const pricePosition = getPricePosition();
   const analystContext = getAnalystContext();
-  const decisionLens = generateDecisionLens();
-  const bullCase = generateBullCase();
-  const bearCase = generateBearCase();
 
   // Gate entire page for Pro+ users
   if (!canAccessPortfolioInsights(tier)) {
@@ -448,62 +306,7 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
               <p style={{ color: "var(--msp-text-muted)", lineHeight: "1.7", fontSize: "14px", overflowWrap: "anywhere", wordBreak: "break-word" }}>{data.description}</p>
             </div>
 
-            {/* Research Lens - Pro feature */}
-            {decisionLens && canAccessPortfolioInsights(tier) && (
-              <div style={{ background: "var(--msp-panel)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
-                <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-accent)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span aria-hidden="true" style={{ border: "1px solid var(--msp-border)", borderRadius: 8, padding: "3px 6px", color: "var(--msp-accent)", fontSize: "11px", fontWeight: 800 }}>FX</span> Research Lens
-                </h3>
-                <p style={{ color: "var(--msp-text)", lineHeight: "1.8", fontSize: "15px", marginBottom: "12px" }}>
-                  <strong>Overall View:</strong> {decisionLens.summary}
-                </p>
-                {decisionLens.fit && (
-                  <p style={{ color: "var(--msp-text-muted)", lineHeight: "1.7", fontSize: "14px", fontStyle: "italic" }}>
-                    {decisionLens.fit}
-                  </p>
-                )}
-                <p style={{ color: "var(--msp-text-faint)", fontSize: "12px", marginTop: "10px" }}>
-                  Algorithmically derived from reported financial metrics. Not AI-generated or investment advice.
-                </p>
-              </div>
-            )}
-
-            {/* Bull & Bear Cases - Pro+ only */}
-            {(bullCase.length > 0 || bearCase.length > 0) && canAccessPortfolioInsights(tier) && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))", gap: "20px" }}>
-                {/* Bull Case */}
-                <div style={{ background: "var(--msp-bull-tint)", borderRadius: "16px", border: "1px solid var(--msp-bull)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
-                  <h3 style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span aria-hidden="true">BULL</span> Bull Case
-                  </h3>
-                  {bullCase.length > 0 ? (
-                    <ul style={{ margin: 0, paddingLeft: "20px", color: "var(--msp-text-muted)", lineHeight: "2" }}>
-                      {bullCase.map((point, i) => (
-                        <li key={i} style={{ fontSize: "14px" }}>{point}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p style={{ color: "var(--msp-text-faint)", fontSize: "14px" }}>Limited bullish signals detected</p>
-                  )}
-                </div>
-
-                {/* Bear Case */}
-                <div style={{ background: "var(--msp-bear-tint)", borderRadius: "16px", border: "1px solid var(--msp-bear)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
-                  <h3 style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--msp-bear)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span aria-hidden="true">RISK</span> Risk Case
-                  </h3>
-                  {bearCase.length > 0 ? (
-                    <ul style={{ margin: 0, paddingLeft: "20px", color: "var(--msp-text-muted)", lineHeight: "2" }}>
-                      {bearCase.map((point, i) => (
-                        <li key={i} style={{ fontSize: "14px" }}>{point}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p style={{ color: "var(--msp-text-faint)", fontSize: "14px" }}>No major risk signals detected</p>
-                  )}
-                </div>
-              </div>
-            )}
+            {/* W3: no algorithmic "overall view" or bull / risk case lists; the numbers are in the sections below. */}
 
             {/* Price position (measured relations; W3) */}
             {pricePosition && (
@@ -523,18 +326,9 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
             <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "12px" }}>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", margin: 0 }}>Valuation</h3>
-                {data.multiple ? (
-                  <span title={data.multiple.rule} style={{ padding: "6px 14px", background: "var(--msp-panel-2)", borderRadius: "20px", color: "var(--msp-text)", fontSize: "13px", fontWeight: "600", border: "1px solid var(--msp-border)" }}>
-                    {data.multiple.label}
-                  </span>
-                ) : valuation && (
-                  <span style={{ padding: "6px 14px", background: valuation.bg, borderRadius: "20px", color: valuation.color, fontSize: "13px", fontWeight: "600", border: `1px solid ${valuation.border}` }}>
-                    {valuation.level} Valuation
-                  </span>
-                )}
               </div>
               {data.multiple && (
-                <p style={{ color: "var(--msp-text-muted)", fontSize: "12px", margin: "0 0 16px 0" }}>{data.multiple.detail} <span style={{ color: "var(--msp-text-faint)" }}>{data.multiple.rule}</span></p>
+                <p style={{ color: "var(--msp-text-muted)", fontSize: "12px", margin: "0 0 16px 0" }}>{data.multiple.detail}</p>
               )}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))", gap: "1rem" }}>
                 <MetricCard label="Market cap (provider)" value={formatMarketCap(data.marketCap)} />
@@ -575,23 +369,23 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
                 <MetricCard
                   label="Last reported quarter"
                   value={data.lastReportedQuarter ?? '—'}
-                  subValue={data.lastReportedEPS != null ? <span style={{ fontSize: 12, color: data.lastEpsBeat ? 'var(--msp-bull)' : 'var(--msp-bear)' }}>EPS ${data.lastReportedEPS.toFixed(2)} vs est {data.lastEstimatedEPS != null ? `$${data.lastEstimatedEPS.toFixed(2)}` : 'n/a'} · {data.lastEpsBeat ? 'beat' : 'miss'}{data.lastReportedDate ? ` · reported ${data.lastReportedDate}` : ''}</span> : undefined}
+                  subValue={data.lastReportedEPS != null ? <span style={{ fontSize: 12, color: 'var(--msp-text-muted)' }}>Reported EPS ${data.lastReportedEPS.toFixed(2)} vs third-party consensus estimate {data.lastEstimatedEPS != null ? `$${data.lastEstimatedEPS.toFixed(2)}` : 'not provided'}{data.lastEstimatedEPS != null ? ` (${data.lastEpsBeat ? 'above' : 'below or equal to'} estimate)` : ''}{data.lastReportedDate ? ` · reported ${data.lastReportedDate}` : ''}</span> : undefined}
                 />
-                <MetricCard label="Beat rate (last 4Q)" value={data.beatRate != null ? `${data.beatRate.toFixed(0)}%` : '—'} />
+                <MetricCard label="Quarters above consensus estimate (last 4)" value={data.beatRate != null ? `${data.beatRate.toFixed(0)}%` : '—'} />
                 <MetricCard
-                  label="Analyst target"
+                  label="Third-party analyst target (consensus)"
                   value={`$${formatValue(data.analystTargetPrice)}`}
-                  subValue={<span style={{ fontSize: 12, color: 'var(--msp-text-muted)' }}>{data.analystCount ? `${data.analystCount} analysts` : 'analyst count n/a'}{analystContext ? <span style={{ color: analystContext.isUpside ? 'var(--msp-bull)' : 'var(--msp-bear)' }}> · {analystContext.isUpside ? '+' : ''}{analystContext.diff}% {analystContext.label} vs current</span> : ''}</span>}
+                  subValue={<span style={{ fontSize: 12, color: 'var(--msp-text-muted)' }}>{data.analystCount ? `${data.analystCount} analysts` : 'analyst count not provided'}{analystContext ? ` · target is ${Math.abs(Number(analystContext.diff))}% ${analystContext.isUpside ? 'above' : 'below'} the current price` : ''}</span>}
                 />
                 {data.analystRatings && (
                   <MetricCard
-                    label="Rating distribution"
+                    label="Third-party rating distribution"
                     value={`SB ${data.analystRatings.strongBuy} · B ${data.analystRatings.buy} · H ${data.analystRatings.hold} · S ${data.analystRatings.sell} · SS ${data.analystRatings.strongSell}`}
                   />
                 )}
               </div>
               <p style={{ color: "var(--msp-text-faint)", fontSize: "12px", marginTop: "10px" }}>
-                Analyst targets and ratings are third-party consensus context, not signals or forecasts. Earnings dates come from the provider calendar and can move.
+                <span data-third-party>Analyst targets, ratings and EPS estimates are third-party consensus figures from Alpha Vantage's company overview{data.fetchedAt ? `, retrieved ${new Date(data.fetchedAt).toLocaleString()}` : ''}; the provider does not give their publication date. They are not this site's view, a signal or a forecast.</span> Earnings dates come from the provider calendar and can move.
               </p>
             </div>
 

@@ -27,4 +27,9 @@ describe('W3: Fundamentals tab price position', () => {
     expect(overview).toContain('data-price-position');
     expect(overview).not.toMatch(/Technical Bias|getTechnicalBias|bias: "Bullish"|bias: "Bearish"|Strong uptrend|Downtrend, near/);
   });
+  it('analyst figures are labelled third-party, neutrally coloured, and no valuation or bull/risk labels remain', () => {
+    expect(overview).toContain('data-third-party');
+    expect(overview).toContain('Third-party analyst target (consensus)');
+    expect(overview).not.toMatch(/getValuationAssessment|Valuation<\/span>|multiple\.label|Bull Case|Risk Case|Overall View|isUpside \? 'var\(--msp-bull\)'|lastEpsBeat \? 'var\(--msp-bull\)'|"upside"|"downside"/);
+  });
 });

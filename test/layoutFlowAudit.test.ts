@@ -1143,10 +1143,9 @@ describe('layout and flow audit regressions', () => {
     const macroPage = read('app/tools/macro/page.tsx');
 
     expect(companyOverviewPage).toContain('icon="CO"');
-    expect(companyOverviewPage).toContain('icon: "UP"');
-    expect(companyOverviewPage).toContain('icon: "DN"');
-    expect(companyOverviewPage).toContain('icon: "MID"');
-    expect(companyOverviewPage).toContain("Research Lens");
+    // W3: the Bullish/Bearish bias banner and the algorithmic "Research Lens" / bull-risk cases are retired.
+    expect(companyOverviewPage).toContain('data-price-position');
+    expect(companyOverviewPage).not.toMatch(/Technical Bias|Research Lens|Bull Case|Overall View/);
     expect(companyOverviewPage).toContain('Research disclaimer:');
     expect(companyOverviewPage).not.toContain('icon="🏢"');
     expect(companyOverviewPage).not.toContain('📈');
