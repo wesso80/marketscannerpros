@@ -33,7 +33,7 @@ export const dynamic = 'force-dynamic';
 
 // ── In-memory cache (3 min) ─────────────────────────────────────────────
 type BarAge = { assetClass: 'equity' | 'crypto' | 'forex'; timeframe: string; lastBarAt: string | null; barInterval: string | null };
-const dveCache = new Map<string, { data: DVEReading; price: number; ts: number; barAge: BarAge; priceEvidence: PriceEvidence | null; optionsRequest: { expiry: string; status: 'used' | 'unavailable' } | null }>();
+const dveCache = new Map<string, { data: DVEReading; input: DVEInput; dates: string[] | null; price: number; ts: number; barAge: BarAge; priceEvidence: PriceEvidence | null; optionsRequest: { expiry: string; status: 'used' | 'unavailable' } | null }>();
 const DVE_CACHE_TTL = 3 * 60 * 1000;
 
 /**
@@ -48,22 +48,26 @@ function freshnessMeta(barAge: BarAge, computedAtMs: number) {
   return { computedAt: new Date(computedAtMs).toISOString(), dataAsOf: barAge.lastBarAt, dataFreshness };
 }
 
+/** Paid, signed-in responses: never stored by a shared or browser cache, and keyed on the session cookie. */
+const PRIVATE_HEADERS = { 'Cache-Control': 'private, no-store, max-age=0', Vary: 'Cookie' } as const;
+const json = (body: unknown, init?: { status?: number }) => NextResponse.json(body, { status: init?.status, headers: PRIVATE_HEADERS });
+
 export async function GET(request: NextRequest) {
   try {
     // 1. Auth + tier check
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {
-      return NextResponse.json({ success: false, error: 'Please log in' }, { status: 401 });
+      return json({ success: false, error: 'Please log in' }, { status: 401 });
     }
     if (!hasPaidSessionAccess(session)) {
-      return NextResponse.json({ success: false, error: 'Pro subscription required for Volatility Engine' }, { status: 403 });
+      return json({ success: false, error: 'Pro subscription required for Volatility Engine' }, { status: 403 });
     }
 
     // 2. Parse symbol + timeframe
     const { searchParams } = new URL(request.url);
     const symbol = (searchParams.get('symbol') || '').trim().toUpperCase();
     if (!symbol) {
-      return NextResponse.json({ success: false, error: 'Missing symbol parameter' }, { status: 400 });
+      return json({ success: false, error: 'Missing symbol parameter' }, { status: 400 });
     }
     const timeframe = (searchParams.get('timeframe') || 'daily').toLowerCase();
     const avIntervalMap: Record<string, string> = { '15m': '15min', '1h': '60min', 'daily': 'daily', 'weekly': 'weekly' };
@@ -73,7 +77,7 @@ export async function GET(request: NextRequest) {
     const assetClass = detectAssetClass(symbol, searchParams.get('type') || undefined);
     const expiryParam = searchParams.get('expiry');
     if (expiryParam && !/^\d{4}-\d{2}-\d{2}$/.test(expiryParam)) {
-      return NextResponse.json({ success: false, error: 'Invalid expiry (expected YYYY-MM-DD)' }, { status: 400 });
+      return json({ success: false, error: 'Invalid expiry (expected YYYY-MM-DD)' }, { status: 400 });
     }
     // Options (and so an expiry) apply to equities only; elsewhere the parameter is ignored and does not split the cache.
     const expiry = assetClass === 'equity' ? expiryParam : null;
@@ -82,7 +86,7 @@ export async function GET(request: NextRequest) {
     const cacheKey = `${symbol}_${timeframe}_${assetClass}_${expiry ?? 'default-expiry'}`;
     const cached = dveCache.get(cacheKey);
     if (cached && Date.now() - cached.ts < DVE_CACHE_TTL) {
-      return NextResponse.json({ success: true, data: toPublicDveReading(cached.data, PROJECTION.FORWARD_BARS), price: cached.price, priceEvidence: cached.priceEvidence, optionsRequest: cached.optionsRequest ?? undefined, cached: true, ...freshnessMeta(cached.barAge, cached.ts) });
+      return json({ success: true, data: toPublicDveReading(cached.data, { forwardBars: PROJECTION.FORWARD_BARS, input: cached.input, history: { dates: cached.dates, timeframe }, assetClass }), price: cached.price, priceEvidence: cached.priceEvidence, optionsRequest: cached.optionsRequest ?? undefined, cached: true, ...freshnessMeta(cached.barAge, cached.ts) });
     }
 
     // 5. Fetch price + MPE in parallel (DVE needs historical data)
@@ -92,7 +96,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     if (!priceData) {
-      return NextResponse.json(
+      return json(
         { success: false, error: `Unable to fetch price data for ${symbol}` },
         { status: 404 },
       );
@@ -194,12 +198,13 @@ export async function GET(request: NextRequest) {
     const priceEvidence = timeframe === 'daily' && assetClass !== 'forex' ? priceEvidenceFromSeries(symbol, assetClass, priceData, computedAtMs) : null;
     // An explicit expiry that is not listed leaves options out of the reading (no substitute expiry) and says so.
     const optionsRequest = expiry ? { expiry, status: optsData ? 'used' as const : 'unavailable' as const } : null;
-    dveCache.set(cacheKey, { data: reading, price: priceData.price, ts: computedAtMs, barAge, priceEvidence, optionsRequest });
-    return NextResponse.json({ success: true, data: toPublicDveReading(reading, PROJECTION.FORWARD_BARS), price: priceData.price, priceEvidence, optionsRequest: optionsRequest ?? undefined, cached: false, ...freshnessMeta(barAge, computedAtMs) });
+    dveCache.set(cacheKey, { data: reading, input: dveInput, dates: priceData.historicalDates ?? null, price: priceData.price, ts: computedAtMs, barAge, priceEvidence, optionsRequest });
+    return json({ success: true, data: toPublicDveReading(reading, { forwardBars: PROJECTION.FORWARD_BARS, input: dveInput, history: { dates: priceData.historicalDates ?? null, timeframe }, assetClass }), price: priceData.price, priceEvidence, optionsRequest: optionsRequest ?? undefined, cached: false, ...freshnessMeta(barAge, computedAtMs) });
   } catch (error) {
     console.error('[DVE API] Error:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'DVE analysis failed' },
+    return json(
+      // Generic public error: the exception (provider URLs, keys in query strings, stack detail) stays in the server log.
+      { success: false, error: 'Volatility reading could not be computed right now.' },
       { status: 500 },
     );
   }

@@ -9,11 +9,13 @@ export type {
   PublicInvalidation,
   PublicProjection,
   PublicBreakout,
-  PublicTrap,
-  PublicExhaustion,
-  PublicDveFlag,
+  PublicPinnedCompression,
+  PublicStretch,
+  InputAvailability,
   SignalConditionGroup,
+  SignalCondition,
   BreakoutConditionId,
+  Tri,
 } from '@/lib/research/publicDve';
 export type { ZoneDurationStats, DVESignalType, DVESignalState, VolRegime, RateDirection } from '@/lib/directionalVolatilityEngine.types';
 
