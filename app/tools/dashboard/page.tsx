@@ -11,7 +11,7 @@ import { useUserTier } from '@/lib/useUserTier';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import TabBar from '@/components/visual/TabBar';
 
-const MacroDashboard = dynamic(() => import('@/app/tools/macro/page'), { ssr: false, loading: () => <div data-macro-skeleton className="space-y-3 py-6" aria-busy="true"><div className="h-24 animate-pulse rounded bg-white/5" /><div className="grid grid-cols-2 gap-3">{[0, 1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded bg-white/5" />)}</div><p className="text-xs text-slate-500">Loading macro regime…</p></div> });
+const MacroDashboard = dynamic(() => import('@/components/macro/MacroDashboard'), { ssr: false, loading: () => <div data-macro-skeleton className="space-y-3 py-6" aria-busy="true"><div className="h-24 animate-pulse rounded bg-white/5" /><div className="grid grid-cols-2 gap-3">{[0, 1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse rounded bg-white/5" />)}</div><p className="text-xs text-slate-500">Loading macro regime…</p></div> });
 const FavoritesPanel = dynamic(() => import('@/components/FavoritesPanel'), { ssr: false, loading: () => <div className="h-48 bg-slate-800/30 rounded-xl animate-pulse" /> });
 
 /** My Pages and Macro only. The retired desk tab opens Overview. */

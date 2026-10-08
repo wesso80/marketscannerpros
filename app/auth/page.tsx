@@ -2,6 +2,8 @@
 import { Suspense, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { publicDesignEnabled } from '@/lib/publicDesign';
+import accountStyles from '@/components/public-design/ResearchAccount.module.css';
 
 import { safeNext } from '@/lib/free/safeNext';
 
@@ -160,6 +162,37 @@ function AuthContent() {
       : status.tone === "success"
         ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
         : "border-white/10 bg-white/5 text-white/70";
+
+  if (publicDesignEnabled()) return <section className={accountStyles.root} data-research-auth>
+    {checkingSession ? <p role="status">Checking your account…</p> : <>
+      <div className={accountStyles.auth}>
+        <header className={accountStyles.hero}>
+          <p className={accountStyles.eyebrow}>YOUR RESEARCH / IN ONE PLACE</p>
+          <h1>A clearer view.<br/><span>A place to keep it.</span></h1>
+          <p>Create your free account or return to your research with a secure email link.</p>
+          <ol className={accountStyles.steps}>
+            <li>Explore the observations, their sources and what is missing.</li>
+            <li>Keep your portfolio records and a journal of your reasoning.</li>
+            <li>Choose Pro when you want deeper research and advanced analysis.</li>
+          </ol>
+        </header>
+        <div>
+          <form className={accountStyles.form} onSubmit={event=>{event.preventDefault();void handleSendMagicLink();}}>
+            <h2>Sign in or create an account</h2>
+            <p>No password. No card needed for Free.</p>
+            <label htmlFor="research-email">Email address</label>
+            <input id="research-email" type="email" autoComplete="email" required value={email} onChange={event=>{setEmail(event.target.value);clearStatus();}} placeholder="you@example.com" />
+            <button className={accountStyles.primary} type="submit" disabled={magicLoading}>{magicLoading?'Sending your link…':'Email me a secure link'}</button>
+            {status.tone !== 'idle' && <p role={status.tone==='error'?'alert':'status'}>{status.text}</p>}
+            <p className={accountStyles.fine}>Already a member? Use the email associated with your account.</p>
+            <p className={accountStyles.fine}>Read our <Link href="/terms">terms</Link> and <Link href="/privacy">privacy policy</Link>. Compare <Link href="/pricing">Free and Pro</Link>.</p>
+            <p className={accountStyles.fine}>No email? Check your spam folder, or <Link href="/contact">contact support</Link>.</p>
+          </form>
+        </div>
+      </div>
+      <AdminLoginSection />
+    </>}
+  </section>;
 
   return (
     <main className="min-h-screen bg-[var(--msp-bg)] text-white">

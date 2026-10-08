@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { isOperator } from '@/lib/quant/operatorAuth';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { q } from '@/lib/db';
 import type { AIToolName, ActionStatus, AIActionResult, PageSkill } from '@/lib/ai/types';
@@ -192,6 +193,17 @@ export async function POST(req: NextRequest) {
       dryRun = false,
       initiatedBy = 'user',
     } = body;
+
+    // Retired public capabilities: enforce before dry-run, replay, proposal or claim.
+    // Signed private callers keep the existing executors and confirmation policy.
+    if ((tool === 'generate_trade_plan' || tool === 'risk_position_size')
+      && session.is_admin !== true && !isOperator(session.cid, session.workspaceId)) {
+      return NextResponse.json({
+        success: false,
+        code: 'PUBLIC_TRADE_ACTION_RETIRED',
+        error: 'Trade plans and position sizing are not available through public AI actions.',
+      }, { status: 403, headers: { 'Cache-Control': 'private, no-store' } });
+    }
 
     if (!tool || !parameters || typeof parameters !== 'object') {
       return NextResponse.json({ error: 'Tool name and parameters are required' }, { status: 400 });
@@ -571,6 +583,15 @@ export async function GET(req: NextRequest) {
 
     if (result.length === 0) {
       return NextResponse.json({ error: 'Action not found' }, { status: 404 });
+    }
+
+    if ((result[0].action_type === 'generate_trade_plan' || result[0].action_type === 'risk_position_size')
+      && session.is_admin !== true && !isOperator(session.cid, session.workspaceId)) {
+      return NextResponse.json({
+        success: false,
+        code: 'PUBLIC_TRADE_ACTION_RETIRED',
+        error: 'Trade plans and position sizing are not available through public AI actions.',
+      }, { status: 403, headers: { 'Cache-Control': 'private, no-store' } });
     }
 
     return NextResponse.json({ success: true, action: result[0] });

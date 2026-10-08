@@ -1,0 +1,54 @@
+PUBLIC REDESIGN INTEGRATION — 8 October 2026
+
+Branch: codex/public-redesign-integration
+Base: research-page-phase4 a7324bf10f062d510f98911ba0358e0de1ee1d62
+Imported Codex stack: codex/public-research-design 97f864b1 (PRs #505, #510, #512).
+This is a consolidated review branch, not a merge or deployment. Existing PRs remain open.
+
+RESOLVED
+Three conflicts: app/api/dve/route.ts, app/api/options-scan/route.ts,
+components/options-terminal/OptionsChainEvidence.tsx.
+Preserved public DVE v2 projection and its missing/zero BBWP semantics, availability,
+historical sample disclosures, private/no-store headers and existing paid access.
+Copilot signs projected evidence separately on both fresh and cached responses.
+The options component uses the read-only /api/research/options adapter, avoiding
+legacy scan orchestration side effects. Automatic Symbol page and API type merges
+retain the v2 DVE type, successful-core request gating and signed public evidence.
+No admin route, worker or internal volatility/scanner engine file changed against base.
+This file-scope check is not a claim that all shared dependencies have no indirect effect.
+
+VERIFICATION
+- Focused route, quota, public contract and UI tests: 127 passed before the additional
+  cache-signing regression; DVE contract now 17/17 passes including that new test.
+- All 44 changed non-database test files: initially 287 passed, 16 failed.
+  Fifteen named failures also reproduced on the exact base in three test files.
+  One extra assertion expected the removed IntradayCharts prop string. Updated it
+  to preserve timeframe URL handoff and the replacement comparison chart. Recheck:
+  10 passed, 1 failed (the same base treasury source assertion). No tests skipped.
+  This was not a full repository suite run; database integration tests were excluded.
+- TypeScript reports the same six previously recorded local dependency errors:
+  four Stripe API-version type mismatches and two timer.unref typing errors.
+- Browser harness now resolves Next CLI through the project dependency resolver.
+  Attempted Symbol at 1280/390 with synthetic APIs; process exited while compiling
+  the first Symbol page, with no completed browser result. Do not claim visual approval.
+- No provider, OpenAI, production database, merge or deployment operation performed.
+
+FLAGS AND OPEN WORK
+NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED and PUBLIC_DAILY_QUOTAS_ENABLED stay opt-in.
+Quota migrations 126–128 are present but not applied by this work.
+Free limits remain 3 positions / 5 open journal entries. Linked-position counting
+semantics are unchanged pending the user's choice.
+Seven-day card trial/reminder/cancellation flow remains unimplemented.
+Free current-reading/options versus Pro depth still needs reconciliation.
+Reviewers must complete combined browser checks and required CI before enabling flags.
+
+CLAUDE HANDOFF
+Do not reimplement this stack. PRs #514, #515 and #516 were still open at inspection
+and are deliberately excluded. Finish those branches against the integration base.
+For #515, address the calendar leaf projection (weight/clusterScore and ranked order)
+and add populated nested canaries; see integration-514-515-review.txt.
+For #514, review configured/validated webhook origin and redirect behavior.
+Review #516 route retirement for callers and admin boundaries.
+Next shared task: apply the reviewed branches to an isolated combined checkout,
+run end-to-end entitlement/record-preservation flows and responsive browser checks.
+No shared-branch merge or release is authorized by this report.

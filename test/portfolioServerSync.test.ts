@@ -35,6 +35,7 @@ function fakeDb(opts: { cashInsertError?: string; cashTableMissing?: boolean; al
       if ((m = s.match(/^SAVEPOINT (\w+)$/))) { savepoints.set(m[1], clone()); return { rows: [] }; }
       if ((m = s.match(/^RELEASE SAVEPOINT (\w+)$/))) { savepoints.delete(m[1]); return { rows: [] }; }
       if ((m = s.match(/^ROLLBACK TO SAVEPOINT (\w+)$/))) { restore(savepoints.get(m[1])!); return { rows: [] }; }
+      if (s.startsWith('SELECT count(*)::int AS total')) { const rows = t.positions.filter(r => r.workspace_id === ws); return { rows: [{total: rows.length, linked: rows.filter(r => r.journal_entry_id != null).length}] }; }
       if (s.startsWith('SELECT pg_advisory_xact_lock')) return { rows: [{}] };
       if (s.startsWith('SELECT md5') && s.includes('portfolio_positions')) {
         const keys = [
@@ -205,5 +206,35 @@ describe('data-loss guard: stale or empty copies never overwrite the server', ()
     const r1 = await revisionOf(db.client);
     db.tables.positions.push({ id: 5, workspace_id: WS, symbol: 'JRNL', journal_entry_id: 42 });
     expect(await revisionOf(db.client)).toBe(r1);
+  });
+});
+
+
+describe('public Free position admission', () => {
+  const positions = (n: number) => Array.from({length:n},(_,i)=>({...body().positions[0],symbol:`TEST${i}`}));
+  it('rejects a fourth position before any delete or insert', async () => {
+    const db = fakeDb();
+    const result = await replacePortfolio(db.client, WS, body({positions:positions(4)}), {baseRevision:await revisionOf(db.client),positionLimit:3});
+    expect(result).toEqual({status:'limited',limit:3});
+    expect(db.log.some(s=>s.startsWith('DELETE')||s.startsWith('INSERT'))).toBe(false);
+  });
+  it('accepts exactly three and leaves unlimited callers unchanged', async () => {
+    for (const limit of [3,undefined]) {
+      const db = fakeDb();
+      const result=await replacePortfolio(db.client,WS,body({positions:positions(limit ? 3 : 6)}),{baseRevision:await revisionOf(db.client),positionLimit:limit});
+      expect(result.status).toBe('saved');
+    }
+  });
+  it('counts linked positions from storage even when omitted by the browser', async () => {
+    const db=fakeDb(); db.tables.positions.push({id:8,workspace_id:WS,journal_entry_id:77});
+    const result=await replacePortfolio(db.client,WS,body({positions:positions(3)}),{baseRevision:await revisionOf(db.client),positionLimit:3});
+    expect(result.status).toBe('limited'); expect(db.tables.positions).toHaveLength(1);
+  });
+  it('allows a downgraded book to stay the same size or shrink, but not grow', async () => {
+    for (const n of [4,5,6]) {
+      const db=fakeDb(); db.tables.positions.push(...positions(5).map((p,i)=>({...p,id:i,workspace_id:WS})));
+      const result=await replacePortfolio(db.client,WS,body({positions:positions(n)}),{baseRevision:await revisionOf(db.client),positionLimit:3});
+      expect(result.status).toBe(n>5?'limited':'saved');
+    }
   });
 });

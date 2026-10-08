@@ -33,6 +33,7 @@ export type ServerPortfolioState = {
 
 export type ReplaceResult =
   | { status: 'saved'; revision: string; cashStateSaved: boolean }
+  | { status: 'limited'; limit: number }
   | { status: 'conflict'; reason: 'revision_required' | 'stale_revision' | 'empty_overwrite'; revision: string };
 
 /** Mutable progress marker so the route can log which step failed. */
@@ -101,7 +102,7 @@ export async function replacePortfolio(
   client: SqlClient,
   workspaceId: string,
   body: PortfolioSyncBody,
-  opts: { baseRevision?: unknown; confirmClear?: unknown },
+  opts: { baseRevision?: unknown; confirmClear?: unknown; positionLimit?: number },
   progress: SyncProgress = { stage: 'start' },
 ): Promise<ReplaceResult> {
   const q = async (sql: string, params: unknown[] = []) => (await client.query(sql, params)).rows;
@@ -120,6 +121,20 @@ export async function replacePortfolio(
   }
   if (isEmptyPortfolioPayload(body) && current.hasData && opts.confirmClear !== true) {
     return { status: 'conflict', reason: 'empty_overwrite', revision: current.revision };
+  }
+
+  // Admission shares the replacement lock. Linked positions are counted from storage,
+  // never from the browser; existing above-limit books may be edited or reduced.
+  if (opts.positionLimit !== undefined) {
+    if (!Number.isInteger(opts.positionLimit) || opts.positionLimit < 0) throw Error('Invalid position limit');
+    progress.stage = 'check_position_limit';
+    const counts = (await q(`SELECT count(*)::int AS total,
+      count(*) FILTER (WHERE journal_entry_id IS NOT NULL)::int AS linked
+      FROM portfolio_positions WHERE workspace_id = $1`, [workspaceId]))[0];
+    const proposed = body.positions.filter(p => !p.journalEntryId).length + Number(counts.linked);
+    if (proposed > Math.max(opts.positionLimit, Number(counts.total))) {
+      return { status: 'limited', limit: opts.positionLimit };
+    }
   }
 
   progress.stage = 'delete_manual_rows';

@@ -1,4 +1,5 @@
-import { assertJournalQuota, JournalQuotaError, journalQuotaResponse } from '@/lib/free/journalQuota';
+import { assertJournalQuota, assertJournalReplacementQuota, JournalQuotaError, journalQuotaResponse } from '@/lib/free/journalQuota';
+import { publicQuotaEnabled, resolvePublicQuotaAccess } from '@/lib/publicQuotaAccess';
 import { getEffectiveTier } from '@/lib/entitlements';
 import { isPaidTier } from '@/lib/tiers';
 import { NextRequest, NextResponse } from "next/server";
@@ -450,7 +451,8 @@ export async function POST(req: NextRequest) {
 
     const incomingEntries = Array.isArray(entries) ? entries : [];
     const paid = isPaidTier(await getEffectiveTier(workspaceId, session.tier, session.cid, q));
-    if (!paid) assertJournalQuota(incomingEntries.filter((entry: any) => entry.isOpen !== false).length);
+    const preserveDowngradedBook = publicQuotaEnabled() && !paid && !(await resolvePublicQuotaAccess(session)).bypass;
+    if (!paid && !preserveDowngradedBook) assertJournalQuota(incomingEntries.filter((entry: any) => entry.isOpen !== false).length);
 
     const guardEnabled = req.cookies.get('msp_risk_guard')?.value !== 'off';
     const runtimeSnapshotInput = await getRuntimeRiskSnapshotInput(workspaceId).catch(() => null);
@@ -629,8 +631,8 @@ export async function POST(req: NextRequest) {
     // Clear and re-insert atomically to avoid transient not-found windows during close requests.
     await tx(async (client) => {
       if (!paid) await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`journal-quota:${workspaceId}`]);
-      const existingIdRows = await client.query<{ id: number }>(
-        `SELECT id FROM journal_entries WHERE workspace_id = $1`,
+      const existingIdRows = await client.query<{ id: number; is_open: boolean }>(
+        `SELECT id, is_open FROM journal_entries WHERE workspace_id = $1`,
         [workspaceId]
       );
       const existingWorkspaceIds = new Set(existingIdRows.rows.map((row) => Number(row.id)));
@@ -663,6 +665,9 @@ export async function POST(req: NextRequest) {
         });
       }
 
+      if (preserveDowngradedBook) {
+        assertJournalReplacementQuota([...dedupedEntries.values()], existingIdRows.rows);
+      }
       await client.query(`DELETE FROM journal_entries WHERE workspace_id = $1`, [workspaceId]);
 
       for (const e of dedupedEntries.values()) {

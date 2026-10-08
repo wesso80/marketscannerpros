@@ -1,0 +1,28 @@
+Public pricing, sign-up and record-limit follow-up
+8 October 2026 | codex/public-research-design | draft PR 512
+
+Approved decision
+Free retains three open Portfolio positions and five open Journal entries. Advanced analysis and exports remain paid. This supersedes the open choice recorded in public-plan-readiness.txt.
+
+Implemented
+New pricing and magic-link sign-up presentation behind NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED, matching the shared public shell. Existing checkout and mail handlers are reused. Existing admin login component and handler remain unchanged.
+Pricing uses US$24.99 monthly / US$249 annual from PLAN_PRICES. It lists the confirmed record limits and existing research features, links existing legal/support pages, and does not advertise a trial, refund guarantee or Free AI allowance. Symbol 3/unlimited and paid Copilot 20/day claims appear only after /api/public-usage confirms the new quota rollout is enabled; errors/unknown state do not advertise those limits. No Free M2 claim is made while the paid gate remains. Paid members receive an account-management link rather than another subscription CTA.
+The new sign-up view labels the email input, exposes loading/success/error states, preserves the safe return URL and explains the Free account path. No email or payment was sent during verification.
+
+Portfolio save admission
+When PUBLIC_DAILY_QUOTAS_ENABLED is on, POST /api/portfolio resolves verified server subscription access. Free receives the three-position limit; Pro and admin/operator bypass retain the existing path. Flag off leaves the old save path unchanged.
+lib/portfolio/serverSync.ts checks the limit within the same workspace advisory lock as revision checking and replacement, before destructive statements. Linked positions are counted from the database, not the request. A book already above the cap may retain or reduce its count; it cannot increase its net count. No stored rows are pruned automatically. This is net-count preservation, not an identity freeze on existing symbols.
+A 403 refusal leaves records intact and carries private, no-store headers. Stale-revision handling remains unchanged. A synthetic database validates query order and record preservation; a real PostgreSQL concurrency test remains outstanding.
+
+Important remaining boundaries
+This check covers manual Portfolio replacement saves. Journal-owned mirrors and background/admin writers are unchanged. Five open journal entries can produce more than three linked Portfolio rows; the new check prevents manual saves from increasing the over-limit book, not those independent mirror writes. A universal combined cap would conflict with the five-entry Journal allowance and needs a separate decision about whether to count mirrored records in Portfolio. Do not describe this as a universal database row cap.
+Journal add/sync enforcement is unchanged. The existing add route enforces five open entries under its lock. The bulk Journal sync path still rejects an above-five incoming open book; downgrade editing through that path needs separate preservation work. No complete Journal downgrade or all-writer concurrency certification is claimed.
+Trial billing, two-day reminder, Free M2/current options projection and record-specific Copilot adapters remain unfinished. The trial should be built and tested against isolated Stripe test-mode fixtures before being offered. No live billing configuration was inspected.
+
+Validation
+44 focused tests pass: pricing/sign-up rendering and callbacks, fake magic-link success/failure, verified Free/Pro/admin Portfolio admission, disabled rollout parity, count refusal, linked rows, downgraded books, existing Portfolio sync protections and Journal add quota.
+Four real Next app browser checks pass at 1280/390 for pricing/sign-up with all APIs mocked and external requests blocked. They exercise annual billing display, checkout failure presentation and email-link success, with no overflow/page errors. Screenshots inspected. These do not prove live Stripe or mail delivery.
+Type check retains the six recorded baseline Stripe API-version/timer errors, with no new errors. Full suite not rerun. Portfolio/Journal workspace browser compilation remains a separate unresolved check from the previous task.
+
+Next recommended task
+Complete Journal downgrade preservation and define the treatment of Journal-mirrored positions before calling record entitlements fully reconciled. Then implement and test the seven-day trial/reminder/cancellation flow in isolation. No merge, deployment or production flag change is included here.

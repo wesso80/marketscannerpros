@@ -38,7 +38,7 @@ vi.mock('@/app/v2/_lib/api', () => ({
 
 import CommandCenterPage from '@/app/tools/command-center/page';
 import DashboardPage from '@/app/tools/dashboard/page';
-import MacroDashboardPage from '@/app/tools/macro/page';
+import MacroDashboardPage from '@/components/macro/MacroDashboard';
 import MarketMoversPage from '@/app/tools/market-movers/page';
 import MspRadarReport from '@/components/msp-radar/MspRadarReport';
 import RadarReportCard from '@/components/overview/RadarReportCard';

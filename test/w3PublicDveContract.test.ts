@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const h = vi.hoisted(() => ({ session: { workspaceId: 'ws-a', tier: 'pro', cid: 'cus_test_a' } as any, computeCalls: 0, last: null as any, closes: 320, load: true, throwInCompute: false, thin: false }));
+vi.mock('@/lib/publicQuotaAccess', () => ({ publicQuotaEnabled: () => process.env.PUBLIC_DAILY_QUOTAS_ENABLED === 'true', resolvePublicQuotaAccess: async () => ({ bypass: false, plan: 'pro', subject: `account:${h.session.workspaceId}` }) }));
 vi.mock('@/lib/auth', () => ({ getSessionFromCookie: vi.fn(async () => h.session) }));
 vi.mock('@/lib/coingecko', () => ({ getAggregatedFundingRates: vi.fn(async () => []), getAggregatedOpenInterest: vi.fn(async () => []) }));
 vi.mock('@/lib/research/priceEvidence', async (orig) => ({ ...(await orig<typeof import('@/lib/research/priceEvidence')>()), priceEvidenceFromSeries: vi.fn(() => null) }));
@@ -55,6 +56,7 @@ vi.mock('@/lib/directionalVolatilityEngine', async (orig) => {
   };
 });
 import { GET } from '@/app/api/dve/route';
+import { verifyPageEvidence } from '@/lib/ai/publicCopilotEvidence';
 
 const FORBIDDEN_KEYS = /^(direction|directionalVolatility|transition|score|scores|coverage|confidence|regimeConfidence|bias|magnitude|probability|continuationProbability|exitProbability|strength|squeezeStrength|priceInvalidation|hitRate|projectionQuality|projectionQualityScore|projectionWarning|level|label_|components|componentDetails|compressionLevel|detected|candidate|flags|dataQuality|trap|exhaustion|canary)$/;
 const PRIVATE_TEXT = /CANARY|123\.45|\(\s*[+-]?\d+(\.\d+)?\s*\)|\b\d+\s*\/\s*\d+\b|\bbullish\b|\bbearish\b|Direction:|BREAKOUT_WATCH|EXPANSION_UP|EXIT_RISK|TRAP_DETECTED|READY|quality high|probabilit|\bHIGH\b|ws-a|ws-b/i;
@@ -70,6 +72,7 @@ const allConditionValues = (d: any) => [
 let n = 0;
 const call = async (sym?: string) => { const r = await GET(new NextRequest(`https://msp.test/api/dve?symbol=${sym ?? `ZZT${n++}`}&type=equity`)); return { status: r.status, body: await r.json(), headers: r.headers }; };
 beforeEach(() => {
+  vi.stubEnv('PUBLIC_DAILY_QUOTAS_ENABLED', 'false');
   h.session = { workspaceId: 'ws-a', tier: 'pro', cid: 'cus_test_a' }; h.computeCalls = 0; h.closes = 320; h.load = true; h.throwInCompute = false; h.thin = false;
   vi.stubEnv('PRO_TRADER_BYPASS_UNTIL', ''); vi.stubEnv('TEMP_PRO_TRADER_BYPASS_UNTIL', '');
 });
@@ -230,4 +233,28 @@ describe('W3: /api/dve access and private-response caching', () => {
     expect(r.status).toBe(400);
     noStore(r);
   });
+});
+
+// Integration regression: shared market cache must never reuse another account's bearer.
+it('signs the v2 public projection separately for each account on a cache hit', async () => {
+  vi.stubEnv('PUBLIC_DAILY_QUOTAS_ENABLED', 'true');
+  vi.stubEnv('APP_SIGNING_SECRET', 'integration-fixture-only');
+  const first = await call('ZZTSIGNEDCACHE');
+  h.session = { workspaceId: 'ws-b', tier: 'pro', cid: 'cus_test_b' };
+  const second = await call('ZZTSIGNEDCACHE');
+  expect(first.status).toBe(200);
+  expect(second.status).toBe(200);
+  expect(h.computeCalls).toBe(1);
+  expect(second.body.cached).toBe(true);
+  expect(second.body.data).toEqual(first.body.data);
+  const a = first.body.copilotEvidenceToken, b = second.body.copilotEvidenceToken;
+  expect(typeof a).toBe('string'); expect(typeof b).toBe('string'); expect(a).not.toBe(b);
+  expect(verifyPageEvidence(a, 'account:ws-b')).toBeNull();
+  expect(verifyPageEvidence(b, 'account:ws-a')).toBeNull();
+  for (const [token, subject] of [[a, 'account:ws-a'], [b, 'account:ws-b']]) {
+    const evidence = verifyPageEvidence(token, subject);
+    expect(evidence?.section).toBe('dve');
+    expect(evidence?.observations).toContainEqual(expect.objectContaining({ field: 'dve.reading.contract', value: 'public-dve-v2' }));
+    expect(JSON.stringify(evidence)).not.toMatch(PRIVATE_TEXT);
+  }
 });

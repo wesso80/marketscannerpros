@@ -1,3 +1,4 @@
+import { sectionEvidenceToken } from '@/lib/ai/sectionEvidenceAccess';
 /**
  * Directional Volatility Engine (DVE) API
  *
@@ -52,6 +53,11 @@ function freshnessMeta(barAge: BarAge, computedAtMs: number) {
 const PRIVATE_HEADERS = { 'Cache-Control': 'private, no-store, max-age=0', Vary: 'Cookie' } as const;
 const json = (body: unknown, init?: { status?: number }) => NextResponse.json(body, { status: init?.status, headers: PRIVATE_HEADERS });
 
+async function signedEvidence(body: {data:unknown;[key:string]:unknown},symbol:string,asset:string,timeframe:string,expiry:string|null) {
+  const token=await sectionEvidenceToken('dve',symbol,asset,{timeframe,reading:body.data},expiry);
+  return json({...body,...(token?{copilotEvidenceToken:token}:{})});
+}
+
 export async function GET(request: NextRequest) {
   try {
     // 1. Auth + tier check
@@ -86,7 +92,7 @@ export async function GET(request: NextRequest) {
     const cacheKey = `${symbol}_${timeframe}_${assetClass}_${expiry ?? 'default-expiry'}`;
     const cached = dveCache.get(cacheKey);
     if (cached && Date.now() - cached.ts < DVE_CACHE_TTL) {
-      return json({ success: true, data: toPublicDveReading(cached.data, { forwardBars: PROJECTION.FORWARD_BARS, input: cached.input, history: { dates: cached.dates, timeframe }, assetClass }), price: cached.price, priceEvidence: cached.priceEvidence, optionsRequest: cached.optionsRequest ?? undefined, cached: true, ...freshnessMeta(cached.barAge, cached.ts) });
+      return signedEvidence({ success: true, data: toPublicDveReading(cached.data, { forwardBars: PROJECTION.FORWARD_BARS, input: cached.input, history: { dates: cached.dates, timeframe }, assetClass }), price: cached.price, priceEvidence: cached.priceEvidence, optionsRequest: cached.optionsRequest ?? undefined, cached: true, ...freshnessMeta(cached.barAge, cached.ts) }, symbol, assetClass, timeframe, expiry);
     }
 
     // 5. Fetch price + MPE in parallel (DVE needs historical data)
@@ -199,7 +205,7 @@ export async function GET(request: NextRequest) {
     // An explicit expiry that is not listed leaves options out of the reading (no substitute expiry) and says so.
     const optionsRequest = expiry ? { expiry, status: optsData ? 'used' as const : 'unavailable' as const } : null;
     dveCache.set(cacheKey, { data: reading, input: dveInput, dates: priceData.historicalDates ?? null, price: priceData.price, ts: computedAtMs, barAge, priceEvidence, optionsRequest });
-    return json({ success: true, data: toPublicDveReading(reading, { forwardBars: PROJECTION.FORWARD_BARS, input: dveInput, history: { dates: priceData.historicalDates ?? null, timeframe }, assetClass }), price: priceData.price, priceEvidence, optionsRequest: optionsRequest ?? undefined, cached: false, ...freshnessMeta(barAge, computedAtMs) });
+    return signedEvidence({ success: true, data: toPublicDveReading(reading, { forwardBars: PROJECTION.FORWARD_BARS, input: dveInput, history: { dates: priceData.historicalDates ?? null, timeframe }, assetClass }), price: priceData.price, priceEvidence, optionsRequest: optionsRequest ?? undefined, cached: false, ...freshnessMeta(barAge, computedAtMs) }, symbol, assetClass, timeframe, expiry);
   } catch (error) {
     console.error('[DVE API] Error:', error);
     return json(

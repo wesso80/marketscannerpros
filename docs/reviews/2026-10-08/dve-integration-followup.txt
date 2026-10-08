@@ -1,0 +1,13 @@
+Volatility integration follow-up - 8 October 2026
+
+Remote base advanced to c3377df3: #506 (35d83c06) public DVE and #507 mobile packet tiles/session dates. Both commits applied to codex/symbol-phase4-integration without conflicts. Their DVE route/projector and mobile fixes are preserved. No shared branch or main was merged or updated by Codex.
+
+Independent base tests: 14 pass across w3PublicDveContract, researchVolatilityDescriptions and volatilityCompact. Combined integration: 47 targeted tests pass across those plus public Symbol/summary, Free page, WP1, limit UI and deferred hooks. Added publicDveHookContract passes (48 total). TypeScript retains six baseline errors, none in changed files.
+
+Found/fixed integration gap: app/v2/_lib/api.ts still described private direction, scores, probabilities, signal strength and hit rate in DVEResponse, and nullable hook inference allowed any. Replaced the duplicate response definition with the public DVEApiResponse type and explicit useApi<DVEResponse>. Added compile-time equality/not-any assertions for both response and hook. Runtime route/engine unchanged.
+
+Browser: 20 component fixtures at 1280/390 using regenerated public-symbol-v2 and synthetic computeDVE -> toPublicDveReading output. Four Pro cases receive successful public-dve-v1; Free/visitors preserve real paid-gate behavior. All 20 have no page exceptions, and 12 successful core reports exercise the research tabs/chart modes. This validates component integration, not live provider or entitlement rollout.
+
+Still open for specialist policy work: /api/dve is paid-only and does not use the completed-core-report entitlement. Public BBWP still carries the internal neutral number when bbwpBasis.available=false (the summary and Symbol display can explain unavailable); consumers must check the basis. Public projection expectedMovePct/casesInDirection, squeezeStrength, exhaustion labels and dataQuality.coverage remain explicit output fields in Claude's contract and need reconciliation with the stricter field-map proposal. This update does not silently delete or endorse those policy choices. Current tests prove the declared #506 contract, not the entire proposed public policy. Cache response protections and visitor provider rights remain release blockers.
+
+Artifacts: outputs/dve-base-tests.txt, dve-integrated-tests.txt, dve-integrated-types.txt, dve-integrated-browser-results.json. No provider/OpenAI calls or production changes. Rollout disabled. Next: resolve specialist Free entitlement and remaining field-policy choices with Claude before changing gates.

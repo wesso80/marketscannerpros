@@ -1,0 +1,43 @@
+Volatility Free/Pro reconciliation - 8 October 2026
+
+Reviewed integration 6acc443f and fetched research-page-phase4 c3377df3. No newer specialist commit observed. Read-only application review; pure computeDVE/toPublicDveReading probes use synthetic arrays and make no provider calls. Claude's active unpushed edits remain unknown.
+
+CONFIRMED FINDINGS
+P1: Unavailable BBWP still generates satisfied numeric conditions.
+- lib/research/publicDve.ts:82 constructs "BBWP breaks above 15 (now ...)" from the number without checking bbwpBasis.available. Line121 copies internal BBWP; line124 separately copies the unavailable basis.
+- Reproduction: five synthetic closes -> bbwp=50, available=false, window=0. Summary correctly says unavailable, but signal.conditions contains "BBWP breaks above 15 (now 50.0)" with met=true.
+- Consequence: a public client can display a condition as satisfied when there is no measurement. Merely hiding the BBWP tile is insufficient.
+- Acceptance: unavailable BBWP and dependent SMA/rate/threshold conditions are null/unknown or omitted with a reason. No idle rule condition may derive a boolean from a neutral placeholder. Test short history, unavailable basis, valid zero percentile, sufficient history, both cold/cache responses. Preserve internal engine numbers for admin/private callers.
+
+P1: Public coverage is a renamed weighted quality score.
+- publicDve.ts:156 assigns dataQuality.coverage = r.dataQuality.score.
+- directionalVolatilityEngine.ts:1297-1331 starts at100 and subtracts fixed penalties (30/10 for history,20 for absent indicators,5 for options,3 for liquidity, etc.). It is not an observed/required count.
+- Synthetic five-close case: internal score32 -> public coverage32 exactly.
+- Acceptance: remove the numeric field from public Free AND Pro; keep missing/warnings. If coverage is useful, introduce explicit observed/required counts by input family, with applicability rules. Do not relabel the same score again. Crypto must not be penalized for inapplicable equity options.
+
+P2: Some remaining labels/flags still summarize heuristic scores.
+- publicDve.ts retains trap detected/candidate, exhaustion label, squeezeStrength, selected signal flags and numeric-condition rules. These are not all raw observations.
+- squeezeStrength has multiple construction paths: goldenEggFetchers.ts:179 takes a squeeze helper result or a bandwidth heuristic; directionalVolatilityEngine.ts:1425 defaults absence to zero.
+- Acceptance: current factual compression measures belong in Free; explain exact formula/basis and missing behavior. Remove unsupported composite verdict labels in both public plans. Explicit rule explanations may reference measured conditions, but not silently substitute weighted model components for observations.
+
+CORRECTION / HISTORICAL FIELDS
+expectedMovePct is a historical average of sampled forward returns (directionalVolatilityEngine.ts:952), not intrinsically a forecast. The public summary already calls it in-sample history. The ambiguous field name should change to historicalMeanReturnPct in a versioned Pro-history response.
+Pro history can include median/dispersion/max historical excursion, episode durations, sample count and cases in the rule's direction. Expose lookback, event selection, forwardBars, actual sample count, overlap treatment and limitations. Return unavailable for insufficient samples; do not portray zeroed placeholders as observations. A historical count reconstructed from rounded hitRate should ideally be retained directly by a history adapter; do not alter private model semantics during public projection work.
+Current BBWP/ATR/rates, current phase age and their provenance belong in each full core Free report. Historical episode distributions and exploration belong in Pro. The current public contract includes both; simply changing the gate would not implement this split.
+
+ACCESS DESIGN (PROPOSED, NOT IMPLEMENTED)
+1. Preserve the rollout-off legacy behavior and existing authenticated/admin semantics.
+2. Under rollout, resolve session/plan with the existing server resolver. Authorize the canonical asset+instrument against a completed report for the current Eastern day before fetching or reading an entitlement-dependent response cache.
+3. For signed-in Free and Pro core reports, return the same public current-evidence contract. Do not reserve another Symbol credit for a specialist section.
+4. Pro history uses a separate scope/response projection enforced server-side. Public Pro does not get internal/admin scores.
+5. Visitor equity access stays disabled until provider rights are resolved. Do not infer rights from the signed visitor cookie. Crypto visitor access needs its own applicable provider review.
+6. Keep internal market-data caches shared only where they contain market data. Re-project after authorization on every hit. Add private,no-store to public success/error responses; force-dynamic is not an isolation proof. DVE route currently has no explicit success Cache-Control (route.ts:85,198).
+7. Identity/timeframe/expiry must match the core instrument. Unknown identity, pending/failed report, expired day, failed subscription/DB lookup must deny before providers; public request flags cannot choose an admin response.
+8. Preserve source observation time, bar interval and computation time separately. Old data may be labelled stale, never relabelled fresh because fetched from cache.
+
+BUILDER OWNERSHIP / NEXT WORK
+Recommended Claude-owned files: lib/research/publicDve.ts, app/api/dve/route.ts and volatility consumers, because he just changed those contracts. Codex can supply short-history and quality-score regression fixtures and test the proposed access matrix in separate test files. No message was sent to Claude and no assumption is made that this report changes his current local task.
+
+Priority order: fix unavailable-derived conditions, replace weighted coverage, agree/remove remaining model labels, define current versus historical projections, then implement Free specialist admission. Do not open the Free gate first.
+
+Evidence: outputs/probe-dve-policy.ts and dve-policy-probe.json. This is a focused reproducible code finding, not a live-production observation. No application changes, merges, deployment or production/provider calls.
