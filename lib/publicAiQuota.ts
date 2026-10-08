@@ -13,6 +13,25 @@ function canonical(value: unknown): string {
   return JSON.stringify(value);
 }
 const reply = (body: unknown,status=200) => NextResponse.json(body,{status,headers:{'Cache-Control':'private, no-store'}});
+/** Only user-visible answer text qualifies; metadata and tool proposals alone do not. */
+function hasUsableAnswer(feature: string, value: unknown): value is Record<string, unknown> {
+ if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+ const body = value as Record<string, unknown>;
+ if (body.error || body.success === false || body.ok === false) return false;
+ const text = (v: unknown) => typeof v === 'string' && v.trim().length > 0;
+ switch (feature) {
+  case 'ai/copilot': return text(body.content);
+  case 'msp-analyst': return text(body.text);
+  case 'ai/explain':
+   return text(body.explanation) && text(body.whyItMatters)
+    && (body.actionableInsight == null || typeof body.actionableInsight === 'string');
+  case 'ai/analyst-context': {
+   const sections = ['explain', 'plan', 'act', 'learn'].map(key => body[key]);
+   return sections.every(v => v == null || typeof v === 'string') && sections.some(text);
+  }
+  default: return false;
+ }
+}
 /** Legacy/admin behaviour is unchanged while disabled or bypassed. All public question callers share one ledger. */
 export function withPublicAiQuota(handler:(req:NextRequest)=>Promise<Response>, feature:string) {
  return async (req:NextRequest):Promise<Response> => {
@@ -31,15 +50,23 @@ export function withPublicAiQuota(handler:(req:NextRequest)=>Promise<Response>, 
    const resource=feature+':'+(id || fingerprint);
    const admission=await publicQuota.reserve({subject:access.subject,plan:access.plan,kind:'ai',resource,fingerprint});
    const quota={limit:admission.limit,used:admission.used,resetsAt:admission.resetsAt};
-   if(admission.status==='completed')return admission.replay ? reply({...admission.replay,quota,replayed:true}) : reply({error:'Saved answer unavailable; this question will not be run again'},503);
+   if(admission.status==='completed')return hasUsableAnswer(feature, admission.replay) ? reply({...admission.replay,quota,replayed:true}) : reply({error:'Saved answer unavailable; this question will not be run again'},503);
    if(admission.status!=='reserved')return reply({error:admission.status==='limited'?'Daily AI question limit reached':'This question is pending or its request ID was reused',quota},admission.status==='limited'?429:409);
    // An exception/5xx can mean an interrupted model call. Hold the reservation rather than spend again.
    reservation=admission.reservation;
    execution={plan:access.plan,subject:access.subject,fingerprint,providerStarted:false};
    const response=await scope.run(execution,()=>handler(req));
    if(!response.ok){if(response.status<500 || !execution.providerStarted)await publicQuota.settle(admission.reservation,'released');response.headers.set('Cache-Control','private, no-store');return response;}
-   const body=await response.json();
-   if(body?.error || body?.success===false || body?.ok===false){await publicQuota.settle(admission.reservation,'released');return reply(body,response.status);}
+   // Read failures can be interrupted outcomes. Fully received invalid JSON is a known unusable answer.
+   const responseText = await response.text();
+   let body: unknown;
+   try { body = JSON.parse(responseText); } catch { body = null; }
+   if (!hasUsableAnswer(feature, body)) {
+    const released = await publicQuota.settle(admission.reservation, 'released');
+    return reply({error: released
+     ? 'AI answer unavailable. No question credit was used.'
+     : 'Question credit release could not be confirmed. Retry with the same request ID.'}, 503);
+   }
    if(!await publicQuota.settle(admission.reservation,'completed',body))return reply({error:'Answer completion could not be confirmed'},503);
    return reply({...body,quota},response.status);
   }catch{if(reservation && !execution?.providerStarted){try{await publicQuota.settle(reservation,'released');}catch{/* fail closed */}}return reply({error:'AI request outcome could not be confirmed. Retry with the same request ID.'},503);}
