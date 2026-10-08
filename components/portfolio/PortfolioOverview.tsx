@@ -15,7 +15,7 @@ export default function PortfolioOverview({ value, totalCost, openPL, allocation
     <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
       <StatTile label="Value simulated" value={formatMoney(value)} />
       <StatTile label="Total cost" value={formatMoney(totalCost)} />
-      <div className="[&_[data-stat-card]]:h-full [&_[data-stat-card]>p:first-child]:text-base"><StatTile label="Today" value="Not measured" /></div>
+      <div className={studio ? records.unavailableStat : "[&_[data-stat-card]]:h-full [&_[data-stat-card]>p:first-child]:text-base"}><StatTile label="Today" value="Not measured" /></div>
       <StatTile label="Open P&L" value={formatSignedMoney(openPL)} />
       <div className="col-span-2 lg:col-span-1"><StatTile label="Largest position" value={largest ? `${largest.percentage.toFixed(1)}%` : null} warning={Boolean(largest && largest.percentage > limit)} /></div>
     </div>

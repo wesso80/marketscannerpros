@@ -12,13 +12,16 @@ const symbolFixture=require(fixtureOut+'/design-fixture.cjs').successFixture();
 const dates=Array.from({length:24},(_,i)=>new Date(Date.UTC(2026,8,1+i)).toISOString().slice(0,10));
 const chartFixture={symbol:'AAPL',type:'equity',requestedDays:90,from:dates[0],to:dates.at(-1),dates,returnPairs:23,missing:[],basis:'Synthetic browser fixture only.',series:['AAPL','SPY','QQQ'].map((symbol,j)=>({symbol,source:'Synthetic fixture',values:dates.map((_,i)=>i*(.12+j*.03)+Math.sin(i)*.4),changePct:3,correlation:j?0.8:null})),price:{source:'Synthetic fixture',basis:'Synthetic browser fixture only.',points:dates.map((date,i)=>({date,close:120+i,open:119+i,high:121+i,low:118+i,volume:100000,sma20:118+i,sma50:null,upper:125+i,lower:115+i,rsi:55,macd:1,signal:.8}))}};
 let comparisonRequests=0;
+const fixturePlan=process.env.MSP_DESIGN_PLAN==='free'?'free':'pro';
 
+const baseUrl=process.env.MSP_BROWSER_BASE_URL || 'http://127.0.0.1:5178';
 let log='';
-const server=spawn(process.execPath,[createRequire(resolve('package.json')).resolve('next/dist/bin/next'),'dev','--webpack','-H','127.0.0.1','-p','5178'],{env:{...process.env,NEXT_TELEMETRY_DISABLED:'1',NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED:'true',APP_SIGNING_SECRET:'fixture-only',DATABASE_URL:'',OPENAI_API_KEY:''},stdio:['ignore','pipe','pipe']});
-server.stdout.on('data',d=>{log+=d;process.stdout.write(d);});server.stderr.on('data',d=>{log+=d;process.stderr.write(d);});
+const server=process.env.MSP_BROWSER_BASE_URL ? null : spawn(process.execPath,[createRequire(resolve('package.json')).resolve('next/dist/bin/next'),'dev','--webpack','-H','127.0.0.1','-p','5178'],{env:{...process.env,NEXT_TELEMETRY_DISABLED:'1',NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED:'true',APP_SIGNING_SECRET:'fixture-only',DATABASE_URL:'',OPENAI_API_KEY:''},stdio:['ignore','pipe','pipe']});
+server?.stdout.on('data',d=>{log+=d;process.stdout.write(d);});server?.stderr.on('data',d=>{log+=d;process.stderr.write(d);});
 let browser;
 try{
- const deadline=Date.now()+20000;while(!log.includes('Ready')&&Date.now()<deadline)await new Promise(r=>setTimeout(r,200));
+ const deadline=Date.now()+20000;while(server && server.exitCode===null && !log.includes('Ready')&&Date.now()<deadline)await new Promise(r=>setTimeout(r,200));
+ if(server && !log.includes('Ready'))throw Error('Preview server did not become ready: '+log);
  browser=await chromium.launch({headless:true,executablePath:process.env.MSP_CHROMIUM});
  const page=await browser.newPage();page.setDefaultTimeout(15000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/*',async route=>{
@@ -36,9 +39,9 @@ try{
   if(u.pathname==='/api/auth/magic-link')return route.fulfill({contentType:'application/json',body:JSON.stringify({message:'Fixture: check your inbox.'})});
   if(u.pathname==='/api/payments/checkout')return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Fixture checkout unavailable. No payment started.'})});
   if(u.pathname==='/api/me' && (page.url().includes('/auth') || page.url().includes('/pricing')))return route.fulfill({contentType:'application/json',body:JSON.stringify({authenticated:false,tier:'free'})});
-  if(u.pathname==='/api/me')return route.fulfill({contentType:'application/json',body:JSON.stringify({authenticated:true,tier:'pro',isAdmin:false})});
+  if(u.pathname==='/api/me')return route.fulfill({contentType:'application/json',body:JSON.stringify({authenticated:true,tier:fixturePlan,isAdmin:false})});
   if(u.pathname==='/api/disclosure/status')return route.fulfill({contentType:'application/json',body:JSON.stringify({authenticated:true,accepted:true,version:'1'})});
-  if(u.pathname==='/api/public-usage')return route.fulfill({contentType:'application/json',body:JSON.stringify({enabled:true,plan:'pro',quotas:[{kind:'ai',remaining:20,limit:20}]})});
+  if(u.pathname==='/api/public-usage')return route.fulfill({contentType:'application/json',body:JSON.stringify({enabled:true,plan:fixturePlan,quotas:fixturePlan==='pro'?[{kind:'ai',remaining:20,limit:20}]:[{kind:'symbol',remaining:3,limit:3},{kind:'ai',remaining:0,limit:0}]})});
   if(page.url().includes('fixture=populated')) {
    const observation={value:4.2,date:'2026-10-07'};
    if(u.pathname==='/api/economic-indicators')return route.fulfill({contentType:'application/json',body:JSON.stringify({timestamp:'2026-10-08T00:00:00Z',rates:{treasury3m:observation,treasury2y:{value:3.7,date:'2026-10-06'},treasury5y:{value:null},treasury10y:observation,treasury30y:observation,fedFunds:observation,yieldCurve:{value:0.5}},inflation:{inflationRate:{value:2.5,history:[{date:'2026-08-01',value:2.5}]}},employment:{unemployment:observation},growth:{realGDP:{value:23000,unit:'billions USD'}},regime:{label:'fixture'}})});
@@ -53,9 +56,11 @@ try{
  });
  const out=resolve(process.env.MSP_BROWSER_OUTPUT);await mkdir(out,{recursive:true});
  const results=[];
+ // Compile the shared shell first when checking a heavy workspace route in isolation.
+ if(process.env.MSP_DESIGN_SCOPE==='records')await page.goto(baseUrl+'/pricing',{timeout:90000});
  for(const width of [1280,390])for(const path of ['/pricing','/auth','/','/learn','/tools/golden-egg?symbol=AAPL&type=equity','/tools/command-center','/tools/command-center?fixture=populated','/tools/golden-egg?symbol=AAPL&type=equity&fixture=symbol','/tools/macro','/tools/macro?fixture=populated','/intelligence/global-m2','/intelligence/global-m2?fixture=populated','/tools/workspace?tab=Portfolio','/tools/workspace?tab=Portfolio&fixture=records','/tools/workspace?tab=Journal','/tools/workspace?tab=Journal&fixture=records'].filter(path=>process.env.MSP_DESIGN_SCOPE==='symbol'?path.startsWith('/tools/golden-egg'):process.env.MSP_DESIGN_SCOPE==='account'?['/pricing','/auth'].includes(path):process.env.MSP_DESIGN_SCOPE==='records'?path.startsWith('/tools/workspace'):process.env.MSP_DESIGN_SCOPE!=='economic'||path.startsWith('/tools/macro')||path.startsWith('/intelligence/global-m2'))){
   await page.setViewportSize({width,height:1000});
-  const response=await page.goto('http://127.0.0.1:5178'+path,{timeout:Number(process.env.MSP_DESIGN_NAVIGATION_TIMEOUT_MS || 90000)});
+  const response=await page.goto(baseUrl+path,{timeout:Number(process.env.MSP_DESIGN_NAVIGATION_TIMEOUT_MS || 90000)});
   await page.locator('[data-public-design]').waitFor();
   const cookies=page.getByRole('button',{name:'Essential Only',exact:true});if(await cookies.count())await cookies.click();
   if(path==='/pricing'){
@@ -107,10 +112,12 @@ try{
   const dimensions=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));
   if(response.status()!==200||dimensions.scroll>width||errors.length)throw Error(JSON.stringify({path,width,status:response.status(),dimensions,errors}));
   await page.screenshot({path:out+'/public-design-'+(['/pricing','/auth'].includes(path)?path.slice(1):path.startsWith('/tools/workspace')?'records-'+(path.includes('Portfolio')?'portfolio':'journal')+'-'+(path.includes('fixture=records')?'populated':'empty'):path.startsWith('/tools/macro')?'macro-'+(path.includes('populated')?'populated':'missing'):path.startsWith('/intelligence/global-m2')?'m2-'+(path.includes('populated')?'populated':'missing'):path.includes('fixture=symbol')?'symbol-populated':path==='/'?'home':path==='/learn'?'learning':path.includes('command-center')?(path.includes('populated')?'overview-populated':'overview-missing'):'symbol')+'-'+width+'.png',fullPage:true});
-  results.push({path,width,status:response.status(),dimensions});
+  results.push({path,width,plan:fixturePlan,status:response.status(),dimensions});
+  await writeFile(out+'/public-design-browser.json',JSON.stringify({complete:false,results,errors},null,2));
+  console.log('PASS '+width+' '+path);
  }
  // Development mount lifecycle may replay effects; mode switches must not fetch again.
- await writeFile(out+'/public-design-browser.json',JSON.stringify({results,errors},null,2));
+ await writeFile(out+'/public-design-browser.json',JSON.stringify({complete:true,results,errors},null,2));
  console.log('PASS: '+results.length+' public design browser checks');
 
-}catch(e){console.log(String(e));process.exitCode=1;}finally{await browser?.close();server.kill();console.log(log.slice(-7000));}
+}catch(e){console.log(String(e));process.exitCode=1;}finally{await browser?.close();server?.kill();console.log(log.slice(-7000));}
