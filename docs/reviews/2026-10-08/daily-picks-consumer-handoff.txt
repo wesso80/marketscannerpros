@@ -102,3 +102,37 @@ tsc still reports four Stripe literal-version mismatches and two timer unref
 errors; record this as local dependency/type environment divergence, not a
 combination-introduced failure. Credential rotation remains the user's separate
 provider/account action; removal from Git files does not revoke credentials.
+
+
+Full Next/server/browser follow-up
+Local combination: #517 consumer code acf4dab7 + #529 8207192b + #530 a4b98fa3.
+Claude reports both local merges clean, project tsc clean on both trees and
+43 full-suite failures on each (no new combined failures). This is his reported
+comparison, not a duplicate local full-suite run.
+
+Created a disposable loopback PostgreSQL database with synthetic daily_picks,
+company_overview and history tables (minimal fixture schema, not migration
+validation). Seeded public numeric observations plus private grade/score/target
+canaries. The real Next app used that database; no production connection.
+Eleven checks completed:
+- /daily-pick, /share/scan/AAPL, /share/scan/MISSING at 1280 and 390: HTTP 200,
+  no document horizontal overflow, no private canaries, no page exceptions.
+- /daily-pick/feed.xml: 200 application/rss+xml, no private canaries.
+- /api/scanner/daily-picks?limit=20: 200 JSON, no private canaries.
+- /api/og/scan?symbol=DAILY and symbol=AAPL: 200 image/png.
+- /api/share/setup/AAPL.png?date=2026-10-08: 200 image/png.
+All three generated images were visually inspected. Zero price-change, RSI=0
+and short interest=0 remain visible; no verdict/grade/levels on the images.
+Results/screenshots/PNGs and harness copies: outputs/daily-full-browser.
+
+Scope: daily/share pages are the actual Next routes and actual SQL loaders.
+Browser requests to unrelated APIs were answered with fixture-unavailable data;
+external browser requests blocked. Authentication was not tested. No provider
+or OpenAI calls. Temporary DB deleted and PostgreSQL stopped after that run.
+
+A separate full-app run for Free Today, command-center and Symbol stalled at
+Next compilation of /tools/start before assertions. The prior component-browser
+checks and real-route adapter tests pass, but do not replace this unresolved
+full-app acceptance. Preserve the runner log under
+outputs/daily-consumers-full-browser; do not describe those pages as passed.
+No shared branch merges, deployment, production mutation or key rotation.
