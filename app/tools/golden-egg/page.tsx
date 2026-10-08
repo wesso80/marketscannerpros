@@ -77,7 +77,7 @@ const CRYPTO_SET = new Set([
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
 const SymbolAiSummary = dynamic(() => import('@/components/research/SymbolAiSummary'), { ssr: false });
-const IntradayCharts = dynamic(() => import('@/app/tools/intraday-charts/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Charts…</div> });
+const SymbolComparisonChart = dynamic(() => import('@/components/research/SymbolComparisonChart'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Charts…</div> });
 const CompanyOverview = dynamic(() => import('@/app/tools/company-overview/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Fundamentals…</div> });
 const OwnershipFlowPanel = dynamic(() => import('@/components/golden-egg/OwnershipFlowPanel'), { ssr: false });
 
@@ -397,6 +397,7 @@ export default function GoldenEggPage() {
   // W3-R: the scenario plan (reference, invalidation and reaction zones) is built from the private direction and is not public.
   const geLevelCount = ge?.layer2.setup.keyLevels.length ?? 0;
   const geHasLevels = geLevelCount > 0;
+  const reportReady = Boolean(ge) && !loading && !goldenEgg.error && !isAuthBlocked;
   const geCanonical = ge?.canonical ?? undefined;
   // Canonical trust (shared evaluator: freshness, interval, history, split guard, liquidity, indicators) wins over the presence-only legacy check.
   const legacyDataQuality = getGEDataQuality({ price: quote.data?.price ?? ge?.meta?.price, levels: geLevelCount });
@@ -640,7 +641,7 @@ export default function GoldenEggPage() {
         </Card>
       )}
 
-      {!isAuthBlocked && (quoteType==='crypto'?<><CryptoBreakdown compact showSource={false} onStamp={setCryptoStamp} symbol={sym} timeframe={timeframe} coinId={searchParams.get('id')??undefined}/>{ge?.priceEvidence&&!loading&&<CollapsibleSection title="Price and structure" summary={ge.priceEvidence.summary[0]??`Completed bar ${ge.priceEvidence.basis.lastCompletedBar??'n/a'}`}><PriceEvidencePanel e={ge.priceEvidence} section="price"/></CollapsibleSection>}{volatilityFold}{ge?.timingEvidence&&!loading&&<CollapsibleSection title="Timing and events" summary={ge.timingEvidence.summary[1]??ge.timingEvidence.summary[0]}><TimingEvidencePanel t={ge.timingEvidence}/></CollapsibleSection>}{ge&&!loading&&<CollapsibleSection deferMount title="News" summary="Symbol news grouped by event. Loads when opened."><SymbolNewsPanel symbol={sym} type="crypto"/></CollapsibleSection>}{evidenceFold}</>:<>
+      {reportReady && (quoteType==='crypto'?<><CryptoBreakdown compact showSource={false} onStamp={setCryptoStamp} symbol={sym} timeframe={timeframe} coinId={searchParams.get('id')??undefined}/>{ge?.priceEvidence&&!loading&&<CollapsibleSection title="Price and structure" summary={ge.priceEvidence.summary[0]??`Completed bar ${ge.priceEvidence.basis.lastCompletedBar??'n/a'}`}><PriceEvidencePanel e={ge.priceEvidence} section="price"/></CollapsibleSection>}{volatilityFold}{ge?.timingEvidence&&!loading&&<CollapsibleSection title="Timing and events" summary={ge.timingEvidence.summary[1]??ge.timingEvidence.summary[0]}><TimingEvidencePanel t={ge.timingEvidence}/></CollapsibleSection>}{ge&&!loading&&<CollapsibleSection deferMount title="News" summary="Symbol news grouped by event. Loads when opened."><SymbolNewsPanel symbol={sym} type="crypto"/></CollapsibleSection>}{evidenceFold}</>:<>
         {ge&&!loading&&<EquityTop data={ge} pick={findSymbolPick(dailyPicks.data,sym,'equity')}/>}
         {ge?.priceEvidence&&!loading&&<CollapsibleSection title="Price and structure" summary={ge.priceEvidence.summary[0]??`Completed bar ${ge.priceEvidence.basis.lastCompletedBar??'n/a'}`}><PriceEvidencePanel e={ge.priceEvidence} section="price"/></CollapsibleSection>}{volatilityFold}
         {goldenEgg.error&&!loading&&<p role="alert" className="text-sm text-amber-300">Symbol data feed failed. <button className="min-h-10 underline" onClick={()=>goldenEgg.refetch()}>Retry</button></p>}
@@ -654,16 +655,40 @@ export default function GoldenEggPage() {
         <ChipRow items={[{id:'evidence',label:`${geDataQuality==='GOOD'?'Evidence and data checks':'Some data checks failed'} · ${geEvidenceItems.length} checks`,warning:geDataQuality!=='GOOD',detail:<EvidenceStack title="Evidence" items={geEvidenceItems.map(item=>({...item,value:symbolText(item.value),detail:item.detail?symbolText(item.detail):undefined}))}/>}]} />
         </>}
       </>)}
+      {/* Loading state */}
+      {loading && (
+        <Card>
+          <div className="space-y-4 py-8">
+            <Skel h="h-8" w="w-48" />
+            <Skel h="h-6" w="w-64" />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+              {[1,2,3,4].map(i => <Skel key={i} h="h-20" />)}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Error state */}
+      {goldenEgg.error && !loading && (
+        <Card>
+          <div className="py-8 text-center">
+            <div className="text-amber-300 text-sm mb-2">Market data feed failed for {symbolText(sym)}</div>
+            <div className="text-[11px] text-slate-500 mb-4">{symbolText(goldenEgg.error)}</div>
+            <button type="button" onClick={() => goldenEgg.refetch()} className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs hover:bg-emerald-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Retry</button>
+          </div>
+        </Card>
+      )}
+
       {!isAuthBlocked && <CollapsibleSection deferMount title="Change symbol" summary={`${sym} · ${timeframe}`}>
         <div className="flex flex-wrap gap-2"><input aria-label="Symbol" value={symbolInput} onChange={e=>setSymbolInput(e.target.value.toUpperCase())} onKeyDown={e=>e.key==='Enter'&&handleSymbolSubmit()} className="min-h-10 min-w-0 rounded border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3"/><button onClick={handleSymbolSubmit} className="min-h-10 rounded border px-3">Review</button></div>
         <div className="mt-2 flex flex-wrap gap-2"><label className="text-xs">Asset <select aria-label="Asset type" value={assetType} onChange={e=>{const type=e.target.value as 'auto'|'equity'|'crypto';setAssetType(type);selectSymbol(sym,{assetType:type==='auto'?(isCryptoSymbol?'crypto':'equity'):type,timeframe});}} className="min-h-10 rounded border border-[var(--msp-border)] bg-[var(--msp-panel)] px-2"><option value="auto">Auto</option><option value="equity">Stock</option><option value="crypto">Crypto</option></select></label><label className="text-xs">Timeframe <select aria-label="Research timeframe" value={timeframe} onChange={e=>{const next=e.target.value as ScanTimeframe;setTimeframe(next);selectSymbol(sym,{timeframe:next,assetType:snapshotAsset});}} className="min-h-10 rounded border border-[var(--msp-border)] bg-[var(--msp-panel)] px-2">{SCAN_TIMEFRAMES.map(t=><option key={t.value} value={t.value}>{symbolText(t.label)}</option>)}</select></label></div>
       </CollapsibleSection>}
-      {!isAuthBlocked && <CollapsibleSection deferMount title={symbolText(quoteType==='crypto'?'More detail':'Deep analysis')} summary={`${sym} research detail`}>
+      {reportReady && <CollapsibleSection deferMount title="Research views" summary={`${sym} research detail`}>
       <GoldenEggTabRail activeTab={activeTab} onSelectTab={setActiveTab} />
       {/* ─── Deep-dive Tabs (v1 components) ─── */}
       {!isAuthBlocked && activeTab === 'Chart' && (
         <GoldenEggSubviewFrame tab="Chart" symbol={sym} terminalHref={canonicalTerminalHref} onSelectTab={setActiveTab}>
-          <IntradayCharts symbol={sym} timeframe={timeframe} assetType={quoteType === 'crypto' ? 'crypto' : 'stocks'} />
+          <SymbolComparisonChart symbol={sym} type={snapshotAsset} />
         </GoldenEggSubviewFrame>
       )}
       {!isAuthBlocked && activeTab === 'AI summary' && (
@@ -745,33 +770,9 @@ export default function GoldenEggPage() {
       )}
       {/* ─── Evidence tab (main Symbol analysis) ─── */}
       {!isAuthBlocked && activeTab === 'Evidence' && <>
-      {/* Loading state */}
-      {loading && (
-        <Card>
-          <div className="space-y-4 py-8">
-            <Skel h="h-8" w="w-48" />
-            <Skel h="h-6" w="w-64" />
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
-              {[1,2,3,4].map(i => <Skel key={i} h="h-20" />)}
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Error state */}
-      {goldenEgg.error && !loading && (
-        <Card>
-          <div className="py-8 text-center">
-            <div className="text-amber-300 text-sm mb-2">Market data feed failed for {symbolText(sym)}</div>
-            <div className="text-[11px] text-slate-500 mb-4">{symbolText(goldenEgg.error)}</div>
-            <button type="button" onClick={() => goldenEgg.refetch()} className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs hover:bg-emerald-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Retry</button>
-          </div>
-        </Card>
-      )}
-
       {/* Main content */}
       {ge && !loading && (
-        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Symbol Deep Analysis">
+        <UpgradeGate requiredTier="pro" currentTier={goldenEgg.data?.reportUnlocked ? 'pro' : tier} feature="Symbol Deep Analysis">
         <>
           {geLocalDemo && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-200">
