@@ -39,7 +39,6 @@ import ScannerInsightStrip from '@/components/analysis/ScannerInsightStrip';
 import CompositeBreakdown from '@/components/analysis/CompositeBreakdown';
 import CanonicalVerdict from '@/components/analysis/CanonicalVerdict';
 import { compareCanonicalRows } from '@/lib/scoring/canonical/scannerAdapter';
-import { gradeBasis } from '@/lib/scoring/canonical/display';
 import { isNoSetupRow, noSetupRankedReason, rankedBiasTitle, rankedClaimedDirection, rankedScoreLabel } from '@/lib/scanner/rankedDisplay';
 import { type ScanTemplate } from '@/components/scanner/ScanTemplatesBar';
 import { useRegisterPageData } from '@/lib/ai/pageContext';
@@ -342,14 +341,14 @@ function ScannerRowStamp({row}:{row:ScanResult}) { return <span>{row.price == nu
 function ProScannerCards({ rows, onRowClick }: { rows: ScreenerRow[]; onRowClick: (row: ScreenerRow) => void }) {
  return <div className="space-y-2" data-scanner-results>{rows.map(row=><button key={row.symbol} onClick={()=>onRowClick(row)} className="min-h-10 w-full rounded-lg border border-slate-700 p-3 text-left">
  <span className="flex justify-between gap-3"><strong>{row.displaySymbol ?? row.symbol}</strong><span>{row.price != null ? formatScannerPrice(row.price) : 'Not collected'}</span></span>
- <span className="mt-1 flex justify-between gap-2 text-xs text-slate-400"><span>{scannerCopy(row.reason || 'Mixed evidence')}</span>{Number.isFinite(row.confidence)&&<span className="shrink-0" title="Indicator agreement, 0–100: how strongly the indicators point the same way. Not a probability or a forecast; historical validation not established.">Agreement {Math.round(row.confidence)}</span>}</span>
+ <span className="mt-1 block text-xs text-slate-400">RSI {row.rsi != null ? row.rsi.toFixed(1) : 'not collected'} · ADX {row.adx != null ? row.adx.toFixed(1) : 'not collected'}</span>
  </button>)}</div>;
 }
 
 function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResult[]; activeRegime: string; onRowClick: (row: ScanResult) => void }) {
  return <div className="space-y-2 md:hidden" data-scanner-results>{rows.map(row=><button key={row.symbol} onClick={()=>onRowClick(row)} className="min-h-10 w-full rounded-lg border border-slate-700 p-3 text-left" aria-label={`Review scenario for ${row.symbol}`}>
  <span className="flex justify-between gap-3"><strong>{row.symbol}</strong><span data-testid="ranked-card-price"><ScannerRowStamp row={row}/></span></span>
- <span className="mt-1 flex justify-between gap-3 text-xs text-slate-400"><span>{scannerCopy(summarizeRankedReason(row,deriveLifecycleState(row,activeRegime),isRegimeCompatibleForRegime(row,activeRegime),activeRegime))}</span>{!isNoSetupRow(row)&&<span className="shrink-0">Score {Math.round(computeMspScore(row,activeRegime))}</span>}</span>
+ <span className="mt-1 block text-xs text-slate-400">RSI {row.rsi != null ? row.rsi.toFixed(1) : 'not collected'} · ADX {row.adx != null ? row.adx.toFixed(1) : 'not collected'}</span>
  </button>)}</div>;
 }
 

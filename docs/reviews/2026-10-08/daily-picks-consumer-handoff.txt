@@ -1,0 +1,43 @@
+Daily-picks public consumers — 8 October 2026
+
+Fetched origin; research-page-phase4 remains 0a2031da. Changes built on
+codex/public-redesign-integration at 9b1f4a57, draft PR #517.
+Claude daily-picks projection was not yet present in the fetched branches/open
+PR list (latest new draft #528). No API shape is assumed or changed here.
+
+Changed files
+components/market/SymbolSnapshotHeader.tsx: removes daily grade, permission and
+score percentile, retaining scan date, observation time and quality.
+components/market/OverviewPicks.tsx: removes grade from command-center list.
+app/tools/command-center/page.tsx: removes grade-change comparison display.
+components/desk/DeskFolds.tsx: Today queue removes composite score/bar and
+inferred direction badge; shows measured RSI alongside price/change instead.
+app/tools/scanner/page.tsx: compact Pro/Ranked cards show RSI/ADX rather than
+score/confidence and synthesized reasons.
+components/scanner/ScreenerTable.tsx: removes Research grade/permission column.
+No admin component imports of this table were found. Shared canonical models,
+ranking helpers, worker writes and admin code are unchanged.
+
+Verification
+17 focused tests pass, including legacy-field injection and minimal projected
+rows in real render tests, Today request counts and Scanner phone price/layout
+contracts. Typecheck retains only the six previously recorded baseline errors.
+The additional layoutSymbol test run passed 6 of 7; the failure is its source
+assertion that the untouched Movers route contains symbolHref directly (it now
+uses MoversView). That assertion was not changed or skipped.
+React review: no hooks or fetches added, existing navigation retained, missing
+RSI/ADX remains unavailable and zero remains visible. No browser visual pass
+or real provider requests during this change.
+
+Claude handoff / still required
+Do not edit these six files in the daily-picks projection PR without reconciling
+this commit. Send the projection branch/commit and exact removed fields next.
+Then test its real projected response against these consumers and the shared
+useRankedQueue/API types. Free SavedPicks, daily-pick view and share/preview
+remain Claude's ownership. No edits to those files here.
+This is a display cleanup, not the completed Find symbols migration: broad
+Scanner ranking, fallback cards, filters and other composite outputs remain.
+The projection's proposed rank order still needs an explicit decision: order
+by a composite is a ranking even without visible reasons. Prefer a disclosed
+factual sort. This patch does not change backend selection/order.
+Nothing merged, deployed or changed in production.

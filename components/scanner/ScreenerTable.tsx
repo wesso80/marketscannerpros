@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { gradeBasis } from '@/lib/scoring/canonical/display';
 import { formatScannerPrice } from '@/lib/scanner/proDisplay';
 
 /* ─── Types ─── */
@@ -236,27 +235,7 @@ const COLUMNS: Column[] = [
         : <span style={{ color: 'var(--msp-text-muted)' }}>—</span>
     ),
   },
-  {
-    key: 'permission', label: 'Research', width: '105px', align: 'center',
-    title: 'Engine verdict and Grade. The Grade comes from the Setup score shown underneath, not from the MSP composite.',
-    render: (r) => {
-      const basis = r.canonical ? gradeBasis(r.canonical) : undefined;
-      return (
-        <>
-          <span style={{
-            fontSize: 11, fontWeight: 700, color: permColor(r.permission),
-            background: `${permColor(r.permission)}15`, borderRadius: 4, padding: '1px 5px',
-          }}>
-            {r.scorePermission ?? (r.permission === 'COMPLIANT' ? 'ALIGNED' : r.permission === 'TIGHT' ? 'MIXED' : r.permission === 'BLOCKED' ? 'NOT ALIGNED' : '\u2014')}
-            {r.canonical ? <span className="ml-1 text-[10px] font-bold opacity-80" title={`${r.canonical.setupType} · ${r.canonical.direction} · ${basis}`}>{r.canonical.grade}</span> : null}
-          </span>
-          {r.canonical && r.canonical.permission !== 'BLOCK'
-            ? <div style={{ fontSize: 9, color: 'var(--msp-text-muted)', marginTop: 1 }} title={basis}>Setup {r.canonical.score} · sets grade</div>
-            : null}
-        </>
-      );
-    },
-  },
+
 ];
 
 /* ─── Component ─── */

@@ -435,7 +435,6 @@ function LegacyCommandCenter() {
         {previous.loading?<p>Loading…</p>:previous.error?<p className="text-amber-300">Earlier scan is not available right now.</p>:!changes.hasPrevious?<p>No earlier scan stored{previousDate?` for ${previousDate}`:''}.</p>:<>
           <p>vs {previousDate} scan · {asset==='crypto'?'UTC':'New York market date'}</p>
           <p>New: {changes.added.map(p=>p.symbol).join(', ')||'none'} · Dropped: {changes.dropped.map(p=>p.symbol).join(', ')||'none'}</p>
-          <p>Grade changes: {changes.gradeChanges.map(p=>`${p.symbol} ${p.from} → ${p.to}`).join(', ')||'none'}</p>
         </>}
         <p>{reg.changed?`Regime changed from ${reg.previousLabel} to ${reg.regimeLabel} since your last visit.`:'No regime change observed since your last visit.'}</p>
       {/* WHAT CHANGED SINCE LAST SESSION */}

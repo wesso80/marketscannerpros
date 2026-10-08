@@ -424,8 +424,6 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
                   if (item.kind === 'cached') {
                     const row = item.row;
                     const moveColor = row.changePct === null ? 'var(--msp-text-muted)' : row.changePct >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)';
-                    const biasLabel = row.direction === 'bullish' ? 'Rising context' : row.direction === 'bearish' ? 'Falling context' : 'Neutral bias';
-                    const biasTone: 'bull' | 'bear' | 'neutral' = row.direction === 'bullish' ? 'bull' : row.direction === 'bearish' ? 'bear' : 'neutral';
                     return (
                       <button
                         key={`queue-${row.symbol}`}
@@ -447,15 +445,13 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)' }}>{row.symbol}</span>
-                          <DSBadge tone={biasTone}>{biasLabel}</DSBadge>
                         </div>
                         <div className="grid grid-cols-3 gap-2">
-                          <MetricCol label="Score" value={row.score} />
+                          <MetricCol label="RSI" value={row.rsi == null ? 'No reading' : row.rsi.toFixed(1)} />
                           <MetricCol label="Price" value={row.price == null ? 'No reading' : fmtPrice(row.price)} align="right" />
                           <MetricCol label="Last bar" value={fmtMove(row.changePct)} tone={moveColor} align="right" />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <MagnitudeBar value={row.score} max={100} color="var(--msp-accent-dim)" height={3} />
                           <MagnitudeBar value={row.changePct ?? 0} max={10} color={moveColor} height={2} />
                         </div>
                         <div style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Next: review in Symbol</div>
