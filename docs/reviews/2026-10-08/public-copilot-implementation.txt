@@ -1,3 +1,18 @@
+FOLLOW-UP: successful report -> answer -> shared allowance browser flow
+Extended app-smoke.mjs with MSP_SMOKE_SUCCESS=1. A synthetic public Symbol report is signed by
+issueSymbolEvidence and its scripted answer rendered by validateCopilotAnswer. Actual Next Symbol
+page/layout/Copilot submit the expected AAPL token plus an idempotency key. Exactly one question
+request is recorded; both panel and page allowance refresh from 20 to 19 via mocked usage responses.
+Result: HTTP 200, no browser errors, panel within viewport at 1280/390. Mobile screenshot inspected.
+Supplementary APIs deliberately unavailable: panel declares partial coverage and uses core evidence.
+All browser API calls mocked, external requests blocked. This is not a server auth/signature/ledger
+end-to-end test or live model relevance evaluation; the signed fixture is matched at the mocked
+endpoint. Ledger and route behavior have separate tests. No provider or OpenAI calls.
+Output: copilot-app-smoke.json (questions=1, usageReads=7), success screenshots in local outputs.
+Next: integrate the real quota wrapper and Copilot route with an isolated PostgreSQL ledger and fake
+model, to verify debit/replay/failure handling across the server boundary. No application changes,
+Claude file edits, merges or deployments in this follow-up.
+
 FOLLOW-UP: full-app build fixes and missing-evidence smoke pass
 instrumentation.ts now places its dynamic Node logger import inside the positive NEXT_RUNTIME
 branch documented by Next, so the Edge compiler excludes fs/v8. Logger activation/intervals unchanged.
