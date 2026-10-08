@@ -1,0 +1,56 @@
+Journal prompt and Market Focus handoff — 8 October 2026
+
+Scope and baseline
+Fetched origin before finalizing. Integration base remains research-page-phase4
+0a2031da73ad3d58e6ed0e3da6375eb471742281. Working branch:
+codex/public-redesign-integration, draft PR #517; parent e336db6d.
+No shared-branch merge, deployment, provider call or production mutation.
+
+Journal change
+app/api/journal/analyze/route.ts used a no-advice system prompt but appended
+requests for best strategies, mistakes to avoid and actionable recommendations.
+Removed those contradictory requests and renamed emotional correlation to
+logged emotion groups. lib/ai/journalAnalysisPrompt.ts now explicitly confines
+the model to supplied historical records, marks user fields as untrusted data,
+forbids invented statistics, causal psychological claims and future advice,
+and requests sample sizes, dates when supplied and missing-data limitations.
+
+Validation
+Two synthetic tests in test/journalAnalysisPrompt.test.ts pass. The actual
+route is exercised with fake database/auth/OpenAI dependencies; its outbound
+messages are inspected. No provider or OpenAI requests. This proves prompt
+construction, not model compliance. No full-suite rerun for this prompt change.
+
+Remaining Journal work — required before Copilot-equivalent claims
+1. Build validated historical evidence server-side: current client entries can
+   supply arbitrary content. Missing P&L is still coerced to zero, outcome labels
+   can disagree with P&L and no-loss profit factor is represented as 999.
+   Acceptance: explicit missing values, disjoint outcome groups, undefined ratio
+   without losses, actual sample period and tests for contradictory records.
+2. Replace legacy usage counting with verified paid access and the atomic daily
+   quota policy. Current route has a free-mode path, UTC counting, post-call
+   recording and legacy 50-question error copy. Acceptance: reject unpaid before
+   work; simultaneous requests cannot exceed allowance; timezone reset correct.
+3. Validate model output against an educational response contract; arbitrary
+   prose currently passes through. Acceptance: advice/invented metrics never
+   reach the UI, unavailable states preserve evidence, no raw provider errors.
+Prompt wording alone does not resolve any of these three implementation gaps.
+
+Market Focus: do not pause on the claim that it has no readers
+lib/admin/morning-brief.ts:1456 calls loadMarketFocusSymbols; :1467 adds its
+Daily market focus source. :1556 defines the loader, which reads
+ daily_market_focus_items JOIN daily_market_focus at :1560–1561.
+lib/worker/schedule.ts:26 schedules /api/jobs/generate-market-focus daily at
+0 21 * * *. Retiring the public reader does not retire this admin dependency.
+This audit made no scheduler/server changes. Verify admin's intended source
+before proposing any retirement. Repository evidence cannot rule out external
+callers of /api/market-focus/generate; inspect access logs and external scheduler
+configuration before retiring it. #521 wording changes are separate.
+
+Coordination
+Inspected open drafts #519 (Market Pressure), #520 (research-case retirement),
+#521 (Market Focus wording), #522 (earnings) and #523 (unused time code).
+No Journal prompt overlap in their inspected file lists. None integrated here.
+Old options/Symbol code deletion should wait for dependent tests to migrate.
+Legacy analyst/explain routes and shared trade-plan prompts remain separate
+work after Copilot integration; preserve admin consumers when changing them.
