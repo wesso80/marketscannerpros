@@ -25,7 +25,8 @@ it('sends only equity movers to the Options Terminal and names that destination'
   expect(new URL(stock!.href, 'https://fixture').pathname).toBe('/tools/options');
   expect(backtestOptionsTerminalLink('BTC', 'crypto')).toBeNull();
 
-  const movers = readFileSync('app/tools/market-movers/page.tsx', 'utf8');
+  // Rows render in MoversView (compact Movers presentation).
+  const movers = readFileSync('components/markets/MoversView.tsx', 'utf8');
   expect(movers).toContain('moverResearchLink');
   expect(movers).not.toContain('tab=options-terminal&type=equity&symbol=${mover.ticker}');
 });

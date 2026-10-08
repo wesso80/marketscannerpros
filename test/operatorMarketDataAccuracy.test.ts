@@ -112,7 +112,7 @@ describe('daily bars / key levels come from the lib/marketData cache', () => {
       ],
     });
     const levels = await createOperatorProvider({ waitForToken: true }).getKeyLevels('AAPL', 'EQUITIES');
-    expect(mocks.getBars).toHaveBeenCalledWith('AAPL', 'daily');
+    expect(mocks.getBars).toHaveBeenCalledWith('AAPL', 'daily', { fullDailyHistory: true });
     expect(mocks.avFetch).not.toHaveBeenCalled();
     // bars are sorted oldest first, so the previous day is 09-23
     expect(levels.find((l) => l.category === 'PDH')?.price).toBe(100);

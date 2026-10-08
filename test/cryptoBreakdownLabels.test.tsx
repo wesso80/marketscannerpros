@@ -11,7 +11,8 @@ it('crypto header trusts the observation time, not latestDay',()=>{
  vi.useRealTimers();
 });
 it('missing weekend quotes say closed, regular session says no quote',()=>{expect(noQuoteLabel(false)).toBe('market closed, no quote');expect(noQuoteLabel(true)).toBe('no quote');expect(noQuoteLabel(null)).toBe('no quote');});
-it('scanner daily label uses bar interval and completed timestamp, without a spot fetch',()=>{const s=readFileSync('app/tools/scanner/page.tsx','utf8');const f=s.slice(s.indexOf('function ScannerRowStamp'),s.indexOf('function ProScannerCards'));expect(f).toContain("daily&&crypto?'daily bar close (UTC day)'");expect(f).toContain('lastCompletedBarAt');expect(f).not.toContain('fetch(');});
+// J16-WP2-1 moved the bar basis from each row to one page source line; rows still never fetch a spot price.
+it('scanner states the completed-bar basis once, without a spot fetch',()=>{const s=readFileSync('app/tools/scanner/page.tsx','utf8');const f=s.slice(s.indexOf('function ScannerRowStamp'),s.indexOf('function ProScannerCards'));expect(f).not.toContain('fetch(');expect(s).toContain('basis="Last completed bar"');expect(s).toContain('lastCompletedBarAt');});
 it('command center and terminal derivatives links are market-wide',()=>{
  for(const file of ['app/tools/command-center/page.tsx','app/tools/terminal/page.tsx']){const s=readFileSync(file,'utf8');expect(s).toContain('href="/tools/crypto-dashboard"');expect(s).not.toContain('crypto-dashboard?symbol=');}
 });

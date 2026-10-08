@@ -159,14 +159,16 @@ it('prints real zeros, a dash only when a chain value is missing, and a readable
   expect(screen.getAllByText('-').length).toBeGreaterThan(0);
   const badge = screen.getByTestId('no-two-sided-quote');
   expect(badge.textContent).toContain('No two-sided quote');
-  for (const cell of screen.getAllByRole('button', { name: '0.00' })) {
+  // A zero bid/ask is not a quote, so those chain cells read "No quote"; the badge stays outside them.
+  for (const cell of screen.getAllByRole('button', { name: 'No quote' })) {
     expect(cell.textContent).not.toContain('No two-sided quote');
     expect(cell.contains(badge)).toBe(false);
   }
-  const bases = [...document.querySelectorAll('[data-price-stamp]')].map((node) => node.getAttribute('data-price-basis'));
-  expect(bases).toContain('last close');
-  expect(bases).toContain('quotes: last session');
-  expect(document.querySelectorAll('[data-source-line]')).toHaveLength(1);
-  expect(screen.getByText(/Chain · select a contract/)).toBeTruthy();
+  // J16-WP2-2 replaced the per-tile price stamps with one source line carrying both session dates.
+  const sourceLines = document.querySelectorAll('[data-source-line]');
+  expect(sourceLines).toHaveLength(1);
+  expect(sourceLines[0].textContent).toContain('Option quote session 2026-10-02');
+  expect(sourceLines[0].textContent).toContain('underlying session 2026-10-02');
+  expect(screen.getByText(/Select bid or ask to inspect/)).toBeTruthy();
   expect(document.body.textContent || '').not.toMatch(/HISTORICAL_OPTIONS|—/);
 });
