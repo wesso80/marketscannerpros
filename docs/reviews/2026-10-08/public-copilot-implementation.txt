@@ -1,3 +1,19 @@
+FOLLOW-UP: longer-answer browser checks and full-app limitation
+Local Next dev (installed 16.4.0, webpack) reported UnhandledSchemeError for node:fs through
+lib/memory/debugLog.ts. Symbol page request timed out. Full-app verification is NOT passed.
+Stopped the dev process and removed only its generated AGENTS.md / next-env addition.
+Expanded real-component browser harness to 16 cases (eight at 1280 and 390). The long response
+uses the actual selection validator and presentation helper with synthetic price, BBWP zero,
+ATR, options ratio, distinct chain/expiry dates and missing IV, plus reviewed explanations.
+The realistic question asks about volatility/options/dates/missing data and whether to buy.
+Selection is scripted, not made by a model: this verifies rendering, not model answer relevance.
+Long answers scroll; source evidence opens; follow-up textbox and submit remain usable; no viewport
+overflow/browser errors. External HTTP blocked. Screenshot inspected at 390. UI attribution corrected
+to AI-selected page evidence with reviewed educational explanations. No live provider/model calls.
+Next: resolve the local full-app build blocker in a separate task, then complete browser route-flow
+verification; separately evaluate real model selections against held-out questions. API connectivity
+reported working by Pip is distinct from those remaining tests. No merge/deploy/rollout enablement.
+
 FOLLOW-UP: readable Copilot measurement presentation
 Verified remote state before editing: own b732b35d; research-page-phase4 717bfdbe; Claude DVE
 5d0f0f7. Published Claude file list has no overlap; unpushed work is not visible.
