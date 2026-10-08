@@ -60,6 +60,7 @@ export function publicScannerObservation(input: unknown) {
 export type PublicScannerObservation = NonNullable<ReturnType<typeof publicScannerObservation>>;
 
 function validateFilters(filters: FindSymbolFilters) {
+  if (!filters || typeof filters !== 'object' || Array.isArray(filters)) throw new Error('Invalid filters');
   for (const key of Object.keys(filters)) {
     if (!['rsiMin', 'rsiMax', 'adxMin', 'aboveEma200'].includes(key)) throw new Error('Unsupported factual filter');
   }

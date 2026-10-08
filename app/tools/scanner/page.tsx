@@ -1,6 +1,7 @@
 'use client';
 
 import { scannerAssetType } from '@/lib/market/assets';
+import FindSymbols from '@/components/scanner/FindSymbols';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useManualScannerResults } from '@/components/scanner/useManualScannerResults';
 import { researchLabel, researchReason } from '@/components/terminal/researchPresentation';
@@ -440,7 +441,7 @@ function RankedDesktopFallbackTable({rows,activeRegime,onRowClick}:{rows:ScanRes
 /*  MAIN PAGE                                                                 */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
-export default function ScannerPage() { const { tier, isAdmin, isLoading } = useUserTier(); if (isLoading) return <FreeLoading />; if (!isAdmin && !canAccessUnlimitedScanning(tier)) return <FreeScannerModes />; return <Suspense fallback={<div>Loading Scanner…</div>}><ScannerContent /></Suspense>; }
+export default function ScannerPage() { const { tier, isAdmin, isLoading } = useUserTier(); if (isLoading) return <FreeLoading />; if (!isAdmin && !canAccessUnlimitedScanning(tier)) return <FreeScannerModes />; if (!isAdmin) return <FindSymbols />; return <Suspense fallback={<div>Loading Scanner…</div>}><ScannerContent /></Suspense>; }
 
 function ScannerContent() {
   const searchParams=useSearchParams();
