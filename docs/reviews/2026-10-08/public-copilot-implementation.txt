@@ -1,3 +1,16 @@
+FOLLOW-UP: ownership and crypto factual adapters
+Ownership now signs explicitly selected filing/transaction fields, preserving delayed reporting dates,
+amount ranges, zero values and unavailable sections. Crypto signs allowlisted measurements with their
+source/time/basis only when the verified coin ID matches the static symbol map. Internal rule stages,
+rule stops, scores, budget internals and unapproved notes are excluded. Original reports are unchanged;
+responses with account-bound tokens are private/no-store. Both components clear tokens on reload.
+DVE remains with Claude. These adapters connect permitted loaded evidence; they do not assert that
+all tabs are loaded or all legacy public metrics are suitable for AI input. Remaining work includes
+DVE, automatic section loading, summary unification, legacy route retirement, cost controls, pricing,
+other destinations and real model/browser evaluation. Rollout stays disabled.
+Validation: 13 Copilot/adapter checks and 21 ownership/crypto regression checks passed (34 total).
+Typecheck: same six baseline errors only. All provider responses in tests were fixtures; no live calls.
+
 FOLLOW-UP: signed section adapters
 Chart/comparison (including compact full historical rows and indicator values), news events and
 public options evidence now issue account-bound section tokens with their actual responses.

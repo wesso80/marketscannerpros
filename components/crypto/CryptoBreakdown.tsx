@@ -1,4 +1,5 @@
 'use client';
+import { useCopilotSection } from '@/lib/ai/useCopilotSection';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import ChipRow from '@/components/visual/ChipRow';
 import type {StampLineProps} from '@/components/visual/StampLine';
@@ -21,13 +22,14 @@ import RisksSection from './sections/RisksSection';
 import SourcesBadge from './sections/SourcesBadge';
 import HandoffSection from './sections/HandoffSection';
 export default function CryptoBreakdown({symbol,timeframe:_,coinId,compact=false,showSource=true,onStamp}:{symbol:string;timeframe:string;coinId?:string;compact?:boolean;showSource?:boolean;onStamp?:(stamp:StampLineProps|null)=>void}){
+ const publishEvidence=useCopilotSection('crypto',symbol);
  const base=normalizeCryptoSymbol(symbol),[data,setData]=useState<Breakdown|null>(null),[error,setError]=useState<string|null>(null),[loading,setLoading]=useState(true),[refresh,setRefresh]=useState(0);
  useEffect(()=>{
-  const abort=new AbortController();setLoading(true);setData(null);setError(null);onStamp?.(null);
+  const abort=new AbortController();setLoading(true);setData(null);setError(null);onStamp?.(null);publishEvidence(null);
   const params=new URLSearchParams({symbol:base});if(coinId)params.set('id',coinId);
-  fetch(`/api/crypto/breakdown?${params}`,{signal:abort.signal}).then(async r=>{if(!r.ok)throw Error(COPY.error);const body=await r.json();if(!body.sections||!body.budget)throw Error(COPY.error);if(!abort.signal.aborted){setData(body);onStamp?.({source:[...new Set([body.top?.daily.source,body.top?.derivatives.source].filter(Boolean))].join(' · '),asOf:body.top?.daily.asOf,basis:body.top?.daily.basis});}}).catch(e=>{if(!abort.signal.aborted)setError(e.message);}).finally(()=>{if(!abort.signal.aborted)setLoading(false);});
+  fetch(`/api/crypto/breakdown?${params}`,{signal:abort.signal}).then(async r=>{if(!r.ok)throw Error(COPY.error);const body=await r.json();if(!body.sections||!body.budget)throw Error(COPY.error);if(!abort.signal.aborted){setData(body);publishEvidence(body.copilotEvidenceToken);onStamp?.({source:[...new Set([body.top?.daily.source,body.top?.derivatives.source].filter(Boolean))].join(' · '),asOf:body.top?.daily.asOf,basis:body.top?.daily.basis});}}).catch(e=>{if(!abort.signal.aborted)setError(e.message);}).finally(()=>{if(!abort.signal.aborted)setLoading(false);});
   return ()=>abort.abort();
- },[base,coinId,refresh,onStamp]);
+ },[base,coinId,refresh,onStamp,publishEvidence]);
  if(compact){
   const metrics=(section:Breakdown['sections'][keyof Breakdown['sections']])=>(section.value?.metrics??[]).filter(m=>m.value!=null&&(typeof m.value!=='number'||Number.isFinite(m.value)));
   const detail=(key:keyof Breakdown['sections'])=>data&&<div className="space-y-2">{metrics(data.sections[key]).length===0&&<p className="text-xs text-amber-300">No observations returned for this section.</p>}<dl className="grid grid-cols-2 gap-3">{metrics(data.sections[key]).map((m,i)=><div key={i}><dt className="text-xs text-[var(--msp-text-muted)]">{symbolText(readerLabel(m.label))}</dt><dd className="break-words text-sm">{symbolMetric(m.value,m.unit)}</dd></div>)}</dl>{data.sections[key].value?.notes.map((n,i)=><p key={i} className="text-xs">{symbolText(readerLabel(n.replace(/Locked rule sha256 prefix [a-f0-9]+\.\s*/i,'')))}</p>)}</div>;

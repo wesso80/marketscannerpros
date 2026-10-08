@@ -57,7 +57,7 @@ function CopilotWithContext({ fallbackSkill }: { fallbackSkill: PageSkill }) {
   useEffect(()=>{
     setSections({});
     const receive=(event:Event)=>{const detail=(event as CustomEvent<CopilotSectionEvent>).detail;
-      if(!detail || !['news','chart','options'].includes(detail.section))return;
+      if(!detail || !['news','chart','options','ownership','crypto'].includes(detail.section))return;
       setSections(old=>({...old,[detail.section]:detail}));};
     window.addEventListener(COPILOT_SECTION_EVENT,receive);return()=>window.removeEventListener(COPILOT_SECTION_EVENT,receive);
   },[pathname]);
