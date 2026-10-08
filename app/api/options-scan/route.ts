@@ -16,6 +16,7 @@ import { computeCorrelationRegime, type CorrelationRegimeOutput } from '@/lib/co
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
 import { assessOptionsChainQuality } from '@/lib/options/dataQuality';
 import { isGenuineOptionsDataFallback } from '@/lib/equityDataHealth';
+import { toPublicCapitalFlow } from '@/lib/research/publicOptionsScan';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -334,12 +335,9 @@ export async function POST(request: NextRequest) {
           providerStatus: optionsProviderStatus,
           optionsChainQuality,
         },
-        adaptiveLayer: {
-          profile: adaptive.profile,
-          match: adaptive.match,
-        },
+        // W3: the personal adaptive profile and the capital-flow brain decision stay on the server (lib/research/publicOptionsScan).
         institutionalFilter,
-        capitalFlow,
+        capitalFlow: toPublicCapitalFlow(capitalFlow),
         dealerPositionVerified: false,
         dealerGamma,
         dealerIntelligence,
