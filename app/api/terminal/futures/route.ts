@@ -16,12 +16,14 @@ import {
   type CashBridgeState,
 } from '@/lib/terminal/futures/cashBridgeMap';
 import { buildPhantomTimeState, type PhantomTimeState } from '@/lib/terminal/futures/phantomTimeEngine';
+import { toPublicFuturesCloseCalendar, type PublicFuturesCloseCalendar } from '@/lib/research/publicFuturesCloseCalendar';
 
 export type FuturesTerminalResponse = {
   symbol: string;
   marketPath: 'futures';
   session: FuturesSessionState;
-  closeCalendar: FuturesCloseCalendarResponse;
+  /** Public close calendar: close times and counts only (no category weight or stack score). */
+  closeCalendar: PublicFuturesCloseCalendar;
   phantomTime?: PhantomTimeState;
   cashBridge?: CashBridgeState;
   riskNotice: string;
@@ -146,7 +148,7 @@ export async function GET(request: NextRequest) {
     symbol,
     marketPath: 'futures',
     session: sessionState,
-    closeCalendar,
+    closeCalendar: toPublicFuturesCloseCalendar(closeCalendar),
     ...(phantomTime ? { phantomTime } : {}),
     ...(cashBridge ? { cashBridge } : {}),
     riskNotice: RISK_NOTICE,
