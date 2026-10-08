@@ -41,24 +41,18 @@ describe('options chain data truth', () => {
   });
 
   it('wires provider status and chain quality into options API and UI mapping', () => {
+    // W3: the route serializes the public evidence contract; chain quality and provider warnings travel inside it.
     const route = read('app/api/options-scan/route.ts');
-    const mapper = read('lib/options/mapPayload.ts');
-    const header = read('components/options/layer0/DeskHeaderSticky.tsx');
-    const evidence = read('components/options/evidence/RiskComplianceEvidence.tsx');
+    const contract = read('lib/research/publicOptionsScan.ts');
+    const view = read('components/options-terminal/OptionsChainEvidence.tsx');
 
     expect(route).toContain('assessOptionsChainQuality');
     expect(route).toContain('buildMarketDataProviderStatus');
-    expect(route).toContain('optionsChainQuality');
-    expect(route).toContain('providerStatus');
-    expect(route).toContain('candidateEligibility');
-    expect(mapper).toContain('raw?.dataSources');
-    expect(mapper).toContain('chainQuality?.avgSpreadPct');
-    expect(mapper).toContain('candidateEligibility');
-    expect(header).toContain('label="Chain"');
-    expect(header).toContain('label="Gate"');
-    expect(evidence).toContain('Provider:');
-    expect(evidence).toContain('Chain Quality:');
-    expect(evidence).toContain('Spread:');
-    expect(evidence).toContain('Candidate Gate:');
+    expect(route).toContain('toPublicOptionsEvidence(analysis, { chainQuality: optionsChainQuality, providerWarnings:');
+    expect(contract).toContain('quality: q ? { status: q.status');
+    expect(view).toContain('label="Chain quality"');
+    expect(view).toContain('Source: {researchLabel(d.chain.source)} options chain');
+    expect(view).toContain('label="Average quoted spread"');
+    expect(contract).not.toMatch(/candidateEligibility|topCandidates/);
   });
 });

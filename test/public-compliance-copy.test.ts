@@ -18,8 +18,6 @@ const PUBLIC_SURFACES = [
   'app/tools/scanner/page.tsx',
   'app/tools/market-movers/page.tsx',
   'app/tools/portfolio/layout.tsx',
-  'components/options/layer2/Layer2ExecutionPlan.tsx',
-  'components/options/layer2/ExecutionPlanCard.tsx',
   'components/scanner/ResearchCaseModal.tsx',
   'lib/ai/intelligenceContext.ts',
   'lib/ai/types.ts',

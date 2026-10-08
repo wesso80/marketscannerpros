@@ -196,7 +196,6 @@ describe('layout and flow audit regressions', () => {
     const explorerActionGrid = read('components/explorer/ExplorerActionGrid.tsx');
     const tradeIdeasSection = read('components/derivatives/TradeIdeasSection.tsx');
     const optionsTerminalView = read('components/options-terminal/OptionsTerminalView.tsx');
-    const optionsScannerPage = read('components/options/OptionsScannerPage.tsx');
     const alertsCheckRoute = read('app/api/alerts/check/route.ts');
     const testEmailRoute = read('app/api/test-email/route.ts');
     const workflowEventsRoute = read('app/api/workflow/events/route.ts');
@@ -314,7 +313,7 @@ describe('layout and flow audit regressions', () => {
     expect(tradeIdeasSection).toContain('/tools/workspace?tab=alerts&symbol=');
     expect(tradeIdeasSection).toContain('/tools/workspace?tab=journal&note=');
     expect(optionsTerminalView).toContain('/tools/workspace?tab=journal&prefill=true&');
-    expect(optionsScannerPage).toContain('/tools/workspace?tab=journal&${params.toString()}');
+    // W3: components/options/OptionsScannerPage (never mounted) was deleted with the setup scanner.
     expect(alertsCheckRoute).toContain('https://marketscannerpros.app/tools/workspace?tab=alerts');
     expect(testEmailRoute).toContain('https://app.marketscannerpros.app/tools/workspace?tab=alerts');
     expect(workflowEventsRoute).toContain("route: '/tools/workspace?tab=journal'");
@@ -358,7 +357,7 @@ describe('layout and flow audit regressions', () => {
     const terminalLayout = read('app/tools/terminal/layout.tsx');
     const toolsLayoutClient = read('app/tools/ToolsLayoutClient.tsx');
     const terminalShell = read('components/terminal/TerminalShell.tsx');
-    const optionsConfluencePage = read('components/options-terminal/OptionsConfluenceScanner.tsx');
+    const optionsConfluencePage = read('components/options-terminal/OptionsChainEvidence.tsx');
     const optionsFlowPage = read('components/options-terminal/OptionsFlowView.tsx');
     const confluenceScannerPage = read('app/tools/confluence-scanner/page.tsx');
     const timeScannerPage = read('components/time/TimeScannerPage.tsx');
@@ -401,26 +400,9 @@ describe('layout and flow audit regressions', () => {
     expect(toolsLayoutClient).not.toContain("'/tools/terminal',");
     expect(terminalShell).toContain('embedded?: boolean');
     expect(terminalShell).toContain("{!embedded && <header");
-    expect(optionsConfluencePage).toContain('embeddedInTerminal = false');
-    expect(optionsConfluencePage).toContain('embedded={embeddedInTerminal}');
-    expect(optionsConfluencePage).toContain("icon: 'OK'");
-    expect(optionsConfluencePage).toContain("icon: 'NO'");
-    expect(optionsConfluencePage).toContain('AI Watching');
-    expect(optionsConfluencePage).toContain('EXPANSION CONTINUATION');
-    expect(optionsConfluencePage).toContain('Bear Case');
-    expect(optionsConfluencePage).toContain("result.direction === 'bearish' ? 'Above'");
-    expect(optionsConfluencePage).toContain('OPTIONS DATA: availability and timestamps shown in Data Quality');
-    expect(optionsConfluencePage).toContain('DECISION LADDER');
-    expect(optionsConfluencePage).not.toContain("icon: '✔'");
-    expect(optionsConfluencePage).not.toContain("icon: '✖'");
-    expect(optionsConfluencePage).not.toContain('✓tag');
-    expect(optionsConfluencePage).not.toContain('★ AI Watching');
-    expect(optionsConfluencePage).not.toContain('🚫');
-    expect(optionsConfluencePage).not.toContain('🚀 EXPANSION CONTINUATION');
-    expect(optionsConfluencePage).not.toContain('🏊');
-    expect(optionsConfluencePage).not.toContain('🐻 Bear Case');
-    expect(optionsConfluencePage).not.toContain('⛔ Framework invalidation');
-    expect(optionsConfluencePage).not.toContain('🪜 DECISION LADDER');
+    // W3: the setup scanner was replaced by the chain-evidence view (measured evidence, no decision ladder or cases).
+    expect(optionsConfluencePage).toContain('embeddedInTerminal');
+    expect(optionsConfluencePage).not.toMatch(/DECISION LADDER|Bear Case|AI Watching|EXPANSION CONTINUATION|[✔✖★🚫🚀🏊🐻⛔🪜]/u);
     expect(optionsFlowPage).toContain('embeddedInTerminal = false');
     expect(optionsFlowPage).toContain('{!embeddedInTerminal && <ComplianceDisclaimer variant="options" />}');
     expect(optionsFlowPage).toContain('function patternCode');
@@ -815,7 +797,6 @@ describe('layout and flow audit regressions', () => {
     const mspOptionsTimingLayer = read('components/msp/options/ExecutionLayer.tsx');
     const mspOptionsDecisionBar = read('components/msp/options/DecisionBar.tsx');
     const mspOptionsTimeWindow = read('components/msp/options/blocks/TimeWindowCard.tsx');
-    const optionsExecutionPlanCard = read('components/options/layer2/ExecutionPlanCard.tsx');
 
     expect(cryptoPage).toContain('type ReviewVerdict');
     expect(cryptoPage).toContain('Risk Context: {morningDecision.riskContext}');
@@ -1034,8 +1015,6 @@ describe('layout and flow audit regressions', () => {
     expect(mspOptionsDecisionBar).not.toContain('View Strategy');
     expect(mspOptionsTimeWindow).toContain('label="Timing State"');
     expect(mspOptionsTimeWindow).not.toContain('label="Permission"');
-    expect(optionsExecutionPlanCard).toContain('Exposure Context:');
-    expect(optionsExecutionPlanCard).not.toContain('Capital Exposure:');
   });
 
   it('keeps Time Scanner compact when embedded in Terminal', () => {
