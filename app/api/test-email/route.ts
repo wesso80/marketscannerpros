@@ -13,10 +13,11 @@ import { requireAdmin } from '@/lib/adminAuth';
  * required: it sends a branded email to any address given, so it must never be open (it was an open relay).
  */
 const PRIVATE_HEADERS = { 'Cache-Control': 'private, no-store, max-age=0', Vary: 'Cookie' };
+const json = (body: unknown, init?: { status?: number }) => NextResponse.json(body, { status: init?.status ?? 200, headers: PRIVATE_HEADERS });
 
 export async function POST(req: NextRequest) {
   const admin = await requireAdmin(req);
-  if (!admin.ok) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: PRIVATE_HEADERS });
+  if (!admin.ok) return json({ error: 'Unauthorized' }, { status: 401 });
   try {
     // Get session for default email
     const session = await getSessionFromCookie();
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
     const email = targetEmail || (session as any)?.email;
     
     if (!email) {
-      return NextResponse.json(
+      return json(
         { error: 'No email provided. Please log in or provide an email in request body.' },
         { status: 400 }
       );
@@ -90,14 +91,14 @@ export async function POST(req: NextRequest) {
     });
 
     if (result) {
-      return NextResponse.json({
+      return json({
         success: true,
         message: `Test email sent to ${email}`,
         emailId: result,
         timestamp: new Date().toISOString(),
       });
     } else {
-      return NextResponse.json({
+      return json({
         success: false,
         message: 'Email not sent - Resend API key may not be configured',
         hint: 'Check RESEND_API_KEY environment variable',
@@ -105,7 +106,7 @@ export async function POST(req: NextRequest) {
     }
   } catch (error: any) {
     console.error('Test email error:', error);
-    return NextResponse.json(
+    return json(
       { 
         error: 'Failed to send test email',
         hint: 'Check Resend dashboard for domain verification status'
@@ -118,12 +119,12 @@ export async function POST(req: NextRequest) {
 // Also support GET for easy browser testing
 export async function GET(req: NextRequest) {
   const admin = await requireAdmin(req);
-  if (!admin.ok) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: PRIVATE_HEADERS });
+  if (!admin.ok) return json({ error: 'Unauthorized' }, { status: 401 });
   const url = new URL(req.url);
   const email = url.searchParams.get('email');
   
   if (!email) {
-    return NextResponse.json({
+    return json({
       error: 'Email required',
       usage: 'GET /api/test-email?email=your@email.com',
     }, { status: 400 });

@@ -31,4 +31,15 @@ describe('/api/test-email', () => {
     expect(g.status).toBe(200);
     expect(h.sent[1].to).toBe('ops2@example.com');
   });
+  it('every response (401, 400, 200) is private, no-store and varies by cookie', async () => {
+    const anon = await POST(new NextRequest('https://msp.test/api/test-email', { method: 'POST', body: JSON.stringify({ email: 'x@example.org' }) }));
+    h.admin = { ok: true };
+    const missing = await GET(new NextRequest('https://msp.test/api/test-email'));
+    const ok = await POST(new NextRequest('https://msp.test/api/test-email', { method: 'POST', body: JSON.stringify({ email: 'ops@example.com' }) }));
+    expect([anon.status, missing.status, ok.status]).toEqual([401, 400, 200]);
+    for (const r of [anon, missing, ok]) {
+      expect(r.headers.get('cache-control')).toBe('private, no-store, max-age=0');
+      expect(r.headers.get('vary')).toBe('Cookie');
+    }
+  });
 });
