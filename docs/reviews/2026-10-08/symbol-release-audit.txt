@@ -1,0 +1,67 @@
+Symbol release audit — HOLD
+8 October 2026
+
+Audited code: ac6a18b4 on codex/public-quota-callers (PR #496), with parents #495 and #494. origin/research-page-phase4 fetched and confirmed at 6174ed6b. The chart backend from #493 is present, but its UI work is not assembled into this branch. This audit changes no application code, billing, data, workers or admin behaviour.
+
+VERIFICATION SCOPE
+Rendered the actual app/tools/golden-egg/page.tsx, actual V2/UserTier/AI context providers, API hooks and dynamically imported child pages in Chromium. Next routing/dynamic/link adapters are fixture implementations; this is not a running Next.js server, middleware/proxy test or deployed environment. API responses are synthetic and reproduce the relevant current gates; all external requests are blocked. Source review, not mocked HTTP, establishes each real route protection below.
+
+20 page scenarios: AAPL/ETH x visitor/Free/Pro/quota-exhausted/provider-error x 1280/390. Visitor opt-in refetches the report. Research tabs are opened; successful report cases receive a synthetic AI summary, while exhausted/provider-error cases receive the report-unlock denial. Chart and Fundamentals are exercised with synthetic unavailable responses where no full specialist fixture exists. These cases verify rendering and failure presentation, not successful provider-backed chart/fundamentals results.
+
+Browser results: all 20 completed without page exceptions or document-level horizontal overflow. Eight visitor/Free evidence views showed the old paid overlay after the core report was returned successfully. Six mobile evidence views had inner elements beyond the viewport edge while the document remained 390px wide; inspect those containers for clipping versus intentional local scrolling. No claim that all release acceptance checks pass.
+
+RELEASE BLOCKERS / BACKLOG
+
+P0 — Guest data permission remains unresolved.
+app/api/quote/route.ts:31 and app/api/bars/route.ts:19 explicitly describe an authenticated-user requirement as an AV licensing constraint; app/api/intraday/route.ts:56 also authenticates. The new guest core report and comparison backend can fetch equity data despite these existing comments. Those comments are evidence of an existing design constraint, not proof of current contract terms. Do not enable guest provider-backed equity access until the actual permitted redistribution/access model is established. Do not simply remove quote/bars guards.
+Acceptance: documented provider permission for each anonymous surface, or a clearly labelled permissible demo/delayed alternative; guest flows make only allowed requests. Keep the approved signed-in three-report Free journey separate from this unresolved guest entitlement.
+
+P1 — The full core report is still partly locked for Free.
+app/tools/golden-egg/page.tsx:785 wraps the large evidence/detail section in UpgradeGate(requiredTier=pro,currentTier=tier). The new report quota grants successful Free core reports but does not change that tier. Confirmed paid overlay in all eight visitor/Free page cases (two assets, two widths).
+Acceptance: a successfully unlocked core report has no paid overlay over included evidence. Pro-only options/history remains separately gated. No frontend-only bypass; unauthorized direct requests remain denied.
+
+P1 — Specialist gates disagree with the core report allowance.
+• app/api/dve/route.ts:54-59: session + paid gate; response still includes the legacy reading payload. Snapshot required for basic volatility should be projected from the shared public evidence, with separately gated premium depth.
+• app/api/crypto/breakdown/route.ts:8-13: session + paid gate and optional coin ID; no shared report-unlock check. Preserve canonical crypto identity binding when adding public access.
+• app/api/research/news/route.ts:14-27: session + paid gate; no shared report-unlock check or explicit success-response Cache-Control. It declares force-dynamic, but that is not evidence of all cache layers being user-isolated.
+• app/api/company-overview/route.ts:18-22 and app/api/ownership/route.ts:16-20: session + paid gates. Ownership uses private,max-age=300 at line 32. Determine which fields are core and which are premium before changing access.
+Acceptance: Free's included report sections work for the same canonical unlocked instrument; tab/timeframe changes do not charge another report. A different instrument cannot reuse the unlock. Distinct Pro depth paths keep server-side checks; admin behaviour remains unchanged.
+
+P1 — The new chart has not been integrated into the Chart tab.
+app/tools/golden-egg/page.tsx:80 imports the old IntradayCharts page. Its Chart tab makes /api/intraday requests; options GEX can also be requested (app/tools/intraday-charts/page.tsx:728,746). The comparison/indicator UI is in PR #493 and was added to its AI summary component. This branch contains its backend only.
+Acceptance: one intended Chart tab exposes Compare and Price & indicators, shares symbol/period correctly, and works through an existing report unlock. Verify assembled #493/#496 code rather than claiming separately passing components prove an integrated flow. Preserve evidence-before-explanation and avoid duplicate chart controls in multiple tabs.
+
+P1 — Public response boundary remains incomplete.
+app/api/regime/route.ts:114,180 includes permission; signed-in responses include operatorContext (line 183). No-store is an existing protection; it does not make those fields evidence-only.
+app/api/options-scan/route.ts:56 calls checkOptionsAccess, an existing paid/admin gate. lib/options/access.ts uses current effective tier with legacy/promo handling. This is not a new public evidence projection. Keep full chains/history Pro but remove public score/verdict exposure as part of Claude's W3 work, without altering internal models.
+Public AI question handlers still return decision/confidence/ACL metadata. The new quota wrapper controls allowance and replay, not content safety or the evidence-only contract.
+Acceptance: route-by-route public allow-list contracts, nested-field tests and no private/admin fields in either responses or model prompts. Distinguish account data from public market observations.
+
+P1 — Empty AI responses can consume a credit.
+lib/publicAiQuota.ts:41-43 checks error/success/ok flags but does not validate a substantive answer. For example, analyst-context maps absent generated sections to null yet returns HTTP 200. Code finding, not a reproduced live provider failure.
+Acceptance: validate each caller's usable answer shape before completion. Empty/malformed outputs must be shown as unavailable without spending a successful-answer credit; retain conservative handling for genuinely unknown provider outcomes. Add fixtures for all-null analyst sections, empty copilot content and malformed explanation fields.
+
+P2 — Page request order and quota feedback need work.
+app/tools/golden-egg/page.tsx:386-390 starts Golden Egg, DVE, quote and regime independently. CryptoBreakdown may mount while the core report is still loading because the display condition checks isAuthBlocked, not a completed unlock. Exhausted/error users can still open report tabs; new summary backend rejects the missing unlock, but old specialist routes use their own policies.
+app/tools/golden-egg/page.tsx:657 presents a generic feed failure/Retry for quota exhaustion, while the usage counter shows zero. The message should distinguish a daily limit from provider failure and offer prior reports, local reset and signup/upgrade as appropriate.
+Acceptance: gate expensive report-specific requests on successful identity-matched admission; retain any deliberately free Overview measurements under their own documented policy. No repeated blocked refresh loops. Display correct reset and retry advice.
+
+P2 — Mobile detail layout and remaining browser scope.
+Six successful mobile evidence cases report inner tiles outside the viewport. Review those grids/containers directly; document-wide overflow checks alone are insufficient. Fundamentals and Chart failure rendering were exercised, but a fully populated successful specialist fixture and integrated dual-mode chart still need review.
+Acceptance: readable evidence at 390px without clipped data or forced sideways document scroll; keyboard access to all tabs/controls. Then test real Next middleware, reverse proxy Origin/HTTPS handling, cookies across reload/multiple tabs, midnight rollover, symbol switching, expiry changes, logout/downgrade and production-shaped cache headers with fake providers.
+
+ENDPOINT MAP — EXISTING BEHAVIOUR, NOT PROPOSED GUARANTEES
+Core /api/golden-egg: new opt-in signed actor/visitor quota; repeated completed reports reuse unlock; private/no-store on success. Admin bypass retained.
+/api/symbol-comparison: new opt-in completed unlock before providers; private/no-store. Its UI branch is separate.
+/api/deep-analysis: new opt-in completed unlock; automatic private once-per-day attempt bound to evidence; private/no-store on success.
+/api/public-usage: counts only; signed cookie issuance; private/no-store. A clearable browser cookie is not a per-person identity.
+/api/bars and /api/intraday: authenticated (not report-unlock-aware), shared market-data caches. Review independent-data policy before declaring a quota bypass; access to a single free measurement is not automatically a full report.
+/api/quote: authenticated or verified cron bypass; preserve worker/cron use.
+/api/regime: stored market regime available signed out; signed-in account context added; private/no-store, but public-field cleanup remains.
+/api/options-scan and /api/options/gex: paid guards; separate public contract/history policy required.
+/api/research/news, /api/company-overview, /api/ownership, /api/crypto/breakdown: paid/session gates; mismatched with complete core Free report.
+
+HANDOFF
+Recommended next implementation: consolidate the core Symbol page around its successful report unlock, remove the old core-evidence paid overlay, and connect only the approved public section projections. Assemble the dual-mode Chart tab from #493 at the same time. Coordinate these page/W3 changes with Claude. Fix empty-answer accounting as a small independent patch. Keep PUBLIC_DAILY_QUOTAS_ENABLED off until all P0/P1 release requirements are met.
+
+Artifacts: workspace outputs/symbol-page-browser-results.json and symbol-page-{mode}-{symbol}-{width}.png. The local reproducible fixture builder/runner and synthetic packets are under C:/Users/brad/Documents/Codex/w6-test-runtime/symbol-page-preview. They use actual repository components/styles and adapters for Next navigation; dependencies are local, not locked CI. No live API keys or provider data were used. This report does not establish legal licensing rights or production readiness.
