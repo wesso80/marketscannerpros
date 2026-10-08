@@ -1,7 +1,7 @@
 'use client';
 import { volatilityText } from '../displayText';
 
-import type { VolatilityTrap } from '@/src/features/volatilityEngine/types';
+import type { PublicTrap as VolatilityTrap } from '@/src/features/volatilityEngine/types';
 
 export default function VETrapAlert({ trap }: { trap: VolatilityTrap }) {
   if (!trap.detected && !trap.candidate) return null;
@@ -24,14 +24,14 @@ export default function VETrapAlert({ trap }: { trap: VolatilityTrap }) {
             {isTrap ? 'Volatility trap detected' : 'Trap candidate'}
           </p>
           <div className="mt-1 flex flex-wrap gap-1.5">
-            {trap.components.map((c, i) => (
+            {trap.observations.map((c, i) => (
               <span key={i} className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[0.7rem] text-white/50">
                 {volatilityText(c)}
               </span>
             ))}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-3 text-[0.7rem] text-white/40">
-            <span>Compression level: {trap.compressionLevel.toFixed(0)}</span>
+            <span>BBWP at check: {trap.bbwpAtCheck.toFixed(0)}</span>
             <span>Near a large open-interest strike: {trap.gammaLockDetected ? 'Yes' : 'No'}</span>
             <span>Time Cluster: {trap.timeClusterApproaching ? 'Yes' : 'No'}</span>
           </div>

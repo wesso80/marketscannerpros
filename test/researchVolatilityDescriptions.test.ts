@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { computeBBWP, computeDVE } from '@/lib/directionalVolatilityEngine';
 import { BBWP } from '@/lib/directionalVolatilityEngine.constants';
 import { bbwpDisplay, breakoutConditions, measuredBbwp, phaseDuration, projectionStudy, trapDescription } from '@/lib/research/volatilityDescriptions';
+import { publicObservation } from '@/lib/research/publicDve';
 
 const closes = (n: number) => Array.from({ length: n }, (_, i) => 100 + Math.sin(i / 5) * 3 + i * 0.05);
 
@@ -32,11 +33,12 @@ describe('BBWP basis (Phase 4: the 50 placeholder is never shown as a measuremen
 
 describe('Volatility wording', () => {
   it('breakout readiness becomes setting conditions, with max pain named as such', () => {
-    const b = breakoutConditions({ score: 100, label: 'HIGH', components: { volCompression: 40, timeAlignment: 30, gammaWall: 20, adxRising: 10 }, componentDetails: ['BBWP < 15: extreme compression (40/40)', 'Squeeze active (+10)'] });
+    // W3: the public reading carries the conditions as present/absent and the details without points (lib/research/publicDve).
+    const b = breakoutConditions({ conditions: { volCompression: true, timeAlignment: true, gammaWall: true, adxRising: true }, details: ['BBWP < 15: extreme compression (40/40)', 'Squeeze active (+10)'].map((d) => publicObservation(d)!) });
     expect(b.headline).toBe('4 of 4 setting conditions present. They describe the setting; they are not a breakout or a signal.');
     expect(b.conditions.find((c) => c.id === 'gammaWall')!.label).toBe('Price near max pain');
     expect(b.details).toEqual(['BBWP < 15: extreme compression', 'Squeeze active']);
-    const na = breakoutConditions({ score: 40, label: 'LOW', components: { volCompression: 40, timeAlignment: 0, gammaWall: 0, adxRising: 3 }, componentDetails: [] }, ['options', 'time']);
+    const na = breakoutConditions({ conditions: { volCompression: true, timeAlignment: false, gammaWall: false, adxRising: false }, details: [] }, ['options', 'time']);
     expect(na.headline).toBe('1 of 2 setting conditions present (2 not collected). They describe the setting; they are not a breakout or a signal.');
   });
   it('phase persistence is stated as lengths, not probabilities', () => {
@@ -45,12 +47,12 @@ describe('Volatility wording', () => {
     expect(phaseDuration('expansion', { currentBars: 0, averageBars: 0, medianBars: 0, maxBars: 0, agePercentile: 0, episodeCount: 0 })).toBe('No expansion phase is active.');
   });
   it('the past-case study states its sample and limits', () => {
-    const s = projectionStudy({ signalType: 'compression_release_up', expectedMovePct: 2.1, medianMovePct: 1.4, maxHistoricalMovePct: 6.2, averageBarsToMove: 9.5, hitRate: 62.5, sampleSize: 8, dispersionPct: 3.3, projectionQuality: 'low', projectionQualityScore: 20, projectionWarning: '' } as any, 20)!;
+    const s = projectionStudy({ signalType: 'compression_release_up', expectedMovePct: 2.1, medianMovePct: 1.4, maxHistoricalMovePct: 6.2, averageBarsToMove: 9.5, casesInDirection: 5, sampleSize: 8, dispersionPct: 3.3, projectionWarning: '' }, 20)!;
     expect(s.lines[1]).toBe('5 of 8 closed higher.');
     expect(s.method).toContain('not a forecast or a win rate');
     expect(projectionStudy({ signalType: 'none' } as any, 20)).toBeNull();
   });
   it('trap text lists observations without a score', () => {
-    expect(trapDescription({ detected: false, candidate: true, score: 55, components: ['BBWP 12 compressed (+25)'], compressionLevel: 12, gammaLockDetected: false, timeClusterApproaching: true })).toBe('Some trap conditions present: BBWP 12 compressed.');
+    expect(trapDescription({ detected: false, candidate: true, observations: ['BBWP 12 compressed (+25)', 'Time cluster 12/30 (display only; not included in score)'].map(publicObservation).filter((x): x is string => !!x) })).toBe('Some trap conditions present: BBWP 12 compressed.');
   });
 });

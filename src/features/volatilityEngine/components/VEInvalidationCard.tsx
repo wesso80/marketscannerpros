@@ -1,10 +1,10 @@
 'use client';
 import { volatilityText } from '../displayText';
 
-import type { DVEInvalidation } from '@/src/features/volatilityEngine/types';
+import type { PublicInvalidation as DVEInvalidation } from '@/src/features/volatilityEngine/types';
 
 export default function VEInvalidationCard({ inv }: { inv: DVEInvalidation }) {
-  const hasLevels = [inv.priceInvalidation, inv.phaseInvalidation, inv.smoothedPhaseInvalidation].some(v => v != null && Number.isFinite(v));
+  const hasLevels = [inv.phaseInvalidation, inv.smoothedPhaseInvalidation].some(v => v != null && Number.isFinite(v));
   const statusColor = !hasLevels ? 'var(--msp-text-muted)' : inv.invalidated ? 'var(--msp-bear)' : 'var(--msp-bull)';
   const statusText = !hasLevels ? 'Not collected' : inv.invalidated ? 'Invalidated' : 'Valid';
 
@@ -13,7 +13,7 @@ export default function VEInvalidationCard({ inv }: { inv: DVEInvalidation }) {
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h3 className="text-xs font-semibold tracking-widest text-amber-400">
-            Invalidation Levels
+            Rule invalidation (BBWP)
           </h3>
         </div>
         <span className="flex items-center gap-1 text-[11px] font-bold" style={{ color: statusColor }}>
@@ -21,13 +21,8 @@ export default function VEInvalidationCard({ inv }: { inv: DVEInvalidation }) {
         </span>
       </div>
 
+      <p className="mb-2 text-[11px] text-white/40">When the recorded rule stops applying, in BBWP terms. No price stop is published.</p>
       <div className="space-y-2 text-[0.72rem]">
-        {inv.priceInvalidation != null && (
-          <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-            <span className="text-white/50">Price Level</span>
-            <span className="font-bold text-white/80">${inv.priceInvalidation.toFixed(2)}</span>
-          </div>
-        )}
         {inv.phaseInvalidation != null && (
           <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2">
             <span className="text-white/50">Phase (BBWP)</span>

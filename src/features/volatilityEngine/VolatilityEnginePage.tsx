@@ -2,9 +2,8 @@
 import { useSearchParams } from 'next/navigation';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { DVEReading, DVEApiResponse } from '@/src/features/volatilityEngine/types';
+import type { PublicDveReading as DVEReading, DVEApiResponse } from '@/src/features/volatilityEngine/types';
 import VEHeatmapGauge from '@/src/features/volatilityEngine/components/VEHeatmapGauge';
-import VEDirectionalCompass from '@/src/features/volatilityEngine/components/VEDirectionalCompass';
 import VEPhasePanel from '@/src/features/volatilityEngine/components/VEPhasePanel';
 import VESignalCard from '@/src/features/volatilityEngine/components/VESignalCard';
 import VEProjectionCard from '@/src/features/volatilityEngine/components/VEProjectionCard';
@@ -106,12 +105,12 @@ export default function VolatilityEnginePage() {
     source: 'dve',
     provider: cached ? `dve cached result${freshness.computedAt ? `, computed ${new Date(freshness.computedAt).toLocaleTimeString()}` : ''}` : 'dve live calculation',
     stale: freshness.dataFreshness === 'stale',
-    degraded: reading.dataQuality.score < 80 || reading.dataQuality.missing.length > 0 || reading.dataQuality.warnings.length > 0,
+    degraded: reading.dataQuality.coverage < 80 || reading.dataQuality.missing.length > 0 || reading.dataQuality.warnings.length > 0,
     warnings: [
       freshness.dataFreshness === 'stale' ? `Price data is stale${barsAsOf}.` : null,
       freshness.dataFreshness === 'delayed' ? `Price data is delayed${barsAsOf}.` : null,
       freshness.dataFreshness === 'unknown' ? 'Price bar time unavailable; freshness unknown.' : null,
-      reading.dataQuality.score < 80 ? `DVE data quality ${reading.dataQuality.score.toFixed(0)}%.` : null,
+      reading.dataQuality.coverage < 80 ? `DVE data quality ${reading.dataQuality.coverage.toFixed(0)}%.` : null,
       ...reading.dataQuality.missing.map((item) => `Missing input: ${item}.`),
       ...reading.dataQuality.warnings,
     ].filter(Boolean) as string[],
@@ -121,7 +120,7 @@ export default function VolatilityEnginePage() {
       label: 'DVE',
       status: dveProviderStatus,
       source: cached ? 'cache' : 'calculation',
-      coverageScore: Math.round(reading.dataQuality.score),
+      coverageScore: Math.round(reading.dataQuality.coverage),
       warnings: reading.dataQuality.warnings,
     },
     {
@@ -132,14 +131,14 @@ export default function VolatilityEnginePage() {
         degraded: reading.dataQuality.missing.length > 0,
         warnings: reading.dataQuality.missing.map((item) => `Missing input: ${item}.`),
       }),
-      coverageScore: Math.round(reading.dataQuality.score),
+      coverageScore: Math.round(reading.dataQuality.coverage),
     },
     {
       label: 'Projection',
       status: buildMarketDataProviderStatus({
         source: 'dve-projection',
         provider: 'DVE projection model',
-        degraded: reading.projection.projectionQuality === 'low' || Boolean(reading.projection.projectionWarning),
+        degraded: Boolean(reading.projection.projectionWarning),
         warnings: reading.projection.projectionWarning ? [reading.projection.projectionWarning] : [],
       }),
       coverageScore: null,
@@ -151,12 +150,6 @@ export default function VolatilityEnginePage() {
       value: reading.volatility.regime.toUpperCase(),
       status: 'neutral' as const,
       detail: (() => { const b = bbwpDisplay(reading.volatility); return `BBWP ${b.value ?? 'not available'}.${b.note ? ` ${b.note}` : ''}`; })()
-    },
-    {
-      label: 'Directional Pressure',
-      value: reading.direction.bias.toUpperCase(),
-      status: 'neutral' as const,
-      detail: 'Engine pressure reading from momentum, trend and options inputs; not a forecast.'
     },
     {
       label: 'Phase State',
@@ -176,7 +169,6 @@ export default function VolatilityEnginePage() {
     reading.exhaustion.label === 'HIGH' || reading.exhaustion.label === 'EXTREME' ? `Exhaustion ${reading.exhaustion.label}.` : null,
     reading.flags.includes('CLIMAX_WARNING') ? 'Climax warning active.' : null,
     reading.dataQuality.missing.length > 0 ? `${reading.dataQuality.missing.length} missing DVE input${reading.dataQuality.missing.length === 1 ? '' : 's'}.` : null,
-    reading.invalidation.priceInvalidation == null && reading.invalidation.phaseInvalidation == null ? 'Invalidation level unavailable.' : null,
     ...reading.dataQuality.warnings.slice(0, 3),
   ].filter(Boolean).map((label) => ({
     label: label as string,
@@ -252,13 +244,13 @@ export default function VolatilityEnginePage() {
           <div className="mt-4 space-y-3">
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               <StatCard label="BBWP percentile" value={bbwpDisplay(reading.volatility).value ?? 'Not available'} />
-              <StatCard label="Directional pressure" value={volatilityText(reading.direction.bias)} />
+              <StatCard label="Regime" value={volatilityText(reading.volatility.regime)} />
               <StatCard label="Breakout setting" value={(() => { const known = breakoutConditions(reading.breakout, reading.dataQuality.missing).conditions.filter((c) => c.present !== null); return `${known.filter((c) => c.present).length} of ${known.length} conditions`; })()} />
-              <StatCard label="Data coverage" value={`${reading.dataQuality.score.toFixed(0)}%`} />
+              <StatCard label="Data coverage" value={`${reading.dataQuality.coverage.toFixed(0)}%`} />
             </div>
             {(reading.dataQuality.missing.length > 0 || reading.dataQuality.warnings.length > 0 || freshness.dataFreshness !== 'fresh') && <p className="text-xs text-amber-300">{freshness.dataFreshness === 'stale' ? 'Price bars are stale. ' : freshness.dataFreshness === 'delayed' ? 'Price bars are delayed. ' : freshness.dataFreshness === 'unknown' ? 'Price bar date not collected. ' : ''}{reading.dataQuality.missing.length > 0 ? `${reading.dataQuality.missing.length} inputs not collected. ` : ''}{reading.dataQuality.warnings.map(volatilityText).join(' ')}</p>}
             <div data-volatility-chart><VEHeatmapGauge vol={reading.volatility} /></div>
-            <CollapsibleSection title="Evidence and limits" summary={`${reading.dataQuality.score.toFixed(0)}% coverage · ${dveRiskFlags.length} flags`}>
+            <CollapsibleSection title="Evidence and limits" summary={`${reading.dataQuality.coverage.toFixed(0)}% coverage · ${dveRiskFlags.length} flags`}>
               <div className="space-y-3 text-sm">{dveEvidenceItems.map(item=><p key={item.label}><strong>{volatilityText(item.label)}:</strong> {volatilityText(item.value)} · {volatilityText(item.detail)}</p>)}
               {dveRiskFlags.length ? <ul className="list-disc pl-4">{dveRiskFlags.map((flag,i)=><li key={i}>{volatilityText(flag.label)}</li>)}</ul> : <p>No trap, exhaustion or data-quality flags recorded.</p>}
               {dveMarketStatusItems.map(item=><p key={item.label}>{volatilityText(item.label)} · {item.coverageScore == null ? 'Coverage not collected' : `${Math.round(item.coverageScore)}% coverage`}</p>)}</div>
@@ -276,11 +268,7 @@ export default function VolatilityEnginePage() {
               </div>
             </CollapsibleSection>
 
-            {/* LAYER 2: Directional Bias */}
-            <CollapsibleSection title="Directional pressure" summary={`${volatilityText(reading.direction.bias)} · engine pressure reading`}>
-              <SectionTitle code="DIR" />
-              <VEDirectionalCompass dir={reading.direction} missingInputs={reading.dataQuality.missing} />
-            </CollapsibleSection>
+            {/* W3: the engine's directional pressure (a points total and its sign) is not published. */}
 
             {/* LAYER 3: Phase Persistence */}
             <CollapsibleSection title="Phase persistence" summary={`${reading.phasePersistence.contraction.active ? 'Contraction' : reading.phasePersistence.expansion.active ? 'Expansion' : 'No active phase'}`}>
@@ -292,12 +280,7 @@ export default function VolatilityEnginePage() {
             <CollapsibleSection title="Signal and invalidation" summary={reading.signal.type === 'none' ? 'No active signal' : `${volatilityText(reading.signal.type)} · ${volatilityText(reading.signal.state)}`}>
               <SectionTitle code="SIG" />
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <VESignalCard
-                signal={reading.signal}
-                volatility={reading.volatility}
-                direction={reading.direction}
-                exhaustion={reading.exhaustion}
-              />
+                <VESignalCard signal={reading.signal} />
                 <VEInvalidationCard inv={reading.invalidation} />
               </div>
             </CollapsibleSection>
@@ -314,10 +297,10 @@ export default function VolatilityEnginePage() {
             </CollapsibleSection>
 
             {/* Supporting: Regime Outlook */}
-            <CollapsibleSection title="Regime context" summary={`${volatilityText(reading.transition.from)} → ${volatilityText(reading.transition.to)}`}>
+            <CollapsibleSection title="Regime context" summary={`${volatilityText(reading.regime.current)}${reading.regime.observation ? ` · ${volatilityText(reading.regime.observation)}` : ''}`}>
               <SectionTitle code="SUP" />
               <VERegimeTimeline
-                transition={reading.transition}
+                regime={reading.regime}
                 exhaustion={reading.exhaustion}
                 flags={reading.flags}
                 summary={reading.summary}

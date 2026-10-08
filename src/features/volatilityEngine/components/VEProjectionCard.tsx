@@ -1,6 +1,6 @@
 'use client';
 
-import type { SignalProjection, VolatilityState, PhasePersistence } from '@/src/features/volatilityEngine/types';
+import type { PublicProjection as SignalProjection, PublicVolatility as VolatilityState, PublicPhase as PhasePersistence } from '@/src/features/volatilityEngine/types';
 import { volatilityBadgeLabel } from '@/lib/presentation/volatilityLayerLabel';
 import { projectionStudy } from '@/lib/research/volatilityDescriptions';
 import { PROJECTION } from '@/lib/directionalVolatilityEngine.constants';

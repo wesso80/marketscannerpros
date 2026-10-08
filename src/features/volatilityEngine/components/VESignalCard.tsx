@@ -2,88 +2,24 @@
 import { volatilityText } from '../displayText';
 import { volatilityBadgeLabel } from '@/lib/presentation/volatilityLayerLabel';
 
-import type { DVESignal, VolatilityState, DirectionalPressure, ExhaustionRisk } from '@/src/features/volatilityEngine/types';
+import type { PublicSignal } from '@/src/features/volatilityEngine/types';
 
 function typeLabel(type: string): string {
   return type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-interface ConditionCheck {
-  label: string;
-  met: boolean;
-}
-
-function getIdleConditions(vol: VolatilityState, dir: DirectionalPressure, exhaustion?: ExhaustionRisk): { signalName: string; conditions: ConditionCheck[] }[] {
-  const groups: { signalName: string; conditions: ConditionCheck[] }[] = [];
-
-  // Compression release conditions
-  const wasCompressed = vol.bbwp <= 15;
-  const bbwpAbove15 = vol.bbwp > 15;
-  const bbwpAccel = vol.rateDirection === 'accelerating';
-  const bbwpAboveSma = vol.bbwp > vol.bbwpSma5;
-  const lowExhaustion = !exhaustion || (exhaustion.label !== 'HIGH' && exhaustion.label !== 'EXTREME');
-
-  groups.push({
-    signalName: 'Compression Release ↑',
-    conditions: [
-      { label: 'Recent compression (BBWP ≤ 15)', met: wasCompressed },
-      { label: `BBWP breaks above 15 (now ${vol.bbwp.toFixed(1)})`, met: bbwpAbove15 },
-      { label: `BBWP > SMA5 or accelerating`, met: bbwpAboveSma || bbwpAccel },
-      { label: `Stoch momentum bullish`, met: dir.components.stochasticMomentum > 0 },
-      { label: `Directional bias bullish`, met: dir.bias === 'bullish' },
-    ],
-  });
-
-  groups.push({
-    signalName: 'Compression Release ↓',
-    conditions: [
-      { label: 'Recent compression (BBWP ≤ 15)', met: wasCompressed },
-      { label: `BBWP breaks above 15 (now ${vol.bbwp.toFixed(1)})`, met: bbwpAbove15 },
-      { label: `BBWP > SMA5 or accelerating`, met: bbwpAboveSma || bbwpAccel },
-      { label: `Stoch momentum bearish`, met: dir.components.stochasticMomentum < 0 },
-      { label: `Directional bias bearish`, met: dir.bias === 'bearish' },
-    ],
-  });
-
-  groups.push({
-    signalName: 'Expansion Continuation ↑',
-    conditions: [
-      { label: `BBWP ≥ 85 climax zone (now ${vol.bbwp.toFixed(1)})`, met: vol.bbwp >= 85 },
-      { label: `SMA5 ≥ 85 confirms (now ${vol.bbwpSma5.toFixed(1)})`, met: vol.bbwpSma5 >= 85 },
-      { label: `Stoch momentum bullish`, met: dir.components.stochasticMomentum > 0 },
-      { label: `Directional bias bullish`, met: dir.bias === 'bullish' },
-      { label: `Low exhaustion risk`, met: lowExhaustion },
-    ],
-  });
-
-  groups.push({
-    signalName: 'Expansion Continuation ↓',
-    conditions: [
-      { label: `BBWP ≥ 85 climax zone (now ${vol.bbwp.toFixed(1)})`, met: vol.bbwp >= 85 },
-      { label: `SMA5 ≥ 85 confirms (now ${vol.bbwpSma5.toFixed(1)})`, met: vol.bbwpSma5 >= 85 },
-      { label: `Stoch momentum bearish`, met: dir.components.stochasticMomentum < 0 },
-      { label: `Directional bias bearish`, met: dir.bias === 'bearish' },
-      { label: `Low exhaustion risk`, met: lowExhaustion },
-    ],
-  });
-
-  return groups;
-}
-
 interface SignalCardProps {
-  signal: DVESignal;
-  volatility?: VolatilityState;
-  direction?: DirectionalPressure;
-  exhaustion?: ExhaustionRisk;
+  signal: PublicSignal;
 }
 
-export default function VESignalCard({ signal, volatility, direction, exhaustion }: SignalCardProps) {
-  const isActive = signal.type !== 'none' && signal.active;
+/**
+ * Signal status. While idle, the rule's measured conditions come from the server (lib/research/publicDve); the rule
+ * also needs the engine's directional pressure to agree, which is not published, so that condition is stated, not shown.
+ */
+export default function VESignalCard({ signal }: SignalCardProps) {
   const color = signal.type.includes('up') ? 'var(--msp-bull)' : signal.type.includes('down') ? 'var(--msp-bear)' : 'var(--msp-text-muted)';
-
-  const conditionGroups = (!isActive && signal.state !== 'armed' && volatility && direction)
-    ? getIdleConditions(volatility, direction, exhaustion)
-    : null;
+  const isActive = signal.type !== 'none' && signal.active;
+  const conditionGroups = signal.conditions;
 
   return (
     <div className={`rounded-xl border p-5 ${isActive ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/10 bg-white/5'}`}>
@@ -103,7 +39,7 @@ export default function VESignalCard({ signal, volatility, direction, exhaustion
         <p className="text-[0.75rem] text-white/40">No active signal. Trigger conditions are not met.</p>
       ) : signal.type === 'none' && conditionGroups ? (
         <div className="space-y-3">
-          <p className="text-[0.7rem] text-white/50 mb-2">Conditions needed to trigger a signal:</p>
+          <p className="text-[0.7rem] text-white/50 mb-2">Measured conditions in each rule. Each rule also needs the engine's directional pressure to agree; that reading is not published.</p>
           {conditionGroups.map((g) => {
             const metCount = g.conditions.filter(c => c.met).length;
             const total = g.conditions.length;

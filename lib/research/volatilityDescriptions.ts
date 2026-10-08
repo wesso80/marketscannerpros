@@ -1,4 +1,5 @@
-import type { BreakoutReadiness, ExhaustionRisk, VolatilityTrap, ZoneDurationStats, SignalProjection } from '@/lib/directionalVolatilityEngine.types';
+import type { ZoneDurationStats } from '@/lib/directionalVolatilityEngine.types';
+import type { BreakoutConditionId, PublicBreakout, PublicExhaustion, PublicProjection, PublicTrap } from '@/lib/research/publicDve';
 
 /**
  * Words for the Volatility engine's outputs (ticker research page, Phase 4). The engine keeps its internal weights;
@@ -8,20 +9,20 @@ import type { BreakoutReadiness, ExhaustionRisk, VolatilityTrap, ZoneDurationSta
  *   • exhaustion and trap scores → their label and the observations behind it;
  *   • the historical projection → a described study of past BBWP crossings, with its sample and limits.
  */
-const stripPoints = (s: string) => s.replace(/\s*\((?:\+\d+|\d+\/\d+)\)/g, '').trim();
+// W3: the public /api/dve reading already carries observations without points and conditions as present/absent.
 
-export type BreakoutCondition = { id: keyof BreakoutReadiness['components']; label: string; present: boolean | null; definition: string };
-export function breakoutConditions(b: BreakoutReadiness, missingInputs: string[] = []): { conditions: BreakoutCondition[]; headline: string; details: string[] } {
+export type BreakoutCondition = { id: BreakoutConditionId; label: string; present: boolean | null; definition: string };
+export function breakoutConditions(b: PublicBreakout, missingInputs: string[] = []): { conditions: BreakoutCondition[]; headline: string; details: string[] } {
   const na = (key: string) => (key === 'gammaWall' && missingInputs.includes('options')) || (key === 'timeAlignment' && missingInputs.includes('time'));
   const conditions: BreakoutCondition[] = [
-    { id: 'volCompression', label: 'Volatility compressed', present: b.components.volCompression > 0, definition: 'BBWP below 35 on the Volatility engine reading, or the squeeze flag from the indicator feed.' },
-    { id: 'timeAlignment', label: 'Several timeframes closing together', present: na('timeAlignment') ? null : b.components.timeAlignment > 0, definition: 'Two or more timeframe bars due to close in the same window.' },
-    { id: 'gammaWall', label: 'Price near max pain', present: na('gammaWall') ? null : b.components.gammaWall > 0, definition: 'Within 2% of the options max-pain strike, or unusual options activity. Max pain is an open-interest calculation, not observed dealer positioning.' },
-    { id: 'adxRising', label: 'Trend strength not yet high', present: b.components.adxRising >= 7, definition: 'ADX14 at or below 25.' },
+    { id: 'volCompression', label: 'Volatility compressed', present: b.conditions.volCompression, definition: 'BBWP below 35 on the Volatility engine reading, or the squeeze flag from the indicator feed.' },
+    { id: 'timeAlignment', label: 'Several timeframes closing together', present: na('timeAlignment') ? null : b.conditions.timeAlignment, definition: 'Two or more timeframe bars due to close in the same window.' },
+    { id: 'gammaWall', label: 'Price near max pain', present: na('gammaWall') ? null : b.conditions.gammaWall, definition: 'Within 2% of the options max-pain strike, or unusual options activity. Max pain is an open-interest calculation, not observed dealer positioning.' },
+    { id: 'adxRising', label: 'Trend strength not yet high', present: b.conditions.adxRising, definition: 'ADX14 at or below 25.' },
   ];
   const known = conditions.filter((c) => c.present !== null), n = known.filter((c) => c.present).length;
   const headline = `${n} of ${known.length} setting conditions present${known.length < conditions.length ? ` (${conditions.length - known.length} not collected)` : ''}. They describe the setting; they are not a breakout or a signal.`;
-  return { conditions, headline, details: b.componentDetails.map(stripPoints) };
+  return { conditions, headline, details: b.details };
 }
 
 export function phaseDuration(label: string, s: ZoneDurationStats): string {
@@ -30,27 +31,27 @@ export function phaseDuration(label: string, s: ZoneDurationStats): string {
   return `This ${label} phase has lasted ${s.currentBars} bars. Earlier ${label} phases on this symbol (${s.episodeCount}): median ${Math.round(s.medianBars * 10) / 10}, average ${Math.round(s.averageBars * 10) / 10}, longest ${s.maxBars} bars. ${Math.round(s.agePercentile)}% of them were this long or shorter.`;
 }
 
-export function exhaustionDescription(e: ExhaustionRisk): string {
-  return e.signals.length ? `${e.label.toLowerCase()} — ${e.signals.map(stripPoints).join('; ')}` : `${e.label.toLowerCase()} — no exhaustion observations recorded`;
+export function exhaustionDescription(e: PublicExhaustion): string {
+  return e.signals.length ? `${e.label.toLowerCase()} — ${e.signals.join('; ')}` : `${e.label.toLowerCase()} — no exhaustion observations recorded`;
 }
 
-export function trapDescription(t: VolatilityTrap): string {
+export function trapDescription(t: Pick<PublicTrap, 'detected' | 'candidate' | 'observations'>): string {
   const state = t.detected ? 'Trap pattern recorded' : t.candidate ? 'Some trap conditions present' : 'No trap pattern';
-  return t.components.length ? `${state}: ${t.components.map(stripPoints).join('; ')}.` : `${state}.`;
+  return t.observations.length ? `${state}: ${t.observations.join('; ')}.` : `${state}.`;
 }
 
 /** The historical projection as a described study; null when there is no study to describe. */
-export function projectionStudy(p: SignalProjection, forwardBars: number): { lines: string[]; method: string } | null {
+export function projectionStudy(p: PublicProjection, forwardBars: number): { lines: string[]; method: string } | null {
   if (p.signalType === 'none') return null;
   const up = p.signalType.endsWith('_up'), release = p.signalType.startsWith('compression_release');
   const event = release ? 'BBWP rose back above the compression line' : 'BBWP entered the climax zone';
   const method = `In-sample study on this symbol's own daily history: each past bar where ${event}, and the close ${forwardBars} bars later. `
     + `The event is simpler than the full signal rule (no momentum or direction check), windows can overlap, and the sample is small. It describes this symbol's past, not a forecast or a win rate.`;
-  if (!p.sampleSize || p.sampleSize < 1 || p.hitRate == null) return { lines: [p.projectionWarning || 'Too few past cases to describe.'], method };
+  if (!p.sampleSize || p.sampleSize < 1 || p.casesInDirection == null) return { lines: [p.projectionWarning || 'Too few past cases to describe.'], method };
   return {
     lines: [
       `${p.sampleSize} past cases. Close ${forwardBars} bars later: mean ${p.expectedMovePct >= 0 ? '+' : ''}${p.expectedMovePct}%, median ${p.medianMovePct >= 0 ? '+' : ''}${p.medianMovePct}%, spread (standard deviation) ${p.dispersionPct}%.`,
-      `${Math.round((p.hitRate / 100) * p.sampleSize)} of ${p.sampleSize} closed ${up ? 'higher' : 'lower'}.`,
+      `${p.casesInDirection} of ${p.sampleSize} closed ${up ? 'higher' : 'lower'}.`,
       `Largest move in the signal's direction within ${forwardBars} bars: ${p.maxHistoricalMovePct}%, reached after ${p.averageBarsToMove} bars on average.`,
     ],
     method,
