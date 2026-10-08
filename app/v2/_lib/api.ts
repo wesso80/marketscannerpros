@@ -1,3 +1,4 @@
+import { PublicReportAccessError, parseReportAccessIssue, type ReportAccessIssue } from '@/lib/publicReportAccessError';
 import type { CanonicalResult } from '@/lib/scoring/canonical/types';
 import type { ScannerScorePayload } from '@/lib/scanner/scoreContract';
 import type { BacktestStatisticsBasis } from '@/lib/backtest/balanceStatistics';
@@ -42,6 +43,8 @@ async function apiFetch<T>(url: string, options?: RequestInit, timeoutMs?: numbe
   if (res.status === 401) throw new AuthError(url);
   if (res.status === 403) throw new UpgradeRequiredError(url);
   if (!res.ok) {
+    const issue = parseReportAccessIssue(url, res.status, body);
+    if (issue) throw new PublicReportAccessError(issue);
     const detail = body?.error || body?.message || '';
     throw new Error(detail ? `${detail}` : `API ${res.status}: ${url}`);
   }
@@ -207,6 +210,8 @@ export interface ScannerResponse {
 // --- Golden Egg ---
 /** /api/golden-egg: the public Symbol contract (W3), never the internal engine packet. */
 export interface GoldenEggResponse {
+  /** Server-confirmed core report admission; does not grant specialist or admin access. */
+  reportUnlocked?: boolean;
   success: boolean;
   data: import('@/lib/research/publicSymbolPacket').PublicSymbolPacket;
   cached?: boolean;
@@ -292,47 +297,8 @@ export interface MarketMoversResponse {
 }
 
 // --- DVE ---
-export interface DVEResponse {
-  success: boolean;
-  price: number;
-  data: {
-    symbol: string;
-    volatility: {
-      bbwp: number;
-      regime: string;
-      regimeConfidence: number;
-      rateOfChange: number;
-      inSqueeze: boolean;
-      squeezeStrength: number;
-    };
-    direction: {
-      score: number;
-      bias: string;
-      confidence: number;
-      components: Record<string, number>;
-    };
-    phasePersistence: {
-      contraction: { active: boolean; continuationProbability: number; stats: { currentBars: number; agePercentile: number } };
-      expansion: { active: boolean; continuationProbability: number; stats: { currentBars: number; agePercentile: number } };
-    };
-    signal: { type: string; state: string; active: boolean; strength: number; triggerReason: string[] };
-    projection: {
-      expectedMovePct: number;
-      hitRate: number;
-      sampleSize: number;
-      averageBarsToMove: number;
-      dispersionPct?: number;
-      projectionQuality?: 'unavailable' | 'low' | 'medium' | 'high';
-      projectionQualityScore?: number;
-      projectionWarning?: string;
-    };
-    breakout: { score: number; label: string; components: Record<string, number> };
-    trap: { detected: boolean; score: number };
-    exhaustion: { level: number; label: string; signals: string[] };
-    flags: string[];
-    summary: string;
-  };
-}
+/** Shared public Volatility response; internal directional/score fields are not a browser contract. */
+export type DVEResponse = import('@/src/features/volatilityEngine/types').DVEApiResponse;
 
 // --- Sectors Heatmap ---
 export interface SectorData {
@@ -802,6 +768,7 @@ export function fetchCloseCalendar(
 import { useState, useEffect, useCallback } from 'react';
 
 export interface UseApiResult<T> {
+  reportAccessIssue?: ReportAccessIssue | null;
   data: T | null;
   error: string | null;
   loading: boolean;
@@ -811,11 +778,12 @@ export interface UseApiResult<T> {
   refetch: () => void;
 }
 
-function useApi<T>(fetcher: () => Promise<T>, deps: any[] = []): UseApiResult<T> {
-  const requestKey = JSON.stringify(deps);
+function useApi<T>(fetcher: () => Promise<T>, deps: any[] = [], enabled = true): UseApiResult<T> {
+  const requestKey = JSON.stringify([enabled, ...deps]);
   const [settledKey, setSettledKey] = useState<string | null>(null);
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reportAccessIssue, setReportAccessIssue] = useState<ReportAccessIssue | null>(null);
   const [isAuthError, setIsAuthError] = useState(false);
   const [isUpgradeRequired, setIsUpgradeRequired] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -829,12 +797,15 @@ function useApi<T>(fetcher: () => Promise<T>, deps: any[] = []): UseApiResult<T>
     setData(null);
     setSettledKey(null);
     setError(null);
+    setReportAccessIssue(null);
     setIsAuthError(false);
     setIsUpgradeRequired(false);
+    if (!enabled) { setLoading(false); return () => { cancelled = true; }; }
     fetcher()
       .then(res => { if (!cancelled) { setData(res); setSettledKey(requestKey); setLoading(false); } })
       .catch(err => {
         if (cancelled) return;
+        setReportAccessIssue(err instanceof PublicReportAccessError ? err.issue : null);
         const upgrade = err instanceof UpgradeRequiredError;
         const isAuth = err instanceof AuthError;
         setIsAuthError(isAuth);
@@ -845,16 +816,16 @@ function useApi<T>(fetcher: () => Promise<T>, deps: any[] = []): UseApiResult<T>
       });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trigger, ...deps]);
+  }, [trigger, enabled, ...deps]);
 
-  const matchesRequest = settledKey === requestKey;
-  return { data: matchesRequest ? data : null, error: matchesRequest ? error : null, loading: loading || !matchesRequest, isAuthError: matchesRequest && isAuthError, isUpgradeRequired: matchesRequest && isUpgradeRequired, refetch };
+  const matchesRequest = enabled && settledKey === requestKey;
+  return { reportAccessIssue: matchesRequest ? reportAccessIssue : null, data: matchesRequest ? data : null, error: matchesRequest ? error : null, loading: enabled && (loading || !matchesRequest), isAuthError: matchesRequest && isAuthError, isUpgradeRequired: matchesRequest && isUpgradeRequired, refetch };
 }
 
 // --- Typed hooks ---
 
-export function useRegime() {
-  return useApi(fetchRegime);
+export function useRegime(enabled = true) {
+  return useApi(fetchRegime, [], enabled);
 }
 
 /** One GET of the stored daily snapshot for Today. Does not POST /api/scanner/run. */
@@ -904,12 +875,12 @@ export function useGoldenEgg(symbol: string | null, timeframe: ScanTimeframe = '
   return useApi(() => symbol ? fetchGoldenEgg(symbol, timeframe, assetType, expiry) : Promise.resolve(null as any), [symbol, timeframe, assetType, expiry ?? null]);
 }
 
-export function useDVE(symbol: string | null, timeframe: ScanTimeframe = 'daily', assetType?: string, expiry?: string | null) {
-  return useApi(() => symbol ? fetchDVE(symbol, timeframe, assetType, expiry) : Promise.resolve(null as any), [symbol, timeframe, assetType, expiry ?? null]);
+export function useDVE(symbol: string | null, timeframe: ScanTimeframe = 'daily', assetType?: string, expiry?: string | null, enabled = true) {
+  return useApi<DVEResponse>(() => symbol ? fetchDVE(symbol, timeframe, assetType, expiry) : Promise.resolve(null as any), [symbol, timeframe, assetType, expiry ?? null], enabled);
 }
 
-export function useQuote(symbol: string | null, type: 'stock' | 'crypto' = 'stock') {
-  return useApi(() => symbol ? fetchQuote(symbol, type) : Promise.resolve(null as any), [symbol, type]);
+export function useQuote(symbol: string | null, type: 'stock' | 'crypto' = 'stock', enabled = true) {
+  return useApi(() => symbol ? fetchQuote(symbol, type) : Promise.resolve(null as any), [symbol, type], enabled);
 }
 
 export function useNews(tickers?: string) {

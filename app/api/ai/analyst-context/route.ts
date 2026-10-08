@@ -1,3 +1,4 @@
+import { withPublicAiQuota, publicAiScope, markPublicAiProviderStarted } from '@/lib/publicAiQuota';
 /**
  * MSP Analyst Contextual Intelligence API
  *
@@ -94,7 +95,7 @@ Format: 2-3 bullet points, each 2-3 sentences.
 
 // ─── POST Handler ───────────────────────────────────
 
-export async function POST(req: NextRequest) {
+async function handlePost(req: NextRequest) {
   // Rate limit
   const ip = getClientIP(req);
   const rateCheck = aiLimiter.check(ip);
@@ -116,10 +117,10 @@ export async function POST(req: NextRequest) {
   }
 
   const workspaceId = session.workspaceId;
-  const tier = normalizeTier(session.tier);
+  const tier = publicAiScope()?.plan ?? normalizeTier(session.tier);
 
   // Tier gate: must be pro or above
-  if (tier === 'free' && !freeForAll) {
+  if (tier === 'free' && !freeForAll && !publicAiScope()) {
     return NextResponse.json(
       { error: 'MSP AI requires Pro or higher subscription.' },
       { status: 403 },
@@ -130,12 +131,12 @@ export async function POST(req: NextRequest) {
   const dailyLimit = AI_DAILY_LIMITS[tier];
   try {
     const today = new Date().toISOString().split('T')[0];
-    const usageResult = await q(
+    const usageResult = publicAiScope() ? [] : await q(
       `SELECT COUNT(*) as count FROM ai_usage WHERE workspace_id = $1 AND DATE(created_at) = $2`,
       [workspaceId, today],
     );
     const usageCount = parseInt(usageResult[0]?.count || '0');
-    if (usageCount >= dailyLimit) {
+    if (!publicAiScope() && usageCount >= dailyLimit) {
       return NextResponse.json(
         { error: `Daily AI limit reached (${dailyLimit}/day). Resets at midnight UTC.`, limitReached: true },
         { status: 429 },
@@ -289,6 +290,7 @@ Generate the 4-tab analysis as JSON. Remember: if authorization is BLOCKED, Plan
 
   try {
     const client = getOpenAIClient();
+    markPublicAiProviderStarted();
     const response = await client.chat.completions.create({
       model: 'gpt-4o-mini',
       response_format: { type: 'json_object' },
@@ -362,3 +364,5 @@ Generate the 4-tab analysis as JSON. Remember: if authorization is BLOCKED, Plan
     return NextResponse.json({ error: err?.message || 'Analyst context generation failed.' }, { status: 500 });
   }
 }
+
+export const POST = withPublicAiQuota(handlePost, 'ai/analyst-context');

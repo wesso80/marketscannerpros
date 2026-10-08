@@ -1,0 +1,22 @@
+Phase 4 integration review - 8 October 2026
+
+Base: origin/research-page-phase4 at 8c813d22 (Claude #503 and #504). Main remained b966bb67 at the preceding remote check. Tested Claude's unmodified base first: W2 identity 11, W3 public Symbol 5 and W3 summary 7 tests all pass with mocked data.
+
+Integration branch codex/symbol-phase4-integration applies eight Codex commits from #494, #495, #496, #498, #499, #500, #501 and #502 onto that base. One page conflict was resolved: preserve Claude's recorded-level count and removal of scenario-plan values, add reportReady alongside it. lib/research/publicSymbolPacket.ts and lib/crypto/breakdown/load.ts/types.ts have zero diff against Claude's base. His public-symbol-v2 and identity checks are unchanged.
+
+The branch includes core report/AI quotas, guest-cookie scaffolding, comparison and indicator chart UI, evidence-first AI summary styling, explicit report-limit UI, deferred auxiliary requests and synthetic contract support. Chart appears in Chart rather than duplicated inside AI summary. Admin code is untouched. PUBLIC_DAILY_QUOTAS_ENABLED remains disabled. Migrations 126-128 are staged source only, not applied to production.
+
+Validation:
+- 22 targeted files: 141 tests pass, 11 layoutFlowAudit failures. The untouched 8c813d22 base independently has exactly those same 11 named failures. No additional failing test names in this targeted selection. This is not a claim that the whole repository suite passes.
+- 11 real PostgreSQL quota tests pass using isolated loopback test storage; test server stopped cleanly. No production connection used.
+- TypeScript: same six local baseline errors (four Stripe API version literals and two timer unref types); no integration-file errors. Installed local package ranges are not lockfile-exact CI.
+- Browser: 20 actual-page component fixtures for AAPL/ETH, visitor/Free/Pro/exhausted/provider error at 1280/390, plus 8 dedicated limit/pending/provider-error cases. All pass without exceptions. Fixtures regenerated through the real public-symbol-v2 projector; synthetic HTTP data only, nonlocal requests blocked. Success flows exercised AI summary and both chart modes; price-mode missing history is checked rather than fabricated. The real Next.js server/proxy/provider path is not exercised.
+- git diff --check passes. Mobile comparison screenshot inspected.
+
+Artifacts in outputs: phase4-integration-tests.txt, phase4-base-layout-tests.txt, phase4-integration-types.txt, phase4-integration-postgres.txt, phase4-symbol-order-browser-results.json, phase4-symbol-order-blocked-browser-results.json.
+
+PR handling: this consolidated branch is an alternative review path for the eight older stacked PRs, not additional changes to merge after them. It also incorporates the #493 UI components, superseding its chart placement. #497 remains a separate audit report. Older PRs were not closed, rebased, merged or otherwise modified. Claude can review this branch once, then choose how to reconcile old PRs; this task authorizes no merge.
+
+Remaining release blockers: specialist public response/Free entitlement work, guest equity provider rights, W7 funding/OI follow-up, residual public wording, and a full deployment-style test with controlled services. W3 projector trusts structured-cloned research DTOs (priceEvidence/timingEvidence); the new-field nonexposure guarantee should not be interpreted as an arbitrary-field allow-list for those trusted modules. Their schema governance remains relevant. Crypto perpetual identity still uses the disclosed base-ticker inference from a verified spot listing; no stronger identity claim added here. Test-kit probes are not completed specialist acceptance.
+
+No merges, deployments, production changes or live market/OpenAI calls. Next recommended work: agree specialist route ownership with Claude, then test actual public specialist adapters using the new fixtures.

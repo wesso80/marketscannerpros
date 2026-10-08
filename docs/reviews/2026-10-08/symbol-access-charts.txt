@@ -1,0 +1,14 @@
+Symbol core access and chart integration — 8 October 2026
+
+Branch codex/symbol-access-charts, based on 073e45ad / PR #498.
+Fetched origin before edits: research-page-phase4 still 6174ed6b. Shared-file overlap reported before editing: Symbol page, GoldenEggResponse type, Golden Egg route, AI summary component. No new Claude remote changes observed.
+
+Chart tab now hosts Compare (SPY/QQQ for equities, BTC for crypto) and Price & indicators from PR #493. AI summary retains the evidence-first visual design without duplicating the chart. Imported chart components and their tests match #493; existing quota-aware comparison backend remains intact. This branch supersedes #493's placement of the chart within AI summary; reconcile this deliberately when combining PRs.
+
+Golden Egg reports reportUnlocked only when quota admission and valid canonical evidence succeeded without a local demo. The page uses that flag only to bypass the legacy core evidence overlay; it does not change account tier or server specialist permissions. Disabled-rollout and admin routes remain unchanged. Research views and crypto breakdown mount after core success; errors/loading remain visible outside the folds.
+
+Validation: 42 targeted tests pass across the eight changed/related test files (one selector fix rerun separately). TypeScript retains the six known baseline errors; none in changed files. Twenty actual-page component browser fixtures at 1280/390, AAPL/ETH, visitor/Free/Pro/exhausted/provider error: no page errors or document overflow; all 12 success scenarios open AI summary and both chart modes, zero core overlays; 8 failure scenarios do not mount research subviews. Compared price curves use synthetic data; price mode checks honest missing-price behavior in the full-page fixture, with indicator calculations separately unit tested. Mobile comparison screenshot inspected. This is not a full Next.js/middleware/live-provider check.
+
+Remaining release blockers: guest equity provider rights; specialist DVE/crypto/news/fundamentals access reconciliation; quote/DVE/regime hooks still start independently of core admission; tailored quota-exhaustion/reset UX; public response boundary and wording work. No claim of complete Free-plan entitlement coverage. Rollout stays disabled. No live data calls, merges or deployments.
+
+Next recommended slice: typed report-limit/pending error UI with local reset times and signup/upgrade actions, followed by public specialist response/access reconciliation with Claude.
