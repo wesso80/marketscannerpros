@@ -1095,7 +1095,7 @@ export default function GoldenEggPage() {
               ) : d ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <Badge label={symbolText(d.volatility.regime)} color={
+                    <Badge label={symbolText(d.volatility.regime ?? 'BBWP not available')} color={
                       d.volatility.regime === 'compression' ? '#06B6D4' : d.volatility.regime === 'expansion' ? 'var(--msp-warn)' : d.volatility.regime === 'climax' ? 'var(--msp-bear)' : 'var(--msp-flat)'
                     } />
                   </div>
@@ -1113,7 +1113,8 @@ export default function GoldenEggPage() {
                             { max: 90, color: 'var(--msp-warn)', text: 'var(--msp-warn)' },
                             { max: 100, color: 'var(--msp-bear)', text: 'var(--msp-bear)' },
                           ];
-                          const zone = zones.find(z => bbwp <= z.max) ?? zones[3];
+                          // W3 DVE v2: an unavailable BBWP is null; no needle is drawn for it.
+                          const zone = bbwp == null ? { max: 0, color: 'var(--msp-panel)', text: 'var(--msp-text-muted)' } : zones.find(z => bbwp <= z.max) ?? zones[3];
                           const r = 50, sw = 7, cx = 60, cy = 58;
                           return (
                             <>
@@ -1127,14 +1128,14 @@ export default function GoldenEggPage() {
                                   const y2 = cy - r * Math.sin(Math.PI - (z.max / 100) * Math.PI);
                                   return <path key={i} d={`M ${x1} ${y1} A ${r} ${r} 0 ${z.max - s > 50 ? 1 : 0} 1 ${x2} ${y2}`} fill="none" stroke={z.color} strokeWidth={sw} opacity={0.5} />;
                                 })}
-                                {(() => {
+                                {bbwp != null && (() => {
                                   const a = Math.PI * (1 - bbwp / 100);
                                   const nl = r - sw;
                                   return <line x1={cx} y1={cy} x2={cx - nl * Math.cos(a)} y2={cy - nl * Math.sin(a)} stroke={zone.text} strokeWidth={2} strokeLinecap="round" />;
                                 })()}
                                 <circle cx={cx} cy={cy} r={3} fill={zone.text} />
                               </svg>
-                              <div className="text-sm font-bold -mt-1" style={{ color: zone.text }}>{symbolText(measuredBbwp(d.volatility) == null ? 'Not available' : bbwp.toFixed(1))}</div>
+                              <div className="text-sm font-bold -mt-1" style={{ color: zone.text }}>{symbolText(bbwp == null ? 'Not available' : bbwp.toFixed(1))}</div>
                             </>
                           );
                         })()}
@@ -1142,7 +1143,7 @@ export default function GoldenEggPage() {
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded p-2 text-[11px] text-slate-400">
                       <div className="text-slate-500">BBWP basis</div>
-                      {symbolText(measuredBbwp(d.volatility) == null ? 'BBWP not available: too few closes.' : bbwpBasisNote(d.volatility.bbwp, ge.priceEvidence) ?? 'BBWP from the Volatility engine (BB 13, one-year percentile).')}
+                      {symbolText(d.volatility.bbwp == null ? 'BBWP not available: too few closes.' : bbwpBasisNote(d.volatility.bbwp, ge.priceEvidence) ?? 'BBWP from the Volatility engine (BB 13, one-year percentile).')}
                     </div>
                   </div>
                   {d.signal.active && d.signal.type !== 'none' && (
@@ -1151,7 +1152,7 @@ export default function GoldenEggPage() {
                       <div className="text-[11px] text-slate-400">{symbolText(d.signal.triggerReason.join(' · '))}</div>
                     </div>
                   )}
-                  {d.trap.detected && <div className="text-xs text-amber-300">Trap pattern recorded by the Volatility engine.</div>}
+                  {d.pinnedCompression.conditions.compressed && d.pinnedCompression.conditions.nearLargeOiStrike && <div className="text-xs text-slate-300">BBWP below 20 with price near a large open-interest strike.</div>}
                   <div className="text-[11px] text-slate-500">{symbolText(d.summary)}</div>
                 </div>
               ) : ge.layer3.structure.volatility ? (

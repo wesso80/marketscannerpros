@@ -1,7 +1,7 @@
 'use client';
 import { volatilityText } from '../displayText';
 
-import type { PublicExhaustion as ExhaustionRisk, PublicDveFlag as DVEFlag, PublicVolatility as VolatilityState, PublicPhase as PhasePersistence, VolRegime } from '@/src/features/volatilityEngine/types';
+import type { PublicStretch, PublicVolatility as VolatilityState, PublicPhase as PhasePersistence, VolRegime } from '@/src/features/volatilityEngine/types';
 
 function regimeColor(regime: string): string {
   switch (regime) {
@@ -12,15 +12,6 @@ function regimeColor(regime: string): string {
     default: return 'var(--msp-text-muted)';
   }
 }
-
-const FLAG_CFG: Record<string, { bg: string; text: string }> = {
-  TRAP_CANDIDATE: { bg: 'bg-amber-500/10', text: 'text-amber-400' },
-  TRAP_DETECTED: { bg: 'bg-red-500/20', text: 'text-red-300' },
-  CLIMAX_WARNING: { bg: 'bg-red-500/15', text: 'text-red-400' },
-  COMPRESSION_EXTREME: { bg: 'bg-slate-500/15', text: 'text-slate-400' },
-  SIGNAL_UP: { bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
-  SIGNAL_DOWN: { bg: 'bg-red-500/15', text: 'text-red-400' },
-};
 
 // Regime phase positions on the timeline (0-100)
 const REGIME_POS: Record<string, number> = {
@@ -33,25 +24,23 @@ const REGIME_POS: Record<string, number> = {
 
 const REGIMES_ORDER: VolRegime[] = ['compression', 'neutral', 'transition', 'expansion', 'climax'];
 
-/** Current regime and the rate observation behind it. The engine's next-regime guess is not published (W3). */
+/**
+ * Current regime and the rate observation behind it (W3). No next-regime guess, flags or exhaustion label; stretch
+ * observations are listed as measured. When BBWP is not available there is no regime to place on the timeline.
+ */
 export default function VERegimeTimeline({
   regime,
-  exhaustion,
-  flags,
+  stretch,
   summary,
-  volatility,
   phase,
 }: {
-  regime: { current: VolRegime; observation: string };
-  exhaustion: ExhaustionRisk;
-  flags: DVEFlag[];
+  regime: { current: VolRegime | null; observation: string };
+  stretch: PublicStretch;
   summary: string;
   volatility?: VolatilityState;
-  phase?: PhasePersistence;
+  phase?: PhasePersistence | null;
 }) {
   const currentRegime = regime.current;
-  const exhaustionHigh = exhaustion.label === 'HIGH' || exhaustion.label === 'EXTREME';
-  const currentPos = REGIME_POS[currentRegime] ?? 50;
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-5">
@@ -110,64 +99,38 @@ export default function VERegimeTimeline({
           </div>
         </div>
 
-        {/* Event markers */}
+        {/* Phase length markers: measured percentiles, not "extended" verdicts. */}
         <div className="mt-5 flex flex-wrap gap-2">
-          {flags.includes('TRAP_DETECTED') && (
-            <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-bold text-red-300">Trap Detected</span>
-          )}
-          {exhaustionHigh && (
-            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-300">Exhaustion Risk</span>
-          )}
           {phase?.contraction.active && phase.contraction.stats.agePercentile > 80 && (
-            <span className="rounded-full bg-slate-500/15 px-2 py-0.5 text-[11px] font-bold text-slate-300">Extended Compression</span>
+            <span className="rounded-full bg-slate-500/15 px-2 py-0.5 text-[11px] font-bold text-slate-300">Contraction longer than {Math.round(phase.contraction.stats.agePercentile)}% of past ones</span>
           )}
           {phase?.expansion.active && phase.expansion.stats.agePercentile > 80 && (
-            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-300">Extended Expansion</span>
+            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-300">Expansion longer than {Math.round(phase.expansion.stats.agePercentile)}% of past ones</span>
           )}
         </div>
       </div>
 
       {/* Current regime and the rate observation; no next-regime guess or "weights" (Phase 4, W3). */}
       <div className="mb-4 flex items-center gap-3">
-        <span className="rounded-full px-3 py-1 text-[0.75rem] font-bold" style={{ background: regimeColor(regime.current) + '30', color: regimeColor(regime.current) }}>
-          {volatilityText(regime.current)}
+        <span className="rounded-full px-3 py-1 text-[0.75rem] font-bold" style={{ background: regimeColor(regime.current ?? '') + '30', color: regimeColor(regime.current ?? '') }}>
+          {regime.current ? volatilityText(regime.current) : 'Regime not available (BBWP not available)'}
         </span>
       </div>
       {regime.observation && (
         <p className="mb-3 text-[0.7rem] text-white/40">Observed: {volatilityText(regime.observation)}</p>
       )}
 
-      {/* Exhaustion */}
-      <div className="mb-4 flex items-center gap-3">
-        <span className="text-[0.72rem] text-white/50">Exhaustion:</span>
-        <span className={`text-sm font-bold ${exhaustionHigh ? 'text-red-400' : exhaustion.label === 'MODERATE' ? 'text-amber-400' : 'text-emerald-400'}`}>
-          {volatilityText(exhaustion.label)}
-        </span>
-      </div>
-      {exhaustion.signals.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-1">
-          {exhaustion.signals.map((s, i) => (
-            <span key={i} className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[0.7rem] text-white/40">{volatilityText(s)}</span>
-          ))}
-        </div>
-      )}
-
-      {/* Flags */}
-      {flags.length > 0 && (
-        <div className="mb-4">
-          <div className="mb-1.5 text-[11px] text-white/40">Active Flags</div>
-          <div className="flex flex-wrap gap-1.5">
-            {flags.map((f) => {
-              const c = FLAG_CFG[f] || { bg: 'bg-white/10', text: 'text-white/60' };
-              return (
-                <span key={f} className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-bold ${c.bg} ${c.text}`}>
-                  {volatilityText(f)}
-                </span>
-              );
-            })}
+      {/* Stretch observations: measured threshold crossings, without the engine's points or LOW…EXTREME label. */}
+      <div className="mb-4">
+        <div className="mb-1.5 text-[0.72rem] text-white/50">Stretch observations</div>
+        {stretch.observations.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {stretch.observations.map((s) => (
+              <span key={s} className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[0.7rem] text-white/40">{volatilityText(s)}</span>
+            ))}
           </div>
-        </div>
-      )}
+        ) : <p className="text-[0.7rem] text-white/40">None recorded.</p>}
+      </div>
 
       {/* Summary */}
       <div className="rounded-lg border border-white/10 bg-white/5 p-3">

@@ -8,7 +8,7 @@ import VEPhasePanel from '@/src/features/volatilityEngine/components/VEPhasePane
 import VESignalCard from '@/src/features/volatilityEngine/components/VESignalCard';
 import VEProjectionCard from '@/src/features/volatilityEngine/components/VEProjectionCard';
 import { volatilityBadgeLabel, volatilityHeadingLabel } from '@/lib/presentation/volatilityLayerLabel';
-import type { PhasePersistence, SignalProjection, VolatilityState } from '@/src/features/volatilityEngine/types';
+import type { PublicPhase, PublicProjection, PublicVolatility } from '@/src/features/volatilityEngine/types';
 
 const ENGINE_TOKEN = /^[A-Z0-9]+(?:[_\s,]+[A-Z0-9]+)*$/;
 
@@ -31,22 +31,19 @@ const headings: Array<[string, string]> = [
   ['SUP', 'Supporting analysis'],
 ];
 
-const vol: VolatilityState = {
-  bbwp: 42, bbwpSma5: 40, regime: 'neutral', regimeConfidence: 50,
+// W3 DVE v2: the cards render the public reading (lib/research/publicDve).
+const vol: PublicVolatility = {
+  bbwp: 42, bbwpSma5: 40, regime: 'neutral',
   rateOfChange: 1, rateSmoothed: 1, acceleration: 0, rateDirection: 'flat',
-  inSqueeze: false, squeezeStrength: 0,
+  squeeze: { inSqueeze: false, definition: 'Bollinger bands inside Keltner channels' },
 };
 
-const phase: PhasePersistence = {
-  contraction: { active: false, continuationProbability: 10, exitProbability: 20, stats: { currentBars: 1, averageBars: 2, medianBars: 2, maxBars: 3, agePercentile: 40, episodeCount: 1 } },
-  expansion: { active: true, continuationProbability: 30, exitProbability: 15, stats: { currentBars: 4, averageBars: 3, medianBars: 3, maxBars: 8, agePercentile: 60, episodeCount: 2 } },
+const phase: PublicPhase = {
+  contraction: { active: false, stats: { currentBars: 1, averageBars: 2, medianBars: 2, maxBars: 3, agePercentile: 40, episodeCount: 1 } },
+  expansion: { active: true, stats: { currentBars: 4, averageBars: 3, medianBars: 3, maxBars: 8, agePercentile: 60, episodeCount: 2 } },
 };
 
-const projection: SignalProjection = {
-  signalType: 'none', expectedMovePct: 0, medianMovePct: 0, maxHistoricalMovePct: 0,
-  averageBarsToMove: 0, hitRate: 0, sampleSize: 0, dispersionPct: 0,
-  projectionQuality: 'unavailable', projectionQualityScore: 0, projectionWarning: '',
-};
+const projection: PublicProjection = { signalType: 'none', sampleSize: 0, minimumSample: 5, stats: null, period: null, note: 'No recorded rule, so no past-case study.' };
 
 beforeEach(() => { vi.stubGlobal('React', React); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
@@ -81,7 +78,7 @@ it('shows plain badges on the volatility cards', () => {
   expect(phases.container.textContent).toContain('Phase Persistence');
   expect(phases.container.textContent).not.toMatch(/\bPH\b/);
   cleanup();
-  const signal = render(<VESignalCard signal={{ type: 'none', state: 'idle', active: false, strength: 0, triggerReason: [] }} />);
+  const signal = render(<VESignalCard signal={{ type: 'none', state: 'idle', active: false, triggerReason: [], conditions: null }} />);
   expect(signal.container.textContent).toContain('Signal');
   expect(signal.container.textContent).not.toMatch(/\bSIG\b/);
   cleanup();
