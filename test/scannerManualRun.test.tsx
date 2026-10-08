@@ -48,11 +48,11 @@ it('one explicit ranked Run click fires exactly one /api/scanner/run',async()=>{
  expect(calls.find(c=>c.url==='/api/scanner/run')!.init?.method).toBe('POST');
 });
 
-it('public Pro opens factual Find symbols without the internal presets',async()=>{
+it('public Pro is directed to Symbol discovery without the internal presets',async()=>{
  access.isAdmin=false;
  const fetch=vi.fn();vi.stubGlobal('fetch',fetch);
  render(<ScannerPage/>);
- expect(screen.getByRole('heading',{name:'Find symbols'})).toBeTruthy();
+ expect(screen.getByRole('link',{name:'Continue to Find symbols'}).getAttribute('href')).toBe('/tools/golden-egg?view=find');
  expect(screen.queryByRole('button',{name:'Momentum',exact:true})).toBeNull();
  expect(fetch).not.toHaveBeenCalled();
 });

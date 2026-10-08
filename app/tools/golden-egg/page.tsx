@@ -1,4 +1,5 @@
 'use client';
+import SymbolResearchDestination from '@/components/research/SymbolResearchDestination';
 import SymbolReportAccessNotice from '@/components/research/SymbolReportAccessNotice';
 import PublicUsageSummary from '@/components/research/PublicUsageSummary';
 import { publicDesignEnabled } from '@/lib/publicDesign';
@@ -323,6 +324,10 @@ function riskSeverity(label: string): RiskFlag['severity'] {
 }
 
 export default function GoldenEggPage() {
+  return <SymbolResearchDestination><GoldenEggReport /></SymbolResearchDestination>;
+}
+
+function GoldenEggReport() {
   const { selectedSymbol, selectSymbol } = useV2();
   const searchParams = useSearchParams();
   const requestedTimeframe = parseResearchTimeframe(searchParams.get('timeframe'));

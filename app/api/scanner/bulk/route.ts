@@ -21,6 +21,8 @@ import { detectPriceDiscontinuity } from '@/lib/scanner/barAggregation';
 import { adx, atr as atrFn, atrPercent as atrPctFn, cci, ema, getIndicatorWarmupStatus, macd, OHLCVBar, rsi, stochastic, detectSqueeze, detectMomentumAcceleration } from '@/lib/indicators';
 import { getSectorETF, SECTOR_ETFS } from '@/lib/sectorMap';
 import { getSessionFromCookie } from '@/lib/auth';
+import { requireAdmin } from '@/lib/adminAuth';
+import { adminBulkHandler } from '@/lib/scanner/adminBulkBoundary';
 import {
   OHLCV,
   calculateSMA, calculateEMA, calculateRSI, calculateMACD,
@@ -2212,7 +2214,9 @@ function applyInstitutionalFilterToTopPicks(
 // MAIN HANDLER
 // =============================================================================
 
-export async function POST(req: NextRequest) {
+export const POST = adminBulkHandler(requireAdmin, runBulkScanner);
+
+async function runBulkScanner(req: NextRequest) {
   const startTime = Date.now();
   let localFallbackArgs: { type: 'equity' | 'crypto' | 'forex'; timeframe: string; mode: BulkScanMode; requestedUniverseSize: number; filters: ProScanFilters; sort: ProScanSort } | null = null;
   
