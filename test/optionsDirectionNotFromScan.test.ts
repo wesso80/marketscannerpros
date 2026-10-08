@@ -25,4 +25,4 @@ it('flipping only the scan direction cannot change options direction, strikes or
  const x=await optionsAnalyzer.analyzeForOptions('AAPL','intraday_1h','2026-10-09');const y=await optionsAnalyzer.analyzeForOptions('AAPL','intraday_1h','2026-10-09');
  expect(decisions(x)).toEqual(decisions(y));expect(x.directionStatus).toBe('unknown');expect(x.tradeSnapshot?.verdict).toBe('WAIT');expect(x.primaryStrike).toBeNull();expect(x.primaryExpiration).toBeNull();
 });
-it('unknown direction has explicit UI wording',()=>{expect(readFileSync('components/options-terminal/OptionsConfluenceScanner.tsx','utf8')).toContain('Direction: unknown');});
+it('the Options view shows no direction at all (W3: chain evidence only)',()=>{expect(readFileSync('components/options-terminal/OptionsChainEvidence.tsx','utf8')).not.toMatch(/\.direction\b|directionStatus|Direction:/);});

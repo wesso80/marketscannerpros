@@ -12,7 +12,8 @@ it('public pages use the distinct indicator and timing labels', () => {
   expect(goldenEgg).not.toMatch(/legacy confluence/i);
   expect(goldenEgg).not.toMatch(/INDICATOR_COMPOSITE_LABEL|Indicator composite score/);
   expect(goldenEgg).toContain('Timeframe pull and close calendar (display only)');
-  expect(read('components/options-terminal/OptionsConfluenceScanner.tsx')).toContain('Clock and prior-candle midpoints. Display only; not used in the grade, direction or WAIT decision.');
+  // W3: the Options setup scanner (and its timing note) was replaced by the chain-evidence view, which has no timing input.
+  expect(read('components/options-terminal/OptionsChainEvidence.tsx')).not.toMatch(/confluence|midpoint|close calendar|mid-50/i);
 });
 it('analyst context never disguises the indicator composite as scanner score', () => {
   expect(read('app/api/ai/analyst-context/route.ts')).not.toContain('pageData?.confluenceScore');

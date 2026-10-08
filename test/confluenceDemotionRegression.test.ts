@@ -160,7 +160,8 @@ it('a neutral timeframe scan on the bullish A-grade chain is a clock note, not N
   expect(low.entryTiming.urgency).toBe(high.entryTiming.urgency);
   expect(low.entryTiming.urgency).not.toBe('no_trade');
   expect(high.entryTiming.urgency).not.toBe('no_trade');
-  expect(readFileSync('components/options-terminal/OptionsConfluenceScanner.tsx', 'utf8')).not.toContain("urgency === 'no_trade'");
+  // W3: the setup scanner was replaced by the chain-evidence view, which reads no urgency or NO TRADE state.
+  expect(readFileSync('components/options-terminal/OptionsChainEvidence.tsx', 'utf8')).not.toMatch(/urgency|no_trade|NO TRADE/);
 });
 
 it('NO TRADE on the options page comes from the verdict or gate, not a scan urgency', async () => {

@@ -431,67 +431,12 @@ export interface EarningsResponse {
 }
 
 // --- Options Scan ---
+/** /api/options-scan: the public Options evidence contract (W3), never the analyzer's setup. */
 export interface OptionsScanResponse {
   success: boolean;
-  data: {
-    currentPrice: number;
-    direction: string;
-    compositeScore: { confidence: number };
-    tradeQuality: string;
-    expectedMove: { selectedExpiry: number; selectedExpiryPercent: number };
-    ivAnalysis: { ivRank?: number; ivRankHeuristic?: number };
-    openInterestAnalysis: { totalCallOI: number; totalPutOI: number; pcRatio: number; highOIStrikes: any[] };
-    strategyRecommendation: { strategy: string };
-    tradeSnapshot: { oneLine: string };
-    unusualActivity: { hasUnusualActivity: boolean };
-    locationContext: { keyZones: Array<{ level: number; type: string }> };
-    dataQuality?: {
-      freshness?: 'REALTIME' | 'DELAYED' | 'EOD' | 'STALE';
-      lastUpdated?: string;
-      providerStatus?: {
-        source: string;
-        provider: string;
-        live: boolean;
-        simulated: boolean;
-        stale: boolean;
-        degraded: boolean;
-        productionDemoEnabled: boolean;
-        alertLevel: 'none' | 'info' | 'warning' | 'critical';
-        warnings: string[];
-        notes?: string[];
-      } | null;
-      optionsChainQuality?: {
-        status: 'sufficient' | 'thin' | 'missing';
-        totalContracts: number;
-        quotedContracts: number;
-        liquidContracts: number;
-        avgSpreadPct: number | null;
-        warnings: string[];
-      };
-    };
-    universalScoringV21?: {
-      topCandidates?: unknown[];
-      diagnostics?: {
-        optionsProvider?: string;
-        warnings?: string[];
-        staleSeconds?: number;
-        tfConfluenceScore?: number;
-        candidateEligibility?: {
-          totalCandidates: number;
-          allowCandidates: number;
-          waitCandidates: number;
-          blockedCandidates: number;
-          topCandidateBlocked: boolean;
-          blockerCounts: Record<string, number>;
-          warnings: string[];
-        };
-      };
-    };
-  };
-  dataSources?: {
-    underlyingPrice: string;
-    optionsChain: string;
-  };
+  data: import('@/lib/research/publicOptionsScan').PublicOptionsEvidence;
+  dataSources?: { underlyingPrice: string; optionsChain: string };
+  timestamp?: string;
 }
 
 /* ------------------------------------------------------------------ */

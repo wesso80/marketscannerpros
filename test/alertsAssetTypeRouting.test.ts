@@ -143,10 +143,9 @@ describe('UI callers send a market', () => {
     expect(src).not.toMatch(/assetType: 'crypto' as const/);
     expect(src).toContain('validateBasicAlertAssetType(newAlert.assetType');
   });
-  it('the options scanner posts camelCase fields with an equity market', () => {
-    const src = readFileSync(resolve(__dirname, '../components/options/OptionsScannerPage.tsx'), 'utf8');
-    expect(src).not.toMatch(/condition_type:|condition_value:|alert_name:/);
-    expect(src).toMatch(/assetType: 'equity',\s*conditionType: 'price_above'/);
+  it('the old options scanner page that posted alerts was deleted with the setup scanner (W3)', () => {
+    // Its camelCase alert payload was asserted here; the page was never mounted and is gone, so no options alert caller remains.
+    expect(require('node:fs').existsSync(resolve(__dirname, '../components/options/OptionsScannerPage.tsx'))).toBe(false);
   });
 });
 
