@@ -24,8 +24,8 @@ Severity: **High** = live caller or reachable route that emits trade levels/sizi
 | G | `/api/ai/analyst-context` | Signed in | OpenAI | `lib/ai/useAnalystContext.ts` (imported by nothing) | "Position sizing context", Sizing, performance-throttle `governorRecommendation` | Medium | Retire with the dead hook |
 | H1 | `/api/ai/explain` | Signed in | OpenAI | None | "one actionable insight" | Medium | Retire or descriptive wording |
 | H2 | `/api/ai/suggest` | Signed in | OpenAI | None | "Next Best Actions"; adaptive layer; `lib/ai/tools.ts` | Medium | Retire |
-| I1 | `GET /api/ai-scanner/alerts` | **Unauthenticated** | — | External Streamlit `app.py` (per comments) | Lists stored TradingView alerts (side LONG/SHORT, price, features); `limit` unbounded | **High (security)** | Require auth (admin or shared secret), cap `limit` |
-| I2 | `POST /api/ai-scanner/test` | **Unauthenticated** | — | None | Injects the server's own webhook secret and inserts a fake LONG BTC alert | **High (security)** | Admin-only or delete |
+| I1 | `GET /api/ai-scanner/alerts` | **Unauthenticated** | — | External Streamlit `app.py` (per comments) | Lists stored TradingView alerts (side LONG/SHORT, price, features); `limit` unbounded | **High (security)** | Fixed: admin-only, `limit` 1–200, private no-store, generic 500 |
+| I2 | `POST /api/ai-scanner/test` | **Unauthenticated** | — | None | Injects the server's own webhook secret, inserts a fake LONG BTC alert, and **returned the secret in `testPayload`** | **High (security)** | Fixed: admin-only, secret removed from response. Rotate the webhook secret |
 | I3 | `/api/ai-scanner/alert`, `/status` | Secret-gated / harmless | — | TradingView webhook | — | Low | None |
 | J | `/api/ai-signals` | Pro | — | None | POST writes entry/stop/target1/target2/verdict to `ai_signal_log` | Medium | Retire, or move behind `/api/admin` |
 | K | `/api/trade-proposal` | Pro | — | None | Sized order, recommended leverage, `governor_max_position_size`, `executable` flag; 500 leaks `err.message` in `detail` | **High** (reachable sizing + leak) | Retire; at minimum generic 500 |

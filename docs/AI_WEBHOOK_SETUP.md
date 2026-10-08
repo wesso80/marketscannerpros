@@ -60,11 +60,17 @@ Content-Type: application/json
 ### 3. Test Endpoint
 **POST** `/api/ai-scanner/test`
 
-Send a test alert to verify webhook is working.
+Send a test alert to verify webhook is working. Admin only (admin session, operator session, or the
+`x-admin-secret` header). The response never includes the webhook secret.
 
 ```bash
-curl -X POST https://marketscannerpros.app/api/ai-scanner/test
+curl -X POST https://marketscannerpros.app/api/ai-scanner/test -H "x-admin-secret: $ADMIN_SECRET"
 ```
+
+### 4. Stored alerts
+**GET** `/api/ai-scanner/alerts?limit=50&symbol=BTC-USD`
+
+Admin only (same auth as above). `limit` is clamped to 1–200. Responses are `private, no-store`.
 
 ## TradingView Setup
 
