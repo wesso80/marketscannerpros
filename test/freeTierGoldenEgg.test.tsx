@@ -112,7 +112,7 @@ it.each(['AAPL','NVDA'])('Pro full Symbol page for %s has closed folds and clean
   expect([...container.querySelectorAll('details')].every(d=>!d.open)).toBe(true);
   const evidence=screen.getByRole('button',{name:/checks.*checks/i});
   fireEvent.click(evidence);
-  const fold=[...container.querySelectorAll('details')].find(d=>d.querySelector('summary')?.textContent?.startsWith('Deep analysis'))!;
+  const fold=[...container.querySelectorAll('details')].find(d=>d.querySelector('summary')?.textContent?.startsWith('Research views'))!;
   fold.open=true;fireEvent(fold,new Event('toggle'));
   await screen.findByText('Research packet');
   // Phase 4: no score breakdown, grade, permission label or /100 composite in the expanded verdict tab.

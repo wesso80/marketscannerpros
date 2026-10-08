@@ -14,7 +14,7 @@ beforeEach(()=>{vi.clearAllMocks();h.enabled=true;h.session={workspaceId:'fixtur
 it('allows a Free core report, completing only after successful public projection',async()=>{
  const r=await call();expect(r.status).toBe(200);expect(r.headers.get('cache-control')).toBe('private, no-store');
  expect(h.reserve.mock.calls[0][0]).toMatchObject({plan:'free',kind:'symbol',resource:'equity:AAPL'});
- expect(h.settle).toHaveBeenCalledWith({token:'fixture'},'completed');expect((await r.json()).quota.used).toBe(1);
+ expect(h.settle).toHaveBeenCalledWith({token:'fixture'},'completed');const body=await r.json();expect(body.quota.used).toBe(1);expect(body.reportUnlocked).toBe(true);
 });
 it('denies at the limit before expensive work and leaves completed revisits uncharged',async()=>{
  h.reserve.mockResolvedValue({status:'limited',limit:3,used:3});expect((await call()).status).toBe(429);expect(h.compute).not.toHaveBeenCalled();
@@ -33,4 +33,16 @@ it('checks authentication and input before admission and does not count demos',a
  h.session=null;h.resolve.mockResolvedValueOnce(null);expect((await call()).status).toBe(401);h.session={workspaceId:'fixture'};
  expect((await call('')).status).toBe(400);expect(h.reserve).not.toHaveBeenCalled();
  h.compute.mockResolvedValueOnce({payload:{canonical:{}},localDemo:true,warnings:[]});await call();expect(h.settle).toHaveBeenCalledWith({token:'fixture'},'released');
+});
+
+it('does not grant the new core-report display entitlement for demos, missing evidence or legacy access',async()=>{
+ for(const result of [{payload:{canonical:{}},localDemo:true,warnings:[]},{payload:{},warnings:[]}]){
+  h.compute.mockResolvedValueOnce(result);expect((await (await call()).json()).reportUnlocked).toBe(false);
+ }
+ h.enabled=false;h.paid=true;expect((await (await call()).json()).reportUnlocked).toBe(false);
+});
+it('confirms a completed report revisit and signed visitor without a second charge',async()=>{
+ h.session=null;h.resolve.mockResolvedValue({bypass:false,subject:'visitor:fixture',plan:'visitor'});
+ h.reserve.mockResolvedValue({status:'completed',limit:1,used:1});
+ expect((await (await call()).json()).reportUnlocked).toBe(true);expect(h.settle).not.toHaveBeenCalled();
 });

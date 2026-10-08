@@ -25,8 +25,8 @@ it.each(['AAPL','NVDA'])('%s closed page keeps legacy verdict out and Fundamenta
 });
 it('expanded legacy packet renders plain research labels while preserving compliance text',async()=>{
  ctx.symbol='AAPL';ctx.payload=buildPayload('AAPL','equity',price,ind,null,null,'1D',null,null,null,{nowMs:now});ctx.payload.layer1.primaryBlocker='NO_STRUCTURAL_STOP';
- const {container}=render(<GoldenEggPage/>);const fold=[...container.querySelectorAll('details')].find(d=>d.querySelector('summary')?.textContent?.startsWith('Deep analysis'))!;fold.open=true;fireEvent(fold,new Event('toggle'));
- await waitFor(()=>expect(screen.getByText('Research views')).toBeTruthy());
+ const {container}=render(<GoldenEggPage/>);const fold=[...container.querySelectorAll('details')].find(d=>d.querySelector('summary')?.textContent?.startsWith('Research views'))!;fold.open=true;fireEvent(fold,new Event('toggle'));
+ await waitFor(()=>expect(screen.getByRole('button', {name: /AI summary/i})).toBeTruthy());
  const text=fold.textContent!;expect(text).not.toMatch(/[A-Z]+_[A-Z_]+|time unknown|\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
  expect(text).not.toMatch(/\b(?:buy|sell|entry signal|likely|will|should|bullish|bearish|Trade Ideas|Permission|Playbook|LONG(?!-term)|SHORT(?!-term)|watch for follow-through|Wait for decompression|Monitor for)\b/i);
 });
