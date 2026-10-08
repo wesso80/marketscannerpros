@@ -24,3 +24,5 @@ P2 Record-specific Copilot adapters and legacy risk/proxy cleanup: follow portfo
 
 Limits of this review
 No production environment values, live Stripe sessions, provider responses or account records were accessed. No entitlement, billing or admin code changed. The final Portfolio/Journal visual rerun is recorded separately; earlier checks do not establish successful record saves or current provider valuation.
+
+Follow-up: user approved retaining 3 open positions / 5 open Journal entries. See pricing-signup-implementation.txt for the implemented pricing/sign-up slice, manual Portfolio save check and remaining mirror/downgrade limitations. Earlier findings above describe the reviewed base.

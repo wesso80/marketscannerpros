@@ -2,6 +2,7 @@
  * Separate from legacy/admin tier helpers; public callers opt in through the rollout flag. */
 export type PublicPlan = 'visitor' | 'free' | 'pro';
 export type PublicQuotaKind = 'symbol' | 'ai';
+export const PUBLIC_FREE_RECORD_LIMITS = { positions: 3, openJournalEntries: 5 } as const;
 export const PUBLIC_DAILY_LIMITS = {
   visitor: { symbol: 1, ai: 0 },
   free: { symbol: 3, ai: 0 },
