@@ -9,7 +9,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { NextRequest } from 'next/server';
 
-const h = vi.hoisted(() => ({ session: { workspaceId: 'ws-a', tier: 'pro' } as any, paid: true }));
+const h = vi.hoisted(() => ({ session: { workspaceId: 'ws-a', tier: 'pro' } as any, paid: true, throwCalendar: false }));
+vi.mock('@/lib/terminal/futures/futuresCloseCalendar', async (orig) => {
+  const real = await orig<typeof import('@/lib/terminal/futures/futuresCloseCalendar')>();
+  return { ...real, buildFuturesCloseCalendar: (...args: Parameters<typeof real.buildFuturesCloseCalendar>) => {
+    if (h.throwCalendar) throw new Error('internal detail: /srv/app/secret-path line 42');
+    return real.buildFuturesCloseCalendar(...args);
+  } };
+});
 vi.mock('@/lib/auth', () => ({ getSessionFromCookie: vi.fn(async () => h.session) }));
 vi.mock('@/lib/proTraderAccess', () => ({ hasPaidSessionAccess: () => h.paid }));
 import { GET } from '@/app/api/terminal/futures/route';
@@ -24,7 +31,7 @@ function keyPaths(v: any, path = '', out: string[] = []): string[] {
   return out;
 }
 beforeEach(() => {
-  h.session = { workspaceId: 'ws-a', tier: 'pro' }; h.paid = true;
+  h.session = { workspaceId: 'ws-a', tier: 'pro' }; h.paid = true; h.throwCalendar = false;
   vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(NOW);
   vi.stubGlobal('React', React);
 });
@@ -58,6 +65,29 @@ describe('public futures close calendar (route)', () => {
     const engine = buildFuturesCloseCalendar('/ES', 'globex', 1, NOW);
     expect(engine.schedule[0]).toHaveProperty('weight');
     expect(engine.clusters[0]).toHaveProperty('clusterScore');
+  });
+  it('the schedule and groups stay within the selected horizon', async () => {
+    const day = (await get('symbol=ES&anchorMode=globex&horizon=1d')).body.closeCalendar;
+    const week = (await get('symbol=ES&anchorMode=globex&horizon=7d')).body.closeCalendar;
+    for (const [c, days] of [[day, 1], [week, 7]] as const) {
+      expect(c.schedule.length).toBeGreaterThan(0);
+      for (const r of c.schedule) expect(r.minutesToClose).toBeLessThanOrEqual(days * 1440);
+      for (const g of c.clusters) expect(Date.parse(g.timeISO) - NOW.getTime()).toBeLessThanOrEqual(days * 86_400_000 + 15 * 60_000);
+    }
+    // Monday 11:00 ET: the weekly close (Friday) is outside one day and inside seven; the monthly close is outside both.
+    expect(day.schedule.map((r: any) => r.timeframe)).not.toContain('1W');
+    expect(week.schedule.map((r: any) => r.timeframe)).toContain('1W');
+    expect(week.schedule.map((r: any) => r.timeframe)).not.toContain('12M');
+  });
+  it('a failing part is reported without its internal error message', async () => {
+    h.throwCalendar = true;
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { status, body } = await get('symbol=ES');
+    expect(status).toBe(200);
+    expect(body.errors).toContain('closeCalendar: could not be computed');
+    expect(JSON.stringify(body)).not.toMatch(/internal detail|secret-path/);
+    expect(errSpy).toHaveBeenCalled();
+    errSpy.mockRestore();
   });
   it('checks access before computing', async () => {
     h.session = null;
