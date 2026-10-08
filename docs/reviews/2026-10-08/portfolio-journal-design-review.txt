@@ -38,3 +38,5 @@ Additional verification: 25 tests pass across portfolioClientSync, journalEntryU
 Visual follow-up limitation: after the eight-check run, a typography adjustment enlarged existing stat values and unified nested backgrounds. The repeated app run stalled during workspace compilation before the new drawer interaction could be checked. Earlier screenshots/checks do not certify that last visual adjustment or drawer interaction. A fresh browser run remains required before rollout.
 
 Follow-up entitlement audit: public-plan-readiness.txt records the five-open-entry Journal semantics, missing matching Portfolio server cap, separate quota rollout flag, stale Free AI pricing and unverified trial/reminder setup.
+
+Latest follow-up: all eight focused workspace/journal tests pass again. Clean-cache browser retry also stalled during workspace compilation and timed out after 240 seconds before rendering; no new visual or drawer pass is claimed. Browser navigation timeout is now configurable for diagnostics. Generated cache backup is outside the repository under the task outputs directory.
