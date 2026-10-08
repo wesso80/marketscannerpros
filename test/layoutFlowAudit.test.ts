@@ -1182,7 +1182,8 @@ describe('layout and flow audit regressions', () => {
     expect(goldenEggPage).toContain('min-h-[3.05rem] rounded-md border border-white/10');
     expect(goldenEggPage).toContain('Measured evidence first');
     expect(goldenEggPage).toContain('Data trust');
-    expect(goldenEggPage).toContain('Reference level');
+    expect(goldenEggPage).toContain('Recorded levels');
+    expect(goldenEggPage).not.toMatch(/Reference level|Reaction Zones|Scenario Map/);
     expect(goldenEggPage).toContain('<ComplianceDisclaimer compact />');
     expect(goldenEggPage).toContain('Research packet');
     expect(goldenEggPage).toContain('Research views');
@@ -1200,7 +1201,7 @@ describe('layout and flow audit regressions', () => {
     expect(goldenEggPage).toContain('onSelectTab={setActiveTab}');
     expect(goldenEggPage).not.toContain('flex gap-1 overflow-x-auto');
     expect(goldenEggPage).not.toContain('min-w-[9rem] shrink-0 rounded-md border px-3 py-1.5');
-    expect(goldenEggPage).toContain('Measured states with their definitions, data trust, scenario levels and the next check.');
+    expect(goldenEggPage).toContain('Measured states with their definitions, data trust, recorded levels and the next check.');
     expect(goldenEggPage).toContain('<GoldenEggTabRail activeTab={activeTab} onSelectTab={setActiveTab} />');
     expect(goldenEggPage).not.toContain('<SectionHeader title="Golden Egg"');
     expect(goldenEggPage).not.toContain('<ComplianceDisclaimer collapsible />');
