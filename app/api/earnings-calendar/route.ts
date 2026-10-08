@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { EARNINGS_SUMMARY_LABEL, EARNINGS_SUMMARY_SYSTEM_PROMPT, sanitizeEarningsSummary } from '@/lib/news/earningsBrief';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
 import { parseAlphaVantageEarningsCalendar } from '@/lib/earningsCalendarCsv';
@@ -74,7 +75,7 @@ async function generateEarningsAIAnalysis(recentResults: Array<{
         messages: [
           {
             role: 'system',
-            content: 'You are a financial analyst. Give a brief 2-3 sentence summary of recent earnings results. Be concise and highlight key trends (beats vs misses, sector patterns). Use professional but accessible language.'
+            content: EARNINGS_SUMMARY_SYSTEM_PROMPT
           },
           {
             role: 'user',
@@ -82,13 +83,13 @@ async function generateEarningsAIAnalysis(recentResults: Array<{
           }
         ],
         max_tokens: 150,
-        temperature: 0.7,
+        temperature: 0.3,
       }),
     });
     
     if (!response.ok) return null;
     const data = await response.json();
-    return data.choices?.[0]?.message?.content || null;
+    return sanitizeEarningsSummary(data.choices?.[0]?.message?.content);
   } catch (err) {
     console.error('AI earnings analysis error:', err);
     return null;
@@ -206,13 +207,14 @@ export async function GET(request: NextRequest) {
       count: earnings.length,
       recentResults,
       aiAnalysis,
+      aiAnalysisLabel: aiAnalysis ? EARNINGS_SUMMARY_LABEL : null,
     });
   } catch (error) {
     console.error("Earnings calendar error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to fetch earnings calendar",
+        error: "Failed to fetch earnings calendar",
       },
       { status: 500 }
     );
