@@ -65,9 +65,9 @@ describe('server-rendered answers', () => {
   it('renders exact symbol, field, signed number and missing state from evidence', () => {
     const { evidence, id } = fixture();
     const result = validateCopilotAnswer(answer('', [id(-2.5), id(0), id(null)]), evidence)!;
-    expect(result).toContain('AAPL · daily · symbol.canonical.changePercent: -2.5');
-    expect(result).toContain('symbol.canonical.bbwp: 0');
-    expect(result).toContain('symbol.canonical.missing: Not available');
+    expect(result).toContain('AAPL · canonical / change Percent: -2.5');
+    expect(result).toContain('canonical / bbwp: 0');
+    expect(result).toContain('canonical / missing: Not available');
     expect(result).not.toContain('+2.5');
   });
   it('does not echo instructions or advice embedded in source strings', () => {

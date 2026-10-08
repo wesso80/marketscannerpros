@@ -1,3 +1,18 @@
+FOLLOW-UP: readable Copilot measurement presentation
+Verified remote state before editing: own b732b35d; research-page-phase4 717bfdbe; Claude DVE
+5d0f0f7. Published Claude file list has no overlap; unpushed work is not visible.
+New copilotPresentation helper names common price, indicator, options, funding and volatility
+measurements with explicit units. No rounding/rescaling. Currency is not guessed. Null, zero and
+negative values stay distinct. Unknown fields use readable paths and unspecified-unit wording.
+Known measurements attach their exact signed observation timestamp or completed-bar date and
+options expiry, with metadata citations. Snapshot capture is labelled separately, never used as an
+observation date. Missing/malformed dates remain unavailable. Arbitrary text stays in disclosure.
+45 focused tests pass, including nine presentation cases and the prior 24 adversarial cases.
+Remaining: expand the explicit field catalogue and typed metadata to other sections; no implied
+complete catalogue. Check the longer answers in the full application and evaluate selection quality.
+API connection reported working by Pip/user; no live API call made by this task.
+No admin, engine or Claude-owned files changed. No merge, deployment or rollout enablement.
+
 FOLLOW-UP: selection-only answer contract closes the eight demonstrated gaps
 The model now selects existing evidence IDs and reviewed explanation keys. It cannot supply factual
 prose or rewrite values. Server rendering supplies symbol, timeframe, exact field path and scalar

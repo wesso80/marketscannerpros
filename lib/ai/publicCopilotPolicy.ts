@@ -1,3 +1,4 @@
+import { renderCopilotObservation } from './copilotPresentation';
 import type { PageEvidence } from './publicCopilotEvidence';
 
 /** Reviewed explanations contain no symbol-specific claims or suggested actions. */
@@ -54,11 +55,7 @@ export function validateCopilotAnswer(value: unknown, evidence: PageEvidence): s
       for (const id of s.evidenceIds) {
         if (typeof id !== 'string' || !indexed.has(id)) return null;
         const observation = indexed.get(id)!;
-        // Arbitrary source strings can contain instructions or advice. Keep them in the source
-        // disclosure rather than laundering them into the generated educational answer.
-        const rendered = observation.value === null ? 'Not available' : typeof observation.value === 'string'
-          ? 'Text or structured data: see source evidence' : String(observation.value);
-        lines.push(`OBSERVATION: ${evidence.symbol} · ${evidence.timeframe} · ${observation.field}: ${rendered} [${id}]`);
+        lines.push(renderCopilotObservation(observation, evidence));
       }
     } else return null;
   }
