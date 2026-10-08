@@ -1,6 +1,8 @@
 'use client';
 import SymbolReportAccessNotice from '@/components/research/SymbolReportAccessNotice';
 import PublicUsageSummary from '@/components/research/PublicUsageSummary';
+import { publicDesignEnabled } from '@/lib/publicDesign';
+import studio from '@/components/public-design/SymbolStudio.module.css';
 
 /* ---------------------------------------------------------------------------
    SURFACE 3: SYMBOL — research page (evidence, chart, AI summary, fundamentals)
@@ -602,10 +604,21 @@ export default function GoldenEggPage() {
     { href: `/tools/terminal?tab=time-confluence&symbol=${q}`, label: 'Time confluence' },
   ];
 
+  const designEnabled = publicDesignEnabled();
+  const symbolControls = (
+    !isAuthBlocked && <CollapsibleSection deferMount title="Change symbol" summary={`${sym} · ${timeframe}`}>
+        <div className="flex flex-wrap gap-2"><input aria-label="Symbol" value={symbolInput} onChange={e=>setSymbolInput(e.target.value.toUpperCase())} onKeyDown={e=>e.key==='Enter'&&handleSymbolSubmit()} className="min-h-10 min-w-0 rounded border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3"/><button onClick={handleSymbolSubmit} className="min-h-10 rounded border px-3">Review</button></div>
+        <div className="mt-2 flex flex-wrap gap-2"><label className="text-xs">Asset <select aria-label="Asset type" value={assetType} onChange={e=>{const type=e.target.value as 'auto'|'equity'|'crypto';setAssetType(type);selectSymbol(sym,{assetType:type==='auto'?(isCryptoSymbol?'crypto':'equity'):type,timeframe});}} className="min-h-10 rounded border border-[var(--msp-border)] bg-[var(--msp-panel)] px-2"><option value="auto">Auto</option><option value="equity">Stock</option><option value="crypto">Crypto</option></select></label><label className="text-xs">Timeframe <select aria-label="Research timeframe" value={timeframe} onChange={e=>{const next=e.target.value as ScanTimeframe;setTimeframe(next);selectSymbol(sym,{timeframe:next,assetType:snapshotAsset});}} className="min-h-10 rounded border border-[var(--msp-border)] bg-[var(--msp-panel)] px-2">{SCAN_TIMEFRAMES.map(t=><option key={t.value} value={t.value}>{symbolText(t.label)}</option>)}</select></label></div>
+      </CollapsibleSection>
+  );
+
   return (
-    <div className="mx-auto max-w-6xl space-y-3">
+    <div className={designEnabled ? studio.page : "mx-auto max-w-6xl space-y-3"} data-symbol-studio={designEnabled || undefined}>
+      {designEnabled && <header className={studio.intro}><div><p>SYMBOL RESEARCH</p><h2>One symbol. The evidence in context.</h2></div><Link href="/tools/command-center">Back to Overview ↗</Link></header>}
+      {designEnabled && symbolControls}
       <PublicUsageSummary onVisitorReady={() => goldenEgg.refetch()} refreshKey={`${sym}:${loading}:${goldenEgg.error || ''}`} />
       <SymbolSnapshotHeader name={geCanonical?.fundamentals?.name} symbol={sym} asset={snapshotAsset} timeframe={timeframe} stamp={symbolQuoteStamp(sym,snapshotAsset,quote.data)} pick={findSymbolPick(dailyPicks.data,sym,snapshotAsset)} rankLoading={dailyPicks.loading} rankError={dailyPicks.error} quiet={isAuthBlocked} compact/>
+      {designEnabled && reportReady && <><nav className={studio.navigation} aria-label="Symbol sections"><a href="#symbol-chart">Chart & comparisons</a><a href="#symbol-evidence">Measured evidence</a><a href="#symbol-research-views">More research views</a></nav><div id="symbol-chart" className={studio.chart}><SymbolComparisonChart key={`${sym}:${snapshotAsset}`} symbol={sym} type={snapshotAsset}/></div><div id="symbol-evidence" className={studio.evidenceHeading}><p>READ THE OBSERVATIONS</p><h2>Evidence, sources and limitations</h2><span>Open each section for its measurements and dates. Missing inputs remain unavailable.</span></div></>}
       {!isAuthBlocked && researchSnapshot && !loading && <ResearchSnapshotCard s={researchSnapshot} links={specialistLinks}/>}
 
 
@@ -673,16 +686,14 @@ export default function GoldenEggPage() {
         </Card>
       )}
 
-      {!isAuthBlocked && <CollapsibleSection deferMount title="Change symbol" summary={`${sym} · ${timeframe}`}>
-        <div className="flex flex-wrap gap-2"><input aria-label="Symbol" value={symbolInput} onChange={e=>setSymbolInput(e.target.value.toUpperCase())} onKeyDown={e=>e.key==='Enter'&&handleSymbolSubmit()} className="min-h-10 min-w-0 rounded border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3"/><button onClick={handleSymbolSubmit} className="min-h-10 rounded border px-3">Review</button></div>
-        <div className="mt-2 flex flex-wrap gap-2"><label className="text-xs">Asset <select aria-label="Asset type" value={assetType} onChange={e=>{const type=e.target.value as 'auto'|'equity'|'crypto';setAssetType(type);selectSymbol(sym,{assetType:type==='auto'?(isCryptoSymbol?'crypto':'equity'):type,timeframe});}} className="min-h-10 rounded border border-[var(--msp-border)] bg-[var(--msp-panel)] px-2"><option value="auto">Auto</option><option value="equity">Stock</option><option value="crypto">Crypto</option></select></label><label className="text-xs">Timeframe <select aria-label="Research timeframe" value={timeframe} onChange={e=>{const next=e.target.value as ScanTimeframe;setTimeframe(next);selectSymbol(sym,{timeframe:next,assetType:snapshotAsset});}} className="min-h-10 rounded border border-[var(--msp-border)] bg-[var(--msp-panel)] px-2">{SCAN_TIMEFRAMES.map(t=><option key={t.value} value={t.value}>{symbolText(t.label)}</option>)}</select></label></div>
-      </CollapsibleSection>}
+      {!designEnabled && symbolControls}
+      <div id="symbol-research-views" />
       {reportReady && <CollapsibleSection deferMount title="Research views" summary={`${sym} research detail`}>
       <GoldenEggTabRail activeTab={activeTab} onSelectTab={setActiveTab} />
       {/* ─── Deep-dive Tabs (v1 components) ─── */}
       {!isAuthBlocked && activeTab === 'Chart' && (
         <GoldenEggSubviewFrame tab="Chart" symbol={sym} terminalHref={canonicalTerminalHref} onSelectTab={setActiveTab}>
-          <SymbolComparisonChart symbol={sym} type={snapshotAsset} />
+          {designEnabled ? <a href="#symbol-chart" className={studio.chartLink}>Go to the comparison and indicator chart ↑</a> : <SymbolComparisonChart symbol={sym} type={snapshotAsset} />}
         </GoldenEggSubviewFrame>
       )}
       {!isAuthBlocked && activeTab === 'AI summary' && (
