@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendAlertEmail } from '@/lib/email';
 import { getSessionFromCookie } from '@/lib/auth';
+import { requireAdmin } from '@/lib/adminAuth';
 
 /**
- * Test Email Endpoint
- * 
- * POST /api/test-email
- * Body: { email?: string }
- * 
- * Sends a test alert email to verify Resend is working.
- * Requires authentication (uses session email by default).
+ * Test Email Endpoint (admin only)
+ *
+ * POST /api/test-email   Body: { email?: string }
+ * GET  /api/test-email?email=…
+ *
+ * Sends a test alert email to verify Resend is working. Admin session, operator session or the admin secret header is
+ * required: it sends a branded email to any address given, so it must never be open (it was an open relay).
  */
+const PRIVATE_HEADERS = { 'Cache-Control': 'private, no-store, max-age=0', Vary: 'Cookie' };
 
 export async function POST(req: NextRequest) {
+  const admin = await requireAdmin(req);
+  if (!admin.ok) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: PRIVATE_HEADERS });
   try {
     // Get session for default email
     const session = await getSessionFromCookie();
@@ -104,7 +108,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { 
         error: 'Failed to send test email',
-        details: error.message,
         hint: 'Check Resend dashboard for domain verification status'
       },
       { status: 500 }
@@ -114,6 +117,8 @@ export async function POST(req: NextRequest) {
 
 // Also support GET for easy browser testing
 export async function GET(req: NextRequest) {
+  const admin = await requireAdmin(req);
+  if (!admin.ok) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: PRIVATE_HEADERS });
   const url = new URL(req.url);
   const email = url.searchParams.get('email');
   
@@ -124,11 +129,6 @@ export async function GET(req: NextRequest) {
     }, { status: 400 });
   }
   
-  // Create a fake request with the email in body
-  const fakeReq = {
-    ...req,
-    json: async () => ({ email }),
-  } as NextRequest;
-  
-  return POST(fakeReq);
+  // Forward as a real POST (headers kept, so the admin check sees the same credentials).
+  return POST(new NextRequest(req.url, { method: 'POST', headers: req.headers, body: JSON.stringify({ email }) }));
 }
