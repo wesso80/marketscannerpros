@@ -86,6 +86,7 @@ export async function GET(request: NextRequest) {
       // W3: the public contract is built from an allow-list; the internal packet (cached, private consumers) is untouched.
       data: publicData,
       quota: quotaMeta,
+      reportUnlocked: quotaOn && Boolean(access) && !result.localDemo && Boolean(publicData.canonical),
       cached: result.cached || undefined,
       localDemo: result.localDemo || undefined,
       warnings: result.warnings.length ? result.warnings : undefined,

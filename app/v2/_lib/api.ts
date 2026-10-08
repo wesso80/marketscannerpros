@@ -207,6 +207,8 @@ export interface ScannerResponse {
 // --- Golden Egg ---
 /** /api/golden-egg: the public Symbol contract (W3), never the internal engine packet. */
 export interface GoldenEggResponse {
+  /** Server-confirmed core report admission; does not grant specialist or admin access. */
+  reportUnlocked?: boolean;
   success: boolean;
   data: import('@/lib/research/publicSymbolPacket').PublicSymbolPacket;
   cached?: boolean;
