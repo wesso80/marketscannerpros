@@ -1,170 +1,104 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
-import { researchLabel, researchReason } from '@/components/terminal/researchPresentation';
-import type { MarketPressureReading, PressureComponent } from '@/lib/marketPressureEngine';
+import { useEffect, useState, useCallback, type ReactNode } from 'react';
+import type { InputSection, PublicMarketInputs } from '@/lib/research/publicMarketInputs';
 
+/**
+ * Market inputs (Time Confluence tab). Renders the public Market Inputs contract: measured volatility, derivatives
+ * and options-chain inputs with source and time, and "Not collected" where an input is missing. No composite score,
+ * direction, alignment or pressure label (those stay inside the internal Market Pressure Engine).
+ */
 interface Props {
   symbol: string;
   scanMode?: string;
   sessionMode?: string;
 }
 
-const LABEL_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  HIGH_PRESSURE: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/30' },
-  BUILDING:      { bg: 'bg-amber-500/15',   text: 'text-amber-400',   border: 'border-amber-500/30' },
-  LOW_PRESSURE:  { bg: 'bg-slate-700/40',   text: 'text-slate-400',   border: 'border-slate-700' },
-  NO_PRESSURE:   { bg: 'bg-slate-800/30',   text: 'text-slate-500',   border: 'border-slate-800' },
-};
+const NOT_COLLECTED = 'Not collected';
+const fmt = (v: number | null, dp = 2, suffix = '') => (v == null ? NOT_COLLECTED : `${v.toLocaleString('en-US', { maximumFractionDigits: dp })}${suffix}`);
+const usd = (v: number | null) => (v == null ? NOT_COLLECTED : `$${Math.abs(v) >= 1e9 ? `${(v / 1e9).toFixed(2)}B` : Math.abs(v) >= 1e6 ? `${(v / 1e6).toFixed(2)}M` : v.toLocaleString('en-US', { maximumFractionDigits: 0 })}`);
+const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : 'time not supplied');
 
-const DIR_COLORS: Record<string, string> = {
-  LONG: 'text-emerald-400',
-  SHORT: 'text-rose-400',
-  NEUTRAL: 'text-slate-400',
-};
-
-const PRESSURE_NAMES: Record<string, { icon: string; label: string }> = {
-  time:       { icon: '⏱', label: 'Time' },
-  volatility: { icon: '📊', label: 'Volatility' },
-  liquidity:  { icon: '💧', label: 'Liquidity' },
-  options:    { icon: '⚙️', label: 'Options' },
-};
-
-function pressureText(value: string) {
-  return researchReason(value).replace(/\bMPE\b/g, 'Market pressure').replace(/\b(HIGH PRESSURE|LOW PRESSURE|NO PRESSURE|BUILDING)\b/g, label => researchLabel(label)).replace(/\bbullish\b/gi, 'upside').replace(/\bbearish\b/gi, 'downside').replace(/\bLONG\b/g, 'Upside').replace(/\bSHORT\b/g, 'Downside').replace(/\bNEUTRAL\b/g, 'Mixed');
-}
-
-function PressureBar({ name, pressure }: { name: string; pressure: PressureComponent }) {
-  const meta = PRESSURE_NAMES[name] || { icon: '•', label: name };
-  const pct = Math.min(100, Math.max(0, pressure.score));
-  const barColor = pct >= 75 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : pct >= 25 ? 'bg-slate-500' : 'bg-slate-700';
-  const dirLabel = pressure.direction !== 'neutral' ? ` (${pressure.direction === 'bullish' ? 'upside' : 'downside'})` : '';
-
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-[11px]">
-        <span className="font-medium text-slate-300">{meta.icon} {meta.label}{dirLabel}</span>
-        <span className="font-mono text-slate-400">{Math.round(pct)} <span className="text-[9px] text-slate-600">× {pressure.weight.toFixed(2)}w</span></span>
-      </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
-        <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${pct}%` }} />
-      </div>
-      {pressure.components.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {pressure.components.map((c, i) => (
-            <span key={i} className="rounded bg-slate-800/60 px-1.5 py-0.5 text-[9px] text-slate-500">{pressureText(c)}</span>
-          ))}
-        </div>
-      )}
+    <div className="flex min-w-0 justify-between gap-3 text-xs">
+      <dt className="text-slate-400">{label}</dt>
+      <dd className={`text-right font-mono ${value === NOT_COLLECTED ? 'text-slate-500' : 'text-slate-200'}`}>{value}</dd>
     </div>
   );
 }
 
-export default function MarketPressureWidget({ symbol, scanMode = 'intraday_1h', sessionMode = 'extended' }: Props) {
-  const [reading, setReading] = useState<MarketPressureReading | null>(null);
-  const [dataSources, setDataSources] = useState<Record<string, boolean>>({});
+function Section<T>({ title, section, children, foot }: { title: string; section: InputSection<T>; children: ReactNode; foot?: string }) {
+  return (
+    <section data-market-input={title} className="min-w-0 rounded-lg border border-slate-800 bg-slate-950/25 p-3">
+      <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-2">
+        <h4 className="text-xs font-semibold text-slate-200">{title}</h4>
+        <span className="text-[10px] text-slate-500">{section.source} · {when(section.asOf)}</span>
+      </div>
+      <dl className="space-y-1">{children}</dl>
+      {section.missing.length > 0 && <p className="mt-1.5 break-words text-[10px] text-amber-200/80">{section.missing.join(' · ')}</p>}
+      {foot && <p className="mt-1 break-words text-[10px] text-slate-500">{foot}</p>}
+    </section>
+  );
+}
+
+export default function MarketPressureWidget({ symbol, scanMode = 'intraday_1h' }: Props) {
+  const [data, setData] = useState<PublicMarketInputs | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchMPE = useCallback(async () => {
+  const load = useCallback(async () => {
     if (!symbol) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/market-pressure?symbol=${encodeURIComponent(symbol)}&scanMode=${encodeURIComponent(scanMode)}&sessionMode=${encodeURIComponent(sessionMode)}`);
+      const res = await fetch(`/api/market-pressure?symbol=${encodeURIComponent(symbol)}&scanMode=${encodeURIComponent(scanMode)}`);
       const json = await res.json();
-      if (json.success && json.reading) {
-        setReading(json.reading);
-        setDataSources(json.dataSources || {});
-      } else {
-        setError(json.error || 'Failed to compute pressure');
-      }
+      if (res.ok && json?.success && json.data?.contract === 'public-market-inputs-v1') setData(json.data);
+      else { setData(null); setError(json?.error || 'Market inputs could not be loaded'); }
     } catch {
-      setError('Network error');
+      setData(null);
+      setError('Market inputs could not be loaded');
     } finally {
       setLoading(false);
     }
-  }, [symbol, scanMode, sessionMode]);
+  }, [symbol, scanMode]);
 
-  useEffect(() => {
-    fetchMPE();
-  }, [fetchMPE]);
+  useEffect(() => { void load(); }, [load]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8 text-xs text-slate-500">
-        <div className="mr-2 h-3 w-3 animate-spin rounded-full border-2 border-slate-600 border-t-emerald-400" />
-        Computing market pressure…
-      </div>
-    );
-  }
+  if (loading) return <div className="py-8 text-center text-xs text-slate-500">Loading market inputs…</div>;
+  if (error) return <div role="alert" className="py-4 text-center text-xs text-slate-500">{error}</div>;
+  if (!data) return null;
 
-  if (error) {
-    return (
-      <div className="py-4 text-center text-xs text-slate-500">{error}</div>
-    );
-  }
-
-  if (!reading) return null;
-
-  const lbl = LABEL_COLORS[reading.label] || LABEL_COLORS.NO_PRESSURE;
-  const activeSourceCount = Object.values(dataSources).filter(Boolean).length;
-
+  const v = data.volatility.values;
   return (
-    <div className="space-y-4">
-      {/* ── Header: Composite score + direction ── */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Score badge */}
-        <div className={`rounded-xl border px-4 py-2 ${lbl.bg} ${lbl.border}`}>
-          <div className="text-[10px] uppercase tracking-wider text-slate-500">Pressure</div>
-          <div className={`text-2xl font-bold tabular-nums ${lbl.text}`}>{Math.round(reading.composite)}</div>
-        </div>
-
-        {/* Label + direction */}
-        <div className="space-y-1">
-          <div className={`text-sm font-bold ${lbl.text}`}>
-            {researchLabel(reading.label)}
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            <span className={`font-semibold ${DIR_COLORS[reading.direction] || 'text-slate-400'}`}>
-              {reading.direction === 'LONG' ? '↑ Upside evidence' : reading.direction === 'SHORT' ? '↓ Downside evidence' : '↔ Mixed evidence'}
-            </span>
-            <span className="text-slate-600">·</span>
-            <span className="text-slate-400">
-              Alignment: <span className="font-semibold text-slate-200">{Math.round(reading.alignment * 100)}%</span>
-            </span>
-          </div>
-          {reading.regime && reading.regime !== 'UNKNOWN' && (
-            <div className="text-[10px] text-slate-500">Regime: {researchLabel(reading.regime)}</div>
-          )}
-        </div>
-
-        {/* Data source indicators */}
-        <div className="ml-auto flex items-center gap-1">
-          {(['time', 'volatility', 'liquidity', 'options'] as const).map((key) => (
-            <div
-              key={key}
-              className={`h-2 w-2 rounded-full ${dataSources[key] ? 'bg-emerald-500/60' : 'bg-slate-700'}`}
-              title={`${PRESSURE_NAMES[key]?.label || key}: ${dataSources[key] ? 'active' : 'no data'}`}
-            />
-          ))}
-          <span className="ml-1 text-[9px] text-slate-600">{activeSourceCount}/4</span>
-        </div>
+    <div data-market-inputs className="space-y-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <Section title="Volatility" section={data.volatility} foot={v.squeezeDefinition}>
+          <Row label="ADX (14)" value={fmt(v.adx14, 1)} />
+          <Row label="ATR % (14)" value={fmt(v.atrPercent14, 2, '%')} />
+          <Row label="Squeeze" value={v.inSqueeze == null ? NOT_COLLECTED : v.inSqueeze ? 'Yes' : 'No'} />
+        </Section>
+        {data.derivatives && (
+          <Section title="Derivatives" section={data.derivatives}>
+            <Row label="Open interest" value={usd(data.derivatives.values.openInterestUsd)} />
+            <Row label="Exchanges" value={fmt(data.derivatives.values.exchanges, 0)} />
+            <Row label="Funding rate" value={fmt(data.derivatives.values.fundingRatePercent, 4, '%')} />
+          </Section>
+        )}
+        {data.options && (
+          <Section title="Options chain" section={data.options} foot={data.options.values.gammaEstimateBasis}>
+            <Row label="Expiry" value={data.options.values.expiry ?? NOT_COLLECTED} />
+            <Row label="Put/call (open interest)" value={fmt(data.options.values.putCallRatio, 2)} />
+            <Row label="Max pain" value={data.options.values.maxPainStrike == null ? NOT_COLLECTED : `${fmt(data.options.values.maxPainStrike, 2)}${data.options.values.maxPainReliable === false ? ' (thin coverage)' : ''}`} />
+            <Row label="IV rank" value={fmt(data.options.values.ivRank, 0)} />
+            <Row label="Strikes with volume high vs open interest" value={fmt(data.options.values.strikesWithHighVolumeVsOpenInterest, 0)} />
+            <Row label="Estimated net gamma" value={usd(data.options.values.estimatedNetGammaUsd)} />
+            <Row label="Estimated gamma flip" value={fmt(data.options.values.estimatedGammaFlipPrice, 2)} />
+          </Section>
+        )}
       </div>
-
-      {/* ── Pressure dimension bars ── */}
-      <div className="space-y-3">
-        {(['time', 'volatility', 'liquidity', 'options'] as const).map((key) => (
-          <PressureBar key={key} name={key} pressure={reading.pressures[key]} />
-        ))}
-      </div>
-
-      {/* ── Summary line ── */}
-      {reading.summary && (
-        <div className="rounded-lg border border-slate-800 bg-slate-950/25 px-3 py-2 text-[11px] text-slate-400">
-          {pressureText(reading.summary)}
-        </div>
-      )}
+      <p className="text-[11px] text-slate-500">{data.note} Observed {when(data.observedAt)}.</p>
     </div>
   );
 }
