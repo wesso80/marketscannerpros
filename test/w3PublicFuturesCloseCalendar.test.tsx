@@ -95,6 +95,18 @@ describe('public futures close calendar (route)', () => {
     h.session = { workspaceId: 'ws-a', tier: 'free' }; h.paid = false;
     expect((await get('symbol=ES')).status).toBe(403);
   });
+  it('every response (200, 401, 403) is private, no-store and varies by cookie (Pro-only route)', async () => {
+    const pro = await GET(new NextRequest('https://msp.test/api/terminal/futures?symbol=ES'));
+    h.session = null;
+    const anon = await GET(new NextRequest('https://msp.test/api/terminal/futures?symbol=ES'));
+    h.session = { workspaceId: 'ws-a', tier: 'free' }; h.paid = false;
+    const free = await GET(new NextRequest('https://msp.test/api/terminal/futures?symbol=ES'));
+    expect([pro.status, anon.status, free.status]).toEqual([200, 401, 403]);
+    for (const r of [pro, anon, free]) {
+      expect(r.headers.get('cache-control')).toBe('private, no-store, max-age=0');
+      expect(r.headers.get('vary')).toBe('Cookie');
+    }
+  });
 });
 
 describe('Futures Close Calendar view', () => {
