@@ -1,0 +1,44 @@
+PUBLIC REDESIGN RECONCILIATION — 8 October 2026
+
+Inputs:
+- Codex PR #517: 3a2f350b301a70eb0d2eaa10ec979b8fb93a1a30.
+- Latest fetched research-page-phase4: 0a2031da.
+- Base includes #514 ec589644, #515 11f944cc, #518 f9756fbc, #516 0a2031da.
+
+Prepared in isolated .reconcile-review checkout. Local integration completed with
+no text conflicts; only app/v2/_lib/api.ts needed automatic content combination.
+The combined API retains public count-only calendar types and Codex's DVE public
+contract, successful-core auxiliary gating, quota error handling and Copilot tokens.
+No edits to Claude's pending drafts (#519 and newer) are included.
+
+Source review confirms the scanner test route now calls its handler in-process,
+removing the Host-derived secret-bearing HTTP request. Both close calendar families
+publish counts/times instead of weights/scores. Retired advice endpoints retain
+access checks followed by private 410 responses. Their corresponding tests pass.
+No additional admin route, worker, scoring or DVE-engine changes relative to the
+new shared base. Imported calendar-helper changes are exactly Claude's landed work.
+
+Verification:
+- 189 tests in 22 files passed on the combined checkout, including both builders'
+  public response contracts, private scanner endpoints, route retirements, Copilot,
+  quotas, Free M2/Pro history, Portfolio limits and Journal downgrade protection.
+- TypeScript reports the same six known Stripe-version/timer typing errors.
+- 32 full Next app browser cases passed at 1280/390: all seven destinations plus
+  homepage, pricing and sign-in, with populated/missing states. Includes Pro M2
+  history selectors and table, chart mode switching and Journal drawer open/close.
+  No document overflow or uncaught page errors. Mobile Portfolio typography fix
+  visually confirmed. Data/auth/payment responses are synthetic; no live writes.
+  Artifacts: outputs/reconciled-browser/public-design-browser.json and PNGs.
+- Dedicated Free record browser follow-up exited during local compilation before
+  a completed case. It remains unverified; server-side Free limits are included
+  in the 189 passing tests. The complete Pro record-page browser cases passed.
+- No full repository suite, production build, real database or provider calls.
+
+No PR merge, deployment, migration or production-data change. The local integration
+commit preserves both parent histories and is published only to the existing draft
+branch. Reviewers should use #517 as the consolidated candidate and avoid separately
+merging the older stacked branches without checking ancestry.
+
+Remaining release work: known type/test baseline cleanup; real database integration;
+trial billing/reminders/cancellation; actual delivery/checkout verification; final
+review of remaining public wording/endpoint work from Claude. Flags stay opt-in.

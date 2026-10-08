@@ -630,33 +630,13 @@ export type FuturesSessionState = {
 
 export type FuturesAnchorMode = 'globex' | 'rth' | 'cash_bridge';
 
-export type FuturesCloseCalendarRow = {
-  timeframe: string;
-  category: 'intraday' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
-  nextCloseISO: string;
-  minutesToClose: number;
-  weight: number;
-};
-
-export type FuturesCloseCluster = {
-  label: string;
-  timeISO: string;
-  timeEtLabel: string;
-  timeframes: string[];
-  weight: number;
-  clusterScore: number;
-};
-
-export type FuturesCloseCalendarResponse = {
-  symbol: string;
-  anchorMode: FuturesAnchorMode;
-  timezone: 'America/New_York';
-  horizonDays: number;
-  schedule: FuturesCloseCalendarRow[];
-  clusters: FuturesCloseCluster[];
-  timeline: string[];
-  warnings: string[];
-};
+/** Public futures close calendar (public-futures-close-calendar-v1): close times and counts; no weight or score. */
+export type {
+  PublicFuturesCloseRow as FuturesCloseCalendarRow,
+  PublicFuturesCloseGroup as FuturesCloseCluster,
+  PublicFuturesCloseCalendar as FuturesCloseCalendarResponse,
+} from '@/lib/research/publicFuturesCloseCalendar';
+import type { PublicFuturesCloseCalendar as FuturesCloseCalendarResponse } from '@/lib/research/publicFuturesCloseCalendar';
 
 export type PhantomTimeState = {
   symbol: string;
@@ -709,21 +689,24 @@ export function fetchFuturesTerminal(
 export type CloseCalendarAnchor = 'NOW' | 'TODAY' | 'PRIOR_DAY' | 'EOW' | 'EOM' | 'CUSTOM';
 export type CloseCalendarScheduleModel = 'crypto_247' | 'equity_session' | 'forex_session';
 
+/** Public Close Calendar contract (public-close-calendar-v1): no timeframe weight or window score. */
 export interface ForwardCloseScheduleRow {
   tf: string;
+  tfMinutes: number;
   category: 'intraday' | 'daily' | 'weekly' | 'monthly' | 'yearly';
-  weight: number;
   firstCloseAtISO: string | null;
   minsToFirstClose: number | null;
   closesInHorizon: number;
   closesOnAnchorDay: boolean;
 }
 
+/** A 60-minute window in which two or more daily-or-longer timeframes close; listed in time order. */
 export interface ForwardCloseCluster {
   label: string;
+  windowStartISO: string;
+  windowEndISO: string;
   tfs: string[];
-  weight: number;
-  clusterScore: number;
+  timeframeCount: number;
 }
 
 export interface ForwardCloseCalendar {
@@ -742,6 +725,9 @@ export interface ForwardCloseCalendar {
   schedule: ForwardCloseScheduleRow[];
   closesOnAnchorDay: ForwardCloseScheduleRow[];
   forwardClusters: ForwardCloseCluster[];
+  contract: 'public-close-calendar-v1';
+  clusterRule: string;
+  generatedAt: string;
 }
 
 export function fetchCloseCalendar(

@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatMarketTime } from '@/lib/market/priceStamp';
 import { detectAssetClass } from '@/lib/detectAssetClass';
+import type { CloseCalendarAnchor } from "@/lib/confluence-learning-agent";
 import type {
-  CloseCalendarAnchor,
-  ForwardCloseCalendar,
-  ForwardCloseCluster,
-  ForwardCloseScheduleRow,
-} from "@/lib/confluence-learning-agent";
+  PublicCloseCalendar as ForwardCloseCalendar,
+  PublicCloseWindow as ForwardCloseCluster,
+  PublicCloseScheduleRow as ForwardCloseScheduleRow,
+} from "@/lib/research/publicCloseCalendar";
 
 // ── Anchor + Horizon selectors ──
 
@@ -68,12 +68,6 @@ function categoryBg(cat: string): string {
   }
 }
 
-function clusterScoreColor(score: number): string {
-  if (score >= 70) return "border-emerald-500/40 bg-emerald-500/10";
-  if (score >= 40) return "border-amber-500/40 bg-amber-500/10";
-  return "border-slate-700 bg-slate-900/30";
-}
-
 function scheduleModelTone(model?: ForwardCloseCalendar['scheduleModel']): string {
   if (model === 'crypto_247') return 'border-cyan-500/35 bg-cyan-500/10 text-cyan-200';
   if (model === 'equity_session') return 'border-emerald-500/35 bg-emerald-500/10 text-emerald-200';
@@ -126,7 +120,7 @@ export default function CloseCalendar({ symbol: propSymbol, onClusterClick, acti
         signal: controller.signal,
       });
       const json = await res.json();
-      if (!res.ok || !json?.success) {
+      if (!res.ok || !json?.success || json?.data?.contract !== "public-close-calendar-v1") {
         setError(json?.error || "Calendar fetch failed");
         return;
       }
@@ -280,10 +274,13 @@ export default function CloseCalendar({ symbol: propSymbol, onClusterClick, acti
             </div>
           )}
 
-          {/* ── Forward Close Clusters (the money shot) ── */}
+          {/* ── Coinciding-close windows, in time order (no weight or score) ── */}
           {data.forwardClusters.length > 0 && (
-            <div>
-              <div className="mb-2 text-xs font-semibold text-slate-300">Close Cluster Timeline</div>
+            <div data-close-windows>
+              <div className="mb-1 text-xs font-semibold text-slate-300">
+                Close windows in time order{data.forwardClusters.length > 8 ? ` (next 8 of ${data.forwardClusters.length})` : ""}
+              </div>
+              <div className="mb-2 text-[10px] text-slate-500">{data.clusterRule}</div>
               <div className="flex flex-wrap gap-2">
                 {data.forwardClusters.slice(0, 8).map((cluster, i) => (
                   <ClusterCard
@@ -366,7 +363,7 @@ function ClusterCard({ cluster, isActive, onClick }: { cluster: ForwardCloseClus
       className={`cursor-pointer rounded-xl border px-3 py-2 transition-all ${
         isActive
           ? 'border-emerald-400/60 bg-emerald-500/15 ring-1 ring-emerald-400/30'
-          : clusterScoreColor(cluster.clusterScore)
+          : 'border-slate-700 bg-slate-900/30'
       } hover:ring-1 hover:ring-slate-500/40`}
     >
       <div className="text-[11px] font-semibold text-slate-100">{cluster.label}</div>
@@ -378,7 +375,7 @@ function ClusterCard({ cluster, isActive, onClick }: { cluster: ForwardCloseClus
         ))}
       </div>
       <div className="mt-1 text-[10px] text-slate-400">
-        Wt {Math.round(cluster.weight)} • Score {cluster.clusterScore}
+        {cluster.timeframeCount} timeframes close
       </div>
     </div>
   );
@@ -415,8 +412,7 @@ function AnchorDayTable({ rows, assetClass }: { rows: ForwardCloseScheduleRow[];
                   <tr className="border-b border-slate-800 text-[10px] uppercase tracking-wider text-slate-500">
                     <th scope="col" className="pb-1.5 pr-3 font-medium">TF</th>
                     <th scope="col" className="pb-1.5 pr-3 font-medium">Close Time</th>
-                    <th scope="col" className="pb-1.5 pr-3 font-medium">In</th>
-                    <th scope="col" className="pb-1.5 font-medium">Weight</th>
+                    <th scope="col" className="pb-1.5 font-medium">In</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -426,10 +422,9 @@ function AnchorDayTable({ rows, assetClass }: { rows: ForwardCloseScheduleRow[];
                       <td className="py-1.5 pr-3 font-mono text-slate-300">
                         {row.firstCloseAtISO ? formatDate(row.firstCloseAtISO, assetClass) : "Not collected"}
                       </td>
-                      <td className="py-1.5 pr-3 font-mono text-slate-400">
+                      <td className="py-1.5 font-mono text-slate-400">
                         {formatMinsShort(row.minsToFirstClose)}
                       </td>
-                      <td className="py-1.5 text-slate-500">{row.weight}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -459,8 +454,7 @@ function FullScheduleTable({ rows, assetClass }: { rows: ForwardCloseScheduleRow
             <th scope="col" className="pb-1.5 pr-3 font-medium">Next Close</th>
             <th scope="col" className="pb-1.5 pr-3 font-medium">In</th>
             <th scope="col" className="pb-1.5 pr-3 font-medium">Closes in Window</th>
-            <th scope="col" className="pb-1.5 pr-3 font-medium">On Anchor Day</th>
-            <th scope="col" className="pb-1.5 font-medium">Weight</th>
+            <th scope="col" className="pb-1.5 font-medium">On Anchor Day</th>
           </tr>
         </thead>
         <tbody>
@@ -479,14 +473,13 @@ function FullScheduleTable({ rows, assetClass }: { rows: ForwardCloseScheduleRow
                 {formatMinsShort(row.minsToFirstClose)}
               </td>
               <td className="py-1.5 pr-3 text-center font-semibold text-slate-200">{row.closesInHorizon}</td>
-              <td className="py-1.5 pr-3 text-center">
+              <td className="py-1.5 text-center">
                 {row.closesOnAnchorDay ? (
                   <span className="inline-block rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-400">YES</span>
                 ) : (
                   <span className="text-slate-600">No</span>
                 )}
               </td>
-              <td className="py-1.5 text-slate-500">{row.weight}</td>
             </tr>
           ))}
         </tbody>

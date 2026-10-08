@@ -1,7 +1,7 @@
 'use client';
 
 import type { TimeGravityMap, CoverageDiagnostics } from '@/lib/time/timeGravityMap';
-import type { ForwardCloseCalendar } from '@/lib/confluence-learning-agent';
+import type { PublicCloseCalendar as ForwardCloseCalendar } from '@/lib/research/publicCloseCalendar';
 import { ResearchFold, ResearchMetric, researchNumber, researchPrice, researchTime, researchReason } from './researchPresentation';
 
 export default function GravityResearchView({symbol,tgm,coverage,calendar,receivedAt,empty,localDemo,error,onRefresh,loading}: {symbol:string;tgm:TimeGravityMap;coverage:CoverageDiagnostics|null;calendar:ForwardCloseCalendar|null;receivedAt:Date;empty:boolean;localDemo:boolean;error:string|null;onRefresh:()=>void;loading:boolean}) {

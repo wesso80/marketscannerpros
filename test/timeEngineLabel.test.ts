@@ -105,8 +105,10 @@ it('uses the label helper in the nested panels and does not restructure them', (
   expect(widget).not.toContain('TARGET ACTIVE');
   expect(widget).not.toContain('MOMENTUM OVERRIDE:');
   expect(widget).not.toContain('>AOI TARGET ZONES<');
-  expect(page).toContain('timeEngineLabel(input.setup.window.status)');
-  expect(page).toContain('timeEngineLabel(input.execution.closeConfirmation)');
+  // W3: the scored window / close-confirmation panel was removed; the tab shows the public timing contract only.
+  expect(page).not.toContain('input.setup.window.status');
+  expect(page).not.toContain('input.execution.closeConfirmation');
+  expect(page).toContain('PublicTimeConfluence');
   expect(page).toContain('<details className="w-full rounded-2xl border border-slate-800 bg-slate-900/30">');
   expect(page).toContain('Time Gravity Map');
   expect(page).toContain('Intraday Equity Close Schedule');

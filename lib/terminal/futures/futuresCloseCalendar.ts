@@ -291,7 +291,9 @@ export function buildFuturesCloseCalendar(
     .map((row) =>
       isClosed ? { ...row, minutesToClose: row.minutesToClose + minutesUntilReopen } : row,
     )
-    .filter((row) => row.minutesToClose <= horizonDays * 24 * 60 + 52 * 7 * 24 * 60)
+    // Only closes that fall within the selected horizon (minutes measured from now, including any
+    // weekend/maintenance reopen gap). Previously the bound was horizon + 52 weeks, so the horizon had no effect.
+    .filter((row) => row.minutesToClose <= horizonDays * 24 * 60)
     .sort((a, b) => a.minutesToClose - b.minutesToClose);
 
   const warnings: string[] = [];
