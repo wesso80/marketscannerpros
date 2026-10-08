@@ -1,3 +1,21 @@
+FOLLOW-UP: real Copilot handler + quota wrapper + PostgreSQL integration
+New publicCopilotLedger.integration.test.ts composes real withPublicAiQuota(publicCopilot), real
+signed evidence verification, real answer policy and real createPublicDailyQuota transactions.
+Mocks only session/entitlement resolution, rate limiter and model fetch; production DB access throws.
+Seven new cases pass: durable success/replay/conflicting ID, simultaneous duplicate, rejected output
+release and retry, interrupted outcome retained/pending, missing-key release, 21st request refused,
+and signed-out/Free refused without ledger writes. Stored counts and model-call counts asserted.
+Existing 11 PostgreSQL quota checks also pass: 18 total. Dedicated loopback PostgreSQL port 55441,
+random isolated databases, actual migrations 126/127 (existing suite additionally 128); both databases
+dropped and dedicated server stopped. No production DB/provider/OpenAI calls or application edits.
+Run with QUOTA_TEST_POSTGRES_PORT set to a dedicated fixture PostgreSQL (quota_test user,
+quota_local_only password) using the repo Vitest configuration. These tests create/drop random
+copilot_test_* databases. Never point at production; host is hardcoded 127.0.0.1 and production db
+module is mocked to throw. Existing local runner used run-copilot-ledger-tests.mjs.
+Limit: session/subscription DB resolution and real OpenAI remain mocked; this is not a deployed
+browser-to-database run. Next recommended task: review release readiness/remaining route coverage
+with Claude, then evaluate real model evidence selections against held-out educational questions.
+
 FOLLOW-UP: successful report -> answer -> shared allowance browser flow
 Extended app-smoke.mjs with MSP_SMOKE_SUCCESS=1. A synthetic public Symbol report is signed by
 issueSymbolEvidence and its scripted answer rendered by validateCopilotAnswer. Actual Next Symbol
