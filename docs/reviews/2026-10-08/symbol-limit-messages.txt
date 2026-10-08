@@ -1,0 +1,13 @@
+Symbol report limit and pending UI — 8 October 2026
+
+Base: d321a4ae, PR #499. Fetched before edits; remote research-page-phase4 remains 6174ed6b. Scope: Golden Egg response error metadata, shared API hook error transport, Symbol error presentation, one new client notice and its tests. No admin, provider, billing or quota-calculation changes.
+
+Daily-limit and pending responses now carry explicit codes, confirmed plan and quota reset metadata. The API hook recognizes only the Golden Egg endpoint with the matching status/code and a known plan. Generic HTTP 429, malformed responses and provider failures do not become allowance UI. The hook clears old instrument metadata synchronously when dependencies change, and when retrying.
+
+Limited visitors get the existing /auth email signup/sign-in flow with the Symbol query preserved in next; Free users get /pricing. Pro and pending states do not show an upsell. Reset timestamps use the browser locale/time zone with the Eastern-midnight rule explained; missing/invalid reset timestamps show unavailable, never an invented date. Manual status/allowance checks use the existing same-instrument request and ledger deduplication; no polling or new provider requests are introduced. Already unlocked tickers are described as reopenable.
+
+Validation: 27 tests pass across new notice/hook cases, quota route, Free-tier page and WP1 acceptance. Eight actual-page component browser fixtures (visitor limit, Free limit, pending, provider failure, each 1280 and 390px) pass with no exceptions or document overflow. Verified action destinations, no summary/comparison requests for blocked reports, and Sydney local time for an Eastern-standard-time reset. Mobile screenshot inspected and encoding corrected. All HTTP data mocked and non-local traffic blocked. TypeScript has the same six baseline failures (four Stripe versions and two timer unref types), none in changed files. git diff --check passes.
+
+Artifacts: outputs/symbol-limit-browser-results.json and symbol-limit-{mode}-{width}.png. These are component fixtures, not a live Next.js/provider/billing integration test. No merge/deploy; rollout disabled.
+
+Remaining release blockers from #497 still apply: guest equity provider permission, specialist public entitlement/response contracts, independently starting quote/DVE/regime hooks, and public wording work. Recommended next task: defer Symbol's auxiliary requests until core admission succeeds, preserving defaults for all other consumers and admin.
