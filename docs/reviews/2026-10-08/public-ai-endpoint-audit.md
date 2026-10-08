@@ -20,16 +20,16 @@ Severity: **High** = live caller or reachable route that emits trade levels/sizi
 | E | `/api/portfolio/analyze` | Pro | OpenAI | `app/tools/portfolio/page.tsx:700` | Descriptive, forbidden-word guard, required footer | Low (compliant) | None |
 | F1 | `/api/market-focus/generate` | Pro | OpenAI | None | Score → "Bullish continuation conditions" / "Bearish-Leaning" / "Risk-off" stance | Medium | Retire or make descriptive |
 | F2 | `/api/jobs/generate-market-focus` | Cron (`0 21 * * *`) | OpenAI | Worker schedule | "Bullish Phase / Bearish Phase" language written to storage | Medium | Check consumers of stored output; descriptive phase labels |
-| F3 | `/api/ai-market-focus` | Pro | OpenAI | `components/DailyAIMarketFocus.tsx` (not mounted) | Reads F2 output | Low (dead UI) | Remove with dead component |
+| F3 | `/api/ai-market-focus` | Pro | OpenAI | `components/DailyAIMarketFocus.tsx` (not mounted) | Reads F2 output | Low (dead UI) | Retired (410 after Pro check); dead component deleted |
 | G | `/api/ai/analyst-context` | Signed in | OpenAI | `lib/ai/useAnalystContext.ts` (imported by nothing) | "Position sizing context", Sizing, performance-throttle `governorRecommendation` | Medium | Retire with the dead hook |
 | H1 | `/api/ai/explain` | Signed in | OpenAI | None | "one actionable insight" | Medium | Retire or descriptive wording |
-| H2 | `/api/ai/suggest` | Signed in | OpenAI | None | "Next Best Actions"; adaptive layer; `lib/ai/tools.ts` | Medium | Retire |
+| H2 | `/api/ai/suggest` | Signed in | OpenAI | None | "Next Best Actions"; adaptive layer; `lib/ai/tools.ts` | Medium | Retired (410 after sign-in check) |
 | I1 | `GET /api/ai-scanner/alerts` | **Unauthenticated** | — | External Streamlit `app.py` (per comments) | Lists stored TradingView alerts (side LONG/SHORT, price, features); `limit` unbounded | **High (security)** | Require auth (admin or shared secret), cap `limit` |
 | I2 | `POST /api/ai-scanner/test` | **Unauthenticated** | — | None | Injects the server's own webhook secret and inserts a fake LONG BTC alert | **High (security)** | Admin-only or delete |
 | I3 | `/api/ai-scanner/alert`, `/status` | Secret-gated / harmless | — | TradingView webhook | — | Low | None |
-| J | `/api/ai-signals` | Pro | — | None | POST writes entry/stop/target1/target2/verdict to `ai_signal_log` | Medium | Retire, or move behind `/api/admin` |
-| K | `/api/trade-proposal` | Pro | — | None | Sized order, recommended leverage, `governor_max_position_size`, `executable` flag; 500 leaks `err.message` in `detail` | **High** (reachable sizing + leak) | Retire; at minimum generic 500 |
-| L | `/api/execute-trade` | Signed in only (no paid check) | — | None | LIVE refused; PAPER writes journal; DRY_RUN default. No broker code in `lib/execution` | Medium | Keep LIVE refused; add paid check or retire; rename to simulation per no-broker rule |
+| J | `/api/ai-signals` | Pro | — | None | POST writes entry/stop/target1/target2/verdict to `ai_signal_log` | Medium | Retired (410 after Pro check) |
+| K | `/api/trade-proposal` | Pro | — | None | Sized order, recommended leverage, `governor_max_position_size`, `executable` flag; 500 leaks `err.message` in `detail` | **High** (reachable sizing + leak) | Retired (410 after Pro check) |
+| L | `/api/execute-trade` | Signed in only (no paid check) | — | None | LIVE refused; PAPER writes journal; DRY_RUN default. No broker code in `lib/execution` | Medium | Retired (410 after sign-in check) |
 | M | `/api/confluence-scan` | Pro | GPT-4o (`full` mode) | `hierarchical`: `components/time/TimeScannerPage.tsx:426`; `calendar`: `CloseCalendar.tsx:116`, `TimeGravityMapWidget.tsx:905`, `app/v2/_lib/api.ts:786` | POST default `mode='forecast'`; GET default `'full'` → `confluenceAgent.scan` asks GPT-4o for "specific levels and risk parameters", parses target, stop, confidence %, pattern win rate. **Live:** TimeScannerPage maps `sd.tradeSetup` to entry/stopLoss/takeProfit/riskReward/riskPct/rewardPct (lines 455–521) and `bestEntryWindow` (342–343) | **High** (live UI shows levels) | Restrict public modes to `hierarchical`/`calendar`; strip `tradeSetup`/`bestEntryWindow` in a public serializer; drop TimeScanner level rows |
 | N | `/api/research-case` | Signed in | — | `lib/clientResearchCases.ts` | Built from capital-flow `probability_matrix` (continuation/pin/expansion probabilities) | Medium | Public contract without probabilities (as done for DVE) |
 | O1 | `/api/news-sentiment` | Per route | gpt-4o-mini | `app/v2/_lib/api.ts:558`, `app/tools/news/page.tsx:470`, `components/NewsSentiment.tsx`, `components/CryptoNewsWidget.tsx` | `NEWS_BRIEF_SYSTEM_PROMPT` descriptive-only, `stripAdviceSentences` guard, label | Low (compliant) | None |
@@ -70,10 +70,19 @@ Proposed sequencing: Codex removes these from Copilot first. After that, `arcaV3
 `mspAnalystV2` options lines and the two tools in `lib/ai/tools.ts` have no remaining required consumers and can be
 deleted together with `/api/msp-analyst` and `/api/ai/suggest` in one Claude PR.
 
-## 4. Suggested order of work (none started)
+## 4. Suggested order of work
 
 1. Security: I1, I2 (auth + limit), K generic 500.
 2. Live UI: M (`confluence-scan` public serializer; TimeScanner level rows).
 3. Uncalled advice routes: retire A, G, H1, H2, J, K, F1/F3 (after confirming no external consumers in logs).
 4. Wording: D, F2, O2, N.
 5. After Codex's Copilot lands: shared prompt/tool deletions (§3).
+
+## 5. Status (2026-10-08)
+
+- I1/I2: fixed in the ai-scanner auth PR.
+- M: fixed in the Time Confluence evidence PR.
+- H2, J, K, L, F3: retired (410 after the existing access check).
+- Not retired yet, by design: A `msp-analyst`, G `ai/analyst-context`, H1 `ai/explain` (Codex is adding the public
+  AI quota to these on `codex/public-copilot-education`), and F1 `market-focus/generate` (accepts `ADMIN_API_KEY`, so
+  an external scheduler may call it; confirm before retiring).
