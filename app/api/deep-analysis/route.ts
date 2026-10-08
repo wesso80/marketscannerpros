@@ -1,3 +1,5 @@
+import { publicQuotaEnabled, publicQuota, resolvePublicActor, publicInstrumentKey } from '@/lib/publicQuotaAccess';
+import { reportSummary } from '@/lib/publicReportSummary';
 /**
  * Symbol AI summary (ticker research page, W3 Option 2).
  *
@@ -51,8 +53,9 @@ export async function GET(request: NextRequest) {
     const rl = deepAnalysisLimiter.check(ip);
     if (!rl.allowed) return NextResponse.json({ success: false, error: `Rate limit exceeded. Try again in ${rl.retryAfter}s` }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } });
     const session = await getSessionFromCookie();
-    if (!session?.workspaceId) return NextResponse.json({ success: false, error: 'Please log in to use the Symbol AI summary' }, { status: 401 });
-    if (!hasPaidSessionAccess(session)) return NextResponse.json({ success: false, error: 'Pro subscription required for the Symbol AI summary' }, { status: 403 });
+    const quotaOn=publicQuotaEnabled();
+    if (!quotaOn && !session?.workspaceId) return NextResponse.json({ success: false, error: 'Please log in to use the Symbol AI summary' }, { status: 401 });
+    if (!quotaOn && !hasPaidSessionAccess(session)) return NextResponse.json({ success: false, error: 'Pro subscription required for the Symbol AI summary' }, { status: 403 });
 
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get('symbol')?.toUpperCase().trim();
@@ -63,9 +66,19 @@ export async function GET(request: NextRequest) {
     const assetClass = detectAssetClass(symbol, searchParams.get('type') || undefined);
     if (assetClass === 'forex') return NextResponse.json({ success: false, error: 'The Symbol AI summary covers equities and crypto' }, { status: 400 });
 
+    let publicAccess: Awaited<ReturnType<typeof resolvePublicActor>> = null;
+    let resource = '';
+    if(quotaOn){
+      publicAccess=await resolvePublicActor(request,session);
+      if(!publicAccess)return NextResponse.json({success:false,error:'Open a Symbol report first'},{status:401,headers:{'Cache-Control':'private, no-store'}});
+      if(!publicAccess.bypass){
+        try{resource=publicInstrumentKey(symbol,assetClass);}catch{return NextResponse.json({success:false,error:'Invalid or unmapped symbol'},{status:400});}
+        if(!await publicQuota.isUnlocked(publicAccess.subject,resource))return NextResponse.json({success:false,error:'Open this Symbol report before its AI summary'},{status:403,headers:{'Cache-Control':'private, no-store'}});
+      }
+    }
     // Same packet, cache and selected expiry as the Symbol page (W1); only its public projection is used here.
     let computed: Awaited<ReturnType<typeof computeGoldenEgg>>;
-    try { computed = await computeGoldenEgg({ symbol, timeframe, assetClass, workspaceId: session.workspaceId, expiry }); }
+    try { computed = await computeGoldenEgg({ symbol, timeframe, assetClass, workspaceId: session?.workspaceId, expiry }); }
     catch (e) { return NextResponse.json({ success: false, error: `Unable to build the Symbol evidence for ${symbol}: ${e instanceof Error ? e.message : 'unavailable'}` }, { status: 502 }); }
     const p = toPublicSymbolPacket(computed.payload);
     if (!p.canonical) return NextResponse.json({ success: false, localDemo: computed.localDemo || undefined, error: 'No live evidence for this symbol (demo payload); the AI summary needs live data.' });
@@ -85,7 +98,8 @@ export async function GET(request: NextRequest) {
     });
     const sections = sectionsFrom(snapshot, ev, news);
     const prompt = buildSummaryPrompt(symbol, p, snapshot, sections, ev.independenceNote);
-    const narrative = sanitizeSummary(await generateSummary(prompt));
+    const text = publicAccess && !publicAccess.bypass ? await reportSummary(publicAccess.subject,resource,prompt,()=>generateSummary(prompt)) : await generateSummary(prompt);
+    const narrative = sanitizeSummary(text);
 
     return NextResponse.json({
       success: true,
@@ -101,9 +115,9 @@ export async function GET(request: NextRequest) {
       removedLines: narrative.removedLines,
       localDemo: computed.localDemo || undefined,
       warnings: computed.warnings.length ? computed.warnings : undefined,
-    });
+    },{headers:{'Cache-Control':'private, no-store'}});
   } catch (error) {
     console.error('Deep analysis error:', error);
-    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Summary failed' }, { status: 500 });
+    return NextResponse.json({ success: false, error: publicQuotaEnabled() ? 'Summary temporarily unavailable' : error instanceof Error ? error.message : 'Summary failed' }, { status: 500 });
   }
 }

@@ -294,7 +294,7 @@ export default function MSPCopilot({
     try {
       const response = await fetch('/api/ai/copilot', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': userMessage.id },
         body: JSON.stringify({
           message: userMessage.content,
           pageContext: { name: skill, symbols, timeframes },
@@ -305,6 +305,8 @@ export default function MSPCopilot({
 
       const data = await response.json();
 
+
+      window.dispatchEvent(new Event('public-usage-changed'));
       if (!response.ok) {
         throw new Error(data.error || 'Request failed');
       }
