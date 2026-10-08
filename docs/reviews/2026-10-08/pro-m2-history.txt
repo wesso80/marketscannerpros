@@ -1,0 +1,48 @@
+PRO M2 STORED HISTORY — 8 October 2026
+
+Branch codex/public-redesign-integration (PR #517), starting 9db0554f.
+Latest fetched research-page-phase4 is 0a2031da. Claude's merged work has no overlap
+with the files changed for M2 history. The older integration stack still needs
+reconciliation with that advanced base; this work does not merge shared branches.
+
+BEHAVIOR
+New /api/research/m2-history authenticates and verifies paid subscription/admin
+access before reading history. The redesign flag gates rollout. Supports one known
+bloc and 12, 36 or 60 completed calendar months. SQL is a parameterized SELECT
+against existing macro_series plus metadata; no provider calls or writes. Disabled,
+signed-out, Free, invalid input, missing database and failed-query responses are
+private/no-store. No shared response cache or account data is returned.
+
+USD-millions storage values are converted to USD. Valid zero remains zero. Missing,
+negative/nonfinite and duplicate-month observations are gaps, never interpolated.
+The selected bloc retains its own coverage rather than summing changing sets of
+blocs into a misleading historical global total. Observation month and ingestion
+stamp are separate. Current metadata is explicitly not historical-vintage metadata.
+The data is latest stored revisions, NOT the values known at a past date. No revision
+backtest, forecast, model label, ranking or trading instruction is added.
+
+UI
+Pro/admin can open the history, choose bloc and 1/3/5 years, inspect a gap-preserving
+chart and expand the date/source table. Data clears when selection changes; aborted
+or superseded requests cannot repopulate an old selection. Free sees the history
+upgrade link while retaining the complete current-summary trust information.
+Pricing now lists stored M2 history by economic bloc under Pro.
+
+VERIFICATION
+38 focused tests passed (19 history, 9 summary route, 5 Free gate, 5 pricing).
+Route tests use fake database calls; no real database/provider/production access.
+Typecheck retains six known Stripe-version/timer errors, no additional diagnostics.
+Eight real-component browser cases passed at 1280/390: Pro, Free (zero history
+requests), empty storage and errors. Checked both selectors, zero-value cells, gap
+segments and no document overflow; mobile screenshot inspected. Results and PNGs:
+outputs/m2-history-component. This harness renders the actual history component
+and CSS with fake tier context and synthetic API responses.
+Full Next app: first desktop case passed; initial next-case failures were ambiguous
+test selectors (corrected). Final full-page rerun timed out in compilation, so full
+page desktop/mobile verification of the new history addition remains open.
+
+LIMITS / NEXT
+Availability depends on existing persisted GM2_USD_<bloc> series; no backfill is run.
+Missing storage is shown as unavailable. No aggregate historical total is claimed.
+Real PostgreSQL validation, full CI/build and integration-base reconciliation remain.
+Admin engines, workers and data collection files unchanged. No merge/deployment.

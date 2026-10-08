@@ -7,6 +7,9 @@ const {chromium}=require('playwright');
 const {build}=require('esbuild');
 const fixtureOut=resolve(process.env.MSP_BROWSER_OUTPUT);await mkdir(fixtureOut,{recursive:true});
 await build({entryPoints:['test/browser/copilot/successFixture.ts'],bundle:true,platform:'node',format:'cjs',outfile:fixtureOut+'/design-fixture.cjs'});
+await build({entryPoints:['lib/research/publicM2History.ts'],bundle:true,platform:'node',format:'cjs',outfile:fixtureOut+'/history-fixture.cjs'});
+const {projectM2History,historyWindow}=require(fixtureOut+'/history-fixture.cjs');
+let historyRequests=0;
 process.env.APP_SIGNING_SECRET='fixture-only';
 const symbolFixture=require(fixtureOut+'/design-fixture.cjs').successFixture();
 const dates=Array.from({length:24},(_,i)=>new Date(Date.UTC(2026,8,1+i)).toISOString().slice(0,10));
@@ -29,6 +32,12 @@ try{
   if(page.url().includes('fixture=symbol')) {
    if(u.pathname==='/api/golden-egg')return route.fulfill({contentType:'application/json',body:JSON.stringify({success:true,data:symbolFixture.packet,reportUnlocked:true,copilotEvidenceToken:symbolFixture.token})});
    if(u.pathname==='/api/symbol-comparison'){comparisonRequests++;return route.fulfill({contentType:'application/json',body:JSON.stringify(chartFixture)});}
+  }
+  if(u.pathname==='/api/research/m2-history'){
+   historyRequests++;if(fixturePlan==='free')throw Error('Free requested paid history');
+   const months=Number(u.searchParams.get('months')),now=new Date('2026-10-08T00:00:00Z');
+   const rows=historyWindow(months,now).months.filter(m=>m!=='2026-08').map((m,i)=>({observed_on:m+'-01',value:m==='2026-07'?0:20000000+i*100000,fetched_at:'2026-10-01',description:'Synthetic history source'}));
+   return route.fulfill({contentType:'application/json',body:JSON.stringify({data:projectM2History(u.searchParams.get('bloc'),months,rows,now)})});
   }
   if(u.pathname==='/api/portfolio' || u.pathname==='/api/journal'){
    if(route.request().method()!=='GET')throw Error('Unexpected record mutation during read-only design check');
@@ -101,9 +110,22 @@ try{
    if(comparisonRequests!==requestsBeforeModes)throw Error('Mode switch refetched comparison');
   }
   if(path.startsWith('/tools/macro'))await page.locator('[data-economic-research="macro"]').waitFor();
-  if(path.startsWith('/intelligence/global-m2'))await page.locator('[data-economic-research="m2"]').waitFor();
+  if(path.startsWith('/intelligence/global-m2')){
+   await page.locator('[data-economic-research="m2"]').waitFor();
+   if(fixturePlan==='free') {await page.getByRole('link',{name:'Explore Pro history access ↗'}).waitFor();if(historyRequests)throw Error('Free requested history');}
+   else {
+    await page.getByRole('button',{name:'Open M2 history',exact:true}).click();
+    await page.getByRole('img',{name:'United States stored M2 history, gaps are not connected',exact:true}).waitFor();
+    await page.getByLabel('History window',{exact:true}).selectOption('36');
+    await page.getByText('35 observed months · 1 missing or invalid months',{exact:true}).waitFor();
+    await page.getByLabel('Economic bloc',{exact:true}).selectOption('AU');
+    await page.getByRole('img',{name:'Australia stored M2 history, gaps are not connected',exact:true}).waitFor();
+    await page.getByText('Observation dates and sources',{exact:true}).click();
+    await page.getByRole('cell',{name:'Not available',exact:true}).waitFor();
+   }
+  }
   if(path.startsWith('/tools/macro')&&path.includes('populated'))await page.getByRole('img',{name:/Treasury yields/}).waitFor();
-  if(path.startsWith('/intelligence/global-m2')&&path.includes('populated'))await page.getByText('United States',{exact:true}).waitFor();
+  if(path.startsWith('/intelligence/global-m2')&&path.includes('populated'))await page.getByRole('heading',{name:'United States',exact:true}).waitFor();
   if(path.startsWith('/tools/workspace')){
    await page.locator('[data-records-studio]').waitFor();
    if(path.includes('Journal')){await page.getByRole('button',{name:'New Trade',exact:true}).click();await page.getByRole('dialog',{name:'New trade drawer',exact:true}).waitFor();await page.getByRole('button',{name:'Close Panel',exact:true}).click();}

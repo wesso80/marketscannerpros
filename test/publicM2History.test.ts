@@ -1,0 +1,27 @@
+import {afterEach,beforeEach,expect,it,vi} from 'vitest';
+import {NextRequest} from 'next/server';
+import {historyWindow,projectM2History} from '@/lib/research/publicM2History';
+const h=vi.hoisted(()=>({session:{workspaceId:'a',tier:'pro'} as any,access:{bypass:false,plan:'pro'} as any,q:vi.fn(),failAccess:false}));
+vi.mock('@/lib/auth',()=>({getSessionFromCookie:async()=>h.session}));
+vi.mock('@/lib/publicQuotaAccess',()=>({resolvePublicQuotaAccess:async()=>{if(h.failAccess)throw Error('secret');return h.access;}}));
+vi.mock('@/lib/db',()=>({q:h.q}));
+import {GET} from '@/app/api/research/m2-history/route';
+const now=new Date('2026-10-08T00:00:00Z');
+const row=(month:string,value:any)=>({observed_on:month+'-01',value,fetched_at:'2026-10-01',description:'Fixture provider'});
+beforeEach(()=>{h.session={workspaceId:'a',tier:'pro'};h.access={bypass:false,plan:'pro'};h.failAccess=false;h.q.mockReset().mockResolvedValue([]);vi.stubEnv('NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED','true');vi.stubEnv('DATABASE_URL','fixture-not-connected');});
+afterEach(()=>vi.unstubAllEnvs());
+const req=(query='')=>new NextRequest('https://fixture.test/api/research/m2-history'+query);
+it('uses completed calendar months across year boundaries',()=>{expect(historyWindow(12,now)).toMatchObject({start:'2025-10-01',end:'2026-10-01'});expect(historyWindow(12,now).months).toHaveLength(12);});
+it('preserves zero, leaves gaps, converts USD millions, excludes future observations',()=>{
+ const d=projectM2History('US',12,[row('2026-07',0),row('2026-09','20000000'),row('2026-10',99)],now);
+ expect(d.points.find(p=>p.month==='2026-07')?.usdM2).toBe(0);expect(d.points.find(p=>p.month==='2026-08')?.usdM2).toBeNull();expect(d.points.at(-1)?.usdM2).toBe(20e12);expect(d.observedMonths).toBe(2);expect(d.missingMonths).toBe(10);expect(d.revisionNote).toContain('not the values known');
+});
+it.each([null,'NaN',-1,'Infinity',''])('does not turn invalid value %s into an observation',value=>{expect(projectM2History('US',12,[row('2026-09',value)],now).observedMonths).toBe(0);});
+it('treats ambiguous duplicate months as gaps and keeps source metadata',()=>{const d=projectM2History('US',12,[row('2026-09',1),row('2026-09',2),row('2026-08',3)],now);expect(d.points.at(-1)?.status).toBe('invalid');expect(d.points.at(-2)?.source).toBe('Fixture provider');});
+it.each(['free','visitor'])('denies %s before reading history despite a paid cookie',async plan=>{h.access={bypass:false,plan};const r=await GET(req());expect(r.status).toBe(403);expect(h.q).not.toHaveBeenCalled();expect(r.headers.get('cache-control')).toContain('no-store');});
+it('denies signed out and failed subscription lookup',async()=>{h.session=null;expect((await GET(req())).status).toBe(401);h.session={workspaceId:'a'};h.failAccess=true;expect((await GET(req())).status).toBe(503);expect(h.q).not.toHaveBeenCalled();});
+it.each(['?bloc=BAD','?months=120','?months=abc'])('rejects invalid parameters %s before history reads',async query=>{expect((await GET(req(query))).status).toBe(400);expect(h.q).not.toHaveBeenCalled();});
+it.each([{bypass:false,plan:'pro'},{bypass:true}])('reads only requested stored series for %j',async access=>{h.access=access;const r=await GET(req('?bloc=AU&months=36'));expect(r.status).toBe(200);const [sql,args]=h.q.mock.calls[0];expect(sql.trim()).toMatch(/^SELECT/);expect(sql).not.toMatch(/INSERT|UPDATE|DELETE/);expect(args[0]).toBe('GM2_USD_AU');expect((await r.json()).data.points).toHaveLength(36);});
+it('rechecks access for each request; a Pro response does not authorize Free',async()=>{expect((await GET(req())).status).toBe(200);h.access={bypass:false,plan:'free'};expect((await GET(req())).status).toBe(403);expect(h.q).toHaveBeenCalledTimes(1);});
+it('distinguishes unavailable storage from an empty series and hides DB errors',async()=>{vi.stubEnv('DATABASE_URL','');expect((await GET(req())).status).toBe(503);vi.stubEnv('DATABASE_URL','fixture');h.q.mockRejectedValue(Error('database password SECRET'));const r=await GET(req());expect(r.status).toBe(503);expect(JSON.stringify(await r.json())).not.toContain('SECRET');});
+it('does no work before rollout',async()=>{vi.stubEnv('NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED','false');expect((await GET(req())).status).toBe(404);expect(h.q).not.toHaveBeenCalled();});

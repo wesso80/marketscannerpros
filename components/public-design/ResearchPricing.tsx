@@ -43,6 +43,7 @@ export default function ResearchPricing({cycle,onCycle,onChoose,loading,error,ti
         <ul>
           {quotasEnabled===true && <li>Unlimited Symbol reports</li>}
           <li>Options research</li>
+          <li>Stored M2 history by economic bloc</li>
           <li>Portfolio and Journal advanced analysis</li>
           <li>Unlimited open portfolio positions and journal entries</li>
           <li>Exports and paid workspace tools</li>
