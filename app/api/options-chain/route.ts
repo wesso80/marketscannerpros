@@ -361,7 +361,7 @@ export async function GET(request: NextRequest) {
       contracts: [],
       provider: 'none',
       cachedAt: 0,
-      error: err instanceof Error ? err.message : 'Failed to fetch options chain',
+      error: 'Failed to fetch options chain',
     } satisfies OptionsChainResponse, { status: 500 });
   }
 }

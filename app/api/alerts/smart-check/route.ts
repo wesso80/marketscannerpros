@@ -179,7 +179,7 @@ async function checkSmartAlerts(req: NextRequest) {
       ok: false,
       checked: 0,
       triggered: 0,
-      error: error?.message || 'Failed to check smart alerts',
+      error: 'Failed to check smart alerts',
       timestamp: new Date().toISOString(),
     });
   }

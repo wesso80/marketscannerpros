@@ -415,6 +415,6 @@ export async function GET(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("[market-focus] Error:", err);
-    return NextResponse.json({ error: err?.message || "Failed to fetch candidates" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch candidates" }, { status: 500 });
   }
 }

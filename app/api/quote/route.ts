@@ -133,7 +133,7 @@ export async function GET(req: NextRequest) {
   } catch (err: any) {
     console.error("Quote API error:", err);
     return NextResponse.json(
-      { ok: false, error: err.message || "Internal error" },
+      { ok: false, error: "Internal error" },
       { status: 500 }
     );
   }

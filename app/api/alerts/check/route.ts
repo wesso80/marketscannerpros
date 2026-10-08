@@ -164,7 +164,7 @@ async function checkAlerts(req: NextRequest) {
       ok: false,
       checked: 0,
       triggered: 0,
-      error: error?.message || 'Failed to check alerts',
+      error: 'Failed to check alerts',
       timestamp: new Date().toISOString(),
     });
   }
