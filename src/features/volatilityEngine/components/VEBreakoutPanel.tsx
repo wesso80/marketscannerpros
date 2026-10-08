@@ -1,6 +1,6 @@
 'use client';
 import { volatilityText } from '../displayText';
-import type { BreakoutReadiness } from '@/src/features/volatilityEngine/types';
+import type { PublicBreakout as BreakoutReadiness } from '@/src/features/volatilityEngine/types';
 import { breakoutConditions } from '@/lib/research/volatilityDescriptions';
 
 /**

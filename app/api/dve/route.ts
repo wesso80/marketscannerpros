@@ -3,12 +3,10 @@
  *
  * GET /api/dve?symbol=AAPL
  *
- * Returns a DVEReading with 5-layer volatility analysis:
- *   Layer 1: Volatility State (BBWP, regime, VHM)
- *   Layer 2: Directional Bias (stochastic momentum + confluence)
- *   Layer 3: Phase Persistence (contraction/expansion age + continuation odds)
- *   Layer 4: Signal Triggering (compression release, expansion continuation, etc.)
- *   Layer 5: Outcome Projection (magnitude, forward estimates, invalidation)
+ * Computes the engine's DVEReading (cached on the server) and returns only its public projection
+ * (lib/research/publicDve, contract public-dve-v1): measured volatility, phase durations, the recorded signal rule and
+ * its BBWP conditions, breakout setting conditions, trap/exhaustion observations and the past-case study. The engine's
+ * directional pressure, scores, confidences, "probabilities", next-regime guess and price stop are not sent (W3).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -27,6 +25,8 @@ import type { DVEInput } from '@/lib/directionalVolatilityEngine.types';
 import type { DVEReading } from '@/lib/directionalVolatilityEngine.types';
 import { evaluateDataTrust } from '@/lib/scanner/dataTrust';
 import { priceEvidenceFromSeries, type PriceEvidence } from '@/lib/research/priceEvidence';
+import { toPublicDveReading } from '@/lib/research/publicDve';
+import { PROJECTION } from '@/lib/directionalVolatilityEngine.constants';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
     const cacheKey = `${symbol}_${timeframe}_${assetClass}_${expiry ?? 'default-expiry'}`;
     const cached = dveCache.get(cacheKey);
     if (cached && Date.now() - cached.ts < DVE_CACHE_TTL) {
-      return NextResponse.json({ success: true, data: cached.data, price: cached.price, priceEvidence: cached.priceEvidence, optionsRequest: cached.optionsRequest ?? undefined, cached: true, ...freshnessMeta(cached.barAge, cached.ts) });
+      return NextResponse.json({ success: true, data: toPublicDveReading(cached.data, PROJECTION.FORWARD_BARS), price: cached.price, priceEvidence: cached.priceEvidence, optionsRequest: cached.optionsRequest ?? undefined, cached: true, ...freshnessMeta(cached.barAge, cached.ts) });
     }
 
     // 5. Fetch price + MPE in parallel (DVE needs historical data)
@@ -195,7 +195,7 @@ export async function GET(request: NextRequest) {
     // An explicit expiry that is not listed leaves options out of the reading (no substitute expiry) and says so.
     const optionsRequest = expiry ? { expiry, status: optsData ? 'used' as const : 'unavailable' as const } : null;
     dveCache.set(cacheKey, { data: reading, price: priceData.price, ts: computedAtMs, barAge, priceEvidence, optionsRequest });
-    return NextResponse.json({ success: true, data: reading, price: priceData.price, priceEvidence, optionsRequest: optionsRequest ?? undefined, cached: false, ...freshnessMeta(barAge, computedAtMs) });
+    return NextResponse.json({ success: true, data: toPublicDveReading(reading, PROJECTION.FORWARD_BARS), price: priceData.price, priceEvidence, optionsRequest: optionsRequest ?? undefined, cached: false, ...freshnessMeta(barAge, computedAtMs) });
   } catch (error) {
     console.error('[DVE API] Error:', error);
     return NextResponse.json(
