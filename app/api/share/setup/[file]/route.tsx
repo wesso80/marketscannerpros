@@ -1,7 +1,7 @@
 /**
  * GET /api/share/setup/<SYMBOL>.png[?date=YYYY-MM-DD]
  *
- * Public 1200×675 PNG of one ticker's stored daily-scan setup (verdict, score, reference levels) for social posts
+ * Public 1200×675 PNG of one ticker's stored daily-scan snapshot (measured values only: price, session change, RSI, ADX, ATR %) for social posts
  * (Metricool / X). Reads daily_picks only (lib/share/setupCard.ts); no live market-data calls. Without a date the
  * latest row is used only if it is at most 7 days old. Plain-text 400/404 otherwise.
  */
@@ -23,7 +23,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ file: st
   if (hit) return hit;
   try {
     const m = await loadSetupCardModel(q, symbol, date);
-    if (!m) return shareError(404, date ? `No stored setup for ${symbol} on ${date}` : `No setup for ${symbol} in the last 7 days of scans`);
+    if (!m) return shareError(404, date ? `No stored snapshot for ${symbol} on ${date}` : `No snapshot for ${symbol} in the last 7 days of scans`);
     return await renderPng(key, <SetupCard m={m} />, {
       cacheControl: date ? CACHE_DATED : CACHE_LATEST,
       ttlMs: date ? 6 * 3_600_000 : 10 * 60_000,

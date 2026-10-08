@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { q } from '@/lib/db';
-import { pickView } from '@/lib/scoring/canonical/dailyPick';
 import { toYmd } from '@/lib/time/usSession';
 
 export const runtime = 'nodejs';
@@ -27,27 +26,25 @@ function xmlEscape(s: string): string {
     .replace(/'/g, '&apos;');
 }
 
+/** Public feed (W3, 8 Oct): measured values only, no side, verdict, grade or score; each day listed A–Z. */
 interface FeedRow {
   scan_date: unknown;
   asset_class: string;
   symbol: string;
-  score: number;
-  direction: string;
   price: string | null;
   change_percent: string | null;
-  canonical?: unknown;
 }
 
 export async function GET() {
   let rows: FeedRow[] = [];
   try {
     rows = await q<FeedRow>(
-      `SELECT scan_date, asset_class, symbol, score, direction, price, change_percent, indicators->'canonical' AS canonical
+      `SELECT scan_date, asset_class, symbol, price, change_percent
          FROM daily_picks
         WHERE scan_date >= CURRENT_DATE - INTERVAL '14 days'
-          AND score > 0 -- canonical BLOCK rows are stored with score 0 (legacy scores are 1-100)
-        ORDER BY scan_date DESC, score DESC
-        LIMIT 100`,
+          AND asset_class IN ('equity', 'crypto')
+        ORDER BY scan_date DESC, symbol ASC
+        LIMIT 200`,
     );
   } catch (err) {
     console.warn('[daily-pick/feed] query failed:', err);
@@ -57,23 +54,17 @@ export async function GET() {
 
   const items = rows.map((r) => {
     const dateStr = toDateString(r.scan_date);
-    const view = pickView(r); // canonical verdict first; legacy fallback for pre-canonical rows
-    const side = view.side;
     const price = r.price != null ? Number(r.price).toFixed(2) : null;
     const chg = r.change_percent != null ? Number(r.change_percent).toFixed(2) : null;
     const link = `${SITE}/share/scan/${encodeURIComponent(r.symbol)}`;
     const guid = `${SITE}/share/scan/${r.symbol}#${dateStr}`;
-    const title = view.label ? `${r.symbol} · ${side} · ${view.label} (${dateStr})` : `${r.symbol} · ${side} · score ${r.score} (${dateStr})`;
+    const title = `${r.symbol} · daily scan snapshot (${dateStr})`;
     const descLines = [
       `Asset class: ${r.asset_class}`,
-      `Side: ${side}`,
-      view.label ? `Verdict: ${view.label}` : null,
-      `Score: ${view.score ?? r.score}`,
-      view.basisNote,
       price ? `Price: $${price}` : null,
-      chg ? `Change: ${chg}%` : null,
+      chg ? `Session change: ${chg}%` : null,
       `Scan date: ${dateStr}`,
-      `Educational research only. Not investment advice.`,
+      `Measured values only; not a rating, ranking or recommendation. Educational research only. Not investment advice.`,
     ].filter(Boolean) as string[];
     return `    <item>
       <title>${xmlEscape(title)}</title>
@@ -88,10 +79,10 @@ export async function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>MarketScanner Pros — Daily Picks</title>
+    <title>MarketScanner Pros — Daily scan observations</title>
     <link>${SITE}/daily-pick</link>
     <atom:link href="${SITE}/daily-pick/feed.xml" rel="self" type="application/rss+xml" />
-    <description>Top canonical-ranked equity and crypto setups from MarketScanner Pros, updated daily. Factors only — no setup has a validated edge. Educational research only — not investment advice.</description>
+    <description>Symbols stored by the MarketScanner Pros daily scan, with measured price and session change, listed A–Z for each day. Not ratings, rankings or recommendations. Educational research only — not investment advice.</description>
     <language>en-au</language>
     <lastBuildDate>${latestDate}</lastBuildDate>
     <ttl>60</ttl>

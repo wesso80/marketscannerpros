@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import {
-  buildScanOgModel, OG_SCAN_HEIGHT, OG_SCAN_WIDTH, type OgSide, type ScanOgModel,
+  buildScanOgModel, OG_SCAN_HEIGHT, OG_SCAN_WIDTH, type ScanOgModel,
 } from '@/lib/og/scanOg';
 import { loadShare } from '@/lib/og/scanShareData';
 import { loadLatestDailyPicks } from '@/lib/og/dailyPicksLatest';
@@ -22,7 +22,8 @@ export const dynamic = 'force-dynamic';
 
 // Site palette as literal colours (satori cannot resolve CSS variables).
 const C = { bg: '#0F172A', text: '#F8FAFC', body: '#CBD5E1', muted: '#94A3B8', line: 'rgba(255,255,255,0.08)' };
-const ACCENT: Record<OgSide, string> = { LONG: '#10B981', SHORT: '#EF4444', WATCH: '#F59E0B' };
+// One neutral accent: the image carries no side or verdict (W3).
+const ACCENT = '#38BDF8';
 const CACHE_CONTROL = 'public, max-age=300, s-maxage=600, stale-while-revalidate=86400';
 
 // Render has no CDN in front of the web service, so keep recent PNGs in memory (bounded).
@@ -69,7 +70,7 @@ export async function GET(req: NextRequest | Request) {
 }
 
 function ScanOgCard({ m }: { m: ScanOgModel }) {
-  const accent = ACCENT[m.side];
+  const accent = ACCENT;
   return (
     <div style={{ width: '1200px', height: '630px', display: 'flex', flexDirection: 'column', background: 'linear-gradient(135deg, #0F172A 0%, #111827 60%, #0B1220 100%)', color: C.text, padding: '56px 64px 56px 52px', borderLeft: `12px solid ${accent}` }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
@@ -78,7 +79,7 @@ function ScanOgCard({ m }: { m: ScanOgModel }) {
           MARKETSCANNER PROS
         </div>
         <div style={{ display: 'flex', padding: '10px 18px', border: `2px solid ${accent}`, color: accent, borderRadius: 999, fontSize: 22, letterSpacing: '0.12em' }}>
-          {m.side === 'LONG' ? 'Bullish' : m.side === 'SHORT' ? 'Bearish' : 'Watch'}
+          Research snapshot
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', marginTop: 40 }}>
