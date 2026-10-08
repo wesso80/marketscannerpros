@@ -382,9 +382,13 @@ export default function GoldenEggPage() {
   // One selected expiry for every section: the packet, the Volatility reading and the Options fold (W1).
   const requestedExpiry = searchParams.get('expiry');
   const goldenEgg = useGoldenEgg(sym, timeframe, resolvedType, requestedExpiry);
-  const dve = useDVE(sym, timeframe, resolvedType, requestedExpiry);
-  const quote = useQuote(sym, quoteType);
-  const regime = useRegime();
+  // Admission must finish for this exact symbol/timeframe/expiry before auxiliary work starts.
+  // Legacy paid and admin core responses still qualify; local demos never trigger provider work.
+  const auxiliaryEnabled = Boolean(goldenEgg.data?.success && goldenEgg.data.data) && !goldenEgg.data?.localDemo
+    && !goldenEgg.loading && !goldenEgg.error && !goldenEgg.isAuthError;
+  const dve = useDVE(sym, timeframe, resolvedType, requestedExpiry, auxiliaryEnabled);
+  const quote = useQuote(sym, quoteType, auxiliaryEnabled);
+  const regime = useRegime(auxiliaryEnabled);
   const dailyPicks=usePublicMarketFeed<PicksResponse>('/api/scanner/daily-picks?limit=20');
   const snapshotAsset=quoteType==='crypto'?'crypto':'equity';
 
