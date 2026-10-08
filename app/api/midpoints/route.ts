@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMidpointService } from '@/lib/midpointService';
 import { getCandleProcessor, type OHLCVBar } from '@/lib/candleProcessor';
+import { requireAdmin, verifyCronAuth } from '@/lib/adminAuth';
+
+/**
+ * Ops-only: POST inserts candles, PUT re-tags and DELETE resets midpoints that feed the Time Gravity Map, and GET is a
+ * diagnostic. No app caller; every method requires an admin session/secret or the cron secret.
+ */
+async function opsOnly(request: NextRequest): Promise<NextResponse | null> {
+  // Only consult the cron check when a cron header is sent (it logs every miss).
+  if (request.headers.get('x-cron-secret') && verifyCronAuth(request)) return null;
+  if ((await requireAdmin(request)).ok) return null;
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: { 'Cache-Control': 'private, no-store' } });
+}
 
 /**
  * Midpoint Management API
@@ -14,6 +26,8 @@ import { getCandleProcessor, type OHLCVBar } from '@/lib/candleProcessor';
  * Fetch untagged midpoints for a symbol
  */
 export async function GET(request: NextRequest) {
+  const denied = await opsOnly(request);
+  if (denied) return denied;
   try {
     const { searchParams } = new URL(request.url);
     
@@ -73,7 +87,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );
@@ -94,6 +107,8 @@ export async function GET(request: NextRequest) {
  * }
  */
 export async function POST(request: NextRequest) {
+  const denied = await opsOnly(request);
+  if (denied) return denied;
   try {
     const body = await request.json();
     
@@ -147,7 +162,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );
@@ -167,6 +181,8 @@ export async function POST(request: NextRequest) {
  * }
  */
 export async function PUT(request: NextRequest) {
+  const denied = await opsOnly(request);
+  if (denied) return denied;
   try {
     const body = await request.json();
     
@@ -195,7 +211,6 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );
@@ -209,6 +224,8 @@ export async function PUT(request: NextRequest) {
  * If no symbol is provided, resets ALL tagged midpoints.
  */
 export async function DELETE(request: NextRequest) {
+  const denied = await opsOnly(request);
+  if (denied) return denied;
   try {
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get('symbol') || undefined;
@@ -229,7 +246,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );
