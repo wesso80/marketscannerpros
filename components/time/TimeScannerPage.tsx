@@ -1,14 +1,10 @@
 "use client";
 
-import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import CloseCalendar from '@/components/time/CloseCalendar';
-import DebugDrawer from '@/components/time/DebugDrawer';
 import TimeScannerShell from '@/components/time/TimeScannerShell';
-import { computeTimeConfluenceV2 } from '@/components/time/scoring';
-import { DecompositionTFRow, Direction, TimeConfluenceV2Inputs } from '@/components/time/types';
 import { boundedJsonFetch } from '@/lib/boundedFetch';
-import { directionalRiskReward } from '@/lib/scanner/researchValidity';
 import { formatPrice } from '@/lib/formatPrice';
 import TimeGravityMapWidget from '@/components/TimeGravityMapWidget';
 import MarketPressureWidget from '@/components/MarketPressureWidget';
@@ -18,21 +14,15 @@ import UpgradeGate from '@/components/UpgradeGate';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import TimeConfluenceWidget from '@/components/TimeConfluenceWidget';
-import { timeEngineLabel, timeEngineProse } from '@/lib/presentation/timeEngineLabel';
+import type { PublicTimeConfluence } from '@/lib/research/publicTimeConfluence';
+
+/*
+ * Time Confluence (Terminal tab). Shows the public Time Confluence contract only: when each timeframe's candle
+ * closes, which closes coincide, and each timeframe's prior-candle midpoint with its distance from price. No
+ * direction, confidence, score, target, entry window or trade level is requested or shown.
+ */
 
 type ScanModeType = 'scalping' | 'intraday_30m' | 'intraday_1h' | 'intraday_4h' | 'swing_1d' | 'swing_3d' | 'swing_1w' | 'macro_monthly' | 'macro_yearly';
-
-const TF_TO_MINUTES: Record<ScanModeType, number> = {
-  scalping: 15,
-  intraday_30m: 30,
-  intraday_1h: 60,
-  intraday_4h: 240,
-  swing_1d: 1440,
-  swing_3d: 4320,
-  swing_1w: 10080,
-  macro_monthly: 43200,
-  macro_yearly: 525600,
-};
 
 const SCAN_MODE_LABELS: Record<ScanModeType, string> = {
   scalping: 'Scalp 15m',
@@ -51,64 +41,6 @@ const TIMEFRAME_OPTIONS: ScanModeType[] = [
   'swing_1d', 'swing_3d', 'swing_1w', 'macro_monthly', 'macro_yearly',
 ];
 
-const FALLBACK_INPUT: TimeConfluenceV2Inputs = {
-  context: {
-    symbol: 'BTCUSD',
-    assetClass: 'crypto',
-    primaryTfMinutes: 60,
-    lookbackBars: 500,
-    macroBias: 'neutral',
-    htfBias: 'neutral',
-    regime: 'unknown',
-    volState: 'normal',
-    trendStrength: 0.5,
-    dataIntegrity: {
-      provider: 'Alpha Vantage',
-      freshnessSec: 0,
-      coveragePct: 0,
-      gapsPct: 0,
-    },
-    extremeConditions: [],
-  },
-  setup: {
-    primaryDirection: 'neutral',
-    decomposition: [],
-    window: {
-      status: 'UNKNOWN',
-      durationHours: 0,
-      timeRemainingMinutes: 0,
-      strength: 0,
-      clusterIntegrity: 0,
-      directionConsistency: 0,
-      alignmentCount: 0,
-      tfCount: 1,
-    },
-    warnings: [],
-  },
-  execution: {
-    closeConfirmation: 'PENDING',
-    closeStrength: 0,
-    entryWindowQuality: 0,
-    liquidityOK: false,
-    riskState: 'elevated',
-    notes: ['Run scan to load live confluence data.'],
-  },
-};
-
-const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
-
-function permissionTone(permission: 'ALLOW' | 'WAIT' | 'BLOCK') {
-  if (permission === 'ALLOW') return { border: 'border-emerald-500/30', dot: 'bg-emerald-400', label: 'Evidence aligned' };
-  if (permission === 'WAIT') return { border: 'border-amber-500/30', dot: 'bg-amber-400', label: 'Evidence mixed' };
-  return { border: 'border-rose-500/30', dot: 'bg-rose-400', label: 'Evidence not aligned' };
-}
-
-function riskLabel(permission: 'ALLOW' | 'WAIT' | 'BLOCK') {
-  if (permission === 'BLOCK') return 'Elevated';
-  if (permission === 'WAIT') return 'Moderate';
-  return 'Low';
-}
-
 function MetricPill({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/30 px-2.5 py-1.5">
@@ -118,259 +50,26 @@ function MetricPill({ label, value }: { label: string; value: string }) {
   );
 }
 
-function scoreDot(score: number) {
-  if (score >= 70) return 'bg-emerald-400';
-  if (score >= 45) return 'bg-amber-400';
-  return 'bg-rose-400';
+function minutesLabel(mins: number) {
+  if (mins < 60) return `${Math.max(0, Math.round(mins))}m`;
+  if (mins < 1440) return `${Math.floor(mins / 60)}h ${Math.round(mins % 60)}m`;
+  return `${Math.floor(mins / 1440)}d ${Math.floor((mins % 1440) / 60)}h`;
 }
 
-
-
-function ConfluenceRow({ label, score }: { label: string; score: number }) {
-  return (
-    <div className="grid grid-cols-[1.2fr_2fr_56px_20px] items-center gap-2.5">
-      <div className="text-xs text-slate-300">{label}</div>
-      <div className="h-2.5 w-full rounded-full bg-slate-800">
-        <div className="h-2.5 rounded-full bg-slate-500" style={{ width: `${Math.max(1, Math.min(99, score))}%` }} />
-      </div>
-      <div className="text-right text-xs font-semibold text-slate-200">{Math.round(score)}%</div>
-      <div className="flex justify-end">
-        <div className={`h-2.5 w-2.5 rounded-full ${scoreDot(score)}`} />
-      </div>
-    </div>
-  );
+function closeSummary(d: PublicTimeConfluence) {
+  const c = d.closes;
+  const parts = [
+    `${c.closingNow.count} timeframe${c.closingNow.count === 1 ? '' : 's'} close within 5 minutes`,
+    `${c.closingSoon.count} more within 4 hours`,
+  ];
+  if (c.densestWindow) parts.push(`most closes together: ${c.densestWindow.count} between ${minutesLabel(c.densestWindow.startMins)} and ${minutesLabel(c.densestWindow.endMins)} from now`);
+  return parts.join(' · ');
 }
 
-function TimingField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">
-      <div className="text-[11px] uppercase tracking-wider text-slate-400">{label}</div>
-      <div className="text-sm font-semibold text-slate-100">{value}</div>
-    </div>
-  );
+function calendarEvents(d: PublicTimeConfluence) {
+  const e = d.closes.calendarEvents;
+  return [e.yearEnd && 'Year end', e.quarterEnd && 'Quarter end', e.monthEnd && 'Month end', e.weekEnd && 'Week end', e.sessionClose !== 'none' && `${e.sessionClose === 'ny' ? 'New York' : e.sessionClose === 'london' ? 'London' : 'Asia'} session close`].filter(Boolean) as string[];
 }
-
-function IntelAccordionSection({ title, summary, children }: { title: string; summary: string; children: ReactNode }) {
-  return (
-    <details className="rounded-2xl border border-slate-800 bg-slate-900/25">
-      <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3">
-        <div>
-          <div className="text-sm font-semibold text-slate-100">{title}</div>
-          <div className="text-xs text-slate-400">{summary}</div>
-        </div>
-        <div className="h-7 w-7 rounded-lg border border-slate-700 bg-slate-950/30" />
-      </summary>
-      <div className="border-t border-slate-800 px-4 py-3 text-sm text-slate-200">{children}</div>
-    </details>
-  );
-}
-
-function normalizeDirection(value: unknown): Direction {
-  const v = String(value || '').toLowerCase();
-  if (v === 'bullish') return 'bullish';
-  if (v === 'bearish') return 'bearish';
-  return 'neutral';
-}
-
-function mapScanToInput(symbol: string, scanMode: ScanModeType, scan: any): TimeConfluenceV2Inputs {
-  const direction = normalizeDirection(scan?.prediction?.direction);
-
-  // ── Build decomposition rows from the FULL close table (not just decompressions) ──
-  // This is the key change: we merge the close schedule (all TFs) with
-  // decompression pull data (only active TFs) so the UI always sees every TF.
-  const closeTable: any[] = Array.isArray(scan?.candleCloseConfluence?.closes)
-    ? scan.candleCloseConfluence.closes
-    : [];
-  const decompressions: any[] = Array.isArray(scan?.decompression?.decompressions)
-    ? scan.decompression.decompressions
-    : [];
-
-  // Index decompressions by TF label for O(1) lookup
-  const decompByTf = new Map<string, any>();
-  for (const row of decompressions) {
-    if (row?.tf) decompByTf.set(String(row.tf), row);
-  }
-
-  // Build rows: prefer close table (has minsToClose + nextCloseAt for ALL TFs),
-  // enrich with decompression data (has pullDirection, pullStrength, isDecompressing).
-  const decompositionRows: DecompositionTFRow[] = closeTable.map((closeRow: any) => {
-    const tfLabel = String(closeRow?.tf || 'n/a');
-    const tfMinutes = Math.max(1, Number(closeRow?.tfMinutes || 1));
-    const minsToClose = Math.max(0, Number(closeRow?.minsToClose || 0));
-    const nextCloseAt = String(closeRow?.nextCloseAt || '');
-    const decompRow = decompByTf.get(tfLabel);
-
-    const closeBias: Direction = decompRow
-      ? (decompRow.pullDirection === 'up' ? 'bullish' : decompRow.pullDirection === 'down' ? 'bearish' : 'neutral')
-      : 'neutral';
-    const strength = decompRow ? clamp01(Number(decompRow.pullStrength || 0) / 10) : 0;
-    const isDecompressing = decompRow ? !!decompRow.isDecompressing : false;
-
-    // ── FIX: Confirmed threshold relative to TF (2% of TF minutes, min 2m) ──
-    const confirmMins = Math.max(2, Math.round(tfMinutes * 0.02));
-    const state: 'forming' | 'confirmed' | 'fading' = isDecompressing
-      ? (minsToClose <= confirmMins ? 'confirmed' : 'forming')
-      : 'fading';
-
-    // ── FIX: Proximity scales by the TF itself (not hardcoded / 240) ──
-    // Use 3× the TF duration as the proximity denominator, capped at 7 days
-    const proximityDenom = Math.max(30, Math.min(3 * tfMinutes, 7 * 1440));
-    const closeProximityPct = clamp01(1 - minsToClose / proximityDenom);
-
-    return {
-      tfLabel,
-      tfMinutes,
-      closeBias,
-      state,
-      strength,
-      alignedToPrimary: direction !== 'neutral' && closeBias === direction,
-      closeProximityPct,
-      nextCloseAt: nextCloseAt || undefined,
-      minsToClose,
-      mid50Level: Number(closeRow?.mid50Level || decompRow?.mid50Level || 0) || undefined,
-      distanceToMid50: Number(closeRow?.distanceToMid50 || decompRow?.distanceToMid50 || 0) || undefined,
-      pullDirection: closeRow?.pullDirection || decompRow?.pullDirection || undefined,
-    };
-  });
-
-  // If close table was empty (legacy API response), fall back to decompressions only
-  if (decompositionRows.length === 0) {
-    for (const row of decompressions) {
-      const tfMinutes = Math.max(1, Number(row?.tfMinutes || 1));
-      const minsToClose = Math.max(0, Number(row?.minsToClose || 0));
-      const closeBias: Direction =
-        row?.pullDirection === 'up' ? 'bullish' : row?.pullDirection === 'down' ? 'bearish' : 'neutral';
-      const strength = clamp01(Number(row?.pullStrength || 0) / 10);
-      const isDecompressing = !!row?.isDecompressing;
-      const confirmMins = Math.max(2, Math.round(tfMinutes * 0.02));
-      const state: 'forming' | 'confirmed' | 'fading' = isDecompressing
-        ? (minsToClose <= confirmMins ? 'confirmed' : 'forming')
-        : 'fading';
-      const proximityDenom = Math.max(30, Math.min(3 * tfMinutes, 7 * 1440));
-
-      decompositionRows.push({
-        tfLabel: String(row?.tf || 'n/a'),
-        tfMinutes,
-        closeBias,
-        state,
-        strength,
-        alignedToPrimary: direction !== 'neutral' && closeBias === direction,
-        closeProximityPct: clamp01(1 - minsToClose / proximityDenom),
-        minsToClose,
-        mid50Level: Number(row?.mid50Level || 0) || undefined,
-        distanceToMid50: Number(row?.distanceToMid50 || 0) || undefined,
-        pullDirection: row?.pullDirection || undefined,
-      });
-    }
-  }
-
-  const tfCount = Math.max(1, decompositionRows.length);
-  const alignmentCount = decompositionRows.filter((row) => row.alignedToPrimary).length;
-  const directionScore = Math.abs(Number(scan?.scoreBreakdown?.directionScore || 0)) / 100;
-  const clusterRatio = clamp01(Number(scan?.decompression?.clusteringRatio || 0));
-  const confluenceScore = clamp01(Number(scan?.candleCloseConfluence?.confluenceScore || 0) / 100);
-
-  // ── Use peakCloseCluster for improved cluster metrics ──
-  const peakCluster = scan?.candleCloseConfluence?.peakCloseCluster;
-  const peakClusterCount = Number(peakCluster?.count || 0);
-  const peakClusterWeight = Number(peakCluster?.weightedScore || 0);
-  const peakClusterStartMins = Number(peakCluster?.windowStartMins ?? Infinity);
-  const actionablePeakCluster = peakClusterCount >= 3 && peakClusterStartMins <= 240;
-  const actionablePeakClusterCount = actionablePeakCluster ? peakClusterCount : 0;
-  const actionablePeakClusterWeight = actionablePeakCluster ? peakClusterWeight : 0;
-
-  const warnings: TimeConfluenceV2Inputs['setup']['warnings'] = [];
-  if (alignmentCount / tfCount < 0.5) warnings.push('LOW_ALIGNMENT_COUNT');
-  if (clusterRatio < 0.55 && actionablePeakClusterCount < 3) warnings.push('LOW_CLUSTER_INTEGRITY');
-  if (directionScore < 0.5) warnings.push('MIXED_DIRECTION');
-  if (confluenceScore < 0.55) warnings.push('WEAK_CLOSE_STRENGTH');
-
-  const specialEvents = scan?.candleCloseConfluence?.specialEvents || {};
-  const extremeConditions: TimeConfluenceV2Inputs['context']['extremeConditions'] = [];
-  if (specialEvents.isMonthEnd || specialEvents.isQuarterEnd || specialEvents.isYearEnd) extremeConditions.push('NEWS_RISK');
-  if ((scan?.decompression?.clusteredCount || 0) >= 4 || actionablePeakClusterCount >= 5) extremeConditions.push('PRICE_MAGNET');
-  if (directionScore < 0.35) extremeConditions.push('HTF_CONFLICT');
-
-  const closeNowCount = Number(scan?.candleCloseConfluence?.closingNow?.count || 0);
-  const closeSoonCount = Number(scan?.candleCloseConfluence?.closingSoon?.count || 0);
-  const closeConfirmation = closeNowCount >= 2 ? 'CONFIRMED' : closeSoonCount > 0 ? 'PENDING' : 'FAILED';
-
-  const riskState: TimeConfluenceV2Inputs['execution']['riskState'] =
-    directionScore >= 0.65 && clusterRatio >= 0.6 ? 'controlled' : directionScore >= 0.45 ? 'elevated' : 'high';
-
-  // Improved cluster integrity: blend decompression clusterRatio with peak cluster score
-  const blendedClusterIntegrity = clamp01(
-    0.5 * clusterRatio + 0.5 * clamp01(actionablePeakClusterWeight / 50)
-  );
-
-  return {
-    context: {
-      symbol,
-      assetClass: detectAssetClass(symbol),
-      primaryTfMinutes: TF_TO_MINUTES[scanMode],
-      lookbackBars: 500,
-      macroBias: normalizeDirection(scan?.decompression?.netPullDirection),
-      htfBias: normalizeDirection(scan?.prediction?.direction),
-      regime:
-        scan?.signalStrength === 'strong'
-          ? 'trend'
-          : scan?.signalStrength === 'moderate'
-          ? 'expansion'
-          : scan?.signalStrength === 'weak'
-          ? 'compression'
-          : 'unknown',
-      volState:
-        scan?.candleCloseConfluence?.confluenceRating === 'extreme'
-          ? 'extreme'
-          : scan?.candleCloseConfluence?.confluenceRating === 'high'
-          ? 'high'
-          : 'normal',
-      trendStrength: clamp01(directionScore),
-      dataIntegrity: {
-        provider: 'Alpha Vantage',
-        freshnessSec: scan?.isLivePrice ? 60 : 600,
-        coveragePct: clamp01((scan?.includedTFs?.length || 0) / 8),
-        gapsPct: scan?.isLivePrice ? 0.02 : 0.08,
-      },
-      extremeConditions,
-    },
-    setup: {
-      primaryDirection: direction,
-      decomposition: decompositionRows,
-      window: {
-        status: closeNowCount > 0 || closeSoonCount > 0 || actionablePeakClusterCount >= 3 ? 'ACTIVE' : 'INACTIVE',
-        durationHours: Math.max(1, Math.round((Number(scan?.candleCloseConfluence?.bestEntryWindow?.endMins || 60) - Number(scan?.candleCloseConfluence?.bestEntryWindow?.startMins || 0)) / 60)),
-        timeRemainingMinutes: Number(scan?.candleCloseConfluence?.bestEntryWindow?.startMins || 0),
-        strength: clamp01(Math.max(
-          Number(scan?.decompression?.temporalCluster?.score || 0) / 100,
-          actionablePeakClusterWeight / 100,
-        )),
-        clusterIntegrity: blendedClusterIntegrity,
-        directionConsistency: clamp01(directionScore),
-        alignmentCount,
-        tfCount,
-      },
-      warnings,
-    },
-    execution: {
-      closeConfirmation,
-      closeStrength: confluenceScore,
-      entryWindowQuality: clamp01(
-        0.6 * clusterRatio +
-          0.4 * clamp01((Number(scan?.candleCloseConfluence?.closingSoon?.peakCount || 0) + closeNowCount) / 5),
-      ),
-      liquidityOK: (scan?.decompression?.activeCount || 0) >= 2,
-      riskState,
-      notes: [
-        String(scan?.prediction?.reasoning || 'Live hierarchical confluence mapping.'),
-        String(scan?.decompression?.reasoning || '').trim(),
-      ].filter(Boolean),
-    },
-  };
-}
-
-/** Adaptive price formatting: 2 decimals for > $1, up to 8 for sub-cent */
-// formatPrice imported from shared lib/formatPrice.ts
 
 export default function TimeScannerPage({ embeddedInTerminal = false, symbol: propSymbol, assetType, timeframe }: { embeddedInTerminal?: boolean; symbol?: string; assetType?: 'equity' | 'crypto'; timeframe?: string } = {}) {
   const { tier, isLoading: tierLoading } = useUserTier();
@@ -380,32 +79,13 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
   const [symbol, setSymbol] = useState(requestedSymbol);
   const [scanMode, setScanMode] = useState<ScanModeType>('intraday_1h');
   const [sessionMode, setSessionMode] = useState<'regular' | 'extended' | 'full'>('extended');
-  const [input, setInput] = useState<TimeConfluenceV2Inputs>(FALLBACK_INPUT);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isMarketOpen, setIsMarketOpen] = useState<boolean>(true);
   const requestRef = useRef<AbortController | null>(null);
   const [selectedClusterTFs, setSelectedClusterTFs] = useState<string[] | null>(null);
   const [activeClusterLabel, setActiveClusterLabel] = useState<string | null>(null);
   const [selectedMid50TF, setSelectedMid50TF] = useState<string>('all');
-  const [scanData, setScanData] = useState<{
-    observedAt: string | number | null;
-    currentPrice: number;
-    direction: 'bullish' | 'bearish' | 'neutral';
-    confidence: number;
-    targetLevel: number;
-    reasoning: string;
-    expectedMoveTime: string;
-    entry: number;
-    stopLoss: number;
-    takeProfit: number;
-    riskReward: number;
-    riskPct: number;
-    rewardPct: number;
-    signalStrength: string;
-    netPull: string;
-    mid50Levels: { tf: string; level: number; distance: number }[];
-  } | null>(null);
+  const [scanData, setScanData] = useState<PublicTimeConfluence | null>(null);
 
   const runScan = async (overrides?: { symbol?: string; scanMode?: ScanModeType }) => {
     // Strip leading slash from CME-style futures tickers (e.g. /ES → ES, /NQ → NQ)
@@ -436,59 +116,11 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
         signal: controller.signal,
       }, 60_000);
       if (controller.signal.aborted) return;
-      if (!response.ok || !json?.success) {
+      if (!response.ok || !json?.success || json?.data?.contract !== 'public-time-confluence-v1') {
         setError(json?.error || 'Time scan failed');
         return;
       }
-
-      const mapped = mapScanToInput(effectiveSymbol, effectiveMode, json.data);
-      mapped.context.assetClass = requestedAsset || mapped.context.assetClass;
-      setInput(mapped);
-      setIsMarketOpen(json.data?.candleCloseConfluence?.isMarketOpen !== false);
-
-      // ── Capture raw scan output for Direction + Target panel ──
-      const sd = json.data;
-      setScanData({
-        observedAt: typeof sd?.timestamp === 'number' || typeof sd?.timestamp === 'string' ? sd.timestamp : null,
-        currentPrice: Number(sd?.currentPrice || sd?.price || 0),
-        direction: String(sd?.prediction?.direction || 'neutral') as 'bullish' | 'bearish' | 'neutral',
-        confidence: Number(sd?.prediction?.confidence || 0),
-        targetLevel: Number(sd?.prediction?.targetLevel || 0),
-        reasoning: String(sd?.prediction?.reasoning || ''),
-        expectedMoveTime: String(sd?.prediction?.expectedMoveTime || ''),
-        entry: Number(sd?.tradeSetup?.entryPrice || sd?.currentPrice || 0),
-        stopLoss: Number(sd?.tradeSetup?.stopLoss || 0),
-        takeProfit: Number(sd?.tradeSetup?.takeProfit || 0),
-        riskReward: Number(sd?.tradeSetup?.riskRewardRatio || 0),
-        riskPct: Number(sd?.tradeSetup?.riskPercent || 0),
-        rewardPct: Number(sd?.tradeSetup?.rewardPercent || 0),
-        signalStrength: String(sd?.signalStrength || 'no_signal'),
-        netPull: String(sd?.decompression?.netPullDirection || 'neutral'),
-        mid50Levels: (() => {
-          // Pull mid50 from the enriched close schedule (covers ALL TFs, not just
-          // those within the scan mode's maxTFMinutes). This ensures the 50% Pull
-          // Levels section shows every TF that appears in the Close Cluster Timeline.
-          const closes: any[] = Array.isArray(sd?.candleCloseConfluence?.closes)
-            ? sd.candleCloseConfluence.closes
-            : [];
-          const fromCloses = closes
-            .filter((r: any) => r?.mid50Level && Number(r.mid50Level) > 0 && Number(r.tfMinutes || 0) >= 60)
-            .map((r: any) => ({
-              tf: String(r.tf || ''),
-              level: Number(r.mid50Level),
-              distance: Number(r.distanceToMid50 || 0),
-            }));
-          // De-duplicate by level (e.g. 7D and 1W are both 10080 min)
-          const seen = new Set<string>();
-          return fromCloses.filter((m: any) => {
-            const key = `${m.level.toFixed(2)}`;
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-          });
-        })(),
-      });
-
+      setScanData(json.data as PublicTimeConfluence);
       // Research scans do not create paper trades; saving belongs to an explicit user action.
     } catch (scanError) {
       if (!controller.signal.aborted) setError(scanError instanceof Error ? scanError.message : 'Network error');
@@ -509,24 +141,11 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
     setLoading(false);
     setError(null);
     setScanData(null);
-    setInput({ ...FALLBACK_INPUT, context: { ...FALLBACK_INPUT.context, symbol, assetClass: requestedAsset || detectAssetClass(symbol), primaryTfMinutes: TF_TO_MINUTES[scanMode] } });
     return () => requestRef.current?.abort();
   }, [symbol, scanMode, sessionMode, requestedAsset]);
 
   const isCrypto = (requestedAsset || detectAssetClass(symbol)) === 'crypto';
-
-  const out = computeTimeConfluenceV2(input);
-  const displaySymbol = useMemo(() => input.context.symbol || symbol, [input.context.symbol, symbol]);
-  const tone = permissionTone(out.permission);
-  const validRR = scanData ? directionalRiskReward(scanData.direction, scanData.entry, scanData.stopLoss, scanData.takeProfit) : null;
-  const rrDisplay = validRR == null ? 'Not measured' : validRR.toFixed(1);
-  const confluenceRows = [
-    { label: 'Trend Alignment', score: out.contextScore },
-    { label: 'Flow Strength', score: out.setupScore },
-    { label: 'Close Evidence', score: out.executionScore },
-    { label: 'Cluster Integrity', score: input.setup.window.clusterIntegrity * 100 },
-    { label: 'Window Quality', score: input.execution.entryWindowQuality * 100 },
-  ];
+  const displaySymbol = useMemo(() => scanData?.symbol || symbol, [scanData?.symbol, symbol]);
 
   // Tier gate: require Pro
   if (tierLoading) {
@@ -623,115 +242,72 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
                 </button>
               </div>
               <div className="mt-1.5 truncate text-xs text-slate-400">
-                {out.direction === 'bullish' ? 'Upside evidence' : out.direction === 'bearish' ? 'Downside evidence' : 'Mixed evidence'} • {SCAN_MODE_LABELS[scanMode]} • {displaySymbol}{!isCrypto ? ` • ${sessionMode === 'regular' ? 'RTH' : sessionMode === 'extended' ? 'Extended' : 'Full'}` : ''}
+                {SCAN_MODE_LABELS[scanMode]} • {displaySymbol}{!isCrypto ? ` • ${sessionMode === 'regular' ? 'RTH' : sessionMode === 'extended' ? 'Extended' : 'Full'}` : ''}
               </div>
             </div>
 
             <div className="flex justify-start lg:justify-center">
-              <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/45 px-3 py-2">
-                <div className={`h-2.5 w-2.5 rounded-full ${tone.dot}`} />
-                <div data-time-verdict className="text-sm font-semibold tracking-wide text-slate-100">{scanData ? (input.setup.decomposition.length ? tone.label : 'No measured timing evidence') : 'Run scan to assess'}</div>
+              <div className="rounded-xl border border-slate-700 bg-slate-950/45 px-3 py-2">
+                <div data-time-verdict className="text-sm font-semibold tracking-wide text-slate-100">
+                  {scanData ? `${scanData.closes.closingNow.count + scanData.closes.closingSoon.count} timeframe closes in the next 4 hours` : 'Run scan to load timing'}
+                </div>
               </div>
             </div>
 
             <div className="flex items-center justify-between gap-2 lg:justify-end">
-              <div className={`grid w-full gap-2 ${validRR == null ? 'grid-cols-2' : 'grid-cols-3'}`}>
-                <MetricPill label="Confluence" value={scanData ? `${Math.round(out.timeConfluenceScore)} / 100` : 'Unavailable'} />
-                <MetricPill label="Risk" value={scanData ? riskLabel(out.permission) : 'Unavailable'} />
-                {validRR != null && <MetricPill label="R:R" value={rrDisplay} />}
+              <div className="grid w-full grid-cols-2 gap-2">
+                <MetricPill label="Price" value={scanData?.price.value != null ? formatPrice(scanData.price.value) : 'Not collected'} />
+                <MetricPill label="Midpoints measured" value={scanData ? `${scanData.midpoints.levels.length} of ${scanData.includedTFs.length}` : 'Not collected'} />
               </div>
             </div>
           </div>
         </section>
 
         <CollapsibleSection title="Timing evidence">
-        {/* ═══ SCAN OUTPUT: Direction + Price Target ═══ */}
-        {scanData && scanData.direction !== 'neutral' && (
-          <section className="w-full rounded-2xl border bg-slate-900/50 p-4 lg:p-5" style={{
-            borderColor: scanData.direction === 'bullish' ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.35)',
-          }}>
+        {scanData && (
+          <section data-time-evidence className="w-full rounded-2xl border border-slate-700 bg-slate-900/50 p-4 lg:p-5">
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.5fr]">
-              {/* Left: Direction + Price */}
               <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className={`rounded-xl px-3 py-1.5 text-lg font-bold tracking-wide ${
-                    scanData.direction === 'bullish'
-                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                      : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                  }`}>
-                    {scanData.direction === 'bullish' ? 'Upside evidence' : 'Downside evidence'}
-                  </div>
-                  <div className="text-xs text-slate-400">
-                    Alignment: <span className="font-semibold text-slate-200">{Math.min(100, Math.round(scanData.confidence <= 1 ? scanData.confidence * 100 : scanData.confidence))}%</span>
-                    {scanData.signalStrength !== 'no_signal' && (
-                      <span className={`ml-2 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
-                        scanData.signalStrength === 'strong' ? 'bg-emerald-500/15 text-emerald-400'
-                        : scanData.signalStrength === 'moderate' ? 'bg-amber-500/15 text-amber-400'
-                        : 'bg-slate-700 text-slate-400'
-                      }`}>{scanData.signalStrength}</span>
-                    )}
-                  </div>
+                <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2.5">
+                  <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Candle closes</div>
+                  <div className="text-xs leading-relaxed text-slate-300">{closeSummary(scanData)}.</div>
+                  {scanData.closes.closingNow.timeframes.length > 0 && <div className="mt-1 text-xs text-slate-400">Closing now: {scanData.closes.closingNow.timeframes.join(', ')}</div>}
+                  {scanData.closes.densestWindow && <div className="mt-1 text-xs text-slate-400">Together: {scanData.closes.densestWindow.timeframes.join(', ')}</div>}
+                  {calendarEvents(scanData).length > 0 && <div className="mt-1 text-xs text-slate-400">Calendar: {calendarEvents(scanData).join(' · ')}</div>}
+                  {!scanData.closes.marketOpen && <div className="mt-1 text-xs text-amber-300">Market closed: the next intraday closes are in the next session.</div>}
+                  <div className="mt-2 text-[10px] text-slate-500">{scanData.closes.basis}</div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-xl border border-slate-800 bg-slate-950/30 px-3 py-2">
-                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Current</div>
-                    <div className="text-base font-bold text-slate-100">{formatPrice(scanData.currentPrice)}</div>
+                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Price</div>
+                    <div className="text-base font-bold text-slate-100">{scanData.price.value != null ? formatPrice(scanData.price.value) : 'Not collected'}</div>
+                    <div className="text-[10px] text-slate-500">{scanData.price.source} · {scanData.price.basis}</div>
                   </div>
-                  <div className={`rounded-xl border px-3 py-2 ${
-                    scanData.direction === 'bullish'
-                      ? 'border-emerald-500/25 bg-emerald-500/5'
-                      : 'border-rose-500/25 bg-rose-500/5'
-                  }`}>
-                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Key Level</div>
-                    <div className={`text-base font-bold ${
-                      scanData.direction === 'bullish' ? 'text-emerald-400' : 'text-rose-400'
-                    }`}>{scanData.targetLevel > 0 ? formatPrice(scanData.targetLevel) : 'Not measured'}</div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/30 px-3 py-2">
+                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Latest bar</div>
+                    <div className="text-xs font-semibold text-slate-200">{scanData.latestBarAt ? new Date(scanData.latestBarAt).toLocaleString() : 'Not recorded'}</div>
                   </div>
                 </div>
 
-                {/* Reference / Risk / Reaction — only show when they differ meaningfully */}
-                {scanData.entry > 0 && scanData.stopLoss > 0 && Math.abs(scanData.entry - scanData.stopLoss) > 0.01 && (
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <div className="rounded-lg border border-slate-800 bg-slate-950/25 px-2 py-1.5 text-center">
-                      <div className="text-[9px] uppercase tracking-wider text-slate-500">Reference</div>
-                      <div className="text-xs font-semibold text-slate-200">{formatPrice(scanData.entry)}</div>
-                    </div>
-                    <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 px-2 py-1.5 text-center">
-                      <div className="text-[9px] uppercase tracking-wider text-slate-500">Risk Level</div>
-                      <div className="text-xs font-semibold text-rose-400">{formatPrice(scanData.stopLoss)}</div>
-                      {scanData.riskPct > 0 && <div className="text-[9px] text-rose-500">-{scanData.riskPct.toFixed(1)}%</div>}
-                    </div>
-                    <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5 text-center">
-                      <div className="text-[9px] uppercase tracking-wider text-slate-500">Reaction</div>
-                      <div className="text-xs font-semibold text-emerald-400">{formatPrice(scanData.takeProfit)}</div>
-                      {scanData.rewardPct > 0 && <div className="text-[9px] text-emerald-500">+{scanData.rewardPct.toFixed(1)}%</div>}
-                    </div>
-                  </div>
-                )}
-
-                {validRR != null && (
-                  <div className="flex items-center gap-2 text-xs text-slate-400">
-                    R:R Ratio: <span className={`font-bold ${
-                      validRR >= 2 ? 'text-emerald-400' : validRR >= 1.5 ? 'text-amber-400' : 'text-rose-400'
-                    }`}>{validRR.toFixed(2)}</span>
-                    {scanData.expectedMoveTime && !scanData.expectedMoveTime.startsWith('-') && (
-                      <span className="text-slate-500">· Expected: {scanData.expectedMoveTime}</span>
-                    )}
+                {scanData.midpoints.groups.length > 0 && (
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2.5">
+                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Midpoints close together</div>
+                    <ul className="space-y-0.5 text-xs text-slate-300">
+                      {scanData.midpoints.groups.map((g) => (
+                        <li key={g.tfs.join('-')} className="flex justify-between gap-3"><span className="text-slate-400">{g.tfs.join(', ')}</span><span className="font-mono">{formatPrice(g.averageLevel)}</span></li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </div>
 
-              {/* Right: Reasoning + 50% Levels */}
               <div className="space-y-3">
-                <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2.5">
-                  <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Analysis</div>
-                  <div className="text-xs leading-relaxed text-slate-300">{timeEngineProse(scanData.reasoning || 'Run scan for analysis.')}</div>
-                </div>
-
                 {(() => {
-                  const allLevels = scanData.mid50Levels.filter((m) => m.level > 0);
-                  if (allLevels.length === 0) return null;
+                  const allLevels = scanData.midpoints.levels;
+                  if (allLevels.length === 0) {
+                    return <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2.5 text-xs text-slate-400">No timeframe midpoint could be measured from the bars collected.</div>;
+                  }
 
                   // Filter by selected cluster TFs (if any)
                   const clusterFiltered = selectedClusterTFs
@@ -749,11 +325,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
                   return (
                     <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2.5">
                       <div className="mb-1.5 flex items-center justify-between">
-                        <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                          50% Pull Levels <span className={`ml-1 ${
-                            scanData.netPull === 'bullish' ? 'text-emerald-400' : scanData.netPull === 'bearish' ? 'text-rose-400' : 'text-slate-500'
-                          }`}>({scanData.netPull === 'bullish' ? 'upward pull' : scanData.netPull === 'bearish' ? 'downward pull' : 'mixed pull'})</span>
-                        </div>
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Prior-candle midpoints (50% levels)</div>
                         <div className="flex items-center gap-1.5">
                           {selectedClusterTFs && (
                             <button
@@ -783,35 +355,46 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
                             <div key={m.tf} className="flex items-center justify-between">
                               <span className="font-medium text-slate-400">{m.tf}</span>
                               <span className="font-mono text-slate-300">{formatPrice(m.level)}
-                                <span className={`ml-1 text-[10px] ${m.distance > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                  {m.distance > 0 ? '+' : ''}{m.distance.toFixed(1)}%
-                                </span>
+                                <span className="ml-1 text-[10px] text-slate-500">price {m.distancePct > 0 ? '+' : ''}{m.distancePct.toFixed(1)}%</span>
                               </span>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <div className="text-[10px] text-slate-500">No mid50 data for this selection — click a cluster tile below to load levels.</div>
+                        <div className="text-[10px] text-slate-500">No measured midpoint for this selection.</div>
                       )}
+                      {scanData.unmeasuredTFs.length > 0 && <div className="mt-1.5 text-[10px] text-slate-500">Not measured (too few bars): {scanData.unmeasuredTFs.join(', ')}</div>}
+                      <div className="mt-1.5 text-[10px] text-slate-500">{scanData.midpoints.basis}</div>
                     </div>
                   );
                 })()}
-              </div>
-            </div>
-          </section>
-        )}
 
-        {scanData && scanData.direction === 'neutral' && (
-          <section className="w-full rounded-2xl border border-slate-700/50 bg-slate-900/30 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <div className="rounded-xl border border-slate-700 bg-slate-800/30 px-3 py-1.5 text-sm font-bold text-slate-400">↔ Mixed evidence</div>
-              <div className="text-xs text-slate-400">
-                No directional bias detected — {scanData.reasoning || 'mixed signals across timeframes'}
+                <details className="rounded-xl border border-slate-800 bg-slate-950/25">
+                  <summary className="cursor-pointer px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Next close by timeframe ({scanData.closes.schedule.length})</summary>
+                  <div className="overflow-x-auto px-3 pb-2">
+                    <table className="w-full text-left text-[11px]">
+                      <thead>
+                        <tr className="border-b border-slate-800 text-[10px] uppercase tracking-wider text-slate-500">
+                          <th className="pb-1 pr-3 font-medium">TF</th>
+                          <th className="pb-1 pr-3 font-medium">Next close</th>
+                          <th className="pb-1 font-medium">In</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-slate-300">
+                        {scanData.closes.schedule.map((r) => (
+                          <tr key={r.tf} className="border-b border-slate-800/40">
+                            <td className="py-1 pr-3 font-medium">{r.tf}</td>
+                            <td className="py-1 pr-3 font-mono">{r.nextCloseAt ? new Date(r.nextCloseAt).toLocaleString() : 'Not calculated'}</td>
+                            <td className="py-1">{minutesLabel(r.minsToClose)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
               </div>
-              {scanData.currentPrice > 0 && (
-                <div className="ml-auto text-sm font-semibold text-slate-200">{formatPrice(scanData.currentPrice)}</div>
-              )}
             </div>
+            <p className="mt-3 text-[11px] text-slate-500">{scanData.note}</p>
           </section>
         )}
 
@@ -1027,69 +610,6 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
           }}
         />
 
-        {/* ═══ ROW 3: CONFLUENCE ENGINE + TIMING (collapsible — collapsed by default) ═══ */}
-        <details className="w-full rounded-2xl border border-slate-800 bg-slate-900/30">
-          <summary className="cursor-pointer list-none px-3 py-3 lg:px-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-sm font-semibold text-slate-100">Time Confluence</span>
-                <span className="ml-2 text-xs text-slate-400">Alignment score, decompression & structure</span>
-              </div>
-              <div className="text-xs text-slate-500">▾ expand</div>
-            </div>
-          </summary>
-          <div className="border-t border-slate-800 p-3 lg:p-5">
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[2fr_1fr] lg:gap-6">
-            <div className="space-y-3">
-              <div>
-                <div className="text-sm font-semibold text-slate-100">Confluence evidence</div>
-                <div className="text-xs text-slate-400">Time alignment → confluence quality</div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/25 p-3">
-                <div className="space-y-3">
-                  {confluenceRows.filter((row) => Math.round(row.score) > 0).length > 0 ? (
-                    confluenceRows.filter((row) => Math.round(row.score) > 0).map((row) => (
-                      <ConfluenceRow key={row.label} label={row.label} score={row.score} />
-                    ))
-                  ) : (
-                    <div className="py-2 text-center text-xs text-slate-500">Run a scan to populate confluence data</div>
-                  )}
-                </div>
-                <div className="mt-3 text-xs text-slate-500">
-                  Alignment {input.setup.window.alignmentCount}/{input.setup.window.tfCount} • Window {timeEngineLabel(input.setup.window.status)}
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <div className="text-sm font-semibold text-slate-100">Timing</div>
-                <div className="text-xs text-slate-400">Key timing context for analysis</div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-700 bg-slate-950/35 p-3 shadow-sm">
-                <div className="space-y-2">
-                  <TimingField label="Close" value={timeEngineLabel(input.execution.closeConfirmation)} />
-                  <TimingField label="Risk" value={input.execution.riskState} />
-                  <TimingField label="Liquidity" value={input.execution.liquidityOK ? 'Adequate' : 'Thin'} />
-
-                  <div className="grid grid-cols-3 gap-2 pt-1">
-                    <MetricPill label="Gate" value={`${Math.round(out.gateScore)}%`} />
-                    <MetricPill label="Time" value={scanData ? `${Math.round(out.timeConfluenceScore)} / 100` : 'Unavailable'} />
-                    <MetricPill label="Window" value={`${Math.round(input.execution.entryWindowQuality * 100)}%`} />
-                  </div>
-
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2 text-xs text-slate-400">
-                    {timeEngineProse(input.execution.notes?.[0] || 'No timing notes')}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          </div>
-        </details>
-
         {/* ═══ ROW 4: TIME GRAVITY MAP (collapsible) ═══ */}
         <details className="w-full rounded-2xl border border-slate-800 bg-slate-900/30">
           <summary className="cursor-pointer list-none px-3 py-3 lg:px-5">
@@ -1104,8 +624,8 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
           <div className="border-t border-slate-800 p-3 lg:p-5">
             <TimeGravityMapWidget
               symbol={symbol}
-              currentPrice={scanData?.currentPrice || undefined}
-              assetType={input.context.assetClass === 'equity' ? 'stock' : 'crypto'}
+              currentPrice={scanData?.price.value ?? undefined}
+              assetType={isCrypto ? 'crypto' : 'stock'}
             />
           </div>
         </details>
@@ -1115,7 +635,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
         {embeddedInTerminal && scanData && (
           <CollapsibleSection title="Scheduled timing context"><TimeConfluenceWidget showMacro showMicro showCalendar assetClass={isCrypto ? 'crypto' : 'equity'} symbol={displaySymbol} /></CollapsibleSection>
         )}
-        {scanData && <SourceLine source="Confluence scan" asOf={scanData.observedAt} tradingDay="Observation time not supplied" basis="Measured scan evidence and calculated schedules" />}
+        {scanData && <SourceLine source={`Time Confluence scan · ${scanData.price.source}`} asOf={scanData.observedAt} tradingDay="Observation time not supplied" basis="Calculated candle schedules and measured prior-candle midpoints" />}
       </main>
     </TimeScannerShell>
   );

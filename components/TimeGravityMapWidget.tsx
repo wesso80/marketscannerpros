@@ -6,7 +6,7 @@ import { decompressionStatusLabel, targetStatusLine, timeEngineLabel, timeEngine
 import { computeTimeGravityMap, type TimeGravityMap, type GravityZone, type GravityPoint, type TargetStatus, type CloseConfluence, type CoverageDiagnostics } from '@/lib/time/timeGravityMap';
 import type { MidpointRecord } from '@/lib/time/midpointDebt';
 import type { MomentumOverrideState, ExpansionTarget } from '@/lib/time/momentumOverride';
-import type { ForwardCloseCalendar, ForwardCloseScheduleRow, ForwardCloseCluster } from '@/lib/confluence-learning-agent';
+import type { PublicCloseCalendar as ForwardCloseCalendar, PublicCloseScheduleRow as ForwardCloseScheduleRow, PublicCloseWindow as ForwardCloseCluster } from '@/lib/research/publicCloseCalendar';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -699,7 +699,7 @@ function urgencyBg(mins: number | null): string {
   return '';
 }
 
-function ForwardSchedulePanel({
+export function ForwardSchedulePanel({
   calendar,
   loading,
 }: {
@@ -757,7 +757,7 @@ function ForwardSchedulePanel({
         </div>
       </div>
 
-      {/* Cluster Cards (top 5) */}
+      {/* Coinciding-close windows: the next 5 in time order (no weight or score) */}
       {forwardClusters.length > 0 && (
         <div className="flex gap-1.5 overflow-x-auto pb-1">
           {forwardClusters.slice(0, 5).map((cluster, i) => (
@@ -779,7 +779,7 @@ function ForwardSchedulePanel({
                 )}
               </div>
               <div className="text-[9px] text-gray-500 mt-0.5">
-                Score: {cluster.clusterScore} • Wt: {cluster.weight.toFixed(0)}
+                {cluster.timeframeCount} timeframes close
               </div>
             </div>
           ))}
@@ -818,11 +818,10 @@ function ForwardSchedulePanel({
       {/* Schedule table */}
       <div className="bg-black/40 border border-gray-800 rounded overflow-hidden">
         {/* Table header */}
-        <div className="grid grid-cols-[60px_1fr_70px_50px] gap-1 px-2 py-1.5 bg-gray-900/60 text-[10px] text-gray-500 font-semibold uppercase">
+        <div className="grid grid-cols-[60px_1fr_70px] gap-1 px-2 py-1.5 bg-gray-900/60 text-[10px] text-gray-500 font-semibold uppercase">
           <span>TF</span>
           <span>Close Time</span>
           <span className="text-right" title="Elapsed time from the selected day’s midnight anchor; not a live countdown">From anchor</span>
-          <span className="text-right">Wt</span>
         </div>
 
         {/* Rows */}
@@ -835,7 +834,7 @@ function ForwardSchedulePanel({
             filteredRows.map((row, i) => (
               <div
                 key={`${row.tf}-${i}`}
-                className={`grid grid-cols-[60px_1fr_70px_50px] gap-1 px-2 py-1 text-xs items-center ${urgencyBg(row.minsToFirstClose)}`}
+                className={`grid grid-cols-[60px_1fr_70px] gap-1 px-2 py-1 text-xs items-center ${urgencyBg(row.minsToFirstClose)}`}
               >
                 <span className={`font-mono font-semibold ${catColor(row.category)}`}>
                   {row.tf}
@@ -851,9 +850,6 @@ function ForwardSchedulePanel({
                     : 'text-gray-400'
                 }`}>
                   {fmtMinsShort(row.minsToFirstClose)}
-                </span>
-                <span className="text-right text-gray-500 font-mono">
-                  {row.weight.toFixed(0)}
                 </span>
               </div>
             ))
@@ -916,8 +912,8 @@ export default function TimeGravityMapWidget({
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.data || data.schedule) {
-          setCalendar(data.data ?? data);
+        if (data?.data?.contract === 'public-close-calendar-v1') {
+          setCalendar(data.data);
         }
       }
     } catch {
