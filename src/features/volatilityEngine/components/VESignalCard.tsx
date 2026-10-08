@@ -41,22 +41,23 @@ export default function VESignalCard({ signal }: SignalCardProps) {
         <div className="space-y-3">
           <p className="text-[0.7rem] text-white/50 mb-2">Measured conditions in each rule. Each rule also needs the engine's directional pressure to agree; that reading is not published.</p>
           {conditionGroups.map((g) => {
-            const metCount = g.conditions.filter(c => c.met).length;
-            const total = g.conditions.length;
-            const pctMet = (metCount / total) * 100;
+            // A condition whose input was not collected (met: null) is neither met nor counted.
+            const known = g.conditions.filter(c => c.met !== null);
+            const metCount = known.filter(c => c.met).length;
+            const total = known.length;
             return (
               <div key={g.signalName} className="rounded-lg border border-white/5 bg-white/[0.03] p-2.5">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[0.7rem] font-bold text-white/70">{g.signalName}</span>
-                  <span className="text-[11px] font-semibold" style={{ color: pctMet >= 80 ? 'var(--msp-bull)' : pctMet >= 50 ? 'var(--msp-warn)' : 'var(--msp-text-muted)' }}>
-                    {metCount}/{total}
+                  <span className="text-[11px] font-semibold text-white/60">
+                    {total ? `${metCount} of ${total} measured` : 'Not collected'}
                   </span>
                 </div>
                 <div className="space-y-1">
                   {g.conditions.map((c, i) => (
                     <div key={i} className="flex items-start gap-1.5 text-[0.63rem]">
-                      <span className={c.met ? 'text-emerald-400' : 'text-white/20'}>{c.met ? '✓' : '○'}</span>
-                      <span className={c.met ? 'text-white/60' : 'text-white/30'}>{volatilityText(c.label)}</span>
+                      <span className={c.met === null ? 'text-white/20' : c.met ? 'text-emerald-400' : 'text-white/20'}>{c.met === null ? '–' : c.met ? '✓' : '○'}</span>
+                      <span className={c.met ? 'text-white/60' : 'text-white/30'}>{volatilityText(c.label)}{c.met === null ? ' (not collected)' : ''}</span>
                     </div>
                   ))}
                 </div>

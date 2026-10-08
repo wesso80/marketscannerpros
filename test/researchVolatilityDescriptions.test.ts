@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { computeBBWP, computeDVE } from '@/lib/directionalVolatilityEngine';
 import { BBWP } from '@/lib/directionalVolatilityEngine.constants';
-import { bbwpDisplay, breakoutConditions, measuredBbwp, phaseDuration, projectionStudy, trapDescription } from '@/lib/research/volatilityDescriptions';
+import { bbwpDisplay, breakoutConditions, measuredBbwp, phaseDuration, pinnedCompressionDescription, projectionStudy, stretchDescription } from '@/lib/research/volatilityDescriptions';
 import { publicObservation } from '@/lib/research/publicDve';
 
 const closes = (n: number) => Array.from({ length: n }, (_, i) => 100 + Math.sin(i / 5) * 3 + i * 0.05);
@@ -38,8 +38,10 @@ describe('Volatility wording', () => {
     expect(b.headline).toBe('4 of 4 setting conditions present. They describe the setting; they are not a breakout or a signal.');
     expect(b.conditions.find((c) => c.id === 'gammaWall')!.label).toBe('Price near max pain');
     expect(b.details).toEqual(['BBWP < 15: extreme compression', 'Squeeze active']);
-    const na = breakoutConditions({ conditions: { volCompression: true, timeAlignment: false, gammaWall: false, adxRising: false }, details: [] }, ['options', 'time']);
+    // W3 DVE v2: an input that was not collected is null, never "not present".
+    const na = breakoutConditions({ conditions: { volCompression: true, timeAlignment: null, gammaWall: null, adxRising: false }, details: [] });
     expect(na.headline).toBe('1 of 2 setting conditions present (2 not collected). They describe the setting; they are not a breakout or a signal.');
+    expect(na.conditions.find((c) => c.id === 'timeAlignment')!.present).toBeNull();
   });
   it('phase persistence is stated as lengths, not probabilities', () => {
     expect(phaseDuration('contraction', { currentBars: 12, averageBars: 9.44, medianBars: 8, maxBars: 20, agePercentile: 78.6, episodeCount: 14 }))
@@ -47,12 +49,22 @@ describe('Volatility wording', () => {
     expect(phaseDuration('expansion', { currentBars: 0, averageBars: 0, medianBars: 0, maxBars: 0, agePercentile: 0, episodeCount: 0 })).toBe('No expansion phase is active.');
   });
   it('the past-case study states its sample and limits', () => {
-    const s = projectionStudy({ signalType: 'compression_release_up', expectedMovePct: 2.1, medianMovePct: 1.4, maxHistoricalMovePct: 6.2, averageBarsToMove: 9.5, casesInDirection: 5, sampleSize: 8, dispersionPct: 3.3, projectionWarning: '' }, 20)!;
-    expect(s.lines[1]).toBe('5 of 8 closed higher.');
+    const period = { from: '2025-06-02', to: '2026-10-06', bars: 340, timeframe: 'daily', forwardBars: 20 };
+    const s = projectionStudy({ signalType: 'compression_release_up', sampleSize: 8, minimumSample: 5, stats: { meanReturnPct: 2.1, medianReturnPct: 1.4, dispersionPct: 3.3, largestMoveInRuleDirectionPct: 6.2, averageBarsToLargestMove: 9.5, casesInDirection: 5 }, period, note: '' })!;
+    expect(s.lines[0]).toBe('Sample: 8 past cases, daily bars 2025-06-02 to 2026-10-06 (340 bars searched).');
+    expect(s.lines[2]).toBe('5 of 8 closed higher.');
+    expect(s.method).toMatch(/^Historical return statistics, in-sample on this symbol's own history \(daily bars 2025-06-02 to 2026-10-06/);
+    // Too few cases: no statistics, the note says so.
+    const thin = projectionStudy({ signalType: 'compression_release_up', sampleSize: 3, minimumSample: 5, stats: null, period, note: 'Too few past cases (3 of the 5 needed), so no statistics are shown.' })!;
+    expect(thin.lines).toEqual(['Too few past cases (3 of the 5 needed), so no statistics are shown.']);
     expect(s.method).toContain('not a forecast or a win rate');
     expect(projectionStudy({ signalType: 'none' } as any, 20)).toBeNull();
   });
-  it('trap text lists observations without a score', () => {
-    expect(trapDescription({ detected: false, candidate: true, observations: ['BBWP 12 compressed (+25)', 'Time cluster 12/30 (display only; not included in score)'].map(publicObservation).filter((x): x is string => !!x) })).toBe('Some trap conditions present: BBWP 12 compressed.');
+  it('compression near a large OI strike is conditions without a trap verdict; stretch is observations without a label', () => {
+    expect(pinnedCompressionDescription({ conditions: { compressed: true, nearLargeOiStrike: null, timeframeClosesClustered: null }, observations: [] }))
+      .toBe('BBWP below 20: yes · Price near a large open-interest strike: not collected · Several timeframe closes together: not collected');
+    expect(stretchDescription({ observations: ['StochK 88 > 80'] })).toBe('StochK 88 > 80');
+    expect(stretchDescription({ observations: [] })).toBe('No stretch observations recorded');
+    expect(['Time cluster 12/30 (display only; not included in score)', 'BBWP 12 compressed (+25)'].map(publicObservation)).toEqual([null, 'BBWP 12 compressed']);
   });
 });

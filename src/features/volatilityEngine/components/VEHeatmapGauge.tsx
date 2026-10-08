@@ -16,7 +16,7 @@ function getZone(bbwp: number) {
   return ZONES.find(z => bbwp <= z.max) ?? ZONES[ZONES.length - 1];
 }
 
-function regimeColor(regime: string): string {
+function regimeColor(regime: string | null): string {
   switch (regime) {
     case 'compression': return 'var(--msp-text-muted)';
     case 'expansion': return 'var(--msp-warn)';
@@ -29,7 +29,7 @@ function regimeColor(regime: string): string {
 export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
   const bbwp = vol.bbwp;
   const shown = bbwpDisplay(vol);
-  const zone = getZone(bbwp);
+  const zone = bbwp == null ? { label: 'NOT AVAILABLE', color: 'var(--msp-panel)', text: 'var(--msp-text-muted)' } : getZone(bbwp);
 
   // SVG semicircle gauge — identical geometry to GE gauge
   const radius = 72;
@@ -77,8 +77,8 @@ export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
               />
             );
           })}
-          {/* Needle (none when BBWP could not be computed: the engine's 50 is a placeholder) */}
-          {shown.value != null && (() => {
+          {/* Needle (none when BBWP could not be computed; the public reading has it as null) */}
+          {bbwp != null && (() => {
             const angle = Math.PI * (1 - bbwp / 100);
             const needleLen = radius - stroke;
             const nx = cx - needleLen * Math.cos(angle);
@@ -109,24 +109,24 @@ export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
           className="mt-1 rounded-full px-3 py-0.5 text-[0.65rem] font-bold tracking-widest"
           style={{ background: regimeColor(vol.regime) + '33', color: regimeColor(vol.regime) }}
         >
-          {volatilityText(vol.regime)}
+          {vol.regime ? volatilityText(vol.regime) : 'Regime not available'}
         </div>
 
         {/* Stats */}
         <div className="mt-2 space-y-0.5 text-center text-[0.7rem] text-white/50">
-          <div>SMA5: <span className="font-semibold text-white/70">{vol.bbwpSma5.toFixed(1)}</span></div>
+          <div>5-bar mean: <span className="font-semibold text-white/70">{vol.bbwpSma5 == null ? 'not available' : vol.bbwpSma5.toFixed(1)}</span></div>
           <div>
-            Rate: <span className="font-semibold text-white/70">{vol.rateSmoothed > 0 ? '+' : ''}{vol.rateSmoothed.toFixed(1)}</span>{' '}
-            <span className="text-white/40">({vol.rateDirection})</span>
+            Rate: {vol.rateSmoothed == null ? <span className="font-semibold text-white/70">not available</span> : <><span className="font-semibold text-white/70">{vol.rateSmoothed > 0 ? '+' : ''}{vol.rateSmoothed.toFixed(1)}</span>{' '}
+            <span className="text-white/40">({vol.rateDirection})</span></>}
           </div>
-          <div>
-            Squeeze: <span className={`font-semibold ${vol.inSqueeze ? 'text-amber-400' : 'text-white/60'}`}>
-              {vol.inSqueeze ? `Active (${vol.squeezeStrength.toFixed(2)})` : 'None'}
+          <div title={vol.squeeze.definition}>
+            Squeeze: <span className="font-semibold text-white/70">
+              {vol.squeeze.inSqueeze === null ? 'not collected' : vol.squeeze.inSqueeze ? 'present' : 'not present'}
             </span>
           </div>
           {vol.extremeAlert && (
             <div className={`font-semibold ${vol.extremeAlert === 'low' ? 'text-slate-400' : 'text-red-400'}`}>
-              {vol.extremeAlert === 'low' ? 'Extreme Low' : 'Extreme High'}
+              {vol.extremeAlert === 'low' ? 'BBWP at an extreme low' : 'BBWP at an extreme high'}
             </div>
           )}
           {shown.note && <div data-bbwp-note className="text-amber-300/90">{shown.note}</div>}
