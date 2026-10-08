@@ -1,5 +1,5 @@
 import { withPublicAiQuota, publicAiScope, markPublicAiProviderStarted } from '@/lib/publicAiQuota';
-import { publicCopilot } from '@/lib/ai/publicCopilot';
+import { routeCopilotRequest } from '@/lib/ai/copilotAccess';
 // =====================================================
 // MSP AI COPILOT API - Main AI chat endpoint with tools
 // POST /api/ai/copilot
@@ -81,8 +81,8 @@ async function logAIUsage(
   }
 }
 
-async function handlePost(req: NextRequest) {
-  if (publicAiScope()) return publicCopilot(req);
+// Kept intact for verified admin/operator access only; see routeCopilotRequest.
+async function handleLegacyPost(req: NextRequest) {
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const startTime = Date.now();
   
@@ -619,4 +619,4 @@ function formatToolLabel(toolName: string, params: Record<string, unknown>): str
   }
 }
 
-export const POST = withPublicAiQuota(handlePost, 'ai/copilot');
+export const POST = withPublicAiQuota(req => routeCopilotRequest(req, handleLegacyPost), 'ai/copilot');

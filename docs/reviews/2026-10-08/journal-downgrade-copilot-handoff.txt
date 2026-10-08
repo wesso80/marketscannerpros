@@ -29,3 +29,5 @@ Verification
 69 tests pass across Journal downgrade helper/route, existing Free Journal add, public Copilot route/adversarial and shared AI quota tests. Synthetic database and network only; no provider, email, payment or production record changes. Type-check result reported separately if unchanged baseline issues persist.
 
 Type check: same six recorded Stripe API-version/timer errors; no new errors from this follow-up.
+
+Follow-up implementation: copilot-private-boundary.txt records the new dispatcher that blocks public legacy fallback even with rollout off. Private handler/prompts/tools remain intact; other legacy endpoints and action execution still require retirement work.
