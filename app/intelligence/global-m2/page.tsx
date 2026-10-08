@@ -1,5 +1,7 @@
 'use client';
 
+import { publicDesignEnabled } from '@/lib/publicDesign';
+import M2Research from '@/components/public-design/M2Research';
 import { useEndpoint } from '@/components/intelligence/useEndpoint';
 import IntelligenceTable, { type IntelColumn, type IntelRow } from '@/components/intelligence/IntelligenceTable';
 import { MetricCell } from '@/components/intelligence/primitives';
@@ -42,7 +44,9 @@ function blocRow(b: GlobalM2Dto['blocs'][number]): IntelRow {
 }
 
 export default function GlobalM2Page() {
-  const { data, loading, error } = useEndpoint<GlobalM2Dto>('/api/intelligence/global-m2');
+  const { data, loading, error, retry } = useEndpoint<GlobalM2Dto>('/api/intelligence/global-m2');
+
+  if (publicDesignEnabled()) return <M2Research data={data} loading={loading} error={Boolean(error)} retry={retry}/>;
 
   return (
     <div>

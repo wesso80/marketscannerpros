@@ -31,6 +31,10 @@ try{
   if(u.pathname==='/api/disclosure/status')return route.fulfill({contentType:'application/json',body:JSON.stringify({authenticated:true,accepted:true,version:'1'})});
   if(u.pathname==='/api/public-usage')return route.fulfill({contentType:'application/json',body:JSON.stringify({enabled:true,plan:'pro',quotas:[{kind:'ai',remaining:20,limit:20}]})});
   if(page.url().includes('fixture=populated')) {
+   const observation={value:4.2,date:'2026-10-07'};
+   if(u.pathname==='/api/economic-indicators')return route.fulfill({contentType:'application/json',body:JSON.stringify({timestamp:'2026-10-08T00:00:00Z',rates:{treasury3m:observation,treasury2y:{value:3.7,date:'2026-10-06'},treasury5y:{value:null},treasury10y:observation,treasury30y:observation,fedFunds:observation,yieldCurve:{value:0.5}},inflation:{inflationRate:{value:2.5,history:[{date:'2026-08-01',value:2.5}]}},employment:{unemployment:observation},growth:{realGDP:{value:23000,unit:'billions USD'}},regime:{label:'fixture'}})});
+   if(u.pathname==='/api/intelligence/global-m2')return route.fulfill({contentType:'application/json',body:JSON.stringify({data:{enabled:true,totalUsd:30e12,validBlocCount:2,missingBlocCount:9,oneMonthPct:0,yoyPct:null,calculatedAt:'2026-10-08T00:00:00Z',estimatedWeightedCoveragePercent:45,weightedCoverageThreshold:95,interpretationEligible:false,calculationStatus:'PARTIAL',parityStatus:'PENDING',blocs:[{id:'us',name:'United States',usdM2:20e12,observationMonth:'2026-08',classification:'EXACT',provider:'Synthetic fixture',stale:true,r1:0,r12:2},{id:'eu',name:'Euro area',usdM2:10e12,observationMonth:'2026-07',classification:'ALTERNATIVE',provider:'Synthetic fixture',stale:false,health:'LIVE',r1:-1,r12:null}],missing:[{id:'jp',reason:'Fixture observation missing'}],excludedBlocs:[{id:'kr',name:'South Korea',reason:'Fixture source unavailable'}]}})});
+
    if(u.pathname==='/api/cached/bulk-quotes')return route.fulfill({contentType:'application/json',body:JSON.stringify({quotes:{SPY:{price:550,changePct:0,latestDay:'2026-10-07',source:'database'},QQQ:{price:480,changePct:1.25,latestDay:'2026-10-07',source:'cache'},BTC:{price:62000,changePct:-1.2,observedAt:'2026-10-08T03:00:00Z',source:'cache',stale:true}}})});
    if(u.pathname==='/api/sectors/heatmap')return route.fulfill({contentType:'application/json',body:JSON.stringify({sectors:[{symbol:'XLK',name:'Technology',changePercent:1.4},{symbol:'XLE',name:'Energy',changePercent:-0.6},{symbol:'XLV',name:'Healthcare',changePercent:0},{symbol:'XLF',name:'Financials',changePercent:null}],asOfTradingDay:'2026-10-07',timestamp:'2026-10-08T03:00:00Z'})});
    if(u.pathname==='/api/economic-calendar')return route.fulfill({contentType:'application/json',body:JSON.stringify({events:[{event:'Synthetic release â€” browser fixture',country:'US',releaseTimeUtc:'2099-10-09T12:30:00Z',timingConfirmed:true,dataStatus:'MISSING'}]})});
@@ -40,7 +44,7 @@ try{
  });
  const out=resolve(process.env.MSP_BROWSER_OUTPUT);await mkdir(out,{recursive:true});
  const results=[];
- for(const width of [1280,390])for(const path of ['/','/learn','/tools/golden-egg?symbol=AAPL&type=equity','/tools/command-center','/tools/command-center?fixture=populated','/tools/golden-egg?symbol=AAPL&type=equity&fixture=symbol']){
+ for(const width of [1280,390])for(const path of ['/','/learn','/tools/golden-egg?symbol=AAPL&type=equity','/tools/command-center','/tools/command-center?fixture=populated','/tools/golden-egg?symbol=AAPL&type=equity&fixture=symbol','/tools/macro','/tools/macro?fixture=populated','/intelligence/global-m2','/intelligence/global-m2?fixture=populated'].filter(path=>process.env.MSP_DESIGN_SCOPE!=='economic'||path.startsWith('/tools/macro')||path.startsWith('/intelligence/global-m2'))){
   await page.setViewportSize({width,height:1000});
   const response=await page.goto('http://127.0.0.1:5178'+path,{timeout:90000});
   await page.locator('[data-public-design]').waitFor();
@@ -55,7 +59,7 @@ try{
    await page.getByRole('button',{name:/MSP Copilot/}).click();
   }
   if(width===390&&path!=='/')await page.locator('summary').filter({hasText:'Browse destinations'}).click();
-  if(path.includes('fixture=populated')){
+  if(path.includes('command-center')&&path.includes('fixture=populated')){
    await page.getByText('Synthetic release â€” browser fixture',{exact:true}).waitFor();
    await page.getByLabel('Observed change').selectOption('flat');
    await page.getByText('1 of 7 symbols',{exact:true}).waitFor();
@@ -70,13 +74,17 @@ try{
    await page.getByRole('button',{name:'Compare',exact:true}).click();
    if(comparisonRequests!==requestsBeforeModes)throw Error('Mode switch refetched comparison');
   }
+  if(path.startsWith('/tools/macro'))await page.locator('[data-economic-research="macro"]').waitFor();
+  if(path.startsWith('/intelligence/global-m2'))await page.locator('[data-economic-research="m2"]').waitFor();
+  if(path.startsWith('/tools/macro')&&path.includes('populated'))await page.getByRole('img',{name:/Treasury yields/}).waitFor();
+  if(path.startsWith('/intelligence/global-m2')&&path.includes('populated'))await page.getByText('United States',{exact:true}).waitFor();
   const dimensions=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));
   if(response.status()!==200||dimensions.scroll>width||errors.length)throw Error(JSON.stringify({path,width,status:response.status(),dimensions,errors}));
-  await page.screenshot({path:out+'/public-design-'+(path.includes('fixture=symbol')?'symbol-populated':path==='/'?'home':path==='/learn'?'learning':path.includes('command-center')?(path.includes('populated')?'overview-populated':'overview-missing'):'symbol')+'-'+width+'.png',fullPage:true});
+  await page.screenshot({path:out+'/public-design-'+(path.startsWith('/tools/macro')?'macro-'+(path.includes('populated')?'populated':'missing'):path.startsWith('/intelligence/global-m2')?'m2-'+(path.includes('populated')?'populated':'missing'):path.includes('fixture=symbol')?'symbol-populated':path==='/'?'home':path==='/learn'?'learning':path.includes('command-center')?(path.includes('populated')?'overview-populated':'overview-missing'):'symbol')+'-'+width+'.png',fullPage:true});
   results.push({path,width,status:response.status(),dimensions});
  }
  // Development mount lifecycle may replay effects; mode switches must not fetch again.
  await writeFile(out+'/public-design-browser.json',JSON.stringify({results,errors},null,2));
- console.log('PASS: 12 public design browser checks');
+ console.log('PASS: '+results.length+' public design browser checks');
 
 }catch(e){console.log(String(e));process.exitCode=1;}finally{await browser?.close();server.kill();console.log(log.slice(-7000));}

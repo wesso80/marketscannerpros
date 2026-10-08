@@ -160,7 +160,7 @@ const nextConfig = {
       { source: '/tools/crypto', destination: '/tools/explorer?tab=crypto-command', permanent: true },
       // Diamond Hunter was removed (26 Sep 2026). Temporary (307) so the path can be reused if it ever comes back.
       { source: '/tools/diamond-hunter', destination: '/tools/explorer?tab=crypto-command', permanent: false },
-      { source: '/tools/macro', destination: '/tools/dashboard?tab=macro', permanent: true },
+      ...(process.env.NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED === 'true' ? [] : [{ source: '/tools/macro', destination: '/tools/dashboard?tab=macro', permanent: true }]),
 
       // Scanner surface
       { source: '/tools/ai-analyst', destination: '/tools/scanner', permanent: true },

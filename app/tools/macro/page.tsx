@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePolling } from '@/hooks/usePolling';
+import { publicDesignEnabled } from '@/lib/publicDesign';
+import MacroResearch from '@/components/public-design/MacroResearch';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
 import MarketStatusBadge from '@/components/MarketStatusBadge';
 import { useAIPageContext } from '@/lib/ai/pageContext';
@@ -366,6 +368,8 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
   const completeAssessment = !!data && [data.rates.fedFunds.value, data.rates.treasury10y.value, data.rates.yieldCurve.value, data.inflation.inflationRate.value, data.employment.unemployment.value, data.growth.realGDP.value].every(value => typeof value === 'number' && Number.isFinite(value));
   const assessment = !completeAssessment ? 'Macro assessment not collected' : gate?.permission === 'yes' ? 'Aligned' : gate?.permission === 'conditional' ? 'Mixed' : 'Not aligned';
   const incompleteFeeds = [!completeAssessment && 'Required macro observations', commoditiesError && 'Commodities', correlationError && 'Cross-asset context', spyPCRError && 'Options positioning'].filter(Boolean);
+
+  if (publicDesignEnabled() && !embeddedInDashboard) return <MacroResearch data={data} loading={loading || tierLoading} error={Boolean(error)} retry={fetchData} paid={isAdmin || tier === 'pro' || tier === 'pro_trader'}/>;
 
   if (!isAdmin && tier !== 'pro' && tier !== 'pro_trader') return <main id="macro-summary" className="space-y-4 p-4">
     <h1 className="text-2xl font-semibold">{FREE_COPY.macro}</h1>
