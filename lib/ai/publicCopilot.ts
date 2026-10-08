@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { publicAiScope, markPublicAiProviderStarted } from '@/lib/publicAiQuota';
-import { verifyPageEvidence, evidenceIdentity } from './publicCopilotEvidence';
+import { verifyPageEvidence, evidenceIdentity, combinePageEvidence } from './publicCopilotEvidence';
 import { COPILOT_RESPONSE_SCHEMA, PUBLIC_COPILOT_INSTRUCTIONS, validateCopilotAnswer } from './publicCopilotPolicy';
 
 const reply = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } });
@@ -10,8 +10,10 @@ export async function publicCopilot(req: NextRequest) {
   if (!scope || scope.plan !== 'pro') return reply({ error: 'Pro required' }, 403);
   const body = await req.json();
   if (typeof body.message !== 'string' || !body.message.trim() || body.message.length > 2000) return reply({ error: 'Enter a question of up to 2,000 characters.' }, 400);
-  const evidence = verifyPageEvidence(body.evidenceToken, scope.subject);
+  const core = verifyPageEvidence(body.evidenceToken, scope.subject);
+  const evidence = core ? combinePageEvidence(core,body.sectionTokens ?? [],scope.subject) : null;
   if (!evidence) return reply({ code: 'PAGE_EVIDENCE_REQUIRED', error: 'Verified page evidence is unavailable or expired. Reload the Symbol report. Other pages are not connected yet.' }, 409);
+  if(Buffer.byteLength(JSON.stringify(evidence))>160000)return reply({error:'This evidence snapshot is too large. Select a shorter chart period.'},413);
   if (body.pagePath !== evidence.page || body.symbol !== evidence.symbol) return reply({ error: 'The page changed. Reload its evidence before asking.' }, 409);
   const key = process.env.OPENAI_API_KEY;
   if (!key) return reply({ error: 'AI is temporarily unavailable. Page evidence remains available.' }, 503);

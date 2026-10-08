@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, it, expect, vi } from 'vitest';
-import { issueSymbolEvidence, verifyPageEvidence } from '@/lib/ai/publicCopilotEvidence';
+import { issueSymbolEvidence, verifyPageEvidence, issueSectionEvidence, combinePageEvidence } from '@/lib/ai/publicCopilotEvidence';
 import { validateCopilotAnswer } from '@/lib/ai/publicCopilotPolicy';
 const packet = { contract:'public-symbol-v2',meta:{symbol:'AAPL',timeframe:'daily'},canonical:{price:123,missing:null} } as any;
 beforeEach(()=>vi.stubEnv('APP_SIGNING_SECRET','isolated-fixture-secret'));
@@ -11,6 +11,21 @@ it('binds evidence to the account, exact bytes and expiration',()=>{
  expect(verifyPageEvidence(token+'x','account:a',1001)).toBeNull();
  expect(verifyPageEvidence(token,'account:a',1801000)).toBeNull();
  expect(verifyPageEvidence('forged','account:a')).toBeNull();
+});
+it('combines exact sections and rejects other accounts, assets, symbols, expiry and duplicate sections',()=>{
+ const p={...packet,meta:{...packet.meta,assetClass:'equity'},canonical:{options:{expiry:'2026-10-09'}}};
+ const core=verifyPageEvidence(issueSymbolEvidence(p,'a',1000),'a',1001)!;
+ const news=issueSectionEvidence('news','AAPL','equity',{headline:'Fixture'},'a',null,1000)!;
+ expect(combinePageEvidence(core,[news],'a',1001)?.observations.some(o=>o.field==='news.headline')).toBe(true);
+ expect(combinePageEvidence(core,[news,news],'a',1001)).toBeNull();
+ for(const token of [issueSectionEvidence('news','BTC','crypto',{},'a',null,1000),issueSectionEvidence('news','AAPL','crypto',{},'a',null,1000),issueSectionEvidence('news','AAPL','equity',{},'other',null,1000),issueSectionEvidence('options','AAPL','equity',{},'a','2026-10-16',1000)])expect(combinePageEvidence(core,[token],'a',1001)).toBeNull();
+});
+it('preserves a full year of chart rows in a bounded token without sampling away points',()=>{
+ const rows=Array.from({length:365},(_,i)=>[String(i),...Array.from({length:12},(_,j)=>(i+j)/3)]);
+ const token=issueSectionEvidence('chart','AAPL','equity',{rows},'a',null,1000);
+ expect(token).not.toBeNull();
+ const section=verifyPageEvidence(token,'a',1001)!;
+ expect(JSON.parse(section.observations[0].value as string)).toEqual(rows);
 });
 it('keeps null values and declares disconnected sections; never signs a demo or absent contract',()=>{
  const e=verifyPageEvidence(issueSymbolEvidence(packet,'a',1000),'a',1001)!;

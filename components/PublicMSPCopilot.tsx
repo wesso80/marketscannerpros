@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 
 export type CopilotUsage = { enabled?: boolean; bypass?: boolean; plan?: string; resetsAt?: string; quotas?: Array<{ kind: string; remaining: number | null }> };
 type Answer = { content?: string; error?: string; capturedAt?: string; missing?: string[]; evidence?: Array<{id:string;field:string;value:unknown}>; quota?: { limit:number;used:number;resetsAt:string } };
-export default function PublicMSPCopilot({ usage, pagePath, symbol, evidenceToken }: { usage: CopilotUsage; pagePath: string; symbol?: string; evidenceToken?: string | null }) {
+export default function PublicMSPCopilot({ usage, pagePath, symbol, evidenceToken, sectionTokens = [] }: { usage: CopilotUsage; pagePath: string; symbol?: string; evidenceToken?: string | null; sectionTokens?: string[] }) {
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState('');
   const [answers, setAnswers] = useState<Answer[]>([]);
@@ -12,7 +12,8 @@ export default function PublicMSPCopilot({ usage, pagePath, symbol, evidenceToke
   const [reset, setReset] = useState(usage.resetsAt);
   const retry = useRef<{id:string;message:string} | null>(null);
   const generation = useRef(0);
-  useEffect(() => { generation.current++; setAnswers([]); setQuestion(''); setBusy(false); retry.current=null; }, [pagePath, symbol, evidenceToken]);
+  const sectionKey=sectionTokens.join('|');
+  useEffect(() => { generation.current++; setAnswers([]); setQuestion(''); setBusy(false); retry.current=null; }, [pagePath, symbol, evidenceToken, sectionKey]);
   useEffect(() => { setRemaining(usage.quotas?.find(q => q.kind === 'ai')?.remaining ?? 0); setReset(usage.resetsAt); }, [usage]);
   async function send() {
     if (busy || !question.trim() || !evidenceToken || remaining <= 0) return;
@@ -21,7 +22,7 @@ export default function PublicMSPCopilot({ usage, pagePath, symbol, evidenceToke
     retry.current = pending; setBusy(true);
     try {
       const response = await fetch('/api/ai/copilot', { method:'POST', headers:{'Content-Type':'application/json','Idempotency-Key':pending.id},
-        body:JSON.stringify({message:pending.message,pagePath,symbol,evidenceToken}) });
+        body:JSON.stringify({message:pending.message,pagePath,symbol,evidenceToken,sectionTokens}) });
       const answer: Answer = await response.json();
       window.dispatchEvent(new Event('public-usage-changed'));
       if (generation.current !== run) return;

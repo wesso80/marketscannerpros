@@ -1,3 +1,18 @@
+FOLLOW-UP: signed section adapters
+Chart/comparison (including compact full historical rows and indicator values), news events and
+public options evidence now issue account-bound section tokens with their actual responses.
+Clients publish only received tokens and clear them on reload/unmount. Copilot verifies each token,
+symbol, asset and options expiry before combining evidence. Different/expired/duplicate sections
+fail closed. No additional provider calls are made to populate Copilot.
+Sections are available only after loaded on the page; not-yet-opened tabs are explicitly missing.
+DVE is untouched because Claude owns its fixes. Ownership and crypto breakdown need adapters too.
+This supersedes the core-only limitation below for these three loaded sections. It is not yet
+complete whole-page coverage. News includes event facts, dates, sources and rule, excluding
+sentiment judgements; the options adapter signs the public chain-evidence contract, not private
+analyzer output. Long series are compacted without sampling or losing rows.
+Validation: 19 section/panel/options/route/comparison checks pass; typecheck has only the same six
+baseline issues. No real provider/model calls. Rollout remains disabled.
+
 MSP Copilot implementation checkpoint — 8 October 2026
 
 Branch: codex/public-copilot-education

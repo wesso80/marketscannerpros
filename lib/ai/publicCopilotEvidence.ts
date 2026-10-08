@@ -6,6 +6,9 @@ export interface PageEvidence {
   page: string;
   symbol: string;
   timeframe: string;
+  section?: 'core' | 'chart' | 'news' | 'options';
+  assetType?: string;
+  expiry?: string | null;
   capturedAt: string;
   observations: Array<{ id: string; field: string; value: string | number | boolean | null }>;
   missing: string[];
@@ -31,11 +34,41 @@ export function issueSymbolEvidence(packet: PublicSymbolPacket, subject: string,
   const evidence: PageEvidence = {
     version: 'copilot-evidence-v1', page: '/tools/golden-egg', symbol: packet.meta.symbol,
     timeframe: packet.meta.timeframe, capturedAt: new Date(now).toISOString(), observations,
+    section: 'core', assetType: packet.meta.assetClass, expiry: packet.canonical.options?.expiry ?? null,
     missing: ['This snapshot covers the public core Symbol packet. Separately loaded news, benchmark chart series, full options chain and Volatility tab are not connected to Copilot yet. Do not infer their contents.'],
   };
   const body = Buffer.from(JSON.stringify({ subject, expires: now + 30 * 60_000, evidence })).toString('base64url');
   if (body.length > MAX_TOKEN_BYTES) return null;
   try { return `${body}.${sign(body).toString('base64url')}`; } catch { return null; }
+}
+/** Only server-built public response adapters may call this. Never sign a request body. */
+export function issueSectionEvidence(section: 'chart' | 'news' | 'options', symbol: string, assetType: string, data: unknown, subject: string, expiry: string | null = null, now = Date.now()): string | null {
+  const observations: PageEvidence['observations'] = [];
+  const visit = (value: unknown, field: string): void => {
+    // Compact long, already-public series without dropping observations or duplicating their field paths.
+    if(Array.isArray(value) && value.length>8){observations.push({id:`${section}_${observations.length+1}`,field,value:JSON.stringify(value)});return;}
+    if(value === null || ['string','boolean','number'].includes(typeof value)) observations.push({id:`${section}_${observations.length+1}`,field,value:value as string|number|boolean|null});
+    else if(Array.isArray(value))value.forEach((v,i)=>visit(v,`${field}[${i}]`));
+    else if(value && typeof value==='object')Object.entries(value).forEach(([k,v])=>visit(v,`${field}.${k}`));
+  };
+  visit(data,section);
+  const evidence:PageEvidence={version:'copilot-evidence-v1',page:'/tools/golden-egg',section,symbol,assetType,expiry,timeframe:section==='chart'?'daily completed bars':'see observation basis',capturedAt:new Date(now).toISOString(),observations,missing:[]};
+  const body=Buffer.from(JSON.stringify({subject,expires:now+30*60_000,evidence})).toString('base64url');
+  if(body.length>MAX_TOKEN_BYTES)return null;
+  try{return `${body}.${sign(body).toString('base64url')}`;}catch{return null;}
+}
+export function combinePageEvidence(core:PageEvidence,tokens:unknown,subject:string,now=Date.now()):PageEvidence|null {
+  if(core.section!=='core' || !Array.isArray(tokens) || tokens.length>3)return null;
+  const sections:PageEvidence[]=[];
+  for(const token of tokens){
+    const s=verifyPageEvidence(token,subject,now);
+    if(!s || !s.section || s.section==='core' || s.page!==core.page || s.symbol!==core.symbol || s.assetType!==core.assetType || sections.some(x=>x.section===s.section))return null;
+    if(s.section==='options' && s.expiry!==core.expiry)return null;
+    sections.push(s);
+  }
+  const missing=['Volatility and ownership sections are not connected yet. Do not infer their contents.'];
+  for(const name of ['chart','news',...(core.assetType==='crypto'?[]:['options'])])if(!sections.some(s=>s.section===name))missing.push(`${name}: not loaded or unavailable in this snapshot.`);
+  return {...core,observations:[...core.observations,...sections.flatMap(s=>[{id:`${s.section}_captured`,field:`${s.section}.capturedAt (not observation time)`,value:s.capturedAt},...s.observations])],missing};
 }
 export function verifyPageEvidence(token: unknown, subject: string, now = Date.now()): PageEvidence | null {
   if (typeof token !== 'string' || token.length > MAX_TOKEN_BYTES + 100) return null;
