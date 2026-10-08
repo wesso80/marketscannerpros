@@ -1,4 +1,5 @@
 'use client';
+import SymbolReportAccessNotice from '@/components/research/SymbolReportAccessNotice';
 import PublicUsageSummary from '@/components/research/PublicUsageSummary';
 
 /* ---------------------------------------------------------------------------
@@ -680,7 +681,8 @@ export default function GoldenEggPage() {
       )}
 
       {/* Error state */}
-      {goldenEgg.error && !loading && (
+      {goldenEgg.reportAccessIssue && !loading && <SymbolReportAccessNotice issue={goldenEgg.reportAccessIssue} returnTo={`/tools/golden-egg?${searchParams.toString()}`} onRetry={goldenEgg.refetch} />}
+      {goldenEgg.error && !goldenEgg.reportAccessIssue && !loading && (
         <Card>
           <div className="py-8 text-center">
             <div className="text-amber-300 text-sm mb-2">Market data feed failed for {symbolText(sym)}</div>
