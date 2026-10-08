@@ -6,6 +6,7 @@ import { cleanup, render } from '@testing-library/react';
 import { futuresScheduleRangeSummary, horizonChipLabel, terminalHorizonLabel } from '@/lib/terminal/horizonChip';
 import FuturesCloseClusterTimeline from '@/components/terminal/futures/FuturesCloseClusterTimeline';
 import { buildFuturesCloseCalendar } from '@/lib/terminal/futures/futuresCloseCalendar';
+import { toPublicFuturesCloseCalendar } from '@/lib/research/publicFuturesCloseCalendar';
 
 afterEach(() => cleanup());
 
@@ -28,7 +29,7 @@ it('hides the horizon chip when the day count is missing', () => {
 });
 
 it('shows the futures close-calendar horizon chip only when the schedule has a day count', () => {
-  const calendar = buildFuturesCloseCalendar('/ES', 'globex', 1, new Date('2026-10-05T15:00:00Z'));
+  const calendar = toPublicFuturesCloseCalendar(buildFuturesCloseCalendar('/ES', 'globex', 1, new Date('2026-10-05T15:00:00Z')));
   const withValue = render(<FuturesCloseClusterTimeline closeCalendar={calendar} />);
   const chip = withValue.container.querySelector('[data-horizon-chip]');
   expect(chip?.textContent).toBe('1 day');

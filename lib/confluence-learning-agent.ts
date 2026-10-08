@@ -2010,8 +2010,9 @@ export class ConfluenceLearningAgent {
       });
     }
 
-    // Sort by score desc
-    forwardClusters.sort((a, b) => b.clusterScore - a.clusterScore);
+    // Time order (earliest first). Windows are not ranked or truncated by score: the public calendar
+    // (lib/research/publicCloseCalendar) lists them chronologically and does not publish weight or score.
+    forwardClusters.sort((a, b) => Date.parse(a.windowStartISO) - Date.parse(b.windowStartISO));
 
     // Closes on anchor day summary
     const closesOnAnchorDay = schedule.filter((s) => s.closesOnAnchorDay);
@@ -2029,7 +2030,7 @@ export class ConfluenceLearningAgent {
       sessionMode,
       warnings: scheduleWarnings,
       schedule,
-      forwardClusters: forwardClusters.slice(0, 20), // top 20
+      forwardClusters,
       closesOnAnchorDay,
       totalCloseEventsInHorizon: allCloseEvents.filter(
         (e) => TIMEFRAMES.find((t) => t.label === e.tf)!.minutes >= 1440,

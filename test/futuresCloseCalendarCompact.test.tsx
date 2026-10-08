@@ -8,10 +8,11 @@ import FuturesTerminalPanel from '@/components/terminal/futures/FuturesTerminalP
 import type { FuturesTerminalResponse } from '@/app/v2/_lib/api';
 import { buildFuturesSessionState } from '@/lib/terminal/futures/futuresSessionEngine';
 import { buildFuturesCloseCalendar } from '@/lib/terminal/futures/futuresCloseCalendar';
+import { toPublicFuturesCloseCalendar } from '@/lib/research/publicFuturesCloseCalendar';
 
 const now = new Date('2026-10-05T15:00:00Z');
 const session = buildFuturesSessionState('/ES', now);
-const calendar = buildFuturesCloseCalendar('/ES', 'globex', 1, now);
+const calendar = toPublicFuturesCloseCalendar(buildFuturesCloseCalendar('/ES', 'globex', 1, now));
 
 beforeEach(() => vi.stubGlobal('React', React));
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
@@ -54,7 +55,7 @@ it('shows five closes in calendar order, then the full list, without raw timesta
 });
 
 it('resets the expanded list when the schedule basis changes', () => {
-  const cashBridge = buildFuturesCloseCalendar('/ES', 'cash_bridge', 1, now);
+  const cashBridge = toPublicFuturesCloseCalendar(buildFuturesCloseCalendar('/ES', 'cash_bridge', 1, now));
   const { container, rerender } = render(<FuturesCloseClusterTimeline closeCalendar={calendar} />);
   fireEvent.click(screen.getByRole('button', { name: `Show all ${calendar.schedule.length}` }));
   rerender(<FuturesCloseClusterTimeline closeCalendar={cashBridge} />);
