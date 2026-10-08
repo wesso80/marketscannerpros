@@ -26,7 +26,7 @@ import { futuresScheduleRangeSummary, terminalHorizonLabel } from '@/lib/termina
 const OptionsTerminalView = dynamic(() => import('@/components/options-terminal/OptionsTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div> });
 const CryptoTerminalView = dynamic(() => import('@/components/crypto-terminal/CryptoTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div> });
 const FuturesTerminalPanel = dynamic(() => import('@/components/terminal/futures/FuturesTerminalPanel'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Futures Terminal…</div> });
-const OptionsConfluence = dynamic(() => import('@/components/options-terminal/OptionsConfluenceScanner'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Confluence…</div> });
+const OptionsConfluence = dynamic(() => import('@/components/options-terminal/OptionsChainEvidence'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Confluence…</div> });
 const OptionsFlow = dynamic(() => import('@/components/options-terminal/OptionsFlowView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Flow…</div> });
 const TimeScanner = dynamic(() => import('@/app/tools/time-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Gravity…</div> });
 const ConfluenceScanner = dynamic(() => import('@/app/tools/confluence-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Confluence Scanner…</div> });
@@ -719,9 +719,9 @@ export default function TerminalPage() {
         </TerminalSubviewFrame>
       )}
 
-      {/* ─── Options Confluence (v1 flagship decision engine) ─── */}
+      {/* ─── Options chain evidence (W3: replaces the setup scanner; measured chain evidence only) ─── */}
       {tab === 'Options Confluence' && (
-        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Options Confluence Engine">
+        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Options chain evidence">
           <TerminalSubviewFrame tab="Options Confluence" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
             <OptionsConfluence embeddedInTerminal symbol={sym} timeframe={requestedTimeframe} expiry={requestedExpiry} />
           </TerminalSubviewFrame>

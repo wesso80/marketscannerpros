@@ -1,16 +1,20 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import CapitalPressureView from '@/components/terminal/CapitalPressureView';
 import GravityResearchView from '@/components/terminal/GravityResearchView';
-import OptionsResearchView from '@/components/terminal/OptionsResearchView';
+import OptionsChainEvidence from '@/components/options-terminal/OptionsChainEvidence';
+import { toPublicOptionsEvidence } from '@/lib/research/publicOptionsScan';
 import { researchLabel, researchNumber, researchPrice } from '@/components/terminal/researchPresentation';
 
 const capital = {data:{spot:249.3506,bias:'bullish',market_mode:'pin',conviction:73.654,gamma_state:'UNKNOWN',asof:'2026-10-02T20:00:00Z',flow_trade_permission:{blocked:true,tps:42.325,sessionLimited:true},probability_matrix:{continuation:60.125,pinReversion:20.245,expansion:19.63,regime:'NO_TREND'},liquidity_levels:[{level:245,label:'PDL',prob:0.625}],brain_decision_v1:{brain_score:{score:71.356}},institutional_risk_governor:{irs:32,riskMode:'DEFENSIVE'}}};
 const gravity:any={targetStatus:'ACTIVE',currentPrice:249.3506,targetPrice:252.194,confidence:73.897,allPoints:[{timeframe:'1D',midpoint:252.194,distance:1.14}],zones:[{minPrice:251,maxPrice:253,dominantTimeframes:['1D'],confidence:78.348}],taggingStats:{taggedThisCycle:2,remainingUntagged:1},closeConfluence:{totalStackedTfs:3,activeWindowCount:1}};
 const options:any={symbol:'MU',currentPrice:249.3506,direction:'bullish',directionStatus:'determined',confluenceStack:3,primaryStrike:{strike:250,type:'call',moneyness:'ATM'},primaryExpiration:{expirationDate:'2026-10-09'},dataQuality:{freshness:'REALTIME',optionsChainSource:'alpha_vantage',lastUpdated:'2026-10-02T20:00:00Z'},openInterestAnalysis:{totalCallOI:109234,totalPutOI:92487,pcRatio:0.8467,expirationDate:'2026-10-09',highOIStrikes:[{strike:250,type:'call',openInterest:3456}]},ivAnalysis:{currentIV:.493506},optionsQualityScore:79,expectedMove:{selectedExpiryPercent:4.2347}};
-afterEach(()=>cleanup());
+afterEach(()=>{cleanup();vi.unstubAllGlobals();});
+// W3: the Options view renders the public evidence contract the route serializes (the analyzer setup above is projected).
+const serve=(body:any,ok=true)=>vi.stubGlobal('fetch',vi.fn(async()=>({ok,json:async()=>body})));
+const evidence=(o:any)=>({success:true,data:toPublicOptionsEvidence(o,{chainQuality:null,providerWarnings:[]})});
 function assertCompact(root:HTMLElement){expect(root.querySelectorAll('[data-research-verdict]')).toHaveLength(1);expect(root.querySelectorAll('[data-research-source]')).toHaveLength(1);expect(root.querySelectorAll('details[open]')).toHaveLength(0);expect(root.textContent).not.toMatch(/TARGET ACTIVE|Trade Permission|playbook|UNKNOWN|NO_TREND|249\.3506/);}
 
 describe('Terminal research presentation',()=>{
@@ -37,18 +41,26 @@ describe('Terminal research presentation',()=>{
   const {container}=render(<GravityResearchView symbol="MU" tgm={gravity} coverage={null} calendar={null} receivedAt={new Date()} empty={true} localDemo={true} error={null} onRefresh={()=>{}} loading={false}/>);
   expect(screen.getByText('Demonstration data · no live observation')).toBeTruthy();expect(container.querySelector('dl')).toBeNull();expect(container.querySelector('details')).toBeNull();
  });
- it('shows options verdict first, uses no duplicate symbol input and keeps one source across folds',()=>{
-  const before=JSON.stringify(options),scan=vi.fn();
-  const {container}=render(<OptionsResearchView symbol="MU" result={options} alignment="ALLOW" blocked={false} loading={false} error={null} onScan={scan} controls={null}/>);
-  assertCompact(container);expect(container.textContent).toContain('Fri 9 Oct');expect(container.textContent).toContain('Alpha Vantage');expect(container.textContent).not.toContain('2026-10-09');expect(screen.getByText('Options conditions are aligned')).toBeTruthy();expect(container.querySelector('input')).toBeNull();expect(screen.getByText('49.4%')).toBeTruthy();expect(screen.getByText('109,234')).toBeTruthy();fireEvent.click(screen.getByRole('button',{name:'Run again'}));expect(scan).toHaveBeenCalledOnce();expect(JSON.stringify(options)).toBe(before);
+ it('shows options evidence first, keeps one source across folds and no setup verdict',async()=>{
+  const before=JSON.stringify(options);serve(evidence(options));
+  const {container}=render(<OptionsChainEvidence symbol="MU" expiry="2026-10-09"/>);
+  await waitFor(()=>{if(!container.querySelector('[data-largest-strikes]'))throw Error('not ready');});
+  assertCompact(container);expect(container.textContent).toContain('Fri 9 Oct');expect(container.textContent).toContain('Alpha Vantage');expect(container.textContent).not.toContain('2026-10-09');
+  expect(container.textContent).toContain('49.4%');expect(container.textContent).toContain('±4.2%');
+  expect(container.textContent).not.toMatch(/aligned|Selected call|quality score|Bullish|bullish|Setup grade|WAIT|entry|target/);
+  expect(JSON.stringify(options)).toBe(before);
  });
- it('withholds blocked contract, score and expected move rather than inventing a result',()=>{
-  const {container}=render(<OptionsResearchView symbol="MU" result={{...options,entryTiming:{reason:'Market is closed'},dataConfidenceCaps:['Quote observation is stale']}} blocked={true} loading={false} error={null} onScan={()=>{}} controls={null}/>);
-  assertCompact(container);expect(screen.getByText('Options analysis is on hold')).toBeTruthy();expect(screen.getByText('Market is closed')).toBeTruthy();expect(screen.getByText('Quote observation is stale')).toBeTruthy();expect(screen.queryByText('Options quality score')).toBeNull();expect(screen.queryByText(/Selected call/)).toBeNull();expect(screen.queryByText('Expected move')).toBeNull();expect(container.textContent).not.toContain('A usable contract, expiry and current quote are required');
+ it('reports a failed request plainly and invents no evidence',async()=>{
+  serve({success:false,error:'Options Scanner requires a Pro subscription'},false);
+  const {container}=render(<OptionsChainEvidence symbol="MU" expiry="2026-10-09"/>);
+  await waitFor(()=>{if(!screen.queryByRole('alert'))throw Error('not ready');});
+  expect(screen.getByText('Options evidence not collected')).toBeTruthy();expect(screen.getByRole('alert').textContent).toContain('Pro subscription');expect(container.querySelector('dl')).toBeNull();
  });
- it('reports a manual scan not yet run without Ready or empty count theater',()=>{
-  const {container}=render(<OptionsResearchView symbol="MU" result={null} blocked={false} loading={false} error={null} onScan={()=>{}} controls={null}/>);
-  expect(screen.getByText('Options analysis has not run for MU')).toBeTruthy();expect(container.querySelector('dl')).toBeNull();expect(container.textContent).not.toMatch(/Ready|Results 0/);
+ it('says when no usable chain was loaded and lists what is missing',async()=>{
+  serve(evidence({symbol:'MU',currentPrice:249.35,dataQuality:{freshness:'STALE',optionsChainSource:'none',chainExpiryUsed:null},openInterestAnalysis:null,ivAnalysis:null,expectedMove:null,unusualActivity:null}));
+  const {container}=render(<OptionsChainEvidence symbol="MU"/>);
+  await waitFor(()=>{if(!container.querySelector('[data-research-source]'))throw Error('not ready');});
+  expect(screen.getByText('MU: no usable options chain')).toBeTruthy();expect(container.textContent).toContain('Open interest not collected for this expiry.');
  });
  it('formats missing and raw values only in the UI',()=>{expect(researchNumber(NaN)).toBe('Not measured');expect(researchPrice(undefined)).toBe('Not measured');expect(researchLabel('NO_SETUP')).toBe('No pattern found');expect(researchLabel('UNKNOWN')).toBe('Not measured');expect(researchPrice(.000000123456)).toBe('$0.0000001235');});
 });

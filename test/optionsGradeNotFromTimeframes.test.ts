@@ -20,5 +20,6 @@ it('v21 and display labels no longer imply measured timeframe quality',()=>{
  expect(read('app/api/jobs/email-best-opportunities/route.ts')).not.toContain('Signal strength:');
  expect(read('app/api/jobs/email-best-opportunities/route.ts')).not.toMatch(/signal strength remains/);
  for(const name of ['StructureAlignmentCard','ConfluenceRadarCard'])expect(read(`components/msp/options/blocks/${name}.tsx`)).toContain('Multi-TF (not measured)');
- expect(read('components/options-terminal/OptionsConfluenceScanner.tsx')).toContain('Setup grade');
+ // W3: the Options view carries no setup or options grade.
+ expect(read('components/options-terminal/OptionsChainEvidence.tsx')).not.toMatch(/tradeQuality|optionsGrade|Setup grade/);
 });
