@@ -1,6 +1,9 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, Suspense } from 'react';
+import dynamic from 'next/dynamic';
+import { publicDesignEnabled, publicDesignScope } from '@/lib/publicDesign';
+const PublicDesignShell = dynamic(() => import('@/components/public-design/PublicDesignShell'));
 import { usePathname } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -18,6 +21,12 @@ export default function RouteChrome({ children }: RouteChromeProps) {
   const isOperatorRoute = pathname.startsWith('/operator');
   const isV2Route = pathname.startsWith('/v2');
   const isAppRoute = pathname.startsWith('/tools') || isAdminRoute || isOperatorRoute;
+
+  const designScope = publicDesignEnabled() ? publicDesignScope(pathname) : null;
+  if (designScope) return <>
+    <main className="msp-main-shell"><Suspense fallback={<div role="status">Loading research workspace…</div>}><PublicDesignShell workspace={designScope === 'workspace'}>{children}</PublicDesignShell></Suspense></main>
+    <CookieBanner/><AlertToast/>
+  </>;
 
   return (
     <>

@@ -1,0 +1,37 @@
+Public research design: first implementation slice
+8 October 2026
+
+Branch: codex/public-research-design
+Stacked on codex/public-copilot-education at 0a4fd7bc.
+Latest remote state checked: research-page-phase4 717bfdbe; Claude DVE branch 5d0f0f7.
+
+Implemented
+- Scoped public shell with seven destinations, account/pricing access and legal/support footer.
+- Portfolio and Journal use the existing workspace query routes; account and authentication keep their existing implementations.
+- Responsive homepage with educational research positioning, real destination links and no fabricated market data.
+- Free Learning foundation lessons. Existing /guide remains available.
+- Hide duplicate tools navigation/regime strip only when the presentation flag is enabled; retain tools providers, disclosure gate, Copilot and page bodies.
+- Homepage metadata follows the presentation flag.
+
+Rollout
+NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED=true is a build-time opt-in flag. Default is off. This work does not enable it on Render or elsewhere.
+Admin, operator and v2 routes are excluded. No engine, worker, API, quota, entitlement or billing change. No merge or deployment.
+No edits to Claude's Symbol page or DVE files.
+
+Verification
+10 focused tests pass: flag, seven destinations, private route exclusions, workspace tab identity, account/legal links, preserved child content.
+6 real Next development-app browser checks pass at 1280 and 390 pixels: homepage, Learning and Symbol. HTTP 200, no page errors or document overflow; Learning details and mobile navigation exercised. Screenshots visually inspected for desktop home and mobile Symbol.
+Browser APIs are mocked, external browser requests blocked; Symbol shows unavailable evidence. These checks do not establish live data or complete research-card layout correctness.
+Type check retains six previously recorded baseline errors (four Stripe version literals and two timer unref types); no new errors from this slice.
+React review: server-rendered static content, deferred client shell, semantic links/details, keyboard focus styles and scoped CSS; no new effects or data fetches.
+
+Remaining, in order
+1. Overview and Daily Radar: real observations, timestamps, missing states and factual filters. Radar stays inside Overview. Replace internal presentation while preserving existing data contracts.
+2. Symbol chart-led interior: comparison against SPY/QQQ or BTC and separate indicator view. Coordinate Claude's edits first; verify real evidence and all loading/missing states.
+3. Macro and M2: dated overview charts, definitions, release lags and history access.
+4. Portfolio and Journal: approved allocation/holdings and reflection layouts, preserving saved data and write controls.
+5. Pricing, signup and account interiors: align copy with implemented entitlements. Do not advertise proposed trial/reminder/cancellation behaviour until verified.
+6. Full legal/content/accessibility and authenticated journey review across all seven pages. Existing legal documents are linked, not rewritten or certified by this work.
+
+Acceptance before rollout
+All pages pass desktop/mobile rendering with populated, missing and loading data; keyboard navigation and account flows work; public navigation has seven destinations; admin screenshots/behaviour unchanged; no unverified paid feature claims; Copilot remains paid and evidence-bound. Validate both flag states and production build in the integration branch before rollout.
