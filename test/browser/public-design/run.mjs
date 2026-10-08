@@ -52,7 +52,7 @@ try{
  const results=[];
  for(const width of [1280,390])for(const path of ['/','/learn','/tools/golden-egg?symbol=AAPL&type=equity','/tools/command-center','/tools/command-center?fixture=populated','/tools/golden-egg?symbol=AAPL&type=equity&fixture=symbol','/tools/macro','/tools/macro?fixture=populated','/intelligence/global-m2','/intelligence/global-m2?fixture=populated','/tools/workspace?tab=Portfolio','/tools/workspace?tab=Portfolio&fixture=records','/tools/workspace?tab=Journal','/tools/workspace?tab=Journal&fixture=records'].filter(path=>process.env.MSP_DESIGN_SCOPE==='records'?path.startsWith('/tools/workspace'):process.env.MSP_DESIGN_SCOPE!=='economic'||path.startsWith('/tools/macro')||path.startsWith('/intelligence/global-m2'))){
   await page.setViewportSize({width,height:1000});
-  const response=await page.goto('http://127.0.0.1:5178'+path,{timeout:90000});
+  const response=await page.goto('http://127.0.0.1:5178'+path,{timeout:Number(process.env.MSP_DESIGN_NAVIGATION_TIMEOUT_MS || 90000)});
   await page.locator('[data-public-design]').waitFor();
   const cookies=page.getByRole('button',{name:'Essential Only',exact:true});if(await cookies.count())await cookies.click();
   if(path==='/learn'){
