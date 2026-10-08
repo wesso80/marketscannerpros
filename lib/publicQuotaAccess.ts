@@ -1,3 +1,5 @@
+import type { NextRequest } from 'next/server';
+import { VISITOR_COOKIE, verifyVisitor } from './publicVisitor';
 import { createHash } from 'node:crypto';
 import type { SessionPayload } from '@/lib/auth';
 import { q } from '@/lib/db';
@@ -24,3 +26,9 @@ export function publicInstrumentKey(symbol: string, asset: string) {
   throw Error('A mapped equity or crypto identity is required');
 }
 export const publicRequestFingerprint = (input: string) => createHash('sha256').update(input).digest('hex');
+
+export async function resolvePublicActor(request:NextRequest,session:SessionPayload|null) {
+ if(session?.workspaceId)return resolvePublicQuotaAccess(session);
+ const subject=verifyVisitor(request.cookies.get(VISITOR_COOKIE)?.value);
+ return subject?{bypass:false as const,subject,plan:'visitor' as const}:null;
+}

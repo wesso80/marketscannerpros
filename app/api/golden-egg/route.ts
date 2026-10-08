@@ -1,4 +1,4 @@
-import { publicQuotaEnabled, publicQuota, resolvePublicQuotaAccess, publicInstrumentKey } from '@/lib/publicQuotaAccess';
+import { publicQuotaEnabled, publicQuota, resolvePublicActor, publicInstrumentKey } from '@/lib/publicQuotaAccess';
 import type { QuotaReservation } from '@/lib/publicDailyQuota';
 /**
  * Golden Egg Live Data API
@@ -25,13 +25,13 @@ export async function GET(request: NextRequest) {
   let produced = false;
   const quotaOn = publicQuotaEnabled();
   let quotaMeta: { day: string; resetsAt: string; limit: number | null; used: number } | undefined;
-  let access: Awaited<ReturnType<typeof resolvePublicQuotaAccess>> | undefined;
+  let access: Awaited<ReturnType<typeof resolvePublicActor>> | undefined;
   let fallbackSymbol = 'AAPL';
   let fallbackAssetClass: 'equity' | 'crypto' | 'forex' = 'equity';
   let fallbackTfLabel = '1D';
   try {
     const session = await getSessionFromCookie();
-    if (!session?.workspaceId) {
+    if (!quotaOn && !session?.workspaceId) {
       return NextResponse.json({ success: false, error: 'Please log in' }, { status: 401 });
     }
     if (!quotaOn && !hasPaidSessionAccess(session)) {
@@ -55,7 +55,8 @@ export async function GET(request: NextRequest) {
       try { resource = publicInstrumentKey(symbol,assetClass); }
       catch { return NextResponse.json({success:false,error:'Invalid or unmapped symbol identity'},{status:400,headers:{'Cache-Control':'private, no-store'}}); }
       try {
-        access = await resolvePublicQuotaAccess(session);
+        access = await resolvePublicActor(request,session);
+        if(!access)return NextResponse.json({success:false,error:'Choose Try one report or sign in'},{status:401,headers:{'Cache-Control':'private, no-store'}});
         if (!access.bypass) {
           const admission = await publicQuota.reserve({subject:access.subject,plan:access.plan,kind:'symbol',resource,fingerprint:resource});
           quotaMeta = {day:admission.day,resetsAt:admission.resetsAt,limit:admission.limit,used:admission.used};
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest) {
     fallbackAssetClass = assetClass;
     fallbackTfLabel = tfLabelFor(timeframe);
 
-    const result = await computeGoldenEgg({ symbol, timeframe, assetClass, workspaceId: session.workspaceId, fresh: searchParams.get('fresh') === '1', expiry: expiryParam });
+    const result = await computeGoldenEgg({ symbol, timeframe, assetClass, workspaceId: session?.workspaceId, fresh: searchParams.get('fresh') === '1', expiry: expiryParam });
     // Provider status is reported at the route boundary so consumers see source/freshness alongside the packet.
     const providerStatus = result.cached
       ? buildMarketDataProviderStatus({ source: 'memory_cache', provider: 'memory_cache' })

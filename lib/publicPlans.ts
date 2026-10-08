@@ -1,5 +1,5 @@
 /** New public policy; callers must resolve verified subscription/trial/admin access server-side.
- * Not wired into legacy/admin tier helpers until coordinated route integration. */
+ * Separate from legacy/admin tier helpers; public callers opt in through the rollout flag. */
 export type PublicPlan = 'visitor' | 'free' | 'pro';
 export type PublicQuotaKind = 'symbol' | 'ai';
 export const PUBLIC_DAILY_LIMITS = {

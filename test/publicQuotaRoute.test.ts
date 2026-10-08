@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 const h=vi.hoisted(()=>({enabled:true,session:{workspaceId:'fixture'} as any,paid:false,reserve:vi.fn(),settle:vi.fn(),resolve:vi.fn(),compute:vi.fn()}));
 vi.mock('@/lib/auth',()=>({getSessionFromCookie:async()=>h.session}));
 vi.mock('@/lib/proTraderAccess',()=>({hasPaidSessionAccess:()=>h.paid}));
-vi.mock('@/lib/publicQuotaAccess',()=>({publicQuotaEnabled:()=>h.enabled,resolvePublicQuotaAccess:h.resolve,publicInstrumentKey:(s:string)=>'equity:'+s,publicQuota:{reserve:h.reserve,settle:h.settle}}));
+vi.mock('@/lib/publicQuotaAccess',()=>({publicQuotaEnabled:()=>h.enabled,resolvePublicActor:h.resolve,publicInstrumentKey:(s:string)=>'equity:'+s,publicQuota:{reserve:h.reserve,settle:h.settle}}));
 vi.mock('@/lib/goldenEggFetchers',()=>({detectAssetClass:()=> 'equity'}));
 vi.mock('@/lib/goldenEgg/engine',()=>({computeGoldenEgg:h.compute,tfLabelFor:()=> '1D',isLocalGoldenEggDemoAllowed:()=>false}));
 vi.mock('@/lib/research/publicSymbolPacket',()=>({toPublicSymbolPacket:(p:unknown)=>p}));
@@ -30,7 +30,7 @@ it('keeps admin bypass and disabled rollout unchanged, and fails closed on tier 
  h.resolve.mockRejectedValueOnce(Error('database unavailable'));expect((await call()).status).toBe(503);
 });
 it('checks authentication and input before admission and does not count demos',async()=>{
- h.session=null;expect((await call()).status).toBe(401);h.session={workspaceId:'fixture'};
+ h.session=null;h.resolve.mockResolvedValueOnce(null);expect((await call()).status).toBe(401);h.session={workspaceId:'fixture'};
  expect((await call('')).status).toBe(400);expect(h.reserve).not.toHaveBeenCalled();
  h.compute.mockResolvedValueOnce({payload:{canonical:{}},localDemo:true,warnings:[]});await call();expect(h.settle).toHaveBeenCalledWith({token:'fixture'},'released');
 });

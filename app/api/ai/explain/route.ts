@@ -1,3 +1,5 @@
+import { publicQuotaEnabled, publicRequestFingerprint, resolvePublicQuotaAccess } from '@/lib/publicQuotaAccess';
+import { withPublicAiQuota, publicAiScope, markPublicAiProviderStarted } from '@/lib/publicAiQuota';
 // =====================================================
 // MSP AI EXPLAIN API - Inline explanations for any metric
 // POST /api/ai/explain - Generate explanation
@@ -24,6 +26,8 @@ const DB_CACHE_TTL_SECONDS = 3600; // 1 hour in database
 
 // Generate cache key with value bucketing for better cache hits
 function generateCacheKey(metricName: string, skill: PageSkill, value: unknown): string {
+  const active=publicAiScope();
+  if(active)return `private_${publicRequestFingerprint(active.subject)}_${active.fingerprint}`;
   const normalizedMetric = metricName.toLowerCase().replace(/\s+/g, '_');
   const valueBucket = getValueBucket(value);
   return `explain_${normalizedMetric}_${skill}_${valueBucket}`;
@@ -50,6 +54,7 @@ function getValueBucket(value: unknown): string {
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
+    if(publicQuotaEnabled() && !(await getSessionFromCookie().then(s=>s ? resolvePublicQuotaAccess(s).then(a=>a.bypass):false)))return NextResponse.json({error:'Use the authenticated explanation request to replay an answer'},{status:410,headers:{'Cache-Control':'private, no-store'}});
     const cacheKey = searchParams.get('cacheKey');
 
     if (!cacheKey) {
@@ -95,7 +100,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+async function handlePost(req: NextRequest) {
   try {
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {
@@ -167,13 +172,13 @@ export async function POST(req: NextRequest) {
     } else {
       // Generate with AI — check per-user quota before spending tokens
       const today = new Date().toISOString().split('T')[0];
-      const usageResult = await q(
+      const usageResult = publicAiScope() ? [] : await q(
         `SELECT COUNT(*) as count FROM ai_usage WHERE workspace_id = $1 AND DATE(created_at) = $2`,
         [session.workspaceId, today]
       );
       const usageCount = parseInt(usageResult[0]?.count || '0');
       const dailyLimit = getDailyAiLimit(session.tier);
-      if (usageCount >= dailyLimit) {
+      if (!publicAiScope() && usageCount >= dailyLimit) {
         return NextResponse.json({
           error: `Daily AI limit reached (${usageCount}/${dailyLimit}). Cached explanations still available.`,
           limitReached: true,
@@ -201,7 +206,8 @@ Respond in JSON format:
   "actionableInsight": "What this specific value suggests (optional)"
 }`;
 
-      const completion = await openai.chat.completions.create({
+      markPublicAiProviderStarted();
+    const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
@@ -313,3 +319,5 @@ function extractActionable(content: string, value: unknown): string | undefined 
   );
   return actionSentence?.trim();
 }
+
+export const POST = withPublicAiQuota(handlePost, 'ai/explain');
