@@ -48,6 +48,7 @@ import { measuredBbwp } from '@/lib/research/volatilityDescriptions';
 import { buildEvidenceSummary } from '@/lib/research/evidenceSummary';
 import { buildVolatilityEvidence } from '@/lib/research/volatilityEvidence';
 import { buildResearchSnapshot } from '@/lib/research/researchSnapshot';
+import type { PublicDveReading } from '@/lib/research/publicDve';
 import type { PublicSymbolPacket } from '@/lib/research/publicSymbolPacket';
 import ChipRow from '@/components/visual/ChipRow';
 import type {StampLineProps} from '@/components/visual/StampLine';
@@ -390,7 +391,8 @@ export default function GoldenEggPage() {
   const ge: PublicSymbolPacket | undefined = goldenEgg.data?.data ?? undefined;
   const geLocalDemo = Boolean((goldenEgg.data as any)?.localDemo);
   const geWarnings = ((goldenEgg.data as any)?.warnings || []) as string[];
-  const d = dve.data?.data;
+  // W3: the public Volatility contract (lib/research/publicDve), typed so removed engine fields cannot be read.
+  const d: PublicDveReading | undefined = dve.data?.data ?? undefined;
   const loading = goldenEgg.loading;
   const isAuthBlocked = goldenEgg.isAuthError && !loading;
   // W3-R: the scenario plan (reference, invalidation and reaction zones) is built from the private direction and is not public.

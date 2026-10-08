@@ -3,15 +3,16 @@ import { breakoutConditions, exhaustionDescription, phaseDuration, trapDescripti
 import { volatilityText } from '../displayText';
 
 import type {
-  BreakoutReadiness,
-  DVEDataQuality,
-  DVEFlag,
-  DVEInvalidation,
-  ExhaustionRisk,
-  PhasePersistence,
-  VolatilityState,
-  VolatilityTrap,
+  PublicBreakout as BreakoutReadiness,
+  PublicDveReading,
+  PublicDveFlag as DVEFlag,
+  PublicInvalidation as DVEInvalidation,
+  PublicExhaustion as ExhaustionRisk,
+  PublicPhase as PhasePersistence,
+  PublicVolatility as VolatilityState,
+  PublicTrap as VolatilityTrap,
 } from '@/src/features/volatilityEngine/types';
+type DVEDataQuality = PublicDveReading['dataQuality'];
 
 type PhaseCardProps = {
   volatility: VolatilityState;
@@ -48,7 +49,7 @@ function ageLabel(percentile: number) {
 function riskLevel(args: { trap: VolatilityTrap; exhaustion: ExhaustionRisk; breakout: BreakoutReadiness; flags: DVEFlag[] }) {
   if (args.trap.detected || args.exhaustion.label === 'EXTREME' || args.flags.includes('CLIMAX_WARNING')) return 'High Friction';
   if (args.trap.candidate || args.exhaustion.label === 'HIGH') return 'Elevated';
-  if (args.exhaustion.label === 'MEDIUM') return 'Moderate';
+  if (args.exhaustion.label === 'MODERATE') return 'Moderate';
   return 'Low';
 }
 
@@ -74,11 +75,9 @@ export default function VEVolatilityPhaseCard({ volatility, phase, breakout, tra
     dataQuality.missing.length ? `${dataQuality.missing.length} missing input${dataQuality.missing.length === 1 ? '' : 's'}` : null,
     ...dataQuality.warnings.slice(0, 2),
   ].filter(Boolean) as string[];
-  const invalidationText = invalidation.priceInvalidation != null
-    ? `$${invalidation.priceInvalidation.toFixed(2)} ${invalidation.invalidationMode} invalidation`
-    : invalidation.phaseInvalidation != null
-      ? `${invalidation.phaseInvalidation.toFixed(0)} phase invalidation`
-      : 'No price invalidation level returned';
+  const invalidationText = invalidation.phaseInvalidation != null
+    ? `Rule stops applying at BBWP ${invalidation.phaseInvalidation.toFixed(0)}`
+    : 'No rule invalidation recorded';
 
   return (
     <section className={`rounded-lg border ${tone.border} ${tone.bg} p-4 ${tone.text}`}>
@@ -101,13 +100,13 @@ export default function VEVolatilityPhaseCard({ volatility, phase, breakout, tra
         <div className="grid min-w-[min(100%,520px)] gap-3 md:grid-cols-3">
           {(() => { const b = breakoutConditions(breakout, dataQuality.missing); const known = b.conditions.filter((c) => c.present !== null); return <Fact label="Breakout setting" value={`${known.filter((c) => c.present).length} of ${known.length} conditions`} detail="Setting only; not a breakout or a signal." />; })()}
           <Fact label="Trap" value={trap.detected ? 'Detected' : trap.candidate ? 'Candidate' : 'Clear'} detail={trapDescription(trap)} tone={trap.detected ? 'text-red-200' : trap.candidate ? 'text-amber-200' : 'text-emerald-200'} />
-          <Fact label="Exhaustion" value={volatilityText(exhaustion.label)} detail={exhaustion.signals.length ? exhaustionDescription(exhaustion) : 'No exhaustion observations recorded.'} tone={exhaustion.level >= 70 ? 'text-red-200' : exhaustion.level >= 40 ? 'text-amber-200' : 'text-emerald-200'} />
+          <Fact label="Exhaustion" value={volatilityText(exhaustion.label)} detail={exhaustion.signals.length ? exhaustionDescription(exhaustion) : 'No exhaustion observations recorded.'} tone={exhaustion.label === 'EXTREME' || exhaustion.label === 'HIGH' ? 'text-red-200' : exhaustion.label === 'MODERATE' ? 'text-amber-200' : 'text-emerald-200'} />
         </div>
       </div>
 
       <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1.4fr]">
         <div className="rounded-md border border-white/10 bg-slate-950/25 p-3 text-xs leading-5 text-slate-300">
-          <div className="mb-1 font-black tracking-[0.09em] text-slate-400">Invalidation</div>
+          <div className="mb-1 font-black tracking-[0.09em] text-slate-400">Rule invalidation</div>
           <div className="font-semibold text-slate-100">{volatilityText(invalidationText)}</div>
           {invalidation.ruleSet.length > 0 && <div className="mt-1 text-slate-400">{volatilityText(invalidation.ruleSet.slice(0, 2).join(' · '))}</div>}
         </div>

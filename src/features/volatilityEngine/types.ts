@@ -1,31 +1,25 @@
-// Frontend types for Volatility Engine — mirrors /api/dve response
-// Re-exports relevant types from the engine for UI component props.
+// Frontend types for Volatility Engine — the public /api/dve contract (lib/research/publicDve, W3).
+// The engine's full DVEReading stays on the server.
 
 export type {
-  DVEReading,
-  VolatilityState,
-  DirectionalPressure,
-  DirectionalBias,
-  PhasePersistence,
-  ZoneDurationStats,
-  DVESignal,
-  DVESignalType,
-  DVESignalState,
-  DVEInvalidation,
-  SignalProjection,
-  BreakoutReadiness,
-  VolatilityTrap,
-  ExhaustionRisk,
-  StateTransition,
-  DVEDataQuality,
-  DVEFlag,
-  VolRegime,
-  RateDirection,
-} from '@/lib/directionalVolatilityEngine.types';
+  PublicDveReading,
+  PublicVolatility,
+  PublicPhase,
+  PublicSignal,
+  PublicInvalidation,
+  PublicProjection,
+  PublicBreakout,
+  PublicTrap,
+  PublicExhaustion,
+  PublicDveFlag,
+  SignalConditionGroup,
+  BreakoutConditionId,
+} from '@/lib/research/publicDve';
+export type { ZoneDurationStats, DVESignalType, DVESignalState, VolRegime, RateDirection } from '@/lib/directionalVolatilityEngine.types';
 
 export interface DVEApiResponse {
   success: boolean;
-  data?: import('@/lib/directionalVolatilityEngine.types').DVEReading;
+  data?: import('@/lib/research/publicDve').PublicDveReading;
   price?: number;
   cached?: boolean;
   /** When this reading was computed (a cache hit returns the original time). */

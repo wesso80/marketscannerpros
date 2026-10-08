@@ -2,7 +2,7 @@
 import { volatilityText } from '../displayText';
 import { volatilityBadgeLabel } from '@/lib/presentation/volatilityLayerLabel';
 
-import type { VolatilityState } from '@/src/features/volatilityEngine/types';
+import type { PublicVolatility as VolatilityState } from '@/src/features/volatilityEngine/types';
 import { bbwpDisplay } from '@/lib/research/volatilityDescriptions';
 
 const ZONES = [

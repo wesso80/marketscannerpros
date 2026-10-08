@@ -1,6 +1,6 @@
 'use client';
 
-import type { PhasePersistence, ZoneDurationStats } from '@/src/features/volatilityEngine/types';
+import type { PublicPhase as PhasePersistence, ZoneDurationStats } from '@/src/features/volatilityEngine/types';
 import { volatilityBadgeLabel } from '@/lib/presentation/volatilityLayerLabel';
 import { phaseDuration } from '@/lib/research/volatilityDescriptions';
 
