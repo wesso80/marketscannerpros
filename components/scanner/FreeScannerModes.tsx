@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import studio from '@/components/public-design/FindSymbolsStudio.module.css';
 import TabBar from '@/components/visual/TabBar';
 import FreeScanner from '@/components/free/FreeScanner';
 import LockedPreview from '@/components/free/LockedPreview';
@@ -9,7 +10,8 @@ import PresetCards from './PresetCards';
 export default function FreeScannerModes() {
   const [tab, setTab] = useState('quick');
   return (
-    <div data-scanner-modes className="mx-auto max-w-4xl space-y-4 p-4">
+    <div data-scanner-modes className={studio.page}>
+      <header className={studio.hero}><div><p className={studio.kicker}>SYMBOL RESEARCH / DISCOVERY</p><h1>Find symbols</h1><p className={studio.lead}>Explore a reading.<br/>Understand its limits.</p></div><p className={studio.introduction}>Try a sample observation, then open a Symbol report. Sources and dates stay visible; your available allowance is shown before you run a scan.</p></header>
       <PresetCards onSelect={() => setTab('pro')} />
       <TabBar
         label="Scanner mode"

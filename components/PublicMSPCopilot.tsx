@@ -1,4 +1,5 @@
 'use client';
+import studio from '@/components/public-design/PublicOverlays.module.css';
 import { useEffect, useRef, useState } from 'react';
 import { loadCopilotSections, type CopilotSectionLoad } from '@/lib/ai/loadCopilotSections';
 
@@ -45,9 +46,9 @@ export default function PublicMSPCopilot({ usage, pagePath, symbol, evidenceToke
     } catch { if(generation.current===run)setAnswers(old=>[...old,{error:'Connection interrupted. Retry the same question to check its status.'}]); }
     finally { if(generation.current===run)setBusy(false); }
   }
-  return <aside style={{width:"min(420px, calc(100vw - 24px))"}} className="fixed bottom-5 right-3 z-50 max-w-[calc(100vw-24px)] text-sm">
-    <button type="button" aria-expanded={open} aria-controls="public-copilot-panel" onClick={()=>setOpen(!open)} className="rounded-xl bg-teal-300 px-4 py-3 font-semibold text-slate-950">MSP Copilot · Pro</button>
-    {open && <section style={{width:"100%"}} id="public-copilot-panel" aria-label="MSP Copilot" className="mt-2 w-[420px] max-w-full rounded-xl border border-slate-600 bg-slate-950 p-4 text-slate-100 shadow-xl">
+  return <aside style={{width:"min(420px, calc(100vw - 24px))"}} className={studio.copilot}>
+    <button type="button" aria-expanded={open} aria-controls="public-copilot-panel" onClick={()=>setOpen(!open)} className={studio.launcher}>MSP Copilot · Pro</button>
+    {open && <section style={{width:"100%"}} id="public-copilot-panel" aria-label="MSP Copilot" className={studio.panel}>
       <h2 className="font-semibold">Understand this page</h2>
       <p className="mt-1 text-xs text-slate-300">AI-selected page evidence with reviewed educational explanations.</p>
       {usage.plan !== 'pro' ? <p className="mt-4">Pro includes 20 questions daily. <a className="text-teal-300 underline" href="/pricing">View Pro</a></p> : <>
@@ -68,7 +69,7 @@ export default function PublicMSPCopilot({ usage, pagePath, symbol, evidenceToke
         <form onSubmit={event=>{event.preventDefault();void send();}} className="mt-3 space-y-2">
           <label htmlFor="public-copilot-question" className="block text-xs">Ask about this evidence</label>
           <textarea id="public-copilot-question" value={question} onChange={event=>setQuestion(event.target.value)} maxLength={2000} disabled={busy || loadingSections || !evidenceToken || remaining<=0} className="w-full rounded border border-slate-600 bg-slate-900 p-2" />
-          <button disabled={busy || loadingSections || !evidenceToken || remaining<=0 || !question.trim()} className="rounded bg-teal-300 px-4 py-2 text-slate-950 disabled:opacity-40">{busy?'Reading evidence…':'Ask Copilot'}</button>
+          <button disabled={busy || loadingSections || !evidenceToken || remaining<=0 || !question.trim()} className={studio.send}>{busy?'Reading evidence…':'Ask Copilot'}</button>
         </form>
       </>}
     </section>}

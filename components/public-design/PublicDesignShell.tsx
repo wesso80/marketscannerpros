@@ -7,6 +7,7 @@ import { useUserTier } from '@/lib/useUserTier';
 import { PUBLIC_DESTINATIONS, PUBLIC_LEGAL_LINKS, publicDestination } from '@/lib/publicDesign';
 import styles from './PublicDesign.module.css';
 import editorial from './EditorialStudio.module.css';
+import surface from './SupportingSurface.module.css';
 
 function Brand() {
   return <Link href="/" className={styles.brand} aria-label="MarketScannerPros home"><span className={styles.mark} aria-hidden="true"><i/><i/><i/></span>MSP<small>RESEARCH</small></Link>;
@@ -17,6 +18,7 @@ function LegalFooter() {
 export default function PublicDesignShell({children,workspace}:{children:ReactNode;workspace:boolean}) {
   const path=usePathname();
   const params=useSearchParams();
+  const secondaryWorkspace = !['/tools/golden-egg','/tools/command-center','/tools/macro','/intelligence/global-m2','/learn'].includes(path);
   const secondaryWebsite = !['/', '/pricing', '/auth'].includes(path);
   const active=publicDestination(path,params.get('tab'));
   const {isLoggedIn,isLoading}=useUserTier();
@@ -27,8 +29,8 @@ export default function PublicDesignShell({children,workspace}:{children:ReactNo
       <aside className={styles.rail}><Brand/>{navigation}<div className={styles.railFoot}><strong>Evidence. Then perspective.</strong>Understand the observation before the explanation.</div></aside>
       <div className={styles.workspace}><div className={styles.workspaceBar}><span>Workspace / <strong className={styles.crumb}>{active ?? 'Research tools'}</strong></span><nav aria-label="Account"><Link href="/pricing">Plans</Link><Link href={isLoggedIn?'/account':'/auth?next=%2Ftools%2Fcommand-center'}>{isLoading?'Account':isLoggedIn?'Your account':'Sign in'}</Link></nav></div>
         <details key={path+'?'+params.toString()} className={styles.mobileNav}><summary>{active ?? 'Research'} · Browse destinations</summary>{navigation}</details>
-        <div id="public-research-content" className={styles.pageBody}>{children}</div><LegalFooter/>
+        <div id="public-research-content" className={`${styles.pageBody} ${secondaryWorkspace ? surface.root : ''}`} data-public-surface={secondaryWorkspace ? 'supporting' : 'destination'}>{children}</div><LegalFooter/>
       </div>
-    </div> : <><header className={styles.header}><Brand/><nav aria-label="Public website" className={styles.headerNav}><Link href="/">Product</Link><Link href="/pricing">Pricing</Link><Link href="/learn">Learning</Link><Link href={isLoggedIn?'/account':'/auth'}>{isLoggedIn?'Account':'Sign in'}</Link><Link className={styles.primary} href={isLoggedIn?'/tools/command-center':'/auth?next=%2Ftools%2Fcommand-center'}>{isLoggedIn?'Open workspace':'Start free'} ↗</Link></nav></header><div id="public-research-content" className={`${styles.websiteBody} ${secondaryWebsite ? editorial.supporting : ''}`}>{children}</div><LegalFooter/></>}
+    </div> : <><header className={styles.header}><Brand/><nav aria-label="Public website" className={styles.headerNav}><Link href="/">Product</Link><Link href="/pricing">Pricing</Link><Link href="/learn">Learning</Link><Link href={isLoggedIn?'/account':'/auth'}>{isLoggedIn?'Account':'Sign in'}</Link><Link className={styles.primary} href={isLoggedIn?'/tools/command-center':'/auth?next=%2Ftools%2Fcommand-center'}>{isLoggedIn?'Open workspace':'Start free'} ↗</Link></nav></header><div id="public-research-content" className={`${styles.websiteBody} ${secondaryWebsite ? `${editorial.supporting} ${surface.root}` : ''}`}>{children}</div><LegalFooter/></>}
   </div>;
 }

@@ -14,6 +14,13 @@ const baseline = JSON.parse(
   readFileSync(new URL("./fixtures/legal-page-text-baseline.json", import.meta.url), "utf8"),
 ) as Record<string, LegalSnapshot>;
 
+// Approved product-description corrections only; all other legal text and links
+// remain compared with the original baseline.
+baseline.terms.text = baseline.terms.text
+ .replace('MSP AI chatbot (powered by OpenAI GPT-4) provides educational insights only, not financial advice.', 'MSP Copilot uses OpenAI to explain the available page evidence for education, not to provide financial advice.')
+ .replace('AI usage is subject to daily limits based on your subscription tier (5/50/unlimited questions per day).', 'MSP Copilot is available on eligible paid plans. The current daily question allowance is shown on the pricing page and in the app.')
+ .replace('MSP AI (powered by OpenAI GPT-4) generates educational insights only.', 'MSP Copilot generates educational explanations of the available page evidence only.');
+
 const TERMS_HEADING_IDS = [
   "eligibility",
   "use",

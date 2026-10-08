@@ -1,5 +1,6 @@
 "use client";
 
+import studio from '@/components/public-design/AccountStudio.module.css';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import ReferralCard from '@/components/account/ReferralCard';
@@ -26,7 +27,7 @@ type TierKey = "free" | "pro" | "pro_trader" | "anonymous";
 type UsageMetric = {
   label: string;
   used: number | null;
-  limit: number;
+  limit: number | null;
 };
 
 export default function AccountPage() {
@@ -47,6 +48,7 @@ export default function AccountPage() {
   const [prefsError, setPrefsError] = useState<string | null>(null);
   const [realUsage, setRealUsage] = useState<{ aiUsed: number | null; alertCount: number | null; watchlistCount: number | null } | null>(null);
 
+  const [aiPolicy, setAiPolicy] = useState<{label:string;limit:number|null}>({label:'MSP Copilot',limit:null});
   const [loadedAt, setLoadedAt] = useState<string | null>(null);
 
   useEffect(() => {
@@ -63,7 +65,22 @@ export default function AccountPage() {
     if (!isLoggedIn) return;
     Promise.all([
       (async () => {
-        // AI usage comes from the entitlements endpoint (the analyst route is POST-only; probing it produced a 405).
+        // Read the active server policy; never show the old Analyst allowance for public Copilot.
+        try {
+          const response=await fetch('/api/public-usage',{credentials:'include',cache:'no-store'});
+          if(!response.ok)return null;
+          const policy=await response.json();
+          if(policy.enabled===true && policy.bypass!==true){
+            const quota=policy.quotas?.find((item:{kind:string})=>item.kind==='ai');
+            const limit=typeof quota?.limit==='number'&&Number.isFinite(quota.limit)&&quota.limit>=0?quota.limit:null;
+            const validCount=(value:unknown):value is number=>typeof value==='number'&&Number.isInteger(value)&&value>=0;
+            const used=validCount(quota?.completed)&&validCount(quota?.pending)?quota.completed+quota.pending:null;
+            setAiPolicy({label:'MSP Copilot',limit});return used;
+          }
+          if(policy.enabled!==false && policy.bypass!==true)return null;
+          setAiPolicy({label:'MSP AI Analyst',limit:getDailyAiLimit(tier)});
+        } catch {return null;}
+        // Retain the legacy policy only when the server explicitly selects it.
         try {
           const res = await fetch("/api/entitlements", { credentials: "include" });
           if (res.ok) { const d = await res.json(); return typeof d?.aiUsedToday === "number" && Number.isFinite(d.aiUsedToday) && d.aiUsedToday >= 0 ? d.aiUsedToday : null; }
@@ -85,7 +102,7 @@ export default function AccountPage() {
       setRealUsage({ aiUsed, alertCount, watchlistCount });
       setLoadedAt(new Date().toISOString());
     });
-  }, [isLoggedIn]);
+  }, [isLoggedIn, tier]);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -194,11 +211,11 @@ export default function AccountPage() {
   const currentTier = tierDisplay[normalizedTier] ?? tierDisplay.anonymous;
   const isPaid = normalizedTier === "pro" || normalizedTier === "pro_trader";
 
-  const aiLimit = getDailyAiLimit(normalizedTier);
+  const aiLimit = aiPolicy.limit;
   const aiUsed = realUsage?.aiUsed ?? null;
 
   const usage: UsageMetric[] = [
-    { label: "MSP AI Analyst", used: aiUsed, limit: aiLimit },
+    { label: aiPolicy.label, used: aiUsed, limit: aiLimit },
     { label: "Saved Alerts", used: realUsage?.alertCount ?? null, limit: isPaid ? ALERT_LIMITS.pro : ALERT_LIMITS.free },
     { label: "Watchlists", used: realUsage?.watchlistCount ?? null, limit: isPaid ? WATCHLIST_LIMITS.pro.watchlists : WATCHLIST_LIMITS.free.watchlists },
   ];
@@ -225,7 +242,7 @@ export default function AccountPage() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-[var(--msp-bg)] text-white">
+      <main className={studio.page}>
         <div className="mx-auto max-w-6xl px-4 py-20 text-center text-white/70">Loading account...</div>
       </main>
     );
@@ -233,7 +250,7 @@ export default function AccountPage() {
 
   if (!isLoggedIn) {
     return (
-      <main className="min-h-screen bg-[var(--msp-bg)] text-white">
+      <main className={studio.page}>
         <div className="mx-auto max-w-3xl px-4 py-20">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center sm:p-10">
             <h2 className="text-2xl font-semibold">Sign In Required</h2>
@@ -248,11 +265,11 @@ export default function AccountPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[var(--msp-bg)] text-white">
+    <main className={studio.page}>
       <div className="mx-auto max-w-4xl px-4 pb-8">
-        <div className="pt-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className={studio.header}>
           <div>
-            <h1 className="text-2xl font-semibold">Account Settings</h1>
+            <p className={studio.eyebrow}>YOUR WORKSPACE / ACCOUNT</p><h1>Account settings</h1>
             <p className="text-sm text-white/60 mt-1">Manage your subscription, alerts, and intelligence access.</p>
             <p className="text-xs text-white/50 mt-2">{email || "Email not collected"}</p>
           </div>
@@ -304,7 +321,7 @@ export default function AccountPage() {
             </section>
 
             <section aria-label="Account usage" className="rounded-xl border border-white/10 p-3">
-              <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+              <div className={studio.usage}>
                 {usage.map(metric => <UsageRing key={metric.label} {...metric} />)}
               </div>
               {realUsage && usage.some(metric => metric.used === null) ? <p className="mt-2 text-xs text-amber-300">Some usage counts were not collected.</p> : null}
@@ -427,15 +444,15 @@ export default function AccountPage() {
 }
 
 function UsageRing({ label, used, limit }: UsageMetric) {
-  const pct = used === null ? 0 : Math.max(0, Math.min(100, used / Math.max(1, limit) * 100));
+  const pct = used === null || limit === null ? 0 : Math.max(0, Math.min(100, used / Math.max(1, limit) * 100));
   return <div className="min-w-0 text-center" data-usage-ring>
     <svg viewBox="0 0 80 80" className="mx-auto h-16 w-16" aria-hidden="true">
       <circle cx="40" cy="40" r="32" fill="none" stroke="currentColor" className="text-white/10" strokeWidth="6" />
       {used !== null && <circle cx="40" cy="40" r="32" fill="none" stroke="currentColor" className={pct >= 90 ? 'text-amber-400' : 'text-white/60'} strokeWidth="6" pathLength="100" strokeDasharray={`${pct} 100`} transform="rotate(-90 40 40)" />}
     </svg>
     <p className="text-xs font-semibold">{label}</p>
-    <p className="mt-1 text-xs text-white/70">{used === null ? 'Not collected' : `${used.toLocaleString()} / ${limit.toLocaleString()}`}</p>
-    {used === null && <p className="text-xs text-white/50">Limit {limit.toLocaleString()}</p>}
+    <p className="mt-1 text-xs text-white/70">{used === null || limit === null ? 'Not collected' : `${used.toLocaleString()} / ${limit.toLocaleString()}`}</p>
+    {used === null && limit !== null && <p className="text-xs text-white/50">Limit {limit.toLocaleString()}</p>}
   </div>;
 }
 

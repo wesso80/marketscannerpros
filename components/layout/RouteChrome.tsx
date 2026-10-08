@@ -17,7 +17,7 @@ export default function RouteChrome({ children }: RouteChromeProps) {
   const designScope = publicDesignScope(pathname);
   if (designScope) return <>
     <main className="msp-main-shell"><Suspense fallback={<div role="status">Loading research workspace…</div>}><PublicDesignShell workspace={designScope === 'workspace'}>{children}</PublicDesignShell></Suspense></main>
-    <CookieBanner/><AlertToast/>
+    <CookieBanner approvedDesign/><AlertToast/>
   </>;
 
   return (

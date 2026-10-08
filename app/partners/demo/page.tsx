@@ -100,15 +100,15 @@ export default function PartnerDemoPage() {
   return (
     <main style={{
       minHeight: "100vh",
-      background: "radial-gradient(circle at top, #111827 0, #020617 55%, #000 100%)",
-      color: "#f9fafb",
+      background: "var(--research-bg)",
+      color: "var(--research-text)",
       fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
     }}>
 
       {/* â”€â”€â”€ Hero â”€â”€â”€ */}
       <section style={{
         padding: "80px 20px 60px",
-        borderBottom: "1px solid #1f2933",
+        borderBottom: "1px solid var(--research-line)",
         textAlign: "center",
       }}>
         <div style={{ maxWidth: 960, margin: "0 auto" }}>
@@ -117,7 +117,7 @@ export default function PartnerDemoPage() {
             alignItems: "center",
             gap: 8,
             fontSize: 12,
-            color: "#14b8a6",
+            color: "var(--research-accent)",
             padding: "6px 14px",
             borderRadius: 999,
             background: "rgba(20,184,166,0.1)",
@@ -127,7 +127,7 @@ export default function PartnerDemoPage() {
             <span style={{ fontWeight: 700 }}>BROKER &amp; PARTNER DEMO</span>
           </div>
 
-          <h1 style={{ fontSize: 44, fontWeight: 800, lineHeight: 1.15, marginBottom: 20 }}>
+          <h1 style={{ fontSize: 'clamp(32px, 4vw, 50px)', fontWeight: 500, lineHeight: 1.15, marginBottom: 20 }}>
             Add MarketScanner Pros<br />
             <span style={{ color: "#10b981" }}>To Your Platform</span>
           </h1>
@@ -182,7 +182,7 @@ export default function PartnerDemoPage() {
       {/* â”€â”€â”€ Value Proposition â”€â”€â”€ */}
       <section style={{
         padding: "60px 20px",
-        borderBottom: "1px solid #1f2933",
+        borderBottom: "1px solid var(--research-line)",
       }}>
         <div style={{ maxWidth: 960, margin: "0 auto" }}>
           <h2 style={{ fontSize: 28, fontWeight: 700, textAlign: "center", marginBottom: 12 }}>
@@ -253,7 +253,7 @@ export default function PartnerDemoPage() {
       {/* â”€â”€â”€ Platform Capabilities â”€â”€â”€ */}
       <section id="capabilities" style={{
         padding: "60px 20px",
-        borderBottom: "1px solid #1f2933",
+        borderBottom: "1px solid var(--research-line)",
       }}>
         <div style={{ maxWidth: 960, margin: "0 auto" }}>
           <h2 style={{ fontSize: 28, fontWeight: 700, textAlign: "center", marginBottom: 12 }}>
@@ -307,7 +307,7 @@ export default function PartnerDemoPage() {
       {/* â”€â”€â”€ Integration Models â”€â”€â”€ */}
       <section style={{
         padding: "60px 20px",
-        borderBottom: "1px solid #1f2933",
+        borderBottom: "1px solid var(--research-line)",
       }}>
         <div style={{ maxWidth: 960, margin: "0 auto" }}>
           <h2 style={{ fontSize: 28, fontWeight: 700, textAlign: "center", marginBottom: 12 }}>
@@ -357,7 +357,7 @@ export default function PartnerDemoPage() {
       {/* â”€â”€â”€ Revenue Models â”€â”€â”€ */}
       <section style={{
         padding: "60px 20px",
-        borderBottom: "1px solid #1f2933",
+        borderBottom: "1px solid var(--research-line)",
       }}>
         <div style={{ maxWidth: 960, margin: "0 auto" }}>
           <h2 style={{ fontSize: 28, fontWeight: 700, textAlign: "center", marginBottom: 12 }}>
@@ -396,7 +396,7 @@ export default function PartnerDemoPage() {
       {/* â”€â”€â”€ Compliance Section â”€â”€â”€ */}
       <section style={{
         padding: "60px 20px",
-        borderBottom: "1px solid #1f2933",
+        borderBottom: "1px solid var(--research-line)",
       }}>
         <div style={{ maxWidth: 800, margin: "0 auto" }}>
           <h2 style={{ fontSize: 28, fontWeight: 700, textAlign: "center", marginBottom: 12 }}>
@@ -453,7 +453,7 @@ export default function PartnerDemoPage() {
       {/* â”€â”€â”€ Data Sources â”€â”€â”€ */}
       <section style={{
         padding: "60px 20px",
-        borderBottom: "1px solid #1f2933",
+        borderBottom: "1px solid var(--research-line)",
       }}>
         <div style={{ maxWidth: 800, margin: "0 auto" }}>
           <h2 style={{ fontSize: 28, fontWeight: 700, textAlign: "center", marginBottom: 40 }}>
@@ -495,7 +495,7 @@ export default function PartnerDemoPage() {
       {/* â”€â”€â”€ Live Platform Link â”€â”€â”€ */}
       <section style={{
         padding: "60px 20px",
-        borderBottom: "1px solid #1f2933",
+        borderBottom: "1px solid var(--research-line)",
       }}>
         <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center" }}>
           <h2 style={{ fontSize: 28, fontWeight: 700, marginBottom: 12 }}>

@@ -1,8 +1,9 @@
 "use client";
+import studio from '@/components/public-design/PublicOverlays.module.css';
 import { useEffect, useState } from "react";
 const KEY = "msp-consent"; // "accepted" | "essential" | "declined"
 
-export default function CookieBanner() {
+export default function CookieBanner({ approvedDesign = false }: { approvedDesign?: boolean }) {
   const [show, setShow] = useState(false);
   useEffect(() => { try { if (!localStorage.getItem(KEY)) setShow(true); } catch {} }, []);
   
@@ -26,7 +27,7 @@ export default function CookieBanner() {
   
   if (!show) return null;
   return (
-    <div className="cookie">
+    <div className={`cookie ${approvedDesign ? studio.cookie : ''}`}>
       <div className="container cookie-row">
         <div className="cookie-text">
           <strong>Cookies & Analytics</strong>

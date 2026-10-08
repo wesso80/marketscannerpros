@@ -1,5 +1,6 @@
 "use client";
 
+import studio from '@/components/public-design/AccountStudio.module.css';
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -77,16 +78,12 @@ function VerifyMagicLinkContent() {
         : "border-white/10 bg-white/5 text-white/70";
 
   return (
-    <main className="min-h-screen bg-[var(--msp-bg)] text-white">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute left-1/2 top-24 h-[300px] w-[300px] md:h-[520px] md:w-[520px] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-3xl" />
-      </div>
-
-      <div className="relative mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4 py-14">
-        <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+    <main className={studio.page}>
+      <div className={studio.verify}>
+        <div className={studio.verifyCard}>
           <div className="text-center">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-xl">🔐</div>
-            <h1 className="mt-4 text-xl font-semibold tracking-tight">Verifying your sign-in</h1>
+            <p className={studio.eyebrow}>SECURE ACCESS</p><h1>Verifying your sign-in</h1>
           </div>
 
           <div className={`mt-5 rounded-2xl border p-3 text-xs ${toneClass}`}>{message}</div>
@@ -108,7 +105,7 @@ export default function VerifyMagicLinkPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen bg-[var(--msp-bg)] text-white">
+        <main className={studio.page}>
           <div className="mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4 text-white/60">Verifying...</div>
         </main>
       }

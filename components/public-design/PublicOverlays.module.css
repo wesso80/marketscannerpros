@@ -1,0 +1,14 @@
+.copilot{position:fixed;right:12px;bottom:20px;z-index:50;max-width:calc(100vw - 24px);font:14px/1.6 Arial,sans-serif;color:#edf1ed;display:flex;flex-direction:column;align-items:flex-end}
+.launcher,.send{min-height:44px;background:#a5e8cf;color:#10241c;padding:11px 18px;border:1px solid #a5e8cf;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+.send:disabled{opacity:.4;cursor:not-allowed}
+.panel{margin-top:10px;max-width:100%;padding:24px;background:#111e26;border:1px solid #38534d;border-radius:8px;box-shadow:0 12px 36px #0005;max-height:calc(100dvh - 100px);overflow-y:auto}
+.panel h2{font-size:20px;font-weight:500;letter-spacing:-.4px}
+.panel article{background:#0c181f;border:1px solid #293a42;border-radius:6px}
+.panel textarea{background:#0c181f;border-color:#38534d;color:#edf1ed;min-height:80px;border-radius:5px}
+.panel a{color:#a5e8cf}.copilot :is(button,textarea,summary,a):focus-visible{outline:2px solid #a5e8cf;outline-offset:3px}
+.cookie{background:#111e26;border-top:1px solid #38534d;color:#edf1ed;font:13px/1.7 Arial,sans-serif;box-shadow:0 -8px 28px #0003}
+.cookie strong{font-size:15px;font-weight:500}.cookie a{color:#a5e8cf;text-underline-offset:3px}
+.cookie button{min-height:44px;border-radius:6px;box-shadow:none;background:transparent;color:#edf1ed;border:1px solid #38534d}
+.cookie button:last-child{background:#a5e8cf;color:#10241c;border-color:#a5e8cf}
+.cookie button:focus-visible{outline:2px solid #a5e8cf;outline-offset:3px}
+@media(max-width:600px){.panel{padding:18px}.copilot{bottom:12px}}

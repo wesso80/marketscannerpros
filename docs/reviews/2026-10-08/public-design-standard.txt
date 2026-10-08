@@ -1,29 +1,44 @@
 Public design standard — 9 October 2026
 
+Branch: codex/public-design-standard; draft PR #533.
 Base: f31e4bb906895fafad07916ec59dfcc91e692559 (Scanner draft #531).
-Fetched origin before changing the design control. No merge or deployment.
+Origin was fetched before this work. No GitHub merge or deployment.
 
 Implemented
-- publicDesignEnabled now always selects the approved public presentation.
-- RouteChrome has no legacy public Header/Footer fallback. Admin, operator and v2 retain their existing unwrapped chrome behavior.
-- All other public paths use the approved website shell; tools/intelligence/Learning use the seven-destination workspace shell. This includes authentication subpages, legal aliases and shared reports.
-- Existing approved Overview, Symbol, Macro, M2, Portfolio/Journal, Learning, pricing and signup presentations no longer depend on the visual environment switch.
-- Find symbols uses the approved slate/mint editorial design with a responsive controls area and measured observation rows. Scan triggers, quotas and filters are unchanged.
-- Legal pages use an editorial document layout, desktop contents rail and mobile contents disclosure. Legal text and links are unchanged.
-- Supporting public pages inherit the approved typography and background tokens.
+- The approved slate/mint public presentation is standard. There is no legacy Header/Footer or visual-flag fallback.
+- Public route classification covers 165 existing page files. Admin, operator and v2 retain their existing unwrapped chrome behavior. Route coverage is a structural check, not 165 individual browser reviews.
+- Overview, Symbol, Macro Outlook, Global M2 Intelligence, Portfolio, Journal and Learning remain the seven destinations. Daily Radar stays inside Overview.
+- Find symbols uses the approved editorial layout, responsive controls and measured observation rows. Manual ticker entry remains available under Change symbol; its MSFT request and URL transition were verified at both widths.
+- Supporting public screens use scoped typography, panel, table, form and background styling. Account, verification, partner pages, Free discovery, workspace utilities, the public Copilot panel, cookie banner and not-found presentation were aligned explicitly.
+- Watchlists, Alerts and Backtest now have named editorial headers and connections to Symbol and Account, rather than the generic Track heading.
+- Portfolio and Journal aliases preserve their destination tabs. Macro cannot redirect back to the legacy dashboard when the old visual flag is off.
+- Account reads the active public Copilot quota, including reserved requests. A failed or absent count remains unavailable. The old allowance is used only when the server explicitly selects legacy/admin policy.
+- Legal pages retain their document navigation and responsive contents. Three obsolete Terms product descriptions were corrected: old GPT-4 references and the 5/50/unlimited allowance. The text-integrity test checks all other wording and links against the baseline; legal effective dates and obligations were not changed.
 
 Operational boundary
-The original environment flag still controls M2 service availability through m2ResearchEnabled. This preserves existing authentication, Free/Pro access and history rollout. Presentation is always approved; unavailable data does not select a legacy UI. No admin engines, production records or provider integrations were changed.
+The original flag still controls M2 service availability through m2ResearchEnabled. Authentication, access rules, history gating, Free record limits and production records are unchanged. Styling is scoped to public chrome; admin engines, workers, scanners and collection were not edited. No new live provider or OpenAI calls were used for verification.
 
 Verification
-75 focused tests passed. A further 14 distinct M2 access/economic design tests passed (89 distinct total). Typecheck retains six previously recorded local dependency errors: four Stripe version literals and two timer unref typings; none in changed files.
-Six isolated actual-component browser layouts passed at 1280 and 390: Find symbols, home and legal. These use esbuild and React with mocked navigation/account state, without live data; they are not a complete Next application check. Screenshot review found cramped mobile filters, which were fixed and rerun.
-Full Next browser run timed out after 90 seconds compiling pricing. Do not represent the site-wide browser review as complete.
+- 106 focused tests pass across 14 files, including design scope, account policy display, public Copilot, cookie wrapping, legal text integrity, pricing/signup, workspace panels, Find symbols, Symbol, Free access and M2 access/history.
+- Project typecheck retains six existing errors: four installed Stripe API-version literal mismatches and two timer unref typings. None is in a changed file. Typecheck is not reported as clean.
+- Running Next: 32 core design checks pass at 1280/390, covering all seven destinations, pricing, signup, home, populated/empty/missing evidence, chart modes, M2 history, and record controls. Requests are fixtures; checkout/email actions are mocked.
+- Running Next: 8 Free checks pass at 1280/390 for Symbol, Watchlists, Alerts and guide, including manual MSFT selection and chart mode changes without duplicate comparison requests.
+- Running Next: 8 final supporting checks pass at 1280/390 for Watchlists, Alerts, Backtest and Account after their presentation changes.
+- Running Next: additional secondary-page desktop checks and six mobile legal/contact/about checks pass. Verification page passes at both widths. These overlap with the isolated checks below and are not presented as a unique total.
+- Combined scratch tree with #529/#530: 19 checks pass with an isolated PostgreSQL database and synthetic daily-scan rows. Covers Today, Symbol, Find symbols, daily-pick and shared scan pages at both widths, plus RSS, two OG images, share-card PNG and signed-out bulk refusal. No page errors or horizontal overflow; seeded private canaries do not appear. Scratch database was dropped and PostgreSQL stopped.
+- 20 isolated actual-component layouts pass at 1280/390 for disclaimer, methodology, compliance, open-interest guide, blog, partners, partner demo, reviews, account and verification. These mock navigation and unavailable APIs; they are not full Next end-to-end checks.
 
-Remaining before design sign-off
-1. Run the real app through all seven destinations plus pricing/signup/account/legal at both widths. Verify manual ticker entry, chart tabs, loading, missing/error, Free and Pro states.
-2. Replace remaining secondary-page interior card layouts (including old utilities and Free discovery surfaces); the shared approved shell alone is not completion of their page designs.
-3. Check stacked daily-pick/share surfaces from #529/#530 against this shell; those branches are not merged into this design patch.
-4. Update stale legal product statements in a separate reviewed content change: current terms still mention old model and 5/50/unlimited AI limits. This patch deliberately preserves legal wording.
+Artifacts (workspace outputs directory)
+- MSP-approved-design-review.html: screenshot gallery and explicit fixture labels.
+- design-completion/public-design-browser.json: core 32 checks.
+- design-final-free3/public-design-browser.json: Free/manual entry 8 checks.
+- design-final-support/public-design-browser.json: final supporting 8 checks.
+- design-daily-combined/results.json: combined real database 19 checks.
+- design-component-review/fixture-results.json: isolated 20 layouts.
+- design-final-tests.log and design-final-typecheck.log.
 
-No claims of production visual verification, live provider verification or deployment.
+Review / release limits
+This completes the scoped public design implementation pass, not a claim that every historical route, entitlement combination or provider failure has been exhaustively reviewed. Local Webpack compilation intermittently stalled; targeted fresh runs and isolated component rendering were used, with the distinction recorded above. Diagnostic Next build settings exist only in the scratch tree, not this PR.
+The combined daily surfaces belong to Claude's drafts #529/#530 and were not copied into this PR. #533 remains stacked on #531; integration and release must respect those dependencies. Live provider, real billing/email delivery, and production smoke checks remain release work. Existing commercial/legal claims outside the three identified Terms descriptions were not certified by this design pass. Credential rotation remains an owner action and is not implied by this work.
+
+No merge, deployment, production mutation or secret rotation was performed.

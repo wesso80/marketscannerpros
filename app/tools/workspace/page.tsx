@@ -103,14 +103,19 @@ function WorkspaceContent() {
   </article>;
 
   return (
-    <div className="space-y-3">
-      <h1 className="text-2xl font-semibold">Track</h1>
+    <article className={records.page} data-workspace-studio={tab.toLowerCase()}>
+      <header className={records.hero}>
+        <p className={records.eyebrow}>Your research workflow</p>
+        <h1>{tab}</h1>
+        <p>{tab === 'Watchlists' ? 'Keep the symbols you follow together, then open their evidence when you need it.' : tab === 'Alerts' ? 'Review your saved conditions and notifications. An alert records a condition, not a recommendation.' : tab === 'Backtest' ? 'Explore historical simulations with their assumptions and limitations in view.' : 'Review your saved research and account tools.'}</p>
+        <nav aria-label="Workspace connections"><Link href="/tools/golden-egg">Research a symbol ↗</Link><Link href="/account">Account & billing ↗</Link></nav>
+      </header>
       <TabBar
         label="Track tabs"
         items={TABS.map(t => ({ id: t, label: t, content: panels[t] }))}
         activeId={tab}
         onChange={id => selectWorkspaceTab(id as WorkspaceTab)}
       />
-    </div>
+    </article>
   );
 }

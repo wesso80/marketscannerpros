@@ -1,3 +1,5 @@
+import {readdirSync} from 'node:fs';
+import {join,relative} from 'node:path';
 // @vitest-environment jsdom
 import React from 'react';
 import {afterEach,expect,it,vi} from 'vitest';
@@ -40,3 +42,18 @@ it('keeps M2 service rollout separate from presentation',()=>{
 });
 it.each(['/auth/verify','/account','/about','/daily-pick','/share/scan/AAPL','/legal/privacy','/new-public-page'])('covers secondary public route %s',path=>expect(publicDesignScope(path)).toBe('website'));
 it.each(['/api/scanner/run','/_next/static/file.js',''])('does not wrap a non-page %s',path=>expect(publicDesignScope(path)).toBeNull());
+
+it('every public page resolves to the approved shell, while internal pages stay excluded',()=>{
+ function pages(dir:string):string[]{return readdirSync(dir,{withFileTypes:true}).flatMap(entry=>entry.isDirectory()?pages(join(dir,entry.name)):entry.name==='page.tsx'?[join(dir,entry.name)]:[]);}
+ const routes=pages('app').map(file=>'/'+relative('app',file).replace(/\\/g,'/').replace(/\/?page\.tsx$/,''));
+ expect(routes.length).toBeGreaterThan(100);
+ for(const path of routes){if(/^\/(admin|operator|v2)(\/|$)/.test(path))expect(publicDesignScope(path),path).toBeNull();else expect(publicDesignScope(path),path).not.toBeNull();}
+});
+it('old records URLs preserve the intended destination and Macro never redirects to the old dashboard',async()=>{
+ vi.stubEnv('NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED','false');
+ const config=(await import('../next.config.mjs')).default;
+ const redirects=await config.redirects();
+ expect(redirects.some((r:any)=>r.source==='/tools/macro')).toBe(false);
+ expect(redirects.find((r:any)=>r.source==='/portfolio')?.destination).toBe('/tools/workspace?tab=Portfolio');
+ expect(redirects.find((r:any)=>r.source==='/journal')?.destination).toBe('/tools/workspace?tab=Journal');
+});
