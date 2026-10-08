@@ -1,0 +1,20 @@
+Specialist contract test kit - 8 October 2026
+
+Base 2eebc1ae / PR #501. Additive test/documentation files only; no route/helper/admin edits. User screenshot identifies Claude tasks as W3-R leaf-level projection, W2-R1/R2 crypto identity, and review of Codex W6/W7/ACT/W8 branches. This is test support, not an implementation of those tasks.
+
+Files:
+- test/fixtures/specialistBoundaryProbes.ts: deliberately contaminated partial DVE/crypto/news/fundamentals objects. They are not complete model inputs. Edge cases include zero OI/current versus baseline, insufficient history, distinct settlement times and coin identity collision.
+- test/support/specialistPublicContract.ts: recursive forbidden-key/private-value scan of complete JSON responses, private/no-store HTTP assertion and ordered admin/Pro/Free cache-response helper.
+- test/specialistContractKit.test.ts: nine tests prove detector sensitivity and exercise the real toPublicSymbolPacket projector without mutating its internal input.
+- specialist-contract-map.txt: field policy proposal and audit references from the preceding read-only review.
+
+Builder usage:
+1. Keep route/provider mocks owned by the specialist implementation tests. Inject contaminated fixture fragments into the actual loader/cache result; do not call providers.
+2. Call assertPrivatePublicResponse on the COMPLETE route response, including envelope and metadata. Pair it with exact allowed-field schema assertions and required evidence checks; a deny-list alone cannot prove an allow-list boundary.
+3. Supply checkWarmCacheSequence with a request callback that switches the actual mocked actor/tier and reuses the actual cache under test. The helper alone does not simulate or prove cache isolation. Admin is required to remain available and is intentionally not scanned as public; separately compare its full legacy contract.
+4. Assert source times/zero/null and current evidence survive projection. Apply the listed edge cases to actual calculation/identity helpers when their changes land. Those edge fixtures are currently data only, not passing W7/identity acceptance claims.
+5. The deny-list is a minimum common public boundary, not a final specialist schema or production sanitizer. Settled internal fields with renamed keys are caught only if carrying the synthetic marker; arbitrary unknown leaks still need exact schema tests. Policy questions in the field map remain unresolved.
+
+Validation: nine focused tests pass; six known baseline TypeScript errors remain, none in added files. No skipped tests, live providers, production writes, merges or deployment. New specialist route acceptance is still outstanding until Claude wires these probes to the real adapters.
+
+Next: review Claude's pushed W3-R and W2 changes, wire tests to their actual response schemas and report any failing fields before proposing route edits.
