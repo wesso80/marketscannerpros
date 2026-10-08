@@ -43,7 +43,7 @@ describe('post-remediation audit round 2 regressions', () => {
   });
 
   it('propagates commodity freshness into Macro instead of reusing stale rows silently', () => {
-    const macro = read('app/tools/macro/page.tsx');
+    const macro = read('components/macro/MacroDashboard.tsx');
 
     expect(macro).toContain('commodityHealth');
     expect(macro).toContain("c.eligibleForGate === false");

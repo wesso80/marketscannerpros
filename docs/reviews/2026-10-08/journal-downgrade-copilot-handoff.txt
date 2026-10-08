@@ -1,0 +1,33 @@
+Journal downgrade preservation and Copilot dependency handoff
+8 October 2026 | codex/public-research-design, starting at 11147a3d
+
+Remote state fetched before edits
+origin/research-page-phase4: a7324bf1, including DVE #511 (e7911a7f) and audit #513. Scanner security PR #514 remains open. No merge/rebase/deployment performed here. This branch remains stacked on #510; it has not imported those later integration commits. No Claude security, DVE or Time Confluence file edited.
+
+Implemented Journal quota repair
+Under PUBLIC_DAILY_QUOTAS_ENABLED, verified non-bypass Free accounts can replace an above-five book if every retained open entry was already open in that same workspace. Entries can be closed gradually. A new, foreign, duplicate or reopened open entry above five is refused. At or below five, normal new entries remain permitted.
+The quota decision happens on deduplicated input after reading authoritative IDs/open states while holding the existing journal quota advisory lock, before DELETE/INSERT. Existing paid, admin bypass and flag-off paths keep their prior quota behaviour. No stored record is automatically removed to bring an account under the limit.
+Files: lib/free/journalQuota.ts and app/api/journal/route.ts. Other validation, risk governor, partial-replacement protection, lifecycle events and record persistence are unchanged. This removes the quota obstruction; it does not promise other existing validation will accept every edit. Tests use the risk-guard-off setting to isolate quota behaviour. Full live Journal save/downgrade browser testing and real PostgreSQL concurrency remain outstanding.
+
+Portfolio mirror decision
+Asked the user whether the three-position Free allowance should count only directly added positions, with Journal-linked records treated separately, or include linked rows. That decision remains pending at the time of this report. No counting semantics changed in this follow-up. Existing manual-save admission still counts stored linked rows and preserves above-limit books without net growth.
+
+Copilot dependency review for Claude
+1. app/api/ai/copilot/route.ts enters lib/ai/publicCopilot.ts when publicAiScope() exists. The quota wrapper creates that scope for verified paid public users with the rollout enabled. That implementation verifies signed, account-bound page evidence, does not include tools or client history, and validates the answer. Relevant contract/adversarial tests pass with fake model responses.
+2. lib/publicAiQuota.ts deliberately delegates to the legacy handler with no public scope when the rollout is disabled, and for admin/operator bypass. Therefore old prompts are not dead code. Do not infer the public migration is active in production; no environment flag inspection occurred.
+3. app/api/ai/copilot/route.ts imports MSP_ANALYST_V2_PROMPT and buildAnalystV2SystemMessages and still labels generate_trade_plan in the legacy handler. app/api/msp-analyst/route.ts also imports the analyst prompt. Deleting lib/prompts/mspAnalystV2.ts now breaks those imports.
+4. generate_trade_plan remains defined in lib/ai/tools.ts, included in lib/ai/types.ts skill allowlists, and executed by app/api/ai/actions/route.ts. Removing only its Copilot label does not retire the action. This is a dependency finding, not a live exploit test; no action was executed.
+5. Admin is required to remain unchanged. Before deleting shared prompts/tools, separate any retained private legacy handler from the public endpoint, verify bypass behaviour, and retire public legacy access intentionally. Disabling the rollout must not silently reopen advice-producing public code once retirement is complete. That behavioural change has not been implemented here.
+
+Recommended next work / acceptance
+- Resolve Portfolio mirror semantics, then make UI counts, save admission and pricing language agree; preserve linked Journal records and independent limits.
+- Isolate legacy Copilot for verified private/admin access and make public callers use only the educational handler or a clear unavailable response. Test rollout on/off, signed out, Free, Pro, legacy paid and admin/operator; assert no tools/private history enter public model requests.
+- Inventory actions executors and stored pending actions before retiring generate_trade_plan. Confirm old public URLs cannot invoke the retired capability; preserve admin actions or move them behind an explicit private boundary. Then Claude can remove genuinely unused modules/routes after caller checks.
+- Keep lib/ai/regimeScoring and lib/institutionalFilter internal outputs untouched, as Claude's audit requires.
+
+Verification
+69 tests pass across Journal downgrade helper/route, existing Free Journal add, public Copilot route/adversarial and shared AI quota tests. Synthetic database and network only; no provider, email, payment or production record changes. Type-check result reported separately if unchanged baseline issues persist.
+
+Type check: same six recorded Stripe API-version/timer errors; no new errors from this follow-up.
+
+Follow-up implementation: copilot-private-boundary.txt records the new dispatcher that blocks public legacy fallback even with rollout off. Private handler/prompts/tools remain intact; other legacy endpoints and action execution still require retirement work.

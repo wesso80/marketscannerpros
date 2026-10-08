@@ -547,7 +547,7 @@ describe('layout and flow audit regressions', () => {
     const favoritesPanel = read('components/FavoritesPanel.tsx');
     const edgeInsightCards = read('components/intelligence/EdgeInsightCards.tsx');
     const cryptoDashboard = read('app/tools/crypto-dashboard/page.tsx');
-    const macroDashboard = read('app/tools/macro/page.tsx');
+    const macroDashboard = read('components/macro/MacroDashboard.tsx');
 
     expect(dashboardPage).toContain('Morning Research Start');
     expect(dashboardPage).toContain('function DashboardMetric');
@@ -584,7 +584,7 @@ describe('layout and flow audit regressions', () => {
     expect(explorerPage).not.toContain("'Movers Intelligence'");
     expect(explorerPage).not.toContain("'Commodities Deep'");
     expect(explorerPage).not.toContain("'Macro'");
-    expect(explorerPage).not.toContain("import('@/app/tools/macro/page')");
+    expect(explorerPage).not.toContain("import('@/components/macro/MacroDashboard')");
     expect(explorerPage).toContain("'market-movers': 'Movers'");
     expect(explorerPage).toContain("'equity-explorer': 'Equity Deep-Dive'");
     expect(explorerPage).toContain("'crypto-explorer': 'Crypto Deep-Dive'");
@@ -1119,7 +1119,7 @@ describe('layout and flow audit regressions', () => {
   it('keeps secondary market routes on text-code visual identity', () => {
     const companyOverviewPage = read('app/tools/company-overview/page.tsx');
     const economicCalendarPage = read('app/tools/economic-calendar/page.tsx');
-    const macroPage = read('app/tools/macro/page.tsx');
+    const macroPage = read('components/macro/MacroDashboard.tsx');
 
     expect(companyOverviewPage).toContain('icon="CO"');
     // W3: the Bullish/Bearish bias banner and the algorithmic "Research Lens" / bull-risk cases are retired.

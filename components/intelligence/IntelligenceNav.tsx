@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { publicDesignEnabled } from '@/lib/publicDesign';
 import { usePathname } from 'next/navigation';
 
 type Tab = { href: string; label: string };
@@ -14,6 +15,8 @@ const TABS: Tab[] = [
 
 export default function IntelligenceNav() {
   const pathname = usePathname() || '';
+
+  if (publicDesignEnabled() && pathname === '/intelligence/global-m2') return null;
 
   return (
     <nav aria-label="Intelligence modules"

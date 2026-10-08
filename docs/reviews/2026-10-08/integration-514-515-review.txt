@@ -1,0 +1,34 @@
+Integration review: Claude #514/#515 and Codex #512
+8 October 2026 | read-only branch review; no merge, deployment or production access
+
+Audited revisions
+Codex HEAD: 10514b300ac83505449f68d7b0c1e6edff976d88
+#514: 530850935b1c4e3f19a9d10ce32011dd9ab4a621, claude/ai-scanner-auth
+#515: 26d3960946102c84e737b0eb561ca728ace723a4, claude/time-confluence-evidence
+Integration branch: a7324bf1. New #516, claude/retire-advice-routes at 5230d940, is already in progress; its full implementation was not audited here.
+
+Findings
+P1 / #515 incomplete public calendar boundary. app/api/confluence-scan/route.ts returns computeForwardCloseCalendar directly in calendar mode. lib/confluence-learning-agent.ts supplies schedule.weight, cluster.weight and clusterScore, computes clusterScore from weight and number of closes, sorts descending and keeps the top 20. components/time/CloseCalendar.tsx displays Wt / Score and score-based colours. TimeScannerPage still embeds CloseCalendar. Therefore the hierarchical projection does not finish the public evidence-only conversion. Existing tab tests stub CloseCalendar and the route calendar fixture has empty arrays. A synthetic canary reproduction confirms weight and clusterScore reach the public response.
+Acceptance: public calendar leaf projection without composite score/weights/ranked selection; chronological or explicitly factual grouping; plain close counts/timeframes/date/timezone and limitations; real embedded-calendar render test plus populated nested canaries. Preserve internal engine/admin outputs. Simply hiding Score text is insufficient because payload and top-20 score selection remain.
+
+P2 / #514 secret-bearing destination fallback. app/api/ai-scanner/test/route.ts still constructs its destination from APP_BASE_URL or the request Host header. Authentication now blocks anonymous access, which is the urgent improvement, but missing configuration still permits request-derived destination selection for a secret-bearing request. This is not proof that an external attacker can forge Host through the deployed proxy. Recommend requiring a validated configured origin, no request-derived fallback, and refusal to follow redirects; tests should verify an attacker Host cannot select a destination and missing configuration makes no request. Actual webhook responses are still nested in alertResponse; a narrow response projection would also prevent future upstream fields from being echoed.
+
+Existing fixes confirmed in review
+#514 checks requireAdmin before reads/webhook calls, bounds requested alert count at 200, removes direct secret echo, marks responses private/no-store and replaces raw route errors. Real helper supports signed admin/operator sessions and configured admin-secret authorization. No credential test or real webhook execution was performed.
+#515 hierarchical responses are projected from allowed leaves on fresh/cache paths, paid access precedes scanning, unsupported forecast/full modes are refused and GET returns 405. Internal engine changes are absent. The calendar gap above remains.
+
+Integration findings
+Code/test-only PR deltas for both #514 and #515 pass git apply --check against Codex HEAD. The complete #514 patch additionally references the audit document not present on the older Codex base.
+Full branch merge-tree simulation reports conflicts in app/api/dve/route.ts, app/api/options-scan/route.ts and components/options-terminal/OptionsChainEvidence.tsx for both branches. These come from the divergent stack/history, not the specific scanner/Time Confluence files. Auto-merged Symbol/API files also require behavioural regression checks. No working-tree merge or ref update was performed. Do not infer clean branch integration from clean PR-file deltas.
+Acceptance: reconcile the stacked #505/#510/#512 work with current research-page-phase4 in isolation, preserving DVE/options public projections, signed Copilot evidence tokens, quotas and new presentation. Run combined route contracts, type check, account/Free/paid/admin fixtures and browser checks before proposing an integration PR. No deployment implied.
+
+Validation
+Extracted only PR source/test changes into a temporary review overlay, resolving remaining dependencies from the current checkout. Their 10 existing tests pass (4 scanner auth, 4 Time Confluence route, 2 tab render). One additional calendar canary reproduction passes by demonstrating score/weight exposure. This is focused overlay testing, not a fully merged branch or full-suite run. No provider/database/model calls. Review artifacts retained outside the checkout under outputs/review-514-515; working code unchanged.
+
+Recommended split
+Claude: complete #515 calendar projection/display and populated tests; harden #514 destination/redirect handling; finish already-open #516 with external-caller checks and no shared private module deletion; then address journal/analyze prompt contradiction, research-case probabilities and earnings AI labelling from his audit. Avoid Codex's Copilot/actions/Journal quota files.
+Codex: reconcile the integration stack, verify combined auth/cache/evidence and browser flows, finish Portfolio mirror counting after user decision, account/trial billing work, and remaining public page Copilot adapters. Existing admin models/helpers must remain intact.
+User-owned operational step: rotate the previously exposed TradingView webhook secret in both Render and TradingView. This review did not rotate it or establish whether it was misused. Draft PRs do not protect production until an approved release.
+
+Remaining release work beyond these PRs
+Seven-page presentation still needs full integrated desktop/mobile/accessibility and saved-record flows. Portfolio/Journal final workspace browser rerun previously stalled. Free M2/current-options access, seven-day trial/card/reminder/cancellation, account presentation, additional page-specific signed Copilot evidence, broader Radar discovery/history features and legacy public metric/wording cleanup remain. Existing six type-check errors and known suite failures must be baselined/resolved before a clean release claim. Treat this as the known backlog, not proof that every repository feature has been audited.

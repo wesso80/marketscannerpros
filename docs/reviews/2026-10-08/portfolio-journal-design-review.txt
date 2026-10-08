@@ -1,0 +1,42 @@
+Portfolio and Journal: redesign compatibility review
+8 October 2026 | codex/public-research-design | staged, not deployed
+
+Scope
+Reviewed active workspace routes, PortfolioContent and overview presentation, Journal page/layout, record classification, account/plan helpers and portfolio sync rules. This is a targeted compatibility review, not a complete audit of every API or statistical model. No production/provider calls, account migrations or saved-record changes.
+
+Implemented
+app/tools/workspace/page.tsx: flag-enabled Portfolio and Journal become distinct destinations within the shared shell, without the duplicate Track tab bar. Only the active body mounts. Existing panels, callbacks, account gate and auxiliary tools remain. Contextual links join Symbol, Portfolio and Journal; explanatory guidance distinguishes observation, expectation and outcome.
+components/portfolio/PortfolioOverview.tsx: opt-in palette/spacing treatment for existing allocation and values. No valuation, allocation or P&L formula changes.
+components/journal/layout/JournalLayout.tsx: scoped embedded-page styling and replacement of the old risk-scoring/AI-summary upgrade claim with historical-review wording. Review modules and access gates remain unchanged.
+
+Existing protections found
+lib/journal/researchRecords.ts and components/journal/JournalPage.tsx: automated/paper entries remain separate from personal performance; revealing research does not add it to personal KPIs. Existing layout tests cover this.
+lib/portfolio/clientSync.ts: server revision, successfully loaded baseline and explicit changed payload are required before syncing. Failed load/conflict blocks sync. Quote refresh is display-only. This work does not change those rules.
+Journal prefill retains assetClass/tradeType through journalLinkAsset; existing trade drawers and add/update/close actions are reused. User-entered simulation records are not represented as a linked brokerage portfolio.
+PortfolioOverview retains the distinction between open P&L and today's change, plus missing-quote notes. Daily return is not invented.
+
+Unresolved product gaps / implementation backlog
+P1 Entitlements: lib/useUserTier.ts getPortfolioLimit currently gives Free 3 positions; lib/free/limits.ts sets FREE_JOURNAL_LIMIT=5 open entries (not five lifetime records). The proposed Free product says one portfolio and basic journal without these exact limits. Decide intended limits, enforce consistently server/client, then update pricing. Acceptance: Free/Pro/legacy/admin matrix tested; downgrade preserves records; limits cannot be bypassed by direct requests.
+P1 Copilot: Portfolio and Journal still publish legacy context. New paid evidence-bound Copilot has no verified page adapter here. Do not claim it can explain these pages yet. Acceptance: account-bound allowlisted record evidence, dates/units, no research-paper contamination of personal metrics, 20/day shared allowance and no actions.
+P1 Legacy Portfolio public risk displays: app/tools/portfolio/page.tsx still includes derived risk labels, concentration-based correlation proxy and operator-state writes. They were not reclassified or removed in this styling pass. Acceptance: factual exposure/valuation facts labelled with basis; any proxy explained explicitly; internal/admin helpers unchanged.
+P1 Record parity: complete a fake-database end-to-end pass covering add/edit/close, duplicate submission, conflicts and downgrade. The browser harness includes opening/closing the Journal drawer, but that added interaction has not yet completed verification; no saves were submitted.
+P2 Visual completion: detailed Risk/Allocation/Ledger views and Journal drawer internals still retain some legacy presentation. Apply the shared typography and layout after evidence semantics are agreed; test long symbols, options units, shorts and missing marks.
+P2 Research links: test equity, crypto and option-contract prefill end-to-end, including return navigation. Existing helpers were preserved, not comprehensively re-audited.
+
+Related route repair
+The newly reachable Macro page exposed Next's invalid default page-props signature (embeddedInDashboard). Moved the existing implementation unchanged to components/macro/MacroDashboard.tsx; app/tools/macro/page.tsx is a no-props route wrapper. Dashboard imports the component. Source-reading tests follow the moved file. No model changes.
+
+Verification
+8 focused workspace/journal tests pass, including flag-enabled account gate, active-body mounting and research/personal separation. Broader selected run: 18 pass, 3 fail in phase2bToday (two legacy Macro heading expectations, one Movers fixture assertion). These failures are recorded, not suppressed or reported as a clean full suite. Type check after Macro extraction returns to the six known Stripe/timer errors.
+8 real Next app browser checks cover empty/populated Portfolio and Journal at 1280/390 with mocked APIs and external traffic blocked. No overflow/page errors or record mutations. Populated quote calls deliberately return unavailable to preserve the missing-mark case. Desktop Portfolio/mobile Journal screenshots inspected. This is not proof of live-provider valuation or successful saves.
+
+Next recommended task
+Resolve the Free/Pro entitlement matrix and complete pricing/sign-up/account presentation against that verified behaviour. Then finish the record-specific Copilot and public metric cleanup above before rollout.
+
+Additional verification: 25 tests pass across portfolioClientSync, journalEntryUnits and journalEntryLevels. The moved MacroDashboard component was byte-for-text compared against the prior route implementation and matches exactly; only its entry-point wrapper/import locations changed.
+
+Visual follow-up limitation: after the eight-check run, a typography adjustment enlarged existing stat values and unified nested backgrounds. The repeated app run stalled during workspace compilation before the new drawer interaction could be checked. Earlier screenshots/checks do not certify that last visual adjustment or drawer interaction. A fresh browser run remains required before rollout.
+
+Follow-up entitlement audit: public-plan-readiness.txt records the five-open-entry Journal semantics, missing matching Portfolio server cap, separate quota rollout flag, stale Free AI pricing and unverified trial/reminder setup.
+
+Latest follow-up: all eight focused workspace/journal tests pass again. Clean-cache browser retry also stalled during workspace compilation and timed out after 240 seconds before rendering; no new visual or drawer pass is claimed. Browser navigation timeout is now configurable for diagnostics. Generated cache backup is outside the repository under the task outputs directory.

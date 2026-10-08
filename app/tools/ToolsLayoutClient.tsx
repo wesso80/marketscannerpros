@@ -1,5 +1,6 @@
 'use client';
 
+import { publicDesignEnabled } from '@/lib/publicDesign';
 import { Suspense, useEffect, useState } from 'react';
 import PublicMSPCopilot, { type CopilotUsage } from '@/components/PublicMSPCopilot';
 import { COPILOT_SECTION_EVENT, type CopilotSectionEvent } from '@/lib/ai/useCopilotSection';
@@ -93,7 +94,7 @@ export default function ToolsLayoutClient({
   const skill = getSkillFromPath(pathname);
   const layoutMode = getToolsLayoutMode(pathname);
   const containerVariant = getToolsContainerVariant(pathname);
-  // Extract page key from pathname for favorites (e.g. /tools/scanner → scanner)
+  // Extract page key from pathname for favorites (e.g. /tools/scanner â†’ scanner)
   const pageKey = pathname.replace(/^\/tools\//, '').replace(/\/.*$/, '') || 'dashboard';
   const showFavoriteButton = pathname !== '/tools' && pageKey !== 'dashboard' && pathname !== '/tools/terminal' && pathname !== '/tools/scanner';
   const wrappedChildren = layoutMode === 'terminal'
@@ -107,13 +108,13 @@ export default function ToolsLayoutClient({
     <RiskPermissionProvider>
     <V2Provider>
       <AIPageProvider>
-        <WorkflowNavigation />
+        {!publicDesignEnabled() && <WorkflowNavigation />}
         <ErrorBoundary fallback={null}>
-          {pathname !== '/tools' && <RegimeBar hideIfMissing={pathname === '/tools/start' || pathname === '/tools/dashboard'} />}
+          {!publicDesignEnabled() && pathname !== '/tools' && <RegimeBar hideIfMissing={pathname === '/tools/start' || pathname === '/tools/dashboard'} />}
         </ErrorBoundary>
 
         <ErrorBoundary>
-          {/* Favourite toggle — lets users pin this page to My Pages */}
+          {/* Favourite toggle â€” lets users pin this page to My Pages */}
           {showFavoriteButton && (
             <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '4px 12px 0' }}>
               <FavoriteButton pageKey={pageKey} />

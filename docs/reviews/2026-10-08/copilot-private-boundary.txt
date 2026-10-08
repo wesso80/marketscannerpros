@@ -1,0 +1,24 @@
+Copilot public/private access boundary
+8 October 2026 | codex/public-research-design | draft PR 512
+
+Change
+app/api/ai/copilot/route.ts now composes the existing public quota wrapper with lib/ai/copilotAccess.ts. Server-created public quota scope goes only to publicCopilot. Without that scope, only a signed admin session or the existing signed operator identity check can reach the old handler. Other signed public users receive 503 PUBLIC_COPILOT_UNAVAILABLE; signed-out requests receive 401. Public refusals are private, no-store. Auth failures never fall back and do not expose exception messages.
+
+Important rollout behaviour
+Turning PUBLIC_DAILY_QUOTAS_ENABLED off no longer restores legacy public Copilot. Public Copilot becomes unavailable until the educational quota/evidence path is enabled and healthy. The shared quota wrapper itself is unchanged, so other legacy endpoints still need separate retirement work. No production flag, model request, admin credential or account data was accessed.
+
+Admin preservation
+The legacy handler and its helper bodies were compared against the starting commit: identical after renaming the function and removing its former public dispatch line. Model selection, internal context, prompts, tool handling and quota behaviour inside that private handler are untouched. Existing admin/operator authentication uses the same signed session fields and isOperator check as the public quota bypass. Public request body or header claims do not grant bypass.
+
+Still not safe to delete
+lib/prompts/mspAnalystV2.ts remains used by the preserved private Copilot and /api/msp-analyst. generate_trade_plan remains in private Copilot skill/tool definitions and /api/ai/actions execution. Claude should not delete those shared modules based only on the public Copilot change. No source module was removed here. A separate private module extraction can make those dependencies clearer, but deleting or changing private behaviour would violate the unchanged-admin requirement.
+
+Verification
+69 tests pass across the new 12-case boundary suite, public Copilot response contracts, shared AI quota tests, public safety source checks and subscription integration checks. The boundary suite composes the actual quota wrapper and access dispatcher with fake auth/ledger/response handlers; it covers rollout on/off, signed out, Free, Pro, legacy paid, admin/operator, forged body/header claims, auth failure and evidence failure without fallback. Existing public response tests verify model input has no tools/history and invalid output is withheld. No real OpenAI calls.
+Type check has the same six recorded Stripe API-version/timer errors and no new errors. No full-suite or real production smoke-test claim.
+
+Coordination
+Fetched before editing: Claude now has claude/time-confluence-evidence. No overlap with that branch or scanner security files. No merge or deployment performed. Portfolio mirror-count decision remains pending; counting unchanged.
+
+Next recommended task
+Review remaining public action executors and legacy AI endpoints with Claude, preserve private/admin dependencies, and retire public trading-plan access without deleting shared models. Complete the Portfolio mirror-count decision separately.

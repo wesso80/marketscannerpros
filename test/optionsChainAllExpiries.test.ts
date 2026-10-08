@@ -69,5 +69,5 @@ it('returns every current expiry for expiries=all and still trims the default ch
   expect(trimmed.contracts).toHaveLength(2);
   expect(trimmed.contracts.every((c: { expiration: string }) => c.expiration === '2026-10-05')).toBe(true);
   expect(trimmed.expirations).toHaveLength(2);
-  expect(readFileSync('app/tools/macro/page.tsx', 'utf8')).toContain('/api/options-chain?symbol=SPY&expiries=all');
+  expect(readFileSync('components/macro/MacroDashboard.tsx', 'utf8')).toContain('/api/options-chain?symbol=SPY&expiries=all');
 });
