@@ -297,47 +297,8 @@ export interface MarketMoversResponse {
 }
 
 // --- DVE ---
-export interface DVEResponse {
-  success: boolean;
-  price: number;
-  data: {
-    symbol: string;
-    volatility: {
-      bbwp: number;
-      regime: string;
-      regimeConfidence: number;
-      rateOfChange: number;
-      inSqueeze: boolean;
-      squeezeStrength: number;
-    };
-    direction: {
-      score: number;
-      bias: string;
-      confidence: number;
-      components: Record<string, number>;
-    };
-    phasePersistence: {
-      contraction: { active: boolean; continuationProbability: number; stats: { currentBars: number; agePercentile: number } };
-      expansion: { active: boolean; continuationProbability: number; stats: { currentBars: number; agePercentile: number } };
-    };
-    signal: { type: string; state: string; active: boolean; strength: number; triggerReason: string[] };
-    projection: {
-      expectedMovePct: number;
-      hitRate: number;
-      sampleSize: number;
-      averageBarsToMove: number;
-      dispersionPct?: number;
-      projectionQuality?: 'unavailable' | 'low' | 'medium' | 'high';
-      projectionQualityScore?: number;
-      projectionWarning?: string;
-    };
-    breakout: { score: number; label: string; components: Record<string, number> };
-    trap: { detected: boolean; score: number };
-    exhaustion: { level: number; label: string; signals: string[] };
-    flags: string[];
-    summary: string;
-  };
-}
+/** Shared public Volatility response; internal directional/score fields are not a browser contract. */
+export type DVEResponse = import('@/src/features/volatilityEngine/types').DVEApiResponse;
 
 // --- Sectors Heatmap ---
 export interface SectorData {
@@ -970,7 +931,7 @@ export function useGoldenEgg(symbol: string | null, timeframe: ScanTimeframe = '
 }
 
 export function useDVE(symbol: string | null, timeframe: ScanTimeframe = 'daily', assetType?: string, expiry?: string | null, enabled = true) {
-  return useApi(() => symbol ? fetchDVE(symbol, timeframe, assetType, expiry) : Promise.resolve(null as any), [symbol, timeframe, assetType, expiry ?? null], enabled);
+  return useApi<DVEResponse>(() => symbol ? fetchDVE(symbol, timeframe, assetType, expiry) : Promise.resolve(null as any), [symbol, timeframe, assetType, expiry ?? null], enabled);
 }
 
 export function useQuote(symbol: string | null, type: 'stock' | 'crypto' = 'stock', enabled = true) {
