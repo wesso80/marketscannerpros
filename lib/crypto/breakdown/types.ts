@@ -22,6 +22,7 @@ export interface IdentityCheck {
  /** More than one coin shares the ticker and the id came from a symbol search. */
  ambiguous:boolean;reason:string;
  okx:{instrument:string;bound:boolean;reason:string};
+ /** Yahoo has no coin id: bound only when the static ticker map names this exact id (W2-R1). */
  yahoo:{bound:boolean;reason:string};
 }
 export interface Breakdown {
