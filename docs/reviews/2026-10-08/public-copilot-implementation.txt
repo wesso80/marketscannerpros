@@ -1,3 +1,19 @@
+FOLLOW-UP: full-app build fixes and missing-evidence smoke pass
+instrumentation.ts now places its dynamic Node logger import inside the positive NEXT_RUNTIME
+branch documented by Next, so the Edge compiler excludes fs/v8. Logger activation/intervals unchanged.
+SymbolAiSummary.tsx encoding-only repair: invalid Windows ellipsis byte converted to UTF-8;
+valid existing UTF-8 preserved. Overlap disclosed before this repair; no Claude summary logic changed.
+CSP allows unsafe-eval only in development for webpack hydration; production/test remain unchanged.
+Real app smoke (Next server + Chromium in one process) now returns 200, hydrates without browser
+errors, opens Pro Copilot with mocked identity/disclosure/usage and unavailable report data, and
+keeps the question disabled. Verified at 1280 and 390. Actual app CSS exposed 12px mobile clipping;
+explicit viewport-safe panel width fixes it. Mobile screenshot visually checked.
+14 focused build/logger tests pass. New reusable test/browser/copilot/app-smoke.mjs uses the same
+MSP_BROWSER_RUNTIME/OUTPUT/CHROMIUM variables as the component harness; port 5178 must be free.
+All browser API requests mocked and external hosts blocked. No provider/model or production DB calls.
+This verifies missing-evidence integration, NOT successful signed-report/model/DB quota flow. Those
+remain next, along with model selection-quality evaluation. No merges/deployments or flag changes.
+
 FOLLOW-UP: longer-answer browser checks and full-app limitation
 Local Next dev (installed 16.4.0, webpack) reported UnhandledSchemeError for node:fs through
 lib/memory/debugLog.ts. Symbol page request timed out. Full-app verification is NOT passed.

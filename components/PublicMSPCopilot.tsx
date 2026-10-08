@@ -45,9 +45,9 @@ export default function PublicMSPCopilot({ usage, pagePath, symbol, evidenceToke
     } catch { if(generation.current===run)setAnswers(old=>[...old,{error:'Connection interrupted. Retry the same question to check its status.'}]); }
     finally { if(generation.current===run)setBusy(false); }
   }
-  return <aside className="fixed bottom-5 right-3 z-50 max-w-[calc(100vw-24px)] text-sm">
+  return <aside style={{width:"min(420px, calc(100vw - 24px))"}} className="fixed bottom-5 right-3 z-50 max-w-[calc(100vw-24px)] text-sm">
     <button type="button" aria-expanded={open} aria-controls="public-copilot-panel" onClick={()=>setOpen(!open)} className="rounded-xl bg-teal-300 px-4 py-3 font-semibold text-slate-950">MSP Copilot · Pro</button>
-    {open && <section id="public-copilot-panel" aria-label="MSP Copilot" className="mt-2 w-[420px] max-w-full rounded-xl border border-slate-600 bg-slate-950 p-4 text-slate-100 shadow-xl">
+    {open && <section style={{width:"100%"}} id="public-copilot-panel" aria-label="MSP Copilot" className="mt-2 w-[420px] max-w-full rounded-xl border border-slate-600 bg-slate-950 p-4 text-slate-100 shadow-xl">
       <h2 className="font-semibold">Understand this page</h2>
       <p className="mt-1 text-xs text-slate-300">AI-selected page evidence with reviewed educational explanations.</p>
       {usage.plan !== 'pro' ? <p className="mt-4">Pro includes 20 questions daily. <a className="text-teal-300 underline" href="/pricing">View Pro</a></p> : <>
