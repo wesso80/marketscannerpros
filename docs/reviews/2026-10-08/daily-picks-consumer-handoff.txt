@@ -71,3 +71,34 @@ No live data/model calls, deployment or browser visual validation in this pass.
 Remaining: Claude's own surfaces; full browser acceptance after both branches
 are integrated. The rank-order objection is resolved by #529's disclosed A–Z
 sort (selection is still scan-filtered, as its selection note explains).
+
+
+#530 component-browser handoff
+Fetched #530 claude/daily-pick-surfaces at
+ a4b98fa390c90f6c4bebd901d9f8901e93d4a446 (base #529).
+Added its 15 changed files to the local combined fixture checkout only.
+Claude is independently comparing full suites/typechecks; no duplicate full
+suite run here. His c360ced3 consumer findings were already addressed by
+acf4dab7. Today now reads daily-picks through useDailyPicksBundle and its hook
+no longer derives scores, direction, grade, permission or lifecycle. The shared
+scanner ranking engine remains for the separate Scanner migration.
+
+Browser checks: six component-fixture cases pass (1280 and 390 widths, each
+populated/missing/empty). Actual DailyPickView, Free SavedPicks, OverviewPicks
+and SymbolSnapshotHeader rendered with project CSS; Next Link is replaced by
+an anchor and DB access is blocked. Free widget uses a synthetic v1 response.
+No horizontal document overflow, browser exceptions or retired visible
+Grade/Permission/percentile/Score labels. Zero change stays +0.00%; missing
+values and empty list remain explicit. Mobile populated screenshot inspected.
+
+Artifacts: outputs/daily-contract-browser/results.json plus six PNGs and
+fixture source copies. Harness remains in the local combined checkout at
+test/browser/daily-contract. This is NOT a full Next/server/authenticated browser
+pass, RSS check, social image render or live data check. Those remain release
+acceptance work. No provider requests, merges, deployments or secret rotation.
+
+Environment note: Claude reports project tsc clean on both his trees. Local
+tsc still reports four Stripe literal-version mismatches and two timer unref
+errors; record this as local dependency/type environment divergence, not a
+combination-introduced failure. Credential rotation remains the user's separate
+provider/account action; removal from Git files does not revoke credentials.
