@@ -15,8 +15,8 @@ vi.mock('@/lib/db', () => ({ q: vi.fn(async (sql: string) => {
 }) }));
 import { GET, POST } from '@/app/api/research-case/route';
 
-const get = async (qs: string) => { const r = await GET(new NextRequest(`https://msp.test/api/research-case?${qs}`)); return { status: r.status, body: await r.json() }; };
-const post = async (body: unknown) => { const r = await POST(new NextRequest('https://msp.test/api/research-case', { method: 'POST', body: JSON.stringify(body) })); return { status: r.status, body: await r.json() }; };
+const get = async (qs: string) => { const r = await GET(new NextRequest(`https://msp.test/api/research-case?${qs}`)); return { status: r.status, headers: r.headers, body: await r.json() }; };
+const post = async (body: unknown) => { const r = await POST(new NextRequest('https://msp.test/api/research-case', { method: 'POST', body: JSON.stringify(body) })); return { status: r.status, headers: r.headers, body: await r.json() }; };
 beforeEach(() => { h.session = { workspaceId: 'ws-a', tier: 'pro' }; h.queries = []; h.failDb = false; });
 
 describe('/api/research-case', () => {
@@ -43,5 +43,19 @@ describe('/api/research-case', () => {
     expect(err.status).toBe(500);
     expect(err.body.error).toBe('Failed to save research case');
     expect(JSON.stringify(err.body)).not.toMatch(/relation|internal-host/);
+  });
+  it('every response is private, no-store and varies by cookie (saved cases are workspace data)', async () => {
+    const list = await get('saved=true');
+    const retired = await get('symbol=AAPL');
+    const bad = await post({ researchCase: { symbol: '' } });
+    h.failDb = true;
+    const err = await post({ researchCase: { symbol: 'AAPL', assetClass: 'equity', title: 'AAPL case' } });
+    h.failDb = false; h.session = null;
+    const anon = await get('saved=true');
+    for (const r of [list, retired, bad, err, anon]) {
+      expect(r.headers.get('cache-control')).toBe('private, no-store, max-age=0');
+      expect(r.headers.get('vary')).toBe('Cookie');
+    }
+    expect([list.status, retired.status, bad.status, err.status, anon.status]).toEqual([200, 410, 400, 500, 401]);
   });
 });

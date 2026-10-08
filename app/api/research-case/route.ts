@@ -8,13 +8,17 @@ import { getLatestStateMachineBySymbol, type StoredStateMachineRow } from '@/lib
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// Saved research cases are one workspace's own data: never stored by a shared cache.
+const PRIVATE = { 'Cache-Control': 'private, no-store, max-age=0', Vary: 'Cookie' };
+const json = (body: unknown, init?: { status?: number }) => NextResponse.json(body, { status: init?.status ?? 200, headers: PRIVATE });
+
 const SAVED_CASE_OUTCOMES = ['pending', 'confirmed', 'invalidated', 'expired', 'reviewed'] as const;
 type SavedCaseOutcome = typeof SAVED_CASE_OUTCOMES[number];
 
 export async function GET(req: NextRequest) {
   const session = await getSessionFromCookie();
   if (!session?.workspaceId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const url = new URL(req.url);
@@ -34,7 +38,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getSessionFromCookie();
   if (!session?.workspaceId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
@@ -65,24 +69,24 @@ export async function POST(req: NextRequest) {
       ],
     );
 
-    return NextResponse.json({ success: true, researchCase: mapSavedResearchCase(rows[0]) }, { status: 201 });
+    return json({ success: true, researchCase: mapSavedResearchCase(rows[0]) }, { status: 201 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : '';
-    if (message.includes('required') || message.includes('valid symbol')) return NextResponse.json({ success: false, error: message }, { status: 400 });
+    if (message.includes('required') || message.includes('valid symbol')) return json({ success: false, error: message }, { status: 400 });
     console.error('[research-case] save failed', err);
-    return NextResponse.json({ success: false, error: 'Failed to save research case' }, { status: 500 });
+    return json({ success: false, error: 'Failed to save research case' }, { status: 500 });
   }
 }
 
 export async function DELETE(req: NextRequest) {
   const session = await getSessionFromCookie();
   if (!session?.workspaceId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const id = new URL(req.url).searchParams.get('id');
   if (!id) {
-    return NextResponse.json({ error: 'id required' }, { status: 400 });
+    return json({ error: 'id required' }, { status: 400 });
   }
 
   try {
@@ -93,24 +97,24 @@ export async function DELETE(req: NextRequest) {
       [session.workspaceId, id],
     );
     if (!rows[0]) {
-      return NextResponse.json({ error: 'Research case not found' }, { status: 404 });
+      return json({ error: 'Research case not found' }, { status: 404 });
     }
-    return NextResponse.json({ success: true, id: rows[0].id });
+    return json({ success: true, id: rows[0].id });
   } catch (err: unknown) {
     console.error('[research-case] delete failed', err);
-    return NextResponse.json({ success: false, error: 'Failed to delete research case' }, { status: 500 });
+    return json({ success: false, error: 'Failed to delete research case' }, { status: 500 });
   }
 }
 
 export async function PATCH(req: NextRequest) {
   const session = await getSessionFromCookie();
   if (!session?.workspaceId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const id = new URL(req.url).searchParams.get('id');
   if (!id) {
-    return NextResponse.json({ error: 'id required' }, { status: 400 });
+    return json({ error: 'id required' }, { status: 400 });
   }
 
   try {
@@ -141,14 +145,14 @@ export async function PATCH(req: NextRequest) {
     );
 
     if (!rows[0]) {
-      return NextResponse.json({ error: 'Research case not found' }, { status: 404 });
+      return json({ error: 'Research case not found' }, { status: 404 });
     }
-    return NextResponse.json({ success: true, researchCase: mapSavedResearchCase(rows[0]) });
+    return json({ success: true, researchCase: mapSavedResearchCase(rows[0]) });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : '';
-    if (message.includes('outcomeStatus')) return NextResponse.json({ success: false, error: message }, { status: 400 });
+    if (message.includes('outcomeStatus')) return json({ success: false, error: message }, { status: 400 });
     console.error('[research-case] outcome update failed', err);
-    return NextResponse.json({ success: false, error: 'Failed to update research case outcome' }, { status: 500 });
+    return json({ success: false, error: 'Failed to update research case outcome' }, { status: 500 });
   }
 }
 
@@ -181,9 +185,9 @@ async function getSavedResearchCases(workspaceId: string, url: URL) {
       [workspaceId, id],
     );
     if (!rows[0]) {
-      return NextResponse.json({ error: 'Research case not found' }, { status: 404 });
+      return json({ error: 'Research case not found' }, { status: 404 });
     }
-    return NextResponse.json({ success: true, researchCase: mapSavedResearchCase(rows[0]) });
+    return json({ success: true, researchCase: mapSavedResearchCase(rows[0]) });
   }
 
   const filters: string[] = ['src.workspace_id = $1'];
@@ -223,7 +227,7 @@ async function getSavedResearchCases(workspaceId: string, url: URL) {
     params,
   );
 
-  return NextResponse.json({ success: true, researchCases: rows.map(mapSavedResearchCase) });
+  return json({ success: true, researchCases: rows.map(mapSavedResearchCase) });
 }
 
 function mapSavedResearchCase(row: any) {
