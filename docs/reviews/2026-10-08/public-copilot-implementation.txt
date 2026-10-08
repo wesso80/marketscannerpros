@@ -1,3 +1,19 @@
+FOLLOW-UP: Copilot browser fixture verification
+14 Chromium checks passed: seven scenarios each at 1280x900 and 390x900.
+Scenarios: Free access, successful Pro question and source disclosure, failed news source,
+exhausted allowance, pending evidence loading, symbol switch during an answer, rejected answer.
+Checks cover disabled inputs, token counts, one question request, quota display, stale-answer
+suppression, no browser errors, and panel/document viewport bounds. Ready screenshots visually
+inspected at both widths. All external HTTP requests blocked; no provider or OpenAI calls.
+Uses the actual PublicMSPCopilot component and generated Tailwind CSS with mocked API responses.
+Fixture tokens are synthetic; this does not exercise server signing, auth, DB or a live deployed app.
+Those server boundaries have separate tests. Live model quality and full-app integration remain open.
+Reusable harness: test/browser/copilot/run.mjs and entry.tsx. Set MSP_BROWSER_RUNTIME to a directory
+with playwright installed, MSP_BROWSER_OUTPUT to an output directory, and optionally MSP_CHROMIUM
+to a Chromium executable. Run node test/browser/copilot/run.mjs from the repository root.
+Outputs: copilot-browser-results.json plus one screenshot per viewport/scenario.
+No application or Claude-owned files changed in this follow-up. No merge or deployment.
+
 FOLLOW-UP: DVE #511 and read-only options integration
 Cherry-picked Claude 5d0f0f7 as 2cca75ed on this branch; #511 itself remains unmerged.
 Cold and cached DVE v2 public readings receive optional account-bound signed tokens. Combination
