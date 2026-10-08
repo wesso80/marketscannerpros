@@ -46,3 +46,8 @@ it('confirms a completed report revisit and signed visitor without a second char
  h.reserve.mockResolvedValue({status:'completed',limit:1,used:1});
  expect((await (await call()).json()).reportUnlocked).toBe(true);expect(h.settle).not.toHaveBeenCalled();
 });
+
+it.each([['limited',429,'SYMBOL_DAILY_LIMIT'],['pending',409,'SYMBOL_REPORT_PENDING']] as const)('returns explicit %s access metadata without provider work',async(status,http,code)=>{
+ h.reserve.mockResolvedValue({status,limit:3,used:3,resetsAt:'2026-11-02T05:00:00Z'});
+ const response=await call();expect(response.status).toBe(http);expect(await response.json()).toMatchObject({code,plan:'free',quota:{resetsAt:'2026-11-02T05:00:00Z'}});expect(h.compute).not.toHaveBeenCalled();
+});

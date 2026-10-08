@@ -1,3 +1,4 @@
+import { PublicReportAccessError, parseReportAccessIssue, type ReportAccessIssue } from '@/lib/publicReportAccessError';
 import type { CanonicalResult } from '@/lib/scoring/canonical/types';
 import type { ScannerScorePayload } from '@/lib/scanner/scoreContract';
 import type { BacktestStatisticsBasis } from '@/lib/backtest/balanceStatistics';
@@ -42,6 +43,8 @@ async function apiFetch<T>(url: string, options?: RequestInit, timeoutMs?: numbe
   if (res.status === 401) throw new AuthError(url);
   if (res.status === 403) throw new UpgradeRequiredError(url);
   if (!res.ok) {
+    const issue = parseReportAccessIssue(url, res.status, body);
+    if (issue) throw new PublicReportAccessError(issue);
     const detail = body?.error || body?.message || '';
     throw new Error(detail ? `${detail}` : `API ${res.status}: ${url}`);
   }
@@ -859,6 +862,7 @@ export function fetchCloseCalendar(
 import { useState, useEffect, useCallback } from 'react';
 
 export interface UseApiResult<T> {
+  reportAccessIssue?: ReportAccessIssue | null;
   data: T | null;
   error: string | null;
   loading: boolean;
@@ -873,6 +877,7 @@ function useApi<T>(fetcher: () => Promise<T>, deps: any[] = []): UseApiResult<T>
   const [settledKey, setSettledKey] = useState<string | null>(null);
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reportAccessIssue, setReportAccessIssue] = useState<ReportAccessIssue | null>(null);
   const [isAuthError, setIsAuthError] = useState(false);
   const [isUpgradeRequired, setIsUpgradeRequired] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -886,12 +891,14 @@ function useApi<T>(fetcher: () => Promise<T>, deps: any[] = []): UseApiResult<T>
     setData(null);
     setSettledKey(null);
     setError(null);
+    setReportAccessIssue(null);
     setIsAuthError(false);
     setIsUpgradeRequired(false);
     fetcher()
       .then(res => { if (!cancelled) { setData(res); setSettledKey(requestKey); setLoading(false); } })
       .catch(err => {
         if (cancelled) return;
+        setReportAccessIssue(err instanceof PublicReportAccessError ? err.issue : null);
         const upgrade = err instanceof UpgradeRequiredError;
         const isAuth = err instanceof AuthError;
         setIsAuthError(isAuth);
@@ -905,7 +912,7 @@ function useApi<T>(fetcher: () => Promise<T>, deps: any[] = []): UseApiResult<T>
   }, [trigger, ...deps]);
 
   const matchesRequest = settledKey === requestKey;
-  return { data: matchesRequest ? data : null, error: matchesRequest ? error : null, loading: loading || !matchesRequest, isAuthError: matchesRequest && isAuthError, isUpgradeRequired: matchesRequest && isUpgradeRequired, refetch };
+  return { reportAccessIssue: matchesRequest ? reportAccessIssue : null, data: matchesRequest ? data : null, error: matchesRequest ? error : null, loading: loading || !matchesRequest, isAuthError: matchesRequest && isAuthError, isUpgradeRequired: matchesRequest && isUpgradeRequired, refetch };
 }
 
 // --- Typed hooks ---

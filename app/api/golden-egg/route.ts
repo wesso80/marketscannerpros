@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
         if (!access.bypass) {
           const admission = await publicQuota.reserve({subject:access.subject,plan:access.plan,kind:'symbol',resource,fingerprint:resource});
           quotaMeta = {day:admission.day,resetsAt:admission.resetsAt,limit:admission.limit,used:admission.used};
-          if (admission.status !== 'reserved' && admission.status !== 'completed') return NextResponse.json({success:false,error:admission.status === 'limited' ? 'Daily Symbol report limit reached' : 'This report is already being prepared',quota:quotaMeta},{status:admission.status === 'limited' ? 429 : 409,headers:{'Cache-Control':'private, no-store'}});
+          if (admission.status !== 'reserved' && admission.status !== 'completed') return NextResponse.json({success:false,code:admission.status === 'limited' ? 'SYMBOL_DAILY_LIMIT' : admission.status === 'pending' ? 'SYMBOL_REPORT_PENDING' : 'SYMBOL_REPORT_CONFLICT',plan:access.plan,error:admission.status === 'limited' ? 'Daily Symbol report limit reached' : 'This report is already being prepared',quota:quotaMeta},{status:admission.status === 'limited' ? 429 : 409,headers:{'Cache-Control':'private, no-store'}});
           if (admission.status === 'reserved') reservation = admission.reservation;
         }
       } catch { return NextResponse.json({success:false,error:'Report access temporarily unavailable'},{status:503,headers:{'Cache-Control':'private, no-store'}}); }
