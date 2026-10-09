@@ -23,10 +23,11 @@ describe('long-horizon evidence denominators',()=>{
  it('does not guess measurement counts for older payloads',()=>{
   expect(summarizeHorizon({setup:null,measured:100,avg_signed_move:5})).toMatchObject({returnCount:0,avgReturnPct:null});
  });
- it('renders individual denominators and explains that method attribution is unverified',()=>{
+ it('renders individual denominators and explains that older results have unknown method attribution',()=>{
   vi.stubGlobal('React',React);
-  const html=renderToStaticMarkup(<Component stats={{available:true,minSample:10,note:HORIZON_METHOD_NOTE,horizons:[{horizon:'6w',days:42,overall:summarizeHorizon({setup:null,measured:100,correct:2,neutral:98,return_count:1,avg_signed_move:5}),bySetup:[]}]}}/>);
-  expect(html).toContain('Method attribution is unverified');expect(html).toContain('n=2');expect(html).toContain('n=1');expect(html).not.toContain('+5.00%');expect(html).toContain('not enough data');
+  const overall=summarizeHorizon({setup:null,measured:100,correct:2,neutral:98,return_count:1,avg_signed_move:5});
+  const html=renderToStaticMarkup(<Component stats={{available:true,minSample:10,note:HORIZON_METHOD_NOTE,horizons:[{horizon:'6w',days:42,overall,bySetup:[],verifiedOnly:{overall:summarizeHorizon({setup:null}),bySetup:[]},evidence:{verified:0,unknown:100,inconsistent:0}}]}}/>);
+  expect(html).toContain('have no record and count as unknown');expect(html).toContain('0 verified');expect(html).toContain('100 unknown method');expect(html).toContain('showing all results (mixed provenance)');expect(html).toContain('n=2');expect(html).toContain('n=1');expect(html).not.toContain('+5.00%');expect(html).toContain('not enough data');
   vi.unstubAllGlobals();
  });
  it('does not expose raw database errors in either route consumer',async()=>{

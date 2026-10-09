@@ -12,11 +12,16 @@
  *   avg R      = mean bracket result in R (rows with a usable stop only; n shown)
  *   pending    = not measured yet: `waiting` (horizon not reached) + `due` (reached, not labelled yet)
  * Below MIN_HORIZON_SAMPLE measured calls a figure reads "not enough data".
+ *
+ * Evidence (migration 134): every labelled row is 'verified' (its outcome_<h>_provenance records the current writer and
+ * method and agrees with every stored field), 'unknown' (no or foreign provenance: everything labelled before 134) or
+ * 'inconsistent' (provenance present but disagreeing). Each horizon carries those counts and two sets of figures:
+ * all labelled rows (mixed provenance) and verified rows only. Pending rows count in both.
  */
 import { adminErrorText } from "@/lib/admin/errorResponse";
 import { q } from "@/lib/db";
 import { POSITION_HORIZONS, POSITION_HORIZON_DAYS, type PositionHorizon } from "@/lib/outcomes/positionHorizon";
-import { POSITION_MIGRATION_FILE, detectPositionHorizons } from "@/lib/outcomes/positionHorizonLabeller";
+import { POSITION_MIGRATION_FILE, POSITION_PROVENANCE_METHOD, detectPositionHorizons } from "@/lib/outcomes/positionHorizonLabeller";
 
 /** Fewer measured calls than this: win rate / averages are shown as "not enough data". */
 export const MIN_HORIZON_SAMPLE = 10;
@@ -51,6 +56,18 @@ export interface HorizonAggRow {
   neither?: number | string | null;
   avg_mfe?: number | string | null;
   avg_mae?: number | string | null;
+  prov_verified?: number | string | null;
+  prov_unknown?: number | string | null;
+  prov_inconsistent?: number | string | null;
+}
+
+export type HorizonCohort = "all" | "verified";
+
+/** Labelled rows by evidence status (see the header). */
+export interface HorizonEvidence {
+  verified: number;
+  unknown: number;
+  inconsistent: number;
 }
 
 export interface HorizonSummary {
@@ -85,11 +102,17 @@ export interface HorizonSummary {
   avgMaePct: number | null;
 }
 
-export interface HorizonBlock {
-  horizon: PositionHorizon;
-  days: number;
+export interface HorizonFigures {
   overall: HorizonSummary;
   bySetup: HorizonSummary[];
+}
+
+export interface HorizonBlock extends HorizonFigures {
+  horizon: PositionHorizon;
+  days: number;
+  /** overall / bySetup above are all labelled rows (mixed provenance); this is the same from verified rows only. */
+  verifiedOnly: HorizonFigures;
+  evidence: HorizonEvidence;
 }
 
 export interface PositionHorizonStats {
@@ -146,7 +169,57 @@ export function summarizeHorizon(r: HorizonAggRow, minSample = MIN_HORIZON_SAMPL
   };
 }
 
-export function horizonStatsSql(h: PositionHorizon): string {
+/** ISO-8601 timestamp text, checked before casting so a malformed value cannot fail the query. */
+const ISO_TS = `'^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]+)?(Z|[+-][0-9]{2}(:?[0-9]{2})?)$'`;
+
+/**
+ * SQL: 'verified' | 'unknown' | 'inconsistent' for a labelled row (NULL while pending). Mirrors what
+ * lib/outcomes/positionHorizonLabeller.ts writes: same writer, method, horizon, direction, outcome, signal time and
+ * processing time, plus every measured field (or, for no_data, a complete bar load and the same reason). The column is
+ * read through row JSON, so a schema without migration 134 gives 'unknown' instead of a query error.
+ */
+export function horizonEvidenceSql(h: PositionHorizon): string {
+  const p = `(to_jsonb(ai_signal_log)->'outcome_${h}_provenance')`;
+  const num = (k: string) => `(CASE WHEN jsonb_typeof(${p}->'${k}') = 'number' THEN (${p}->>'${k}')::numeric END)`;
+  const ts = (k: string) => `(CASE WHEN jsonb_typeof(${p}->'${k}') = 'string' AND ${p}->>'${k}' ~ ${ISO_TS} THEN (${p}->>'${k}')::timestamptz END)`;
+  const near = (a: string, b: string, tol: string) => `ABS(${a} - ${b}) <= ${tol}`;
+  const move = num('pctMove');
+  const signedMove = `(CASE WHEN UPPER(TRIM(trade_bias)) = 'SHORT' THEN -${move} ELSE ${move} END)`;
+  const common = [
+    `${p}->>'direction' = UPPER(TRIM(trade_bias))`,
+    `${p}->>'outcome' = outcome_${h}`,
+    `${ts('signalAt')} = signal_at`,
+    `${ts('processedAt')} = outcome_${h}_measured_at`,
+  ].join(' AND ');
+  const measured = [
+    `outcome_${h} IN ('correct','wrong','neutral')`,
+    near(num('entryPrice'), 'price_at_signal', '0.000000011'),
+    near(num('exitPrice'), `price_after_${h}`, '0.000000011'),
+    `${ts('exitAt')} = price_after_${h}_at`,
+    near(move, `pct_move_${h}`, '0.00011'),
+    `outcome_${h} = (CASE WHEN ${signedMove} >= 1 THEN 'correct' WHEN ${signedMove} <= -1 THEN 'wrong' ELSE 'neutral' END)`,
+    `${p}->>'firstHit' = first_hit_${h}`,
+    `(${p}->>'firstHitDay') IS NOT DISTINCT FROM to_char(first_hit_${h}_date, 'YYYY-MM-DD')`,
+    `((${p}->'rMultiple' = 'null'::jsonb AND r_multiple_${h} IS NULL) OR ${near(num('rMultiple'), `r_multiple_${h}`, '0.00011')})`,
+    `${num('bars')} = bars_${h}`,
+  ].join(' AND ');
+  const noData = [
+    `outcome_${h} = 'no_data'`,
+    `${p}->'barLoadComplete' = 'true'::jsonb`,
+    `${p}->>'reason' = outcome_${h}_note`,
+  ].join(' AND ');
+  return `CASE
+          WHEN outcome_${h} IS NULL THEN NULL
+          WHEN ${p} IS NULL OR jsonb_typeof(${p}) <> 'object'
+            OR ${p}->>'writer' IS DISTINCT FROM 'label-ai-outcomes'
+            OR ${p}->>'method' IS DISTINCT FROM '${POSITION_PROVENANCE_METHOD}'
+            OR ${p}->>'horizon' IS DISTINCT FROM '${h}' THEN 'unknown'
+          WHEN COALESCE(${common} AND ((${measured}) OR (${noData})), FALSE) THEN 'verified'
+          ELSE 'inconsistent'
+        END`;
+}
+
+export function horizonStatsSql(h: PositionHorizon, cohort: HorizonCohort = "all"): string {
   const signed = `(CASE WHEN UPPER(TRIM(trade_bias)) = 'SHORT' THEN -pct_move_${h} ELSE pct_move_${h} END)`;
   const done = `outcome_${h} IN ('correct','wrong','neutral')`;
   const validR = `r_multiple_${h} IS NOT NULL AND r_multiple_${h}::text NOT IN ('NaN','Infinity','-Infinity')`;
@@ -169,10 +242,17 @@ export function horizonStatsSql(h: PositionHorizon): string {
              COUNT(*) FILTER (WHERE ${done} AND first_hit_${h} IN ('stop','both_same_day'))::int AS stop_first,
              COUNT(*) FILTER (WHERE ${done} AND first_hit_${h} = 'neither')::int AS neither,
              ROUND(AVG(mfe_pct_${h}) FILTER (WHERE ${done} AND ABS(mfe_pct_${h}) <= ${SANE_MOVE_PCT})::numeric, 3) AS avg_mfe,
-             ROUND(AVG(mae_pct_${h}) FILTER (WHERE ${done} AND ABS(mae_pct_${h}) <= ${SANE_MOVE_PCT})::numeric, 3) AS avg_mae
-        FROM ai_signal_log
-       WHERE (workspace_id = 'operator-terminal' OR workspace_id LIKE 'admin-call:%')
-         AND ${MEASURABLE_SQL}
+             ROUND(AVG(mae_pct_${h}) FILTER (WHERE ${done} AND ABS(mae_pct_${h}) <= ${SANE_MOVE_PCT})::numeric, 3) AS avg_mae,
+             COUNT(*) FILTER (WHERE evidence_status = 'verified')::int AS prov_verified,
+             COUNT(*) FILTER (WHERE evidence_status = 'unknown')::int AS prov_unknown,
+             COUNT(*) FILTER (WHERE evidence_status = 'inconsistent')::int AS prov_inconsistent
+        FROM (
+          SELECT ai_signal_log.*, ${horizonEvidenceSql(h)} AS evidence_status
+            FROM ai_signal_log
+           WHERE (workspace_id = 'operator-terminal' OR workspace_id LIKE 'admin-call:%')
+             AND ${MEASURABLE_SQL}
+        ) rows_with_evidence
+       WHERE ${cohort === "verified" ? `(outcome_${h} IS NULL OR evidence_status = 'verified')` : "TRUE"}
        GROUP BY GROUPING SETS ((${SETUP_TYPE_SQL}), ())`;
 }
 
@@ -180,7 +260,16 @@ export const HORIZON_METHOD_NOTE =
   "6w = 42 and 12w = 84 calendar days after the call, measured on daily bars. Win rate = correct ÷ (correct + wrong) on the close at the horizon (at least +1% in the call direction is correct; at most -1% is wrong; strictly between is neutral). " +
   "Avg R = stop-or-target result using the stop and first target logged with the call (a day touching both counts as the stop). " +
   "Levels use the timeframe recorded with each call and may be shorter than this horizon. These are simulated daily-bar results, not executed P&L; fees and slippage are not deducted. " +
-  "Method attribution is unverified: historical rows have no versioned 6w/12w evidence snapshot. The current algorithm description does not prove which method produced an older row. Each statistic needs its own minimum valid sample.";
+  "Verified = the result carries a record (written with it, migration 134) whose writer, method and every measured field agree with the stored result. Results labelled before that have no record and count as unknown: the current method description does not prove how they were measured. Verified checks the method, not a trading edge. Each statistic needs its own minimum valid sample.";
+
+function figures(rows: HorizonAggRow[]): HorizonFigures {
+  const overallRow = rows.find((r) => r.setup === null) ?? { setup: null };
+  const bySetup = rows
+    .filter((r) => r.setup !== null)
+    .map((r) => summarizeHorizon(r))
+    .sort((a, b) => b.measured - a.measured || b.pending - a.pending || a.setup.localeCompare(b.setup));
+  return { overall: summarizeHorizon(overallRow), bySetup };
+}
 
 /** 6w/12w stats; `available: false` (with a note) until migration 105 has been run. Never throws. */
 export async function loadPositionHorizonStats(): Promise<PositionHorizonStats> {
@@ -192,13 +281,16 @@ export async function loadPositionHorizonStats(): Promise<PositionHorizonStats> 
   try {
     const blocks: HorizonBlock[] = [];
     for (const h of POSITION_HORIZONS.filter((x) => horizons.includes(x))) {
-      const rows = await q<HorizonAggRow>(horizonStatsSql(h));
-      const overallRow = rows.find((r) => r.setup === null) ?? { setup: null };
-      const bySetup = rows
-        .filter((r) => r.setup !== null)
-        .map((r) => summarizeHorizon(r))
-        .sort((a, b) => b.measured - a.measured || b.pending - a.pending || a.setup.localeCompare(b.setup));
-      blocks.push({ horizon: h, days: POSITION_HORIZON_DAYS[h], overall: summarizeHorizon(overallRow), bySetup });
+      const all = await q<HorizonAggRow>(horizonStatsSql(h, "all"));
+      const verified = await q<HorizonAggRow>(horizonStatsSql(h, "verified"));
+      const overallRow = all.find((r) => r.setup === null) ?? { setup: null };
+      blocks.push({
+        horizon: h,
+        days: POSITION_HORIZON_DAYS[h],
+        ...figures(all),
+        verifiedOnly: figures(verified),
+        evidence: { verified: n(overallRow.prov_verified), unknown: n(overallRow.prov_unknown), inconsistent: n(overallRow.prov_inconsistent) },
+      });
     }
     return { ...base, available: true, horizons: blocks, note: HORIZON_METHOD_NOTE };
   } catch (err) {
