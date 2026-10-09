@@ -69,6 +69,36 @@ describe('Symbol truth stamp uses observation time, not packet build time', () =
 });
 
 describe('symbolObservationAsOf', () => {
+  it('does not invent a completed observation from a forming or future bar', () => {
+    expect(symbolObservationAsOf([{ timestamp: '2026-10-08T14:55:00Z' }], '15m', 'CRYPTO', NOW)).toBeNull();
+    expect(symbolObservationAsOf([{ timestamp: '2026-10-09T14:45:00Z' }], '15m', 'CRYPTO', NOW)).toBeNull();
+  });
+
+  it('keeps an old completed observation when the new forming bar follows a data gap', () => {
+    expect(symbolObservationAsOf([
+      { timestamp: '2026-10-07T14:30:00Z' },
+      { timestamp: '2026-10-08T14:55:00Z' },
+    ], '15m', 'CRYPTO', NOW)).toBe('2026-10-07T14:45:00.000Z');
+  });
+
+  it('chooses the newest completed bar regardless of order and ignores invalid rows', () => {
+    expect(symbolObservationAsOf([
+      { timestamp: '2026-10-08T14:45:00Z' },
+      { timestamp: '2026-10-08T14:30:00Z' },
+      { timestamp: 'invalid' },
+    ], '15m', 'CRYPTO', NOW)).toBe('2026-10-08T15:00:00.000Z');
+  });
+
+  it('uses the completed equity session, not midnight of a forming daily bar', () => {
+    expect(symbolObservationAsOf([
+      { timestamp: '2026-10-07' }, { timestamp: '2026-10-08' },
+    ], '1D', 'EQUITIES', NOW)).toBe('2026-10-07T20:00:00.000Z');
+  });
+
+  it('cannot assign a close to an unknown timeframe', () => {
+    expect(symbolObservationAsOf([{ timestamp: '2026-10-08T14:00:00Z' }], 'unknown', 'CRYPTO', NOW)).toBeNull();
+  });
+
   it('returns null for missing or unreadable timestamps', () => {
     expect(symbolObservationAsOf(null, '15m', 'CRYPTO', NOW)).toBeNull();
     expect(symbolObservationAsOf([{ timestamp: 'not a date' }], '15m', 'CRYPTO', NOW)).toBeNull();

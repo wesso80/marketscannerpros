@@ -1,9 +1,9 @@
-import { barAgeFromClose } from '@/lib/admin/barAge';
+import { barWindowMs } from '@/lib/admin/barAge';
+import { timeframeToSeconds } from '@/lib/engines/dataTruth';
 
 /**
- * When the Symbol page's input data was observed: the close of the newest completed bar (a forming bar counts
- * from its open, when the previous bar closed). This is the data age, not the packet build time — a packet built
- * now over old bars must still read as old. Returns null when there are no bars or the timestamp is unreadable.
+ * Close of the newest completed price bar actually supplied. Never infer a missing prior bar from a forming
+ * bar's open, or use a future timestamp as current data. Other packet inputs can have different observation times.
  */
 export function symbolObservationAsOf(
   bars: ReadonlyArray<{ timestamp?: string | null }> | null | undefined,
@@ -11,7 +11,13 @@ export function symbolObservationAsOf(
   market: string,
   nowMs: number = Date.now(),
 ): string | null {
-  const last = bars?.length ? bars[bars.length - 1] : null;
-  const age = barAgeFromClose(last?.timestamp, timeframe, market, nowMs);
-  return age.ageSec == null ? null : new Date(nowMs - age.ageSec * 1000).toISOString();
+  if (!Number.isFinite(nowMs) || !timeframeToSeconds(timeframe)) return null;
+  let newest: number | null = null;
+  for (const bar of bars ?? []) {
+    if (!bar.timestamp) continue;
+    const window = barWindowMs(bar.timestamp, timeframe, market);
+    if (!window || !Number.isFinite(window.closeMs) || window.closeMs > nowMs || window.closeMs <= window.openMs) continue;
+    if (newest == null || window.closeMs > newest) newest = window.closeMs;
+  }
+  return newest == null ? null : new Date(newest).toISOString();
 }
