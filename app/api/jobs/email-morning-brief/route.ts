@@ -9,6 +9,7 @@ import {
   saveMorningBriefSnapshot,
 } from "@/lib/admin/morning-brief";
 import { resolveAdminMarket } from "@/lib/admin/defaultAdminMarket";
+import { adminEquityEmailsEnabled, ADMIN_EQUITY_EMAILS_DISABLED_REASON } from "@/lib/admin/equityOutbound";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -32,6 +33,10 @@ export async function POST(req: NextRequest) {
 
   if (!isCron && !isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  if (!adminEquityEmailsEnabled()) {
+    return NextResponse.json({ ok: true, skipped: true, reason: ADMIN_EQUITY_EMAILS_DISABLED_REASON });
   }
 
   const body = await req.json().catch(() => ({}));

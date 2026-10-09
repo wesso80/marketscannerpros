@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, verifyCronAuth } from '@/lib/adminAuth';
 import { sendAlertEmail } from '@/lib/email';
+import { adminEquityEmailsEnabled, ADMIN_EQUITY_EMAILS_DISABLED_REASON } from '@/lib/admin/equityOutbound';
 import { runScan, type CandidatePipeline } from '@/lib/operator/orchestrator';
 import { alphaVantageProvider } from '@/lib/operator/market-data';
 import { DEFAULT_WATCHLISTS } from '@/lib/operator/watchlists';
@@ -73,6 +74,10 @@ export async function POST(req: NextRequest) {
 
   if (!isCron && !isAdmin) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  if (!adminEquityEmailsEnabled()) {
+    return NextResponse.json({ ok: true, skipped: true, reason: ADMIN_EQUITY_EMAILS_DISABLED_REASON });
   }
 
   try {

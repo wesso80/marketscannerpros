@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const m = vi.hoisted(() => ({
   cron: vi.fn(() => true),
@@ -23,12 +23,18 @@ vi.mock('@/lib/admin/morning-brief', () => ({
 import { POST } from '@/app/api/jobs/email-morning-brief/route';
 
 const req = (body: unknown) => new Request('http://x/api/jobs/email-morning-brief', { method: 'POST', body: JSON.stringify(body) }) as never;
+const savedEmails = process.env.ADMIN_EQUITY_EMAILS_ENABLED;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  process.env.ADMIN_EQUITY_EMAILS_ENABLED = 'true';
   m.cron.mockReturnValue(true);
   m.already.mockResolvedValue(false);
   m.build.mockImplementation(async (o: { market: string }) => ({ briefId: `2026-09-27:${o.market}:15m`, market: o.market, deskState: 'WAIT', topPlays: [] }));
+});
+afterEach(() => {
+  if (savedEmails === undefined) delete process.env.ADMIN_EQUITY_EMAILS_ENABLED;
+  else process.env.ADMIN_EQUITY_EMAILS_ENABLED = savedEmails;
 });
 
 describe('email-morning-brief job', () => {
