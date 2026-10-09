@@ -4,7 +4,7 @@ import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { checkoutCustomerFromSession } from "@/lib/checkoutSignIn";
 import { isStripeCustomerId } from "@/lib/billingPortal";
-import { chooseStripeCustomerId } from "@/lib/subscriptionRow";
+import { chooseAccessSubscription, chooseStripeCustomerId, type SubscriptionRowFields } from "@/lib/subscriptionRow";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-09-30.clover",
@@ -13,19 +13,26 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 /** Same-origin return. Stripe opens this after the customer leaves the portal. */
 const PORTAL_RETURN_URL = "https://marketscannerpros.app/tools/explorer";
 
-async function stripeCustomerIdForEmail(email: string): Promise<string | null> {
-  const rows = await q<{ stripe_customer_id: string | null; updated_at?: Date | string | null; created_at?: Date | string | null; id?: number | null }>(
-    `SELECT stripe_customer_id, updated_at, created_at, id
-      FROM user_subscriptions
+type PortalSubscriptionRow = SubscriptionRowFields & { workspace_id?: string | null };
+
+function customerIdOnRow(row: SubscriptionRowFields | null): string | null {
+  const id = typeof row?.stripe_customer_id === 'string' ? row.stripe_customer_id.trim() : '';
+  return isStripeCustomerId(id) ? id : null;
+}
+
+async function stripeCustomerIdForEmail(email: string, workspaceId: string): Promise<string | null> {
+  const rows = await q<PortalSubscriptionRow>(
+    `SELECT workspace_id, tier, status, current_period_end, stripe_customer_id, stripe_subscription_id,
+            updated_at, created_at, id
+       FROM user_subscriptions
       WHERE LOWER(email) = LOWER($1)
-      ORDER BY
-        CASE WHEN BTRIM(stripe_customer_id) ~ '^cus_[A-Za-z0-9]+$' THEN 0 ELSE 1 END,
-        updated_at DESC NULLS LAST,
-        created_at DESC NULLS LAST,
-        id DESC`,
+      ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST, id DESC`,
     [email],
   );
-  return chooseStripeCustomerId(rows);
+  const workspaceRows = rows.filter((row) => row.workspace_id === workspaceId);
+  const otherRows = rows.filter((row) => row.workspace_id !== workspaceId);
+  const chosen = chooseAccessSubscription(workspaceRows, otherRows);
+  return customerIdOnRow(chosen) ?? chooseStripeCustomerId(rows);
 }
 
 export async function POST(_req: NextRequest) {
@@ -38,7 +45,7 @@ export async function POST(_req: NextRequest) {
   let customerId: string | null = null;
   try {
     if (account?.customer_email) {
-      customerId = await stripeCustomerIdForEmail(account.customer_email);
+      customerId = await stripeCustomerIdForEmail(account.customer_email, session.workspaceId);
     } else if (account?.customer && isStripeCustomerId(account.customer)) {
       customerId = account.customer;
     }

@@ -62,6 +62,57 @@ it('starts checkout after sign-in when the return path names Pro', async () => {
   }));
 });
 
+it('sends an already-subscribed member to the billing portal', async () => {
+  me.authenticated = true;
+  me.tier = 'free';
+  vi.mocked(fetch).mockImplementation(async (url: string) => {
+    const path = String(url);
+    if (path.includes('/api/payments/checkout')) {
+      return {
+        ok: false,
+        status: 409,
+        json: async () => ({
+          error: 'You already have Pro. Manage it in billing.',
+          code: 'already_subscribed',
+          portalUrl: '/api/payments/portal',
+        }),
+      };
+    }
+    if (path.includes('/api/payments/portal')) {
+      return { ok: true, status: 200, json: async () => ({ url: 'https://billing.stripe.com/p/session/test' }) };
+    }
+    if (path.includes('/api/me')) return { ok: true, status: 200, json: async () => ({ ...me, email: 'reader@example.test' }) };
+    return { ok: true, status: 200, json: async () => ({ enabled: true }) };
+  });
+  render(<PricingPage />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Continue to Pro checkout' }));
+  expect((await screen.findByRole('alert')).textContent).toContain('You already have Pro. Manage it in billing.');
+  await waitFor(() => expect(goTo).toHaveBeenCalledWith('https://billing.stripe.com/p/session/test'));
+  const portalCall = vi.mocked(fetch).mock.calls.find((call) => String(call[0]).includes('/api/payments/portal'));
+  expect(portalCall?.[0]).toBe('/api/payments/portal');
+  expect(portalCall?.[1]).toEqual(expect.objectContaining({ method: 'POST', credentials: 'include' }));
+  expect(goTo).not.toHaveBeenCalledWith('https://checkout.stripe.com/c/pay/cs_test');
+});
+
+it('keeps the billing sentence when the portal cannot be opened', async () => {
+  me.authenticated = true;
+  me.tier = 'free';
+  vi.mocked(fetch).mockImplementation(async (url: string) => {
+    const path = String(url);
+    if (path.includes('/api/payments/checkout')) {
+      return { ok: false, status: 409, json: async () => ({ code: 'already_subscribed', portalUrl: '/api/payments/portal' }) };
+    }
+    if (path.includes('/api/payments/portal')) return { ok: false, status: 404, json: async () => ({ error: 'no_billing_account' }) };
+    if (path.includes('/api/me')) return { ok: true, status: 200, json: async () => ({ ...me, email: 'reader@example.test' }) };
+    return { ok: true, status: 200, json: async () => ({ enabled: true }) };
+  });
+  render(<PricingPage />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Continue to Pro checkout' }));
+  expect((await screen.findByRole('alert')).textContent).toContain('You already have Pro. Manage it in billing.');
+  await waitFor(() => expect(vi.mocked(fetch).mock.calls.some((call) => String(call[0]).includes('/api/payments/portal'))).toBe(true));
+  expect(goTo).not.toHaveBeenCalled();
+});
+
 it('sends a signed-in visitor back to sign-in when checkout returns 401', async () => {
   me.authenticated = true;
   me.tier = 'free';

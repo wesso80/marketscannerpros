@@ -112,6 +112,67 @@ describe('billing portal uses a real Stripe customer id', () => {
     expect(sql).not.toContain('LIMIT 1');
   });
 
+  it('uses the cus_ id on the live subscription row instead of a newer canceled customer', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'pro', workspaceId: 'w', exp: 0 };
+    mocks.q.mockResolvedValue([
+      {
+        workspace_id: 'other',
+        tier: 'pro',
+        status: 'canceled',
+        stripe_customer_id: 'cus_NewerCanceled',
+        stripe_subscription_id: 'sub_old',
+        updated_at: '2026-10-09T00:00:00.000Z',
+        id: 9,
+      },
+      {
+        workspace_id: 'w',
+        tier: 'pro',
+        status: 'active',
+        stripe_customer_id: 'cus_Live',
+        stripe_subscription_id: 'sub_live',
+        current_period_end: '2026-12-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+        id: 1,
+      },
+    ]);
+    const res = await POST(post());
+    expect(res.status).toBe(200);
+    expect(mocks.create).toHaveBeenCalledWith({
+      customer: 'cus_Live',
+      return_url: 'https://marketscannerpros.app/tools/explorer',
+    });
+  });
+
+  it('falls back to another cus_ when the live row has a subscription id but no customer id', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'pro', workspaceId: 'w', exp: 0 };
+    mocks.q.mockResolvedValue([
+      {
+        workspace_id: 'w',
+        tier: 'pro',
+        status: 'active',
+        stripe_customer_id: null,
+        stripe_subscription_id: 'sub_live',
+        updated_at: '2026-10-09T00:00:00.000Z',
+        id: 2,
+      },
+      {
+        workspace_id: 'other',
+        tier: 'pro',
+        status: 'canceled',
+        stripe_customer_id: 'cus_PaidUser1',
+        stripe_subscription_id: 'sub_old',
+        updated_at: '2026-01-01T00:00:00.000Z',
+        id: 1,
+      },
+    ]);
+    const res = await POST(post());
+    expect(res.status).toBe(200);
+    expect(mocks.create).toHaveBeenCalledWith({
+      customer: 'cus_PaidUser1',
+      return_url: 'https://marketscannerpros.app/tools/explorer',
+    });
+  });
+
   it('rejects a stored id that does not have the cus_ prefix', async () => {
     mocks.session = { cid: 'admin_bradleywessling@yahoo.com.au', tier: 'pro_trader', workspaceId: 'w', exp: 0 };
     mocks.q.mockResolvedValue([{ stripe_customer_id: 'admin_bradleywessling@yahoo.com.au' }]);

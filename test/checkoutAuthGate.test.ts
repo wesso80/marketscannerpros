@@ -111,7 +111,7 @@ describe('checkout requires a signed-in account', () => {
     expect(params.subscription_data).toBeUndefined();
   });
 
-  it('does not grant a trial when only a later duplicate row has Stripe ids', async () => {
+  it('returns 409 already_subscribed when a duplicate row has a live Stripe subscription', async () => {
     mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
     mocks.q.mockImplementation(async (sql: string) => {
       if (!sql.includes('FROM user_subscriptions')) return [];
@@ -119,6 +119,49 @@ describe('checkout requires a signed-in account', () => {
         { stripe_subscription_id: null, stripe_customer_id: null, is_trial: false, status: 'active' },
         { stripe_subscription_id: 'sub_paid', stripe_customer_id: 'cus_PaidUser1', is_trial: false, status: 'active' },
       ];
+    });
+    const res = await POST(post({ plan: 'pro', billing: 'monthly' }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      error: 'You already have Pro. Manage it in billing.',
+      code: 'already_subscribed',
+      portalUrl: '/api/payments/portal',
+    });
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  it.each(['active', 'trialing', 'past_due'])(
+    'does not open checkout for a %s row that already has a stripe subscription id',
+    async (status) => {
+      mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+      mocks.q.mockImplementation(async (sql: string) => {
+        if (!sql.includes('FROM user_subscriptions')) return [];
+        return [{ stripe_subscription_id: 'sub_live', stripe_customer_id: 'cus_Live', is_trial: status === 'trialing', status }];
+      });
+      const res = await POST(post({ plan: 'pro', billing: 'monthly' }));
+      expect(res.status).toBe(409);
+      expect((await res.json()).code).toBe('already_subscribed');
+      expect(mocks.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it('still opens checkout for a manual grant that has no stripe subscription id', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'pro_trader', workspaceId: 'w', exp: 0 };
+    mocks.q.mockImplementation(async (sql: string) => {
+      if (!sql.includes('FROM user_subscriptions')) return [];
+      return [{ stripe_subscription_id: '  ', stripe_customer_id: null, is_trial: false, status: 'active' }];
+    });
+    const res = await POST(post({ plan: 'pro', billing: 'monthly' }));
+    expect(res.status).toBe(200);
+    const params = mocks.create.mock.calls[0][0] as { subscription_data?: { trial_period_days?: number } };
+    expect(params.subscription_data).toEqual({ trial_period_days: 7 });
+  });
+
+  it('still opens checkout when the only Stripe subscription is unpaid', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    mocks.q.mockImplementation(async (sql: string) => {
+      if (!sql.includes('FROM user_subscriptions')) return [];
+      return [{ stripe_subscription_id: 'sub_unpaid', stripe_customer_id: 'cus_Unpaid', is_trial: false, status: 'unpaid' }];
     });
     const res = await POST(post({ plan: 'pro', billing: 'monthly' }));
     expect(res.status).toBe(200);

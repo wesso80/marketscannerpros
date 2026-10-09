@@ -95,6 +95,26 @@ async function emailHadTrialOrSubscription(email: string): Promise<boolean> {
   return rowsBlockTrial(subs);
 }
 
+const CHECKOUT_BLOCK_STATUSES = new Set(['active', 'trialing', 'past_due']);
+
+/** A live Stripe subscription already exists, so a second Checkout would duplicate it. */
+function rowBlocksNewCheckout(row: { status?: string | null; stripe_subscription_id?: string | null }): boolean {
+  const subscriptionId = typeof row.stripe_subscription_id === 'string' ? row.stripe_subscription_id.trim() : '';
+  return subscriptionId.length > 0 && CHECKOUT_BLOCK_STATUSES.has(row.status ?? '');
+}
+
+async function accountHasLiveSubscription(email: string | null, customerId: string | null): Promise<boolean> {
+  if (!email && !customerId) return false;
+  const rows = await q<{ status: string | null; stripe_subscription_id: string | null }>(
+    `SELECT status, stripe_subscription_id
+       FROM user_subscriptions
+      WHERE ($1::text IS NOT NULL AND LOWER(email) = LOWER($1::text))
+         OR ($2::text IS NOT NULL AND stripe_customer_id = $2)`,
+    [email, customerId],
+  );
+  return rows.some(rowBlocksNewCheckout);
+}
+
 async function resolveCheckoutEmail(fields: { customer?: string; customer_email?: string }): Promise<string | null> {
   if (fields.customer_email) return fields.customer_email;
   if (!fields.customer) return null;
@@ -162,6 +182,16 @@ export async function POST(req: NextRequest) {
     // A failed read does not guess: checkout continues with no trial.
     let grantTrial = false;
     const trialEmail = await resolveCheckoutEmail(customerFields);
+    if (await accountHasLiveSubscription(trialEmail, customerFields.customer ?? null)) {
+      return NextResponse.json(
+        {
+          error: 'You already have Pro. Manage it in billing.',
+          code: 'already_subscribed',
+          portalUrl: '/api/payments/portal',
+        },
+        { status: 409 },
+      );
+    }
     if (trialEmail) {
       try {
         grantTrial = !(await emailHadTrialOrSubscription(trialEmail));

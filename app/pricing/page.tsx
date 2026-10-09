@@ -126,6 +126,24 @@ export default function PricingPage() {
         goTo(checkoutSignInPath(billing));
         return;
       }
+      if (res.status === 409 && data?.code === 'already_subscribed') {
+        setCheckoutError('You already have Pro. Manage it in billing.');
+        const portalPath = typeof data.portalUrl === 'string' && data.portalUrl.startsWith('/api/payments/portal')
+          ? data.portalUrl
+          : '/api/payments/portal';
+        try {
+          const portalRes = await fetch(portalPath, { method: 'POST', credentials: 'include' });
+          const portalData = await portalRes.json().catch(() => ({}));
+          if (portalRes.ok && typeof portalData?.url === 'string' && portalData.url.startsWith('https://')) {
+            goTo(portalData.url);
+            return;
+          }
+        } catch {
+          // The sentence above stays on the page when the portal cannot be opened.
+        }
+        setLoadingPlan(null);
+        return;
+      }
       if (!res.ok || !data?.url) {
         throw new Error(data?.error || "Failed to start checkout");
       }

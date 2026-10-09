@@ -748,12 +748,18 @@ export async function POST(req: NextRequest) {
             break;
           }
           const workspaceId = hashWorkspaceId(loaded.email.toLowerCase());
-          
+
+          // workspace_id is unique, but the same email can have another row
+          // whose workspace_id was hashed from a different key. Mark that row
+          // too when it carries this Stripe subscription id.
           await q(`
-            UPDATE user_subscriptions 
+            UPDATE user_subscriptions
             SET status = 'past_due', updated_at = NOW()
-            WHERE workspace_id = $1
-              AND (stripe_subscription_id IS NULL OR stripe_subscription_id = $2)
+            WHERE stripe_subscription_id = $2
+               OR (
+                 workspace_id = $1
+                 AND (stripe_subscription_id IS NULL OR stripe_subscription_id = $2)
+               )
           `, [workspaceId, subscriptionId]);
           
           console.log(`[Webhook] Marked subscription as past_due: ${loaded.email}`);
