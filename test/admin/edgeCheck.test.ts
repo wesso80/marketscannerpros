@@ -69,6 +69,8 @@ describe('GET /api/admin/edge-check', () => {
     expect(m.sql[0]).toMatch(/COALESCE\(regime, 'unknown'\) AS grp/);
     expect(m.params[0]).toEqual([LABELLER_FIX_AT, 30]);
     expect(body).toMatchObject({ ok: true, by: 'regime', days: 30 });
+    expect(body.overall.overlap.daily).toMatchObject({status:'insufficient_blocks',low:null,high:null});
+    expect(body.definition.caveats.join(' ')).toMatch(/CR1 cluster variance/);
     expect(body.definition.costs).toMatch(/Assumed 0.2% round trip/);
     expect(body.definition.split).toMatch(/equal timestamps stay together/);
     expect(body.definition.split).toMatch(/not a held-out test/);

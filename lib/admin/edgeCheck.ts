@@ -1,3 +1,5 @@
+import { clusteredMean, type OverlapInterval } from './overlapUncertainty';
+
 /**
  * Edge check: does any group of shared-scan signals show a measurable edge after costs, and does it hold on the
  * later half of its own history? Pure maths so it can be unit-tested; the route supplies the rows.
@@ -46,6 +48,7 @@ export interface EdgeGroup {
   earlier: HalfStats;
   later: HalfStats;
   verdict: EdgeVerdict;
+  overlap: { daily: OverlapInterval; weekly: OverlapInterval };
 }
 
 export const MIN_SAMPLE = 30;
@@ -126,6 +129,7 @@ export function summariseGroup(group: string, input: EdgeRow[], cost = ASSUMED_C
     moveLow: after ? r2(after.low) : null,
     moveHigh: after ? r2(after.high) : null,
     earlier, later, verdict,
+    overlap: { daily: clusteredMean(rows, cost, 1), weekly: clusteredMean(rows, cost, 7) },
   };
 }
 

@@ -73,6 +73,9 @@ export async function GET(req: NextRequest) {
         caveats: [
           'In-sample only: the scoring rules were not frozen before these signals, so nothing here is out-of-sample validation.',
           'Signals on the same symbol and day are deduplicated per playbook and direction, but nearby signals still overlap and are not independent.',
+          'Overlap sensitivity uses an intercept-only CR1 cluster variance for the signal-weighted after-cost mean, with approximate mean ± 1.96 SE intervals only for 30 or more nonempty blocks. UTC day and fixed seven-day blocks anchored at 1970-01-01 (Thursday) are shown; empty blocks are not observations.',
+          'Cluster blocks allow within-block dependence but still assume independent blocks. Returns crossing a block boundary, repeated symbols across blocks and large unequal block sizes can still make intervals unreliable. Thirty blocks is a display guard, not a validity guarantee. Block size was not selected by performance.',
+          'The nominal evidence label, group order and Wilson hit-rate interval still use the original independence assumptions; clustered intervals are a separate sensitivity comparison and do not validate those labels.',
           'Displayed moves are rounded to two decimals; evidence labels use unrounded values. A displayed 0% may be slightly positive or negative.',
           'There is no embargo between periods: 24h outcome windows can overlap the split, and daily fallback may measure later than 24h.',
           'Only measured outcomes enter this sample; pending, expired and old-method outcomes are excluded. Recent periods may be less complete.',
