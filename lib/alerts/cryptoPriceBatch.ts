@@ -65,6 +65,7 @@ export async function fetchAlertCryptoQuotes(
     getPrices?: (ids: string[]) => Promise<PriceMap>;
   } = {},
 ): Promise<{ quotes: Record<string, AlertCryptoQuote>; skipped: AlertCryptoSkip[]; calls: number }> {
+  if (symbols.length === 0) return { quotes: {}, skipped: [], calls: 0 };
   const coinMap = deps.coinMap ?? COINGECKO_ID_MAP;
   const equitySymbols = deps.equitySymbols ?? equityTickerList();
   const getPrices = deps.getPrices ?? ((ids) => getSimplePrices(ids, { include_24h_change: true }));

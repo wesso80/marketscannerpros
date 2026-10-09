@@ -12,8 +12,9 @@ describe('alert crypto prices', () => {
     const mapped = resolveAlertCryptoSymbol('CVX', ['CVX'], { CVX: 'convex-finance', BTC: 'bitcoin' });
     expect(mapped.action).toBe('skip');
     if (resolved.action === 'skip') expect(resolved.reason).toMatch(/equity|not priced/i);
-    const batch = readFileSync('lib/alerts/cryptoPriceBatch.ts', 'utf8');
-    const route = readFileSync('app/api/alerts/check/route.ts', 'utf8');
+    const stripComments = (source: string) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const batch = stripComments(readFileSync('lib/alerts/cryptoPriceBatch.ts', 'utf8'));
+    const route = stripComments(readFileSync('app/api/alerts/check/route.ts', 'utf8'));
     expect(batch).not.toContain('searchCoins');
     expect(batch).not.toContain('getPriceBySymbol');
     expect(route).not.toContain('getPriceBySymbol');
