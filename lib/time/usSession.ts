@@ -121,6 +121,21 @@ export function toYmd(value: unknown): string | null {
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+/**
+ * Whole America/New_York calendar dates from `fromMs` to `toMs`.
+ * The same New York date is 0, including an event 9.6 hours away later that day.
+ * The next New York date is 1, including an event less than 24 hours away after midnight.
+ * This is the calendar-day count, not ceil(milliseconds / 24h).
+ */
+export function nyCalendarDaysBetween(fromMs: number, toMs: number): number | null {
+  if (!Number.isFinite(fromMs) || !Number.isFinite(toMs)) return null;
+  const from = nyDateTime(fromMs).ymd;
+  const to = nyDateTime(toMs).ymd;
+  const [fy, fm, fd] = ymdParts(from);
+  const [ty, tm, td] = ymdParts(to);
+  return Math.round((Date.UTC(ty, tm, td) - Date.UTC(fy, fm, fd)) / 86_400_000);
+}
+
 /** "Fri 25 Sep 2026" for a YYYY-MM-DD session date (no time-zone shift, no locale variation). */
 export function formatSessionDate(ymd: string): string {
   const [y, m, d] = ymdParts(ymd);

@@ -38,6 +38,7 @@ export default function PricingPage() {
   const [cycle, setCycle] = React.useState<BillingCycle>("monthly");
   const [loadingPlan, setLoadingPlan] = React.useState<PlanId | null>(null);
   const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
+  const [billingPortalPath, setBillingPortalPath] = React.useState<string | null>(null);
   const [referralCode, setReferralCode] = React.useState<string | null>(null);
   const [currentTier, setCurrentTier] = React.useState<string | null>(null);
   const [signedIn, setSignedIn] = React.useState<boolean | null>(null);
@@ -107,6 +108,7 @@ export default function PricingPage() {
     }
 
     setCheckoutError(null);
+    setBillingPortalPath(null);
     setLoadingPlan(planId);
 
     try {
@@ -125,6 +127,33 @@ export default function PricingPage() {
       if (res.status === 401) {
         setLoadingPlan(null);
         goTo(checkoutSignInPath(billing));
+        return;
+      }
+      if (res.status === 409 && data?.code === 'billing_check_failed') {
+        setCheckoutError("We couldn't confirm your billing status right now. Please try again in a minute or open billing.");
+        const portalPath = typeof data.portalUrl === 'string' && data.portalUrl.startsWith('/api/payments/portal')
+          ? data.portalUrl
+          : '/api/payments/portal';
+        setBillingPortalPath(portalPath);
+        setLoadingPlan(null);
+        return;
+      }
+      if (res.status === 409 && data?.code === 'already_subscribed') {
+        setCheckoutError('You already have Pro. Manage it in billing.');
+        const portalPath = typeof data.portalUrl === 'string' && data.portalUrl.startsWith('/api/payments/portal')
+          ? data.portalUrl
+          : '/api/payments/portal';
+        try {
+          const portalRes = await fetch(portalPath, { method: 'POST', credentials: 'include' });
+          const portalData = await portalRes.json().catch(() => ({}));
+          if (portalRes.ok && typeof portalData?.url === 'string' && portalData.url.startsWith('https://')) {
+            goTo(portalData.url);
+            return;
+          }
+        } catch {
+          // The sentence above stays on the page when the portal cannot be opened.
+        }
+        setLoadingPlan(null);
         return;
       }
       if (!res.ok || !data?.url) {
@@ -253,7 +282,27 @@ export default function PricingPage() {
     return `equivalent to $${(plan.priceYearlyRaw / 12).toFixed(2)}/month`;
   };
 
-  if (publicDesignEnabled()) return <ResearchPricing cycle={cycle} onCycle={setCycle} onChoose={handleCheckout} loading={loadingPlan} error={checkoutError} tier={currentTier} quotasEnabled={quotasEnabled} />;
+  const openBillingPortal = async () => {
+    const portalPath = billingPortalPath && billingPortalPath.startsWith('/api/payments/portal')
+      ? billingPortalPath
+      : '/api/payments/portal';
+    try {
+      const portalRes = await fetch(portalPath, { method: 'POST', credentials: 'include' });
+      const portalData = await portalRes.json().catch(() => ({}));
+      if (portalRes.ok && typeof portalData?.url === 'string' && portalData.url.startsWith('https://')) {
+        goTo(portalData.url);
+        return;
+      }
+      if (portalRes.status === 404 && portalData?.error === 'no_billing_account') {
+        setCheckoutError('Contact support@marketscannerpros.app');
+        setBillingPortalPath(null);
+      }
+    } catch {
+      // The billing message and button stay so the visitor can try again.
+    }
+  };
+
+  if (publicDesignEnabled()) return <ResearchPricing cycle={cycle} onCycle={setCycle} onChoose={handleCheckout} loading={loadingPlan} error={checkoutError} onOpenBilling={billingPortalPath ? () => void openBillingPortal() : undefined} tier={currentTier} quotasEnabled={quotasEnabled} />;
 
   return (
     <main className="min-h-screen bg-[var(--msp-bg)] text-white">
@@ -320,8 +369,13 @@ export default function PricingPage() {
         </section>
 
         {checkoutError ? (
-          <div className="mx-auto mt-4 max-w-3xl rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-            {checkoutError}
+          <div role="alert" className="mx-auto mt-4 flex max-w-3xl flex-wrap items-center gap-3 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+            <span>{checkoutError}</span>
+            {billingPortalPath ? (
+              <button type="button" onClick={() => void openBillingPortal()} className="rounded-lg border border-rose-200/40 px-3 py-1.5 text-sm font-semibold text-rose-50">
+                Open billing
+              </button>
+            ) : null}
           </div>
         ) : null}
 
