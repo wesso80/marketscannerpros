@@ -170,6 +170,7 @@ export default function AdminClientLayout({ children, discoveryPaused = false }:
         { href: "/admin/diagnostics", label: "Diagnostics (legacy)", code: "DX" },
         { href: "/admin/system", label: "System (legacy)", code: "SY" },
         { href: "/admin/logs", label: "Logs", code: "LG" },
+        { href: "/admin/research-export", label: "Research Export", code: "RX" },
         { href: "/admin/settings", label: "Settings", code: "SE" },
       ],
     },
