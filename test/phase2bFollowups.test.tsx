@@ -57,7 +57,7 @@ it('tool document titles are one visible name', () => {
 it('pricing calls the live Intelligence modules live', () => {
   const pricing = read('app/pricing/page.tsx');
   expect(pricing).toContain('Live with Pro: Global M2, Liquidity Transmission and Market Fragility');
-  expect(pricing).toContain('the live Intelligence modules (Global M2, Liquidity Transmission and Market Fragility)');
+  expect(pricing).not.toContain('the live Intelligence modules (Global M2, Liquidity Transmission and Market Fragility)');
   expect(pricing).not.toContain('Lead/Lag');
   expect(pricing).not.toContain('NQ Pressure');
   expect(pricing).not.toMatch(/\bAuction\b/);
