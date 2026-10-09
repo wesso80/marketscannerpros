@@ -6,6 +6,8 @@ import { checkoutCustomerFromSession, checkoutReturnPath, checkoutSignInPath, sh
 const mocks = vi.hoisted(() => ({
   session: null as null | { cid: string; tier: string; workspaceId: string; exp: number },
   create: vi.fn(async () => ({ url: 'https://checkout.stripe.com/c/pay/cs_test' })),
+  q: vi.fn(async (_sql: string, _params?: unknown[]) => [] as unknown[]),
+  customer: { id: 'cus_existing', deleted: false, email: 'reader@example.test' } as { id: string; deleted?: boolean; email?: string | null },
 }));
 
 vi.hoisted(() => {
@@ -19,13 +21,14 @@ vi.mock('@/lib/auth', () => ({
 }));
 
 vi.mock('@/lib/db', () => ({
-  q: async () => [],
+  q: (sql: string, params?: unknown[]) => mocks.q(sql, params),
 }));
 
 vi.mock('stripe', () => ({
   default: class Stripe {
     checkout = { sessions: { create: (...args: unknown[]) => mocks.create(...args) } };
     prices = { retrieve: async () => ({ recurring: {} }) };
+    customers = { retrieve: async () => mocks.customer };
     coupons = {
       retrieve: async () => ({ id: 'referral_5_off' }),
       create: async () => ({ id: 'referral_5_off' }),
@@ -51,6 +54,9 @@ describe('checkout requires a signed-in account', () => {
   beforeEach(() => {
     mocks.session = null;
     mocks.create.mockClear();
+    mocks.q.mockReset();
+    mocks.q.mockResolvedValue([]);
+    mocks.customer = { id: 'cus_existing', deleted: false, email: 'reader@example.test' };
   });
 
   it('returns 401 without a session and does not create a Stripe session', async () => {
@@ -66,23 +72,47 @@ describe('checkout requires a signed-in account', () => {
     expect(mocks.create).not.toHaveBeenCalled();
   });
 
-  it('uses the session email, ignores a body email, and does not set a product or a trial', async () => {
+  it('uses the session email, ignores a body email, and grants 7 days when this email has no trial or subscription', async () => {
     mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
     const res = await POST(post({ plan: 'pro', billing: 'yearly', email: 'other@evil.test' }));
     expect(res.status).toBe(200);
     const params = mocks.create.mock.calls[0][0] as {
       customer_email?: string;
       customer?: string;
-      subscription_data?: unknown;
+      subscription_data?: { trial_period_days?: number };
       line_items: { price?: string; price_data?: unknown }[];
     };
     expect(params.customer_email).toBe('reader@example.test');
     expect(params.customer).toBeUndefined();
-    expect(params.subscription_data).toBeUndefined();
+    expect(params.subscription_data).toEqual({ trial_period_days: 7 });
     expect(params.line_items).toEqual([{ price: 'price_test_yearly', quantity: 1 }]);
     expect(params.line_items[0].price_data).toBeUndefined();
     expect(JSON.stringify(params)).not.toContain('product_data');
-    expect(JSON.stringify(params)).not.toContain('trial_period_days');
+    const eligibility = mocks.q.mock.calls.map((call) => String(call[0]));
+    expect(eligibility.some((sql) => sql.includes('FROM user_trials'))).toBe(true);
+    expect(eligibility.some((sql) => sql.includes('stripe_subscription_id') && sql.includes('is_trial') && sql.includes("status = 'trialing'"))).toBe(true);
+  });
+
+  it.each([
+    ['a stored admin trial', 'FROM user_trials'],
+    ['a Stripe subscription id', 'FROM user_subscriptions'],
+  ])('does not grant a trial when the email has %s', async (_label, table) => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    mocks.q.mockImplementation(async (sql: string) => (sql.includes(table) ? [{ ok: 1 }] : []));
+    const res = await POST(post({ plan: 'pro', billing: 'monthly' }));
+    expect(res.status).toBe(200);
+    const params = mocks.create.mock.calls[0][0] as { subscription_data?: unknown };
+    expect(params.subscription_data).toBeUndefined();
+  });
+
+  it('defers a referral coupon while the 7-day trial is granted', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    mocks.q.mockImplementation(async (sql: string) => (sql.includes('FROM referrals') ? [{ ok: 1 }] : []));
+    const res = await POST(post({ plan: 'pro', billing: 'monthly', referralCode: 'FRIEND' }));
+    expect(res.status).toBe(200);
+    const params = mocks.create.mock.calls[0][0] as { subscription_data?: { trial_period_days?: number }; discounts?: unknown };
+    expect(params.subscription_data).toEqual({ trial_period_days: 7 });
+    expect(params.discounts).toBeUndefined();
   });
 
   it('attaches an existing Stripe customer instead of a caller-supplied email', async () => {
@@ -92,6 +122,7 @@ describe('checkout requires a signed-in account', () => {
     const params = mocks.create.mock.calls[0][0] as { customer?: string; customer_email?: string };
     expect(params.customer).toBe('cus_existing');
     expect(params.customer_email).toBeUndefined();
+    expect((params as { subscription_data?: { trial_period_days?: number } }).subscription_data).toEqual({ trial_period_days: 7 });
   });
 });
 

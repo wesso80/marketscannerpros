@@ -60,6 +60,60 @@ async function validateReferralCode(code: string): Promise<boolean> {
   return rows.length > 0;
 }
 
+function dbErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : '';
+}
+
+/**
+ * One trial per email, using rows that already exist.
+ * user_trials keeps admin grants, including expired and revoked ones.
+ * user_subscriptions keeps the Stripe customer and subscription ids after cancel.
+ * A free account row (no Stripe ids, not a trial) does not count.
+ */
+async function emailHadTrialOrSubscription(email: string): Promise<boolean> {
+  try {
+    const trials = await q(
+      `SELECT 1 FROM user_trials WHERE LOWER(email) = LOWER($1) LIMIT 1`,
+      [email],
+    );
+    if (trials.length > 0) return true;
+  } catch (error) {
+    if (!dbErrorMessage(error).includes('does not exist')) throw error;
+  }
+  const subs = await q(
+    `SELECT 1 FROM user_subscriptions
+      WHERE LOWER(email) = LOWER($1)
+        AND (
+          NULLIF(BTRIM(stripe_subscription_id), '') IS NOT NULL
+          OR NULLIF(BTRIM(stripe_customer_id), '') IS NOT NULL
+          OR is_trial IS TRUE
+          OR status = 'trialing'
+        )
+      LIMIT 1`,
+    [email],
+  );
+  return subs.length > 0;
+}
+
+async function resolveCheckoutEmail(fields: { customer?: string; customer_email?: string }): Promise<string | null> {
+  if (fields.customer_email) return fields.customer_email;
+  if (!fields.customer) return null;
+  try {
+    const rows = await q<{ email: string | null }>(
+      `SELECT email FROM user_subscriptions WHERE stripe_customer_id = $1 AND email IS NOT NULL LIMIT 1`,
+      [fields.customer],
+    );
+    if (rows[0]?.email) return rows[0].email;
+    const customer = await stripe.customers.retrieve(fields.customer);
+    if (customer.deleted) return null;
+    const email = customer.email?.trim();
+    return email || null;
+  } catch (error) {
+    console.error('[Checkout] Could not resolve checkout email; continuing without a trial');
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   // Rate limit: prevent checkout session spam
   const ip = getClientIP(req);
@@ -104,6 +158,19 @@ export async function POST(req: NextRequest) {
     // Base URL for redirects - always use Next.js site (not Streamlit)
     const baseUrl = "https://marketscannerpros.app";
 
+    // 7 days only when this email has no stored trial and no stored Stripe subscription.
+    // A failed read does not guess: checkout continues with no trial.
+    let grantTrial = false;
+    const trialEmail = await resolveCheckoutEmail(customerFields);
+    if (trialEmail) {
+      try {
+        grantTrial = !(await emailHadTrialOrSubscription(trialEmail));
+      } catch (error) {
+        console.error('[Checkout] Trial eligibility read failed; continuing without a trial');
+        grantTrial = false;
+      }
+    }
+
     // If referral code provided, validate it and check for trial
     let validReferral = false;
     let couponId: string | undefined;
@@ -113,11 +180,11 @@ export async function POST(req: NextRequest) {
         if (validReferral) {
           // Check if this price has a free trial — don't apply coupon during trials
           const price = await stripe.prices.retrieve(priceId);
-          const hasTrial = (price.recurring?.trial_period_days ?? 0) > 0;
+          const hasTrial = grantTrial || (price.recurring?.trial_period_days ?? 0) > 0;
           const disc = REFERRAL_DISCOUNTS[plan] || REFERRAL_DISCOUNTS.pro;
 
           if (hasTrial) {
-            console.log(`[Checkout] Valid referral ${referralCode} — price has trial, coupon deferred until trial converts`);
+            console.log(`[Checkout] Valid referral ${referralCode} — trial in effect, coupon deferred until trial converts`);
           } else {
             couponId = await getOrCreateReferralCoupon(plan);
             console.log(`[Checkout] Valid referral ${referralCode} — applying $${disc.cents / 100} coupon for ${plan} (no trial)`);
@@ -128,9 +195,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Name and description are the Stripe Product on this price id, not inline product_data.
-    // trial_period_days is intentionally not set: there is no checkout helper that
-    // enforces one trial per email. Admin user_trials grants are a separate path.
+    // Name and description stay on the Stripe Product for this price id.
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
       payment_method_types: ["card"],
@@ -148,6 +213,7 @@ export async function POST(req: NextRequest) {
         billing: billingPeriod,
         referralCode: validReferral ? referralCode : undefined,
       },
+      ...(grantTrial ? { subscription_data: { trial_period_days: 7 } } : {}),
     };
 
     // Stripe doesn't allow allow_promotion_codes + discounts together
