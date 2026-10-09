@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 
 import TruthStampLine from "@/components/admin/shared/TruthStampLine";
+import ModelOutcomeBreakdowns from '@/components/admin/ModelOutcomeBreakdowns';
+import type { OutcomeBreakdowns } from '@/lib/admin/modelBreakdowns';
 interface CalibrationBucket {
   band: string;
   min: number;
@@ -56,6 +58,7 @@ interface ModelDiagnosticsResponse {
   totalLabelled?: number;
   overallHitRate?: number | null;
   buckets?: CalibrationBucket[];
+  breakdowns?: OutcomeBreakdowns;
   drift?: DriftRow[];
   note?: string | null;
   definition?: Definition;
@@ -238,6 +241,8 @@ export default function ModelDiagnosticsPage() {
               ))}
             </div>
           </section>
+
+          {data.breakdowns && <ModelOutcomeBreakdowns data={data.breakdowns} minimum={data.definition?.minLabelledForComparison ?? 20} />}
 
           {data.drift && data.drift.length > 0 && (
             <section style={{ marginBottom: "1.5rem" }}>
