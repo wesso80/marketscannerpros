@@ -31,6 +31,17 @@ describe('scanner data audit (read-only)',()=>{
   expect(r.cryptoHistory).toEqual({unavailable:expect.stringMatching(/not created/)});
   expect(r.source).toMatch(/ohlcv_bars/);expect(r.generatedAt).toBeTruthy();
  });
+ it('universe query aliases the no-bars count as without_bars (bare "without" is a Postgres syntax error) and maps it',async()=>{
+  vi.mocked(q).mockReset();
+  vi.mocked(q).mockImplementation((async(sql:string)=>/FROM symbol_universe u WHERE u.enabled/.test(sql)?[{asset:'equity',enabled:'50',without_bars:'7'}]:[]) as any);
+  const r=await scannerDataAudit(true);
+  const uniSql=vi.mocked(q).mock.calls.map(([sql])=>String(sql)).find(sql=>/FROM symbol_universe u WHERE u.enabled/.test(sql))!;
+  expect(uniSql).toMatch(/\) AS without_bars FROM/);
+  for(const [sql] of vi.mocked(q).mock.calls)expect(String(sql)).not.toMatch(/\)\s+without\s+FROM/i);
+  expect(r.universe).toEqual([{asset:'equity',enabled:50,withoutBars:7}]);
+  expect(r.findings).toContain('equity: 7 of 50 enabled scanner symbols have no stored daily bars.');
+  vi.mocked(q).mockReset();vi.mocked(q).mockImplementation((async()=>[]) as any);
+ });
  it('GET is allowed while admin discovery-only mode is on; POST is not',()=>{
   expect(discoveryOnlyAction('/api/admin/scanner-data-audit','GET')).toBe('allow');
   expect(discoveryOnlyAction('/api/admin/scanner-data-audit','POST')).toBe('pause_api');
