@@ -4,7 +4,7 @@ import { apiLimiter, getClientIP } from '@/lib/rateLimit';
 import { q } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
 import { checkoutCustomerFromSession } from '@/lib/checkoutSignIn';
-import { rowsBlockTrial } from '@/lib/subscriptionRow';
+import { isLiveStripeSubscription, rowsBlockTrial, type SubscriptionRowFields } from '@/lib/subscriptionRow';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-09-30.clover",
@@ -95,24 +95,119 @@ async function emailHadTrialOrSubscription(email: string): Promise<boolean> {
   return rowsBlockTrial(subs);
 }
 
-const CHECKOUT_BLOCK_STATUSES = new Set(['active', 'trialing', 'past_due']);
+const STRIPE_CONFIRMED_LIVE = new Set(['active', 'trialing', 'past_due', 'unpaid']);
 
-/** A live Stripe subscription already exists, so a second Checkout would duplicate it. */
-function rowBlocksNewCheckout(row: { status?: string | null; stripe_subscription_id?: string | null }): boolean {
-  const subscriptionId = typeof row.stripe_subscription_id === 'string' ? row.stripe_subscription_id.trim() : '';
-  return subscriptionId.length > 0 && CHECKOUT_BLOCK_STATUSES.has(row.status ?? '');
+type CheckoutSubRow = SubscriptionRowFields;
+
+function subscriptionIdOf(row: CheckoutSubRow): string {
+  return typeof row.stripe_subscription_id === 'string' ? row.stripe_subscription_id.trim() : '';
 }
 
-async function accountHasLiveSubscription(email: string | null, customerId: string | null): Promise<boolean> {
+function grantsPro(row: CheckoutSubRow): boolean {
+  return row.tier === 'pro' || row.tier === 'pro_trader';
+}
+
+function periodEndMillis(value: CheckoutSubRow['current_period_end']): number | null {
+  if (value == null || value === '') return null;
+  if (value instanceof Date) {
+    const ms = value.getTime();
+    return Number.isFinite(ms) ? ms : null;
+  }
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  const ms = Date.parse(String(value));
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/** Active row whose stored period end is already past. The webhook may have been missed. */
+function isStaleActive(row: CheckoutSubRow, nowMs: number): boolean {
+  if (row.status !== 'active' || !subscriptionIdOf(row)) return false;
+  const endMs = periodEndMillis(row.current_period_end);
+  return endMs != null && endMs < nowMs;
+}
+
+/** Trialing row that no longer counts as live because the period end is missing or past. */
+function isStaleTrial(row: CheckoutSubRow, nowMs: number): boolean {
+  if (row.status !== 'trialing' || !subscriptionIdOf(row)) return false;
+  return !isLiveStripeSubscription(row, nowMs);
+}
+
+/**
+ * Certain block: the row grants Pro and is live. A past period end on an
+ * active row is not certain — Stripe is asked before that one is refused.
+ */
+function certainProLive(row: CheckoutSubRow, nowMs: number): boolean {
+  if (!subscriptionIdOf(row) || !grantsPro(row) || isStaleActive(row, nowMs)) return false;
+  return isLiveStripeSubscription(row, nowMs);
+}
+
+/** past_due and unpaid still have a Stripe subscription. A second Checkout would duplicate it. */
+function owedSubscription(row: CheckoutSubRow): boolean {
+  if (!subscriptionIdOf(row)) return false;
+  return row.status === 'past_due' || row.status === 'unpaid';
+}
+
+function needsStripeConfirm(row: CheckoutSubRow, nowMs: number): boolean {
+  return isStaleTrial(row, nowMs) || isStaleActive(row, nowMs);
+}
+
+function knownProPriceIds(): Set<string> {
+  return new Set(
+    [
+      PRICE_IDS.pro_monthly,
+      PRICE_IDS.pro_yearly,
+      process.env.STRIPE_PRICE_PRO_MONTHLY,
+      process.env.STRIPE_PRICE_PRO_YEARLY,
+      process.env.STRIPE_PRICE_PRO_TRADER_MONTHLY,
+      process.env.STRIPE_PRICE_PRO_TRADER_YEARLY,
+    ].filter((id): id is string => typeof id === 'string' && id.length > 0),
+  );
+}
+
+function subscriptionHasProPrice(subscription: {
+  items?: { data?: Array<{ price?: { id?: string | null } | null } | null> | null } | null;
+}): boolean {
+  const prices = knownProPriceIds();
+  return (subscription.items?.data ?? []).some((item) => {
+    const id = item?.price?.id;
+    return typeof id === 'string' && prices.has(id);
+  });
+}
+
+function stripeErrorCode(error: unknown): string {
+  if (error && typeof error === 'object' && 'code' in error && typeof (error as { code?: unknown }).code === 'string') {
+    return (error as { code: string }).code;
+  }
+  return 'unknown';
+}
+
+/** Refuse only when Stripe still has this subscription on a Pro price. A failed read does not refuse. */
+async function stripeConfirmsLivePro(subscriptionId: string): Promise<boolean> {
+  try {
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    if (!STRIPE_CONFIRMED_LIVE.has(subscription.status)) return false;
+    return subscriptionHasProPrice(subscription);
+  } catch (error) {
+    console.error(`[Checkout] subscription confirm failed (${stripeErrorCode(error)}); continuing checkout`);
+    return false;
+  }
+}
+
+async function accountAlreadySubscribed(email: string | null, customerId: string | null): Promise<boolean> {
   if (!email && !customerId) return false;
-  const rows = await q<{ status: string | null; stripe_subscription_id: string | null }>(
-    `SELECT status, stripe_subscription_id
+  const rows = await q<CheckoutSubRow>(
+    `SELECT tier, status, current_period_end, stripe_subscription_id, stripe_customer_id
        FROM user_subscriptions
       WHERE ($1::text IS NOT NULL AND LOWER(email) = LOWER($1::text))
          OR ($2::text IS NOT NULL AND stripe_customer_id = $2)`,
     [email, customerId],
   );
-  return rows.some(rowBlocksNewCheckout);
+  const now = Date.now();
+  if (rows.some((row) => certainProLive(row, now) || owedSubscription(row))) return true;
+  const confirmIds = [...new Set(rows.filter((row) => needsStripeConfirm(row, now)).map(subscriptionIdOf).filter(Boolean))];
+  for (const id of confirmIds) {
+    if (await stripeConfirmsLivePro(id)) return true;
+  }
+  return false;
 }
 
 async function resolveCheckoutEmail(fields: { customer?: string; customer_email?: string }): Promise<string | null> {
@@ -182,7 +277,15 @@ export async function POST(req: NextRequest) {
     // A failed read does not guess: checkout continues with no trial.
     let grantTrial = false;
     const trialEmail = await resolveCheckoutEmail(customerFields);
-    if (await accountHasLiveSubscription(trialEmail, customerFields.customer ?? null)) {
+    // A failed subscription read must not turn into a 500. Continue as if no live row was found.
+    let alreadySubscribed = false;
+    try {
+      alreadySubscribed = await accountAlreadySubscribed(trialEmail, customerFields.customer ?? null);
+    } catch {
+      console.error('[Checkout] Subscription read failed; continuing checkout');
+      alreadySubscribed = false;
+    }
+    if (alreadySubscribed) {
       return NextResponse.json(
         {
           error: 'You already have Pro. Manage it in billing.',

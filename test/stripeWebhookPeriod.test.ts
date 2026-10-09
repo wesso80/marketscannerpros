@@ -752,28 +752,48 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
     expect(mocks.subscriptionsRetrieve).toHaveBeenCalledWith('sub_test_basil');
     const update = mocks.q.mock.calls.find((call) => String(call[0]).includes("status = 'past_due'"));
     expect(update).toBeTruthy();
-    expect((update![1] as unknown[])[1]).toBe('sub_test_basil');
+    expect((update![1] as unknown[])[0]).toBe('sub_test_basil');
   });
 
-  it('invoice.payment_failed also marks the row matched by stripe subscription id', async () => {
-    mocks.subscriptionsRetrieve.mockResolvedValue(cloverSubscription({ id: 'sub_duplicate_row', status: 'past_due' }));
+  it('invoice.payment_failed does not mark a manual grant with a null subscription id', async () => {
+    mocks.subscriptionsRetrieve.mockResolvedValue(cloverSubscription({ id: 'sub_failed', status: 'past_due' }));
     const res = await postEvent(stripeEvent('invoice.payment_failed', {
-      id: 'in_test_duplicate_row',
+      id: 'in_test_manual_grant',
       object: 'invoice',
       customer: 'cus_test_period',
       parent: {
         type: 'subscription_details',
-        subscription_details: { subscription: 'sub_duplicate_row' },
+        subscription_details: { subscription: 'sub_failed' },
       },
     }, '2025-09-30.clover'));
 
     expect(res.status).toBe(200);
     const update = mocks.q.mock.calls.find((call) => String(call[0]).includes("status = 'past_due'"));
     const sql = String(update![0]);
-    expect(sql).toContain('workspace_id = $1');
-    expect(sql).toContain('stripe_subscription_id IS NULL OR stripe_subscription_id = $2');
-    expect(sql).toMatch(/stripe_subscription_id = \$2\s+OR/);
-    expect((update![1] as unknown[])[1]).toBe('sub_duplicate_row');
+    expect(sql).toContain('stripe_subscription_id = $1');
+    expect(sql).toContain('stripe_subscription_id IS NOT NULL');
+    expect(sql).not.toMatch(/stripe_subscription_id IS NULL(?!S)/);
+    expect(sql).not.toContain('workspace_id');
+    expect(update![1]).toEqual(['sub_failed']);
+  });
+
+  it('invoice.payment_failed updates only the matching subscription when the user has two', async () => {
+    mocks.subscriptionsRetrieve.mockResolvedValue(cloverSubscription({ id: 'sub_failed', status: 'unpaid' }));
+    const res = await postEvent(stripeEvent('invoice.payment_failed', {
+      id: 'in_test_two_subs',
+      object: 'invoice',
+      customer: 'cus_test_period',
+      subscription: 'sub_failed',
+    }, '2024-06-20'));
+
+    expect(res.status).toBe(200);
+    const updates = mocks.q.mock.calls.filter((call) => String(call[0]).includes("status = 'past_due'"));
+    expect(updates).toHaveLength(1);
+    const sql = String(updates[0][0]);
+    expect(sql).toContain('WHERE stripe_subscription_id = $1');
+    expect(sql).not.toContain('OR');
+    expect(updates[0][1]).toEqual(['sub_failed']);
+    expect(JSON.stringify(updates[0][1])).not.toContain('sub_other');
   });
 
   it('an unknown price on an active subscription keeps the existing tier and logs', async () => {

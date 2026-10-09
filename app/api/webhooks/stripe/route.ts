@@ -747,20 +747,16 @@ export async function POST(req: NextRequest) {
             skipCustomerWrite(event.type, loaded === 'deleted' ? 'deleted' : 'no-email', subscriptionId);
             break;
           }
-          const workspaceId = hashWorkspaceId(loaded.email.toLowerCase());
-
-          // workspace_id is unique, but the same email can have another row
-          // whose workspace_id was hashed from a different key. Mark that row
-          // too when it carries this Stripe subscription id.
+          // Match the subscription id only. A manual grant has no
+          // stripe_subscription_id and must stay untouched, including when it
+          // shares this email's workspace. A second subscription on the same
+          // email is a different id and is not updated.
           await q(`
             UPDATE user_subscriptions
             SET status = 'past_due', updated_at = NOW()
-            WHERE stripe_subscription_id = $2
-               OR (
-                 workspace_id = $1
-                 AND (stripe_subscription_id IS NULL OR stripe_subscription_id = $2)
-               )
-          `, [workspaceId, subscriptionId]);
+            WHERE stripe_subscription_id = $1
+              AND stripe_subscription_id IS NOT NULL
+          `, [subscriptionId]);
           
           console.log(`[Webhook] Marked subscription as past_due: ${loaded.email}`);
         }

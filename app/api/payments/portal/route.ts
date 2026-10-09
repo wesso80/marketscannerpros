@@ -4,7 +4,7 @@ import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { checkoutCustomerFromSession } from "@/lib/checkoutSignIn";
 import { isStripeCustomerId } from "@/lib/billingPortal";
-import { chooseAccessSubscription, chooseStripeCustomerId, type SubscriptionRowFields } from "@/lib/subscriptionRow";
+import { chooseAccessSubscription, chooseStripeCustomerId, subscriptionRecency, type SubscriptionRowFields } from "@/lib/subscriptionRow";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-09-30.clover",
@@ -32,7 +32,15 @@ async function stripeCustomerIdForEmail(email: string, workspaceId: string): Pro
   const workspaceRows = rows.filter((row) => row.workspace_id === workspaceId);
   const otherRows = rows.filter((row) => row.workspace_id !== workspaceId);
   const chosen = chooseAccessSubscription(workspaceRows, otherRows);
-  return customerIdOnRow(chosen) ?? chooseStripeCustomerId(rows);
+  const chosenId = customerIdOnRow(chosen);
+  if (chosenId) return chosenId;
+  const payable = rows
+    .filter((row) => {
+      const subscriptionId = typeof row.stripe_subscription_id === 'string' ? row.stripe_subscription_id.trim() : '';
+      return (row.status === 'past_due' || row.status === 'unpaid') && subscriptionId.length > 0 && customerIdOnRow(row);
+    })
+    .sort((a, b) => subscriptionRecency(b) - subscriptionRecency(a));
+  return customerIdOnRow(payable[0] ?? null) ?? chooseStripeCustomerId(rows);
 }
 
 export async function POST(_req: NextRequest) {

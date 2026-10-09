@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   session: null as null | { cid: string; tier: string; workspaceId: string; exp: number },
   create: vi.fn(async () => ({ url: 'https://checkout.stripe.com/c/pay/cs_test' })),
   q: vi.fn(async (_sql: string, _params?: unknown[]) => [] as unknown[]),
+  subscriptionsRetrieve: vi.fn(async () => ({ status: 'canceled', cancel_at_period_end: false, items: { data: [] as unknown[] } })),
   customer: { id: 'cus_existing', deleted: false, email: 'reader@example.test' } as { id: string; deleted?: boolean; email?: string | null },
 }));
 
@@ -27,6 +28,7 @@ vi.mock('@/lib/db', () => ({
 vi.mock('stripe', () => ({
   default: class Stripe {
     checkout = { sessions: { create: (...args: unknown[]) => mocks.create(...args) } };
+    subscriptions = { retrieve: (...args: unknown[]) => mocks.subscriptionsRetrieve(...args) };
     prices = { retrieve: async () => ({ recurring: {} }) };
     customers = { retrieve: async () => mocks.customer };
     coupons = {
@@ -51,9 +53,35 @@ describe('checkout requires a signed-in account', () => {
     POST = (await import('../app/api/payments/checkout/route')).POST;
   });
 
+  const FUTURE = new Date(Date.now() + 7 * 86_400_000).toISOString();
+  const PAST = new Date(Date.now() - 10 * 86_400_000).toISOString();
+
+  function subRow(overrides: Record<string, unknown> = {}) {
+    return {
+      tier: 'pro',
+      status: 'active',
+      stripe_subscription_id: 'sub_live',
+      stripe_customer_id: 'cus_Live',
+      current_period_end: FUTURE,
+      is_trial: false,
+      ...overrides,
+    };
+  }
+
+  function stripeSub(status: string, priceId = 'price_test_monthly', extra: Record<string, unknown> = {}) {
+    return {
+      status,
+      cancel_at_period_end: false,
+      items: { data: [{ price: { id: priceId } }] },
+      ...extra,
+    };
+  }
+
   beforeEach(() => {
     mocks.session = null;
     mocks.create.mockClear();
+    mocks.subscriptionsRetrieve.mockReset();
+    mocks.subscriptionsRetrieve.mockResolvedValue(stripeSub('canceled', 'price_not_pro'));
     mocks.q.mockReset();
     mocks.q.mockResolvedValue([]);
     mocks.customer = { id: 'cus_existing', deleted: false, email: 'reader@example.test' };
@@ -111,15 +139,11 @@ describe('checkout requires a signed-in account', () => {
     expect(params.subscription_data).toBeUndefined();
   });
 
-  it('returns 409 already_subscribed when a duplicate row has a live Stripe subscription', async () => {
-    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
-    mocks.q.mockImplementation(async (sql: string) => {
-      if (!sql.includes('FROM user_subscriptions')) return [];
-      return [
-        { stripe_subscription_id: null, stripe_customer_id: null, is_trial: false, status: 'active' },
-        { stripe_subscription_id: 'sub_paid', stripe_customer_id: 'cus_PaidUser1', is_trial: false, status: 'active' },
-      ];
-    });
+  function rowsOf(...rows: Record<string, unknown>[]) {
+    mocks.q.mockImplementation(async (sql: string) => (sql.includes('FROM user_subscriptions') ? rows : []));
+  }
+
+  async function expectAlreadySubscribed() {
     const res = await POST(post({ plan: 'pro', billing: 'monthly' }));
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({
@@ -128,45 +152,144 @@ describe('checkout requires a signed-in account', () => {
       portalUrl: '/api/payments/portal',
     });
     expect(mocks.create).not.toHaveBeenCalled();
+  }
+
+  async function expectCheckoutOpens() {
+    const res = await POST(post({ plan: 'pro', billing: 'monthly' }));
+    expect(res.status).toBe(200);
+    expect((await res.json()).code).not.toBe('already_subscribed');
+    expect(mocks.create).toHaveBeenCalledTimes(1);
+    return res;
+  }
+
+  it('returns 409 already_subscribed when a duplicate row has a live Pro subscription', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    rowsOf(
+      { stripe_subscription_id: null, stripe_customer_id: null, is_trial: false, status: 'active', tier: 'free' },
+      subRow({ stripe_subscription_id: 'sub_paid', stripe_customer_id: 'cus_PaidUser1' }),
+    );
+    await expectAlreadySubscribed();
+    expect(mocks.subscriptionsRetrieve).not.toHaveBeenCalled();
   });
 
-  it.each(['active', 'trialing', 'past_due'])(
-    'does not open checkout for a %s row that already has a stripe subscription id',
+  it.each(['active', 'trialing'] as const)(
+    'does not open checkout for an in-period %s Pro row',
     async (status) => {
       mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
-      mocks.q.mockImplementation(async (sql: string) => {
-        if (!sql.includes('FROM user_subscriptions')) return [];
-        return [{ stripe_subscription_id: 'sub_live', stripe_customer_id: 'cus_Live', is_trial: status === 'trialing', status }];
-      });
-      const res = await POST(post({ plan: 'pro', billing: 'monthly' }));
-      expect(res.status).toBe(409);
-      expect((await res.json()).code).toBe('already_subscribed');
-      expect(mocks.create).not.toHaveBeenCalled();
+      rowsOf(subRow({ status, is_trial: status === 'trialing', current_period_end: FUTURE }));
+      await expectAlreadySubscribed();
+      expect(mocks.subscriptionsRetrieve).not.toHaveBeenCalled();
     },
   );
 
+  it.each(['past_due', 'unpaid'] as const)(
+    'sends a %s subscription to the billing portal',
+    async (status) => {
+      mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+      rowsOf(subRow({ status, current_period_end: PAST }));
+      await expectAlreadySubscribed();
+      expect(mocks.subscriptionsRetrieve).not.toHaveBeenCalled();
+    },
+  );
+
+  it('opens checkout for a canceled subscription', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    rowsOf(subRow({ status: 'canceled', current_period_end: PAST }));
+    await expectCheckoutOpens();
+    expect(mocks.subscriptionsRetrieve).not.toHaveBeenCalled();
+  });
+
+  it('opens checkout for an incomplete subscription', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    rowsOf(subRow({ status: 'incomplete', current_period_end: FUTURE }));
+    await expectCheckoutOpens();
+    expect(mocks.subscriptionsRetrieve).not.toHaveBeenCalled();
+  });
+
+  it('sends cancel_at_period_end to the portal when Stripe still says the Pro subscription is active', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    rowsOf(subRow({ status: 'active', current_period_end: PAST }));
+    mocks.subscriptionsRetrieve.mockResolvedValue(stripeSub('active', 'price_test_monthly', { cancel_at_period_end: true }));
+    await expectAlreadySubscribed();
+    expect(mocks.subscriptionsRetrieve).toHaveBeenCalledWith('sub_live');
+  });
+
+  it('opens checkout for a stale trial when Stripe says the subscription is not live', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    rowsOf(subRow({ status: 'trialing', is_trial: true, current_period_end: PAST }));
+    mocks.subscriptionsRetrieve.mockResolvedValue(stripeSub('canceled'));
+    await expectCheckoutOpens();
+    expect(mocks.subscriptionsRetrieve).toHaveBeenCalledWith('sub_live');
+  });
+
+  it('refuses a stale trial when Stripe says the Pro subscription is still live', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    rowsOf(subRow({ status: 'trialing', is_trial: true, current_period_end: PAST }));
+    mocks.subscriptionsRetrieve.mockResolvedValue(stripeSub('trialing'));
+    await expectAlreadySubscribed();
+  });
+
+  it('opens checkout for a stale active row when Stripe says it is not live', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    rowsOf(subRow({ status: 'active', current_period_end: PAST }));
+    mocks.subscriptionsRetrieve.mockResolvedValue(stripeSub('canceled'));
+    await expectCheckoutOpens();
+    expect(mocks.subscriptionsRetrieve).toHaveBeenCalledWith('sub_live');
+  });
+
+  it('refuses a stale active row when Stripe says the Pro subscription is still live', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    rowsOf(subRow({ status: 'active', current_period_end: PAST }));
+    mocks.subscriptionsRetrieve.mockResolvedValue(stripeSub('past_due'));
+    await expectAlreadySubscribed();
+  });
+
+  it('opens checkout when the Stripe confirm call fails', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    rowsOf(subRow({ status: 'trialing', is_trial: true, current_period_end: PAST }));
+    mocks.subscriptionsRetrieve.mockRejectedValue(Object.assign(new Error('No such subscription: sub_live reader@example.test'), { code: 'resource_missing' }));
+    await expectCheckoutOpens();
+    const logged = errSpy.mock.calls.flat().map(String).join('\n');
+    expect(logged).toContain('subscription confirm failed (resource_missing)');
+    expect(logged).not.toContain('reader@example.test');
+    expect(logged).not.toContain('sub_live');
+    errSpy.mockRestore();
+  });
+
+  it('opens checkout for a free row that has a stripe subscription id', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    rowsOf(subRow({ tier: 'free', status: 'active', stripe_subscription_id: 'sub_free_label', current_period_end: FUTURE }));
+    await expectCheckoutOpens();
+    expect(mocks.subscriptionsRetrieve).not.toHaveBeenCalled();
+  });
+
+  it('continues checkout when the subscription read fails', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    mocks.q.mockImplementation(async (sql: string) => {
+      if (String(sql).includes('current_period_end')) throw new Error('connection terminated for reader@example.test');
+      return [];
+    });
+    const res = await expectCheckoutOpens();
+    const params = mocks.create.mock.calls[0][0] as { subscription_data?: { trial_period_days?: number } };
+    expect(params.subscription_data).toEqual({ trial_period_days: 7 });
+    expect(res.status).toBe(200);
+    const logged = errSpy.mock.calls.flat().map(String).join('\n');
+    expect(logged).toContain('Subscription read failed; continuing checkout');
+    expect(logged).not.toContain('reader@example.test');
+    errSpy.mockRestore();
+  });
+
   it('still opens checkout for a manual grant that has no stripe subscription id', async () => {
     mocks.session = { cid: 'free_reader@example.test', tier: 'pro_trader', workspaceId: 'w', exp: 0 };
-    mocks.q.mockImplementation(async (sql: string) => {
-      if (!sql.includes('FROM user_subscriptions')) return [];
-      return [{ stripe_subscription_id: '  ', stripe_customer_id: null, is_trial: false, status: 'active' }];
-    });
+    rowsOf({ stripe_subscription_id: '  ', stripe_customer_id: null, is_trial: false, status: 'active', tier: 'pro_trader' });
     const res = await POST(post({ plan: 'pro', billing: 'monthly' }));
     expect(res.status).toBe(200);
     const params = mocks.create.mock.calls[0][0] as { subscription_data?: { trial_period_days?: number } };
     expect(params.subscription_data).toEqual({ trial_period_days: 7 });
-  });
-
-  it('still opens checkout when the only Stripe subscription is unpaid', async () => {
-    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
-    mocks.q.mockImplementation(async (sql: string) => {
-      if (!sql.includes('FROM user_subscriptions')) return [];
-      return [{ stripe_subscription_id: 'sub_unpaid', stripe_customer_id: 'cus_Unpaid', is_trial: false, status: 'unpaid' }];
-    });
-    const res = await POST(post({ plan: 'pro', billing: 'monthly' }));
-    expect(res.status).toBe(200);
-    const params = mocks.create.mock.calls[0][0] as { subscription_data?: unknown };
-    expect(params.subscription_data).toBeUndefined();
+    expect(mocks.subscriptionsRetrieve).not.toHaveBeenCalled();
+    expect(res.ok).toBe(true);
   });
 
   it('defers a referral coupon while the 7-day trial is granted', async () => {
