@@ -1068,11 +1068,11 @@ Always mention which derivatives signals support or contradict your analysis.
           verdict: aclResult.authorization === 'BLOCKED' ? 'NO_TRADE' :
                    aclResult.authorization === 'CONDITIONAL' ? 'CONDITIONAL' :
                    regimeScoring.tradeBias === 'HIGH_CONFLUENCE' ? 'TRADE_READY' : 'WATCH',
-          reasonCodes: [
+          reasonCodes: reasonsForPrompt([
             ...aclResult.reasonCodes,
             sessionPhase.reason,
             ...perfAdjusted.reasonCodes,
-          ],
+          ]),
         },
         confidence: {
           value: aclResult.confidence,
@@ -1104,7 +1104,7 @@ Always mention which derivatives signals support or contradict your analysis.
           level: perfThrottle.level,
           dampener: perfThrottle.ruDampener,
           governorRecommendation: perfThrottle.governorRecommendation,
-          reasons: perfThrottle.reasonCodes,
+          reasons: reasonsForPrompt(perfThrottle.reasonCodes),
         },
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }

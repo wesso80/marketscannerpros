@@ -28,7 +28,7 @@ export function regimeStatsForPrompt(
   });
 }
 
-/** Reason codes placed in a model prompt. Win-rate, hit-rate, and accuracy lines stay out while the flag is off. */
+/** Reason codes placed in a model prompt or a client JSON payload. Win-rate, hit-rate, and accuracy lines stay out while the flag is off. */
 export function reasonsForPrompt(codes: readonly string[]): string[] {
   if (SHOW_SIGNAL_OUTCOME_STATS) return [...codes];
   return codes.filter((code) => !/win[\s_-]*rate|hit[\s_-]*rate|\baccuracy\b/i.test(code));

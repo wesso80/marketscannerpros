@@ -20,7 +20,7 @@ import { mapToScoringRegime, computeRegimeScore, estimateComponentsWithAvailabil
 import { computeACLFromScoring } from '@/lib/ai/adaptiveConfidenceLens';
 import { fetchIntelligenceContext } from '@/lib/ai/intelligenceContext';
 import { buildV3EnginePrompt } from '@/lib/prompts/arcaV3Engine';
-import { regimeStatsForPrompt, regimeStatsSql } from '@/lib/signals/outcomeStatsVisibility';
+import { reasonsForPrompt, regimeStatsForPrompt, regimeStatsSql } from '@/lib/signals/outcomeStatsVisibility';
 import { PUBLIC_AI_SAFETY_GUARDRAILS, appendPublicAISafetyCorrection, buildPublicAIDataBindingGuardrail } from '@/lib/prompts/publicAiSafety';
 import { getEdgeContext } from '@/lib/intelligence/edgeContextBuilder';
 import { computePerformanceThrottle, applyPerformanceDampener } from '@/lib/ai/performanceThrottle';
@@ -503,7 +503,7 @@ Effective Throttle: ${perfAdjusted.throttle.toFixed(3)}`,
         authorization: aclResult.authorization,
         throttle: aclResult.throttle,
         tradeBias: regimeScoring.tradeBias,
-        reasonCodes: aclResult.reasonCodes,
+        reasonCodes: reasonsForPrompt(aclResult.reasonCodes),
       },
       confidence: {
         value: aclResult.confidence,

@@ -67,6 +67,34 @@ it('labels journal and portfolio prompt win rates as the member\'s own record', 
   }
 });
 
+it('filters MSP Analyst client reason codes while outcome stats are hidden', () => {
+  const source = readFileSync('app/api/msp-analyst/route.ts', 'utf8');
+  const throttleAt = source.indexOf('performanceThrottle: {');
+  const payload = source.slice(source.lastIndexOf('decision: {', throttleAt), throttleAt + 280);
+  expect(payload).toContain('reasonCodes: reasonsForPrompt([');
+  expect(payload).toContain('reasons: reasonsForPrompt(perfThrottle.reasonCodes)');
+  expect(payload).not.toContain('reasons: perfThrottle.reasonCodes');
+  const visible = reasonsForPrompt([
+    'LOSS_STREAK_3+: 3 consecutive losses',
+    'LOW_WIN_RATE: 0% < 20% → RU capped ×0.70',
+    'HIT_RATE: 40% accuracy',
+  ]);
+  expect(visible).toEqual(['LOSS_STREAK_3+: 3 consecutive losses']);
+});
+
+it('filters Copilot client reason codes while outcome stats are hidden', () => {
+  const source = readFileSync('app/api/ai/copilot/route.ts', 'utf8');
+  const payload = source.slice(source.indexOf('return NextResponse.json({\n      success: true'));
+  expect(payload).toContain('reasonCodes: reasonsForPrompt(aclResult.reasonCodes)');
+  expect(payload).not.toContain('reasonCodes: aclResult.reasonCodes');
+  const visible = reasonsForPrompt([
+    'RISK_GOVERNOR_BLOCK',
+    'LOW_WIN_RATE: 20% < 20%',
+    'historical accuracy 61%',
+  ]);
+  expect(visible).toEqual(['RISK_GOVERNOR_BLOCK']);
+});
+
 it('gates both AI routes on the shared outcome-stats flag', () => {
   for (const file of ['app/api/ai/copilot/route.ts', 'app/api/msp-analyst/route.ts']) {
     const source = readFileSync(file, 'utf8');
