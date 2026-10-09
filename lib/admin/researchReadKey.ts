@@ -36,6 +36,7 @@ export const RESEARCH_READ_PATHS: ReadonlySet<string> = new Set([
   '/api/admin/rank-calibration',
   '/api/admin/edge-ledger',
   '/api/admin/crypto-markets/backtest',
+  '/api/admin/edge-check',
   // Paper portfolio & journal (simulated records only)
   '/api/admin/portfolio-lab/summary',
   '/api/admin/portfolio-lab/positions',
