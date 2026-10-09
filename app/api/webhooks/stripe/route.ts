@@ -738,7 +738,7 @@ export async function POST(req: NextRequest) {
         if (subscriptionId) {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId);
           if (subscription.status !== 'past_due' && subscription.status !== 'unpaid') {
-            console.error(`[Webhook] invoice.payment_failed subscription ${subscriptionId} live status is ${subscription.status}; not writing past_due`);
+            console.error(`[Webhook] invoice.payment_failed live status is ${subscription.status}; not writing past_due`);
             break;
           }
           const customer = await stripe.customers.retrieve((invoice as any).customer as string);
@@ -747,16 +747,18 @@ export async function POST(req: NextRequest) {
             skipCustomerWrite(event.type, loaded === 'deleted' ? 'deleted' : 'no-email', subscriptionId);
             break;
           }
-          const workspaceId = hashWorkspaceId(loaded.email.toLowerCase());
-          
+          // Match the subscription id only. A manual grant has no
+          // stripe_subscription_id and must stay untouched, including when it
+          // shares this email's workspace. A second subscription on the same
+          // email is a different id and is not updated.
           await q(`
-            UPDATE user_subscriptions 
+            UPDATE user_subscriptions
             SET status = 'past_due', updated_at = NOW()
-            WHERE workspace_id = $1
-              AND (stripe_subscription_id IS NULL OR stripe_subscription_id = $2)
-          `, [workspaceId, subscriptionId]);
+            WHERE stripe_subscription_id = $1
+              AND stripe_subscription_id IS NOT NULL
+          `, [subscriptionId]);
           
-          console.log(`[Webhook] Marked subscription as past_due: ${loaded.email}`);
+          console.log('[Webhook] Marked subscription as past_due');
         }
         break;
       }

@@ -7,9 +7,10 @@ import styles from './ResearchAccount.module.css';
 type Props = {
   cycle: 'monthly' | 'yearly'; onCycle: (cycle: 'monthly' | 'yearly') => void;
   onChoose: (plan: 'free' | 'pro') => void; loading: string | null; error: string | null;
+  onOpenBilling?: () => void;
   tier: string | null; quotasEnabled: boolean | null;
 };
-export default function ResearchPricing({cycle,onCycle,onChoose,loading,error,tier,quotasEnabled}: Props) {
+export default function ResearchPricing({cycle,onCycle,onChoose,loading,error,onOpenBilling,tier,quotasEnabled}: Props) {
   const paid = tier === 'pro' || tier === 'pro_trader';
   return <section className={styles.root} data-research-pricing>
     <header className={styles.hero}><p className={styles.eyebrow}>MEMBERSHIP / RESEARCH WITH CONTEXT</p>
@@ -20,7 +21,7 @@ export default function ResearchPricing({cycle,onCycle,onChoose,loading,error,ti
       {(['monthly','yearly'] as const).map(value=><button key={value} aria-pressed={cycle===value} onClick={()=>onCycle(value)}>{value==='monthly'?'Monthly':'Annual'}</button>)}
       <span>All prices in US dollars</span>
     </div>
-    {error && <p role="alert" className={styles.notice}>{error}</p>}
+    {error ? <div role="alert" className={styles.billingNotice}><p className={styles.notice}>{error}</p>{onOpenBilling ? <button type="button" onClick={onOpenBilling}>Open billing</button> : null}</div> : null}
     <div className={styles.plans}>
       <article className={styles.card}><p className={styles.eyebrow}>01 / BUILD YOUR RESEARCH HABIT</p><h2>Free</h2>
         <p className={styles.price}>US$0 <small>/ month</small></p><p>Explore, record and learn at your own pace.</p>

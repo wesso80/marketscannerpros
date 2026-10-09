@@ -92,6 +92,90 @@ describe('getSessionFromCookie trial period', () => {
     expect(mocks.q).not.toHaveBeenCalled();
   });
 
+  it('orders rows like chooseAccessSubscription and keeps the live Stripe duplicate', async () => {
+    withSession({ cid: 'trial_ada@example.com', tier: 'pro', workspaceId: WORKSPACE_ID });
+    const past = new Date(Date.now() - 86_400_000).toISOString();
+    const future = new Date(Date.now() + 86_400_000).toISOString();
+    mocks.q.mockResolvedValue([
+      {
+        workspace_id: WORKSPACE_ID,
+        tier: 'pro',
+        status: 'trialing',
+        current_period_end: past,
+        stripe_customer_id: null,
+        stripe_subscription_id: null,
+        updated_at: '2026-10-09T00:00:00.000Z',
+        id: 2,
+      },
+      {
+        workspace_id: 'other-workspace',
+        tier: 'pro',
+        status: 'active',
+        current_period_end: future,
+        stripe_customer_id: 'cus_Live',
+        stripe_subscription_id: 'sub_Live',
+        updated_at: '2026-01-01T00:00:00.000Z',
+        id: 1,
+      },
+    ]);
+
+    await expect(getSessionFromCookie()).resolves.toMatchObject({ tier: 'pro' });
+    expect(String(mocks.q.mock.calls[0][0])).toContain(
+      'ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST, id DESC',
+    );
+  });
+
+  it('uses the newer open trial when no row matches this workspace', async () => {
+    withSession({ cid: 'trial_ada@example.com', tier: 'pro', workspaceId: WORKSPACE_ID });
+    mocks.q.mockResolvedValue([
+      {
+        workspace_id: 'older-other',
+        tier: 'pro',
+        status: 'trialing',
+        current_period_end: new Date(Date.now() - 86_400_000).toISOString(),
+        updated_at: '2026-01-01T00:00:00.000Z',
+        created_at: '2026-01-01T00:00:00.000Z',
+        id: 1,
+      },
+      {
+        workspace_id: 'newer-other',
+        tier: 'pro',
+        status: 'trialing',
+        current_period_end: new Date(Date.now() + 86_400_000).toISOString(),
+        updated_at: '2026-10-01T00:00:00.000Z',
+        created_at: '2026-10-01T00:00:00.000Z',
+        id: 2,
+      },
+    ]);
+
+    await expect(getSessionFromCookie()).resolves.toMatchObject({ tier: 'pro' });
+  });
+
+  it('keeps a manual grant and an active Stripe row whose period end is past', async () => {
+    const staleEnd = new Date(Date.now() - 10 * 86_400_000).toISOString();
+    withSession({ cid: 'trial_ada@example.com', tier: 'pro_trader', workspaceId: WORKSPACE_ID });
+    mocks.q.mockResolvedValue([{
+      workspace_id: WORKSPACE_ID,
+      tier: 'pro_trader',
+      status: 'active',
+      current_period_end: staleEnd,
+      stripe_customer_id: null,
+      stripe_subscription_id: null,
+    }]);
+    await expect(getSessionFromCookie()).resolves.toMatchObject({ tier: 'pro_trader' });
+
+    withSession({ cid: 'trial_ada@example.com', tier: 'pro', workspaceId: WORKSPACE_ID });
+    mocks.q.mockResolvedValue([{
+      workspace_id: WORKSPACE_ID,
+      tier: 'pro',
+      status: 'active',
+      current_period_end: staleEnd,
+      stripe_customer_id: 'cus_Live',
+      stripe_subscription_id: 'sub_Live',
+    }]);
+    await expect(getSessionFromCookie()).resolves.toMatchObject({ tier: 'pro' });
+  });
+
   it('reads the trial row on every call', async () => {
     withSession({ cid: 'trial_ada@example.com', tier: 'pro', workspaceId: WORKSPACE_ID });
     mocks.q.mockResolvedValue([{ tier: 'pro', status: 'trialing', current_period_end: new Date(Date.now() + 86_400_000) }]);
