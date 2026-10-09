@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 
 vi.mock('@/lib/useUserTier', () => ({ useUserTier: () => ({ tier: 'pro' }), canAccessPortfolioInsights: () => true }));
 vi.mock('@/hooks/usePolling', () => ({ usePolling: vi.fn() }));
@@ -138,6 +138,7 @@ it('shows unavailable growth lines when gold is missing and leaves gold out of t
   await screen.findByText('Growth proxy');
   expect(container.querySelector('[data-growth-proxy]')?.textContent).toBe('unavailable');
   expect(container.querySelector('[data-copper-vs-gold]')?.textContent).toBe('unavailable');
+  await waitFor(() => expect(pageContext.setPageData).toHaveBeenCalled());
   const context = pageContext.setPageData.mock.calls.at(-1)?.[0];
   expect(context.data.commodities.some((item: { symbol: string }) => item.symbol === 'GOLD')).toBe(false);
   expect(context.data.commodityGate.relative.copperVsGold).toBeNull();
