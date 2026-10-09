@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { NO_BILLING_ACCOUNT_MESSAGE } from "@/lib/billingPortal";
 
 export default function PortalButton() {
   const [loading, setLoading] = useState(false);
@@ -16,6 +17,8 @@ export default function PortalButton() {
       
       if (data.url) {
         window.location.href = data.url;
+      } else if (res.status === 404 && data.error === "no_billing_account") {
+        alert(NO_BILLING_ACCOUNT_MESSAGE);
       } else {
         alert(data.error || "Unable to open billing portal");
       }

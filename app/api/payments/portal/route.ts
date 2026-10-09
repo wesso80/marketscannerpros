@@ -1,40 +1,65 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getSessionFromCookie } from "@/lib/auth";
+import { q } from "@/lib/db";
+import { checkoutCustomerFromSession } from "@/lib/checkoutSignIn";
+import { isStripeCustomerId } from "@/lib/billingPortal";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-09-30.clover",
 });
 
-export async function POST(req: NextRequest) {
+/** Same-origin return. Stripe opens this after the customer leaves the portal. */
+const PORTAL_RETURN_URL = "https://marketscannerpros.app/tools/explorer";
+
+async function stripeCustomerIdForEmail(email: string): Promise<string | null> {
+  const rows = await q<{ stripe_customer_id: string | null }>(
+    `SELECT stripe_customer_id FROM user_subscriptions
+      WHERE LOWER(email) = LOWER($1)
+        AND NULLIF(BTRIM(stripe_customer_id), '') IS NOT NULL
+      LIMIT 1`,
+    [email],
+  );
+  const stored = rows[0]?.stripe_customer_id?.trim() ?? "";
+  return isStripeCustomerId(stored) ? stored : null;
+}
+
+export async function POST(_req: NextRequest) {
+  const session = await getSessionFromCookie();
+  if (!session || session.cid.startsWith("anon-")) {
+    return NextResponse.json({ error: "Sign in required" }, { status: 401 });
+  }
+
+  const account = checkoutCustomerFromSession(session.cid);
+  let customerId: string | null = null;
   try {
-    const session = await getSessionFromCookie();
-    
-    if (!session) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    if (account?.customer_email) {
+      customerId = await stripeCustomerIdForEmail(account.customer_email);
+    } else if (account?.customer && isStripeCustomerId(account.customer)) {
+      customerId = account.customer;
     }
+  } catch (error: unknown) {
+    console.error("Portal customer lookup failed:", error);
+    return NextResponse.json({ error: "Failed to create portal session" }, { status: 500 });
+  }
 
-    // Get customer ID from session (cid is the Stripe customer ID for paid users)
-    const customerId = session.cid;
-    
-    if (!customerId || customerId.startsWith("trial_")) {
-      return NextResponse.json({ 
-        error: "No active subscription found. Trial users don't have billing to manage." 
-      }, { status: 400 });
-    }
+  if (!customerId) {
+    return NextResponse.json({ error: "no_billing_account" }, { status: 404 });
+  }
 
-    // Create a Stripe Customer Portal session
+  try {
+    // No configuration id: Stripe uses the default Customer portal config for this mode.
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: "https://marketscannerpros.app/tools/explorer",
+      return_url: PORTAL_RETURN_URL,
     });
 
     return NextResponse.json({ url: portalSession.url });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Portal error:", error);
     return NextResponse.json(
       { error: "Failed to create portal session" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
