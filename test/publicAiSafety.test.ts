@@ -38,18 +38,16 @@ describe('public AI safety guardrails', () => {
     expect(appendPublicAISafetyCorrection(safe)).toBe(safe);
   });
 
-  it('injects the final safety guardrail before the final user message in public AI routes', () => {
+  it('admin AI handlers use the operator rules (not the public guardrail) and keep the data-binding guardrail', () => {
     for (const file of ['app/api/msp-analyst/route.ts', 'app/api/ai/copilot/route.ts']) {
       const content = readFileSync(join(root, file), 'utf8');
-      const guardrailIndex = content.lastIndexOf('PUBLIC_AI_SAFETY_GUARDRAILS');
-      const remainingRouteAssembly = content.slice(guardrailIndex);
-      const userMessageIndex = remainingRouteAssembly.includes("role: 'user'")
-        ? remainingRouteAssembly.indexOf("role: 'user'")
-        : remainingRouteAssembly.indexOf('role: "user"');
-
-      expect(guardrailIndex).toBeGreaterThan(-1);
-      expect(userMessageIndex).toBeGreaterThan(-1);
-      expect(content).toContain('appendPublicAISafetyCorrection');
+      const rulesIndex = content.lastIndexOf('ADMIN_OPERATOR_RULES');
+      const rest = content.slice(rulesIndex);
+      const userIndex = rest.includes("role: 'user'") ? rest.indexOf("role: 'user'") : rest.indexOf('role: "user"');
+      expect(rulesIndex).toBeGreaterThan(-1);
+      expect(userIndex).toBeGreaterThan(-1); // operator rules come before the final user message
+      expect(content).toContain('buildPublicAIDataBindingGuardrail');
+      expect(content).not.toContain('PUBLIC_AI_SAFETY_GUARDRAILS');
     }
   });
 
@@ -158,16 +156,11 @@ describe('public AI trade-ticket detection', () => {
     expect(findPublicAdviceViolations(scenario)).toEqual([]);
   });
 
-  it('the analyst-mode scenario template no longer asks for a trade ticket', () => {
+  it('the admin analyst template asks for a full trade plan and forbids placing orders', () => {
     const prompt = buildV3EnginePrompt(null);
-    const lines = prompt.split('\n');
-
-    expect(lines.filter((line) => /^\s*(?:Entry|Target \d|Size Context|Strike\(s\)|DTE|Strategy|R:R)\s*:/i.test(line))).toEqual([]);
-    expect(lines.filter((line) => /^\s*Direction\s*:.*(?:LONG|SHORT)/.test(line))).toEqual([]);
-    expect(prompt).not.toContain('% of capital based on');
-    expect(prompt).toContain('Level of Interest:');
-    expect(prompt).toContain('Invalidation:');
-    expect(prompt).toContain('Key Levels:');
-    expect(prompt).toContain('Never state position size, % of capital, % risk');
+    for (const label of ['Direction:', 'Entry:', 'Stop:', 'Target 1:', 'R:R:', 'Size:']) expect(prompt).toContain(label);
+    expect(prompt).toContain('Stop is MANDATORY');
+    expect(prompt).toMatch(/NEVER place, route or claim to have sent an order/);
+    expect(prompt).not.toMatch(/educational scenario|mandatory disclaimer/i);
   });
 });
