@@ -19,21 +19,50 @@ export async function GET(req:Request){
  try{return NextResponse.json({simulated:true,automation:await cryptoAutomationState(),...await fullState(auth.workspaceId)});}catch{return NextResponse.json({error:'Crypto paper ledger unavailable'},{status:503});}
 }
 export async function POST(req:Request){
- const auth=await requireAdmin(req);if(!auth.ok||!auth.workspaceId)return NextResponse.json({error:'Unauthorized'},{status:403});
- const body=await req.json().catch(()=>null);if(!['enable','pause','cycle','auto_enable','auto_pause'].includes(body?.action))return NextResponse.json({error:'Valid paper action required'},{status:400});
+ const headers={'Cache-Control':'private, no-store'};
+ const auth=await requireAdmin(req);if(!auth.ok||!auth.workspaceId)return NextResponse.json({error:'Unauthorized'},{status:403,headers});
+ const body=await req.json().catch(()=>null);if(!['enable','pause','cycle','auto_enable','auto_pause'].includes(body?.action))return NextResponse.json({error:'Valid paper action required'},{status:400,headers});
+ const steps:{name:string;status:'completed'|'skipped'|'unconfirmed'}[]=[];
+ async function perform<T>(name:string,run:()=>Promise<T>):Promise<T>{
+  const step:{name:string;status:'completed'|'skipped'|'unconfirmed'}={name,status:'unconfirmed'};steps.push(step);
+  const value=await run();
+  const report=value as {skipped?:boolean;ok?:boolean;monitorHealthy?:boolean}|null|undefined;
+  step.status=report?.ok===false||report?.monitorHealthy===false?'unconfirmed':value===null||report?.skipped?'skipped':'completed';
+  return value;
+ }
+ // Snapshot failure must never reclassify a confirmed setting change as a failed action.
+ async function respond(extra:Record<string,unknown>={}){
+  const status=steps.some(s=>s.status==='unconfirmed')?'partial':steps.length&&steps.every(s=>s.status==='skipped')?'skipped':'completed';
+  const result={simulated:true,...extra,actionResult:{action:body.action,status,steps}};
+  try{
+   const [automation,state]=await Promise.all([cryptoAutomationState(),fullState(auth.workspaceId!)]);
+   return NextResponse.json({...result,automation,...state,snapshot:{status:'available'}},{headers});
+  }catch{
+   return NextResponse.json({...result,snapshot:{status:'unavailable'},notice:'The action result is recorded below, but the account snapshot could not be refreshed. Refresh saved state before another action.'},{headers});
+  }
+ }
  try{
   if(body.action.startsWith('auto_')){
-   await setCryptoAutomation(body.action==='auto_enable');
-   return NextResponse.json({simulated:true,automation:await cryptoAutomationState(),...await fullState(auth.workspaceId),...(cryptoMarketsPaused()?pausedCryptoMarketsBody():{})});
+   await perform('background_scans',()=>setCryptoAutomation(body.action==='auto_enable'));
+   return respond(cryptoMarketsPaused()?pausedCryptoMarketsBody():{});
+  }
+  if(body.action!=='cycle'){
+   await perform('paper_entries',()=>setCryptoPaperActive(auth.workspaceId!,body.action==='enable'));
+   try{await perform('base_entries',()=>ensureBaseSleeve(auth.workspaceId!,body.action==='enable'));}catch{/* Report the unconfirmed step; do not pretend the other account change failed. */}
   }
   if(cryptoMarketsPaused()&&(body.action==='cycle'||body.action==='enable')){
-   if(body.action==='enable'){await setCryptoPaperActive(auth.workspaceId,true);try{await ensureBaseSleeve(auth.workspaceId,true);}catch{}}
-   return NextResponse.json({simulated:true,...pausedCryptoMarketsBody(),cycle:{paused:true,skipped:true},baseCycle:{paused:true,skipped:true},automation:await cryptoAutomationState(),...await fullState(auth.workspaceId)});
+   steps.push({name:'paper_cycle',status:'skipped'},{name:'base_cycle',status:'skipped'});
+   return respond({...pausedCryptoMarketsBody(),cycle:{paused:true,skipped:true},baseCycle:{paused:true,skipped:true}});
   }
-  if(body.action!=='cycle'){await setCryptoPaperActive(auth.workspaceId,body.action==='enable');try{await ensureBaseSleeve(auth.workspaceId,body.action==='enable');}catch{}}
-  const cycle=body.action==='pause'?null:await runCryptoPaperCycle(auth.workspaceId);
+  const cycle=body.action==='pause'?null:await perform('paper_cycle',()=>runCryptoPaperCycle(auth.workspaceId!));
   let baseCycle:unknown=null;
-  if(body.action!=='pause'){try{baseCycle=await runCryptoBaseSleeveCycle(auth.workspaceId);}catch{baseCycle={skipped:true,reason:'Base-breakout cycle failed'};}}
-  return NextResponse.json({simulated:true,cycle,baseCycle,automation:await cryptoAutomationState(),...await fullState(auth.workspaceId)});
- }catch{return NextResponse.json({error:'Paper action failed; reload saved account state before retrying'},{status:503});}
+  if(body.action!=='pause'){
+   try{baseCycle=await perform('base_cycle',()=>runCryptoBaseSleeveCycle(auth.workspaceId!));}
+   catch{baseCycle={skipped:true,reason:'Base-breakout cycle outcome unconfirmed; refresh saved state'};}
+  }
+  return respond({cycle,baseCycle});
+ }catch{
+  // An exception may follow a committed write. Never invite blind retry or claim rollback.
+  return NextResponse.json({simulated:true,error:'Paper action outcome is unconfirmed. Refresh saved state before deciding whether to retry.',actionResult:{action:body.action,status:'unknown',steps},snapshot:{status:'unavailable'}},{status:503,headers});
+ }
 }
