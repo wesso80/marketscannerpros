@@ -8,7 +8,8 @@ it('has the seven navigation groups in order',()=>expect(primaryNavTools.map(({l
 ]));
 it('lands free logins on Today and paid logins on Overview',()=>{
  const auth=read('app/auth/page.tsx');
- expect(auth).toContain('router.push("/tools/command-center")');
+ expect(read('components/admin/AdminDirectLogin.tsx')).toContain('router.push("/tools/command-center")');
+ expect(auth).not.toContain('Admin Direct Login');
  expect(auth).toContain("'/tools/command-center' : '/tools/start'");
  expect(read('app/after-checkout/page.tsx')).toContain('router.replace("/tools/command-center")');
  const verify=read('app/auth/verify/page.tsx');
