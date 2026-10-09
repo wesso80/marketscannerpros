@@ -15,7 +15,9 @@ it('quote timestamps survive watchlist and journal stamps; fetch-only stays unkn
  expect(renderToStaticMarkup(<PriceStamp {...stamp}/>)).toContain('vs 24h ago');
  const mark=journalMarkStamp({assetClass:'equity',tradeType:'Spot',mark:{price:330,observedAt:null,retrievedAt:'2026-10-03T19:00:00Z'}});
  expect(renderToStaticMarkup(<PriceStamp {...mark}/>)).toContain('time unknown');
- for(const f of ['components/WatchlistWidget.tsx','components/journal/layer2/TradeTable.tsx','app/tools/portfolio/page.tsx'])expect(readFileSync(f,'utf8')).toContain('PriceStamp');
+ expect(readFileSync('components/WatchlistWidget.tsx','utf8')).toContain('PriceStamp');
+ // J2-WP4-5 / J3-WP4-1 replaced per-row stamps on Portfolio and Journal with one page source line.
+ for(const f of ['components/journal/layout/JournalLayout.tsx','app/tools/portfolio/page.tsx'])expect(readFileSync(f,'utf8')).toContain('<SourceLine');
 });
 it('LONG put premium appreciation remains a gain',()=>{
  const trade={id:'put',symbol:'AAPL',assetClass:'equity',tradeType:'Options',status:'open',side:'long',entry:{price:1.29,ts:'2026-10-02T18:00:00Z'},qty:1,option:{right:'put',strike:335,expiration:'2026-10-05'}} as TradeRowModel;

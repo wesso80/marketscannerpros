@@ -1,10 +1,13 @@
 import { describeMultiple } from '@/lib/goldenEgg/fundamentalsContext';
+import { buildTimingEvidence, TIMING_EVIDENCE } from '@/lib/research/timingEvidence';
+import { buildCalendarFeed } from '@/lib/macro/calendar/feed';
+import { priceEvidenceFromSeries as evidenceFromPrice } from '@/lib/research/priceEvidence';
 import { oiBasisLabel } from '@/lib/options/oiSummary';
 import { valuationAtPrice } from '@/lib/market/valuationIntegrity';
 /**
  * Golden Egg engine — the ONE validated research packet for a symbol.
  *
- * `computeGoldenEgg()` is consumed by /api/golden-egg (Verdict tab) AND /api/deep-analysis (Deep Analyst), so both
+ * `computeGoldenEgg()` is consumed by /api/golden-egg (Symbol Evidence tab) AND /api/deep-analysis (Symbol AI summary), so both
  * surfaces read identical price, indicators, options/derivatives, levels, trust and time-confluence facts.
  */
 
@@ -236,6 +239,7 @@ function barsPerDayFor(tfLabel: string, assetClass: 'equity' | 'crypto' | 'forex
 function fmtLevel(v: number): string { return `$${fmtPriceStr(v)}`; }
 
 // ── Build GoldenEggPayload from live data ───────────────────────────────
+/** Completed-bar evidence from the fetcher's longest dated history (indicator history first, else the display bars). */
 export function buildPayload(
   symbol: string,
   assetClass: 'equity' | 'crypto' | 'forex',
@@ -257,6 +261,8 @@ export function buildPayload(
     extras = { ...extras, fundamentals: { ...f, pe: v.pe, marketCap: v.marketCap,
       currentPrice: p, valuationBasis: v.basis, multiple: describeMultiple(v.pe, f.forwardPe, f.peg) } };
   }
+  // Measured price/volatility evidence (shared definitions, completed daily bars only, dated). Daily timeframe only.
+  const priceEvidence = (extras.timeframeKey ?? 'daily') === 'daily' && assetClass !== 'forex' ? evidenceFromPrice(symbol, assetClass, price, nowMs) : null;
   const atr = ind?.atr != null && Number.isFinite(ind.atr) && ind.atr > 0 ? ind.atr : 0;
   const hasAtr = atr > 0;
   const atrPct = p > 0 ? (atr / p) * 100 : 0;
@@ -638,7 +644,8 @@ export function buildPayload(
       breakoutScore: dveReading?.breakout.score, rsi: ind?.rsi ?? null, macdHist: ind?.macdHist ?? null, adx: ind?.adx ?? null, stochK: ind?.stochK ?? null,
       priceVsSma20Pct: ind?.sma20 != null && p > 0 ? ((p - ind.sma20) / ind.sma20) * 100 : null,
       priceVsSma50Pct: ind?.sma50 != null && p > 0 ? ((p - ind.sma50) / ind.sma50) * 100 : null,
-      volumeRatio: price.avgVolume && price.avgVolume > 0 ? price.volume / price.avgVolume : null,
+      // Shared definition: last completed bar vs the 20 completed bars before it (was the latest, possibly unfinished, bar vs a 20-bar mean that included it).
+      volumeRatio: priceEvidence ? priceEvidence.volumeRatio : (price.avgVolume && price.avgVolume > 0 ? price.volume / price.avgVolume : null),
       permission, direction, confidence, setupType: setup.setupType, optionsVerdict: optionsEvidence?.verdict, inSqueeze: ind?.inSqueeze ?? undefined,
       structureVerdict, directionalBias: dveReading?.direction.bias, trapDetected: dveReading?.trap.detected, exhaustionRisk: dveReading?.exhaustion.level,
     };
@@ -724,6 +731,7 @@ export function buildPayload(
 
   return {
     meta: { symbol, assetClass, price: p, asOfTs: new Date(nowMs).toISOString(), timeframe: tfLabel },
+    priceEvidence,
     layer1: {
       assessment: toPublicAssessment(permission),
       direction,
@@ -932,6 +940,8 @@ export interface GoldenEggComputeParams {
   workspaceId?: string | null;
   /** Skip the 3-minute memory cache. */
   fresh?: boolean;
+  /** Explicit options expiry (YYYY-MM-DD, equities). Used only if listed in the chain; never replaced by the default. */
+  expiry?: string | null;
 }
 
 export interface GoldenEggComputeResult {
@@ -995,10 +1005,14 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
   const avIntervalMap: Record<string, string> = { '15m': '15min', '1h': '60min', 'daily': 'daily', 'weekly': 'weekly' };
   const avInterval = avIntervalMap[timeframe] || 'daily';
   const tfLabel = tfLabelFor(timeframe);
-  const cacheKey = `${symbol}_${timeframe}_${assetClass}`;
+  // Options exist for equities only; an expiry on any other asset is ignored rather than splitting the cache.
+  const expiry = assetClass === 'equity' && params.expiry && /^\d{4}-\d{2}-\d{2}$/.test(params.expiry) ? params.expiry : null;
+  // Everything that changes the packet is in the key: symbol, timeframe, asset class and the options expiry.
+  const cacheKey = `${symbol}_${timeframe}_${assetClass}_${expiry ?? 'default-expiry'}`;
   const hit = cache.get(cacheKey);
   if (!params.fresh && hit && Date.now() - hit.ts < CACHE_TTL) {
-    return { payload: hit.data, cached: true, localDemo: false, warnings: [], dataQuality: buildMarketDataProviderStatus({ source: 'memory_cache', provider: 'memory_cache' }) };
+    const req = hit.data.optionsRequest;
+    return { payload: hit.data, cached: true, localDemo: false, warnings: req?.status === 'unavailable' ? [`Options for the requested ${req.expiry} expiry are not available; no other expiry was substituted.`] : [], dataQuality: buildMarketDataProviderStatus({ source: 'memory_cache', provider: 'memory_cache' }) };
   }
 
   const tcSymbol = assetClass === 'crypto' ? `${symbol.replace(/[-/]?(USDT|USD)$/i, '')}USD` : symbol;
@@ -1009,6 +1023,8 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
     fetchMacroRegime(),
   ]);
   const mpeData = await fetchMPE(symbol, assetClass, tcData);
+  // Scheduled high-importance US releases for the timing section (providers cache ~10 min; a failure is reported, not fatal).
+  const calendarFeed = assetClass === 'forex' ? null : await buildCalendarFeed({ nowMs: Date.now(), days: TIMING_EVIDENCE.eventHorizonDays, countries: ['US'], importance: 'high' }).catch(() => null);
 
   if (!priceData) {
     if (isLocalGoldenEggDemoAllowed()) {
@@ -1030,7 +1046,7 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
   const benchSeries: { btcCloses?: number[]; ethCloses?: number[] } = {};
   if (assetClass === 'equity') {
     [optsData, fundamentals] = await Promise.all([
-      fetchOptionsSnapshot(symbol, priceData.price, { recentCloses: priceData.historicalCloses, recentDates: priceData.historicalDates }),
+      fetchOptionsSnapshot(symbol, priceData.price, { recentCloses: priceData.historicalCloses, recentDates: priceData.historicalDates, expiry }),
       getFundamentalsSummary(symbol).catch(() => null),
     ]);
   } else if (assetClass === 'crypto') {
@@ -1068,7 +1084,8 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
     console.warn('[golden-egg] canonical verdict unavailable:', e instanceof Error ? e.message : e);
   }
 
-  if (payload.layer1.direction !== 'NEUTRAL') {
+  // Signal records describe the default packet; a packet for an explicitly chosen expiry is not a new signal.
+  if (payload.layer1.direction !== 'NEUTRAL' && !expiry) {
     recordSignal({
       symbol, signalType: 'golden_egg', direction: payload.layer1.direction === 'LONG' ? 'bullish' : 'bearish', score: payload.canonicalVerdict?.score ?? payload.layer1.confidence,
       priceAtSignal: priceData.price, timeframe: tfLabel,
@@ -1087,6 +1104,19 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
     }).catch(() => {});
   }
 
+  if (assetClass !== 'forex') {
+    payload = { ...payload, timingEvidence: buildTimingEvidence({
+      assetClass, nowMs: Date.now(),
+      earnings: assetClass === 'equity' ? { date: fundamentals?.nextEarningsDate ?? null, status: fundamentals?.nextEarningsStatus ?? (fundamentals ? null : 'UNKNOWN'), lastReportedQuarter: fundamentals?.lastReportedQuarter ?? null } : null,
+      releases: calendarFeed ? { events: calendarFeed.events.filter((e) => !e.isReleased), source: `Economic calendar (${calendarFeed.meta?.providers?.map((p: { id: string }) => p.id).join(', ') || 'providers'})` } : null,
+    }) };
+  }
+  const warnings: string[] = [];
+  if (expiry) {
+    const used = payload.canonical?.options?.expiry === expiry;
+    payload = { ...payload, optionsRequest: { expiry, status: used ? 'used' : 'unavailable' } };
+    if (!used) warnings.push(`Options for the requested ${expiry} expiry are not available (not listed in the chain, or no usable open interest); no other expiry was substituted.`);
+  }
   cache.set(cacheKey, { data: payload, ts: Date.now() });
-  return { payload, cached: false, localDemo: false, warnings: [], dataQuality: goldenEggLiveDataQuality(assetClass) };
+  return { payload, cached: false, localDemo: false, warnings, dataQuality: goldenEggLiveDataQuality(assetClass) };
 }

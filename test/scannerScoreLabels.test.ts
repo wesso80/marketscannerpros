@@ -70,8 +70,9 @@ describe('page and Pro table wiring', () => {
     expect(page).toContain('const noSetup = noSetupRankedReason(r);');
     expect(page).toContain('!isNoSetupRow(row)&&Math.round(computeMspScore(row,activeRegime))');
   });
-  it('Pro table labels both numbers: "MSP 58/100" and "Setup 10 · sets grade"', () => {
+  it('legacy MSP table stays behind the admin scanner boundary', () => {
     expect(table).toContain('>MSP</span>{r.confidence}');
-    expect(table).toContain('Setup {r.canonical.score} · sets grade');
+    expect(page).toContain('if (!isAdmin) return <PublicScannerRedirect />');
+    expect(table).not.toContain('Setup {r.canonical.score} · sets grade');
   });
 });

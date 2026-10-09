@@ -1,0 +1,45 @@
+Combined public redesign review — 9 October 2026
+
+Status: automated combined suite passes; not a deployment approval.
+Draft fix PR: https://github.com/wesso80/marketscannerpros/pull/542
+Fix head tested: 68397e07 (documentation may follow).
+
+Snapshot
+- research-page-phase4: 73462e14dd7fc27a1881e3199a0fe5960b2fd586
+- Claude #537: ed9aa92067df3feaa4a6e3c900218fb99d478341
+- Codex stack through #538: 1f7783e5, plus #542 fixes.
+- Resolved local candidate: 382e7f70 on codex/public-combined-review.
+- Newer Claude #539, #540 and #541 are excluded from these results.
+- No GitHub merge, deployment, provider request or production data change.
+
+Changes
+The bulk scanner tests now authenticate an admin and exercise the real workspace/IP limiter. Separate tests preserve non-admin rejection, fail-closed authentication errors, sanitized errors and private cache headers. Public Scanner tests assert redirection without requesting the private scanner.
+Tests follow the approved seven destinations, factual Overview/Radar, authenticated pricing, Portfolio/Journal tabs and Symbol section order. Private-data and banned-wording guards remain. Source assertions use the actual SourceLine components rather than unused imports.
+Production edits are limited to unused Scanner/Options imports and the text “Report not collected”. No private engine/worker behavior changed.
+The options access test now supplies a fail-fast tx mock; all four access-gate cases execute. The commodities test waits for page context before inspecting it, fixing the previously reported timing failure without removing assertions.
+The options-validation Vitest config preserves symlink paths for the Windows sandbox. Text assertions accept Windows newlines where needed.
+
+Conflict resolution
+A local combination had two test conflicts: test/bulkCatalystRateLimits.test.ts and test/sharedMarketComponents.test.ts. Use the #542 versions: these retain Claude's SourceLine corrections and negative guards plus the new admin/rate checks. No production conflicts. The resolved local candidate was compared against the validation source file-by-file after newline normalization; no differences before the subsequent single test fix, which was cherry-picked into the candidate.
+
+Validation
+Dependencies installed using npm ci --ignore-scripts from the committed lockfile: Next 16.0.10, TypeScript 5.9.3, Vitest 3.2.4, Stripe 19.1.0, @types/node 20.19.21. Earlier shared dependencies differed and were not used for the final result.
+Final full suite: 6,397 passed, 0 failed, 31 existing skipped/pending tests. No new skips. Report: outputs/combined-locked-release.json.
+Project typecheck: two TS2339 timer.unref errors at lib/memory/debugLog.ts:155 and worker/ingest-data.ts:2037. A separate extraction of the research baseline, compiled against the same locked dependencies using a compiler host redirect for node_modules, reproduces exactly those two diagnostics. This is no type regression, not a clean typecheck. Those files and tsconfig are unchanged by the stack.
+Browser: pricing, auth, landing and Learning pass at 1280 and 390 pixels (8 checks), HTTP 200, no horizontal overflow or page errors. Pricing toggle/fixture checkout error, magic-link fixture response and Learning interaction were exercised. Report: outputs/combined-locked-shell-browser/public-design-browser.json.
+Full browser runner timed out after 90 seconds compiling /tools/golden-egg. The eight checks do not replace the outstanding full workspace pass. Earlier browser results cover older trees and are not represented as this snapshot's proof. Browser requests use fixtures; no real payment, email, provider or database mutation.
+
+Remaining / recommended order
+1. Review #542 and the documented two test resolutions alongside #537. Keep the private scanner limiter and authentication guards.
+2. Complete exact combined-tree browser verification for Symbol, Overview, Macro, M2, Portfolio and Journal on a stable preview runtime, desktop and mobile, including manual symbol selection and missing-data states.
+3. Integrate/review Claude #539–#541 in another isolated candidate; rerun affected route tests. Migration 129 is reserved by Claude. Do not infer production retirement from draft PRs.
+4. Resolve the two existing timer type errors in separately scoped work, preserving worker behavior.
+5. Review the complete stack for release only after the outstanding browser and operational prerequisites are satisfied. Merges/deployments still require explicit authorization.
+
+Browser follow-up completed — 9 October 2026
+The prior browser gap is closed for the agreed core fixture cases: 32 Pro checks (8 entry + 4 Symbol + 20 workspace cases) and 10 Free checks pass at 1280/390. Manual AAPL-to-MSFT selection produces the expected request/URL; chart mode switching does not refetch. Overview filters, Macro/M2 populated/unavailable states, Portfolio records and Journal drawer were exercised. Free M2 never requests paid history. All checked pages return 200 with no page errors or horizontal overflow.
+Webpack still stalled on local Symbol compilation after 180 seconds. The same source compiled in approximately five seconds with Turbopack. The runner now supports an explicit MSP_BROWSER_BUNDLER=turbopack without changing application configuration. React transiently retains hidden Suspense shells; shell and summary locators now require visibility, retaining strict uniqueness for visible elements.
+Visual review found 100.0% wrapping in the public mobile Journal. A RecordsStudio.module.css rule increases its metric grid minimum to 140px below 650px, scoped to the public Journal wrapper. Desktop/mobile Journal browser recheck passes; no shared/admin component or calculation was modified.
+Evidence: outputs/combined-symbol-final, combined-workspaces-final, combined-free-final, combined-journal-polish, plus prior combined-locked-shell-browser. Gallery: outputs/MSP-combined-browser-review.html. Previous failed runs remain diagnostic evidence only. The successful workspaces JSON has complete=true; previous-run-failure.txt preserves the earlier hidden-shell locator failure.
+Latest edits after the 6,397-test run are browser harness, scoped CSS and this report. Browser checks validate those edits; the full unit suite was not repeated for CSS/docs. The two baseline timer type errors and separate #539–#541 integration review remain outstanding. This does not certify live provider, billing or email integrations.
+Recommended next task: assemble #539–#541 with this stack in an isolated candidate and verify the retired endpoint contracts and schedule removal before any release decision.

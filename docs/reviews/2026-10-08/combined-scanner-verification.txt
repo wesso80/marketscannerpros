@@ -1,0 +1,23 @@
+Combined Scanner / daily-picks verification — completed scoped run, 8 October 2026
+
+Commits: #531 73a72a28, #529 48bb48fc, #530 72ad9970. These were assembled in an isolated exported snapshot; no Git merge, deployment or production change.
+
+Result: 15 browser/server checks passed in the resumed run.
+At both 1280 and 390 widths: /tools/start, /daily-pick, /share/scan/AAPL, /tools/command-center, /tools/golden-egg?symbol=AAPL&type=equity, /tools/golden-egg?view=find, and the public /tools/scanner redirect.
+All pages returned 200, no horizontal overflow, no browser exceptions and no private-field canaries in visible text. Discovery made zero report requests and zero scan requests before the explicit scan button; after clicking it, exactly one scan request was observed. The legacy Scanner URL landed in Symbol discovery. The real local /api/scanner/bulk rejected an unauthenticated POST with 403 and private/no-store headers.
+
+Evidence boundaries:
+Real Next server and real daily-picks SQL/routes used an isolated PostgreSQL database with synthetic daily rows. Symbol's core packet, manual scan response and browser account/disclosure state were fixtures. Unrelated browser API feeds were refused and provider keys were blank. This is not verification of live provider accuracy, paid credentials, billing, production latency or deployment settings. Cookie banner remained visible in screenshots. Symbol report GETs occurred twice under the development run; discovery made none. Report charging itself was not exercised by these mocked Symbol responses.
+
+Tests from the combined snapshot: 87 passed and one image-render test failed because it rejects all fetch calls, including bundled data-URL WebAssembly. A scratch-only assertion correction permits that local data URL while rejecting external fetch URLs; its ten image tests then pass. Thus all 88 scoped cases pass with that test-harness correction. No production image changes are indicated. Patch for Claude: outputs/og-data-url-test-adjustment.patch. Full repository suite was not rerun here.
+Typecheck retains six known local dependency errors: four Stripe API version literals and two timer unref typings; no new errors observed.
+
+Compilation investigation:
+The earlier stall occurred after module compilation. Instrumented webpack hooks and output filesystem callbacks narrowed it to the output/completion phase. A fresh build directory alone still stalled; the next instrumented run completed /tools/start in 7.5 seconds and all remaining checks. Timing or local filesystem/output state may be involved, but the precise cause is unproven. Do not claim this is a production compiler fix. No diagnostic compiler changes were committed.
+
+Cleanup:
+Browser closed, synthetic database dropped, local PostgreSQL stopped, Next execution stopped. Restored scratch next.config.mjs, next-env.d.ts and tsconfig.json; removed generated scratch AGENTS.md. Existing user work and active branch code were preserved.
+
+Artifacts under outputs/combined-531-io: results.json, next.log, screenshots and runner.mjs. Earlier diagnostic attempts remain under combined-531-browser and combined-531-resume. Test logs: combined-531-tests.txt and combined-og-recheck.txt. Type log: combined-531-types.txt.
+
+Next recommended work: a consolidated release-readiness check covering signup, Free/Pro access, trial/cancellation, quotas and production-secret rotation status, using test billing and isolated data. Keep merges and deployment separate until explicitly authorized.

@@ -7,7 +7,6 @@ import type {PriceStampInput} from '@/lib/market/priceStamp';
 import {formatMarketTime} from '@/lib/market/priceStamp';
 import {pickTrust,type MarketPick} from '@/lib/market/overview';
 import {symbolJournalHref} from '@/lib/market/symbolSnapshot';
-import {ordinal} from '@/lib/utils/ordinal';
 export function SymbolSnapshotHeader({symbol,asset,timeframe,stamp,pick,rankLoading=false,rankError,quiet=false,compact=false,name}:{symbol:string;name?:string|null;asset:'crypto'|'equity';timeframe:string;stamp:PriceStampInput;pick:MarketPick|null;rankLoading?:boolean;rankError?:string|null;quiet?:boolean;compact?:boolean}){
  const ambiguousCrypto=asset==='crypto'&&/^[A-Z0-9]+USD$/i.test(symbol);
  const safeStamp=ambiguousCrypto?{...stamp,price:null,observedAt:null,latestDay:null}:stamp;
@@ -28,8 +27,8 @@ export function SymbolSnapshotHeader({symbol,asset,timeframe,stamp,pick,rankLoad
    <Link href={`/tools/workspace?${new URLSearchParams({tab:'watchlists',addSymbol:symbol,type:asset})}`}>Add to watchlist</Link>
    <Link href={`/tools/workspace?${new URLSearchParams({tab:'backtest',symbol,type:asset,timeframe})}`}>Backtest</Link>
   </div>
-  {quiet?null:rankLoading?<p>Loading daily rank…</p>:rankError?<p className="text-amber-300">Daily rank unavailable: {rankError}</p>:pick?<div>
-   <p>Daily pick: {pick.grade??'grade unavailable'} · {pick.permission??'permission unavailable'} · {pick.scorePercentile!=null?`${ordinal(pick.scorePercentile)} percentile`:'percentile unavailable'} · scan {pick.scan_date?.slice(0,10)??'date unknown'} · data as of {formatMarketTime(pick.data_as_of??pick.dataTimestamp)??'time unknown'}</p>
+  {quiet?null:rankLoading?<p>Loading daily scan…</p>:rankError?<p className="text-amber-300">Daily scan unavailable: {rankError}</p>:pick?<div>
+   <p>Daily scan: {pick.scan_date?.slice(0,10)??'date unknown'} · data as of {formatMarketTime(pick.data_as_of??pick.dataTimestamp)??'time unknown'}</p>
    <TrustBadge compact status={pickTrust(pick)} reason={pick.trust?.reasons?.join(' · ')}/>
   </div>:<p>Not in today's picks.</p>}
   <p className="text-xs text-slate-500">Research snapshot only — not a trade instruction.</p>

@@ -40,7 +40,8 @@ describe('intelligence launch: under-construction public pages', () => {
     ['app/intelligence/lead-lag/page.tsx',     'Cross-Asset Lead/Lag'],
     ['app/intelligence/nq-pressure/page.tsx',  'NQ Institutional Pressure'],
     ['app/intelligence/auction/page.tsx',      'NQ Auction'],
-    ['app/intelligence/master/page.tsx',       'Master Command Centre'],
+    // Public titles were normalised (fcf17783); the master page now redirects to /intelligence.
+    ['app/intelligence/master/page.tsx',       'Intelligence Overview'],
   ])('%s renders IntelligenceUnderConstruction with module name %s', (rel, moduleName) => {
     const src = read(rel);
     expect(src.includes('IntelligenceUnderConstruction')).toBe(true);

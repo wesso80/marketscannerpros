@@ -16,7 +16,9 @@ describe('post-remediation audit round 2 regressions', () => {
 
     expect(goldenEgg).toContain('const canonicalTerminalHref = \`/tools/terminal?symbol=\${encodeURIComponent(sym)}&type=\${quoteType ===');
     expect(goldenEgg).toContain('terminalHref={canonicalTerminalHref}');
-    expect(goldenEgg).toContain('timeframe={timeframe} assetType={quoteType ===');
+    // The new chart uses daily completed bars; selected research timeframe still travels in the Terminal URL.
+    expect(goldenEgg).toContain('&timeframe=${encodeURIComponent(timeframe)}');
+    expect(goldenEgg).toContain('<SymbolComparisonChart symbol={sym} type={snapshotAsset} />');
     expect(goldenEgg).not.toContain("navigateTo('terminal', sym)");
   });
 
@@ -43,7 +45,7 @@ describe('post-remediation audit round 2 regressions', () => {
   });
 
   it('propagates commodity freshness into Macro instead of reusing stale rows silently', () => {
-    const macro = read('app/tools/macro/page.tsx');
+    const macro = read('components/macro/MacroDashboard.tsx');
 
     expect(macro).toContain('commodityHealth');
     expect(macro).toContain("c.eligibleForGate === false");
@@ -85,6 +87,7 @@ describe('post-remediation audit round 2 regressions', () => {
     expect(valuation).toContain('Number.isFinite(cost) && cost > 0');
     expect(valuation).toContain('profitLossUsd: available ? value - cost : null');
     expect(widget).toContain('Cost basis not supplied');
-    expect(widget).toContain('Unavailable');
+    // Public wording for a missing value is "Not collected".
+    expect(widget).toContain('<p className="font-semibold text-slate-500">Not collected</p>');
   });
 });

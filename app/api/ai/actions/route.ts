@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { isOperator } from '@/lib/quant/operatorAuth';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { q } from '@/lib/db';
 import type { AIToolName, ActionStatus, AIActionResult, PageSkill } from '@/lib/ai/types';
@@ -43,6 +44,13 @@ async function ensureJournalRiskColumns() {
   await q(`ALTER TABLE IF EXISTS journal_entries ADD COLUMN IF NOT EXISTS status_reason VARCHAR(120)`);
   await q(`ALTER TABLE IF EXISTS journal_entries ADD COLUMN IF NOT EXISTS proposal_id UUID`);
   await q(`ALTER TABLE IF EXISTS journal_entries ADD COLUMN IF NOT EXISTS broker_order_id VARCHAR(120)`);
+}
+
+/** JSON parameters compared independently of key order (JSONB equality). */
+function sameParams(a: unknown, b: unknown): boolean {
+  const norm = (v: any): any => (v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, norm(v[k])])) : Array.isArray(v) ? v.map(norm) : v);
+  const parse = (v: unknown) => (typeof v === 'string' ? (() => { try { return JSON.parse(v); } catch { return v; } })() : v);
+  return JSON.stringify(norm(parse(a))) === JSON.stringify(norm(parse(b)));
 }
 
 async function resolveActionSkill(
@@ -186,6 +194,17 @@ export async function POST(req: NextRequest) {
       initiatedBy = 'user',
     } = body;
 
+    // Retired public capabilities: enforce before dry-run, replay, proposal or claim.
+    // Signed private callers keep the existing executors and confirmation policy.
+    if ((tool === 'generate_trade_plan' || tool === 'risk_position_size')
+      && session.is_admin !== true && !isOperator(session.cid, session.workspaceId)) {
+      return NextResponse.json({
+        success: false,
+        code: 'PUBLIC_TRADE_ACTION_RETIRED',
+        error: 'Trade plans and position sizing are not available through public AI actions.',
+      }, { status: 403, headers: { 'Cache-Control': 'private, no-store' } });
+    }
+
     if (!tool || !parameters || typeof parameters !== 'object') {
       return NextResponse.json({ error: 'Tool name and parameters are required' }, { status: 400 });
     }
@@ -193,6 +212,15 @@ export async function POST(req: NextRequest) {
     const policy = getToolPolicy(tool);
     if (!policy) {
       return NextResponse.json({ error: 'Unknown tool' }, { status: 400 });
+    }
+
+    // ACT-R2: a supplied responseId must belong to this workspace, checked before any proposal, claim or effect
+    // (independently of whether a skill was also supplied).
+    if (responseId) {
+      const owned = await q(`SELECT id FROM ai_responses WHERE id = $1 AND workspace_id = $2 LIMIT 1`, [responseId, session.workspaceId]);
+      if (!owned[0]?.id) {
+        return NextResponse.json({ error: 'Response not found for this workspace' }, { status: 404 });
+      }
     }
 
     const resolvedSkill = await resolveActionSkill(session.workspaceId, requestedSkill, responseId);
@@ -224,47 +252,78 @@ export async function POST(req: NextRequest) {
       sessionId
     );
 
-    let pendingActionId: string | null = actionId || null;
+    // ACT01: a dry run only simulates. It never executes a tool and writes nothing.
+    if (dryRun) {
+      const dryRunResult = await simulateAction(tool, parameters);
+      return NextResponse.json({
+        success: true,
+        idempotencyKey,
+        dryRun: true,
+        executed: false,
+        dryRunResult,
+        requiresConfirmation: policy.requiresConfirmation,
+        message: 'Dry run only; nothing was executed',
+      });
+    }
 
     const existingAction = await q(
-      `SELECT id, status, result_data, error_message
+      `SELECT id, status, result_data, error_message, action_type, action_params
        FROM ai_actions
-       WHERE workspace_id = $1 AND idempotency_key = $2 AND status IN ('executed', 'pending', 'confirmed')
+       WHERE workspace_id = $1 AND idempotency_key = $2
        ORDER BY created_at DESC
        LIMIT 1`,
       [session.workspaceId, idempotencyKey]
     );
+    const existing = existingAction[0] as { id: string; status: string; result_data: unknown; error_message: string | null; action_type: string; action_params: unknown } | undefined;
 
-    if (existingAction.length > 0) {
-      const existing = existingAction[0];
-      pendingActionId = existing.id;
-
-      if (existing.status === 'executed') {
-        return NextResponse.json({
-          success: true,
-          actionId: existing.id,
-          idempotencyKey,
-          status: existing.status as ActionStatus,
-          duplicate: true,
-          executedResult: existing.result_data,
-          error: existing.error_message,
-          message: 'Action already processed (idempotent)',
-        });
-      }
-
-      if ((existing.status === 'pending' || existing.status === 'confirmed') && !confirm && !dryRun) {
-        return NextResponse.json({
-          success: true,
-          actionId: existing.id,
-          idempotencyKey,
-          status: existing.status as ActionStatus,
-          requiresConfirmation: policy.requiresConfirmation,
-          message: 'Action already pending confirmation',
-        });
-      }
+    // ACT-R1: an idempotency key (and any actionId) identifies one action. Reusing it for a different tool or
+    // parameters, or pairing it with another action's id, is rejected before any cached result, claim or retry.
+    if (existing && (existing.action_type !== tool || !sameParams(existing.action_params, parameters))) {
+      return NextResponse.json({ success: false, idempotencyKey, error: 'Idempotency key already used for a different action' }, { status: 409 });
+    }
+    if (actionId && (!existing || String(existing.id) !== String(actionId))) {
+      return NextResponse.json({ success: false, idempotencyKey, error: 'actionId does not match the action for this idempotency key' }, { status: 409 });
+    }
+    // ACT-R3: terminal states are not reused. A cancelled proposal is not revived and a failed attempt is not replayed
+    // under the same key (it may have had partial effects); a new attempt needs a new idempotency key.
+    if (existing?.status === 'cancelled' || existing?.status === 'failed') {
+      return NextResponse.json({
+        success: false, actionId: existing.id, idempotencyKey, status: existing.status as ActionStatus,
+        error: existing.status === 'cancelled' ? 'This proposal was cancelled; propose again with a new idempotency key' : 'This action failed; retry with a new idempotency key after checking for partial effects',
+      }, { status: 409 });
+    }
+    // ACT-R3: confirmed without a recorded outcome = execution started but was interrupted. Not re-run automatically.
+    if (existing?.status === 'confirmed') {
+      return NextResponse.json({
+        success: false, actionId: existing.id, idempotencyKey, status: 'confirmed' as ActionStatus, outcome: 'unknown',
+        error: 'Execution is in progress, or was interrupted before its outcome was recorded; check the target record before retrying with a new idempotency key',
+      }, { status: 409 });
     }
 
-    if (!dryRun && !confirm && policy.sideEffect === 'read' && isToolCacheable(tool)) {
+    if (existing?.status === 'executed') {
+      return NextResponse.json({
+        success: true,
+        actionId: existing.id,
+        idempotencyKey,
+        status: existing.status as ActionStatus,
+        duplicate: true,
+        executedResult: existing.result_data,
+        error: existing.error_message,
+        message: 'Action already processed (idempotent)',
+      });
+    }
+    if (existing?.status === 'pending' && !confirm) {
+      return NextResponse.json({
+        success: true,
+        actionId: existing.id,
+        idempotencyKey,
+        status: existing.status as ActionStatus,
+        requiresConfirmation: policy.requiresConfirmation,
+        message: 'Action already pending confirmation',
+      });
+    }
+
+    if (!confirm && policy.sideEffect === 'read' && isToolCacheable(tool)) {
       const ttlSeconds = getToolCacheTTL(tool);
       if (ttlSeconds > 0) {
         const cachedRows = await q(
@@ -309,18 +368,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (policy.requiresConfirmation && !dryRun && !confirm) {
+    // A tool that needs confirmation and was not confirmed: record the proposal and stop.
+    if (policy.requiresConfirmation && !confirm) {
       const dryRunResult = await simulateAction(tool, parameters);
-
       const pendingInsert = await q(
         `INSERT INTO ai_actions
          (workspace_id, response_id, action_type, action_params, idempotency_key, initiated_by,
           status, dry_run, dry_run_result, required_confirmation, user_confirmed, tool_cost_level, execution_time_ms)
          VALUES ($1, $2, $3, $4, $5, $6, 'pending', true, $7, true, false, $8, $9)
-         ON CONFLICT (workspace_id, idempotency_key)
-         DO UPDATE SET
-           status = CASE WHEN ai_actions.status = 'executed' THEN ai_actions.status ELSE 'pending' END,
-           dry_run_result = EXCLUDED.dry_run_result
+         ON CONFLICT (workspace_id, idempotency_key) WHERE idempotency_key IS NOT NULL
+         DO UPDATE SET dry_run_result = EXCLUDED.dry_run_result
+         WHERE ai_actions.status = 'pending'
          RETURNING id, status`,
         [
           session.workspaceId,
@@ -335,6 +393,10 @@ export async function POST(req: NextRequest) {
         ]
       );
 
+      // A concurrent request moved the row out of 'pending' between the lookup and this upsert.
+      if (!pendingInsert[0]?.id) {
+        return NextResponse.json({ success: false, idempotencyKey, error: 'Action state changed; reload its status' }, { status: 409 });
+      }
       return NextResponse.json({
         success: true,
         actionId: pendingInsert[0]?.id,
@@ -347,109 +409,116 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (confirm && policy.requiresConfirmation && pendingActionId) {
-      await q(
+    // Recovery policy (ACT-R3). The claim makes the ROUTE run an action at most once per key; it does not make the
+    // business effect exactly-once. An executor error is recorded as 'failed' (terminal: it may have had partial
+    // effects, so it is not replayed). A crash after the effect but before the outcome is written leaves 'confirmed',
+    // reported as "outcome unknown" and not re-run. In both cases the reader checks the target record and retries
+    // with a new idempotency key. Durable downstream idempotency is not provided by this route.
+    // ACT02 + ACT03: claim exactly one row atomically before executing. Only the request whose UPDATE/INSERT returns the
+    // row executes; a concurrent or repeated request finds it already claimed. A confirmation must match a pending
+    // proposal in this workspace with the same tool and parameters, and the stored parameters are what runs.
+    let claimedId: string;
+    let execParams: Record<string, unknown> = parameters;
+    if (policy.requiresConfirmation) {
+      const claimed = await q(
         `UPDATE ai_actions
          SET status = 'confirmed', user_confirmed = true, confirmed_at = NOW()
-         WHERE id = $1 AND workspace_id = $2`,
-        [pendingActionId, session.workspaceId]
+         WHERE workspace_id = $1
+           AND status = 'pending'
+           AND action_type = $2
+           AND action_params = $3::jsonb
+           AND idempotency_key = $5
+           AND ($4::text IS NULL OR id::text = $4::text)
+         RETURNING id, action_params`,
+        [session.workspaceId, tool, JSON.stringify(parameters), actionId || null, idempotencyKey]
       );
+      if (!claimed[0]?.id) {
+        return NextResponse.json({
+          success: false,
+          idempotencyKey,
+          error: existing?.status === 'confirmed' ? 'Action is already being executed' : 'No matching pending proposal to confirm',
+        }, { status: 409 });
+      }
+      claimedId = claimed[0].id;
+      execParams = (claimed[0].action_params ?? parameters) as Record<string, unknown>;
+    } else {
+      const inserted = await q(
+        `INSERT INTO ai_actions
+         (workspace_id, response_id, action_type, action_params, idempotency_key, initiated_by,
+          status, required_confirmation, user_confirmed, confirmed_at, tool_cost_level)
+         VALUES ($1, $2, $3, $4, $5, $6, 'confirmed', false, true, NOW(), $7)
+         ON CONFLICT (workspace_id, idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING
+         RETURNING id`,
+        [session.workspaceId, responseId || null, tool, JSON.stringify(parameters), idempotencyKey, initiatedBy, policy.costLevel]
+      );
+      if (!inserted[0]?.id) {
+        return NextResponse.json({ success: false, idempotencyKey, error: 'Action is already being executed' }, { status: 409 });
+      }
+      claimedId = inserted[0].id;
     }
 
-    // Execute the action
+    // Execute the action (once, for the claimed row)
     let result: { success: boolean; data?: unknown; error?: string };
-
-    switch (tool) {
-      case 'create_alert':
-        result = await executeCreateAlert(session.workspaceId, parameters);
-        break;
-      case 'add_to_watchlist':
-        result = await executeAddToWatchlist(session.workspaceId, parameters);
-        break;
-      case 'remove_from_watchlist':
-        result = await executeRemoveFromWatchlist(session.workspaceId, parameters);
-        break;
-      case 'journal_trade':
-        result = await executeJournalTrade(session.workspaceId, parameters);
-        break;
-      case 'risk_position_size':
-        result = executePositionSize(parameters);
-        break;
-      case 'generate_trade_plan':
-        result = generateTradePlan(parameters);
-        break;
-      default:
-        result = { success: false, error: 'Unknown tool' };
+    try {
+      switch (tool) {
+        case 'create_alert':
+          result = await executeCreateAlert(session.workspaceId, execParams);
+          break;
+        case 'add_to_watchlist':
+          result = await executeAddToWatchlist(session.workspaceId, execParams);
+          break;
+        case 'remove_from_watchlist':
+          result = await executeRemoveFromWatchlist(session.workspaceId, execParams);
+          break;
+        case 'journal_trade':
+          result = await executeJournalTrade(session.workspaceId, execParams);
+          break;
+        case 'risk_position_size':
+          result = executePositionSize(execParams);
+          break;
+        case 'generate_trade_plan':
+          result = generateTradePlan(execParams);
+          break;
+        default:
+          result = { success: false, error: 'Unknown tool' };
+      }
+    } catch (error) {
+      result = { success: false, error: error instanceof Error ? error.message : 'Execution failed' };
     }
 
     const executionTime = Date.now() - startTime;
     const status: ActionStatus = result.success ? 'executed' : 'failed';
 
-    let finalActionId: string | null = pendingActionId;
+    const updated = await q(
+      `UPDATE ai_actions
+       SET success = $3,
+           status = $4,
+           result_data = $5,
+           error_message = $6,
+           error_code = $7,
+           tool_cost_level = $8,
+           execution_time_ms = $9
+       WHERE id = $1 AND workspace_id = $2
+       RETURNING id`,
+      [
+        claimedId,
+        session.workspaceId,
+        result.success,
+        status,
+        JSON.stringify(result.data || {}),
+        result.error || null,
+        result.success ? null : 'EXECUTION_ERROR',
+        policy.costLevel,
+        executionTime,
+      ]
+    );
+    const finalActionId: string | null = updated[0]?.id || claimedId;
 
-    if (pendingActionId) {
-      const updated = await q(
-        `UPDATE ai_actions
-         SET success = $3,
-             status = $4,
-             result_data = $5,
-             error_message = $6,
-             error_code = $7,
-             required_confirmation = $8,
-             tool_cost_level = $9,
-             execution_time_ms = $10,
-             user_confirmed = CASE WHEN $8 THEN true ELSE user_confirmed END,
-             confirmed_at = CASE WHEN $8 THEN COALESCE(confirmed_at, NOW()) ELSE confirmed_at END
-         WHERE id = $1 AND workspace_id = $2
-         RETURNING id`,
-        [
-          pendingActionId,
-          session.workspaceId,
-          result.success,
-          status,
-          JSON.stringify(result.data || {}),
-          result.error || null,
-          result.success ? null : 'EXECUTION_ERROR',
-          policy.requiresConfirmation,
-          policy.costLevel,
-          executionTime,
-        ]
-      );
-      finalActionId = updated[0]?.id || pendingActionId;
-    } else {
-      const actionResult = await q(
-        `INSERT INTO ai_actions 
-         (workspace_id, response_id, action_type, action_params, idempotency_key, initiated_by,
-          success, status, result_data, error_message, error_code,
-          user_confirmed, confirmed_at, required_confirmation, tool_cost_level, execution_time_ms)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CASE WHEN $12 THEN NOW() ELSE NULL END, $13, $14, $15)
-         RETURNING id`,
-        [
-          session.workspaceId,
-          responseId || null,
-          tool,
-          JSON.stringify(parameters),
-          idempotencyKey,
-          initiatedBy,
-          result.success,
-          status,
-          JSON.stringify(result.data || {}),
-          result.error || null,
-          result.success ? null : 'EXECUTION_ERROR',
-          confirm || !policy.requiresConfirmation,
-          policy.requiresConfirmation,
-          policy.costLevel,
-          executionTime,
-        ]
-      );
-      finalActionId = actionResult[0]?.id || null;
-    }
-
-    // Update response record if action was taken
+    // ACT04: only this workspace's response can be marked as acted upon.
     if (responseId && result.success) {
       await q(
-        `UPDATE ai_responses SET user_took_action = true, action_type = $2 WHERE id = $1`,
-        [responseId, tool]
+        `UPDATE ai_responses SET user_took_action = true, action_type = $2 WHERE id = $1 AND workspace_id = $3`,
+        [responseId, tool, session.workspaceId]
       );
     }
 
@@ -514,6 +583,15 @@ export async function GET(req: NextRequest) {
 
     if (result.length === 0) {
       return NextResponse.json({ error: 'Action not found' }, { status: 404 });
+    }
+
+    if ((result[0].action_type === 'generate_trade_plan' || result[0].action_type === 'risk_position_size')
+      && session.is_admin !== true && !isOperator(session.cid, session.workspaceId)) {
+      return NextResponse.json({
+        success: false,
+        code: 'PUBLIC_TRADE_ACTION_RETIRED',
+        error: 'Trade plans and position sizing are not available through public AI actions.',
+      }, { status: 403, headers: { 'Cache-Control': 'private, no-store' } });
     }
 
     return NextResponse.json({ success: true, action: result[0] });

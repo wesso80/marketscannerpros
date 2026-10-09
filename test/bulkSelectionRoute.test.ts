@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const mocks = vi.hoisted(() => ({ marketData: vi.fn(), series: vi.fn(), tier: vi.fn(), query: vi.fn() }));
+const mocks = vi.hoisted(() => ({ admin: true, marketData: vi.fn(), series: vi.fn(), tier: vi.fn(), query: vi.fn() }));
+vi.mock('@/lib/adminAuth', () => ({ requireAdmin: async () => ({ ok: mocks.admin }) }));
 vi.mock('@/lib/auth', () => ({ getSessionFromCookie: async () => ({ workspaceId: 'test-workspace', tier: 'pro' }) }));
 vi.mock('@/lib/entitlements', () => ({ getEffectiveTier: mocks.tier }));
 vi.mock('@/lib/adaptiveTrader', () => ({ getAdaptiveLayer: async () => null }));
@@ -28,9 +29,10 @@ function syntheticSeries(symbol: string, coinId: string) {
   return { symbol, bars, barInterval: '1d', lastCompletedBarAt: bars[bars.length - 1].t, volumeBasis: 'market_chart_24h', coinId };
 }
 
-describe('bulk scanner (Pro crypto is Deep-only)', () => {
+describe('retained admin bulk scanner (crypto is Deep-only)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.admin = true;
     mocks.tier.mockResolvedValue('pro');
     mocks.query.mockResolvedValue([{ symbol: 'AAA' }, { symbol: 'BBB' }, { symbol: 'CCC' }]);
     mocks.marketData.mockResolvedValue([]);
@@ -89,4 +91,26 @@ describe('bulk scanner (Pro crypto is Deep-only)', () => {
     expect(res.status).toBe(403);
     expect(mocks.series).not.toHaveBeenCalled();
   });
+});
+
+it('refuses a paid app session without verified admin access before any scan work', async () => {
+  vi.clearAllMocks(); mocks.admin = false;
+  const response = await POST(request({ type: 'crypto', mode: 'deep', internal: true }));
+  expect(response.status).toBe(403);
+  expect(response.headers.get('cache-control')).toContain('private, no-store');
+  expect(await response.json()).toEqual({ error: 'This scanner is restricted to administrators.', replacement: '/tools/golden-egg?view=find' });
+  expect(mocks.query).not.toHaveBeenCalled();
+  expect(mocks.series).not.toHaveBeenCalled();
+  expect(mocks.marketData).not.toHaveBeenCalled();
+});
+
+it('fails closed when authorization is unavailable', async () => {
+  const { adminBulkHandler } = await import('@/lib/scanner/adminBulkBoundary');
+  const run = vi.fn();
+  const handler = adminBulkHandler(async () => { throw new Error('private auth detail'); }, run);
+  const response = await handler(request({ type: 'crypto' }));
+  expect(response.status).toBe(503);
+  expect(response.headers.get('cache-control')).toContain('no-store');
+  expect(await response.text()).not.toContain('private auth detail');
+  expect(run).not.toHaveBeenCalled();
 });

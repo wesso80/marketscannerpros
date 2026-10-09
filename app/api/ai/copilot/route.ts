@@ -1,3 +1,5 @@
+import { withPublicAiQuota, publicAiScope, markPublicAiProviderStarted } from '@/lib/publicAiQuota';
+import { routeCopilotRequest } from '@/lib/ai/copilotAccess';
 // =====================================================
 // MSP AI COPILOT API - Main AI chat endpoint with tools
 // POST /api/ai/copilot
@@ -25,9 +27,7 @@ import { computeSessionPhaseOverlay } from '@/lib/ai/sessionPhase';
 import { AI_MODEL_BY_TIER, normalizeTier, getDailyAiLimit } from '@/lib/entitlements';
 import { getVerifiedTier } from '@/lib/apiMiddleware';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+
 
 // Check daily usage against canonical tier limit (database-backed)
 async function checkTierQuota(workspaceId: string, tier: string): Promise<{
@@ -81,7 +81,9 @@ async function logAIUsage(
   }
 }
 
-export async function POST(req: NextRequest) {
+// Kept intact for verified admin/operator access only; see routeCopilotRequest.
+async function handleLegacyPost(req: NextRequest) {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const startTime = Date.now();
   
   try {
@@ -91,10 +93,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify tier from DB (cached 5min) instead of trusting cookie alone
-    const tier = normalizeTier(await getVerifiedTier(session)) as 'free' | 'pro' | 'pro_trader';
+    const tier = publicAiScope()?.plan ?? normalizeTier(await getVerifiedTier(session)) as 'free' | 'pro' | 'pro_trader';
 
     // Check daily quota against tier limit (database-backed)
-    const quota = await checkTierQuota(session.workspaceId, tier);
+    const quota = publicAiScope() ? {allowed:true,usageCount:0,dailyLimit:0} : await checkTierQuota(session.workspaceId, tier);
     if (!quota.allowed) {
       const upgradeMsg = tier === 'free' 
         ? 'Upgrade to Pro for 50/day with GPT-4.1.' 
@@ -373,6 +375,7 @@ Effective Throttle: ${perfAdjusted.throttle.toFixed(3)}`,
     const aiModel = AI_MODEL_BY_TIER[normalizeTier(tier)] || 'gpt-4o-mini';
 
     // Call OpenAI
+    markPublicAiProviderStarted();
     const completion = await openai.chat.completions.create({
       model: aiModel,
       messages,
@@ -615,3 +618,5 @@ function formatToolLabel(toolName: string, params: Record<string, unknown>): str
       return toolName.replace(/_/g, ' ');
   }
 }
+
+export const POST = withPublicAiQuota(req => routeCopilotRequest(req, handleLegacyPost), 'ai/copilot');

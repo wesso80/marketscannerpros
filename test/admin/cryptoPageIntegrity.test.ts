@@ -206,7 +206,7 @@ describe("price display helpers", () => {
     expect(formatUsdPrice(undefined)).toBeNull();
     const overview = src("app/tools/command-center/page.tsx");
     expect(overview).toContain("quoteStamp(symbol, asset, quotes.data?.quotes?.[symbol])");
-    expect(overview).toContain("<PriceStamp {...reading} />");
+    expect(overview).toContain("<PriceStamp plain {...reading} />");
   });
 });
 

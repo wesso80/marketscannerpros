@@ -1,7 +1,7 @@
 'use client';
 import { volatilityText } from '../displayText';
 
-import type { StateTransition, ExhaustionRisk, DVEFlag, VolatilityState, PhasePersistence, VolRegime, RateDirection } from '@/src/features/volatilityEngine/types';
+import type { PublicStretch, PublicVolatility as VolatilityState, PublicPhase as PhasePersistence, VolRegime } from '@/src/features/volatilityEngine/types';
 
 function regimeColor(regime: string): string {
   switch (regime) {
@@ -12,20 +12,6 @@ function regimeColor(regime: string): string {
     default: return 'var(--msp-text-muted)';
   }
 }
-
-const FLAG_CFG: Record<string, { bg: string; text: string }> = {
-  BREAKOUT_WATCH: { bg: 'bg-amber-500/15', text: 'text-amber-400' },
-  EXPANSION_UP: { bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
-  EXPANSION_DOWN: { bg: 'bg-red-500/15', text: 'text-red-400' },
-  TRAP_CANDIDATE: { bg: 'bg-amber-500/10', text: 'text-amber-400' },
-  TRAP_DETECTED: { bg: 'bg-red-500/20', text: 'text-red-300' },
-  CLIMAX_WARNING: { bg: 'bg-red-500/15', text: 'text-red-400' },
-  COMPRESSION_EXTREME: { bg: 'bg-slate-500/15', text: 'text-slate-400' },
-  CONTRACTION_EXIT_RISK: { bg: 'bg-amber-500/15', text: 'text-amber-400' },
-  EXPANSION_EXIT_RISK: { bg: 'bg-red-500/15', text: 'text-red-400' },
-  SIGNAL_UP: { bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
-  SIGNAL_DOWN: { bg: 'bg-red-500/15', text: 'text-red-400' },
-};
 
 // Regime phase positions on the timeline (0-100)
 const REGIME_POS: Record<string, number> = {
@@ -38,73 +24,29 @@ const REGIME_POS: Record<string, number> = {
 
 const REGIMES_ORDER: VolRegime[] = ['compression', 'neutral', 'transition', 'expansion', 'climax'];
 
-// Compute all possible next-regime probabilities from current state
-function computeRegimeForecast(current: VolRegime, rateDir: RateDirection, bbwp: number): { regime: VolRegime; probability: number }[] {
-  const forecast: { regime: VolRegime; probability: number }[] = [];
-
-  if (current === 'compression') {
-    const exitProb = rateDir === 'accelerating' ? 65 : rateDir === 'flat' ? 20 : 10;
-    forecast.push({ regime: 'compression', probability: 100 - exitProb });
-    forecast.push({ regime: 'transition', probability: exitProb * 0.7 });
-    forecast.push({ regime: 'expansion', probability: exitProb * 0.3 });
-  } else if (current === 'neutral') {
-    const toCompression = rateDir === 'decelerating' ? 45 : 20;
-    const toExpansion = rateDir === 'accelerating' ? 40 : 15;
-    forecast.push({ regime: 'compression', probability: toCompression });
-    forecast.push({ regime: 'neutral', probability: Math.max(0, 100 - toCompression - toExpansion - 10) });
-    forecast.push({ regime: 'transition', probability: 10 });
-    forecast.push({ regime: 'expansion', probability: toExpansion });
-  } else if (current === 'transition') {
-    const toExpansion = rateDir === 'accelerating' ? 55 : 25;
-    const toCompression = rateDir === 'decelerating' ? 40 : 15;
-    forecast.push({ regime: 'compression', probability: toCompression });
-    forecast.push({ regime: 'transition', probability: Math.max(0, 100 - toExpansion - toCompression) });
-    forecast.push({ regime: 'expansion', probability: toExpansion });
-  } else if (current === 'expansion') {
-    const toClimax = rateDir === 'accelerating' && bbwp > 75 ? 50 : rateDir === 'accelerating' ? 30 : 10;
-    const toTransition = rateDir === 'decelerating' ? 35 : 15;
-    forecast.push({ regime: 'expansion', probability: Math.max(0, 100 - toClimax - toTransition) });
-    forecast.push({ regime: 'climax', probability: toClimax });
-    forecast.push({ regime: 'transition', probability: toTransition });
-  } else if (current === 'climax') {
-    const toExpansion = rateDir === 'decelerating' ? 50 : 30;
-    const toClimax = rateDir === 'accelerating' ? 40 : 20;
-    forecast.push({ regime: 'climax', probability: toClimax });
-    forecast.push({ regime: 'expansion', probability: toExpansion });
-    forecast.push({ regime: 'transition', probability: Math.max(0, 100 - toClimax - toExpansion) });
-  }
-
-  return forecast.filter(f => f.probability > 0).sort((a, b) => b.probability - a.probability);
-}
-
+/**
+ * Current regime and the rate observation behind it (W3). No next-regime guess, flags or exhaustion label; stretch
+ * observations are listed as measured. When BBWP is not available there is no regime to place on the timeline.
+ */
 export default function VERegimeTimeline({
-  transition,
-  exhaustion,
-  flags,
+  regime,
+  stretch,
   summary,
-  volatility,
   phase,
 }: {
-  transition: StateTransition;
-  exhaustion: ExhaustionRisk;
-  flags: DVEFlag[];
+  regime: { current: VolRegime | null; observation: string };
+  stretch: PublicStretch;
   summary: string;
   volatility?: VolatilityState;
-  phase?: PhasePersistence;
+  phase?: PhasePersistence | null;
 }) {
-  const currentRegime = transition.from;
-  const currentPos = REGIME_POS[currentRegime] ?? 50;
-
-  // Compute regime forecast
-  const forecast = volatility
-    ? computeRegimeForecast(currentRegime, volatility.rateDirection, volatility.bbwp)
-    : [];
+  const currentRegime = regime.current;
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-5">
       <div className="mb-4 flex items-center gap-2">
         <h3 className="text-xs font-semibold tracking-widest text-amber-400">
-          Regime &amp; Outlook
+          Regime context
         </h3>
       </div>
 
@@ -142,15 +84,6 @@ export default function VERegimeTimeline({
                 </div>
               );
             })}
-            {/* Transition arrow */}
-            {transition.from !== transition.to && (
-              <div
-                className="absolute top-1/2 -translate-y-1/2 text-white/40 text-[0.7rem]"
-                style={{ left: `${((REGIME_POS[transition.from] + REGIME_POS[transition.to]) / 2)}%`, transform: 'translate(-50%, -50%)' }}
-              >
-                →
-              </div>
-            )}
           </div>
           {/* Labels below */}
           <div className="relative mt-1.5">
@@ -166,93 +99,38 @@ export default function VERegimeTimeline({
           </div>
         </div>
 
-        {/* Event markers */}
+        {/* Phase length markers: measured percentiles, not "extended" verdicts. */}
         <div className="mt-5 flex flex-wrap gap-2">
-          {flags.includes('TRAP_DETECTED') && (
-            <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-bold text-red-300">Trap Detected</span>
-          )}
-          {exhaustion.level >= 60 && (
-            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-300">Exhaustion Risk</span>
-          )}
-          {flags.includes('BREAKOUT_WATCH') && (
-            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold text-emerald-300">Breakout Watch</span>
-          )}
           {phase?.contraction.active && phase.contraction.stats.agePercentile > 80 && (
-            <span className="rounded-full bg-slate-500/15 px-2 py-0.5 text-[11px] font-bold text-slate-300">Extended Compression</span>
+            <span className="rounded-full bg-slate-500/15 px-2 py-0.5 text-[11px] font-bold text-slate-300">Contraction longer than {Math.round(phase.contraction.stats.agePercentile)}% of past ones</span>
           )}
           {phase?.expansion.active && phase.expansion.stats.agePercentile > 80 && (
-            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-300">Extended Expansion</span>
+            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-300">Expansion longer than {Math.round(phase.expansion.stats.agePercentile)}% of past ones</span>
           )}
         </div>
       </div>
 
-      {/* Transition */}
+      {/* Current regime and the rate observation; no next-regime guess or "weights" (Phase 4, W3). */}
       <div className="mb-4 flex items-center gap-3">
-        <span className="rounded-full px-3 py-1 text-[0.75rem] font-bold" style={{ background: regimeColor(transition.from) + '30', color: regimeColor(transition.from) }}>
-          {transition.from}
-        </span>
-        <span className="text-white/30">→</span>
-        <span className="rounded-full px-3 py-1 text-[0.75rem] font-bold" style={{ background: regimeColor(transition.to) + '30', color: regimeColor(transition.to) }}>
-          {transition.to}
-        </span>
-        <span className="text-[0.7rem] text-white/40">{transition.probability.toFixed(0)}/100 weight</span>
-      </div>
-      {transition.trigger && (
-        <p className="mb-3 text-[0.7rem] text-white/40">Trigger: {volatilityText(transition.trigger)}</p>
-      )}
-
-      {/* ── Next regime weights · heuristic Forecast ── */}
-      {forecast.length > 0 && (
-        <div className="mb-4 rounded-lg border border-white/10 bg-white/[0.03] p-3">
-          <div className="text-[0.65rem] text-white/40 mb-2">Next regime weights · heuristic</div>
-          <div className="space-y-1.5">
-            {forecast.map((f) => {
-              const c = regimeColor(f.regime);
-              return (
-                <div key={f.regime} className="flex items-center gap-2">
-                  <span className="w-20 text-[0.65rem] font-bold" style={{ color: c }}>{f.regime}</span>
-                  <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${f.probability}%`, background: c }} />
-                  </div>
-                  <span className="w-10 text-right text-[0.65rem] font-bold" style={{ color: c }}>{f.probability.toFixed(0)}%</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Exhaustion */}
-      <div className="mb-4 flex items-center gap-3">
-        <span className="text-[0.72rem] text-white/50">Exhaustion:</span>
-        <span className={`text-sm font-bold ${exhaustion.level >= 70 ? 'text-red-400' : exhaustion.level >= 40 ? 'text-amber-400' : 'text-emerald-400'}`}>
-          {exhaustion.level.toFixed(0)}/100 ({volatilityText(exhaustion.label)})
+        <span className="rounded-full px-3 py-1 text-[0.75rem] font-bold" style={{ background: regimeColor(regime.current ?? '') + '30', color: regimeColor(regime.current ?? '') }}>
+          {regime.current ? volatilityText(regime.current) : 'Regime not available (BBWP not available)'}
         </span>
       </div>
-      {exhaustion.signals.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-1">
-          {exhaustion.signals.map((s, i) => (
-            <span key={i} className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[0.7rem] text-white/40">{volatilityText(s)}</span>
-          ))}
-        </div>
+      {regime.observation && (
+        <p className="mb-3 text-[0.7rem] text-white/40">Observed: {volatilityText(regime.observation)}</p>
       )}
 
-      {/* Flags */}
-      {flags.length > 0 && (
-        <div className="mb-4">
-          <div className="mb-1.5 text-[11px] text-white/40">Active Flags</div>
-          <div className="flex flex-wrap gap-1.5">
-            {flags.map((f) => {
-              const c = FLAG_CFG[f] || { bg: 'bg-white/10', text: 'text-white/60' };
-              return (
-                <span key={f} className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-bold ${c.bg} ${c.text}`}>
-                  {volatilityText(f)}
-                </span>
-              );
-            })}
+      {/* Stretch observations: measured threshold crossings, without the engine's points or LOW…EXTREME label. */}
+      <div className="mb-4">
+        <div className="mb-1.5 text-[0.72rem] text-white/50">Stretch observations</div>
+        {stretch.observations.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {stretch.observations.map((s) => (
+              <span key={s} className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[0.7rem] text-white/40">{volatilityText(s)}</span>
+            ))}
           </div>
-        </div>
-      )}
+        ) : <p className="text-[0.7rem] text-white/40">None recorded.</p>}
+      </div>
 
       {/* Summary */}
       <div className="rounded-lg border border-white/10 bg-white/5 p-3">

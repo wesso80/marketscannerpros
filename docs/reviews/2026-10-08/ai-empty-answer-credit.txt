@@ -1,0 +1,12 @@
+AI answer credit fix — 8 October 2026
+
+Base: codex/public-quota-callers at ac6a18b4 (PR #496).
+Remote research-page-phase4 checked at 6174ed6b. No shared Symbol page edits.
+
+Successful public AI responses now require caller-specific visible answer text before completing the daily question reservation. Copilot requires content, analyst requires text, explain requires explanation and whyItMatters with an optional string insight, and analyst-context requires at least one nonblank section with all supplied sections string/null. Metadata or tool proposals alone do not count as an answer. This is shape validation, not a guarantee of factual quality or a replacement for the remaining public wording boundary work.
+
+Fully received empty/malformed responses return unavailable and release the reservation. A failed release never promises a refund. Interrupted reads/provider calls retain the pending reservation. Invalid historical replays return unavailable without another provider call or rewriting historical usage. Existing completed empty answers are not retroactively refunded.
+
+Validation: 41 tests pass across publicAiQuota, publicQuotaRoute, publicQuotaAccess, publicVisitor and publicUsageSummary. Of those, 28 cover the AI wrapper. git diff --check passes. TypeScript still reports the six previously recorded baseline errors: four Stripe API version literals and two timer unref types; none in changed files. Mocked calls only; no provider, production database or billing requests.
+
+Rollout remains disabled. No merges/deployments. Release blockers from PR #497 remain, except the fresh-response empty-answer handling addressed here. Next: coordinate Symbol report access and chart integration with Claude; resolve guest provider rights before enabling anonymous equity data.

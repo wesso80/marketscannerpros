@@ -1,7 +1,9 @@
 'use client';
 
-import type { SignalProjection, VolatilityState, PhasePersistence } from '@/src/features/volatilityEngine/types';
+import type { PublicProjection as SignalProjection, PublicVolatility as VolatilityState, PublicPhase as PhasePersistence } from '@/src/features/volatilityEngine/types';
 import { volatilityBadgeLabel } from '@/lib/presentation/volatilityLayerLabel';
+import { projectionStudy } from '@/lib/research/volatilityDescriptions';
+import { PROJECTION } from '@/lib/directionalVolatilityEngine.constants';
 
 interface ProjectionCardProps {
   proj: SignalProjection;
@@ -10,162 +12,42 @@ interface ProjectionCardProps {
   currentPrice?: number;
 }
 
-function qualityTone(quality?: SignalProjection['projectionQuality']): string {
-  if (quality === 'high') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200';
-  if (quality === 'medium') return 'border-amber-500/30 bg-amber-500/10 text-amber-200';
-  if (quality === 'low') return 'border-rose-500/30 bg-rose-500/10 text-rose-200';
-  return 'border-white/10 bg-white/5 text-white/50';
-}
-
-function qualityLabel(quality?: SignalProjection['projectionQuality']): string {
-  if (quality === 'high') return 'High quality';
-  if (quality === 'medium') return 'Medium quality';
-  if (quality === 'low') return 'Low quality';
-  return 'Not collected';
-}
-
-export default function VEProjectionCard({ proj, volatility, phase, currentPrice }: ProjectionCardProps) {
+/**
+ * Phase 4. Without a signal: the size of a typical daily range (1 ATR), not upside / downside targets, and never a
+ * range invented from BBWP. With a signal: the engine's past-case study, described with its sample and limits, instead
+ * of a "hit rate" and a quality score.
+ */
+export default function VEProjectionCard({ proj, volatility, currentPrice }: ProjectionCardProps) {
+  const header = (
+    <div className="mb-3 flex min-w-0 flex-wrap items-center gap-2">
+      <span className="shrink-0 whitespace-nowrap rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.62rem] font-semibold text-amber-300">{volatilityBadgeLabel('PROJ')}</span>
+      <h3 className="text-xs font-semibold tracking-widest text-amber-400">{proj.signalType === 'none' ? 'Daily range size' : 'Past-case study'}</h3>
+    </div>
+  );
   if (proj.signalType === 'none') {
-    // Show expected move range bands based on current volatility when no signal
-    const hasVolData = volatility && currentPrice && currentPrice > 0;
     const atr = volatility?.atr;
-    const bbwp = volatility?.bbwp ?? 50;
-
-    // Estimate expected move from ATR or BBWP-implied volatility
-    let expectedPct = 0;
-    if (atr && currentPrice && currentPrice > 0) {
-      expectedPct = (atr / currentPrice) * 100;
-    } else {
-      // Fallback: BBWP-implied estimate (low bbwp = low expected, high bbwp = high expected)
-      expectedPct = 0.5 + (bbwp / 100) * 3.5; // 0.5% to 4% range
-    }
-
-    const upTarget = hasVolData ? currentPrice! * (1 + expectedPct / 100) : 0;
-    const downTarget = hasVolData ? currentPrice! * (1 - expectedPct / 100) : 0;
-    const upExtended = hasVolData ? currentPrice! * (1 + (expectedPct * 1.5) / 100) : 0;
-    const downExtended = hasVolData ? currentPrice! * (1 - (expectedPct * 1.5) / 100) : 0;
-
-    // Phase context
-    const activePhase = phase?.contraction.active ? 'contraction' : phase?.expansion.active ? 'expansion' : null;
-    const exitProb = activePhase === 'contraction' ? phase?.contraction.exitProbability : activePhase === 'expansion' ? phase?.expansion.exitProbability : null;
-
+    const pct = atr && currentPrice && currentPrice > 0 ? (atr / currentPrice) * 100 : null;
     return (
-      <div className="rounded-xl border border-white/10 bg-white/5 p-5">
-        <div className="mb-3 flex min-w-0 flex-wrap items-center gap-2">
-          <span className="shrink-0 whitespace-nowrap rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.62rem] font-semibold text-amber-300">{volatilityBadgeLabel('PROJ')}</span>
-          <h3 className="text-xs font-semibold tracking-widest text-amber-400">
-            Outcome Projection
-          </h3>
-        </div>
-        {hasVolData ? (
-          <div className="space-y-4">
-            <p className="text-[0.7rem] text-white/40">No active signal — showing expected move range based on current volatility</p>
-
-            {/* Expected range bands */}
-            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-              <div className="mb-2 text-[11px] text-white/40">Model range ({atr ? '1 ATR' : 'BBWP-based estimate'})</div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="text-center">
-                  <div className="text-[11px] text-red-400/60">Downside</div>
-                  <div className="text-sm font-bold text-red-400">${downTarget.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                  <div className="text-[0.55rem] text-white/25">-{expectedPct.toFixed(1)}%</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-[11px] text-emerald-400/60">Upside</div>
-                  <div className="text-sm font-bold text-emerald-400">${upTarget.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                  <div className="text-[0.55rem] text-white/25">+{expectedPct.toFixed(1)}%</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-              <div className="mb-2 text-[11px] text-white/40">Extended range ({atr ? '1.5× ATR' : '1.5× BBWP-based estimate'})</div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="text-center">
-                  <div className="text-[11px] text-red-400/40">Downside</div>
-                  <div className="text-sm font-bold text-red-400/70">${downExtended.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                  <div className="text-[0.55rem] text-white/20">-{(expectedPct * 1.5).toFixed(1)}%</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-[11px] text-emerald-400/40">Upside</div>
-                  <div className="text-sm font-bold text-emerald-400/70">${upExtended.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                  <div className="text-[0.55rem] text-white/20">+{(expectedPct * 1.5).toFixed(1)}%</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Phase context */}
-            <div className="flex items-center justify-between text-[0.65rem] text-white/40">
-              <span>BBWP: {bbwp.toFixed(1)} • {volatility!.regime}</span>
-              {activePhase && exitProb != null && (
-                <span>{activePhase} exit weight: {exitProb.toFixed(0)}%</span>
-              )}
-            </div>
-          </div>
+      <div data-projection className="rounded-xl border border-white/10 bg-white/5 p-5">
+        {header}
+        {pct != null ? (
+          <p className="text-[0.75rem] text-white/70">
+            One ATR is {atr!.toLocaleString(undefined, { maximumFractionDigits: 2 })} ({pct.toFixed(1)}% of the latest price). It describes the size of a typical daily range; it is not a target or a direction.
+          </p>
         ) : (
-          <p className="text-[0.75rem] text-white/40">No active signal — projection not collected.</p>
+          <p className="text-[0.75rem] text-white/40">No active signal. ATR not available, so no range size is shown.</p>
         )}
       </div>
     );
   }
-
-  const isUp = proj.signalType.includes('up');
-  const moveColor = isUp ? 'var(--msp-bull)' : 'var(--msp-bear)';
-  const hitColor = proj.hitRate >= 60 ? 'var(--msp-bull)' : proj.hitRate >= 40 ? 'var(--msp-warn)' : 'var(--msp-bear)';
-  const qualityScore = proj.projectionQualityScore ?? 0;
-  const dispersionPct = proj.dispersionPct ?? 0;
-
+  const study = projectionStudy(proj, PROJECTION.FORWARD_BARS);
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-5">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className="shrink-0 whitespace-nowrap rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.62rem] font-semibold text-amber-300">{volatilityBadgeLabel('PROJ')}</span>
-          <h3 className="text-xs font-semibold tracking-widest text-amber-400">
-            Outcome Projection
-          </h3>
-        </div>
-        <span className={`rounded-full border px-2 py-1 text-[0.65rem] font-semibold tracking-wide ${qualityTone(proj.projectionQuality)}`}>
-          {qualityLabel(proj.projectionQuality)} - {qualityScore.toFixed(0)}/100
-        </span>
+    <div data-projection className="rounded-xl border border-white/10 bg-white/5 p-5">
+      {header}
+      <div className="space-y-1.5 text-[0.75rem] text-white/70">
+        {study?.lines.map((l) => <p key={l}>{l}</p>)}
       </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
-          <div className="text-[0.7rem] text-white/40">Historical mean move</div>
-          <div className="mt-1 text-xl font-black" style={{ color: moveColor }}>
-            {proj.expectedMovePct >= 0 ? '+' : ''}{proj.expectedMovePct.toFixed(1)}%
-          </div>
-        </div>
-        <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
-          <div className="text-[0.7rem] text-white/40">Hit Rate</div>
-          <div className="mt-1 text-xl font-black" style={{ color: hitColor }}>
-            {proj.hitRate.toFixed(0)}%
-          </div>
-          <div className="text-[0.65rem] text-white/30">{proj.sampleSize} samples</div>
-        </div>
-        <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
-          <div className="text-[0.7rem] text-white/40">Median Move</div>
-          <div className="mt-1 text-lg font-bold text-white/80">
-            {proj.medianMovePct >= 0 ? '+' : ''}{proj.medianMovePct.toFixed(1)}%
-          </div>
-        </div>
-        <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
-          <div className="text-[0.7rem] text-white/40">Avg Bars</div>
-          <div className="mt-1 text-lg font-bold text-white/80">
-            {proj.averageBarsToMove.toFixed(1)}
-          </div>
-          <div className="text-[0.65rem] text-white/30">Dispersion {dispersionPct.toFixed(1)}%</div>
-        </div>
-      </div>
-
-      <div className="mt-3 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-[0.7rem] text-white/40">
-        <div className="text-center">
-          Max historical: {proj.maxHistoricalMovePct >= 0 ? '+' : ''}{proj.maxHistoricalMovePct.toFixed(1)}%
-        </div>
-        {proj.projectionWarning && (
-          <div className="mt-2 text-center text-white/35">{proj.projectionWarning}</div>
-        )}
-      </div>
+      {study && <p className="mt-3 text-[0.68rem] leading-relaxed text-white/40">{study.method}</p>}
     </div>
   );
 }

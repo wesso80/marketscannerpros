@@ -1,0 +1,28 @@
+Public daily quota foundation — 8 October 2026
+
+Branch: codex/public-daily-quotas
+Base inspected: origin/research-page-phase4 at 6174ed6b.
+Remote fetched before work; open PRs inspected. Claude's Symbol response/summary files and PR #493 chart files were not edited. Four new implementation/test files plus this report are the entire scope.
+
+Existing behaviour
+lib/entitlements.ts defines Free 10 / paid 50 AI questions. Public AI routes perform independent count-then-generate checks using ai_usage. app/api/ai/copilot/route.ts permits access if that check fails. These checks are not an atomic shared reservation system. Their date handling is not the newly specified authoritative Eastern quota day.
+lib/proTraderAccess.ts contains legacy paid-tier, operator and promotional bypass handling. lib/auth.ts includes subscription checks for trial identities. These shared helpers are unchanged.
+app/api/payments/checkout/route.ts uses configured Stripe price IDs. Its referral branch checks price trial settings, but that is not evidence that the approved seven-day trial, reminder and cancellation lifecycle is implemented. No Stripe calls were made; actual configured prices/trials were not inspected or changed.
+
+Implemented
+lib/publicPlans.ts defines the new visitor/Free/Pro limits separately: Symbol 1/3/unlimited; AI 0/5/100. Canonical instrument keys include asset type.
+migrations/126_public_daily_quotas.sql adds daily subject buckets and per-resource reservation entries, without modifying existing tables.
+lib/publicDailyQuota.ts serializes each subject/day/quota kind with a database row lock, counts pending plus completed work, deduplicates completed reports and pending retries, and rejects mismatched fingerprints. Reservation tokens fence stale workers. Confirmed failures can release credits; uncertain/interrupted work remains reserved until reconciled. Storage failures throw rather than grant access.
+Quota day and next reset come from PostgreSQL's clock and America/New_York rules. Response includes reset ISO instant for localization by the UI. Midnight rollover creates a separate day bucket.
+
+Validation
+Eight tests passed against disposable PostgreSQL 18.4 on loopback port 55441. Tests cover policy constants, final-credit races, subject isolation, retry deduplication, fingerprint conflicts, completion idempotence, release/retry fencing, shared Free AI capacity, visitor access, unlimited Pro reports, unresolved work, day separation, DST reset instants and storage errors. Migration applied twice successfully. Random test database dropped; pg_ctl confirmed no server running after the test run.
+TypeScript reports the same six baseline diagnostics outside changed files: four Stripe API-version literals and two timer unref types. No diagnostics in the new files.
+Run with an isolated local PostgreSQL: QUOTA_TEST_POSTGRES_PORT=<loopback port> and user quota_test/password quota_local_only, then run test/publicDailyQuota.integration.test.ts with Vitest. The suite never reads DATABASE_URL and creates/drops only its randomly named test database. Without an explicit test port, database cases skip; the policy test still runs. Local runner/config are in the external w6-test-runtime directory, not repository runtime dependencies.
+
+Required integration contract / next task
+This is a foundation, not active enforcement. No public API calls it yet. No migration was run on production, and existing limits remain active until coordinated integration.
+Resolve subject and current plan server-side, using verified subscription state. Keep operator/admin paths unchanged. Do not accept subject, plan, canonical identity or fingerprint directly from the client. For Symbol, fingerprint canonical identity/policy, not changing observations: a refresh must not conflict. For AI, use a stable request ID and hash the normalized question plus relevant context; completed retries must replay a durable result rather than call the model again.
+Reserve before expensive work; atomically persist usable output before marking complete. Never release after a successful provider call just because the browser disconnects. Unknown outcomes need reconciliation. Define answer retention and quota-entry cleanup before enabling routes. A completed Symbol unlock permits rereads/refreshes; all subordinate public endpoints must verify that unlock or coordinate acquisition. No cached response may bypass the checks.
+Coordinate integration of golden-egg, deep-analysis, symbol-comparison and all public AI routes with Claude. Chart PR #493 has a paid-only gate that must be replaced by the agreed core-report entitlement path. Inventory remaining bypass endpoints first, then add route contract tests and UI counters/reset display. Add signed-out identity design; a clearable browser cookie cannot enforce a strict per-person quota. Test downgrade, midnight in-flight completion and full 100-question Pro boundary during integration.
+Billing rollout is separate: exact $24.99 price configuration, card trial, reminder scheduling, cancellation and retained-data downgrade must be validated in test mode before any release. No merges, deployments, provider requests, email sends or billing changes were performed.

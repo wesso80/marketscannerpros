@@ -8,13 +8,14 @@ vi.mock('@/lib/og/dailyPicksLatest', () => ({ loadLatestDailyPicks: mocks.loadLa
 import { GET } from '@/app/api/og/scan/route';
 import { buildScanOgModel, ogSafeText, parseOgScanParams, scanOgImageUrl } from '@/lib/og/scanOg';
 
+// W3: the share data is measured values only. Extra private-looking fields on the loader output must not reach the image.
 const share = (over: Record<string, unknown> = {}) => ({
-  symbol: 'NVDA', side: 'LONG', score: 74, verdict: 'PASS · B · Pullback · uncalibrated', basisNote: null,
+  symbol: 'NVDA', side: 'LONG', score: 74, verdict: 'PASS · B · Pullback · uncalibrated', scoreText: '95th pct',
   price: 187.42, changePct: 1.2, float: null, shortPct: null, sector: 'TECHNOLOGY',
-  headline: 'NVDA: PASS · B · Pullback · uncalibrated (long side) on 2026-09-25',
+  headline: 'NVDA: daily scan snapshot for 2026-09-25', scanDate: '2026-09-25',
   fetchedAt: '2026-09-25T00:00:00.000Z', source: 'daily_picks', ...over,
 });
-const day = { scan_date: '2026-09-25', picks: [{ symbol: 'NVDA', asset_class: 'equity' }, { symbol: 'SOL', asset_class: 'crypto' }, { symbol: 'AVGO', asset_class: 'equity' }, { symbol: 'NEM', asset_class: 'equity' }] };
+const day = { scan_date: '2026-09-25', picks: [{ symbol: 'AVGO', asset_class: 'equity' }, { symbol: 'NEM', asset_class: 'equity' }, { symbol: 'NVDA', asset_class: 'equity' }, { symbol: 'SOL', asset_class: 'crypto' }] };
 const loaders = () => ({ loadShare: mocks.loadShare, loadLatestDailyPicks: mocks.loadLatest });
 const sp = (q: string) => new URLSearchParams(q);
 const INJECT = 'headline=FREE%20MONEY%20BUY%20NOW&sub=Guaranteed%2010x&score=100&price=1&sector=HACKED&float=1&shortPct=99&rvol=50&side=LONG';
@@ -45,28 +46,26 @@ describe('buildScanOgModel: every word comes from stored data', () => {
     const json = JSON.stringify(r);
     for (const bad of ['FREE MONEY', 'Guaranteed', 'HACKED', '99', '$1.00', '100/100', '50x']) expect(json).not.toContain(bad);
     if (r.status === 200) {
-      expect(r.model).toMatchObject({ symbol: 'NVDA', side: 'LONG', headline: share().headline });
+      expect(r.model).toEqual(expect.objectContaining({ symbol: 'NVDA', headline: share().headline }));
+      expect(r.model).not.toHaveProperty('side');
       expect(r.model.stats).toEqual([
-        { label: 'Setup score', value: '74/100' }, { label: 'Price', value: '$187.42' }, { label: 'Sector', value: 'TECHNOLOGY' },
+        { label: 'Price', value: '$187.42' }, { label: 'Session chg', value: '+1.20%' }, { label: 'Sector', value: 'TECHNOLOGY' },
       ]);
       expect(r.model.sub).toBe('Snapshot 2026-09-25 · Educational research only. Not financial advice.');
     }
   });
 
-  it('prints the score in the share card\'s wording ("95th pct"), not a bare /100', async () => {
+  it('never prints a score, verdict, grade or side, even when the loader output carries them', async () => {
     mocks.loadShare.mockResolvedValue(share({ score: 95, scoreText: '95th pct', verdict: 'WATCH · A · Exhaustion fade · factors only' }));
     const r = await buildScanOgModel(sp('symbol=META'), loaders());
-    expect(r.status === 200 && r.model.stats[0]).toEqual({ label: 'Score', value: '95th pct' });
-    expect(JSON.stringify(r)).not.toContain('95/100');
-    mocks.loadShare.mockResolvedValue(share({ scoreText: '74/100 factors (uncalibrated)' }));
-    const u = await buildScanOgModel(sp('symbol=NVDA'), loaders());
-    expect(u.status === 200 && u.model.stats[0]).toEqual({ label: 'Score', value: '74/100 factors (uncalibrated)' });
+    expect(JSON.stringify(r)).not.toMatch(/95th|WATCH|PASS|Pullback|Exhaustion|LONG|Score|\/100/);
   });
 
-  it('DAILY uses the latest stored snapshot (top 3, crypto as -USD), not query text', async () => {
+  it('DAILY uses the latest stored snapshot (first symbols A–Z, crypto as -USD, not a ranking), not query text', async () => {
     mocks.loadLatest.mockResolvedValue(day);
     const r = await buildScanOgModel(sp(`symbol=DAILY&date=2020-01-01&${INJECT}`), loaders());
-    expect(r).toMatchObject({ status: 200, model: { symbol: 'DAILY', side: 'WATCH', headline: 'Top picks for 2026-09-25', sub: 'NVDA, SOL-USD, AVGO · Educational research only. Not financial advice.' } });
+    expect(r).toMatchObject({ status: 200, model: { symbol: 'DAILY', headline: 'Daily scan observations for 2026-09-25', sub: '4 symbols, A–Z: AVGO, NEM, NVDA… · Educational research only. Not financial advice.' } });
+    expect(JSON.stringify(r)).not.toMatch(/Top picks|WATCH/);
     expect(JSON.stringify(r)).not.toContain('FREE MONEY');
   });
 

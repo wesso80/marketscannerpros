@@ -73,7 +73,7 @@ it('shows the reader label on the crypto pill and keeps the raw stage off the te
   expect(screen.queryByText('ZZZ_NEW_STATE')).toBeNull();
 });
 
-it('keeps the AAPL-style No setup pill', () => {
+it('shows no verdict pill on the stock top, even for a no-setup packet (Phase 4)', () => {
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ ok: true, candles: [] }) })));
   const data = {
     meta: { symbol: 'AAPL', assetClass: 'equity', price: 10, asOfTs: '2026-10-02T00:00:00.000Z', timeframe: 'daily' },
@@ -82,7 +82,8 @@ it('keeps the AAPL-style No setup pill', () => {
   } as unknown as GoldenEggPayload;
   const before = JSON.stringify(data);
   const { container } = render(<EquityTop data={data} />);
-  expect(container.querySelector('[data-equity-verdict]')?.textContent).toBe('No setup');
+  expect(container.querySelector('[data-equity-verdict]')).toBeNull();
+  expect(container.textContent).not.toMatch(/No setup/);
   expect(JSON.stringify(data)).toBe(before);
 });
 

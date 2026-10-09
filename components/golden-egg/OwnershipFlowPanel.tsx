@@ -1,4 +1,5 @@
 'use client';
+import { useCopilotSection } from '@/lib/ai/useCopilotSection';
 /**
  * MV-5: insider transactions, congressional trades and institutional holdings in Golden Egg → Fundamentals (equities).
  * Data: /api/ownership (Alpha Vantage, cached server-side). Each block shows "Unavailable (reason)" on its own.
@@ -15,23 +16,24 @@ function UnavailableLine({ u }: { u: Unavailable }) {
 }
 
 export default function OwnershipFlowPanel({ symbol }: { symbol: string }) {
+  const publishEvidence=useCopilotSection('ownership',symbol);
   const [data, setData] = useState<OwnershipContext | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    setData(null);
+    setData(null); publishEvidence(null);
     setError(null);
     fetch(`/api/ownership?symbol=${encodeURIComponent(symbol)}`)
       .then(async (r) => {
         const j = await r.json().catch(() => ({}));
         if (cancelled) return;
         if (!r.ok) setError(j?.error || `HTTP ${r.status}`);
-        else setData(j as OwnershipContext);
+        else {setData(j as OwnershipContext);publishEvidence(j.copilotEvidenceToken);}
       })
       .catch((e) => { if (!cancelled) setError(e instanceof Error ? e.message : 'network error'); });
     return () => { cancelled = true; };
-  }, [symbol]);
+  }, [symbol,publishEvidence]);
 
   return (
     <section className="mt-4 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-card)] p-4" aria-label="Ownership and insider activity">

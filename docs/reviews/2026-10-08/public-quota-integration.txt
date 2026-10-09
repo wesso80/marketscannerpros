@@ -1,0 +1,28 @@
+Public quota integration — signed-in Symbol admission, status and durable replay
+8 October 2026
+
+Stacked on codex/public-daily-quotas / PR #494, base commit 35b3e6af.
+Remote research-page-phase4 remains 6174ed6b. Open PRs checked before editing. Overlap with Claude's committed golden-egg route and Symbol page was reported before editing. deep-analysis and publicSymbolPacket are untouched. Chart PR #493 is separate and not incorporated.
+
+Implemented
+• PUBLIC_DAILY_QUOTAS_ENABLED opt-in, default off. No environment changes made.
+• New server-only access resolver reads subscription state directly, fails closed on database errors, ignores stale paid cookie grants, preserves signed admin/operator bypass.
+• Signed-in /api/golden-egg reserves by canonical instrument before computation; Free can access three successful core reports when opted in. Reopening and cached reports use the same unlock. Crypto aliases use existing stable CoinGecko identities; unmapped identities are withheld. Forex remains outside this new path.
+• Successful public projection completes a report; provider failure releases it. Demo/absent canonical evidence releases rather than spends a report. If completion storage fails after output exists, capacity remains reserved and the response is unavailable instead of granting an uncounted report.
+• New /api/public-usage returns only counts and reset metadata, private/no-store; no subject, instrument, question, response or token fields. Symbol page displays remaining/pending usage and local reset time, reloading when report state changes and at reset. Counter is hidden while rollout is off.
+• Migration 127 adds private replay JSON. AI completion now requires a stored response (maximum 256 KiB) in the same update as completion. Matching completed retries return it internally. Private replay is never included in quota-status output.
+
+Validation
+10 tests on isolated PostgreSQL 18.4 passed, including atomic private replay, status isolation and 102 concurrent Pro requests admitting exactly 100. Both migrations are repeatable. Disposable test database dropped; server cleanly stopped using pg_ctl.
+Golden Egg quota route tests (5), existing W3 public contract tests (4), access resolver tests (4), usage component tests (2), and usage endpoint tests (2) cover admission, old gates when disabled, repeat requests, failures, admin bypass, stale cookies, unknown crypto identity, no-store and honest counter failures.
+TypeScript retains the six baseline errors in Stripe API version literals and timer unref types, outside changed files. No changed-file diagnostics. The counter has component tests, not a full-page browser verification.
+
+NOT READY TO ENABLE
+The rollout flag must remain off. Public AI entry points still use the legacy checks (10/50); they are not connected to the new shared reservation and replay flow. Deep-analysis, the comparison chart in PR #493 and other dependent endpoints still require coordinated entitlement wiring. Do not turn on the flag merely to expose Free Symbol access: the core report's sections would otherwise have inconsistent access and the AI counter would not reflect legacy usage.
+Signed-out admission is not implemented. It needs a signed browser identity, separate abuse controls and honest acknowledgement that per-person limits cannot be guaranteed using cookies alone. UI quota-limit errors still need tailored prompts. Pro options/history gates, usage updates after AI answers, full-page browser checks, cleanup/reconciliation and billing changes remain outstanding.
+Question pending: does automatic Symbol AI summary count against question allowance? Recommendation is only explicitly submitted questions count, with a cached summary per report. Implement that separately after confirming the rule; this PR does not change automatic-summary spending.
+
+Next coordinated slice
+Connect all public AI question routes to reserve-before-provider and durable result replay, retiring legacy count checks only on the new path. Require stable idempotency IDs; bind fingerprints to normalized question/context. Wire deep-analysis and chart access to the shared report unlock without another report charge. Complete guest identity, counters/prompts and full-page tests before any rollout. Keep admin/private engines, existing collectors and billing untouched.
+
+No merges, deployments, production migrations, provider calls or outgoing messages were made.

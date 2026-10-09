@@ -1,0 +1,95 @@
+MARKETSCANNERPROS - SPECIALIST PUBLIC CONTRACT AND BUILDER HANDOFF
+8 October 2026 | Read-only review; proposed policy, not implemented access
+
+AUDIT BASIS AND COORDINATION
+Local codex/symbol-request-order at 2eebc1ae (PR #501). Fresh fetch: origin/research-page-phase4 remains 6174ed6b. Latest visible Claude deep-analysis branch is ff248c59; no later Claude push observed. Claude has resumed according to the user; uncommitted/unpushed work is unknown. No application files changed for this review. No live provider, billing or production database calls. No merge/deployment.
+
+Codex draft stack for Claude: #494 -> #495 -> #496 -> #498 -> #499 -> #500 -> #501. #497 is a separate report-only branch based on #496. #493 is a separate visual/chart branch; #499 imports its chart components and summary styling but intentionally places charts in Chart, not AI summary. Do not mechanically merge both placements. These PRs are stacked, not independent patches onto research-page-phase4. Rollout PUBLIC_DAILY_QUOTAS_ENABLED remains disabled. No instruction here authorizes a merge or rollout.
+
+Overlap to coordinate: app/tools/golden-egg/page.tsx, app/v2/_lib/api.ts, app/api/golden-egg/route.ts, components/research/SymbolAiSummary.tsx and the new quota/access/chart components. Claude's remaining W3 specialist work can use this map; Codex has not edited specialist routes in this task.
+
+POLICY TO IMPLEMENT
+Free's three daily reports contain full current core evidence, not a reduced-quality report. Pro adds cross-expiry options depth, historical exploration and time-saving workflows. Scores/verdicts removed from the public design do NOT become acceptable merely by charging Pro. Sources, timestamps, coverage and missing-data explanations accompany every available metric for everyone. Visitor one-report access remains subject to unresolved provider rights; existing authenticated-data comments are evidence of a question, not legal confirmation.
+
+Proposed common response: contractVersion, canonical instrument identity (asset plus symbol, coinId/venue where needed), requested versus actual timeframe/expiry, observations, coverage, source observation times, separate fetched/computed times, missing reasons, and explicit unavailable/not-applicable status. Use named allow-listed fields; never spread an internal model. No raw provider dump or undefined values masquerading as zero. Past inputs needed to compute today's indicator are core computation; user-visible historical browsing is Pro.
+
+1. VOLATILITY / DVE
+Entry: app/api/dve/route.ts:53-85,197. Schema: lib/directionalVolatilityEngine.types.ts:86-100,107-151,167-274. Consumers include Symbol useDVE and the specialist volatility page. Shared calculation: computeDVE; inputs fetchPrice, fetchIndicators, fetchOptionsSnapshot, fetchMPE and CoinGecko funding/OI.
+
+Field group -> proposed public treatment
+- symbol, price, priceEvidence, optionsRequest, computedAt, dataAsOf, dataFreshness: Free core; preserve requested expiry and unavailable status. Add explicit source/actual bar interval where absent.
+- volatility.bbwp, bbwpSma5, atr, rateOfChange, rateSmoothed, acceleration: Free measured/derived observations with exact window and units. bbwpBasis.available=false MUST yield null, not the internal neutral placeholder 50.
+- volatility.regime, rateDirection, inSqueeze, extremeAlert: explain or rename as factual threshold states; include thresholds and underlying observations. regimeConfidence and squeezeStrength: remove from public until a transparent measurement contract is separately justified.
+- direction (score,bias,confidence,components,componentDetails), directionalVolatility, breakout, trap, exhaustion, transition: remove internal composite/model outputs from BOTH public plans. Individual actual input observations can be separately allow-listed from their source, not recovered from weighted scores.
+- phasePersistence: Free current phase age/definition and coverage. Pro historical episode counts/distributions (average,median,max,age percentile) only with explicit sample/window/method. continuationProbability and exitProbability are not public forecasts.
+- signal/invalidation: no actionable strength, trigger/recommendation, stop or invalidation bundle. A completed-bar release observation can be restated via a factual public helper with the exact rule and dates.
+- projection: omit forward expected move, quality scores and hit-rate verdict framing. A Pro historical event-study response may independently expose historical median/max/sample/dispersion, labelled historical rather than predictive. Options-implied expected move is a separate dated calculation with assumptions, not this model projection.
+- dataQuality.missing/warnings: Free trust features; omit dataQuality.score. flags,label,summary: rebuild from public observations; do not forward generated internal language.
+
+Existing protection: login and paid-session check before cache/providers. Three-minute in-process cache keyed symbol,timeframe,asset,expiry; raw internal reading is shared, not actor/plan isolated. No explicit private/no-store on shown success paths; force-dynamic alone is not evidence of complete cache isolation. Proposal: retain internal cache but authorize on every request and project anew into a separately versioned public response. Never store a public tier-specific object in the internal cache.
+
+2. CRYPTO BREAKDOWN
+Entry app/api/crypto/breakdown/route.ts:7-14. Contract lib/crypto/breakdown/types.ts:5-35; construction load.ts:64-158, top.ts:8-25; derivatives okx.ts:24-58; levels.ts:11-20.
+
+Top-level symbol,coinId,name,identityMatches,identity,generatedAt -> Free with observation versus generation distinction. Market-cap rank is provider market-cap position, not a composite opportunity rank: keep and explain its universe/time. budget.breakdownToday/appToday/capped/reason/accounting -> remove operational counters from public; expose only a generic partial/unavailable reason if needed.
+
+Sections and nested duplicates:
+- price: spot, rolling24h,7d/30d changes,last daily close -> Free; do not relabel rolling24h as a daily close return.
+- ruleCheck: base length/high/low/range, volume ratio, distance, ATR, ADV -> Free factual observations with window/formula. Strip stage, why/verdict notes, required daily close/required volume trading instructions and limit/minimum/floor prescriptions; describe reference thresholds only where useful for explaining a user's own factual filter.
+- earlyContext: current volume averages/ratios, distances to highs and current benchmark-relative returns -> Free calculations. Pro historical date selection/comparable episodes/export; fixed old-date anchors (1 Jan 2023) require an explained purpose or removal, not an arbitrary upgrade lock.
+- marketContext: BTC close/50/200 averages, dominance and dated changes, TOTAL3 and 50-day average -> Free context with stablecoin inclusion/coverage. Remove Rule6/Rule7 and trading gate wording from public. Prior benchmark points used to compute current changes are not paywalled inputs.
+- derivatives: funding estimate, observed interval, distinct settlement/next time, USD and coin OI, measured OI changes, coin volume, listed status -> Free current evidence. Pro historical funding/OI exploration and exports. Explicitly one OKX instrument, never whole-market OI; do not substitute equity options for crypto.
+- liquidity: fresh returned venue volume, spread, depth, venue/quote-currency and first-page coverage -> Free observed data. Missing depth is not zero. Pro historical liquidity exploration.
+- supply: market cap, rank, FDV, circulating/total/max supply, circulating fraction, ATH/date/distance, categories/genesis/age -> Free with provider basis. Unknown max supply is not zero or necessarily finite. No unlock schedule is currently sourced.
+- levels: ATR and observed base/90/365-day reference levels/distances -> Free descriptive calculations. ruleStop and action/invalidation language -> omit publicly, including top.chart.ruleStop. Pro history adds browsing, not a trade instruction.
+- risks/sourcesCheck: factual missing/stale/identity/venue coverage and source discrepancies -> Free. Rebuild notes to avoid inherited rule verdicts. Preserve distinction between USD and USDT; Yahoo unknown observation time cannot become fresh evidence.
+- top: spot, change24h, funding, interval, OI, OIchange, listed, rank and source metadata follow the corresponding section rules. top.stage and top.rule cannot bypass the projection; top.chart should carry observed bars and explained factual levels only.
+
+Existing protections: login+paid, symbol/id validation, private/no-store HTTP response, verified coin/venue binding. Cache cachedPart in cache.ts:12-25 uses crypto-breakdown:v1 keys by instrument/provider part, shares in-flight work, preserves provider times, and can return a cached fallback retained for seven days. This is raw-data sharing, not proof of entitlement or audience isolation. Authorization must precede loading and projection must apply equally to fresh, cached, partial and failure responses.
+
+Unresolved W7 evidence on this audited commit: okx.ts:24 tests !current, so zero current OI produces null change rather than -100% against positive baseline. Funding display at line47 reads nextFundingTime while the rate has its own observed period. History request limit25 hourly rows cannot substantiate a seven-day change; unavailable is correct. Require zero-current, zero-baseline, insufficient-history and distinct-settlement fixtures before declaring W7 complete.
+
+3. SYMBOL NEWS
+Entry app/api/research/news/route.ts:14-29. lib/research/newsEvidence.ts:19-50; nested shapes lib/goldenEgg/newsRelevance.ts:22-41.
+
+Free: version,symbol,status,provider,grouping rule,fetchedAt,considered count; event id/headline/publication span/article count/sources; article title,summary,source,url,publishedAt,eventId,eventSize. Counts.articles/events are coverage, not independent confirmations. Explain the 72-hour grouping and max8 events/max16 articles. Missing publication time remains null.
+
+Reconcile/remove: article.sentiment,sentimentScore,relevance; event.maxRelevance; positive/negative/eventRisk/neutral aggregates; catalyst and catalystReason; generated headline may repeat those classifications. Keep filtering relevance internally; public copy should explain why an event matches without exposing a scored verdict. Neutral topic categories may replace catalyst labels after review. Both Free and Pro follow this boundary. Pro may add historical search/archive/export where licensing permits, not ordinary source links or current evidence.
+
+Existing: login+paid gate, symbol validation, forex rejected. Raw Alpha Vantage feed cached across users under research-news-feed:v1 with 15-minute success/2-minute failure TTL. Failure is unavailable, not zero news. Route has no explicit success Cache-Control. Add private/no-store for public output and verify raw-versus-projected namespaces; retain shared feed/grouping consistency with AI summary. Do not claim cache isolation already exists.
+
+4. FUNDAMENTALS AND OWNERSHIP
+Company route app/api/company-overview/route.ts:18-136; shared helpers lib/goldenEgg/companyOverview.ts:12-14,33-34,59-78,93-165. Ownership route app/api/ownership/route.ts:16-32; shapes lib/ownership/avOwnership.ts:14-64,187-204.
+
+Free company fields: symbol,name,description,sector,industry; marketCap/providerMarketCap/valuationBasis; pe/providerPe/trailingPE/providerTrailingPE; bookValue,dividendYield,eps,revenuePerShare,profitMargin,operatingMargin,returnOnAssets,returnOnEquity,revenue,grossProfit,dilutedEPS,quarterlyEarningsGrowth,quarterlyRevenueGrowth; priceToSales,priceToBook,evToRevenue,evToEBITDA,beta; week52High/Low,day50MA/day200MA,sharesOutstanding; dividendDate/exDividendDate/ipoDate; latestQuarter/fiscalYearEnd/periodBasis/periodSummary; nextEarningsDate/status/daysToEarnings; lastReportedQuarter/date/EPS; currentPrice/changePercent/priceAsOf,dataSource. Reconcile duplicate valuation measurements by quote time, fiscal period and formula. Negative-EPS P/E unavailable is not zero. Label provider valuation versus recomputed valuation explicitly.
+
+Remove or reconcile forward/analyst fields before public exposure: analystTargetPrice,analystCount,analystRatings,forwardPE,peg,nextEarningsEstimate,lastEstimatedEPS,lastEpsBeat. These are forecasts/consensus or estimates, not reported results. They are not automatically Pro privileges. The agreed current Symbol/AI boundary excludes analyst figures; do not reintroduce through Fundamentals. multiple wording and periodSummary must be regenerated from allowed observations, not passed through unchecked.
+
+Pro history: recentQuarters and historical earnings browsing/annual EPS; beatRate requires historical sample and methodology and depends on the consensus decision above. The latest reported period remains core. fetchedAt currently assigned at response construction (line132), while underlying OVERVIEW can be six hours cached: rename as response/generated time or preserve actual cache-fetch time; do not present it as observation freshness.
+
+Free ownership proposal: dated current ownershipPct,holders,totalShares,holders increased/decreased/unchanged,netSharesChanged/Pct,reportPeriod; current insider window/from/buys/sells/netShares/netValue/awards/otherCount,lastTransactionDate; congress totalTrades,last12m counts,lastTradeDate. These are disclosed transactions/filings, not a buying signal. Keep grants separate from priced purchases and publication/filing dates separate from trade/period dates.
+
+Pro history proposal: insider.notable transaction drilldown, congress.recent records and institutional.topHolders drilldown plus prior periods/export. Product decision: these current-detail lists could instead be included in each full core report; the user has approved history depth as Pro, not explicitly a cap on current ownership rows. Do not implement that particular split without resolving it. Trust/status/unavailable reason is Free regardless.
+
+Existing protections: both routes login+paid and IP rate limit; ownership validates equity symbol; company route only checks nonempty symbol. Ownership success has private,max-age=300; company success has no explicit Cache-Control. Company helper TTLs: OVERVIEW/EARNINGS six hours, calendar twelve hours. Ownership raw compact caches: insider six hours, congress/institutional twelve hours, failures fifteen minutes; keyed kind+symbol with in-flight sharing. No actor-level public response isolation established. UNKNOWN earnings calendar must remain distinct from NONE_IN_HORIZON.
+
+SHARED HELPER / ADMIN BOUNDARY
+Do not modify computeDVE, DVEReading or global model weights to satisfy public contracts. Confirmed consumers: lib/goldenEgg/engine.ts:29,361; lib/research/priceEvidence.ts:2; lib/quant/discoveryEngine.ts:19,219 and app/api/quant/evidence/[symbol]/route.ts:13,96 use directional helpers. lib/quant/orchestrator.ts:20 uses discovery. These prove shared engine dependencies; they are not a complete audit of every admin call graph.
+Company helpers feed Golden Egg (engine.ts:47,321) and news company-name matching. News helper also feeds AI summary. Crypto helpers/caches/budgets and ownership adapters must preserve current internal contracts. No direct admin import was proven for every specialist; absence of an import match is not proof of no indirect dependency.
+
+Implement public adapters at a new route/version or explicit server-authorized audience boundary. An arbitrary query like audience=admin must never grant internal fields. Keep existing admin callers on their verified internal contract, with regression snapshots. Public Pro must not inherit the admin response.
+
+PRIORITISED IMPLEMENTATION / ACCEPTANCE
+P0 A: Agree an explicit per-field allow-list and public response versions before relaxing any paid gates. Tests inject sentinel score,verdict,confidence,ruleStop,budget and analyst fields at top/nested/cache locations; none reach Free or public Pro response or AI input.
+P0 B: Authorize each specialist against canonical instrument and actor's completed same-Eastern-day core report; session/plan from server, not UI. Preserve admin checks; reject mismatched equity/crypto, coin identity, expiry substitutions and malformed queries before provider access. Specialist fetches do not consume a second report. Pro-only history enforces Pro server-side. Test free/visitor/pro/admin, pending/failed, expired day, changed symbol and unavailable database.
+P0 C: Cache review: authorize on hits as well as misses; raw shared cache never contains account data or a projected paid/admin response. Private/no-store on public responses including errors; if response caching is needed later, key schema/audience/entitlements/identity/window explicitly. Test Pro-warmed -> Free, admin-warmed -> public, cross-actor and same-ticker/different-asset sequences. Preserve original observation times in stale fallback.
+P0 D: Resolve guest provider rights before enabling visitor equity data. Do not infer permission from trial access or public HTTP endpoints.
+P1 E: Implement DVE projection and explicit zero/missing/placeholder behavior. Test BBWP unavailable=50 internally -> null publicly, different actual bar intervals, missing options and requested expiry consistency; internal engine golden tests unchanged.
+P1 F: Crypto projection plus W7 tests above. Preserve verified coin/venue binding and source disagreement. Zero OI remains a measurement; zero baseline cannot define a percentage return. No fabricated seven-day history.
+P1 G: News and fundamentals adapters, replace score/classification wording, synchronize AI inputs, preserve current evidence for Free. Test provider errors versus empty datasets, fiscal/quote/publication-date distinctions and identity rejection.
+P2 H: Historical Pro routes and exports use separate allow-lists and entitlement checks; read-only historical examples explain sample/window, never forecast a trade. No advertising complete Free core coverage until all relevant sections pass.
+
+OPEN QUESTIONS FOR BUILDERS
+Which W3 files is Claude editing locally now? Which W7 changes, if any, are unpushed? Are current ownership drilldowns core or Pro history? Are forward/consensus fundamentals to be removed entirely under the agreed evidence boundary? What provider permission covers signed-out visitors? Which admin consumers need explicit legacy response routes? These are unresolved; no answer is assumed by this report.
+
+Recommended coordination: Claude takes the public specialist adapters/gates; Codex can independently prepare synthetic contract fixtures and negative exposure tests once route/schema ownership is agreed. Do not have both builders edit the same specialist routes or shared Symbol page concurrently.

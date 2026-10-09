@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
     console.error('Expirations fetch error:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch expirations',
+      error: 'Failed to fetch expirations',
     }, { status: 500 });
   }
 }

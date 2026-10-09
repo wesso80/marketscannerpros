@@ -1,4 +1,5 @@
 'use client';
+import { publicDesignEnabled } from '@/lib/publicDesign';
 
 import UpgradeMoment, { useUpgradeMoment } from '@/components/free/UpgradeMoment';
 
@@ -2177,7 +2178,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         </CollapsibleSection>)}
         <div className={`mt-4 rounded-xl border border-slate-700/60 bg-[var(--msp-panel)] ${embeddedInWorkspace ? 'p-3' : 'p-4'}`}>
           {activeTab === 'overview' && (dataLoaded ? positions.length > 0 ? (
-            <PortfolioOverview value={overviewValue} totalCost={overviewCost} openPL={unrealizedPL} allocation={allocationData} limit={riskSettings.maxPositionSize} unpricedCount={unpricedCount} />
+            <PortfolioOverview studio={publicDesignEnabled() && embeddedInWorkspace} value={overviewValue} totalCost={overviewCost} openPL={unrealizedPL} allocation={allocationData} limit={riskSettings.maxPositionSize} unpricedCount={unpricedCount} />
           ) : <EmptyState title="Add your first position" action="Add Position" href="/tools/workspace?tab=portfolio&view=add" /> : <p role="status">Loading saved records…</p>)}
 
           {activeTab === 'risk-model' && (

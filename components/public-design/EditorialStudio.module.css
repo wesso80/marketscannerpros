@@ -1,0 +1,19 @@
+.supporting{color:var(--research-text);line-height:1.7}
+.supporting h1{font-size:clamp(32px,4vw,52px);line-height:1.15;letter-spacing:-1.5px;font-weight:450;color:var(--research-text)}
+.supporting h2{font-weight:500;letter-spacing:-.4px;color:var(--research-text)}
+.supporting :where(input,select,textarea){accent-color:var(--research-accent)}
+.supporting :where(a):focus-visible{outline:2px solid var(--research-accent);outline-offset:4px}
+.legal{padding:48px 0 64px;color:var(--research-text);background:transparent}
+.legalGrid{display:grid;grid-template-columns:220px minmax(0,1fr);gap:40px;max-width:1100px;margin:auto;align-items:start}
+.document{min-width:0;padding:0 0 24px;border-top:1px solid var(--research-line)}
+.prose h1{margin:28px 0 24px;font-size:clamp(32px,4vw,48px);font-weight:450;line-height:1.15;letter-spacing:-1.4px;color:var(--research-text)}
+.prose h2{font-size:23px;font-weight:500;line-height:1.4;border-top:1px solid var(--research-line);padding-top:24px;margin-top:36px}
+.prose p,.prose li{font-size:14px;line-height:1.85;color:var(--research-muted)}
+.prose a,.legal nav a{color:var(--research-accent);text-underline-offset:4px}
+.prose strong{color:var(--research-text)}
+.legal nav>p{font-size:11px;text-transform:uppercase;letter-spacing:1.4px;color:var(--research-muted)}
+@media(max-width:1279px){.legalGrid{grid-template-columns:minmax(0,1fr);max-width:800px}.legal{padding-top:28px}.document{padding-top:20px}}
+@media(max-width:600px){.supporting h1{letter-spacing:-1px}.legal{padding-bottom:36px}.prose h2{font-size:21px}}
+
+.desktopToc{position:sticky;top:72px;max-height:calc(100vh - 96px);overflow-y:auto;min-width:0}.mobileToc{display:none}.legal nav ul{list-style:none;padding:0;margin:0}.legal nav li{margin:0 0 8px}.legal nav a{font-size:13px;line-height:1.7;text-decoration:none}.legal nav a:hover{text-decoration:underline}
+@media(max-width:1279px){.desktopToc{display:none}.mobileToc{display:block;border:1px solid var(--research-line);border-radius:6px;padding:14px 18px;margin-bottom:24px}.mobileToc summary{cursor:pointer;color:var(--research-accent);min-height:24px}.mobileToc nav{padding-top:16px}}

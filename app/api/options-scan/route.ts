@@ -1,3 +1,4 @@
+import { sectionEvidenceToken } from '@/lib/ai/sectionEvidenceAccess';
 import { NextRequest, NextResponse } from 'next/server';
 import { optionsAnalyzer, OptionsSetup } from '@/lib/options-confluence-analyzer';
 import { measuredIvRank } from '@/lib/options/ivRank';
@@ -5,17 +6,15 @@ import { ScanMode } from '@/lib/confluence-learning-agent';
 import { checkOptionsAccess } from '@/lib/options/access';
 import { getAdaptiveLayer } from '@/lib/adaptiveTrader';
 import { computeInstitutionalFilter, inferStrategyFromText } from '@/lib/institutionalFilter';
-import { canonicalFromBarStore } from '@/lib/scoring/canonical/barStore';
-import { loadRegimeOverlayInputs } from '@/lib/scoring/canonical/regimeOverlayData';
 import { computeCapitalFlowEngine } from '@/lib/capitalFlowEngine';
 import { getLatestStateMachine, upsertStateMachine } from '@/lib/state-machine-store';
 import { AVOptionRow, scoreOptionCandidatesV21WithDiagnostics } from '@/lib/scoring/options-v21';
 import { avFetch } from '@/lib/avRateGovernor';
 import { defaultChainProviders, fetchSharedOptionsChain } from '@/lib/options/chainCache';
-import { computeCorrelationRegime, type CorrelationRegimeOutput } from '@/lib/correlation-regime-engine';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
 import { assessOptionsChainQuality } from '@/lib/options/dataQuality';
 import { isGenuineOptionsDataFallback } from '@/lib/equityDataHealth';
+import { toPublicOptionsEvidence } from '@/lib/research/publicOptionsScan';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -229,9 +228,6 @@ export async function POST(request: NextRequest) {
     });
     // This feed has unsigned option Greeks/OI, not dealer inventory. Never
     // alter candidate scores using an assumed dealer side or missing macro legs.
-    const dealerGamma = null;
-    const dealerIntelligence = null;
-    const crossAssetFlow: CorrelationRegimeOutput | null = null;
 
     const stateMachine = capitalFlow.brain_decision_v1?.state_machine;
     if (stateMachine) {
@@ -318,56 +314,21 @@ export async function POST(request: NextRequest) {
       warnings: providerWarnings,
     });
     
-    // Canonical engine verdict for the underlying on DAILY bars (worker bar store; no extra provider calls). This is
-    // the primary setup grade in the cockpit; the options filter grade / trade quality stay as secondary options reads.
-    const canonicalVerdict = await canonicalFromBarStore(
-      symbol.toUpperCase(), 'equity', await loadRegimeOverlayInputs().catch(() => null),
-    ).catch(() => null);
-
+    // W3 (product decision 8 Oct): the response is the measured chain evidence only (lib/research/publicOptionsScan).
+    // The analyzer's setup, the institutional filter, scored candidates, the capital-flow engine and the adaptive
+    // profile were computed above for the server-side state machine; none of them is serialized.
+    const publicEvidence=toPublicOptionsEvidence(analysis, { chainQuality: optionsChainQuality, providerWarnings: optionsProviderStatus.warnings ?? providerWarnings });
+    const copilotEvidenceToken=await sectionEvidenceToken('options',analysis.symbol,analysis.assetType === 'crypto' ? 'crypto' : 'equity',publicEvidence,publicEvidence.chain.expiry);
     return NextResponse.json({
       success: true,
-      data: {
-        ...analysis,
-        canonicalVerdict,
-        dataQuality: {
-          ...(analysis.dataQuality || {}),
-          providerStatus: optionsProviderStatus,
-          optionsChainQuality,
-        },
-        adaptiveLayer: {
-          profile: adaptive.profile,
-          match: adaptive.match,
-        },
-        institutionalFilter,
-        capitalFlow,
-        dealerPositionVerified: false,
-        dealerGamma,
-        dealerIntelligence,
-        crossAssetFlow,
-        universalScoringV21: {
-          version: 'msp.score.v2.1',
-          mode: 'options_scanner',
-          timeGate: {
-            permission: timePermission,
-            quality: timeQuality,
-          },
-          topCandidates: analysis.strategyRecommendation?.strategy === 'WAIT' ? [] : scoredOptionCandidatesV21.candidates.slice(0, 12),
-          diagnostics: {
-            optionsProvider: rawOptions.provider,
-            warnings: rawOptions.warnings,
-            staleSeconds,
-            tfConfluenceScore,
-            optionsChainQuality,
-            candidateEligibility: scoredOptionCandidatesV21.diagnostics,
-          },
-        },
-      },
+      ...(copilotEvidenceToken ? {copilotEvidenceToken} : {}),
+      data: publicEvidence,
       dataSources: {
         underlyingPrice: analysis.assetType === 'crypto' ? 'coingecko' : 'alpha_vantage',
         optionsChain: analysis.dataQuality?.optionsChainSource || 'none',
       },
       timestamp: new Date().toISOString(),
-    });
+    },{headers:{'Cache-Control':'private, no-store'}});
     
   } catch (error) {
     console.error('Options scan error:', error);

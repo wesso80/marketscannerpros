@@ -126,7 +126,7 @@ describe('client gates that used to be Pro-Trader-only', () => {
 
   it('no UpgradeGate asks for pro_trader any more', () => {
     for (const f of ['app/tools/terminal/page.tsx', 'app/tools/workspace/page.tsx', 'app/tools/golden-egg/page.tsx',
-      'components/options-terminal/OptionsFlowView.tsx', 'components/options-terminal/OptionsConfluenceScanner.tsx', 'app/tools/deep-analysis/page.tsx', 'app/tools/volatility-engine/page.tsx',
+      'components/options-terminal/OptionsFlowView.tsx', 'components/options-terminal/OptionsChainEvidence.tsx', 'components/research/SymbolAiSummary.tsx', 'app/tools/volatility-engine/page.tsx',
       'app/tools/confluence-scanner/page.tsx',
       'app/tools/crypto-time-confluence/CryptoTimeConfluenceInner.tsx', 'components/backtest/BacktestHub.tsx', 'components/time/TimeScannerPage.tsx', 'app/operator/page.tsx']) {
       expect(read(f)).not.toContain('requiredTier="pro_trader"');
@@ -239,7 +239,7 @@ describe('every server route that used a Pro-Trader gate now uses the shared ses
     'app/api/evolution/route.ts', 'app/api/flow/route.ts', 'app/api/golden-egg/route.ts', 'app/api/market-pressure/route.ts', 'app/api/options/gex/route.ts',
     'app/api/state-machine/route.ts', 'app/api/terminal/futures/route.ts', 'app/api/time-gravity-map/route.ts', 'app/api/trade-proposal/route.ts',
     'app/api/workflow/decision-packet/route.ts', 'app/api/workflow/events/route.ts', 'app/api/workflow/feedback/route.ts', 'app/api/workflow/tasks/route.ts',
-    'app/api/workflow/today/route.ts', 'app/api/alerts/route.ts', 'app/api/scalper/run/route.ts',
+    'app/api/workflow/today/route.ts', 'app/api/alerts/route.ts', 'app/api/scalper/run/route.ts', 'app/api/research/news/route.ts',
   ];
   it.each(files)('%s', (file) => {
     const src = read(file);

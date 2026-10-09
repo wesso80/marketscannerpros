@@ -1,0 +1,28 @@
+/* The approved visual system for supporting public screens. Applied by the public
+   shell only: internal/admin routes never receive this class. Semantic data colors,
+   chart geometry, visibility, form state and control behavior remain component-owned. */
+.root{color:var(--research-text);font-family:Arial,sans-serif;min-width:0}
+.root>main{background:transparent;min-height:0;padding:32px 12px 48px}
+.root h1{font-size:clamp(32px,3.6vw,50px);font-weight:500;letter-spacing:-1.3px;line-height:1.15;margin-bottom:24px;color:var(--research-text)}
+.root h2{font-weight:500;letter-spacing:-.35px;line-height:1.4}
+.root :is(section,article,details)[class*="border"],.root [data-stat-card]{border-color:var(--research-line);box-shadow:none;border-radius:8px}
+.root :is(section,article,details)[class*="bg-"],.root [data-stat-card]{background-color:var(--research-panel);background-image:none}
+.root div[class*="rounded-3xl"],.root div[class*="shadow-2xl"]{background:transparent;border:0;border-radius:0;box-shadow:none}
+.root [data-stat-card]{padding:20px}
+.root :is(input,select,textarea){color:var(--research-text);background-color:#0c181f;border-color:#38534d;border-radius:5px;max-width:100%;font:inherit}
+.root :is(input:not([type=checkbox]):not([type=radio]),select){min-height:44px}
+.root :is(button,a)[class*="bg-emerald"]{background:var(--research-accent);color:#10241c;border-color:var(--research-accent);box-shadow:none}
+.root button[class*="rounded"]{border-radius:6px}
+.root a[class*="text-emerald"]{color:var(--research-accent)}
+.root :is(a,button,input,select,textarea,summary):focus-visible{outline:2px solid var(--research-accent);outline-offset:4px}
+.root table{font-variant-numeric:tabular-nums;border-collapse:collapse}
+.root th{font-size:11px;font-weight:500;letter-spacing:.4px;color:var(--research-muted);text-align:left}
+.root :is(th,td){border-color:var(--research-line);padding-top:14px;padding-bottom:14px}
+.root :is(p,li){overflow-wrap:anywhere}
+.root :global(.prose){color:var(--research-muted);line-height:1.85}
+.root :global(.prose) h2{border-top:1px solid var(--research-line);padding-top:24px;margin-top:36px}
+@media(max-width:650px){.root>main{padding:24px 0 32px}.root h1{letter-spacing:-.8px}.root [data-stat-card]{padding:14px}.root :is(th,td){padding-top:12px;padding-bottom:12px}}
+
+/* Older shared-report pages use inline typography; this adapter owns their public heading. */
+.root h1[style]{font-size:clamp(32px,4vw,50px)!important;font-weight:500!important;letter-spacing:-1.3px;overflow-wrap:anywhere}
+.root a[style*="var(--msp-bull)"]{background:var(--research-accent)!important;color:#10241c!important;border-radius:6px!important;font-weight:500!important}

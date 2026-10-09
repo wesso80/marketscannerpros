@@ -4,26 +4,15 @@ import Link from "next/link";
 export default function PartnersPage() {
   return (
     <>
-      <style jsx global>{`
-        :root {
-          --bg: #05070b;
-          --bg-alt: #0c1018;
-          --card: #111624;
-          --accent: var(--msp-accent);
-          --accent-soft: rgba(20, 184, 166, 0.12);
-          --text-main: #f9fafb;
-          --text-muted: #9ca3af;
-          --border-subtle: #1f2933;
-        }
-      `}</style>
+
 
       {/* Hero Section */}
       <section style={{
         width: '100%',
-        background: 'radial-gradient(circle at top, #111827 0, #020617 55%, #000 100%)',
-        color: '#f9fafb',
+        background: 'var(--research-bg)',
+        color: 'var(--research-text)',
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
-        borderBottom: '1px solid #1f2933',
+        borderBottom: '1px solid var(--research-line)',
         padding: '80px 20px'
       }}>
         <div style={{ maxWidth: 1120, margin: '0 auto', textAlign: 'center' }}>
@@ -43,7 +32,7 @@ export default function PartnersPage() {
             <span style={{ fontWeight: 600 }}>PARTNER PROGRAM</span>
           </div>
 
-          <h1 style={{ fontSize: 40, fontWeight: 700, lineHeight: 1.2, marginBottom: 20 }}>
+          <h1 style={{ fontSize: 'clamp(32px, 4vw, 50px)', fontWeight: 500, lineHeight: 1.2, marginBottom: 20 }}>
             MarketScanner Pros — <br/>
             <span style={{ color: 'var(--msp-accent)' }}>Partner & Educator Program</span>
           </h1>
@@ -52,7 +41,7 @@ export default function PartnersPage() {
             Bring Your Trading Methodology to Life — With Structure, Clarity, and AI
           </p>
 
-          <p style={{ fontSize: 16, color: '#9ca3af', maxWidth: 700, margin: '0 auto 32px', lineHeight: 1.7 }}>
+          <p style={{ fontSize: 16, color: 'var(--research-muted)', maxWidth: 700, margin: '0 auto 32px', lineHeight: 1.7 }}>
             MarketScanner Pros partners with trading educators and communities to combine your expertise with our market intelligence platform.
           </p>
 
@@ -68,7 +57,7 @@ export default function PartnersPage() {
               You teach the <strong style={{ color: 'var(--msp-accent)' }}>why</strong>.<br/>
               We provide the <strong style={{ color: 'var(--msp-bull)' }}>infrastructure</strong>.
             </p>
-            <p style={{ fontSize: 15, color: '#9ca3af', marginTop: 12, fontStyle: 'italic' }}>
+            <p style={{ fontSize: 15, color: 'var(--research-muted)', marginTop: 12, fontStyle: 'italic' }}>
               Together, we give traders clarity — not noise.
             </p>
           </div>
@@ -107,7 +96,7 @@ export default function PartnersPage() {
             <Link href="#how-it-works" style={{
               display: 'inline-block',
               borderRadius: 999,
-              border: '1px solid #1f2933',
+              border: '1px solid var(--research-line)',
               background: 'transparent',
               color: '#e5e7eb',
               padding: '14px 32px',
@@ -126,9 +115,9 @@ export default function PartnersPage() {
       <section style={{
         width: '100%',
         background: 'var(--msp-bg)',
-        color: '#f9fafb',
+        color: 'var(--research-text)',
         padding: '60px 20px',
-        borderBottom: '1px solid #1f2933'
+        borderBottom: '1px solid var(--research-line)'
       }}>
         <div style={{ maxWidth: 1120, margin: '0 auto' }}>
           <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 16, textAlign: 'center' }}>
@@ -199,15 +188,15 @@ export default function PartnersPage() {
       <section style={{
         width: '100%',
         background: '#05070b',
-        color: '#f9fafb',
+        color: 'var(--research-text)',
         padding: '60px 20px',
-        borderBottom: '1px solid #1f2933'
+        borderBottom: '1px solid var(--research-line)'
       }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
           <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 16, textAlign: 'center' }}>
             The Problem Partners Face
           </h2>
-          <p style={{ fontSize: 16, color: '#9ca3af', marginBottom: 32, textAlign: 'center' }}>
+          <p style={{ fontSize: 16, color: 'var(--research-muted)', marginBottom: 32, textAlign: 'center' }}>
             Most educators struggle with:
           </p>
 
@@ -246,9 +235,9 @@ export default function PartnersPage() {
       <section style={{
         width: '100%',
         background: 'var(--msp-bg)',
-        color: '#f9fafb',
+        color: 'var(--research-text)',
         padding: '60px 20px',
-        borderBottom: '1px solid #1f2933'
+        borderBottom: '1px solid var(--research-line)'
       }}>
         <div style={{ maxWidth: 1120, margin: '0 auto' }}>
           <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 16, textAlign: 'center' }}>
@@ -266,7 +255,7 @@ export default function PartnersPage() {
             border: '1px solid rgba(20,184,166,0.2)',
             borderRadius: 8
           }}>
-            <p style={{ fontSize: 15, color: '#9ca3af', margin: 0, lineHeight: 1.7 }}>
+            <p style={{ fontSize: 15, color: 'var(--research-muted)', margin: 0, lineHeight: 1.7 }}>
               <strong style={{ color: 'var(--msp-accent)' }}>Example:</strong> An educator teaching market structure can use MSP scanners to surface live consolidation → expansion phases, while the AI Analyst explains context to members in real time.
             </p>
           </div>
@@ -348,9 +337,9 @@ export default function PartnersPage() {
       <section id="how-it-works" style={{
         width: '100%',
         background: '#05070b',
-        color: '#f9fafb',
+        color: 'var(--research-text)',
         padding: '60px 20px',
-        borderBottom: '1px solid #1f2933'
+        borderBottom: '1px solid var(--research-line)'
       }}>
         <div style={{ maxWidth: 1120, margin: '0 auto' }}>
           <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 48, textAlign: 'center' }}>
@@ -383,7 +372,7 @@ export default function PartnersPage() {
               </h3>
             </div>
 
-            <p style={{ fontSize: 16, color: '#9ca3af', marginBottom: 20 }}>
+            <p style={{ fontSize: 16, color: 'var(--research-muted)', marginBottom: 20 }}>
               You receive:
             </p>
 
@@ -414,7 +403,7 @@ export default function PartnersPage() {
               borderLeft: '3px solid var(--msp-accent)',
               borderRadius: 4
             }}>
-              <p style={{ fontSize: 14, color: '#9ca3af', margin: 0, fontStyle: 'italic' }}>
+              <p style={{ fontSize: 14, color: 'var(--research-muted)', margin: 0, fontStyle: 'italic' }}>
                 <strong style={{ color: 'var(--msp-accent)' }}>Example:</strong><br/>
                 "This page shows how [Partner Name] uses MarketScanner Pros to identify structure, phases, and technically aligned conditions."
               </p>
@@ -447,7 +436,7 @@ export default function PartnersPage() {
               </h3>
             </div>
 
-            <p style={{ fontSize: 16, color: '#9ca3af', marginBottom: 20 }}>
+            <p style={{ fontSize: 16, color: 'var(--research-muted)', marginBottom: 20 }}>
               We align:
             </p>
 
@@ -520,7 +509,7 @@ export default function PartnersPage() {
               </h3>
             </div>
 
-            <p style={{ fontSize: 16, color: '#9ca3af', marginBottom: 20 }}>
+            <p style={{ fontSize: 16, color: 'var(--research-muted)', marginBottom: 20 }}>
               The MSP AI Analyst:
             </p>
 
@@ -559,9 +548,9 @@ export default function PartnersPage() {
       <section style={{
         width: '100%',
         background: 'var(--msp-bg)',
-        color: '#f9fafb',
+        color: 'var(--research-text)',
         padding: '60px 20px',
-        borderBottom: '1px solid #1f2933'
+        borderBottom: '1px solid var(--research-line)'
       }}>
         <div style={{ maxWidth: 1120, margin: '0 auto' }}>
           <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 40, textAlign: 'center' }}>
@@ -648,7 +637,7 @@ export default function PartnersPage() {
               <span>✓ Better understanding of your system</span>
               <span>✓ A learning-first environment</span>
             </div>
-            <p style={{ fontSize: 15, color: '#9ca3af', marginTop: 20, fontStyle: 'italic' }}>
+            <p style={{ fontSize: 15, color: 'var(--research-muted)', marginTop: 20, fontStyle: 'italic' }}>
               This reduces churn and improves outcomes.
             </p>
           </div>
@@ -659,9 +648,9 @@ export default function PartnersPage() {
       <section style={{
         width: '100%',
         background: '#05070b',
-        color: '#f9fafb',
+        color: 'var(--research-text)',
         padding: '60px 20px',
-        borderBottom: '1px solid #1f2933'
+        borderBottom: '1px solid var(--research-line)'
       }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
           <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 40, textAlign: 'center' }}>
@@ -701,9 +690,9 @@ export default function PartnersPage() {
       <section style={{
         width: '100%',
         background: 'var(--msp-bg)',
-        color: '#f9fafb',
+        color: 'var(--research-text)',
         padding: '60px 20px',
-        borderBottom: '1px solid #1f2933'
+        borderBottom: '1px solid var(--research-line)'
       }}>
         <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
           <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 20 }}>
@@ -741,10 +730,10 @@ export default function PartnersPage() {
       {/* Final CTA */}
       <section style={{
         width: '100%',
-        background: 'radial-gradient(circle at top, #111827 0, #020617 55%, #000 100%)',
-        color: '#f9fafb',
+        background: 'var(--research-bg)',
+        color: 'var(--research-text)',
         padding: '80px 20px',
-        borderBottom: '1px solid #1f2933'
+        borderBottom: '1px solid var(--research-line)'
       }}>
         <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
           <p style={{ 
@@ -764,7 +753,7 @@ export default function PartnersPage() {
             Build Better Traders —<br/>
             <span style={{ color: 'var(--msp-accent)' }}>Not Louder Signals</span>
           </h2>
-          <p style={{ fontSize: 17, color: '#9ca3af', marginBottom: 40, lineHeight: 1.7 }}>
+          <p style={{ fontSize: 17, color: 'var(--research-muted)', marginBottom: 40, lineHeight: 1.7 }}>
             If you're serious about education, structure, and clarity, let's talk.
           </p>
 
@@ -787,7 +776,7 @@ export default function PartnersPage() {
             <Link href="/contact" style={{
               display: 'inline-block',
               borderRadius: 999,
-              border: '1px solid #1f2933',
+              border: '1px solid var(--research-line)',
               background: 'transparent',
               color: '#e5e7eb',
               padding: '16px 36px',
@@ -824,7 +813,7 @@ export default function PartnersPage() {
           <p style={{ fontSize: 14, color: 'var(--msp-accent)', marginBottom: 12 }}>
             No upfront cost. No obligation. Partnerships reviewed individually.
           </p>
-          <p style={{ fontSize: 14, color: '#9ca3af', fontStyle: 'italic' }}>
+          <p style={{ fontSize: 14, color: 'var(--research-muted)', fontStyle: 'italic' }}>
             Education-focused partnerships only.
           </p>
         </div>
@@ -834,14 +823,14 @@ export default function PartnersPage() {
       <section style={{
         width: '100%',
         background: '#05070b',
-        color: '#f9fafb',
+        color: 'var(--research-text)',
         padding: '60px 20px'
       }}>
         <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
           <h2 style={{ fontSize: 28, fontWeight: 700, marginBottom: 16 }}>
             Want Your Own Branded Page?
           </h2>
-          <p style={{ fontSize: 16, color: '#9ca3af', marginBottom: 32 }}>
+          <p style={{ fontSize: 16, color: 'var(--research-muted)', marginBottom: 32 }}>
             Approved partners can receive:
           </p>
 

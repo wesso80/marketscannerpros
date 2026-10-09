@@ -33,7 +33,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms https://plausible.io https://js.stripe.com https://*.posthog.com",
+              `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ""} https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms https://plausible.io https://js.stripe.com https://*.posthog.com`,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: blob: https:",
               "font-src 'self' https://fonts.gstatic.com",
@@ -102,7 +102,7 @@ const nextConfig = {
       },
       {
         source: '/portfolio',
-        destination: '/tools/workspace',
+        destination: '/tools/workspace?tab=Portfolio',
         permanent: true,
       },
       {
@@ -112,7 +112,7 @@ const nextConfig = {
       },
       {
         source: '/journal',
-        destination: '/tools/workspace',
+        destination: '/tools/workspace?tab=Journal',
         permanent: true,
       },
       {
@@ -160,7 +160,6 @@ const nextConfig = {
       { source: '/tools/crypto', destination: '/tools/explorer?tab=crypto-command', permanent: true },
       // Diamond Hunter was removed (26 Sep 2026). Temporary (307) so the path can be reused if it ever comes back.
       { source: '/tools/diamond-hunter', destination: '/tools/explorer?tab=crypto-command', permanent: false },
-      { source: '/tools/macro', destination: '/tools/dashboard?tab=macro', permanent: true },
 
       // Scanner surface
       { source: '/tools/ai-analyst', destination: '/tools/scanner', permanent: true },

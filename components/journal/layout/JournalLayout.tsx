@@ -1,3 +1,5 @@
+import { publicDesignEnabled } from '@/lib/publicDesign';
+import records from '@/components/public-design/RecordsStudio.module.css';
 import CollapsibleSection from "@/components/visual/CollapsibleSection";
 import EmptyState from "@/components/visual/EmptyState";
 import SourceLine from "@/components/visual/SourceLine";
@@ -52,7 +54,7 @@ type JournalLayoutProps = {
 
 export default function JournalLayout(props: JournalLayoutProps) {
   return (
-    <div className="space-y-3">
+    <div className={publicDesignEnabled() && props.embeddedInWorkspace ? records.journal : "space-y-3"}>
       <div className="rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-[11px] leading-relaxed text-slate-400">
         This page displays historical journal records and descriptive summaries
         only. It does not suggest future actions, strategy changes, or trading
@@ -135,8 +137,7 @@ export default function JournalLayout(props: JournalLayoutProps) {
               Intelligence Dock — Pro Feature
             </p>
             <p className="mt-1 text-xs text-slate-400">
-              Upgrade to Pro for automated trade data analysis, risk scoring,
-              labeling, evidence snapshots, and AI-powered summaries.
+              {publicDesignEnabled() && props.embeddedInWorkspace ? 'Review historical records by setup and inspect saved evidence. See pricing for current access; this review does not provide trading recommendations.' : 'Upgrade to Pro for automated trade data analysis, risk scoring, labeling, evidence snapshots, and AI-powered summaries.'}
             </p>
             <a
               href="/pricing"

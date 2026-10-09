@@ -1,43 +1,29 @@
 'use client';
-import { volatilityText } from '../displayText';
 
-import type { VolatilityTrap } from '@/src/features/volatilityEngine/types';
+import type { PublicPinnedCompression } from '@/src/features/volatilityEngine/types';
+import { pinnedConditionLabel } from '@/lib/research/volatilityDescriptions';
 
-export default function VETrapAlert({ trap }: { trap: VolatilityTrap }) {
-  if (!trap.detected && !trap.candidate) return null;
-
-  const isTrap = trap.detected;
-
+/**
+ * Compression next to a large open-interest strike, shown as its conditions (W3 DVE v2). The engine's trap score and
+ * its "detected / candidate" verdicts are not published; a condition whose input was not collected says so.
+ */
+export default function VETrapAlert({ pinned }: { pinned: PublicPinnedCompression }) {
+  const keys = Object.keys(pinned.conditions) as Array<keyof PublicPinnedCompression['conditions']>;
   return (
-    <div
-      className={`rounded-xl border px-5 py-4 ${isTrap ? 'animate-pulse border-red-500/40' : 'border-amber-500/30'}`}
-      style={{
-        background: isTrap
-          ? 'linear-gradient(90deg, rgba(220,38,38,0.15), rgba(217,119,6,0.15))'
-          : 'linear-gradient(90deg, rgba(217,119,6,0.08), rgba(217,119,6,0.04))',
-      }}
-    >
-      <div className="flex items-center gap-3">
-        <span className={`h-2.5 w-2.5 rounded-full ${isTrap ? 'bg-red-400' : 'bg-amber-400'}`} aria-hidden="true" />
-        <div className="min-w-0 flex-1">
-          <p className={`text-sm font-bold tracking-wide ${isTrap ? 'text-red-400' : 'text-amber-400'}`}>
-            {isTrap ? 'Volatility trap detected' : 'Trap candidate'}{' '}
-            <span className="text-amber-400">— Score: {trap.score.toFixed(0)}/100</span>
-          </p>
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            {trap.components.map((c, i) => (
-              <span key={i} className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[0.7rem] text-white/50">
-                {volatilityText(c)}
-              </span>
-            ))}
-          </div>
-          <div className="mt-1 flex flex-wrap items-center gap-3 text-[0.7rem] text-white/40">
-            <span>Compression: {trap.compressionLevel.toFixed(0)}%</span>
-            <span>Gamma Lock: {trap.gammaLockDetected ? 'Yes' : 'No'}</span>
-            <span>Time Cluster: {trap.timeClusterApproaching ? 'Yes' : 'No'}</span>
-          </div>
-        </div>
-      </div>
+    <div data-pinned-compression className="rounded-xl border border-white/10 bg-white/5 px-5 py-4">
+      <p className="text-sm font-bold text-white/80">Compression near a large open-interest strike</p>
+      <ul className="mt-2 space-y-1 text-[0.72rem]">
+        {keys.map((k) => (
+          <li key={k} className="flex min-w-0 flex-wrap justify-between gap-x-3">
+            <span className="text-white/60">{pinnedConditionLabel(k)}</span>
+            <span className={pinned.conditions[k] === null ? 'text-white/30' : pinned.conditions[k] ? 'font-semibold text-amber-300' : 'text-white/50'}>
+              {pinned.conditions[k] === null ? 'Not collected' : pinned.conditions[k] ? 'Yes' : 'No'}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {pinned.observations.length > 0 && <p className="mt-2 break-words text-[0.7rem] text-white/40">{pinned.observations.join(' · ')}</p>}
+      <p className="mt-1 text-[0.68rem] text-white/35">Conditions only; they do not predict a failed or false move.</p>
     </div>
   );
 }

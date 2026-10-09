@@ -1,0 +1,235 @@
+FOLLOW-UP: real Copilot handler + quota wrapper + PostgreSQL integration
+New publicCopilotLedger.integration.test.ts composes real withPublicAiQuota(publicCopilot), real
+signed evidence verification, real answer policy and real createPublicDailyQuota transactions.
+Mocks only session/entitlement resolution, rate limiter and model fetch; production DB access throws.
+Seven new cases pass: durable success/replay/conflicting ID, simultaneous duplicate, rejected output
+release and retry, interrupted outcome retained/pending, missing-key release, 21st request refused,
+and signed-out/Free refused without ledger writes. Stored counts and model-call counts asserted.
+Existing 11 PostgreSQL quota checks also pass: 18 total. Dedicated loopback PostgreSQL port 55441,
+random isolated databases, actual migrations 126/127 (existing suite additionally 128); both databases
+dropped and dedicated server stopped. No production DB/provider/OpenAI calls or application edits.
+Run with QUOTA_TEST_POSTGRES_PORT set to a dedicated fixture PostgreSQL (quota_test user,
+quota_local_only password) using the repo Vitest configuration. These tests create/drop random
+copilot_test_* databases. Never point at production; host is hardcoded 127.0.0.1 and production db
+module is mocked to throw. Existing local runner used run-copilot-ledger-tests.mjs.
+Limit: session/subscription DB resolution and real OpenAI remain mocked; this is not a deployed
+browser-to-database run. Next recommended task: review release readiness/remaining route coverage
+with Claude, then evaluate real model evidence selections against held-out educational questions.
+
+FOLLOW-UP: successful report -> answer -> shared allowance browser flow
+Extended app-smoke.mjs with MSP_SMOKE_SUCCESS=1. A synthetic public Symbol report is signed by
+issueSymbolEvidence and its scripted answer rendered by validateCopilotAnswer. Actual Next Symbol
+page/layout/Copilot submit the expected AAPL token plus an idempotency key. Exactly one question
+request is recorded; both panel and page allowance refresh from 20 to 19 via mocked usage responses.
+Result: HTTP 200, no browser errors, panel within viewport at 1280/390. Mobile screenshot inspected.
+Supplementary APIs deliberately unavailable: panel declares partial coverage and uses core evidence.
+All browser API calls mocked, external requests blocked. This is not a server auth/signature/ledger
+end-to-end test or live model relevance evaluation; the signed fixture is matched at the mocked
+endpoint. Ledger and route behavior have separate tests. No provider or OpenAI calls.
+Output: copilot-app-smoke.json (questions=1, usageReads=7), success screenshots in local outputs.
+Next: integrate the real quota wrapper and Copilot route with an isolated PostgreSQL ledger and fake
+model, to verify debit/replay/failure handling across the server boundary. No application changes,
+Claude file edits, merges or deployments in this follow-up.
+
+FOLLOW-UP: full-app build fixes and missing-evidence smoke pass
+instrumentation.ts now places its dynamic Node logger import inside the positive NEXT_RUNTIME
+branch documented by Next, so the Edge compiler excludes fs/v8. Logger activation/intervals unchanged.
+SymbolAiSummary.tsx encoding-only repair: invalid Windows ellipsis byte converted to UTF-8;
+valid existing UTF-8 preserved. Overlap disclosed before this repair; no Claude summary logic changed.
+CSP allows unsafe-eval only in development for webpack hydration; production/test remain unchanged.
+Real app smoke (Next server + Chromium in one process) now returns 200, hydrates without browser
+errors, opens Pro Copilot with mocked identity/disclosure/usage and unavailable report data, and
+keeps the question disabled. Verified at 1280 and 390. Actual app CSS exposed 12px mobile clipping;
+explicit viewport-safe panel width fixes it. Mobile screenshot visually checked.
+14 focused build/logger tests pass. New reusable test/browser/copilot/app-smoke.mjs uses the same
+MSP_BROWSER_RUNTIME/OUTPUT/CHROMIUM variables as the component harness; port 5178 must be free.
+All browser API requests mocked and external hosts blocked. No provider/model or production DB calls.
+This verifies missing-evidence integration, NOT successful signed-report/model/DB quota flow. Those
+remain next, along with model selection-quality evaluation. No merges/deployments or flag changes.
+
+FOLLOW-UP: longer-answer browser checks and full-app limitation
+Local Next dev (installed 16.4.0, webpack) reported UnhandledSchemeError for node:fs through
+lib/memory/debugLog.ts. Symbol page request timed out. Full-app verification is NOT passed.
+Stopped the dev process and removed only its generated AGENTS.md / next-env addition.
+Expanded real-component browser harness to 16 cases (eight at 1280 and 390). The long response
+uses the actual selection validator and presentation helper with synthetic price, BBWP zero,
+ATR, options ratio, distinct chain/expiry dates and missing IV, plus reviewed explanations.
+The realistic question asks about volatility/options/dates/missing data and whether to buy.
+Selection is scripted, not made by a model: this verifies rendering, not model answer relevance.
+Long answers scroll; source evidence opens; follow-up textbox and submit remain usable; no viewport
+overflow/browser errors. External HTTP blocked. Screenshot inspected at 390. UI attribution corrected
+to AI-selected page evidence with reviewed educational explanations. No live provider/model calls.
+Next: resolve the local full-app build blocker in a separate task, then complete browser route-flow
+verification; separately evaluate real model selections against held-out questions. API connectivity
+reported working by Pip is distinct from those remaining tests. No merge/deploy/rollout enablement.
+
+FOLLOW-UP: readable Copilot measurement presentation
+Verified remote state before editing: own b732b35d; research-page-phase4 717bfdbe; Claude DVE
+5d0f0f7. Published Claude file list has no overlap; unpushed work is not visible.
+New copilotPresentation helper names common price, indicator, options, funding and volatility
+measurements with explicit units. No rounding/rescaling. Currency is not guessed. Null, zero and
+negative values stay distinct. Unknown fields use readable paths and unspecified-unit wording.
+Known measurements attach their exact signed observation timestamp or completed-bar date and
+options expiry, with metadata citations. Snapshot capture is labelled separately, never used as an
+observation date. Missing/malformed dates remain unavailable. Arbitrary text stays in disclosure.
+45 focused tests pass, including nine presentation cases and the prior 24 adversarial cases.
+Remaining: expand the explicit field catalogue and typed metadata to other sections; no implied
+complete catalogue. Check the longer answers in the full application and evaluate selection quality.
+API connection reported working by Pip/user; no live API call made by this task.
+No admin, engine or Claude-owned files changed. No merge, deployment or rollout enablement.
+
+FOLLOW-UP: selection-only answer contract closes the eight demonstrated gaps
+The model now selects existing evidence IDs and reviewed explanation keys. It cannot supply factual
+prose or rewrite values. Server rendering supplies symbol, timeframe, exact field path and scalar
+value; null is Not available, negative signs and zero are retained. Arbitrary string/structured values
+remain in the source disclosure rather than being echoed as educational prose. Unknown templates,
+extra properties, duplicate IDs, invented IDs and legacy free-form text are rejected.
+All eight former expected failures are ordinary rejection tests now. Added positive rendering,
+source-string injection and template/prototype validation checks. 65 focused tests pass across
+adversarial cases, signed evidence, route behavior and quota handling. Typecheck reports only the
+same six local baseline errors (four Stripe version literals, two timer unref types).
+Tradeoff: constrained evidence selection with a reviewed educational library, not free-form chat.
+The model can still choose irrelevant or incomplete evidence; selection quality needs live evaluation.
+String dates/units/qualifications remain in source disclosure; field paths are exact but technical.
+This fixes the demonstrated prose-invention mechanism; it does not prove source accuracy or complete
+page coverage. Next: readable field labels and grouped observation metadata, then model selection
+evaluation against held-out questions. Keep rollout disabled pending that and remaining release work.
+No admin/engine/Claude-owned files changed, no real model/provider calls, merges or deployments.
+
+FOLLOW-UP: adversarial answer validation audit
+Added test/publicCopilotAdversarial.test.ts: 12 ordinary checks plus EIGHT explicit expected
+failures (it.fails). The expected failures document missing protections, not successful rejection.
+Existing checker accepts: wrong symbol, wrong field, reversed numeric sign, changed numeric unit,
+an invented event, indirect portfolio advice, an unsupported forecast, and a claim from null data.
+A matching citation and matching digits do not establish that a sentence follows from that evidence.
+The numeric extractor discards sign; cited digits can be relabelled as another measurement.
+Instruction text forbids these outputs but the deterministic validator does not enforce that fully.
+This is a release blocker for the promised page-only educational experience. Keep rollout disabled.
+No application code changed. No live model evaluation was performed. These synthetic adversarial
+outputs demonstrate validator behavior, not their frequency in actual model responses.
+Added three route rejection checks: unsafe output is withheld with 422/private no-store and no
+content field. Ledger release is covered separately by quota tests, not by these route mocks.
+Next implementation: render symbol/field/value/unit/date observations from server evidence IDs,
+not model-authored factual prose; constrain explanations to reviewed educational content or add
+an evaluated semantic verification layer. Regex additions alone cannot establish grounding.
+Acceptance: convert all eight expected failures to ordinary passing rejection tests; retain valid
+zero/missing distinctions and useful educational explanations; evaluate indirect advice and prompt
+injection using held-out cases before enabling. Preserve admin and coordinate shared-file ownership.
+
+FOLLOW-UP: Copilot browser fixture verification
+14 Chromium checks passed: seven scenarios each at 1280x900 and 390x900.
+Scenarios: Free access, successful Pro question and source disclosure, failed news source,
+exhausted allowance, pending evidence loading, symbol switch during an answer, rejected answer.
+Checks cover disabled inputs, token counts, one question request, quota display, stale-answer
+suppression, no browser errors, and panel/document viewport bounds. Ready screenshots visually
+inspected at both widths. All external HTTP requests blocked; no provider or OpenAI calls.
+Uses the actual PublicMSPCopilot component and generated Tailwind CSS with mocked API responses.
+Fixture tokens are synthetic; this does not exercise server signing, auth, DB or a live deployed app.
+Those server boundaries have separate tests. Live model quality and full-app integration remain open.
+Reusable harness: test/browser/copilot/run.mjs and entry.tsx. Set MSP_BROWSER_RUNTIME to a directory
+with playwright installed, MSP_BROWSER_OUTPUT to an output directory, and optionally MSP_CHROMIUM
+to a Chromium executable. Run node test/browser/copilot/run.mjs from the repository root.
+Outputs: copilot-browser-results.json plus one screenshot per viewport/scenario.
+No application or Claude-owned files changed in this follow-up. No merge or deployment.
+
+FOLLOW-UP: DVE #511 and read-only options integration
+Cherry-picked Claude 5d0f0f7 as 2cca75ed on this branch; #511 itself remains unmerged.
+Cold and cached DVE v2 public readings receive optional account-bound signed tokens. Combination
+requires matching symbol, asset, expiry and timeframe. No engine/admin/Free entitlement changes.
+New GET /api/research/options checks paid access and input before the analyzer and projects the
+public contract directly. It never invokes options-scan orchestration, adaptive profiles or state-machine
+updates. OptionsChainEvidence now uses this read-only endpoint too. Supplementary quoted-contract
+quality counts are explicitly not collected here (no second raw-chain request).
+Pro Copilot now automatically loads DVE for the selected timeframe/expiry and read-only options for
+equities, along with the existing chart/news/ownership-or-crypto sections. Missing signatures or failed
+sources remain unavailable. No automatic AI call/question debit. Live page data still needs browser
+verification and live model evaluation; summary unification/legacy routes/pricing/cost controls remain.
+Validation: 35 distinct focused checks passed across DVE contracts/access, hook types, loader, panel,
+read-only options route, evidence binding and public Copilot route. Typecheck remains six baseline
+local runtime errors only. No real provider/model calls, production DB changes, merges or deployments.
+
+FOLLOW-UP: on-open evidence loading
+Opening the Pro Copilot on a verified Symbol report loads chart (90-day default), news and ownership
+or crypto through existing public endpoints, without requiring the tabs to be opened. Loaded tab
+snapshots override those defaults. Three concurrent requests, 20-second per-request timeout, abort
+on close/context change, no automatic model call or question debit. Missing signatures and failed
+responses remain explicitly unavailable. Options intentionally is not prefetched because its existing
+endpoint writes state-machine data. A separate read-only options path is needed. DVE stays with Claude.
+14 focused loader, panel, route and evidence checks pass. No live calls were used for testing.
+
+FOLLOW-UP: ownership and crypto factual adapters
+Ownership now signs explicitly selected filing/transaction fields, preserving delayed reporting dates,
+amount ranges, zero values and unavailable sections. Crypto signs allowlisted measurements with their
+source/time/basis only when the verified coin ID matches the static symbol map. Internal rule stages,
+rule stops, scores, budget internals and unapproved notes are excluded. Original reports are unchanged;
+responses with account-bound tokens are private/no-store. Both components clear tokens on reload.
+DVE remains with Claude. These adapters connect permitted loaded evidence; they do not assert that
+all tabs are loaded or all legacy public metrics are suitable for AI input. Remaining work includes
+DVE, automatic section loading, summary unification, legacy route retirement, cost controls, pricing,
+other destinations and real model/browser evaluation. Rollout stays disabled.
+Validation: 13 Copilot/adapter checks and 21 ownership/crypto regression checks passed (34 total).
+Typecheck: same six baseline errors only. All provider responses in tests were fixtures; no live calls.
+
+FOLLOW-UP: signed section adapters
+Chart/comparison (including compact full historical rows and indicator values), news events and
+public options evidence now issue account-bound section tokens with their actual responses.
+Clients publish only received tokens and clear them on reload/unmount. Copilot verifies each token,
+symbol, asset and options expiry before combining evidence. Different/expired/duplicate sections
+fail closed. No additional provider calls are made to populate Copilot.
+Sections are available only after loaded on the page; not-yet-opened tabs are explicitly missing.
+DVE is untouched because Claude owns its fixes. Ownership and crypto breakdown need adapters too.
+This supersedes the core-only limitation below for these three loaded sections. It is not yet
+complete whole-page coverage. News includes event facts, dates, sources and rule, excluding
+sentiment judgements; the options adapter signs the public chain-evidence contract, not private
+analyzer output. Long series are compacted without sampling or losing rows.
+Validation: 19 section/panel/options/route/comparison checks pass; typecheck has only the same six
+baseline issues. No real provider/model calls. Rollout remains disabled.
+
+MSP Copilot implementation checkpoint — 8 October 2026
+
+Branch: codex/public-copilot-education
+Foundation: Codex integration plus Claude #508/#509 (research-page-phase4 717bfdbe).
+No merges, deployments, production data changes or provider/OpenAI calls.
+
+Implemented behind existing PUBLIC_DAILY_QUOTAS_ENABLED rollout:
+- Public Free/visitor AI allowance zero; Pro 20 across shared question ledger.
+- Verified subscription gate precedes reservation and provider execution; admin bypass unchanged.
+- Automatic Symbol AI summary requires Pro when the public rollout is enabled.
+- Public Copilot bypasses legacy internal context, intelligence retrieval, tools and trading prompts.
+- Core Symbol public packet signed server-side, account-bound, 30-minute expiry, no-store response.
+- Missing signing configuration preserves the report but leaves Copilot unavailable.
+- Public model receives only that signed snapshot plus a bounded question, no arbitrary pageData or history.
+- Educational prompt, strict JSON output, checked evidence IDs and numerical claims, basic advisory-text rejection.
+- Public model default gpt-6-luna, configurable with PUBLIC_COPILOT_MODEL. Not live evaluated.
+- Pro panel with remaining allowance, localized reset, explicit missing sections and expandable source fields.
+- Account plan/allowance rechecks on window focus, successful responses and Eastern reset.
+- Pending interrupted requests retain reservation; same request ID does not rerun. Definite failures release credit.
+
+Limits / release blockers (do not enable rollout yet):
+1. Snapshot contains the core public Symbol packet ONLY. Full chart series/comparison, separately loaded news,
+   options chain and DVE need explicit server-issued evidence adapters. Other destinations intentionally
+   show unavailable rather than read stale or arbitrary client context. This is not whole-page completion.
+2. User follow-up messages are independent against the same snapshot; conversation history is not yet trusted/stored.
+3. Other legacy public AI endpoints retain their existing behaviour under the shared paid gate. They need
+   educational routing or retirement before release; admin consumers must remain intact.
+4. Automatic summary remains on existing generator/model and once-per-report/day cache, separate from 20 questions.
+   Unify signed evidence and summary generation after adapters; no extra automatic generation added here.
+5. Pricing/marketing copy and legacy free AI claims are not updated yet; update with rollout-aware policy.
+6. Regex/numeric checks are conservative filters, not proof of semantic grounding. Run representative
+   adversarial/educational evaluations before choosing model and enabling it. No live account verification yet.
+7. No aggregate dollar budget or token-cost observability implemented yet. Output/request caps and daily quota
+   exist; private replay stores model usage. Add durable aggregate spend admission before broad release.
+8. Panel unit-tested; visual browser check at 390/1280 still required.
+
+Validation:
+- 36 focused evidence/route/quota tests passed; 25 existing route/access/summary/usage checks passed.
+- 3 new panel tests passed.
+- 11 isolated real PostgreSQL tests passed, including 20-request contention and DST reset instants;
+  local test database removed and PostgreSQL stopped by harness. No production database accessed.
+- Typecheck reports only the six previously recorded local runtime baseline errors:
+  four Stripe API literal versions, and two timer.unref types. No new errors found.
+- git diff --check passed.
+
+Claude ownership: public DVE fields and access reconciliation; avoid Copilot/policy/quota files.
+Next Codex task: signed evidence adapters for all Symbol tabs, then remaining seven destinations,
+summary unification, legacy AI retirement, pricing and model evaluation. Report shared page overlap first.

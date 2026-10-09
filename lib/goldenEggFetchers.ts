@@ -4,6 +4,7 @@ import { isMeasuredLevel } from '@/lib/confluenceMeasured';
  * Used by: app/api/golden-egg/route.ts, app/api/dve/route.ts
  */
 
+import { partialBarDate } from '@/lib/research/priceEvidence';
 import { avFetch, avTakeToken } from '@/lib/avRateGovernor';
 import { getIndicators, getQuote } from '@/lib/onDemandFetch';
 import { calculateAllIndicators, detectSqueeze, type OHLCVBar } from '@/lib/indicators';
@@ -359,7 +360,8 @@ export async function fetchPrice(
         volumes: indicatorDates.map(d => { const v = parseFloat(ts[d]['6. volume'] ?? ts[d]['5. volume']); const f = splitFactor.get(d) ?? 1; return Number.isFinite(v) && v > 0 ? v * f : null; }),
       },
       barInterval,
-      lastCompletedBarAt: lastKey ?? null,
+      // A daily bar dated today (New York) is still forming until after the close: it is the price, not a completed bar.
+      lastCompletedBarAt: interval === 'daily' && lastKey && partialBarDate(lastKey, 'equity', Date.now()) ? (dates[1] ?? null) : (lastKey ?? null),
       priceTs: lastKey,
       source: isIntraday ? `alpha_vantage TIME_SERIES_INTRADAY ${interval}` : `alpha_vantage TIME_SERIES_${interval === 'weekly' ? 'WEEKLY' : 'DAILY'}_ADJUSTED (O/H/L/C split-adjusted via coefficients${splitsApplied ? `, ${splitsApplied} split${splitsApplied === 1 ? '' : 's'} applied` : ''})`,
       volumeBasis: avgVol && avgVol > 0 ? 'exchange_volume_20_bars' : 'unavailable',
@@ -426,7 +428,7 @@ export async function fetchIndicators(
 export async function fetchOptionsSnapshot(
   symbol: string,
   price: number,
-  ctx: { recentCloses?: number[]; recentDates?: string[] } = {},
+  ctx: { recentCloses?: number[]; recentDates?: string[]; /** Explicit expiry: used only if listed, else null (no fallback). */ expiry?: string | null } = {},
 ): Promise<OptionsSnapshot | null> {
   if (!AV_KEY) return null;
   try {
@@ -446,7 +448,7 @@ export async function fetchOptionsSnapshot(
 
     // ONE expiry, ONE timestamp. All P/C, walls, max pain and IV below refer to this chain only.
     const snapshotTs = rawData[0]?.date ? String(rawData[0].date).slice(0, 10) : '';
-    const canonical = summarizeChain(rawData, price, { snapshotTs, recentCloses: ctx.recentCloses, recentDates: ctx.recentDates });
+    const canonical = summarizeChain(rawData, price, { snapshotTs, recentCloses: ctx.recentCloses, recentDates: ctx.recentDates, expiry: ctx.expiry });
     // No call open interest near spot: there is no put/call ratio to report, so options positioning is unavailable (never 1.0).
     if (!canonical || canonical.putCallOi == null) return null;
     canonical.notes.push(`Source: ${provider}.`);

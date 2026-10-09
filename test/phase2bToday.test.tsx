@@ -36,9 +36,9 @@ vi.mock('@/app/v2/_lib/api', () => ({
   useDailyPicksBundle: () => ({ data: null, loading: false, error: null, isAuthError: false, isUpgradeRequired: false, refetch: () => {} }),
 }));
 
-import CommandCenterPage from '@/app/tools/command-center/page';
+import ResearchOverview from '@/components/public-design/ResearchOverview';
 import DashboardPage from '@/app/tools/dashboard/page';
-import MacroDashboardPage from '@/app/tools/macro/page';
+import MacroDashboardPage from '@/components/macro/MacroDashboard';
 import MarketMoversPage from '@/app/tools/market-movers/page';
 import MspRadarReport from '@/components/msp-radar/MspRadarReport';
 import RadarReportCard from '@/components/overview/RadarReportCard';
@@ -92,15 +92,13 @@ afterEach(() => { window.history.replaceState(null, '', '/'); act(() => root.unm
 const render = async (element: React.ReactNode) => { await act(async () => { root.render(element); }); await act(async () => { await Promise.resolve(); }); };
 
 describe('Phase 2B today pages', () => {
-  it('Overview has one regime box, folded blocks closed, and three headlines', async () => {
-    await render(<CommandCenterPage />);
-    expect(container.querySelectorAll('[data-regime-box]')).toHaveLength(1);
-    const folds = [...container.querySelectorAll('[data-desk-folds] details')];
-    expect(folds.length).toBeGreaterThan(0);
-    expect(folds.every((node) => !(node as HTMLDetailsElement).open)).toBe(true);
-    expect(container.textContent).toContain('Headline 0');
-    expect(container.textContent).toContain('Headline 2');
-    expect(container.textContent).not.toContain('Headline 3');
+  it('Overview shows dated benchmarks and factual Radar instead of a composite regime box',async()=>{
+    await render(<ResearchOverview/>);
+    expect(container.querySelector('[aria-label="Benchmark observations"]')?.querySelectorAll('a')).toHaveLength(3);
+    expect(container.textContent).toContain('Daily Radar');
+    expect(container.textContent).toContain('7 benchmark symbols · fixed coverage');
+    expect(container.querySelector('[data-regime-box]')).toBeNull();
+    expect(container.textContent).toContain('Not available');
     expect(container.textContent).not.toMatch(BANNED);
   });
 
@@ -126,10 +124,11 @@ describe('Phase 2B today pages', () => {
     await render(<MacroDashboardPage embeddedInDashboard />);
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
     const lead = container.querySelector('[data-global-regime]');
-    expect(lead?.querySelector('h2')?.textContent).toBe('Global regime');
+    expect(lead?.querySelector('h2')?.textContent).toBe('Published macro observations');
     expect(lead?.querySelector('[data-verdict-box]')).not.toBeNull();
     expect(lead?.querySelectorAll('[data-macro-tile]')).toHaveLength(4);
-    expect(container.innerHTML.indexOf('data-global-regime')).toBeLessThan(container.innerHTML.indexOf('Decision detail'));
+    // J9 renamed the folded decision section to "Assessment detail".
+    expect(container.innerHTML.indexOf('data-global-regime')).toBeLessThan(container.innerHTML.indexOf('Assessment detail'));
     expect(container.querySelector('[data-global-regime] details')).toBeNull();
     expect(container.querySelector('[aria-label="Macro command header"]')).toBeNull();
     expect(container.textContent).not.toContain('Yield curve chart is the next row');
@@ -153,8 +152,9 @@ describe('Phase 2B today pages', () => {
   it('Macro inside Dashboard starts at Global regime', async () => {
     nav.tab = 'macro';
     await render(<DashboardPage />);
-    await vi.waitFor(() => expect(container.querySelector('[data-global-regime] h2')?.textContent).toBe('Global regime'));
-    expect(container.querySelector('h1')).toBeNull();
+    await vi.waitFor(() => expect(container.querySelector('[data-global-regime] h2')?.textContent).toBe('Published macro observations'));
+    // J9: the Dashboard hides its own heading on the Macro tab and the embedded view supplies the only h1.
+    expect([...container.querySelectorAll('h1')].map((h) => h.textContent)).toEqual(['Macro']);
     expect(container.querySelector('[aria-label="Dashboard lens"]')).toBeNull();
     expect(container.querySelector('[aria-label="Macro command header"]')).toBeNull();
     expect(container.textContent).not.toContain('Yield curve chart is the next row');
@@ -166,9 +166,9 @@ describe('Phase 2B today pages', () => {
     expect(container.querySelector('h1')?.textContent).toBe('Daily Radar');
     expect(container.textContent).not.toMatch(BANNED);
     root.render(<MarketMoversPage />);
-    await vi.waitFor(() => expect(container.querySelectorAll('[data-mover-bars]')).toHaveLength(2));
-    expect(container.querySelectorAll('[data-mover-bars]')).toHaveLength(2);
-    expect(container.textContent).toContain('Show all');
+    // Compact Movers presentation: an empty fixture states that nothing was collected and draws no charts.
+    await vi.waitFor(() => expect(container.querySelector('[data-movers-verdict]')?.textContent).toBe('No mover observations collected.'));
+    expect(container.querySelector('[data-mover-row]')).toBeNull();
     expect(container.textContent).not.toMatch(BANNED);
   });
 

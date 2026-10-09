@@ -1,0 +1,34 @@
+.page{max-width:1400px;margin:auto;padding:28px clamp(12px,3vw,40px) 56px;color:#edf1ed}
+.navigation{max-width:1320px;margin:0 auto;display:flex;gap:28px;padding:0 12px;border-bottom:1px solid #293a42}
+.navigation a{color:#a8b9bf;text-decoration:none;font-size:13px;padding:18px 0;border-bottom:2px solid transparent}
+.navigation a[aria-current=page]{color:#a5e8cf;border-color:#a5e8cf}
+.hero{display:grid;grid-template-columns:1.35fr 1fr;gap:48px;align-items:end;padding:20px 0 36px}
+.kicker{font-size:11px;letter-spacing:1.8px;color:#a5e8cf;margin:0 0 18px}
+.hero h1{font-size:clamp(38px,4vw,56px);font-weight:500;letter-spacing:-1.8px;margin:0;line-height:1.1}
+.lead{font-size:clamp(22px,2.2vw,30px);font-weight:400;line-height:1.35;letter-spacing:-.5px;color:#a8b9bf;margin:18px 0 0}
+.introduction{font-size:14px;line-height:1.8;color:#a8b9bf;max-width:400px;margin:0 0 3px;padding-left:24px;border-left:1px solid #38534d}
+.controls{display:flex;flex-wrap:wrap;align-items:end;gap:20px;padding:24px;background:#111e26;border:1px solid #293a42;border-radius:8px}
+.field{display:grid;gap:10px;font-size:12px;color:#a8b9bf;min-width:150px}
+.input{min-height:44px;max-width:100%;width:100%;background:#0c181f;color:#edf1ed;border:1px solid #38534d;border-radius:5px;padding:10px 12px;font:inherit}
+.primary{min-height:44px;padding:12px 24px;background:#a5e8cf;color:#10241c;border:1px solid #a5e8cf;border-radius:5px;font-size:13px;font-weight:600;margin-left:auto}
+.primary:disabled{opacity:.55;cursor:wait}
+.controlNote{width:100%;font-size:12px;color:#a8b9bf;line-height:1.7;margin:0}
+.filters{display:flex;flex-wrap:wrap;gap:24px;align-items:end;padding:28px 0;border-bottom:1px solid #293a42}
+.filters .field{min-width:0;width:140px}
+.checkbox{display:flex;gap:10px;align-items:center;min-height:44px;font-size:13px;color:#edf1ed}
+.checkbox input{accent-color:#a5e8cf;width:16px;height:16px}
+.clear{background:transparent;border:0;padding:0;cursor:pointer;margin-left:auto;min-height:44px;color:#a5e8cf;font-size:12px;text-decoration:underline;text-underline-offset:4px}
+.coverage{font-size:12px;line-height:1.8;color:#a8b9bf;margin:20px 0}
+.sectionHeading{display:flex;justify-content:space-between;gap:18px;align-items:baseline;margin:32px 0 16px}
+.sectionHeading h2{font-size:23px;font-weight:500;letter-spacing:-.6px;margin:0}.sectionHeading span{font-size:12px;color:#a8b9bf}
+.results{border-top:1px solid #293a42}.row{padding:24px 0;border-bottom:1px solid #293a42;min-width:0}
+.rowData{display:grid;grid-template-columns:minmax(110px,.7fr) 3fr;align-items:center;gap:24px}
+.symbol{color:#a5e8cf;font-size:23px;letter-spacing:-.5px;text-decoration:none;overflow-wrap:anywhere}.symbol:hover{text-decoration:underline;text-underline-offset:5px}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;margin:0}.metrics dt{font-size:11px;color:#a8b9bf;margin-bottom:8px}.metrics dd{font-size:clamp(17px,2vw,25px);font-weight:400;font-variant-numeric:tabular-nums;letter-spacing:-.5px;overflow-wrap:anywhere;margin:0}
+.source,.note{font-size:11px;line-height:1.8;color:#a8b9bf;overflow-wrap:anywhere;margin:16px 0 0}.note{margin-top:6px;color:#91a5ae}
+.notice{font-size:12px;line-height:1.7;color:#e2c795;margin:14px 0}
+.empty{padding:40px 0}.empty span{font-size:11px;color:#a5e8cf;letter-spacing:3px}.empty p{font-size:20px;font-weight:400;margin:18px 0 10px;color:#edf1ed}.empty small{color:#a8b9bf;font-size:12px}
+.page :is(a,button,input,select):focus-visible,.navigation a:focus-visible{outline:2px solid #a5e8cf;outline-offset:4px}
+@media(max-width:700px){.hero{grid-template-columns:1fr;gap:24px;padding-top:8px}.introduction{max-width:none;padding-left:16px}.controls{padding:18px;gap:16px}.field{flex:1;min-width:125px}.primary{width:100%;margin:0}.filters{gap:16px}.filters .field{flex:1}.clear{margin-left:0}.sectionHeading{align-items:start;flex-direction:column;gap:8px}.rowData{grid-template-columns:1fr;gap:20px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.page{padding-top:20px}.navigation{margin:0 12px;padding:0;gap:24px}}
+
+@media(max-width:700px){.filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.filters .field{width:auto;min-width:0}.filters .checkbox{grid-column:1/-1}.filters .clear{justify-self:start}}

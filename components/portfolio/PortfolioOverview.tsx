@@ -1,20 +1,21 @@
+import records from '@/components/public-design/RecordsStudio.module.css';
 import StatTile from '@/components/visual/StatTile';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import { formatMoney, formatSignedMoney } from '@/lib/portfolio/formatMoney';
 
 type Allocation = { symbol: string; value: number; percentage: number };
 /** Presentation only. An open P&L value is never passed off as today's movement. */
-export default function PortfolioOverview({ value, totalCost, openPL, allocation, limit, unpricedCount = 0 }: {
-  value: number; totalCost: number; openPL: number; allocation: Allocation[]; limit: number; unpricedCount?: number;
+export default function PortfolioOverview({ value, totalCost, openPL, allocation, limit, unpricedCount = 0, studio = false }: {
+  value: number; totalCost: number; openPL: number; allocation: Allocation[]; limit: number; unpricedCount?: number; studio?: boolean;
 }) {
   const largest = allocation[0];
-  const shades = ['#e2e8f0', '#94a3b8', '#64748b', '#475569', '#334155'];
+  const shades = studio ? ['#a5e8cf', '#8bafdc', '#d0b584', '#799c9b', '#647887'] : ['#e2e8f0', '#94a3b8', '#64748b', '#475569', '#334155'];
   let offset = 0;
-  return <section className="min-w-0 space-y-3" aria-label="Portfolio overview">
+  return <section className={studio ? records.portfolioOverview : "min-w-0 space-y-3"} aria-label="Portfolio overview">
     <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
       <StatTile label="Value simulated" value={formatMoney(value)} />
       <StatTile label="Total cost" value={formatMoney(totalCost)} />
-      <div className="[&_[data-stat-card]]:h-full [&_[data-stat-card]>p:first-child]:text-base"><StatTile label="Today" value="Not measured" /></div>
+      <div className={studio ? records.unavailableStat : "[&_[data-stat-card]]:h-full [&_[data-stat-card]>p:first-child]:text-base"}><StatTile label="Today" value="Not measured" /></div>
       <StatTile label="Open P&L" value={formatSignedMoney(openPL)} />
       <div className="col-span-2 lg:col-span-1"><StatTile label="Largest position" value={largest ? `${largest.percentage.toFixed(1)}%` : null} warning={Boolean(largest && largest.percentage > limit)} /></div>
     </div>

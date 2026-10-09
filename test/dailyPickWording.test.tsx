@@ -17,11 +17,13 @@ const blocked = verdict({ permission: 'BLOCK', grade: 'F', setupType: 'NONE', di
 const passed = verdict({ permission: 'PASS', grade: 'B', setupType: 'SQUEEZE', direction: 'short' });
 const fade = verdict({ permission: 'WATCH', grade: 'C', setupType: 'EXHAUSTION_FADE', direction: 'short', scoreBasis: 'factor_alignment_uncalibrated' });
 
-function row(partial: Partial<DailyPickRow> & Pick<DailyPickRow, 'rank' | 'symbol' | 'score'>): DailyPickRow {
+// W3: the public loader returns measured rows in symbol order. Old private fields (score, canonical, direction,
+// rank) are added to the fixtures on purpose: the view must not render them even when present.
+function row(partial: Record<string, unknown> & { symbol: string }): DailyPickRow {
   return {
-    asset_class: 'equity', direction: 'neutral', price: null, change_percent: null, sector: null,
-    shares_float: null, short_pct_float: null, canonical: null, legacyScore: partial.score, ...partial,
-  };
+    asset_class: 'equity', price: null, change_percent: null, sector: null,
+    shares_float: null, short_pct_float: null, ...partial,
+  } as DailyPickRow;
 }
 
 const picks: DailyPickRow[] = [
@@ -72,49 +74,38 @@ it('translates permission into reader labels and keeps the engine line for the f
   expect(readableObservedAt('2026-10-02T20:00:00.000Z')).not.toContain('T20');
 });
 
-it('shows reader labels on the closed card and keeps engine codes, grades, and setup categories in a closed fold', () => {
-  const snapshot = JSON.stringify(picks);
-  const { container } = render(<DailyPickView data={{ scan_date: '2026-10-02', picks }} />);
-  const closed = closedText(container);
+it('lists measured values in symbol order with the selection and sort disclosed; no verdict, grade, score or side', () => {
+  const sorted = [...picks].sort((x, y) => x.symbol.localeCompare(y.symbol));
+  const snapshot = JSON.stringify(sorted);
+  const { container } = render(<DailyPickView data={{ scan_date: '2026-10-02', picks: sorted }} />);
+  const text = container.textContent ?? '';
   expect(container.querySelectorAll('[data-daily-picks-summary]')).toHaveLength(1);
   expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);
-  expect(container.querySelectorAll('details[open]')).toHaveLength(0);
-  expect(closed).toContain('5 ranked snapshots for the Fri 2 Oct 2026 US session');
-  expect(closed).toContain('Checks still open');
-  expect(closed).toContain('No qualifying setup');
-  expect(closed).toContain('Verdict not available right now');
-  expect(closed).toContain('76.1');
-  expect(closed).toContain('55.5');
-  expect(closed).not.toMatch(/\b(?:PASS|WATCH|BLOCK)\b/);
-  expect(closed).not.toMatch(/Pullback|Squeeze|Exhaustion fade|factors only|uncalibrated|canonical|legacy|STALE|grade/);
-  expect(container.querySelector('[data-pick-card] details')?.textContent).toContain('Engine code WATCH · grade A · setup category Pullback · factors only');
-  expect(container.querySelector('[data-pick-card] details')?.textContent).toContain('Stored score 76.06');
-  expect(container.querySelector('[data-pick-card] details')?.textContent).toContain('Earlier signal-count score 61');
-  const rowLink = container.querySelector('[data-pick-row] a');
-  expect(rowLink?.textContent).toContain('Checks passed');
-  expect(rowLink?.textContent).toContain('$123.46');
-  expect(rowLink?.textContent).toContain('Daily close 24 Sep 2026');
-  expect(rowLink?.textContent).toContain('older than the latest session');
-  expect(rowLink?.textContent).not.toMatch(/\b(?:PASS|WATCH|BLOCK|STALE)\b/);
-  expect(container.querySelector('[data-pick-row] details')?.textContent).toContain('Engine code PASS · grade B · setup category Squeeze');
-  const symbols = [...container.querySelectorAll('[data-pick-card] strong, [data-pick-row] a')].map((node) => node.textContent);
-  expect(symbols[0]).toContain('AAPL');
-  expect(symbols[1]).toContain('NVDA');
-  expect(symbols[2]).toContain('AMD');
-  expect(symbols[3]).toContain('TSLA');
-  expect(JSON.stringify(picks)).toBe(snapshot);
+  expect(container.querySelector('[data-selection-note]')?.textContent).toMatch(/not a rating, ranking or recommendation.*Sorted by symbol \(A–Z\)\. The list is not ordered by any score/);
+  expect(text).toContain('5 symbols stored by the daily scan for the Fri 2 Oct 2026 US session');
+  expect(text).not.toMatch(/\b(?:PASS|WATCH|BLOCK|STALE)\b|Checks passed|Checks still open|No qualifying setup|Pullback|Squeeze|Exhaustion|grade|Bullish|Bearish|ranked|Top \d|76\.1|76\.06|Stored score|signal-count/);
+  expect(container.querySelectorAll('details')).toHaveLength(0);
+  const rows = [...container.querySelectorAll('[data-pick-row] a')].map((node) => node.textContent ?? '');
+  expect([...container.querySelectorAll('[data-pick-row] a > div:first-child > span:first-child')].map((n) => n.textContent)).toEqual(['AAPL', 'AMD', 'META', 'NVDA', 'TSLA']);
+  const tsla = rows[4];
+  expect(tsla).toContain('$123.46');
+  expect(tsla).toContain('Daily close 24 Sep 2026');
+  expect(tsla).toContain('older than the latest session');
+  expect(tsla).toContain('-0.50%');
+  expect(tsla).toContain('1.5M');
+  expect(tsla).toContain('12.3%');
+  const ld = JSON.parse(container.querySelector('script')!.innerHTML);
+  expect(ld.itemListOrder).toBe('https://schema.org/ItemListUnordered');
+  expect(JSON.stringify(ld)).not.toMatch(/score|Checks|Bullish|Bearish/i);
+  expect(JSON.stringify(sorted)).toBe(snapshot);
 });
 
-it('does not re-rank stored rows in the page view', () => {
-  const stored = [
-    { symbol: 'TSLA', score: 91, canonical: passed },
-    { symbol: 'AAPL', score: 76.06, canonical: watch },
-    { symbol: 'NVDA', score: 0, canonical: blocked },
-  ];
-  expect(rankDailyPicks(stored).map((row) => row.symbol)).toEqual(['TSLA', 'AAPL', 'NVDA']);
+it('does not rank stored rows in the page view or loader', () => {
   const view = readFileSync('app/daily-pick/DailyPickView.tsx', 'utf8');
   const page = readFileSync('app/daily-pick/page.tsx', 'utf8');
-  expect(`${view}\n${page}`).not.toMatch(/rankDailyPicks|selectDailyPicks/);
+  const loader = readFileSync('lib/og/dailyPicksLatest.ts', 'utf8');
+  expect(`${view}\n${page}\n${loader}`).not.toMatch(/rankDailyPicks|selectDailyPicks|ORDER BY[^\n]*score/);
   expect(page).not.toContain('PASS / WATCH / BLOCK');
   expect(view).toContain('href="/pricing"');
+  expect(rankDailyPicks).toBeTypeOf('function'); // still used by the admin response
 });

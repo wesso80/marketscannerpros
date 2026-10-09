@@ -21,6 +21,8 @@ import { detectPriceDiscontinuity } from '@/lib/scanner/barAggregation';
 import { adx, atr as atrFn, atrPercent as atrPctFn, cci, ema, getIndicatorWarmupStatus, macd, OHLCVBar, rsi, stochastic, detectSqueeze, detectMomentumAcceleration } from '@/lib/indicators';
 import { getSectorETF, SECTOR_ETFS } from '@/lib/sectorMap';
 import { getSessionFromCookie } from '@/lib/auth';
+import { requireAdmin } from '@/lib/adminAuth';
+import { adminBulkHandler } from '@/lib/scanner/adminBulkBoundary';
 import {
   OHLCV,
   calculateSMA, calculateEMA, calculateRSI, calculateMACD,
@@ -48,6 +50,7 @@ import { isAsciiCryptoTicker } from '@/lib/scanner/cryptoTicker';
 import { cachedMoversToAdd, completedSessionAvgVolume, parseEquityQuote } from '@/lib/scanner/equityScanInputs';
 import { riskOffThresholds } from '@/lib/regime-classifier';
 import { easternBarTimeToIso, intradayAvgDailyVolume } from '@/lib/scanner/intradayEquityBars';
+import { bulkScanLimiter, getClientIP } from '@/lib/rateLimit';
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 60 seconds max for client requests
@@ -2212,7 +2215,9 @@ function applyInstitutionalFilterToTopPicks(
 // MAIN HANDLER
 // =============================================================================
 
-export async function POST(req: NextRequest) {
+export const POST = adminBulkHandler(requireAdmin, runBulkScanner);
+
+async function runBulkScanner(req: NextRequest) {
   const startTime = Date.now();
   let localFallbackArgs: { type: 'equity' | 'crypto' | 'forex'; timeframe: string; mode: BulkScanMode; requestedUniverseSize: number; filters: ProScanFilters; sort: ProScanSort } | null = null;
   
@@ -2257,6 +2262,16 @@ export async function POST(req: NextRequest) {
         error: 'Advanced research scanner requires Pro access.',
         compliance: scannerComplianceMetadata(),
       }, { status: 403 });
+    }
+
+    // /api/scanner/ is exempt from the middleware quota, so this expensive route limits itself: per workspace and per IP.
+    {
+      const byWorkspace = bulkScanLimiter.check(`ws:${session.workspaceId}`);
+      const byIp = bulkScanLimiter.check(`ip:${getClientIP(req)}`);
+      if (!byWorkspace.allowed || !byIp.allowed) {
+        const retryAfter = Math.max(byWorkspace.retryAfter ?? 0, byIp.retryAfter ?? 0) || 60;
+        return NextResponse.json({ error: 'Too many bulk scans. Please wait before scanning again.', retryAfter }, { status: 429, headers: { 'Retry-After': String(retryAfter) } });
+      }
     }
 
     const adaptive = session?.workspaceId

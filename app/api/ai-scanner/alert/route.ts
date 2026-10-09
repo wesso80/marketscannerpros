@@ -87,7 +87,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("[AI-SCANNER ERROR]", error);
     return NextResponse.json({ 
-      error: error?.message || "Invalid request" 
+      error: "Invalid request" 
     }, { status: 400 });
   }
 }

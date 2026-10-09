@@ -29,13 +29,17 @@ describe('Intelligence overview tiles use the pages\' status rules (RS-10)', () 
     expect(tileStatus({ loading: false, error: null }, () => 'LIVE')).toBe('LIVE');
   });
 
-  it('the overview and the Fragility page share the helpers; no live tile hard-codes a status', () => {
+  it('the overview uses the shared helpers, the Fragility page states its status, and no live tile hard-codes a status', () => {
     const overview = readFileSync('app/intelligence/page.tsx', 'utf8');
     const liveBlock = overview.slice(overview.indexOf('const LIVE_NOW'), overview.indexOf('const COMING_SOON'));
     expect(liveBlock).not.toMatch(/status: 'LIVE/);
     expect(overview).toContain('globalM2StatusLabel(');
     expect(overview).toContain('fragilityStatusLabel(');
     expect(overview).toContain('liquidityStatusLabel(');
-    expect(readFileSync('app/intelligence/fragility/page.tsx', 'utf8')).toContain('fragilityStatusLabel(meta)');
+    // J7-WP5: the compact Fragility page states status in its data-quality row (stale, partial, mock, unavailable).
+    const fragility = readFileSync('app/intelligence/fragility/page.tsx', 'utf8');
+    expect(fragility).toContain('<DataQualityRow meta={data.meta} />');
+    expect(fragility).toContain("meta?.isStale ? 'Older saved observations'");
+    expect(fragility).toContain("meta?.sourceStatus === 'DATA_UNAVAILABLE'");
   });
 });

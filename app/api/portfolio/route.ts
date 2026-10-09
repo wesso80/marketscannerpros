@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { q, tx } from "@/lib/db";
 import { getSessionFromCookie } from "@/lib/auth";
+import { publicQuotaEnabled, resolvePublicQuotaAccess } from '@/lib/publicQuotaAccess';
+import { PUBLIC_FREE_RECORD_LIMITS } from '@/lib/publicPlans';
 import { getRuntimeRiskSnapshotInput } from "@/lib/risk/runtimeSnapshot";
 import { buildPermissionSnapshot } from "@/lib/risk-governor-hard";
 
@@ -295,6 +297,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid position, performance snapshot or cash flow. No records were changed.' }, { status: 400 });
     }
 
+    let positionLimit: number | undefined;
+    if (publicQuotaEnabled()) {
+      const access = await resolvePublicQuotaAccess(session);
+      if (!access.bypass && access.plan === 'free') positionLimit = PUBLIC_FREE_RECORD_LIMITS.positions;
+    }
+
     // ─── Risk Governor check: BLOCK if LOCKED, warn if DEFENSIVE ───
     let riskWarning: string | null = null;
     try {
@@ -326,10 +334,13 @@ export async function POST(req: NextRequest) {
       client,
       workspaceId,
       { positions, closedPositions, performanceHistory, cashState },
-      { baseRevision: body.baseRevision, confirmClear: body.confirmClear },
+      { baseRevision: body.baseRevision, confirmClear: body.confirmClear, positionLimit },
       progress,
     ));
 
+    if (result.status === 'limited') {
+      return NextResponse.json({ error: `Free includes ${result.limit} open positions. Close a position or upgrade to Pro. Existing records were kept.`, limitReached: true, limit: result.limit }, { status: 403, headers: { 'Cache-Control': 'private, no-store' } });
+    }
     if (result.status === 'conflict') {
       const message = result.reason === 'empty_overwrite'
         ? 'Refusing to replace saved portfolio data with an empty portfolio. No records were changed.'

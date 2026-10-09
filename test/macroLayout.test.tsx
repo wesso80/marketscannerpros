@@ -8,7 +8,7 @@ const state=vi.hoisted(()=>({tier:'pro',missing:false,failed:false,setPageData:v
 vi.mock('@/lib/useUserTier',()=>({useUserTier:()=>({tier:state.tier,isAdmin:false,isLoading:false})}));
 vi.mock('@/lib/ai/pageContext',()=>({useAIPageContext:()=>({setPageData:state.setPageData})}));
 vi.mock('@/components/MarketStatusBadge',()=>({default:()=>null}));
-import Macro from '@/app/tools/macro/page';
+import Macro from '@/components/macro/MacroDashboard';
 beforeEach(()=>{vi.stubGlobal('React',React);state.tier='pro';state.missing=false;state.failed=false;state.setPageData.mockReset();vi.stubGlobal('fetch',vi.fn(async(url)=>{const path=new URL(String(url),'https://fixture.invalid').pathname;return {ok:!state.failed,status:state.failed?503:200,json:async()=>structuredClone(state.missing&&fixtures.missing[path]||fixtures[path])};}));});
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 it('one verdict/source, closed detail and no raw labels with incomplete secondary feeds',async()=>{

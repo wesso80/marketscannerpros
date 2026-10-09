@@ -10,8 +10,10 @@ function debugIntervalMs(): number {
 }
 
 export async function register(): Promise<void> {
-  if (process.env.NEXT_RUNTIME !== 'nodejs') return;
-  if (process.env.MEMORY_DEBUG_LOG !== 'true') return;
-  const { startMemoryDebugLog } = await import('./lib/memory/debugLog');
-  startMemoryDebugLog(debugIntervalMs());
+  // Keep the Node-only import inside the runtime branch so Edge bundling can omit it.
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    if (process.env.MEMORY_DEBUG_LOG !== 'true') return;
+    const { startMemoryDebugLog } = await import('./lib/memory/debugLog');
+    startMemoryDebugLog(debugIntervalMs());
+  }
 }

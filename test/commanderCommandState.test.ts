@@ -13,7 +13,9 @@ describe('admin commander command state strip', () => {
     expect(page).toContain('Command State');
     expect(page).toContain('deriveCommandState');
     expect(page).toContain('Allowed Next Action');
-    expect(page).toContain('RESEARCH ALERTS PAUSED');
+    // 8f84ced4 split account risk from notification controls: the pill names the account stop, the reason names the paused alerts.
+    expect(page).toContain('ACCOUNT STOP ACTIVE');
+    expect(page).toContain('Research alerts are paused.');
     expect(page).toContain('Data Age');
     expect(page).toContain('Risk Age');
     expect(page).toContain('sourceLabel(brief.risk.source)');

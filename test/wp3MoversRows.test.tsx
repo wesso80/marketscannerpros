@@ -37,7 +37,7 @@ const mover = (ticker: string, extra: Record<string, unknown>) => ({
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-it('non-universe rows render no em dashes, and equities say CRCS once', async () => {
+it('non-universe rows render no em dashes, missing fields say Not collected, and equities say the crypto score does not apply', async () => {
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input);
     if (url.includes('/api/market-status')) {
@@ -60,12 +60,19 @@ it('non-universe rows render no em dashes, and equities say CRCS once', async ()
     };
   }));
   render(<MarketMoversPage />);
-  expect(await screen.findByText('CRCS: crypto only')).toBeTruthy();
-  const rows = ['AMOD', 'NVDA'].map((ticker) => {
-    const node = screen.getAllByText(ticker).map((el) => el.closest('tr')).find(Boolean);
+  // Compact Movers presentation: each mover is a list item; its evidence sits in a details panel.
+  const rows = await Promise.all(['AMOD', 'NVDA'].map(async (ticker) => {
+    const node = (await screen.findAllByText(ticker)).map((el) => el.closest('[data-mover-row]')).find(Boolean);
     expect(node).toBeTruthy();
-    return node!;
-  });
-  for (const row of rows) expect(row.textContent).not.toContain('—');
-  expect(rows[0].textContent).not.toMatch(/RSI|EMA200|ADX|squeeze/i);
+    return node as HTMLElement;
+  }));
+  for (const row of rows) {
+    expect(row.textContent).not.toContain('—');
+    expect(row.textContent).toContain('Crypto scoreNot applicable');
+  }
+  // AMOD is outside the worker universe: its indicator fields are marked missing, never filled.
+  expect(rows[0].textContent).toContain('RSINot collected');
+  expect(rows[0].textContent).toContain('MomentumNot collected');
+  expect(rows[1].textContent).toContain('RSI55');
 });
+

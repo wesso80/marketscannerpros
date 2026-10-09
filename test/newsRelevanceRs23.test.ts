@@ -1,5 +1,5 @@
 /** RS-23: "vesting" is only a token unlock for crypto; equity Form 4 / vesting news is an insider filing. */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { classifyCatalyst, filterRelevantNews } from '@/lib/goldenEgg/newsRelevance';
 
@@ -24,8 +24,8 @@ describe('RS-23 catalyst labels', () => {
     const feed = [{ title: 'Form 4 Apple Inc For: 25 September By Investing.com', summary: 'Officer vesting of restricted stock units.', source: 'Investing.com', ticker_sentiment: [{ ticker: 'AAPL', relevance_score: '0.95' }] }];
     expect(filterRelevantNews(feed, 'AAPL', 'equity', { companyName: 'Apple Inc' })[0]).toMatchObject({ catalyst: 'NEUTRAL', catalystReason: 'insider filing' });
   });
-  it('the news tag shows a neutral reason such as "insider filing" but not the default one', () => {
-    const src = readFileSync('app/tools/deep-analysis/page.tsx', 'utf8');
-    expect(src).toContain("item.catalystReason && item.catalystReason !== 'no material catalyst pattern' ? ` · ${readerLabel(item.catalystReason)}` : ''");
+  it('the Symbol news panel shows each event\'s reason, such as "insider filing" (the Deep Analysis news tag was retired with that page in W3)', () => {
+    expect(existsSync('app/tools/deep-analysis/page.tsx')).toBe(false);
+    expect(readFileSync('components/research/SymbolNewsPanel.tsx', 'utf8')).toContain('· {e.catalystReason}');
   });
 });

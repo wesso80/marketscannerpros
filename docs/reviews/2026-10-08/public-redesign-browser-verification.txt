@@ -1,0 +1,58 @@
+PUBLIC REDESIGN BROWSER AND ACCESS VERIFICATION — 8 October 2026
+Branch: codex/public-redesign-integration, PR #517, starting at 8cf4f47d.
+
+COMPLETE CHECKS
+32 browser cases passed at 1280 and 390 pixels: homepage, pricing, sign-in,
+Learning, Overview (missing/populated), Symbol (missing/populated), Macro
+(missing/populated), M2 (missing/populated), Portfolio (empty/populated), Journal
+(empty/populated). These run the actual Next app against synthetic browser API
+responses. They confirm no horizontal document overflow or uncaught page errors,
+chart mode switches without refetch, filters, journal drawer open/close, and mocked
+sign-in/checkout feedback. Auth/payment success and provider freshness are NOT tested.
+
+16 separate Copilot browser fixtures passed at the same two widths: Free, ready,
+partial evidence, exhausted quota, loading, symbol switch, failure, long answer.
+Free sends no evidence requests; loading/exhausted disable questions; stale answers
+are not rendered after symbol change. Long answers scroll and retain follow-up access.
+No provider or OpenAI calls were made.
+
+89 route/helper checks passed across Portfolio, Journal, quotas and Copilot access.
+Includes fourth-position refusal before writes; exactly three accepted; unchanged
+paid/admin policy; stale-revision and accidental-empty overwrite rejection;
+linked positions counted from storage; downgraded books retained/shrunk;
+five-open-entry Journal policy and rejection of new/reopened excess entries before
+DELETE/INSERT. Database calls are faked here; this is not real PostgreSQL validation.
+19 component checks passed after the layout correction.
+
+VISUAL REVIEW / FIX
+Inspected populated Symbol desktop, Portfolio mobile, Journal mobile and M2 mobile
+screenshots. The redesigned Portfolio CSS overrode the smaller text size for
+'Not measured', splitting 'measured' mid-word. Added a studio-only text style that
+keeps normal word boundaries and 16px text. Legacy/admin presentation is unchanged.
+The browser runner now preserves progress after each page and supports Free fixtures
+and a supplied local preview URL, failing early if its own server cannot start.
+
+OPEN ITEMS / LIMITS
+- Dedicated Free record-page browser rerun and final typography screenshot pending
+  local workspace compilation (both attempts exited before a completed case); the Pro page run and server-side Free tests passed.
+- Free M2 summary is not implemented: IntelligenceGate still requires a paid tier.
+- Trial billing, reminder, cancellation and live payment flows remain unimplemented
+  or unverified; fixture sign-in does not send an email or prove delivery.
+- Full production build, real DB integration and provider-connected testing not run.
+- Existing baseline test/type issues documented in public-redesign-integration.txt.
+- Linked-position quota semantics unchanged pending the user's choice.
+
+CLAUDE COORDINATION
+PR #515 verified OPEN/DRAFT at ecbe1e55b204b17589f40ef22fe9d77b9044dbcd.
+Read the updated publicCloseCalendar projection and engine/route tests: no exposed
+weight/score fields, count-based grouping, chronological ordering; projection retains
+a 60-window chronological cap. PublicTimeConfluence recomputes the busiest span by
+count and highest timeframe by duration. Source review only; these new tests were
+not rerun on this branch. PR #515 is not incorporated here.
+Futures Session separate Weight/stack display remains Claude's next cleanup.
+PRs #514/#516 remain separate; no merges, deployments or production-data changes.
+
+LOCAL ARTIFACTS (workspace outputs directory)
+integration-browser-complete/public-design-browser.json and PNGs (32 cases)
+integration-copilot/copilot-browser-results.json and PNGs (16 cases)
+records-access-verification.log (89 checks)

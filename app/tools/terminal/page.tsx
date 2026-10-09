@@ -26,7 +26,7 @@ import { futuresScheduleRangeSummary, terminalHorizonLabel } from '@/lib/termina
 const OptionsTerminalView = dynamic(() => import('@/components/options-terminal/OptionsTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div> });
 const CryptoTerminalView = dynamic(() => import('@/components/crypto-terminal/CryptoTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div> });
 const FuturesTerminalPanel = dynamic(() => import('@/components/terminal/futures/FuturesTerminalPanel'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Futures Terminal…</div> });
-const OptionsConfluence = dynamic(() => import('@/components/options-terminal/OptionsConfluenceScanner'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Confluence…</div> });
+const OptionsConfluence = dynamic(() => import('@/components/options-terminal/OptionsChainEvidence'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Confluence…</div> });
 const OptionsFlow = dynamic(() => import('@/components/options-terminal/OptionsFlowView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Flow…</div> });
 const TimeScanner = dynamic(() => import('@/app/tools/time-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Gravity…</div> });
 const ConfluenceScanner = dynamic(() => import('@/app/tools/confluence-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Confluence Scanner…</div> });
@@ -296,12 +296,6 @@ function catColor(c: string) {
 function catBg(c: string) {
   switch(c){ case 'intraday': return 'bg-slate-800'; case 'daily': return 'bg-cyan-500/10'; case 'weekly': return 'bg-emerald-500/10'; case 'monthly': return 'bg-amber-500/10'; case 'yearly': return 'bg-rose-500/10'; default: return ''; }
 }
-function clusterColors(s: number) {
-  if (s >= 70) return 'border-emerald-500/40 bg-emerald-500/10';
-  if (s >= 40) return 'border-amber-500/40 bg-amber-500/10';
-  return 'border-slate-700 bg-slate-900/30';
-}
-
 export default function TerminalPage() {
   const { tier } = useUserTier();
   const { selectedSymbol, selectSymbol } = useV2();
@@ -588,15 +582,16 @@ export default function TerminalPage() {
               {/* Close Cluster Timeline */}
               {calData.forwardClusters.length > 0 && (
                 <Card>
-                  <div className="mb-2 text-xs font-semibold text-slate-300">Close Cluster Timeline</div>
+                  <div className="mb-1 text-xs font-semibold text-slate-300">Close windows in time order{calData.forwardClusters.length > 8 ? ` (next 8 of ${calData.forwardClusters.length})` : ''}</div>
+                  <div className="mb-2 text-[11px] text-slate-500">{calData.clusterRule}</div>
                   <div className="flex flex-wrap gap-2">
                     {calData.forwardClusters.slice(0, 8).map((cluster, i) => (
-                      <div key={i} className={`rounded-xl border px-3 py-2 transition-all ${clusterColors(cluster.clusterScore)}`}>
+                      <div key={i} className="rounded-xl border border-slate-700 bg-slate-900/30 px-3 py-2 transition-all">
                         <div className="text-[11px] font-semibold text-slate-100">{cluster.label}</div>
                         <div className="mt-0.5 flex flex-wrap gap-1">
                           {cluster.tfs.map(tf => (<span key={tf} className="rounded bg-slate-800/60 px-1.5 py-0.5 text-[11px] font-semibold text-slate-200">{tf}</span>))}
                         </div>
-                        <div className="mt-1 text-[11px] text-slate-400">Wt {Math.round(cluster.weight)} · Score {cluster.clusterScore}</div>
+                        <div className="mt-1 text-[11px] text-slate-400">{cluster.timeframeCount} timeframes close</div>
                       </div>
                     ))}
                   </div>
@@ -719,9 +714,9 @@ export default function TerminalPage() {
         </TerminalSubviewFrame>
       )}
 
-      {/* ─── Options Confluence (v1 flagship decision engine) ─── */}
+      {/* ─── Options chain evidence (W3: replaces the setup scanner; measured chain evidence only) ─── */}
       {tab === 'Options Confluence' && (
-        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Options Confluence Engine">
+        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Options chain evidence">
           <TerminalSubviewFrame tab="Options Confluence" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
             <OptionsConfluence embeddedInTerminal symbol={sym} timeframe={requestedTimeframe} expiry={requestedExpiry} />
           </TerminalSubviewFrame>
@@ -778,15 +773,13 @@ function AnchorDayTable({ rows, asset }: { rows: ForwardCloseScheduleRow[]; asse
                 <thead><tr className="border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-500">
                   <th scope="col" className="pb-1.5 pr-3 font-medium">TF</th>
                   <th scope="col" className="pb-1.5 pr-3 font-medium">Close Time</th>
-                  <th scope="col" className="pb-1.5 pr-3 font-medium">In</th>
-                  <th scope="col" className="pb-1.5 font-medium">Weight</th>
+                  <th scope="col" className="pb-1.5 font-medium">In</th>
                 </tr></thead>
                 <tbody>{catRows.map(row => (
                   <tr key={row.tf} className={`border-b border-slate-800/50 ${catBg(cat)}`}>
                     <td className={`py-1.5 pr-3 font-semibold ${catColor(cat)}`}>{row.tf}</td>
                     <td className="py-1.5 pr-3 font-mono text-slate-300">{row.firstCloseAtISO ? formatCalDate(row.firstCloseAtISO, asset) : 'Not collected'}</td>
-                    <td className="py-1.5 pr-3 font-mono text-slate-400">{fmtMins(row.minsToFirstClose)}</td>
-                    <td className="py-1.5 text-slate-500">{row.weight}</td>
+                    <td className="py-1.5 font-mono text-slate-400">{fmtMins(row.minsToFirstClose)}</td>
                   </tr>
                 ))}</tbody>
               </table>
@@ -809,8 +802,7 @@ function FullScheduleTable({ rows, asset }: { rows: ForwardCloseScheduleRow[]; a
           <th scope="col" className="pb-1.5 pr-3 font-medium">Next Close</th>
           <th scope="col" className="pb-1.5 pr-3 font-medium">In</th>
           <th scope="col" className="pb-1.5 pr-3 font-medium">Closes</th>
-          <th scope="col" className="pb-1.5 pr-3 font-medium">Anchor Day</th>
-          <th scope="col" className="pb-1.5 font-medium">Weight</th>
+          <th scope="col" className="pb-1.5 font-medium">Anchor Day</th>
         </tr></thead>
         <tbody>{rows.map(row => (
           <tr key={row.tf} className={`border-b border-slate-800/50 ${row.closesOnAnchorDay ? catBg(row.category) : ''}`}>
@@ -819,8 +811,7 @@ function FullScheduleTable({ rows, asset }: { rows: ForwardCloseScheduleRow[]; a
             <td className="py-1.5 pr-3 font-mono text-slate-300">{row.firstCloseAtISO ? formatCalDate(row.firstCloseAtISO, asset) : 'Not collected'}</td>
             <td className="py-1.5 pr-3 font-mono text-slate-400">{fmtMins(row.minsToFirstClose)}</td>
             <td className="py-1.5 pr-3 text-center font-semibold text-slate-200">{row.closesInHorizon}</td>
-            <td className="py-1.5 pr-3 text-center">{row.closesOnAnchorDay ? <span className="inline-block rounded bg-emerald-500/20 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-400">YES</span> : <span className="text-slate-600">No</span>}</td>
-            <td className="py-1.5 text-slate-500">{row.weight}</td>
+            <td className="py-1.5 text-center">{row.closesOnAnchorDay ? <span className="inline-block rounded bg-emerald-500/20 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-400">YES</span> : <span className="text-slate-600">No</span>}</td>
           </tr>
         ))}</tbody>
       </table>

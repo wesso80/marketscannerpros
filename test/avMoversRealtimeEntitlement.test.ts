@@ -61,16 +61,19 @@ describe('GET /api/market-movers requests realtime movers', () => {
 describe('movers surfaces show the feed basis', () => {
   const dashboard = readFileSync(resolve(__dirname, '../components/desk/DeskFolds.tsx'), 'utf8');
   const moversPage = readFileSync(resolve(__dirname, '../app/tools/market-movers/page.tsx'), 'utf8');
+  // Rendering moved to MoversView in the compact Movers presentation; the page still builds the data.
+  const moversView = readFileSync(resolve(__dirname, '../components/markets/MoversView.tsx'), 'utf8');
   it('dashboard equity movers: feed basis + as-of; crypto keeps "Live movement"', () => {
     expect(dashboard).toMatch(/title="Equity movers" eyebrow=\{equityMoversBasisLabel\(movers\.data\?\.equityFeed\)\} action=\{formatEasternAsOf\(movers\.data\?\.equityAsOf\)/);
     expect(dashboard).toContain('<PanelHeader title="Crypto movers" eyebrow="Live movement" />');
   });
-  it('Movers tab carries equityAsOf into a "US equities" status chip', () => {
+  it('Movers tab carries equityAsOf and the equity feed basis into its source line', () => {
     expect(moversPage).toContain('equityAsOf: result.equityAsOf ?? null');
-    expect(moversPage).toContain("['US equities', `${equityMoversBasisLabel(data?.equityFeed)}");
+    expect(moversView).toContain('<SourceLine source={`${equityMoversBasisLabel(data.equityFeed)');
+    expect(moversView).toContain('asOf={data.equityAsOf || undefined}');
   });
   it('no US-equity surface still says "15-minute delayed"', () => {
-    for (const file of ['components/desk/DeskFolds.tsx', 'app/tools/market-movers/page.tsx', 'components/markets/tabs/OverviewTab.tsx', 'app/disclaimer/page.tsx', 'lib/alphaVantageEntitlement.ts']) {
+    for (const file of ['components/desk/DeskFolds.tsx', 'app/tools/market-movers/page.tsx', 'components/markets/MoversView.tsx', 'components/markets/tabs/OverviewTab.tsx', 'app/disclaimer/page.tsx', 'lib/alphaVantageEntitlement.ts']) {
       const src = readFileSync(resolve(__dirname, '..', file), 'utf8');
       expect(src, file).not.toMatch(/15[- ]?min(ute)?s?[- ]delayed|delayed 15|delayed by 15/i);
     }

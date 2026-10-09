@@ -1,0 +1,65 @@
+Public research design: first implementation slice
+8 October 2026
+
+Branch: codex/public-research-design
+Stacked on codex/public-copilot-education at 0a4fd7bc.
+Latest remote state checked: research-page-phase4 717bfdbe; Claude DVE branch 5d0f0f7.
+
+Implemented
+- Scoped public shell with seven destinations, account/pricing access and legal/support footer.
+- Portfolio and Journal use the existing workspace query routes; account and authentication keep their existing implementations.
+- Responsive homepage with educational research positioning, real destination links and no fabricated market data.
+- Free Learning foundation lessons. Existing /guide remains available.
+- Hide duplicate tools navigation/regime strip only when the presentation flag is enabled; retain tools providers, disclosure gate, Copilot and page bodies.
+- Homepage metadata follows the presentation flag.
+
+Rollout
+NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED=true is a build-time opt-in flag. Default is off. This work does not enable it on Render or elsewhere.
+Admin, operator and v2 routes are excluded. No engine, worker, API, quota, entitlement or billing change. No merge or deployment.
+No edits to Claude's Symbol page or DVE files.
+
+Verification
+10 focused tests pass: flag, seven destinations, private route exclusions, workspace tab identity, account/legal links, preserved child content.
+6 real Next development-app browser checks pass at 1280 and 390 pixels: homepage, Learning and Symbol. HTTP 200, no page errors or document overflow; Learning details and mobile navigation exercised. Screenshots visually inspected for desktop home and mobile Symbol.
+Browser APIs are mocked, external browser requests blocked; Symbol shows unavailable evidence. These checks do not establish live data or complete research-card layout correctness.
+Type check retains six previously recorded baseline errors (four Stripe version literals and two timer unref types); no new errors from this slice.
+React review: server-rendered static content, deferred client shell, semantic links/details, keyboard focus styles and scoped CSS; no new effects or data fetches.
+
+Remaining, in order
+1. Overview and Daily Radar: real observations, timestamps, missing states and factual filters. Radar stays inside Overview. Replace internal presentation while preserving existing data contracts.
+2. Symbol chart-led interior: comparison against SPY/QQQ or BTC and separate indicator view. Coordinate Claude's edits first; verify real evidence and all loading/missing states.
+3. Macro and M2: dated overview charts, definitions, release lags and history access.
+4. Portfolio and Journal: approved allocation/holdings and reflection layouts, preserving saved data and write controls.
+5. Pricing, signup and account interiors: align copy with implemented entitlements. Do not advertise proposed trial/reminder/cancellation behaviour until verified.
+6. Full legal/content/accessibility and authenticated journey review across all seven pages. Existing legal documents are linked, not rewritten or certified by this work.
+
+Acceptance before rollout
+All pages pass desktop/mobile rendering with populated, missing and loading data; keyboard navigation and account flows work; public navigation has seven destinations; admin screenshots/behaviour unchanged; no unverified paid feature claims; Copilot remains paid and evidence-bound. Validate both flag states and production build in the integration branch before rollout.
+
+Overview follow-up (8 October)
+Implemented ResearchOverview behind the same flag. The legacy component remains the default and its hooks do not mount while the new view is active. Shared helpers and API contracts are unchanged.
+Sources: existing cached/bulk-quotes endpoint (seven explicit symbols), sectors/heatmap and economic-calendar. New view does not call regime, scanner daily-picks, funding or market-movers. No scores or verdicts shown.
+Daily Radar is a fixed benchmark filter, NOT full market discovery. Asset class and positive/negative/zero change filters operate on returned observations; missing values cannot pass change filters. Correct asset identity is preserved in Symbol links. Saved filters and broader discovery remain unimplemented.
+Sector chart uses reported daily changes in alphabetical order, retains missing readings, and separates provider observation from response time. Calendar only shows confirmed future releases and existing health warnings. Source/cache limitations are explicit.
+Validation now totals 13 focused tests and 10 real development-app browser checks. Populated and missing Overview fixtures pass at 1280/390 with no page errors or horizontal overflow. Both populated screenshots visually inspected. Zero/missing and filter behaviour tested. External browser requests blocked and APIs mocked; no live provider calls. Type check still only the six recorded baseline errors.
+Remaining Overview work: broader factual discovery coverage, saved Pro filters, signed Overview evidence for Copilot, and verification against production-shaped payloads. Copilot remains unavailable for page explanation until that adapter exists; this change does not send new evidence to AI.
+
+Symbol follow-up (8 October)
+Published branches checked before editing; Claude DVE branch unchanged. Shared-file overlap was reported to the user before editing app/tools/golden-egg/page.tsx.
+Behind the design flag, Symbol controls move above the snapshot, the existing comparison/indicator chart is promoted ahead of the evidence sections, and section anchors plus scoped styling establish the research flow. ReportReady still gates chart mounting. Existing Chart tab links to the single chart instead of mounting a second instance. The chart is keyed by symbol/asset to reset context on identity changes. DVE, AI summary and shared data calculations are untouched.
+17 focused tests pass (public shell, chart behaviour and auxiliary request gating). The browser suite now passes 12 checks, including populated Symbol at 1280/390 with comparison and price/indicator switching, one chart host and no additional request on mode switch. Browser data is synthetic; no provider requests. Screenshots inspected at both widths. Type check retains the same six baseline errors.
+Development effect mounting made an initial exact total-request-count assertion unsuitable; the final check asserts no mode-switch refetch and one chart host. This does not claim a production request-count measurement.
+Still needed: populated crypto full-page browser coverage, production-shaped evidence fixtures, remaining specialist card typography, and integration review with any unpublished Claude edits. This is a staged presentation improvement, not completion of all Symbol content work.
+Next recommended design task: Macro Outlook and Global M2, preserving observation/publication dates and missing-data semantics.
+
+Macro and M2 follow-up (8 October)
+Fetched origin and reviewed open PRs; no new published Claude changes. Added pure presentation components under the existing disabled-by-default design flag.
+Macro: dated measured readings and Treasury maturity dots/bars. Equal maturity spacing is labelled; different observation dates are retained; no line is drawn across missing maturities. Free retains its two-reading summary, Pro/admin see the broader current measurements. Embedded dashboard renders remain on the legacy path. Existing fetches and calculations are unchanged; legacy score/verdict objects still exist internally and in original response contracts, so this is not a response-boundary migration.
+M2: available-bloc total, factual count coverage, per-bloc USD bars, individual months, classifications, provider/retrieval states, missing sources and excluded blocs. No liquidity-cycle verdict is displayed in the new view. The existing IntelligenceGate remains in place; Free M2 access has not been granted. Duplicate IntelligenceNav is suppressed only for the redesigned M2 route.
+Publication timestamps and historical M2 total series are not supplied by these responses and are explicitly described as unavailable. Response/calculation timestamps do not become observation dates. History-derived macro dates are used only when the newest entry matches the displayed value.
+15 focused tests pass: five new economic-presentation cases and ten shell cases. Type check retains only six known baseline errors.
+Remaining: macro commodities/cross-asset factual presentation, historical M2 data contract and access split, page-specific signed Copilot evidence, full API exposure audit and real provider integration validation. None of those are claimed complete by this presentation change.
+
+Browser verification: eight targeted real Next app checks passed for missing/populated Macro and M2 at 1280/390. No page errors or document overflow; screenshots visually inspected (desktop Macro and mobile M2). All APIs mocked and external requests blocked. The combined suite stalled compiling the unchanged Symbol route; its previous 12 checks are not represented as rerun successfully in this step.
+Routing fix: /tools/macro previously redirected permanently to the legacy embedded dashboard. That redirect now applies only when the public redesign flag is off; both flag states verified by evaluating next.config redirects. Existing browsers may retain a previously cached permanent redirect, which must be considered in rollout testing. Existing embedded Macro remains on the legacy view.
+Next recommended task: Portfolio and Journal presentation, preserving their records, calculations and save/edit controls.

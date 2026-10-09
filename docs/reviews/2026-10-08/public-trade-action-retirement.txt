@@ -1,0 +1,23 @@
+Public AI trade-action retirement
+8 October 2026 | codex/public-research-design | draft PR 512
+
+Coordination and scope
+Fetched latest remote state before editing. Claude's open PR #515 changes the confluence route, TimeScannerPage, its public projection and tests; no overlap. Security PR #514 remains separate. Starting HEAD b433fbbf. No merge, deployment, provider request or production database operation.
+
+Finding
+Removing tools from the educational Copilot did not remove direct /api/ai/actions access. Its POST still accepted generate_trade_plan and risk_position_size, and GET returned stored action parameters/results. Confirmation and idempotency protections were present but did not retire those public capabilities.
+
+Implemented
+app/api/ai/actions/route.ts now refuses those two public tools with 403 PUBLIC_TRADE_ACTION_RETIRED and private, no-store headers. The POST check is before parameter validation, action lookup, cache/replay, simulation, pending proposal, confirmation claim or execution. It applies regardless of PUBLIC_DAILY_QUOTAS_ENABLED, so disabling rollout cannot reopen the capability. Body/header claims and paid tier alone do not grant private access.
+GET still scopes its database lookup to the caller's workspace, but withholds stored results for the two retired tools from public callers, including pending, confirmed and executed records. Neither parameters nor stored result payloads are returned on refusal. No pending action is cancelled/deleted and no historical result is rewritten.
+Signed admin/operator identity checks preserve the existing executor and lookup paths. The original paid-session gate remains. No executor math, shared tool definitions, internal models, admin route or notification/worker code changed. Alerts, watchlists, Journal actions and their confirmation/idempotency paths remain unchanged.
+
+Verification
+29 tests pass: 11 public retirement cases and the 18 existing ACT boundary cases. New tests cover dry runs, normal calls, confirmations, old response references, forged body/header claims, Free/Pro/legacy paid, rollout on/off, signed out, private dry runs, the actual private sizing calculation and stored-result lookup by ID/idempotency key. Database operations are faked; public retired POST requests perform no database call. Existing ACT tests exercise concurrent confirmation and interrupted/failed outcomes using their fake database.
+Type checking reports the same six baseline Stripe API-version/timer errors, with no new errors. No live PostgreSQL, real model, provider, notification or browser execution was used for this backend change. Full suite not rerun.
+
+Remaining handoff for Claude
+The shared generate_trade_plan and sizing definitions must remain for signed private access. Do not delete shared prompts/tools yet. Other public legacy routes in the audit (/api/msp-analyst, /api/ai/suggest, /api/trade-proposal and others) remain separate retirement work; these action checks do not secure or remove those endpoints. Check external callers before retirement. Scope protections to public access/response layers and preserve private model outputs.
+
+Next recommendation
+Review Claude's #514 security and #515 Time Confluence changes alongside #512 for integration compatibility and remaining public exposure. Keep merge/deployment decisions separate. Portfolio mirrored-position counting is still awaiting a user choice.

@@ -11,7 +11,8 @@ import { avCircuit } from "@/lib/circuitBreaker";
 import { avTakeToken } from "@/lib/avRateGovernor";
 import { shouldUseCache, canFallbackToAV, getCacheMode } from "@/lib/cacheMode";
 import { getCachedScanData, getBulkCachedScanData, getBulkCachedScanDataFast, CachedScanData } from "@/lib/scannerCache";
-import { verifyCronAuth } from "@/lib/adminAuth";
+import { verifyCronAuth, requireAdmin } from "@/lib/adminAuth";
+import { publicScannerHandler } from '@/lib/scanner/publicBoundary';
 import { isFreeForAllMode, getEffectiveTier } from "@/lib/entitlements";
 import { recordSignalsBatch, RecordSignalParams } from "@/lib/signalRecorder";
 import { recordEngineEvent } from "@/lib/brain/engineBridge";
@@ -546,7 +547,12 @@ function buildScannerLiquidityLevels(
   };
 }
 
-export async function POST(req: NextRequest) {
+export const POST = publicScannerHandler({
+  isInternal: async req => verifyCronAuth(req) || (await requireAdmin(req)).ok,
+  run: runScanner,
+});
+
+async function runScanner(req: NextRequest, capturePublicRows?: (rows: readonly unknown[]) => void) {
   const requestStartedAt = Date.now();
   console.info(`[scanner] VERSION: ${SCANNER_VERSION} - stablecoins excluded`);
   let requestedType: 'crypto' | 'equity' | 'forex' = 'crypto';
@@ -2727,6 +2733,10 @@ export async function POST(req: NextRequest) {
       results.length = 0;
       results.push(...filtered);
     }
+
+    // Capture factual rows before score sorting/top-ten truncation. The internal
+    // pipeline and its recording side effects continue unchanged below.
+    capturePublicRows?.(results);
 
     // Rank by the MSP Composite v2 (cross-sectional, regime-conditional,
     // evidence/freshness/liquidity-gated) when available, falling back to the

@@ -219,6 +219,6 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('[CatalystCron] Fatal error:', error);
     // Return 200 with error details — prevents cron exit-22 for transient failures
-    return NextResponse.json({ error: 'Cron job failed', detail: error.message });
+    return NextResponse.json({ error: 'Cron job failed' });
   }
 }

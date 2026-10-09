@@ -27,7 +27,6 @@ Since 2026-10-02 almost every scheduled job runs **inside the always-on data wor
 | alerts-signal-check | `3-59/10 * * * *` | `POST /api/alerts/signal-check` |
 | alerts-smart-check | `1-59/5 * * * *` | `POST /api/alerts/smart-check` |
 | alerts-strategy-check | `4,19,34,49 * * * *` | `POST /api/alerts/strategy-check` |
-| daily-market-focus | `0 21 * * *` | `POST /api/jobs/generate-market-focus` |
 | daily-scan | `30 21 * * *` | `POST /api/jobs/scan-daily` |
 | learning-outcomes | `9,24,39,54 * * * *` | `POST /api/jobs/learning-outcomes` |
 | journal-auto-close | `2-59/5 * * * *` | `POST /api/jobs/journal-auto-close?limit=200` |

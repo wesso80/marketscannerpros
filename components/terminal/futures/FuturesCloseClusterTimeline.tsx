@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { FuturesAnchorMode, FuturesCloseCalendarResponse, FuturesCloseCalendarRow } from '@/lib/terminal/futures/futuresCloseCalendar';
+import type { FuturesAnchorMode } from '@/lib/terminal/futures/futuresCloseCalendar';
+import type { PublicFuturesCloseCalendar as FuturesCloseCalendarResponse, PublicFuturesCloseRow as FuturesCloseCalendarRow } from '@/lib/research/publicFuturesCloseCalendar';
 import { horizonChipLabel } from '@/lib/terminal/horizonChip';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 
@@ -26,8 +27,8 @@ const CATEGORY_LABEL: Record<FuturesCloseCalendarRow['category'], string> = {
   yearly: 'Yearly',
 };
 
-function formatMinutes(minutes: number): string {
-  if (!Number.isFinite(minutes)) return 'Time not supplied';
+function formatMinutes(minutes: number | null): string {
+  if (minutes == null || !Number.isFinite(minutes)) return 'Time not supplied';
   if (minutes <= 0) return 'Now';
   const days = Math.floor(minutes / 1440);
   const hours = Math.floor((minutes % 1440) / 60);
@@ -103,7 +104,7 @@ export default function FuturesCloseClusterTimeline({ closeCalendar }: FuturesCl
 
       {(timeline.length > 0 || clusters.length > 0 || schedule.length > 0) && (
         <div className="mt-2 min-w-0">
-          <CollapsibleSection title="Schedule detail" summary={detailSummary || 'Markers and weights'}>
+          <CollapsibleSection title="Schedule detail" summary={detailSummary || 'Markers and close times'}>
             {timeline.length > 0 && (
               <ul aria-label="Session markers" className="min-w-0 space-y-1">
                 {timeline.map((line) => (
@@ -112,21 +113,23 @@ export default function FuturesCloseClusterTimeline({ closeCalendar }: FuturesCl
               </ul>
             )}
             {clusters.length > 0 && (
-              <ul aria-label="Close groups" className="mt-3 min-w-0 space-y-2">
-                {clusters.map((cluster) => (
-                  <li key={`${cluster.timeISO}-${cluster.label}`} className="min-w-0 break-words text-xs leading-5">
-                    <div className="font-semibold text-emerald-200">{cluster.timeEtLabel} ET · {cluster.label}</div>
-                    <p className="text-slate-300">{cluster.timeframes.join(', ')}</p>
-                    <p className="text-slate-500">Weight {cluster.weight} · stack {cluster.clusterScore}</p>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul aria-label="Close groups" className="mt-3 min-w-0 space-y-2">
+                  {clusters.map((cluster) => (
+                    <li key={cluster.timeISO} data-futures-close-group className="min-w-0 break-words text-xs leading-5">
+                      <div className="font-semibold text-emerald-200">{cluster.timeEtLabel} ET · {cluster.closeCount} {cluster.closeCount === 1 ? 'close' : 'closes'}</div>
+                      <p className="text-slate-300">{cluster.timeframes.join(', ')}</p>
+                    </li>
+                  ))}
+                </ul>
+                {closeCalendar.groupRule && <p className="mt-1 break-words text-[11px] leading-5 text-slate-500">{closeCalendar.groupRule}</p>}
+              </>
             )}
             {schedule.length > 0 && (
-              <ul aria-label="Close weights" className="mt-3 min-w-0 space-y-1">
+              <ul aria-label="Close times" className="mt-3 min-w-0 space-y-1">
                 {schedule.map((row) => (
-                  <li key={`weight-${row.timeframe}`} className="break-words text-xs leading-5 text-slate-400">
-                    {row.timeframe} · {CATEGORY_LABEL[row.category]} · {formatMinutes(row.minutesToClose)} · {formatClose(row.nextCloseISO)} · weight {row.weight}
+                  <li key={`time-${row.timeframe}`} className="break-words text-xs leading-5 text-slate-400">
+                    {row.timeframe} · {CATEGORY_LABEL[row.category]} · {formatMinutes(row.minutesToClose)} · {formatClose(row.nextCloseISO)}
                   </li>
                 ))}
               </ul>

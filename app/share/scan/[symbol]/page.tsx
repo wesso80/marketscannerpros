@@ -25,13 +25,13 @@ export async function generateMetadata(
     openGraph: {
       type: 'article',
       url,
-      title: `${data.symbol} — ${evidenceWord(data.side)}`,
+      title: `${data.symbol} — research snapshot`,
       description: data.headline,
-      images: [{ url: og, width: 1200, height: 630, alt: `${data.symbol} ${evidenceWord(data.side)}` }],
+      images: [{ url: og, width: 1200, height: 630, alt: `${data.symbol} research snapshot` }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${data.symbol} — ${evidenceWord(data.side)}`,
+      title: `${data.symbol} — research snapshot`,
       description: data.headline,
       images: [og],
     },
@@ -45,9 +45,6 @@ export default async function ShareScanPage(
   const data = await loadShare(symbol);
   if (!data) notFound();
 
-  const sideColor =
-    data.side === 'LONG' ? 'var(--msp-bull)' : data.side === 'SHORT' ? 'var(--msp-bear)' : 'var(--msp-warn)';
-
   return (
     <main style={{ minHeight: '100vh', background: 'var(--msp-bg)', color: '#F8FAFC', padding: '48px 20px' }}>
       <div style={{ maxWidth: 880, margin: '0 auto' }}>
@@ -55,17 +52,12 @@ export default async function ShareScanPage(
           MarketScanner Pros · shared study snapshot
         </div>
         <h1 style={{ fontSize: 64, margin: '8px 0 4px', fontWeight: 800 }}>{data.symbol}</h1>
-        <div style={{ display: 'inline-block', padding: '6px 14px', border: `2px solid ${sideColor}`, color: sideColor, borderRadius: 999, fontWeight: 700, letterSpacing: '0.12em' }}>
-          {evidenceWord(data.side)}
-        </div>
         <p style={{ fontSize: 22, color: 'var(--msp-text)', marginTop: 20, lineHeight: 1.4 }}>{data.headline}</p>
-        {data.basisNote && <p style={{ fontSize: 13, color: 'var(--msp-text-muted)', marginTop: 6 }}>{data.basisNote}</p>}
+        <p style={{ fontSize: 13, color: 'var(--msp-text-muted)', marginTop: 6 }}>Measured values only. Not a rating, ranking or recommendation.</p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14, marginTop: 28 }}>
-          {data.score != null && <Stat label={data.verdict ? 'Setup score' : 'Opp Score'} value={`${data.score}/100`} />}
-          {data.verdict && <Stat label="Verdict" value={data.verdict} />}
-          {data.price != null && <Stat label="Last Price" value={`$${data.price.toFixed(2)}`} />}
-          {data.changePct != null && <Stat label="Change" value={`${data.changePct >= 0 ? '+' : ''}${data.changePct.toFixed(2)}%`} />}
+          {data.price != null && <Stat label={data.scanDate ? `Price (scan ${data.scanDate})` : 'Price'} value={`$${data.price.toFixed(2)}`} />}
+          {data.changePct != null && <Stat label="Session change" value={`${data.changePct >= 0 ? '+' : ''}${data.changePct.toFixed(2)}%`} />}
           {data.float && <Stat label="Float" value={data.float} />}
           {data.shortPct != null && <Stat label="Short %" value={`${data.shortPct.toFixed(1)}%`} />}
           {data.sector && <Stat label="Sector" value={data.sector} />}
@@ -73,7 +65,7 @@ export default async function ShareScanPage(
 
         <div style={{ marginTop: 36, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <Link href="/pricing" style={{ padding: '14px 22px', background: 'var(--msp-bull)', color: 'var(--msp-bg)', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>
-            Get the full scanner →
+            See the research workspace →
           </Link>
           <Link href={`/tools/scanner?symbol=${data.symbol}`} style={{ padding: '14px 22px', border: '1px solid rgba(255,255,255,0.18)', color: '#F8FAFC', borderRadius: 10, fontWeight: 600, textDecoration: 'none' }}>
             Open {data.symbol} in MSP
@@ -88,12 +80,6 @@ export default async function ShareScanPage(
       </div>
     </main>
   );
-}
-
-function evidenceWord(side: 'LONG' | 'SHORT' | 'WATCH') {
-  if (side === 'LONG') return 'Bullish evidence';
-  if (side === 'SHORT') return 'Bearish evidence';
-  return 'Watch';
 }
 
 function Stat({ label, value }: { label: string; value: string }) {

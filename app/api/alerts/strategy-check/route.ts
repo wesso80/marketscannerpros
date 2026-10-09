@@ -331,7 +331,7 @@ async function checkStrategyAlerts(req: NextRequest) {
       ok: false,
       checked: 0,
       triggered: 0,
-      error: error?.message || 'Strategy check failed',
+      error: 'Strategy check failed',
       timestamp: new Date().toISOString(),
     });
   }

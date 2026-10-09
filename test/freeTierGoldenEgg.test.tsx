@@ -20,6 +20,7 @@ import {baseBreakoutV1} from '@/lib/crypto/breakdown/baseBreakoutV1';
 import {levels} from '@/lib/crypto/breakdown/levels';
 import {SECTION_KEYS,type Breakdown} from '@/lib/crypto/breakdown/types';
 import {buildPayload} from '@/lib/goldenEgg/engine';
+import {toPublicSymbolPacket} from '@/lib/research/publicSymbolPacket';
 import {now,price,ind} from './fixtures/goldenEggTiming';
 import GoldenEggPage from '@/app/tools/golden-egg/page';
 
@@ -53,7 +54,7 @@ it('treats upgrade denial as an auth error with its own message', () => {
   expect(new AuthError('/api/golden-egg').message).toBe('Sign in required');
 });
 
-it.each(['AAPL', 'LINK-USD'])('403 on %s shows the example unlock card and real quote', async symbol => {
+it.each(['AAPL', 'LINK-USD'])('403 on %s shows the example unlock card without fetching a separate quote', async symbol => {
   state.symbol = symbol;
   state.status = 403;
   render(<GoldenEggPage />);
@@ -65,8 +66,8 @@ it.each(['AAPL', 'LINK-USD'])('403 on %s shows the example unlock card and real 
   expect(screen.queryByRole('link', { name: 'Sign in' })).toBeNull();
   const snapshot = document.querySelector('[aria-label="Symbol snapshot"]');
   expect(snapshot?.textContent).toContain(symbol);
-  expect(await screen.findByText(/\$189\.25/)).toBeTruthy();
-  expect(snapshot?.textContent).toContain('$189.25');
+  expect(snapshot?.textContent).not.toContain('$189.25');
+  expect(vi.mocked(fetch).mock.calls.some(([url]) => /^\/api\/(quote|dve|regime)(\?|$)/.test(String(url)))).toBe(false);
   expect(snapshot?.textContent).not.toContain('Example');
   expect(document.body.textContent).not.toMatch(/Awaiting data|\bDEGRADED\b|\bUnknown\b|\bMISSING\b/);
 });
@@ -100,20 +101,22 @@ it.each(['AAPL','NVDA'])('Pro full Symbol page for %s has closed folds and clean
   const before=JSON.stringify(packet);
   vi.mocked(fetch).mockImplementation(async(input:any)=>{
     const url=String(input);
-    const body=url.startsWith('/api/golden-egg')?{data:packet}:url.startsWith('/api/quote')?quote:url.startsWith('/api/bars')?{ok:true,candles:price.historicalCloses!.map((c,i)=>({t:new Date(now-(300-i)*86400000).toISOString(),c}))}:url.includes('/api/scanner/')?{equity:[],crypto:[],topPicks:{equity:[],crypto:[]}}:{};
+    const body=url.startsWith('/api/golden-egg')?{success:true,data:toPublicSymbolPacket(packet)}:url.startsWith('/api/quote')?quote:url.startsWith('/api/bars')?{ok:true,candles:price.historicalCloses!.map((c,i)=>({t:new Date(now-(300-i)*86400000).toISOString(),c}))}:url.includes('/api/scanner/')?{equity:[],crypto:[],topPicks:{equity:[],crypto:[]}}:{};
     return {ok:true,status:200,json:async()=>body} as Response;
   });
   const {container}=render(<GoldenEggPage/>);
   await waitFor(()=>expect(container.querySelector('[data-symbol-summary]')).toBeTruthy());
   expect(screen.getAllByRole('heading',{level:1})).toHaveLength(1);
   expect(container.querySelector('[data-stage-badge]')).toBeNull();
-  expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);
+  await waitFor(()=>expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1));
   expect([...container.querySelectorAll('details')].every(d=>!d.open)).toBe(true);
   const evidence=screen.getByRole('button',{name:/checks.*checks/i});
   fireEvent.click(evidence);
-  const fold=[...container.querySelectorAll('details')].find(d=>d.querySelector('summary')?.textContent?.startsWith('Deep analysis'))!;
+  const fold=[...container.querySelectorAll('details')].find(d=>d.querySelector('summary')?.textContent?.startsWith('Research views'))!;
   fold.open=true;fireEvent(fold,new Event('toggle'));
-  await screen.findByText('Score Breakdown');
+  await screen.findByText('Research packet');
+  // Phase 4: no score breakdown, grade, permission label or /100 composite in the expanded verdict tab.
+  expect(container.textContent).not.toMatch(/Score Breakdown|Grade [A-F]\b|Indicator composite|\/100|READY|WATCHING|INVALIDATED|Hypothetical R:R|Best window|Breakout Score/);
   expect(container.textContent).not.toMatch(/UNAVAILABLE|UNVERIFIED|N\/A|Missing \(50\)/);
   expect(container.textContent).not.toContain('Absent component');
   expect(JSON.stringify(packet)).toBe(before);
@@ -128,7 +131,7 @@ it('Pro crypto full page keeps one source and cleans every compact fold',async()
  breakdown.top=buildTop({...breakdown,bars,rule:baseBreakoutV1(bars),levels:levels(bars)});
  const before=JSON.stringify({packet,breakdown});
  vi.mocked(fetch).mockImplementation(async(input:any)=>{
- const url=String(input),body=url.startsWith('/api/crypto/breakdown')?breakdown:url.startsWith('/api/golden-egg')?{data:packet}:url.startsWith('/api/quote')?quote:{};
+ const url=String(input),body=url.startsWith('/api/crypto/breakdown')?breakdown:url.startsWith('/api/golden-egg')?{success:true,data:toPublicSymbolPacket(packet)}:url.startsWith('/api/quote')?quote:{};
  return {ok:true,status:200,json:async()=>body} as Response;
  });
  const {container}=render(<GoldenEggPage/>);

@@ -2,9 +2,8 @@
 import { useSearchParams } from 'next/navigation';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { DVEReading, DVEApiResponse } from '@/src/features/volatilityEngine/types';
+import type { PublicDveReading as DVEReading, DVEApiResponse } from '@/src/features/volatilityEngine/types';
 import VEHeatmapGauge from '@/src/features/volatilityEngine/components/VEHeatmapGauge';
-import VEDirectionalCompass from '@/src/features/volatilityEngine/components/VEDirectionalCompass';
 import VEPhasePanel from '@/src/features/volatilityEngine/components/VEPhasePanel';
 import VESignalCard from '@/src/features/volatilityEngine/components/VESignalCard';
 import VEProjectionCard from '@/src/features/volatilityEngine/components/VEProjectionCard';
@@ -19,7 +18,9 @@ import SourceLine from '@/components/visual/SourceLine';
 import { volatilityText } from './displayText';
 import { volatilityBadgeLabel, volatilityHeadingLabel } from '@/lib/presentation/volatilityLayerLabel';
 import { type RiskFlag } from '@/components/market/RiskFlagPanel';
-import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
+import PriceEvidencePanel from '@/components/research/PriceEvidencePanel';
+import { bbwpBasisNote, type PriceEvidence } from '@/lib/research/priceEvidence';
+import { bbwpDisplay, measuredBbwp, breakoutConditions, phaseDuration, projectionStudy, stretchDescription } from '@/lib/research/volatilityDescriptions';
 
 const QUICK_SYMBOLS = ['BTC', 'ETH', 'AAPL', 'TSLA', 'NVDA', 'SPX', 'GOLD'];
 
@@ -32,9 +33,6 @@ function SectionTitle({ code }: { code: string }) {
   );
 }
 
-function evidenceStatus(value: boolean) {
-  return value ? 'supportive' as const : 'conflicting' as const;
-}
 
 function riskSeverity(label: string): RiskFlag['severity'] {
   const lower = label.toLowerCase();
@@ -53,6 +51,7 @@ export default function VolatilityEnginePage() {
   const [error, setError] = useState('');
   const [cached, setCached] = useState(false);
   const [freshness, setFreshness] = useState<Pick<DVEApiResponse, 'computedAt' | 'dataAsOf' | 'dataFreshness'>>({});
+  const [priceEvidence, setPriceEvidence] = useState<PriceEvidence | null>(null);
 
   const analyze = useCallback(async (sym?: string) => {
     const s = (sym || symbol).trim().toUpperCase();
@@ -64,6 +63,7 @@ export default function VolatilityEnginePage() {
     setCurrentPrice(0);
     setCached(false);
     setFreshness({});
+    setPriceEvidence(null);
     try {
       const res = await fetch(`/api/dve?symbol=${encodeURIComponent(s)}`);
       const json: DVEApiResponse = await res.json();
@@ -75,6 +75,7 @@ export default function VolatilityEnginePage() {
       setCurrentPrice(json.price ?? 0);
       setCached(!!json.cached);
       setFreshness({ computedAt: json.computedAt, dataAsOf: json.dataAsOf, dataFreshness: json.dataFreshness });
+      setPriceEvidence(json.priceEvidence ?? null);
     } catch {
       setError('Network error — please try again');
     } finally {
@@ -95,89 +96,39 @@ export default function VolatilityEnginePage() {
     if (requestedSymbol) void analyzeRef.current(requestedSymbol);
   }, [requestedSymbol]);
 
-  // Stale comes from the age of the price bars (session-aware, from the API), not from a cache hit: a result cached
-  // inside the 3-minute TTL is as current as the bars it was computed from.
-  const barsAsOf = freshness.dataAsOf ? ` (last bar ${freshness.dataAsOf.slice(0, 16).replace('T', ' ')})` : '';
-  const dveProviderStatus = reading ? buildMarketDataProviderStatus({
-    source: 'dve',
-    provider: cached ? `dve cached result${freshness.computedAt ? `, computed ${new Date(freshness.computedAt).toLocaleTimeString()}` : ''}` : 'dve live calculation',
-    stale: freshness.dataFreshness === 'stale',
-    degraded: reading.dataQuality.score < 80 || reading.dataQuality.missing.length > 0 || reading.dataQuality.warnings.length > 0,
-    warnings: [
-      freshness.dataFreshness === 'stale' ? `Price data is stale${barsAsOf}.` : null,
-      freshness.dataFreshness === 'delayed' ? `Price data is delayed${barsAsOf}.` : null,
-      freshness.dataFreshness === 'unknown' ? 'Price bar time unavailable; freshness unknown.' : null,
-      reading.dataQuality.score < 80 ? `DVE data quality ${reading.dataQuality.score.toFixed(0)}%.` : null,
-      ...reading.dataQuality.missing.map((item) => `Missing input: ${item}.`),
-      ...reading.dataQuality.warnings,
-    ].filter(Boolean) as string[],
-  }) : null;
-  const dveMarketStatusItems = reading ? [
-    {
-      label: 'DVE',
-      status: dveProviderStatus,
-      source: cached ? 'cache' : 'calculation',
-      coverageScore: Math.round(reading.dataQuality.score),
-      warnings: reading.dataQuality.warnings,
-    },
-    {
-      label: 'Inputs',
-      status: buildMarketDataProviderStatus({
-        source: 'dve-inputs',
-        provider: 'DVE input stack',
-        degraded: reading.dataQuality.missing.length > 0,
-        warnings: reading.dataQuality.missing.map((item) => `Missing input: ${item}.`),
-      }),
-      coverageScore: Math.round(reading.dataQuality.score),
-    },
-    {
-      label: 'Projection',
-      status: buildMarketDataProviderStatus({
-        source: 'dve-projection',
-        provider: 'DVE projection model',
-        degraded: reading.projection.projectionQuality === 'low' || Boolean(reading.projection.projectionWarning),
-        warnings: reading.projection.projectionWarning ? [reading.projection.projectionWarning] : [],
-      }),
-      coverageScore: reading.projection.projectionQualityScore ?? null,
-    },
-  ] : [];
+  // W3 DVE v2: factual availability per input instead of the engine's weighted coverage score.
+  const notCollected = reading ? reading.availability.inputs.filter((i) => i.status === 'not collected' || i.status === 'partial') : [];
+  const applicable = reading ? reading.availability.inputs.filter((i) => i.status !== 'not applicable') : [];
+  const collectedCount = applicable.filter((i) => i.status === 'collected').length;
+  const study = reading ? projectionStudy(reading.projection) : null;
   const dveEvidenceItems = reading ? [
     {
       label: 'Volatility Regime',
-      value: reading.volatility.regime.toUpperCase(),
-      status: evidenceStatus(reading.volatility.regimeConfidence >= 50),
-      detail: `${reading.volatility.regimeConfidence.toFixed(0)}% confluence with BBWP ${reading.volatility.bbwp.toFixed(0)}.`
-    },
-    {
-      label: 'Directional Pressure',
-      value: reading.direction.bias.toUpperCase(),
-      status: evidenceStatus(reading.direction.confidence >= 40),
-      detail: `${reading.direction.confidence.toFixed(0)}% confluence, score ${reading.direction.score.toFixed(0)}.`
+      value: reading.volatility.regime ? reading.volatility.regime.toUpperCase() : 'NOT AVAILABLE',
+      status: 'neutral' as const,
+      detail: (() => { const b = bbwpDisplay(reading.volatility); return b.value == null ? (b.note ?? 'BBWP not available.') : `BBWP ${b.value}.${b.note ? ` ${b.note}` : ''}`; })()
     },
     {
       label: 'Phase State',
-      value: reading.phasePersistence.contraction.active ? 'CONTRACTION' : reading.phasePersistence.expansion.active ? 'EXPANSION' : 'MIXED',
-      status: reading.phasePersistence.contraction.active || reading.phasePersistence.expansion.active ? 'supportive' as const : 'neutral' as const,
-      detail: `Contraction exit ${reading.phasePersistence.contraction.exitProbability.toFixed(0)}%, expansion exit ${reading.phasePersistence.expansion.exitProbability.toFixed(0)}%.`
+      value: !reading.phasePersistence ? 'NOT AVAILABLE' : reading.phasePersistence.contraction.active ? 'CONTRACTION' : reading.phasePersistence.expansion.active ? 'EXPANSION' : 'MIXED',
+      status: 'neutral' as const,
+      detail: !reading.phasePersistence ? 'Phase lengths need BBWP, which is not available.' : reading.phasePersistence.contraction.active ? phaseDuration('contraction', reading.phasePersistence.contraction.stats) : reading.phasePersistence.expansion.active ? phaseDuration('expansion', reading.phasePersistence.expansion.stats) : 'No contraction or expansion phase is active.'
     },
     {
-      label: 'Signal Projection',
-      value: (reading.projection.projectionQuality ?? 'unavailable').toUpperCase(),
-      status: reading.projection.projectionQuality === 'high' ? 'supportive' as const : reading.projection.projectionQuality === 'low' ? 'conflicting' as const : 'neutral' as const,
-      detail: reading.projection.projectionWarning || `${reading.projection.projectionQualityScore ?? 0}/100 projection quality score.`
+      label: 'Past-case study (historical returns)',
+      value: reading.projection.signalType === 'none' ? 'NO RECORDED RULE' : `${reading.projection.sampleSize} CASES`,
+      status: 'neutral' as const,
+      detail: study ? study.lines[0] : 'No recorded rule, so no past-case study.'
     },
   ] : [];
   const dveRiskFlags = reading ? [
-    reading.trap.detected ? 'Volatility trap detected.' : reading.trap.candidate ? 'Volatility trap candidate.' : null,
-    reading.exhaustion.label === 'HIGH' || reading.exhaustion.label === 'EXTREME' ? `Exhaustion ${reading.exhaustion.label}.` : null,
-    reading.flags.includes('CLIMAX_WARNING') ? 'Climax warning active.' : null,
-    reading.dataQuality.missing.length > 0 ? `${reading.dataQuality.missing.length} missing DVE input${reading.dataQuality.missing.length === 1 ? '' : 's'}.` : null,
-    reading.invalidation.priceInvalidation == null && reading.invalidation.phaseInvalidation == null ? 'Invalidation level unavailable.' : null,
-    ...reading.dataQuality.warnings.slice(0, 3),
+    reading.volatility.bbwp == null ? 'BBWP not available: regime, phase and BBWP conditions are not measured.' : null,
+    ...notCollected.map((i) => `${i.input} not fully collected: ${i.detail}.`),
+    ...reading.availability.warnings.slice(0, 3),
   ].filter(Boolean).map((label) => ({
     label: label as string,
     severity: riskSeverity(label as string),
-    detail: 'Limits confidence in this DVE read until resolved or confirmed by later data.',
+    detail: 'Limits what this reading can show until the input is collected.',
   })) : [];
 
   return (
@@ -247,80 +198,76 @@ export default function VolatilityEnginePage() {
         {reading && (
           <div className="mt-4 space-y-3">
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-              <StatCard label="BBWP percentile" value={reading.volatility.bbwp.toFixed(1)} />
-              <StatCard label="Pressure score" value={reading.direction.score.toFixed(0)} />
-              <StatCard label="Breakout score" value={`${reading.breakout.score.toFixed(0)}/100`} />
-              <StatCard label="Data coverage" value={`${reading.dataQuality.score.toFixed(0)}%`} />
+              <StatCard label="BBWP percentile" value={bbwpDisplay(reading.volatility).value ?? 'Not available'} />
+              <StatCard label="Regime" value={reading.volatility.regime ? volatilityText(reading.volatility.regime) : 'Not available'} />
+              <StatCard label="Breakout setting" value={(() => { const known = breakoutConditions(reading.breakout).conditions.filter((c) => c.present !== null); return known.length ? `${known.filter((c) => c.present).length} of ${known.length} conditions` : 'Not collected'; })()} />
+              <StatCard label="Inputs collected" value={`${collectedCount} of ${applicable.length}`} />
             </div>
-            {(reading.dataQuality.missing.length > 0 || reading.dataQuality.warnings.length > 0 || freshness.dataFreshness !== 'fresh') && <p className="text-xs text-amber-300">{freshness.dataFreshness === 'stale' ? 'Price bars are stale. ' : freshness.dataFreshness === 'delayed' ? 'Price bars are delayed. ' : freshness.dataFreshness === 'unknown' ? 'Price bar date not collected. ' : ''}{reading.dataQuality.missing.length > 0 ? `${reading.dataQuality.missing.length} inputs not collected. ` : ''}{reading.dataQuality.warnings.map(volatilityText).join(' ')}</p>}
+            {(notCollected.length > 0 || reading.availability.warnings.length > 0 || freshness.dataFreshness !== 'fresh') && <p className="text-xs text-amber-300">{freshness.dataFreshness === 'stale' ? 'Price bars are stale. ' : freshness.dataFreshness === 'delayed' ? 'Price bars are delayed. ' : freshness.dataFreshness === 'unknown' ? 'Price bar date not collected. ' : ''}{notCollected.length > 0 ? `Not fully collected: ${notCollected.map((i) => i.input).join(', ')}. ` : ''}{reading.availability.warnings.map(volatilityText).join(' ')}</p>}
             <div data-volatility-chart><VEHeatmapGauge vol={reading.volatility} /></div>
-            <CollapsibleSection title="Evidence and limits" summary={`${reading.dataQuality.score.toFixed(0)}% coverage · ${dveRiskFlags.length} flags`}>
+            <CollapsibleSection title="Evidence and limits" summary={`${collectedCount} of ${applicable.length} inputs collected · ${dveRiskFlags.length} limits`}>
               <div className="space-y-3 text-sm">{dveEvidenceItems.map(item=><p key={item.label}><strong>{volatilityText(item.label)}:</strong> {volatilityText(item.value)} · {volatilityText(item.detail)}</p>)}
-              {dveRiskFlags.length ? <ul className="list-disc pl-4">{dveRiskFlags.map((flag,i)=><li key={i}>{volatilityText(flag.label)}</li>)}</ul> : <p>No trap, exhaustion or data-quality flags recorded.</p>}
-              {dveMarketStatusItems.map(item=><p key={item.label}>{volatilityText(item.label)} · {item.coverageScore == null ? 'Coverage not collected' : `${Math.round(item.coverageScore)}% coverage`}</p>)}</div>
+              {dveRiskFlags.length ? <ul className="list-disc pl-4">{dveRiskFlags.map((flag,i)=><li key={i}>{volatilityText(flag.label)}</li>)}</ul> : <p>Every input this reading uses was collected.</p>}
+              <ul data-input-availability className="space-y-1">{reading.availability.inputs.map((i)=><li key={i.input} className="break-words"><strong>{i.input}:</strong> {i.status} · {i.detail}</li>)}</ul></div>
             </CollapsibleSection>
-            <CollapsibleSection title="Phase detail" summary={`${volatilityText(reading.volatility.regime)} · ${reading.exhaustion.level.toFixed(0)}/100 exhaustion`}>
-              <VETrapAlert trap={reading.trap} />
-              <VEVolatilityPhaseCard volatility={reading.volatility} phase={reading.phasePersistence} breakout={reading.breakout} trap={reading.trap} exhaustion={reading.exhaustion} invalidation={reading.invalidation} flags={reading.flags} dataQuality={reading.dataQuality} />
+            <CollapsibleSection title="Phase detail" summary={`${reading.volatility.regime ? volatilityText(reading.volatility.regime) : 'BBWP not available'} · ${stretchDescription(reading.stretch)}`}>
+              <VETrapAlert pinned={reading.pinnedCompression} />
+              <VEVolatilityPhaseCard volatility={reading.volatility} phase={reading.phasePersistence} breakout={reading.breakout} pinned={reading.pinnedCompression} stretch={reading.stretch} invalidation={reading.invalidation} availability={reading.availability} />
             </CollapsibleSection>
 
             {/* LAYER 1: Volatility State */}
-            <CollapsibleSection title="Breakout evidence" summary={`${reading.breakout.score.toFixed(0)}/100 · ${volatilityText(reading.breakout.label)}`}>
+            <CollapsibleSection title="Breakout evidence" summary={breakoutConditions(reading.breakout).headline.split('.')[0]}>
               <SectionTitle code="VOL" />
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <VEBreakoutPanel breakout={reading.breakout} missingInputs={reading.dataQuality.missing} />
+                <VEBreakoutPanel breakout={reading.breakout} />
               </div>
             </CollapsibleSection>
 
-            {/* LAYER 2: Directional Bias */}
-            <CollapsibleSection title="Directional pressure" summary={`${volatilityText(reading.direction.bias)} · ${reading.direction.confidence.toFixed(0)}% confluence`}>
-              <SectionTitle code="DIR" />
-              <VEDirectionalCompass dir={reading.direction} missingInputs={reading.dataQuality.missing} />
-            </CollapsibleSection>
+            {/* W3: the engine's directional pressure (a points total and its sign) is not published. */}
 
             {/* LAYER 3: Phase Persistence */}
-            <CollapsibleSection title="Phase persistence" summary={`${reading.phasePersistence.contraction.active ? 'Contraction' : reading.phasePersistence.expansion.active ? 'Expansion' : 'No active phase'}`}>
+            <CollapsibleSection title="Phase persistence" summary={!reading.phasePersistence ? 'Not available (needs BBWP)' : reading.phasePersistence.contraction.active ? 'Contraction' : reading.phasePersistence.expansion.active ? 'Expansion' : 'No active phase'}>
               <SectionTitle code="PH" />
-              <VEPhasePanel phase={reading.phasePersistence} />
+              {reading.phasePersistence ? <VEPhasePanel phase={reading.phasePersistence} /> : <p className="text-sm text-white/50">Phase lengths come from the BBWP series, which is not available for this symbol.</p>}
             </CollapsibleSection>
 
             {/* LAYER 4: Signal + Invalidation */}
-            <CollapsibleSection title="Signal and invalidation" summary={reading.signal.type === 'none' ? 'No active signal' : `${volatilityText(reading.signal.state)} · ${reading.signal.strength.toFixed(0)}/100`}>
+            <CollapsibleSection title="Signal and invalidation" summary={reading.signal.type === 'none' ? 'No active signal' : `${volatilityText(reading.signal.type)} · ${volatilityText(reading.signal.state)}`}>
               <SectionTitle code="SIG" />
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <VESignalCard
-                signal={reading.signal}
-                volatility={reading.volatility}
-                direction={reading.direction}
-                exhaustion={reading.exhaustion}
-              />
+                <VESignalCard signal={reading.signal} />
                 <VEInvalidationCard inv={reading.invalidation} />
               </div>
             </CollapsibleSection>
 
             {/* LAYER 5: Outcome Projection */}
-            <CollapsibleSection title="Projection" summary={reading.projection.signalType === 'none' ? 'Volatility range · no active signal' : `${reading.projection.projectionQualityScore == null ? 'Quality not collected' : `${Math.round(reading.projection.projectionQualityScore)}/100 quality`}`}>
+            <CollapsibleSection title="Projection" summary={reading.projection.signalType === 'none' ? 'Daily range size · no recorded rule' : `Historical returns · ${reading.projection.sampleSize} past cases${reading.projection.period ? ` · ${reading.projection.period.from ?? '?'} to ${reading.projection.period.to ?? '?'}` : ''}`}>
               <SectionTitle code="PROJ" />
               <VEProjectionCard
                 proj={reading.projection}
                 volatility={reading.volatility}
-                phase={reading.phasePersistence}
+                phase={reading.phasePersistence ?? undefined}
                 currentPrice={currentPrice}
               />
             </CollapsibleSection>
 
             {/* Supporting: Regime Outlook */}
-            <CollapsibleSection title="Regime context" summary={`${volatilityText(reading.transition.from)} → ${volatilityText(reading.transition.to)}`}>
+            <CollapsibleSection title="Regime context" summary={`${reading.regime.current ? volatilityText(reading.regime.current) : 'Not available'}${reading.regime.observation ? ` · ${volatilityText(reading.regime.observation)}` : ''}`}>
               <SectionTitle code="SUP" />
               <VERegimeTimeline
-                transition={reading.transition}
-                exhaustion={reading.exhaustion}
-                flags={reading.flags}
+                regime={reading.regime}
+                stretch={reading.stretch}
                 summary={reading.summary}
                 volatility={reading.volatility}
                 phase={reading.phasePersistence}
               />
             </CollapsibleSection>
+            {priceEvidence && (
+              <CollapsibleSection title="Measured price and volatility (shared with Symbol)" summary={priceEvidence.summary[0] ?? `Completed bar ${priceEvidence.basis.lastCompletedBar ?? 'n/a'}`}>
+                {(() => { const note = bbwpBasisNote(measuredBbwp(reading.volatility), priceEvidence); return note ? <p data-bbwp-basis-note className="mb-2 text-xs text-amber-300">{note}</p> : null; })()}
+                <PriceEvidencePanel e={priceEvidence} />
+              </CollapsibleSection>
+            )}
             <SourceLine source="Volatility calculation" asOf={freshness.dataAsOf?.includes('T') ? freshness.dataAsOf : undefined} tradingDay={freshness.dataAsOf ? `Price bar session ${freshness.dataAsOf}` : 'Price bar date not collected'} basis={cached ? 'Cached reading; freshness based on price bars' : 'Calculated from price bars'} />
           </div>
         )}

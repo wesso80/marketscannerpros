@@ -37,8 +37,8 @@ export default function MobileOptionsChain({ rows, selected, onSelect }: {
           return <tr key={row.strike} data-atm={row.isAtm} className={`border-t border-zinc-800 ${active?'bg-emerald-500/10':''}`}>
             <th scope="row" className="sticky left-0 z-10 bg-zinc-950 px-0.5 font-medium"><span>{row.strike.toLocaleString('en-US',{maximumFractionDigits:2})}</span>{row.isAtm&&<span className="block text-[9px] text-emerald-300">ATM</span>}</th>
             {(['bid','ask'] as const).map(key=><td key={key} className="px-0.5 text-center"><button type="button" disabled={!contract} className="min-h-10 w-full" aria-label={`${side === 'CALL'?'Call':'Put'} ${row.strike} ${key}`} onClick={()=>onSelect({side,strike:row.strike})}><span className="whitespace-nowrap text-[11px]">{contract&&contract[key]>0?number(contract[key]):'·'}</span></button></td>)}
-            <td className="px-0.5 text-center" title={contract?.volume.toLocaleString()}>{count(contract?.volume)}</td>
-            <td className="px-0.5 text-center" title={contract?.openInterest.toLocaleString()}>{count(contract?.openInterest)}</td>
+            <td className="px-0.5 text-center" title={contract?.volume?.toLocaleString()}>{count(contract?.volume)}</td>
+            <td className="px-0.5 text-center" title={contract?.openInterest?.toLocaleString()}>{count(contract?.openInterest)}</td>
             <td className="px-0.5 text-center">{contract&&contract.iv>0?`${(contract.iv*100).toFixed(1)}%`:'·'}</td>
             <td className="px-0.5 text-center">{number(contract?.delta)}</td>
           </tr>;

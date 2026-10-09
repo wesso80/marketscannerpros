@@ -148,7 +148,8 @@ describe('CoinGecko /news coin feeds (Analyst plan, coin_id)', () => {
     expect(widget).toContain('<TickerSentimentSummary items={coinSentiment}');
     expect(read('app/tools/news/page.tsx')).toContain('<TickerSentimentSummary items={tickerSummaries}');
     expect(read('app/tools/research/page.tsx')).toContain('(article.relevantTickers ?? []).includes(candidateSymbol)');
-    expect(read('components/news/TickerSentimentSummary.tsx')).toContain('Unavailable ({item.reason})');
-    expect(read('app/api/deep-analysis/route.ts')).toContain("if (assetClass === 'crypto') return cryptoNewsName(symbol);");
+    // Plain (public) mode says "Not collected"; both modes keep the reason instead of a neutral default.
+    expect(read('components/news/TickerSentimentSummary.tsx')).toContain("{plain ? 'Not collected' : 'Unavailable'} ({plain ? marketText(item.reason) : item.reason})");
+    expect(read('app/api/deep-analysis/route.ts')).toContain("assetClass === 'equity' ? fundamentals?.name ?? null : cryptoNewsName(symbol)");
   });
 });

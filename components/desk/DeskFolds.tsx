@@ -20,7 +20,7 @@ import { Card as DSCard, Badge as DSBadge, Button as DSButton, StatCard } from '
 import { FREE_COPY } from '@/components/free/copy';
 import FreeLoading from '@/components/free/Loading';
 import { useUserTier } from '@/lib/useUserTier';
-import { useRankedQueue } from '@/hooks/useRankedQueue';
+import { useRankedQueue, type DailyQueueRow } from '@/hooks/useRankedQueue';
 import { degradedFeedList } from '@/lib/analysis/sessionDataHealth';
 import type { RankedQueueRow } from '@/lib/scanner/rankedQueue';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
@@ -205,8 +205,8 @@ export default function DeskFolds() {
   // Today's research queue from the shared current-day daily-picks read.
   const ranked = useRankedQueue('daily');
   // Adapter kept so the existing panels below read the same shape they always did.
-type CachedSymbol = { symbol: string; score: number; direction: string; price: number | null; changePct: number | null; rsi: number | null; adx: number | null; type: string };
-const toCached = (r: RankedQueueRow): CachedSymbol => ({ symbol: r.symbol, score: r.mspScore, direction: r.direction, price: r.price, changePct: r.changePct, rsi: r.rsi, adx: r.adx, type: r.assetClass });
+type CachedSymbol = { symbol: string; price: number | null; changePct: number | null; rsi: number | null; adx: number | null; type: string };
+const toCached = (r: DailyQueueRow): CachedSymbol => ({ symbol: r.symbol, price: r.price, changePct: r.changePct, rsi: r.rsi, adx: r.adx, type: r.assetClass });
 const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`);
   const cached = useMemo(() => ({
     equity: ranked.equity.map(toCached),
@@ -376,7 +376,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
             </div>
             <h1 className="mt-1" style={{ fontSize: 'var(--msp-text-h1)', fontWeight: 500, color: 'var(--msp-text)', lineHeight: 1.25, overflowWrap: 'anywhere' }}>Open the research queue, then validate one symbol.</h1>
             <p className="mt-1 max-w-3xl" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', lineHeight: 1.5 }}>
-              Scanner’s ranked queue, movers, calendar risk, and headlines compressed into a morning review path.
+              Daily scan observations, movers, calendar dates and headlines for your morning review.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <DSButton variant="primary" size="sm" onClick={() => navigateTo('scanner')}>Start scanner</DSButton>
@@ -424,8 +424,6 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
                   if (item.kind === 'cached') {
                     const row = item.row;
                     const moveColor = row.changePct === null ? 'var(--msp-text-muted)' : row.changePct >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)';
-                    const biasLabel = row.direction === 'bullish' ? 'Rising context' : row.direction === 'bearish' ? 'Falling context' : 'Neutral bias';
-                    const biasTone: 'bull' | 'bear' | 'neutral' = row.direction === 'bullish' ? 'bull' : row.direction === 'bearish' ? 'bear' : 'neutral';
                     return (
                       <button
                         key={`queue-${row.symbol}`}
@@ -447,15 +445,13 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)' }}>{row.symbol}</span>
-                          <DSBadge tone={biasTone}>{biasLabel}</DSBadge>
                         </div>
                         <div className="grid grid-cols-3 gap-2">
-                          <MetricCol label="Score" value={row.score} />
+                          <MetricCol label="RSI" value={row.rsi == null ? 'No reading' : row.rsi.toFixed(1)} />
                           <MetricCol label="Price" value={row.price == null ? 'No reading' : fmtPrice(row.price)} align="right" />
                           <MetricCol label="Last bar" value={fmtMove(row.changePct)} tone={moveColor} align="right" />
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <MagnitudeBar value={row.score} max={100} color="var(--msp-accent-dim)" height={3} />
                           <MagnitudeBar value={row.changePct ?? 0} max={10} color={moveColor} height={2} />
                         </div>
                         <div style={{ fontSize: 'var(--msp-text-label)', color: 'var(--msp-text-muted)' }}>Next: review in Symbol</div>

@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => {
   process.env.ALPHA_VANTAGE_API_KEY = 'test-key';
   return { query: vi.fn(), cache: vi.fn(), series: vi.fn() };
 });
+// This legacy bulk engine is now retained behind verified admin access.
+vi.mock('@/lib/adminAuth', () => ({ requireAdmin: async () => ({ ok: true }) }));
 vi.mock('@/lib/auth', () => ({ getSessionFromCookie: async () => ({ workspaceId: 'test-workspace', tier: 'pro' }) }));
 vi.mock('@/lib/entitlements', () => ({ getEffectiveTier: async () => 'pro' }));
 vi.mock('@/lib/adaptiveTrader', () => ({ getAdaptiveLayer: async () => null }));

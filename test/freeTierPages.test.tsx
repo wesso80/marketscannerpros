@@ -13,6 +13,7 @@ import LockedPreview from '@/components/free/LockedPreview';
 import UpgradeGate from '@/components/UpgradeGate';
 import PaidPreviewGate from '@/components/free/PaidPreviewGate';
 import IntelligenceGate from '@/components/free/IntelligenceGate';
+import { buildPublicScannerObservations } from '@/lib/scanner/publicObservations';
 import { FREE_COPY } from '@/components/free/copy';
 import { trackFreeEvent } from '@/lib/free/funnel';
 let container: HTMLDivElement, root: Root, used: number;
@@ -23,7 +24,7 @@ beforeEach(() => {
   vi.stubGlobal('React', React); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.stubGlobal('fetch', fetcher);
   used=0; tracked.mockReset(); localStorage.clear(); sessionStorage.clear();
   fetcher.mockReset().mockImplementation(async (url: string, opts?: RequestInit) => {
-    if(url === '/api/scanner/run') { used++; return {ok:true,status:200,json:async()=>({results:[result]})}; }
+    if(url === '/api/scanner/run') { used++; return {ok:true,status:200,json:async()=>buildPublicScannerObservations([{...result,type:"equity"}])}; }
     if(url === '/api/scanner/usage') return {ok:true,status:200,json:async()=>({used,limit:5,resetsAt:'2026-10-05T00:00:00Z'})};
     if(url === '/api/msp-radar/preview') return {ok:true,json:async()=>({preview:{sessionDate:'2026-10-02',status:'COMPLETE',candidateCount:10,previous:{sessionDate:'2026-10-01',symbols:['SPY']}}})};
     if(url.startsWith('/api/scanner/daily-picks')) return {ok:true,json:async()=>({topPicks:{equity:[{...result,scan_date:'2026-10-02'}],crypto:[]},dataQuality:{computedAt:'2026-10-02',source:'database',stale:false,coverageScore:90,warnings:[]}})};
@@ -48,7 +49,7 @@ it('one click sends one symbol request and decrements exactly once',async()=>{
   await act(async()=>button.click());
   expect(fetcher.mock.calls.filter(([url])=>url==='/api/scanner/run')).toHaveLength(1);
   expect(JSON.parse(fetcher.mock.calls.find(([url])=>url==='/api/scanner/run')![1].body as string).symbols).toEqual(['AAPL']);
-  expect(container.textContent).toContain('4 of 5 scans left today');expect(container.textContent).toContain('74');
+  expect(container.textContent).toContain('4 of 5 scans left today');expect(container.textContent).toContain('200');
   expect(tracked.mock.calls.filter(([name])=>name==='first_scan')).toHaveLength(1);
 });
 it('locked examples cannot leak paid fixture values or mount paid children',async()=>{
@@ -78,7 +79,7 @@ it('429 shows one upgrade moment; Not now survives another attempt',async()=>{
 it('accepts the crypto scanner BTC-USD symbol without treating a successful scan as empty',async()=>{
   const defaultFetch=fetcher.getMockImplementation()!;
   fetcher.mockImplementation(async(url:string,opts?:RequestInit)=>{
-    if(url==='/api/scanner/run'){ used++;return {ok:true,status:200,json:async()=>({results:[{...result,symbol:'BTC-USD'}]})}; }
+    if(url==='/api/scanner/run'){ used++;return {ok:true,status:200,json:async()=>buildPublicScannerObservations([{...result,symbol:'BTC-USD',type:'crypto'}])}; }
     return defaultFetch(url,opts);
   });
   await render(<FreeScanner/>);

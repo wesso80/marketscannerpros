@@ -30,7 +30,7 @@ describe('L-6 shared options and links',()=>{
  });
  it('uses the shared Symbol link on all named entry surfaces',async()=>{
   const {readFileSync}=await import('node:fs');
-  for(const file of ['app/tools/market-movers/page.tsx','app/tools/explorer/page.tsx','components/explorer/ExplorerActionGrid.tsx','components/WatchlistWidget.tsx'])expect(readFileSync(file,'utf8')).toContain('symbolHref(');
+  for(const file of ['components/markets/MoversView.tsx','app/tools/explorer/page.tsx','components/explorer/ExplorerActionGrid.tsx','components/WatchlistWidget.tsx'])expect(readFileSync(file,'utf8')).toContain('symbolHref(');
  });
 });
 

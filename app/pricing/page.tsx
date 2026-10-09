@@ -9,6 +9,8 @@ import { getPortfolioLimit, getAILimit } from '@/lib/useUserTier';
 // them as fully Pro. This page never renders "Pro Trader".
 
 import React from "react";
+import { publicDesignEnabled } from "@/lib/publicDesign";
+import ResearchPricing from "@/components/public-design/ResearchPricing";
 import { PLAN_PRICES } from "@/lib/planPrices";
 
 type BillingCycle = "monthly" | "yearly";
@@ -68,9 +70,18 @@ export default function PricingPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (d?.email) setUserEmail(d.email);
-        if (d?.tier) setCurrentTier(d.tier);
+        if (d?.tier && (!publicDesignEnabled() || d.authenticated === true)) setCurrentTier(d.tier);
       })
       .catch(() => {});
+  }, []);
+
+  const [quotasEnabled, setQuotasEnabled] = React.useState<boolean | null>(null);
+  React.useEffect(() => {
+    if (!publicDesignEnabled()) return;
+    const controller = new AbortController();
+    fetch('/api/public-usage', {signal: controller.signal}).then(r => r.ok ? r.json() : null)
+      .then(d => setQuotasEnabled(d?.enabled === true)).catch(() => {});
+    return () => controller.abort();
   }, []);
 
   const isPaidUser = currentTier === "pro" || currentTier === "pro_trader";
@@ -78,7 +89,7 @@ export default function PricingPage() {
 
   const handleCheckout = async (planId: PlanId) => {
     if (planId === "free") {
-      window.location.href = "/auth";
+      window.location.href = publicDesignEnabled() ? (currentTier ? "/tools/command-center" : "/auth?next=%2Ftools%2Fcommand-center") : "/auth";
       return;
     }
 
@@ -227,6 +238,8 @@ export default function PricingPage() {
     if (plan.priceMonthlyRaw === 0) return "";
     return `equivalent to $${(plan.priceYearlyRaw / 12).toFixed(2)}/month`;
   };
+
+  if (publicDesignEnabled()) return <ResearchPricing cycle={cycle} onCycle={setCycle} onChoose={handleCheckout} loading={loadingPlan} error={checkoutError} tier={currentTier} quotasEnabled={quotasEnabled} />;
 
   return (
     <main className="min-h-screen bg-[var(--msp-bg)] text-white">

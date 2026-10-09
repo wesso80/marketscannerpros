@@ -10,17 +10,18 @@ import RegimeBar from '@/app/v2/_components/RegimeBar';
 import TodayStrip from '@/components/overview/TodayStrip';
 import StartToday from '@/components/free/StartToday';
 import {rankSectorStrength} from '@/lib/analysis/commandCenter';
-beforeEach(()=>{vi.stubGlobal('React',React);state.regime=null;vi.stubGlobal('fetch',vi.fn(async(url)=>({ok:true,json:async()=>String(url).includes('daily-picks')?{topPicks:{equity:[{symbol:'AAPL',score:89.123456,dataTimestamp:'2026-10-05T13:00:00Z'}],crypto:[]}}:String(url).includes('preview')?{preview:null}:{used:0,limit:5,resetsAt:'2026-10-06T00:00:00Z'}})));});
+beforeEach(()=>{vi.stubGlobal('React',React);state.regime=null;vi.stubGlobal('fetch',vi.fn(async(url)=>({ok:true,json:async()=>String(url).includes('daily-picks')?{contract:'public-daily-observations-v1',observations:{equity:[{symbol:'AAPL',assetClass:'equity',changePercent:1.23456,score:89.123456,dataQuality:{dataTimestamp:'2026-10-05T13:00:00Z'}}],crypto:[]}}:String(url).includes('preview')?{preview:null}:{used:0,limit:5,resetsAt:'2026-10-06T00:00:00Z'}})));});
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 it('hides an absent regime only when the caller opts in',()=>{
  const {container,rerender}=render(<RegimeBar hideIfMissing/>);expect(container.textContent).toBe('');
  rerender(<RegimeBar/>);expect(container.textContent).toContain('Not available right now');
  state.regime={regime:'risk_on',signals:[]};rerender(<RegimeBar hideIfMissing/>);expect(container.textContent).toContain('Risk-On');
 });
-it('Today has one stored-picks verdict and source, readable scores, and no scan on mount',async()=>{
+it('Today has one stored-picks summary and source, measured change (no score), and no scan on mount',async()=>{
  const {container}=render(<StartToday/>);await screen.findByText('AAPL');
  expect(container.querySelectorAll('[data-today-verdict]')).toHaveLength(1);expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);
- expect(container.textContent).toContain('89.1');expect(container.textContent).not.toContain('89.123456');expect(container.querySelectorAll('details[open]')).toHaveLength(0);
+ // W3: public daily observations carry no score; a stray score field is not shown.
+ expect(container.textContent).toContain('+1.23% session');expect(container.textContent).not.toMatch(/89\.1/);expect(container.querySelectorAll('details[open]')).toHaveLength(0);
  expect(vi.mocked(fetch).mock.calls.some(([url,options])=>String(url).includes('/scanner/run')||(options as RequestInit)?.method==='POST')).toBe(false);
 });
 it('Overview summary has one plain verdict and hides absent price cards',()=>{

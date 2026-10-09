@@ -1,3 +1,4 @@
+import { PUBLIC_DESTINATIONS } from '@/lib/publicDesign';
 import { moveExpectancy } from '@/lib/signals/accuracyDisplay';
 import { getToolByKey } from '@/lib/toolCatalog';
 import { describe, expect, it } from 'vitest';
@@ -72,7 +73,8 @@ describe('2026-09-21 production audit remediations', () => {
 
     expect(config).not.toContain("{ source: '/tools/volatility-engine', destination: '/tools/golden-egg'");
     expect(config).not.toContain("{ source: '/tools/liquidity-sweep', destination: '/tools/golden-egg'");
-    expect(config).toContain("{ source: '/tools/macro', destination: '/tools/dashboard?tab=macro'");
+    expect(config).not.toContain("{ source: '/tools/macro', destination: '/tools/dashboard?tab=macro'");
+    expect(PUBLIC_DESTINATIONS.find(item=>item.label==='Macro Outlook')?.href).toBe('/tools/macro');
     expect(getToolByKey('macro')?.href).toBe('/tools/dashboard?tab=macro');
   });
 

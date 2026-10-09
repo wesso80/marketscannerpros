@@ -1,0 +1,15 @@
+Symbol auxiliary request ordering - 8 October 2026
+
+Base: 806c046f, PR #500. Remote fetched before edits: research-page-phase4 remains 6174ed6b. Shared Symbol page/hooks overlap disclosed before editing.
+
+Symbol enables quote, DVE and regime only after a successful current core response, without loading/error/auth block or local demo. Changing symbol/timeframe/type/expiry disables auxiliaries until core success. Disabled hooks expose no stale data, errors or loading and ignore manual refetch. Late completions are discarded; already started HTTP requests are not forcibly aborted. Other callers retain eager defaults and existing five-second regime sharing. Admin files and endpoint protections unchanged.
+
+Locked previews no longer fetch a separate quote. Successful test packets now include the actual success:true contract and wait for the deferred quote.
+
+Validation: 21 targeted tests pass. Twenty delayed-core actual-page component browser fixtures at 1280/390: 12 successes started auxiliaries after core success; eight failures started none. Another eight visitor/Free limit, pending and provider-error fixtures confirm no quote/DVE/regime/summary/chart requests. No page exceptions, no live providers, non-local traffic blocked. TypeScript retains six baseline errors: four Stripe API literals and two timer unref types; none in changed files. git diff --check passes.
+
+Artifacts: outputs/symbol-order-browser-results.json and symbol-order-blocked-browser-results.json plus screenshots. Component fixtures, not live Next.js/provider verification.
+
+This is request sequencing, not server authorization. Stored scanner navigation/daily-pick reads remain unchanged. Guest provider rights, specialist public-response/Free-access reconciliation, cache isolation and public wording remain release blockers. Rollout disabled; no merges, deployments or production data changes.
+
+Next: map public-only specialist response contracts (DVE, crypto breakdown, news, fundamentals), explicitly distinguishing core Free evidence from Pro depth and tracing admin dependencies before changing server gates.

@@ -5,16 +5,17 @@
  *
  * Reads GET /api/scanner/daily-picks once for every tier (free, signed-out, pro, pro_trader, admin).
  * A page load never POSTs /api/scanner/run. Explicit Scanner Run stays on useManualScannerResults.
- * Rows stay in the order daily-picks already ranked: equity list, then crypto list.
+ * Rows retain the endpoint order (public observations: symbol A–Z): equity list, then crypto list.
  */
 import { useMemo } from 'react';
-import { useDailyPicksBundle, useRegime, type ScanResult, type ScanTimeframe } from '@/app/v2/_lib/api';
-import { deriveLifecycleState, type RankedQueueRow } from '@/lib/scanner/rankedQueue';
+import { useDailyPicksBundle, useRegime, type ScanTimeframe } from '@/app/v2/_lib/api';
+import type { RankedQueueRow } from '@/lib/scanner/rankedQueue';
+export type DailyQueueRow = Pick<RankedQueueRow,'symbol'|'assetClass'|'price'|'changePct'|'adx'|'rsi'>;
 
 export interface RankedQueueResult {
-  rows: RankedQueueRow[];
-  equity: RankedQueueRow[];
-  crypto: RankedQueueRow[];
+  rows: DailyQueueRow[];
+  equity: DailyQueueRow[];
+  crypto: DailyQueueRow[];
   loading: boolean;
   error: string | null;
   qualityWarnings: string[];
@@ -49,22 +50,6 @@ function finiteNum(value: unknown): number | null {
   return null;
 }
 
-function readCanonical(row: Record<string, unknown>): ScanResult['canonical'] {
-  const canonical = row.canonical;
-  if (!canonical || typeof canonical !== 'object') return undefined;
-  const permission = (canonical as { permission?: unknown }).permission;
-  if (permission !== 'PASS' && permission !== 'WATCH' && permission !== 'BLOCK') return undefined;
-  return canonical as ScanResult['canonical'];
-}
-
-function pickDirection(row: Record<string, unknown>, canonical: ScanResult['canonical']): string {
-  const direction = row.direction;
-  if (direction === 'bullish' || direction === 'bearish' || direction === 'neutral') return direction;
-  if (canonical?.direction === 'long') return 'bullish';
-  if (canonical?.direction === 'short') return 'bearish';
-  return 'neutral';
-}
-
 /** A stored trust label that is present and not GOOD. Missing trust is not treated as a weak row. */
 function isWeakDailyPick(row: Record<string, unknown>): boolean {
   const trust = asRecord(row.trust);
@@ -73,47 +58,28 @@ function isWeakDailyPick(row: Record<string, unknown>): boolean {
   return false;
 }
 
-function mapDailyPick(raw: unknown, assetClass: 'equity' | 'crypto', regime: string): RankedQueueRow | null {
+function mapDailyPick(raw: unknown, assetClass: 'equity' | 'crypto', regime: string): DailyQueueRow | null {
   const row = asRecord(raw);
   const symbol = typeof row.symbol === 'string' ? row.symbol.trim() : '';
   if (!symbol) return null;
   const indicators = asRecord(row.indicators);
-  const canonical = readCanonical(row);
-  const score = finiteNum(row.score) ?? finiteNum(canonical?.score) ?? 0;
   const price = finiteNum(row.price);
   const rsi = finiteNum(row.rsi) ?? finiteNum(indicators.rsi);
   const adx = finiteNum(row.adx) ?? finiteNum(indicators.adx);
-  const direction = pickDirection(row, canonical);
   return {
     symbol,
     assetClass,
-    mspScore: score,
-    direction,
     price,
     changePct: finiteNum(row.change_percent) ?? finiteNum(row.changePercent) ?? finiteNum(row.changePct),
     adx,
     rsi,
-    lifecycle: deriveLifecycleState({
-      symbol,
-      score,
-      direction,
-      timeframe: 'daily',
-      type: assetClass,
-      price: price ?? undefined,
-      rsi: rsi ?? undefined,
-      adx: adx ?? undefined,
-      canonical,
-    } as ScanResult, regime),
-    confidence: finiteNum(row.confidence),
-    setup: typeof row.setup === 'string' ? row.setup : canonical?.setupType ?? null,
-    permission: canonical?.permission,
-    grade: canonical?.grade,
+
   };
 }
 
-function mapDailyPickList(rows: unknown[] | undefined, assetClass: 'equity' | 'crypto', regime: string): { rows: RankedQueueRow[]; weak: number } {
+function mapDailyPickList(rows: unknown[] | undefined, assetClass: 'equity' | 'crypto', regime: string): { rows: DailyQueueRow[]; weak: number } {
   let weak = 0;
-  const mapped: RankedQueueRow[] = [];
+  const mapped: DailyQueueRow[] = [];
   for (const raw of rows ?? []) {
     if (raw && typeof raw === 'object' && isWeakDailyPick(raw as Record<string, unknown>)) weak += 1;
     const row = mapDailyPick(raw, assetClass, regime);

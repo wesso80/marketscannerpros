@@ -1,9 +1,11 @@
+import { withPublicAiQuota, publicAiScope, markPublicAiProviderStarted } from '@/lib/publicAiQuota';
+import { privateAnalystHandler } from '@/lib/ai/legacyAnalystAccess';
 /**
  * MSP Analyst AI Chat API
  * 
  * @route POST /api/msp-analyst
  * @description OpenAI-powered market analysis chatbot with tier-based rate limits
- * @authentication Required (ms_auth cookie)
+ * @authentication Verified admin/operator session required (ms_auth cookie)
  * 
  * @body {object} request
  * @body {string} request.query - User's question or command
@@ -143,7 +145,7 @@ function countDataComponents(scanner: any): number {
   return count;
 }
 
-export async function POST(req: NextRequest) {
+async function handlePost(req: NextRequest) {
   // Rate limit: 10 requests per minute per IP (prevents spam, separate from daily DB limits)
   const ip = getClientIP(req);
   const rateCheck = aiLimiter.check(ip);
@@ -243,7 +245,7 @@ export async function POST(req: NextRequest) {
 
     const workspaceId = session!.workspaceId;
     // Verify tier from DB (cached 5min) instead of trusting cookie alone
-    const tier = normalizeTier(await getVerifiedTier(session!));
+    const tier = publicAiScope()?.plan ?? normalizeTier(await getVerifiedTier(session!));
 
     const directionValue = String(scanner?.direction || '').toLowerCase();
     const adaptiveDirection: 'bullish' | 'bearish' | 'neutral' | undefined =
@@ -302,7 +304,7 @@ export async function POST(req: NextRequest) {
     const dailyLimit = AI_DAILY_LIMITS[tier];
 
     // Check usage against daily limit
-    if (dailyLimit) {
+    if (dailyLimit && !publicAiScope()) {
       try {
         const today = new Date().toISOString().split('T')[0];
         // Use text comparison for workspace_id (supports both UUID and anon_xxx formats)
@@ -896,6 +898,7 @@ Always mention which derivatives signals support or contradict your analysis.
     let response;
     const aiModel = AI_MODEL_BY_TIER[tier] || 'gpt-4o-mini';
     try {
+      markPublicAiProviderStarted();
       response = await openAICircuit.call(() => client.chat.completions.create({
         model: aiModel,
         messages,
@@ -1135,3 +1138,4 @@ Always mention which derivatives signals support or contradict your analysis.
     );
   }
 }
+export const POST = privateAnalystHandler(withPublicAiQuota(handlePost, 'msp-analyst'));

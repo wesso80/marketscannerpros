@@ -1,7 +1,8 @@
 'use client';
 
-import type { PhasePersistence, ZoneDurationStats } from '@/src/features/volatilityEngine/types';
+import type { PublicPhase as PhasePersistence, ZoneDurationStats } from '@/src/features/volatilityEngine/types';
 import { volatilityBadgeLabel } from '@/lib/presentation/volatilityLayerLabel';
+import { phaseDuration } from '@/lib/research/volatilityDescriptions';
 
 function ageLabel(pct: number): { text: string; color: string } {
   if (pct >= 80) return { text: 'Stretched', color: 'var(--msp-bear)' };
@@ -9,11 +10,9 @@ function ageLabel(pct: number): { text: string; color: string } {
   return { text: 'Young', color: 'var(--msp-bull)' };
 }
 
-function PhaseBlock({ label, active, prob, exitProb, stats }: {
+function PhaseBlock({ label, active, stats }: {
   label: string;
   active: boolean;
-  prob: number;
-  exitProb: number;
   stats: ZoneDurationStats;
 }) {
   const age = ageLabel(stats.agePercentile);
@@ -36,31 +35,11 @@ function PhaseBlock({ label, active, prob, exitProb, stats }: {
         <div className="text-white/50">Average: <span className="font-bold text-white/80">{stats.averageBars.toFixed(1)} bars</span></div>
         <div className="text-white/50">Max: <span className="font-bold text-white/80">{stats.maxBars} bars</span></div>
         <div className="text-white/50">Episodes: <span className="font-bold text-white/80">{stats.episodeCount}</span></div>
-        <div className="text-white/50">Percentile: <span className="font-bold text-white/80">{stats.agePercentile.toFixed(0)}%</span></div>
+        <div className="text-white/50">This long or shorter: <span className="font-bold text-white/80">{stats.agePercentile.toFixed(0)}% of past phases</span></div>
       </div>
 
-      {active && (
-        <div className="mt-3 space-y-1.5">
-          <div className="space-y-0.5">
-            <div className="flex items-center justify-between text-[0.7rem]">
-              <span className="text-white/50">Continuation</span>
-              <span className="font-semibold text-white/80">{prob.toFixed(0)}%</span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
-              <div className="h-full rounded-full bg-slate-500 transition-all" style={{ width: `${prob}%` }} />
-            </div>
-          </div>
-          <div className="space-y-0.5">
-            <div className="flex items-center justify-between text-[0.7rem]">
-              <span className="text-white/50">Exit weight</span>
-              <span className="font-semibold text-white/80">{exitProb.toFixed(0)}%</span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
-              <div className="h-full rounded-full bg-amber-500 transition-all" style={{ width: `${exitProb}%` }} />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Phase 4: duration facts instead of continuation / exit "probabilities" (additive heuristic points). */}
+      <p data-phase-duration className="mt-3 text-[0.7rem] leading-relaxed text-white/60">{phaseDuration(label.toLowerCase(), stats)}</p>
     </div>
   );
 }
@@ -79,15 +58,11 @@ export default function VEPhasePanel({ phase }: { phase: PhasePersistence }) {
         <PhaseBlock
           label="Contraction"
           active={phase.contraction.active}
-          prob={phase.contraction.continuationProbability}
-          exitProb={phase.contraction.exitProbability}
           stats={phase.contraction.stats}
         />
         <PhaseBlock
           label="Expansion"
           active={phase.expansion.active}
-          prob={phase.expansion.continuationProbability}
-          exitProb={phase.expansion.exitProbability}
           stats={phase.expansion.stats}
         />
       </div>

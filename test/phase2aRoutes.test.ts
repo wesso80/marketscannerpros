@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { expect, it, vi } from "vitest";
 import config from "../next.config.mjs";
+import { PUBLIC_DESTINATIONS } from "@/lib/publicDesign";
 import { areaLinks } from "@/lib/toolWorkflows";
 const redirect = vi.hoisted(() =>
   vi.fn((href: string) => {
@@ -114,7 +115,7 @@ it("preserves the shared v2 library and embedded pages while retiring the middle
 
 it('accounts for every current public static content route in the seven-group map', async () => {
   const { readdirSync } = await import('node:fs');
-  const paths = new Set(Object.values(areaLinks).flat().map(link => link.href.split('?')[0]));
+  const paths = new Set([...Object.values(areaLinks).flat(), ...PUBLIC_DESTINATIONS].map(link => link.href.split('?')[0]));
   const redirects = new Set((await config.redirects()).map(rule => rule.source));
   // /tools/signal-accuracy stays reachable by URL and off the menus until labelled results exist.
   const intentionallyUnlisted = new Set(['/reviews', '/partners/demo', '/after-checkout', '/auth/verify', '/intelligence/lead-lag', '/intelligence/nq-pressure', '/intelligence/auction', '/intelligence/master', '/intelligence/history', '/tools/signal-accuracy']);
@@ -122,7 +123,7 @@ it('accounts for every current public static content route in the seven-group ma
   const walk = (dir: string) => { for (const item of readdirSync(dir, {withFileTypes:true})) { const file=path.join(dir,item.name);if(item.isDirectory()) walk(file);else if(item.name==='page.tsx') pages.push(file); } };
   walk('app');
   for(const file of pages) {
-    const route='/' + path.dirname(file).replace(/^app\/?/, '');
+    const route='/' + path.dirname(file).replace(/\\/g, '/').replace(/^app\/?/, '');
     if(/^\/(admin|operator)(\/|$)/.test(route) || route.includes('[') || intentionallyUnlisted.has(route) || redirects.has(route)) continue;
     // Page-level redirects expose no separate content; their destinations are the catalog pages.
     const code=readFileSync(file,'utf8');

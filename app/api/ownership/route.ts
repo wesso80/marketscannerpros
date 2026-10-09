@@ -1,3 +1,5 @@
+import { ownershipEvidence } from '@/lib/ai/ownershipCryptoEvidence';
+import { sectionEvidenceToken } from '@/lib/ai/sectionEvidenceAccess';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
@@ -29,5 +31,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Valid equity symbol required' }, { status: 400 });
   }
   const context = await getOwnershipContext(symbol);
-  return NextResponse.json({ ...context, source: 'Alpha Vantage' }, { headers: { 'Cache-Control': 'private, max-age=300' } });
+  const token=await sectionEvidenceToken('ownership',symbol,'equity',ownershipEvidence(context));
+  return NextResponse.json({ ...context, source: 'Alpha Vantage', ...(token?{copilotEvidenceToken:token}:{}) }, { headers: { 'Cache-Control': 'private, no-store' } });
 }

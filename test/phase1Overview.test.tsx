@@ -16,8 +16,9 @@ describe('Symbol header hierarchy', () => {
     const header = source.slice(start, source.indexOf('/>', start));
     expect(header).toContain('compact');
     expect(header).not.toMatch(/Indicator composite|INDICATOR_COMPOSITE_LABEL|geConfluenceScore/);
-    expect(source.slice(source.indexOf(header) + header.length)).toContain('INDICATOR_COMPOSITE_LABEL');
-    expect(source).toContain('CANONICAL_SETUP_TOOLTIP');
+    // Phase 4: the composite is gone everywhere; the lower block shows descriptive states instead.
+    expect(source).not.toContain('INDICATOR_COMPOSITE_LABEL');
+    expect(source.slice(source.indexOf(header) + header.length)).toContain('<DescriptiveStates');
   });
 });
 
@@ -61,7 +62,7 @@ describe('Radar access and response states', () => {
     await render(<RadarReportCard />);
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(fetcher).toHaveBeenCalledWith('/api/msp-radar/daily?view=card', expect.objectContaining({ cache: 'no-store', credentials: 'include', signal: expect.any(AbortSignal) }));
-    expect(container.textContent).toMatch(/Fri 2 Oct/); expect(container.textContent).toContain('12 candidates'); expect(container.textContent).toContain('COMPLETE');
+    expect(container.textContent).toMatch(/Fri 2 Oct/); expect(container.textContent).toContain('12 candidates'); expect(container.textContent).toContain('Complete');
     expect(container.innerHTML).not.toMatch(/SECRET|PRIVATE|987654|NORMAL/);
     await render(<RadarReportCard />); expect(fetcher).toHaveBeenCalledTimes(1);
   });
@@ -79,7 +80,7 @@ describe('Radar access and response states', () => {
   });
   it.each([500, 502])('%s has an explicit error and no fake count', async status => {
     fetcher.mockResolvedValue({ ok: false, status }); await render(<RadarReportCard />);
-    expect(container.textContent).toContain(`HTTP ${status}`); expect(container.textContent).toContain('Report unavailable');
+    expect(container.textContent).toContain(`HTTP ${status}`); expect(container.textContent).toMatch(/Report not collected/i);
   });
   it('network failure has safe error text', async () => {
     fetcher.mockRejectedValue(new Error('SECRET bearer token')); await render(<RadarReportCard />);
@@ -102,17 +103,25 @@ describe('Today data presentation', () => {
     const cells = [...container.querySelectorAll('[data-sector-cell]')];
     expect(cells).toHaveLength(11); expect(cells[0].getAttribute('data-sector-cell')).toBe('XLU'); expect(cells[10].textContent).toContain('No reading');
     expect(container.querySelector('[role="img"]')?.getAttribute('aria-label')).toContain('XLK No reading');
-    expect(container.textContent).toContain('no quote'); expect(container.textContent).not.toContain('$0.00');
-    for (const card of container.querySelectorAll('[data-stat-card], figure')) expect(card.querySelector('[data-stamp-line]')).not.toBeNull();
-    expect(container.querySelectorAll('[data-stat-card]')).toHaveLength(4);
+    // J10 compact Today: a zero SPY quote is not a reading, so its card is omitted rather than shown as $0.00.
+    // Source and freshness moved to the page's SourceLine and status rows.
+    expect(container.textContent).not.toContain('$0.00');
+    const statLabels = [...container.querySelectorAll('[data-stat-card]')].map((card) => card.textContent || '');
+    expect(statLabels).toHaveLength(3);
+    expect(statLabels.some((text) => text.includes('SPY'))).toBe(false);
     expect(container.textContent).toContain('5 / 10'); // Missing sector excluded by the existing strength model.
   });
+  // J10: the strip shows the regime label only when the regime is available; freshness is stated on the page.
   it.each([
-    [true, false, false, false, 'Loading'], [false, false, false, false, 'Not available right now'],
-    [false, true, true, true, 'Stale inputs'], [false, true, true, false, 'Current'],
-  ])('uses the existing regime freshness precedence', async (loading, hasRegimeData, available, stale, expected) => {
+    [true, false, false, false, 'Market assessment not collected'], [false, false, false, false, 'Market assessment not collected'],
+    [false, true, true, true, 'Trending — risk-on'], [false, true, true, false, 'Trending — risk-on'],
+  ])('shows the regime verdict only when the regime is available', async (loading, hasRegimeData, available, stale, expected) => {
     await render(<TodayStrip {...props} loading={loading} hasRegimeData={hasRegimeData} regime={{ ...props.regime, available, stale }} />);
-    expect(container.querySelector('[aria-label="Overview"]')?.textContent).toContain(expected);
+    expect(container.querySelector('[aria-label="Overview"] [data-today-verdict]')?.textContent).toBe(expected);
+  });
+  it('keeps regime freshness on the Today page now that the strip is compact', () => {
+    const page = readFileSync('app/tools/command-center/page.tsx', 'utf8');
+    expect(page).toContain("reg.stale ? 'Older observations'");
   });
   it('folds the same eight status items into a closed disclosure', async () => {
     const items = Array.from({ length: 8 }, (_, i) => ({ label: `Feed ${i}`, statusLabel: i === 0 ? 'Degraded' : i < 3 ? 'Stale' : 'Unknown', notes: i < 3 ? ['12:00 UTC Fri 2 Oct'] : ['time unknown'] }));

@@ -57,7 +57,7 @@ it('exports GET only, nodejs, force-dynamic, and compares CRYPTO_SUMMARY_KEY in 
  expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS crypto_btc_dominance_daily/);
  expect(sql).toMatch(/day\s+DATE PRIMARY KEY/);expect(sql).toMatch(/value\s+NUMERIC NOT NULL/);expect(sql).toMatch(/source\s+TEXT NOT NULL/);expect(sql).toMatch(/recorded_at\s+TIMESTAMPTZ NOT NULL DEFAULT NOW\(\)/);
  const render=readFileSync('render.yaml','utf8');
- expect(render).toMatch(/- key: CRYPTO_SUMMARY_KEY\n\s+sync: false/);expect(render).not.toMatch(/CRYPTO_SUMMARY_KEY\n\s+value:/);
+ expect(render).toMatch(/- key: CRYPTO_SUMMARY_KEY\r?\n\s+sync: false/);expect(render).not.toMatch(/CRYPTO_SUMMARY_KEY\r?\n\s+value:/);
 });
 it('returns 403 for a missing key, a wrong key, an unset env var, ADMIN_SECRET, and cookies',async()=>{
  expect((await route.GET(req())).status).toBe(403);

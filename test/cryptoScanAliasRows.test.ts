@@ -6,6 +6,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const mocks = vi.hoisted(() => ({ series: vi.fn(), query: vi.fn() }));
+// This legacy bulk engine is now retained behind verified admin access.
+vi.mock('@/lib/adminAuth', () => ({ requireAdmin: async () => ({ ok: true }) }));
 vi.mock('@/lib/auth', () => ({ getSessionFromCookie: async () => ({ workspaceId: 'test-workspace', tier: 'pro' }) }));
 vi.mock('@/lib/entitlements', () => ({ getEffectiveTier: async () => 'pro' }));
 vi.mock('@/lib/adaptiveTrader', () => ({ getAdaptiveLayer: async () => null }));

@@ -1,15 +1,23 @@
 import { NextResponse } from "next/server";
 import { Pool } from "pg";
+import { requireAdmin } from "@/lib/adminAuth";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : false
 });
 
+const PRIVATE_HEADERS = { 'Cache-Control': 'private, no-store, max-age=0', Vary: 'Cookie' };
+const MAX_LIMIT = 200;
+
+/** Stored TradingView alerts (side, price, indicator features) are private: admin session, operator or admin secret only. */
 export async function GET(req: Request) {
+  const admin = await requireAdmin(req);
+  if (!admin.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: PRIVATE_HEADERS });
   try {
     const { searchParams } = new URL(req.url);
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const requested = parseInt(searchParams.get('limit') || '50', 10);
+    const limit = Number.isFinite(requested) ? Math.min(Math.max(requested, 1), MAX_LIMIT) : 50;
     const symbol = searchParams.get('symbol');
 
     let query = `
@@ -58,12 +66,10 @@ export async function GET(req: Request) {
           vol_z: row.vol_z ? parseFloat(row.vol_z) : null
         }
       }))
-    });
+    }, { headers: PRIVATE_HEADERS });
 
   } catch (error: any) {
     console.error("[AI-SCANNER ALERTS ERROR]", error);
-    return NextResponse.json({ 
-      error: error?.message || "Failed to fetch alerts" 
-    }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch alerts" }, { status: 500, headers: PRIVATE_HEADERS });
   }
 }

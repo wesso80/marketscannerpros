@@ -1,4 +1,7 @@
 'use client';
+import dynamic from 'next/dynamic';
+import { publicDesignEnabled } from '@/lib/publicDesign';
+const ResearchOverview = dynamic(() => import('@/components/public-design/ResearchOverview'));
 import { calendarDataWarning, upcomingConfirmedEvents } from '@/lib/calendarPresentation';
 
 /* ---------------------------------------------------------------------------
@@ -129,6 +132,10 @@ function SectionTitle({ n, title, hint }: { n: string; title: string; hint?: str
 }
 
 export default function CommandCenterPage() {
+  return publicDesignEnabled() ? <ResearchOverview /> : <LegacyCommandCenter />;
+}
+
+function LegacyCommandCenter() {
   const regime = useRegime();
   const sectors = useSectorsHeatmap();
   const crypto = useCryptoOverview();
@@ -137,8 +144,7 @@ export default function CommandCenterPage() {
   const [asset,setAsset]=useState<'crypto'|'equity'>('crypto');
   const quotes=usePublicMarketFeed<{quotes:Record<string,DisplayQuote>}>('/api/cached/bulk-quotes?symbols=BTC,ETH,SOL,SPY,QQQ,IWM,DIA');
   const funding=usePublicMarketFeed<{coins:Array<{symbol:string;fundingRatePercent:number}>;timestamp?:string;freshnessStatus?:string;source?:string}>('/api/funding-rates');
-  // Same current-day limit=20 read as DeskFolds (one in-flight GET). The server re-sorts that
-  // window by verdict, so this shell takes the first 5 of the shared result rather than a separate limit=5.
+  // Share the current-day request with Today. Public observations arrive in disclosed symbol A–Z order.
   const dailyPicks=useDailyPicksBundle();
   const picks: { data: PicksResponse | null; loading: boolean; error: string | null } = {
     data: dailyPicks.data ? {
@@ -153,8 +159,7 @@ export default function CommandCenterPage() {
   };
   const rows=topPicks(picks.data,asset);
   const previousDate=previousScanDate(rows[0]?.scan_date,asset);
-  // Same query as the current-day read, plus the date, then the same top-5 slice. A limit=5
-  // previous day is a different verdict window and would report adds and drops that did not happen.
+  // Compare the same displayed five-symbol slice for each scan date.
   const previous=usePublicMarketFeed<PicksResponse>(previousDate?`${DAILY_PICKS_CURRENT_PATH}&date=${previousDate}`:null);
   const changes=diffPicks(rows,topPicks(previous.data,asset));
 
@@ -415,7 +420,8 @@ export default function CommandCenterPage() {
         </>:<ul className="grid gap-2 md:grid-cols-2">{sectorData.filter(sector => typeof sector.changePercent === 'number').map(sector=><li key={sector.symbol}>{sector.name}: {sector.changePercent!.toFixed(2)}% vs prior close</li>)}</ul>}
       </section>
       <Card className="p-3">
-        <h2 className="text-sm font-bold">Daily Picks · {asset==='crypto'?'Crypto':'Stocks'}</h2>
+        <h2 className="text-sm font-bold">Daily observations · {asset==='crypto'?'Crypto':'Stocks'}</h2>
+        <p className="text-xs text-slate-400">Public observations are listed A–Z; scan inclusion is not a recommendation.</p>
         {picks.loading?<p>Loading…</p>:picks.error?<p className="text-amber-300">Stored picks could not be loaded.</p>:rows.length?<OverviewPicks rows={rows.slice(0,5)} asset={asset}/>:<p>No picks in the latest stored scan.</p>}
         <div className="mt-2 flex flex-wrap gap-3 text-sm">
           <Link className="inline-flex min-h-10 items-center text-emerald-300" href="/daily-pick">Open Daily Picks</Link>
@@ -427,8 +433,7 @@ export default function CommandCenterPage() {
         <h2 className="text-lg font-bold">What changed since the previous scan</h2>
         {previous.loading?<p>Loading…</p>:previous.error?<p className="text-amber-300">Earlier scan is not available right now.</p>:!changes.hasPrevious?<p>No earlier scan stored{previousDate?` for ${previousDate}`:''}.</p>:<>
           <p>vs {previousDate} scan · {asset==='crypto'?'UTC':'New York market date'}</p>
-          <p>New: {changes.added.map(p=>p.symbol).join(', ')||'none'} · Dropped: {changes.dropped.map(p=>p.symbol).join(', ')||'none'}</p>
-          <p>Grade changes: {changes.gradeChanges.map(p=>`${p.symbol} ${p.from} → ${p.to}`).join(', ')||'none'}</p>
+          <p>New in this displayed slice: {changes.added.map(p=>p.symbol).join(', ')||'none'} · No longer in this slice: {changes.dropped.map(p=>p.symbol).join(', ')||'none'}</p>
         </>}
         <p>{reg.changed?`Regime changed from ${reg.previousLabel} to ${reg.regimeLabel} since your last visit.`:'No regime change observed since your last visit.'}</p>
       {/* WHAT CHANGED SINCE LAST SESSION */}

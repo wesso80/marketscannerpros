@@ -5,12 +5,12 @@ import {cleanup,render,screen,waitFor} from '@testing-library/react';
 import {AI_DAILY_LIMITS} from '@/lib/entitlements';
 import {ALERT_LIMITS} from '@/lib/alerts/planLimits';
 import {WATCHLIST_LIMITS} from '@/lib/tiers';
-const state=vi.hoisted(()=>({tier:'pro',missing:false,failed:false,requests:[] as string[]}));
+const state=vi.hoisted(()=>({tier:'pro',publicPolicy:false,missing:false,failed:false,requests:[] as string[]}));
 vi.mock('@/lib/useUserTier',()=>({useUserTier:()=>({tier:state.tier,isLoading:false,isLoggedIn:state.tier!=='anonymous'})}));
 vi.mock('next/navigation',()=>({redirect:(url:string)=>{throw Error(`redirect:${url}`);}}));
 import AccountPage from '@/app/account/page';
 import ReferralsPage from '@/app/tools/referrals/page';
-beforeEach(()=>{vi.stubGlobal('React',React);state.tier='pro';state.missing=false;state.failed=false;state.requests=[];vi.stubGlobal('fetch',vi.fn(async(url,init)=>{state.requests.push(init?.method??'GET');return {ok:!state.failed,status:state.failed?503:200,json:async()=>String(url)==='/api/entitlements'?(state.missing?{tier:'pro'}:{aiUsedToday:7}):String(url)==='/api/alerts'?{alerts:[{is_active:true},{is_active:true},{is_active:false}],quota:{used:1,max:100}}:String(url)==='/api/watchlists'?{watchlists:[{id:'1'},{id:'2'}]}:String(url)==='/api/referral/dashboard'?{referralUrl:'https://example.test/ref',stats:{conversions:0,creditsEarned:0,nextEntryProgress:0},contest:{period:'October 2026',drawDate:'2026-11-01',yourEntries:0,totalEntries:0},leaderboard:[],history:[]}:{email:'fixture@example.test',prefs:{}}};}));});
+beforeEach(()=>{vi.stubGlobal('React',React);state.tier='pro';state.publicPolicy=false;state.missing=false;state.failed=false;state.requests=[];vi.stubGlobal('fetch',vi.fn(async(url,init)=>{state.requests.push(init?.method??'GET');return {ok:!state.failed,status:state.failed?503:200,json:async()=>String(url)==='/api/public-usage'?(state.publicPolicy?{enabled:true,quotas:[{kind:'ai',limit:20,completed:2,pending:1}]}:{enabled:false}):String(url)==='/api/entitlements'?(state.missing?{tier:'pro'}:{aiUsedToday:7}):String(url)==='/api/alerts'?{alerts:[{is_active:true},{is_active:true},{is_active:false}],quota:{used:1,max:100}}:String(url)==='/api/watchlists'?{watchlists:[{id:'1'},{id:'2'}]}:String(url)==='/api/referral/dashboard'?{referralUrl:'https://example.test/ref',stats:{conversions:0,creditsEarned:0,nextEntryProgress:0},contest:{period:'October 2026',drawDate:'2026-11-01',yourEntries:0,totalEntries:0},leaderboard:[],history:[]}:{email:'fixture@example.test',prefs:{}}};}));});
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 it.each(['pro','pro_trader','free'])('uses existing limits and closed folds for %s',async tier=>{
  state.tier=tier;
@@ -49,3 +49,5 @@ it('preserves signed-out access copy',()=>{
 it('redirects the referral page to the embedded card',()=>{
  expect(()=>ReferralsPage()).toThrow('redirect:/account#refer');
 });
+
+it('uses the active public Copilot quota instead of the legacy Analyst allowance',async()=>{state.publicPolicy=true;render(<AccountPage/>);await screen.findByText('3 / 20');expect(screen.getByText('MSP Copilot')).toBeTruthy();expect(screen.queryByText('MSP AI Analyst')).toBeNull();});
