@@ -9,8 +9,20 @@ import { q } from '@/lib/db';
 import { getRedis } from '@/lib/redis';
 import { PRICE_UNAVAILABLE } from '@/lib/alerts/cryptoPriceBatch';
 
-const memory = new Map<string, string>();
 const NOTICE_TTL_SEC = 24 * 60 * 60;
+const NOTICE_TTL_MS = NOTICE_TTL_SEC * 1000;
+type StoredNotice = { notice: string | null; expiresAt: number };
+const memory = new Map<string, StoredNotice>();
+
+function liveNotice(id: string, now: number): StoredNotice | undefined {
+  const row = memory.get(id);
+  if (!row) return undefined;
+  if (row.expiresAt <= now) {
+    memory.delete(id);
+    return undefined;
+  }
+  return row;
+}
 let lastErrorColumn: boolean | null = null;
 let lastErrorCheckedAt = 0;
 
@@ -40,9 +52,8 @@ export function clearAlertPriceNoticeCacheForTests(): void {
   lastErrorCheckedAt = 0;
 }
 
-export async function setAlertPriceNotice(id: string, notice: string | null): Promise<void> {
-  if (notice) memory.set(id, notice);
-  else memory.delete(id);
+export async function setAlertPriceNotice(id: string, notice: string | null, now = Date.now()): Promise<void> {
+  memory.set(id, { notice, expiresAt: now + NOTICE_TTL_MS });
   const redis = getRedis();
   if (!redis) return;
   try {
@@ -53,13 +64,13 @@ export async function setAlertPriceNotice(id: string, notice: string | null): Pr
   }
 }
 
-export async function readAlertPriceNotices(ids: string[]): Promise<Record<string, string>> {
+export async function readAlertPriceNotices(ids: string[], now = Date.now()): Promise<Record<string, string>> {
   const out: Record<string, string> = {};
   const missing: string[] = [];
   for (const id of ids) {
-    const hit = memory.get(id);
-    if (hit) out[id] = hit;
-    else missing.push(id);
+    const hit = liveNotice(id, now);
+    if (hit?.notice) out[id] = hit.notice;
+    else if (!hit) missing.push(id);
   }
   const redis = getRedis();
   if (!redis || missing.length === 0) return out;
@@ -75,13 +86,18 @@ export async function readAlertPriceNotices(ids: string[]): Promise<Record<strin
   return out;
 }
 
-/** Status only. Does not change symbol, condition, or notify flags. */
-export async function writeAlertPriceStatus(rows: { id: string; unavailable: boolean }[]): Promise<void> {
+/** Status only. Writes Redis and last_error when the sentence changes. Does not change symbol, condition, or notify flags. */
+export async function writeAlertPriceStatus(rows: { id: string; unavailable: boolean }[], now = Date.now()): Promise<void> {
+  const changed: { id: string; unavailable: boolean }[] = [];
   for (const row of rows) {
-    await setAlertPriceNotice(row.id, row.unavailable ? PRICE_UNAVAILABLE : null);
+    const next = row.unavailable ? PRICE_UNAVAILABLE : null;
+    const prev = liveNotice(row.id, now);
+    if (prev && prev.notice === next) continue;
+    await setAlertPriceNotice(row.id, next, now);
+    changed.push(row);
   }
-  if (!(await alertsHaveLastErrorColumn())) return;
-  for (const row of rows) {
+  if (changed.length === 0 || !(await alertsHaveLastErrorColumn())) return;
+  for (const row of changed) {
     await q(
       `UPDATE alerts SET last_error = $2 WHERE id = $1`,
       [row.id, row.unavailable ? PRICE_UNAVAILABLE : null],

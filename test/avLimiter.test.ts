@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const redisHarness = vi.hoisted(() => {
@@ -16,6 +17,7 @@ vi.mock('@/lib/redis', () => ({
 }));
 
 import {
+  AV_540_CEILING_PER_MIN,
   AV_ALLOWANCE_SUM,
   AV_CEILING_PER_MIN,
   AV_FALLBACK_LOG_EVERY_MS,
@@ -29,11 +31,18 @@ import {
   AV_WEB_FALLBACK_PER_MIN,
   AV_WORKER_FALLBACK_PER_MIN,
   AV_WORKER_FEATURE,
+  applyAvBudgetForTests,
+  applyAvProcessRoleForTests,
+  avBudgetPlanForMode,
   avTryTake,
   decideAvTake,
   fallbackBudget,
   flushAvFeatureCounts,
+  jarvisSharedFloor,
+  normalizeBudget,
   noteAvFeatureCall,
+  readAvBudgetMode,
+  refuseIllegalAvBudget,
   reservesForCeiling,
   resetAvLimiterLocalForTests,
 } from '@/lib/avLimiter';
@@ -66,6 +75,8 @@ describe('shared AV limiter', () => {
   beforeEach(() => {
     flushAvFeatureCounts();
     resetAvLimiterLocalForTests();
+    applyAvBudgetForTests({ AV_BUDGET_MODE: 'split' });
+    applyAvProcessRoleForTests(null);
     redisHarness.mode.value = 'off';
     redisHarness.evalFn.mockReset();
   });
@@ -74,24 +85,34 @@ describe('shared AV limiter', () => {
     vi.useRealTimers();
   });
 
-  it('keeps Redis ceiling + web + worker + Jarvis fallbacks inside the 600 licence', () => {
+  it('keeps split at 600 and 540 mode inside the licence, with Jarvis at 120 in both', () => {
+    const split = avBudgetPlanForMode('split');
     expect(AV_CEILING_PER_MIN).toBe(300);
-    expect(AV_WEB_FALLBACK_PER_MIN).toBe(80);
-    expect(AV_WORKER_FALLBACK_PER_MIN).toBe(100);
-    expect(AV_JARVIS_FALLBACK_PER_MIN).toBe(120);
+    expect(split.reserves).toEqual({ user: 50, alerts: 30, scheduled: 100, backfill: 120 });
+    expect(split.jarvisFloor).toBe(120);
+    expect(split.worstCase).toBe(600);
     expect(AV_ALLOWANCE_SUM).toBe(AV_LICENCE_PER_MIN);
-    expect(AV_ALLOWANCE_SUM).toBe(600);
-    expect(AV_LANES.reduce((sum, lane) => sum + AV_LANE_RESERVE[lane], 0)).toBe(AV_CEILING_PER_MIN);
+    expect(AV_LANES.reduce((sum, lane) => sum + AV_LANE_RESERVE[lane], 0)).toBe(300);
+    expect(jarvisSharedFloor(split.ceiling, split.reserves)).toBe(AV_JARVIS_FALLBACK_PER_MIN);
+    const wide = avBudgetPlanForMode('540');
+    expect(wide.ceiling).toBe(AV_540_CEILING_PER_MIN);
+    expect(wide.reserves).toEqual({ user: 90, alerts: 54, scheduled: 180, backfill: 216 });
+    expect(wide.jarvisFloor).toBe(216);
+    expect(wide.worstCase).toBe(540);
+    expect(wide.worstCase).toBeLessThanOrEqual(600);
     expect(AV_LANES.reduce((sum, lane) => sum + reservesForCeiling(AV_WEB_FALLBACK_PER_MIN)[lane], 0)).toBe(AV_WEB_FALLBACK_PER_MIN);
-    expect(fallbackBudget(AV_JARVIS_FEATURE).ceiling).toBe(120);
-    expect(fallbackBudget(AV_WORKER_FEATURE).ceiling).toBe(100);
-    expect(fallbackBudget('page').ceiling).toBe(80);
+    expect(() => readAvBudgetMode({ AV_BUDGET_MODE: 'wide' } as NodeJS.ProcessEnv)).toThrow(/AV_BUDGET_MODE=wide/);
+    expect(() => refuseIllegalAvBudget({ ...split, worstCase: 601 })).toThrow(/AV_BUDGET_MODE=split/);
   });
 
-  it('lets a user take a token when a backfill must leave the higher reserves', () => {
-    const usedByLane = { user: 0, alerts: 0, scheduled: 0, backfill: 100 };
-    expect(decideAvTake({ lane: 'backfill', usedTotal: 100, usedByLane }).allow).toBe(false);
-    expect(decideAvTake({ lane: 'user', usedTotal: 100, usedByLane }).allow).toBe(true);
+  it('lets a user take a token when backfill has used its 120 floor', () => {
+    const usedByLane = { user: 0, alerts: 0, scheduled: 0, backfill: 120 };
+    expect(decideAvTake({ lane: 'backfill', usedTotal: 119, usedByLane: { ...usedByLane, backfill: 119 } }).allow).toBe(true);
+    expect(decideAvTake({ lane: 'backfill', usedTotal: 120, usedByLane }).allow).toBe(false);
+    expect(decideAvTake({ lane: 'user', usedTotal: 120, usedByLane }).allow).toBe(true);
+    const wide = avBudgetPlanForMode('540');
+    expect(decideAvTake({ lane: 'backfill', usedTotal: 215, usedByLane: {}, ceiling: wide.ceiling, reserve: wide.reserves }).allow).toBe(true);
+    expect(decideAvTake({ lane: 'backfill', usedTotal: 216, usedByLane: {}, ceiling: wide.ceiling, reserve: wide.reserves }).allow).toBe(false);
   });
 
   it('denies every lane once the shared minute is full', () => {
@@ -101,31 +122,49 @@ describe('shared AV limiter', () => {
     }
   });
 
-  it('gives jarvis-overnight its 120 fallback and caps other processes at their own allowance', async () => {
+  it('defaults an untagged call to the user lane', () => {
+    expect(normalizeBudget().lane).toBe('user');
+    expect(normalizeBudget({ feature: 'page' }).lane).toBe('user');
+    expect(normalizeBudget({ lane: 'scheduled', feature: 'daily-scan' }).lane).toBe('scheduled');
+  });
+
+  it('picks the fallback from the process, not the feature name', async () => {
     const t = 40_000_000;
+    let postedAsJarvis = 0;
+    for (let i = 0; i < 130; i += 1) {
+      if (await avTryTake({ lane: 'backfill', feature: AV_JARVIS_FEATURE }, t + i)) postedAsJarvis += 1;
+    }
+    expect(postedAsJarvis).toBe(reservesForCeiling(AV_WEB_FALLBACK_PER_MIN).backfill);
+    expect(postedAsJarvis).toBeLessThan(AV_JARVIS_FALLBACK_PER_MIN);
+
+    resetAvLimiterLocalForTests();
+    applyAvProcessRoleForTests('jarvis');
+    const jarvisAt = 45_000_000;
     let jarvis = 0;
     for (let i = 0; i < 130; i += 1) {
-      if (await avTryTake({ lane: 'backfill', feature: AV_JARVIS_FEATURE }, t + i)) jarvis += 1;
+      if (await avTryTake({ lane: 'backfill', feature: 'something-else' }, jarvisAt + i)) jarvis += 1;
     }
     expect(jarvis).toBe(AV_JARVIS_FALLBACK_PER_MIN);
-    expect(await avTryTake({ lane: 'backfill', feature: AV_JARVIS_FEATURE }, t + 131)).toBe(false);
+    expect(fallbackBudget().ceiling).toBe(120);
 
     resetAvLimiterLocalForTests();
-    const webAt = 50_000_000;
-    let web = 0;
-    for (let i = 0; i < 90; i += 1) {
-      if (await avTryTake({ lane: 'user', feature: 'page' }, webAt + i)) web += 1;
-    }
-    expect(web).toBe(AV_WEB_FALLBACK_PER_MIN);
-
-    resetAvLimiterLocalForTests();
+    applyAvProcessRoleForTests('worker');
     const workerAt = 60_000_000;
     let worker = 0;
     for (let i = 0; i < 110; i += 1) {
       if (await avTryTake({ lane: 'scheduled', feature: AV_WORKER_FEATURE }, workerAt + i)) worker += 1;
     }
     expect(worker).toBe(AV_WORKER_FALLBACK_PER_MIN);
-    expect(await avTryTake({ lane: 'backfill', feature: AV_WORKER_FEATURE }, workerAt + 111)).toBe(false);
+    expect(await avTryTake({ lane: 'backfill', feature: AV_JARVIS_FEATURE }, workerAt + 111)).toBe(false);
+
+    resetAvLimiterLocalForTests();
+    applyAvProcessRoleForTests(null);
+    const webAt = 50_000_000;
+    let web = 0;
+    for (let i = 0; i < 90; i += 1) {
+      if (await avTryTake({ lane: 'user', feature: 'page' }, webAt + i)) web += 1;
+    }
+    expect(web).toBe(AV_WEB_FALLBACK_PER_MIN);
   });
 
   it('logs the fallback warning once per five minutes, not once per call', async () => {
@@ -133,9 +172,12 @@ describe('shared AV limiter', () => {
     const t = 70_000_000;
     await avTryTake({ lane: 'scheduled', feature: 'page' }, t);
     await avTryTake({ lane: 'scheduled', feature: 'page' }, t + 1_000);
-    const fallbacks = () => warn.mock.calls.filter((call) => String(call[0]).includes('local fallback cap'));
+    const fallbacks = () => warn.mock.calls.filter((call) => String(call[0]).includes('fallback rate'));
     expect(fallbacks()).toHaveLength(1);
-    expect(String(fallbacks()[0][0])).toContain('cap 80/min');
+    expect(String(fallbacks()[0][0])).toContain('absent=1');
+    expect(String(fallbacks()[0][0])).toContain('cap=80');
+    expect(String(fallbacks()[0][0])).toContain('role=web');
+    expect(String(fallbacks()[0][0])).not.toMatch(/ECONN|http|token/i);
     await avTryTake({ lane: 'scheduled', feature: 'page' }, t + AV_FALLBACK_LOG_EVERY_MS);
     expect(fallbacks()).toHaveLength(2);
     warn.mockRestore();
@@ -175,7 +217,8 @@ describe('shared AV limiter', () => {
     redisHarness.evalFn.mockRejectedValue(new Error('ECONNRESET'));
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     expect(await avTryTake({ lane: 'user', feature: 'page' }, 80_000_000)).toBe(true);
-    expect(String(warn.mock.calls[0]?.[0])).toContain('ECONNRESET');
+    expect(String(warn.mock.calls[0]?.[0])).toContain('error=1');
+    expect(String(warn.mock.calls[0]?.[0])).not.toContain('ECONNRESET');
     warn.mockRestore();
   });
 
@@ -187,7 +230,8 @@ describe('shared AV limiter', () => {
     const pending = avTryTake({ lane: 'scheduled', feature: 'page' }, 90_000_000);
     await vi.advanceTimersByTimeAsync(AV_LIMITER_REDIS_TIMEOUT_MS);
     await expect(pending).resolves.toBe(true);
-    expect(warn.mock.calls.some((call) => String(call[0]).includes('AV limiter Redis timeout'))).toBe(true);
+    expect(warn.mock.calls.some((call) => String(call[0]).includes('timeout=1'))).toBe(true);
+    expect(warn.mock.calls.some((call) => String(call[0]).includes('AV limiter Redis timeout'))).toBe(false);
     const redisSource = readFileSync('lib/redis.ts', 'utf8');
     expect(redisSource).toContain('export const LIMITER_REDIS_TIMEOUT_MS = 400');
     expect(redisSource).toContain('AbortSignal.timeout(LIMITER_REDIS_TIMEOUT_MS)');
@@ -202,6 +246,31 @@ describe('shared AV limiter', () => {
     expect(await avTryTake({ lane: 'user', feature: 'page' }, 100_000_000)).toBe(false);
     redisHarness.evalFn.mockResolvedValue(1);
     expect(await avTryTake({ lane: 'user', feature: 'page' }, 100_000_001)).toBe(true);
+  });
+
+  it('tags every cron and job route, and the worker and Jarvis entrypoints', () => {
+    const routes: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const path = join(dir, name);
+        if (statSync(path).isDirectory()) walk(path);
+        else if (name === 'route.ts') routes.push(path);
+      }
+    };
+    walk('app/api/cron');
+    walk('app/api/jobs');
+    expect(routes.length).toBeGreaterThan(10);
+    for (const path of routes) {
+      const src = readFileSync(path, 'utf8');
+      expect(src, path).toMatch(/lane:\s*'scheduled'/);
+    }
+    const worker = readFileSync('worker/ingest-data.ts', 'utf8');
+    expect(worker).toContain("lane: 'scheduled'");
+    expect(worker).toContain("feature: 'worker-ingest'");
+    expect(worker).toContain("AV_PROCESS_ROLE ??= 'worker'");
+    const jarvis = readFileSync('scripts/jarvis-overnight-scan.ts', 'utf8');
+    expect(jarvis).toContain("lane: 'backfill'");
+    expect(jarvis).toContain("AV_PROCESS_ROLE ??= 'jarvis'");
   });
 
   it('logs a per-feature counter line', () => {

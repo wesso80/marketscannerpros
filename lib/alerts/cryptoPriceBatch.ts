@@ -19,6 +19,9 @@ import { getRedis } from '@/lib/redis';
 
 export const ALERT_CG_CHUNK = 100;
 export const ALERT_COIN_SEARCH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+/** A search that timed out or threw. A confirmed empty result keeps the 7-day TTL. */
+export const ALERT_COIN_RETRY_TTL_MS = 15 * 60 * 1000;
+const COIN_RETRY_MARK = '!';
 export const PRICE_UNAVAILABLE = 'Price unavailable for this symbol';
 
 /** Alert pricing only. Outcome labelling does not use this. */
@@ -99,20 +102,22 @@ async function readCoinCache(symbol: string, now: number): Promise<string | null
   try {
     const raw = await redis.get<string>(`${CACHE_PREFIX}${symbol}`);
     if (raw == null) return undefined;
-    const id = raw === '' ? null : String(raw);
-    memoryCoinCache.set(symbol, { id, expiresAt: now + ALERT_COIN_SEARCH_TTL_MS });
+    const retry = raw === COIN_RETRY_MARK;
+    const id = raw === '' || retry ? null : String(raw);
+    memoryCoinCache.set(symbol, { id, expiresAt: now + (retry ? ALERT_COIN_RETRY_TTL_MS : ALERT_COIN_SEARCH_TTL_MS) });
     return id;
   } catch {
     return undefined;
   }
 }
 
-async function writeCoinCache(symbol: string, id: string | null, now: number): Promise<void> {
-  memoryCoinCache.set(symbol, { id, expiresAt: now + ALERT_COIN_SEARCH_TTL_MS });
+async function writeCoinCache(symbol: string, id: string | null, ttlMs: number, now: number): Promise<void> {
+  const retry = id == null && ttlMs <= ALERT_COIN_RETRY_TTL_MS;
+  memoryCoinCache.set(symbol, { id, expiresAt: now + ttlMs });
   const redis = getRedis();
   if (!redis) return;
   try {
-    await redis.set(`${CACHE_PREFIX}${symbol}`, id ?? '', { ex: Math.floor(ALERT_COIN_SEARCH_TTL_MS / 1000) });
+    await redis.set(`${CACHE_PREFIX}${symbol}`, retry ? COIN_RETRY_MARK : (id ?? ''), { ex: Math.max(1, Math.floor(ttlMs / 1000)) });
   } catch {
     /* The in-process copy still stops a second search in this process. */
   }
@@ -133,7 +138,7 @@ export async function fetchAlertCryptoQuotes(
     search?: (symbol: string) => Promise<{ coins: SearchCoin[] } | null>;
     cache?: {
       get: (symbol: string) => Promise<string | null | undefined>;
-      set: (symbol: string, id: string | null) => Promise<void>;
+      set: (symbol: string, id: string | null, ttlMs: number) => Promise<void>;
     };
   } = {},
 ): Promise<{ quotes: Record<string, AlertCryptoQuote>; skipped: AlertCryptoSkip[]; calls: number; searches: number }> {
@@ -148,7 +153,7 @@ export async function fetchAlertCryptoQuotes(
   const now = deps.now ?? Date.now();
   const cache = deps.cache ?? {
     get: (symbol: string) => readCoinCache(symbol, now),
-    set: (symbol: string, id: string | null) => writeCoinCache(symbol, id, now),
+    set: (symbol: string, id: string | null, ttlMs: number) => writeCoinCache(symbol, id, ttlMs, now),
   };
 
   const quotes: Record<string, AlertCryptoQuote> = {};
@@ -176,9 +181,21 @@ export async function fetchAlertCryptoQuotes(
         }
       } else {
         searches += 1;
-        const found = await search(resolved.symbol);
+        let found: { coins: SearchCoin[] } | null = null;
+        let failed = false;
+        try {
+          found = await search(resolved.symbol);
+          if (found == null) failed = true;
+        } catch {
+          failed = true;
+        }
+        if (failed) {
+          await cache.set(resolved.symbol, null, ALERT_COIN_RETRY_TTL_MS);
+          skipped.push({ symbol: resolved.symbol, reason: PRICE_UNAVAILABLE, detail: `${resolved.symbol} search failed; retry after the short window` });
+          continue;
+        }
         const picked = pickAlertSearchId(resolved.symbol, found?.coins ?? []);
-        await cache.set(resolved.symbol, picked);
+        await cache.set(resolved.symbol, picked, ALERT_COIN_SEARCH_TTL_MS);
         if (!picked) {
           skipped.push({ symbol: resolved.symbol, reason: PRICE_UNAVAILABLE, detail: `${resolved.symbol} has no single exact coin match` });
           continue;

@@ -7,22 +7,23 @@ import { pausedAdminAvRequest } from './admin/adminEquities';
  * - On-demand fetcher
  * - Background worker (when deployed alongside)
  * 
- * The shared Redis ceiling is 300/min (lib/avLimiter.ts). Untagged calls use the
- * scheduled lane. ALPHA_VANTAGE_RPM no longer grants a separate budget.
+ * The shared Redis ceiling comes from AV_BUDGET_MODE (split 300, or 540).
+ * Untagged calls use the user lane. Cron, job, and worker entry points pass a lane.
+ * ALPHA_VANTAGE_RPM no longer grants a separate budget.
  * A full minute does not fall through to a second in-memory bucket.
  *
  * Every AV call should go through `avFetch()` or `avTakeToken()`.
  */
 
 import { avCircuit, CircuitBreakerOpenError } from './circuitBreaker';
-import { AV_CEILING_PER_MIN, avTakeToken as takeSharedToken, avTryTake, currentAvBudget, type AvBudget } from './avLimiter';
+import { avTakeToken as takeSharedToken, avTryTake, currentAvBudget, currentAvBudgetPlan, type AvBudget } from './avLimiter';
 
 export type { AvBudget };
 
 /**
  * Take a token from the shared limiter.
  * Pass a lane and feature, or call inside runWithAvBudget.
- * Untagged callers are the scheduled lane so a cron that forgot a tag does not spend the user reserve.
+ * Untagged callers are the user lane. A cron or worker must pass its own lane.
  */
 export async function avTakeToken(budget?: Partial<AvBudget>): Promise<void> {
   await takeSharedToken(budget);
@@ -141,7 +142,7 @@ export async function avAvailable(): Promise<number> {
       const now = Date.now();
       await redis.zremrangebyscore('av_limiter:minute', 0, now - 60_000);
       const used = await redis.zcard('av_limiter:minute');
-      return Math.max(0, AV_CEILING_PER_MIN - (used ?? 0));
+      return Math.max(0, currentAvBudgetPlan().ceiling - (used ?? 0));
     } catch { /* diagnostic only */ }
   }
   return 0;
@@ -150,7 +151,7 @@ export async function avAvailable(): Promise<number> {
 export async function getAlphaVantageProviderStatus() {
   return {
     provider: 'alpha_vantage',
-    configuredRpm: AV_CEILING_PER_MIN,
+    configuredRpm: currentAvBudgetPlan().ceiling,
     availableNow: await avAvailable(),
     hasApiKey: Boolean(process.env.ALPHA_VANTAGE_API_KEY),
     liveOutputSize: process.env.OPERATOR_AV_OUTPUTSIZE === 'full' ? 'full' : 'compact',

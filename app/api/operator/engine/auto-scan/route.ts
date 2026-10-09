@@ -1,3 +1,4 @@
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { adminEquitiesPaused, ADMIN_EQUITIES_PAUSED_MESSAGE } from '@/lib/admin/adminEquities';
 /**
  * POST /api/operator/engine/auto-scan — trigger the shared saved admin scan
@@ -104,7 +105,8 @@ export async function GET(req: NextRequest) {
 
 /* ── POST: start the shared scan ────────────────────────────── */
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'admin-auto-scan' }, () => POST(req));
   const isCron = verifyCronAuth(req);
   if (!isCron && !(await checkAuth(req))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });

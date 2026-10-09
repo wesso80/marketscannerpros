@@ -1,3 +1,4 @@
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { timingSafeEqual } from 'crypto';
@@ -121,7 +122,8 @@ function directionFromMove(movePct: number): 'up' | 'down' | 'flat' {
   return 'flat';
 }
 
-export async function POST(_req: NextRequest) {
+export async function POST(_req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'job-learning-outcomes' }, () => POST(_req));
   // Accept: cron secret (automated jobs) OR admin session (cookie or ADMIN_SECRET bearer)
   const cronSecret = process.env.CRON_SECRET;
   const headerCron = _req.headers.get('x-cron-secret');

@@ -1,3 +1,4 @@
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { randomUUID } from 'node:crypto';
 import { dailyPublication, isCompletedDailyBar } from '@/lib/scanner/dailyPublication';
 /**
@@ -383,7 +384,8 @@ function analyzeAsset(symbol: string, ohlcv: OHLCV[], canonicalOpts?: { assetCla
 // MAIN HANDLER
 // =============================================================================
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'job-scan-universe' }, () => POST(req));
   const startTime = Date.now();
   
   if (!verifyCronAuth(req) && !verifyAdminAuth(req)) {

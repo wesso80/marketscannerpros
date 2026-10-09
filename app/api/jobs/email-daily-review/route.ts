@@ -1,3 +1,4 @@
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, verifyCronAuth } from "@/lib/adminAuth";
 import { sendAlertEmail } from "@/lib/email";
@@ -6,7 +7,8 @@ import { buildDailyReview, renderDailyReviewEmail } from "@/lib/admin/morning-br
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'job-email-daily-review' }, () => POST(req));
   const isCron = verifyCronAuth(req);
   if (!isCron) {
     const admin = await requireAdmin(req);

@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { COINGECKO_ID_MAP } from '@/lib/coingecko';
 import {
+  ALERT_COIN_RETRY_TTL_MS,
+  ALERT_COIN_SEARCH_TTL_MS,
   PRICE_UNAVAILABLE,
   alertSymbolKey,
   fetchAlertCryptoQuotes,
@@ -186,6 +188,70 @@ describe('alert crypto prices', () => {
     expect(getPrices.mock.calls[0][0]).toHaveLength(100);
     expect(getPrices.mock.calls[1][0]).toHaveLength(1);
     expect(result.calls).toBe(2);
+  });
+
+  it('caches a real match and a confirmed empty search for 7 days, and a failed search for 15 minutes', async () => {
+    const ttls: number[] = [];
+    const rows = new Map<string, { id: string | null; expiresAt: number }>();
+    let now = 1_000_000;
+    const cache = {
+      get: async (symbol: string) => {
+        const row = rows.get(symbol);
+        if (!row || row.expiresAt <= now) return undefined;
+        return row.id;
+      },
+      set: async (symbol: string, id: string | null, ttlMs: number) => {
+        ttls.push(ttlMs);
+        rows.set(symbol, { id, expiresAt: now + ttlMs });
+      },
+    };
+    const search = vi.fn(async (symbol: string) => {
+      if (symbol === 'ERR') throw new Error('timeout');
+      if (symbol === 'NONE') return { coins: [] as SearchCoin[] };
+      if (symbol === 'NULL') return null;
+      return { coins: [exactCoin(symbol)] };
+    });
+    const getPrices = vi.fn(async (ids: string[]) => Object.fromEntries(ids.map((id) => [id, { usd: 1, usd_24h_change: 0 }])));
+    const first = await fetchAlertCryptoQuotes(['SNX', 'NONE', 'ERR', 'NULL'], {
+      coinMap: {},
+      equitySymbols: [],
+      search,
+      getPrices,
+      cache,
+      now,
+    });
+    expect(first.searches).toBe(4);
+    expect(first.quotes.SNX.price).toBe(1);
+    expect(ttls).toEqual([
+      ALERT_COIN_SEARCH_TTL_MS,
+      ALERT_COIN_SEARCH_TTL_MS,
+      ALERT_COIN_RETRY_TTL_MS,
+      ALERT_COIN_RETRY_TTL_MS,
+    ]);
+    search.mockClear();
+    now += 60_000;
+    const second = await fetchAlertCryptoQuotes(['SNX', 'NONE', 'ERR', 'NULL'], {
+      coinMap: {},
+      equitySymbols: [],
+      search,
+      getPrices,
+      cache,
+      now,
+    });
+    expect(second.searches).toBe(0);
+    expect(search).not.toHaveBeenCalled();
+    now += ALERT_COIN_RETRY_TTL_MS;
+    const third = await fetchAlertCryptoQuotes(['ERR', 'NONE', 'SNX'], {
+      coinMap: {},
+      equitySymbols: [],
+      search,
+      getPrices,
+      cache,
+      now,
+    });
+    expect(third.searches).toBe(1);
+    expect(search).toHaveBeenCalledTimes(1);
+    expect(search).toHaveBeenCalledWith('ERR');
   });
 
   it('returns before reading prices when the symbol list is empty', async () => {

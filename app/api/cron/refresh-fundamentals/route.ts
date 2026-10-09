@@ -1,3 +1,4 @@
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyCronAuth, verifyAdminAuth } from '@/lib/adminAuth';
 import { q } from '@/lib/db';
@@ -26,7 +27,8 @@ function floatCategory(sharesFloat: number | null): string | null {
   return 'normal';
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'cron-refresh-fundamentals' }, () => POST(req));
   if (!verifyCronAuth(req) && !verifyAdminAuth(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

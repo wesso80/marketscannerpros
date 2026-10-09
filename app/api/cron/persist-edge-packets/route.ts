@@ -1,3 +1,4 @@
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { adminEquitiesPaused, ADMIN_EQUITIES_PAUSED_MESSAGE } from '@/lib/admin/adminEquities';
 /**
  * POST /api/cron/persist-edge-packets
@@ -59,7 +60,8 @@ function authorise(req: NextRequest): boolean {
   return !!cronSecret && timingSafeCompare(headerCron, cronSecret);
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'cron-persist-edge-packets' }, () => POST(req));
   if (!authorise(req)) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }

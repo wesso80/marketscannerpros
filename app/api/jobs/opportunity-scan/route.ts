@@ -19,6 +19,7 @@
  *  4. Expire stale pending suggestions
  */
 
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { verifyCronAuth, verifyAdminAuth } from '@/lib/adminAuth';
@@ -116,8 +117,14 @@ interface ScoredPick extends DailyPick {
 
 /* ── Handlers ─────────────────────────────────────────────────────────── */
 
-export async function GET(req: NextRequest) { return runOpportunityScan(req); }
-export async function POST(req: NextRequest) { return runOpportunityScan(req); }
+export async function GET(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'job-opportunity-scan' }, () => GET(req));
+  return runOpportunityScan(req);
+}
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'job-opportunity-scan' }, () => POST(req));
+  return runOpportunityScan(req);
+}
 
 async function runOpportunityScan(req: NextRequest) {
   if (!verifyCronAuth(req) && !verifyAdminAuth(req)) {

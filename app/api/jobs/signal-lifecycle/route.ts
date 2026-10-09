@@ -1,3 +1,4 @@
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { q } from '@/lib/db';
@@ -64,7 +65,8 @@ async function ensureLifecycleColumns() {
     ADD COLUMN IF NOT EXISTS stop_hit_at TIMESTAMPTZ`);
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'job-signal-lifecycle' }, () => POST(req));
   const traceId = generateTraceId();
   const log = logger.withTrace(traceId);
   const cronSecret = process.env.CRON_SECRET;

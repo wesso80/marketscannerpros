@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyCronAuth } from '@/lib/adminAuth';
 import {
   AV_BUDGET_CONTRACT,
-  AV_CEILING_PER_MIN,
+  currentAvBudgetPlan,
   AV_LANES,
   avTryTake,
   avWaitMs,
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     granted,
-    ceiling: AV_CEILING_PER_MIN,
+    ceiling: currentAvBudgetPlan().ceiling,
     lane,
     feature,
     retryAfterMs: granted === count ? 0 : avWaitMs(lane),

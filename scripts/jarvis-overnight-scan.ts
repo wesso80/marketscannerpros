@@ -15,9 +15,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config();
-// Not a separate budget. With UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN
-// this process shares the 300/min Redis ceiling. Without them, feature
-// jarvis-overnight uses the 120/min fallback (300 + 80 web + 100 worker + 120 = 600).
+// AV_PROCESS_ROLE selects the 120/min fallback. The feature name does not.
+// AV_BUDGET_MODE=split: shared 300 + fallbacks 80/100/120 = 600, Jarvis floor 120.
+// AV_BUDGET_MODE=540: shared 540 with those fallbacks inside it, Jarvis floor 216.
+process.env.AV_PROCESS_ROLE ??= 'jarvis';
 process.env.ALPHA_VANTAGE_RPM ??= '120';
 
 const args = new Set(process.argv.slice(2));

@@ -21,6 +21,8 @@ import { ensureCaptureSchema, captureDueAccounts, dueCaptureSymbols } from '../l
 import { Redis } from '@upstash/redis';
 import { sleep, TokenBucket } from '../lib/rateLimiter';
 import { avTakeToken } from '../lib/avRateGovernor';
+import { runWithAvBudget } from '../lib/avLimiter';
+process.env.AV_PROCESS_ROLE ??= 'worker';
 import { calculateAllIndicators, detectSqueeze, getIndicatorWarmupStatus, OHLCVBar } from '../lib/indicators';
 import { CACHE_KEYS, CACHE_TTL } from '../lib/redis';
 import { recordSignalsBatch } from '../lib/signalService';
@@ -2104,10 +2106,12 @@ async function main(): Promise<void> {
   }
 }
 
-// Run if executed directly
-main().catch(async (err) => {
-  console.error('[worker] Fatal error:', err);
-  const { alertWorkerError } = await import('../lib/opsAlerting');
-  await alertWorkerError('ingest-data', err?.message || String(err));
-  process.exit(1);
+// Run if executed directly. The lane is scheduled for every call in this process.
+runWithAvBudget({ lane: 'scheduled', feature: 'worker-ingest' }, () => {
+  main().catch(async (err) => {
+    console.error('[worker] Fatal error:', err);
+    const { alertWorkerError } = await import('../lib/opsAlerting');
+    await alertWorkerError('ingest-data', err?.message || String(err));
+    process.exit(1);
+  });
 });
