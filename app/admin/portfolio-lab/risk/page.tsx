@@ -12,6 +12,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 
+import TruthStampLine from "@/components/admin/shared/TruthStampLine";
 type RiskSeverity = "info" | "warning" | "critical" | "kill_switch";
 
 interface RiskEvent {
@@ -54,6 +55,7 @@ interface PortfolioSummary {
 
 export default function PortfolioLabRiskPage() {
   const [events, setEvents] = useState<RiskEvent[]>([]);
+  const [truth, setTruth] = useState<any>(null);
   const [positions, setPositions] = useState<Position[]>([]);
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,6 +74,7 @@ export default function PortfolioLabRiskPage() {
       if (!eRes.ok) throw new Error(eJson?.error || `risk HTTP ${eRes.status}`);
       if (!sRes.ok) throw new Error(sJson?.error || `summary HTTP ${sRes.status}`);
       setEvents((eJson?.data?.events ?? []) as RiskEvent[]);
+      setTruth(eJson ?? null);
       const sData = sJson?.data ?? sJson;
       setPositions((sData?.positions ?? []) as Position[]);
       if (sData?.portfolio) {
@@ -126,6 +129,7 @@ export default function PortfolioLabRiskPage() {
           <div>
             <div style={crumb}>SIMULATED · NO BROKER</div>
             <h1 style={h1}>ARCA Risk Console</h1>
+            <TruthStampLine truth={truth} />
             <div style={{ fontSize: 12, color: "#64748B" }}>arca:risk · real-time</div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>

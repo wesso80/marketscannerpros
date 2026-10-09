@@ -9,6 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { storedTruth } from '@/lib/admin/truthLayer';
 import { requireAdmin } from '@/lib/adminAuth';
 import { findAnalogues, backfillEmbeddings } from '@/lib/analogues/search';
 import type { SetupFeatures } from '@/lib/analogues/featureEmbedding';
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
     };
     if (body.backfill) {
       const out = await backfillEmbeddings(session.workspaceId, body.limit ?? 500);
-      return NextResponse.json(out);
+      return NextResponse.json({ ...out, truth: storedTruth({ source: 'setup analogue store (pgvector)', dataAsOf: null, staleAfterMinutes: 24 * 60 }) });
     }
     if (!body.features) {
       return NextResponse.json({ ok: false, error: 'features required' }, { status: 400 });
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
       k: body.k,
       excludeSetupId: body.excludeSetupId,
     });
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, truth: storedTruth({ source: 'setup analogue store (pgvector)', dataAsOf: null, staleAfterMinutes: 24 * 60 }) });
   } catch (e: unknown) {
     return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 });
   }

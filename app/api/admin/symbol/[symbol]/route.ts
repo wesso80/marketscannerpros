@@ -8,10 +8,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { storedTruth } from '@/lib/admin/truthLayer';
 import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
 import { isOperator } from "@/lib/quant/operatorAuth";
-import { wrapTruth } from "@/lib/admin";
 import type { Market } from "@/types/operator";
 import { buildAdminResearchScan } from "@/lib/admin/getAdminResearchPacket";
 import { marketForSymbol, parseAdminMarket } from "@/lib/admin/adminMarket";
@@ -61,16 +61,10 @@ export async function GET(
         packetId: packet.packetId,
         alertEligibility: packet.alertEligibility,
       },
-      adminTruth: wrapTruth(
-        { source: 'admin:symbol', symbol, packetId: packet.packetId },
-        {
-          source: 'admin:symbol',
-          freshness: 'real-time',
-          simulated: false,
-          confidence: 'high',
-          confidenceReason: `Packet built from live research engine for ${symbol} on ${timeframe}.`,
-        },
-      ),
+      adminTruth: {
+        ...storedTruth({ source: `admin research packet (${symbol}, ${timeframe})`, dataAsOf: packet.createdAt ?? null, staleAfterMinutes: 60 }),
+        data: { source: 'admin:symbol', symbol, packetId: packet.packetId },
+      },
     });
   } catch (err: unknown) {
     console.error("[admin:symbol] Error:", err);
