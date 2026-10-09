@@ -96,8 +96,6 @@ describe('layout and flow audit regressions', () => {
   it('positions the homepage around workflow and product proof instead of generic hero art', () => {
     const hero = read('components/home/Hero.tsx');
     const commandHub = read('components/home/CommandHub.tsx');
-    const workflows = read('lib/toolWorkflows.ts');
-    const parkedDashboard = read('components/home/TradePermissionDashboard.tsx');
 
     expect(hero).toContain('Educational research workflow');
     expect(hero).toContain('No brokerage execution. No financial advice.');
@@ -115,13 +113,8 @@ describe('layout and flow audit regressions', () => {
     expect(commandHub).not.toContain('v2 Platform Surfaces');
     expect(commandHub).not.toContain('FeaturedTile');
     expect(primaryNavTools.map(t => t.label)).toEqual(['Today', 'Scan & Analyse', 'Markets', 'Intelligence', 'Track', 'Learn', 'Account']);
-    expect(parkedDashboard).toContain('const FALLBACK_CANDIDATES: Candidate[] = [];');
-    expect(parkedDashboard).toContain('Research Alignment Matrix');
-    expect(parkedDashboard).toContain('Alignment-Filtered Observations');
-    expect(parkedDashboard).toContain('Research guard active');
-    expect(parkedDashboard).not.toContain('Trade Permission Matrix');
-    expect(parkedDashboard).not.toContain('Permission-Filtered Candidates');
-    expect(parkedDashboard).not.toContain("'Enter'");
+    expect(existsSync(join(root, 'components/home/TradePermissionDashboard.tsx'))).toBe(false);
+    expect(existsSync(join(root, 'components/home/WhyMSP.tsx'))).toBe(false);
   });
 
   it('keeps account plan copy from exposing permission-engine language', () => {

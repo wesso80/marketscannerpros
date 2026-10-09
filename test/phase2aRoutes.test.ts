@@ -11,6 +11,22 @@ const redirect = vi.hoisted(() =>
 );
 vi.mock("next/navigation", () => ({ redirect }));
 
+it("301s the old crypto screener blog slug and lists the renamed slug from posts", async () => {
+  const posts = readFileSync("app/blog/posts-data.ts", "utf8");
+  const sitemap = readFileSync("app/sitemap.ts", "utf8");
+  const blogPage = readFileSync("app/blog/page.tsx", "utf8");
+  expect(posts).toContain('slug: "free-crypto-screeners-2025"');
+  expect(posts).not.toContain("best-free-crypto-screeners-2025");
+  expect(sitemap).toContain("blogPosts.map((post) => `/blog/${post.slug}`)");
+  expect(blogPage).toContain("href={`/blog/${post.slug}`}");
+  expect(await config.redirects()).toContainEqual({
+    source: "/blog/best-free-crypto-screeners-2025",
+    destination: "/blog/free-crypto-screeners-2025",
+    permanent: true,
+    statusCode: 301,
+  });
+});
+
 it("every seven-group navigation destination resolves directly without duplicate destinations or dead links", async () => {
   const redirects = await config.redirects();
   const links = Object.values(areaLinks)

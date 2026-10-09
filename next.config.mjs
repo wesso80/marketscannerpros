@@ -74,6 +74,7 @@ const nextConfig = {
       { source: '/partners/:path*', destination: '/pricing', permanent: true, statusCode: 301 },
       { source: '/daily-pick', destination: '/daily-scan', permanent: true, statusCode: 301 },
       { source: '/daily-pick/:path*', destination: '/daily-scan', permanent: true, statusCode: 301 },
+      { source: '/blog/best-free-crypto-screeners-2025', destination: '/blog/free-crypto-screeners-2025', permanent: true, statusCode: 301 },
       // The Nasdaq Reporting admin page and /api/admin/reporting were removed (brad, 27 Sep 2026).
       // Old bookmarks land on the admin home. The nasdaq_usage_reports table is left in place.
       {

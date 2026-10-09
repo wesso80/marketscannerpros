@@ -94,7 +94,7 @@ Short squeezes can produce explosive move potential, but they can also reverse v
     `,
   },
   {
-    slug: "best-free-crypto-screeners-2025",
+    slug: "free-crypto-screeners-2025",
     title: "Free Crypto Screeners in 2025 (Comparison Guide)",
     excerpt: "Compare free cryptocurrency screening tools and learn which data, indicators, and alert features support educational market research.",
     category: "Tools",

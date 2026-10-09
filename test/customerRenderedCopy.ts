@@ -7,9 +7,9 @@
  * tuple labels rendered as <dt> text.
  *
  * Internal identifiers, class names, routes, and API field names are ignored.
- * Admin pages and the homepage (owned by a separate PR) are excluded from the
- * failing scan. Phrase allowlist entries are exact substrings; only the
- * allowlisted span is exempt.
+ * Admin pages, app/page.tsx, and ResearchHome stay out of the failing scan.
+ * components/home is scanned. Phrase allowlist entries are exact substrings;
+ * only the allowlisted span is exempt.
  */
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { join, relative } from 'path';
@@ -34,7 +34,6 @@ export const BANNED_PATTERNS: { id: string; re: RegExp }[] = [
 /** Path prefixes and files left out of the failing scan, with reasons. */
 export const SCAN_EXCLUSIONS: { test: (file: string) => boolean; reason: string }[] = [
   { test: (file) => file.startsWith('app/admin/') || file.includes('/admin/'), reason: 'Admin pages and admin-only components are out of scope.' },
-  { test: (file) => file.startsWith('components/home/'), reason: 'Homepage-only components are owned by a separate PR.' },
   { test: (file) => file === 'app/page.tsx', reason: 'The homepage is owned by a separate PR.' },
   { test: (file) => file === 'components/public-design/ResearchHome.tsx', reason: 'Homepage-only. Owned by a separate PR.' },
 ];
@@ -88,6 +87,12 @@ export const PHRASE_ALLOWLIST: { file: string; phrase: string; reason: string }[
     file: 'app/cookie-policy/page.tsx',
     phrase: 'We currently do not respond to "Do Not Track" browser signals',
     reason: 'Legal description of the Do Not Track browser feature, not a market signal.',
+  },
+  // Temporary. Remove this entry after #578 merges the Hero wording change.
+  {
+    file: 'components/home/Hero.tsx',
+    phrase: 'a clear Symbol verdict with reasons, and data you can check.',
+    reason: 'Temporary. Hero.tsx is owned by PR #578. Remove this entry after #578 merges.',
   },
 ];
 
