@@ -3,13 +3,14 @@ import { validAdminWriteOrigin } from './admin/adminWriteOrigin';
 import { cookies } from 'next/headers';
 import { hashWorkspaceId, signSessionToken, verifySessionToken } from './auth';
 import { isOperator } from './quant/operatorAuth';
+import { adminEmailList, researchReadGrant, RESEARCH_READ_HEADER } from './admin/researchReadKey';
 
 export const ADMIN_SESSION_COOKIE = 'ms_admin';
 const ADMIN_SESSION_MAX_AGE = 60 * 60 * 12;
 
 export type AdminAuthResult = {
   ok: boolean;
-  source?: 'admin_session' | 'app_session' | 'admin_secret';
+  source?: 'admin_session' | 'app_session' | 'admin_secret' | 'research_key';
   cid?: string;
   workspaceId?: string;
 };
@@ -127,11 +128,29 @@ export async function verifyAdminRequest(request: Request): Promise<AdminAuthRes
     }
   }
 
+  // Read-only research key: only GET/HEAD on allowlisted read paths (lib/admin/researchReadKey.ts). Acts as the
+  // configured admin's /admin/login workspace so reads match what that admin sees; never authorizes writes.
+  const research = researchReadFromRequest(request);
+  if (research) return research;
+
   if (verifyAdminAuth(request)) {
     return { ok: true, source: 'admin_secret', cid: 'admin_secret', workspaceId: hashWorkspaceId('admin_secret') };
   }
 
   return { ok: false };
+}
+
+function researchReadFromRequest(request: Request): AdminAuthResult | null {
+  let url: URL;
+  try { url = new URL(request.url); } catch { return null; }
+  const grant = researchReadGrant({
+    pathname: url.pathname, method: request.method, searchParams: url.searchParams,
+    headerValue: request.headers.get(RESEARCH_READ_HEADER),
+    keysRaw: process.env.ADMIN_RESEARCH_READ_KEYS, email: process.env.ADMIN_RESEARCH_READ_EMAIL,
+    adminEmails: adminEmailList(process.env.ADMIN_EMAILS),
+  });
+  if (!grant || !isOperator(grant.cid)) return null;
+  return { ok: true, source: 'research_key', cid: grant.cid, workspaceId: hashWorkspaceId(grant.cid) };
 }
 
 export async function requireAdmin(request: Request): Promise<AdminAuthResult> {
