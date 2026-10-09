@@ -131,7 +131,7 @@ export async function GET(req: NextRequest) {
   let note: string | null = null;
   if (error) note = "Backtest Lab is unavailable: the signal log could not be read.";
   else if (totalCases === 0) note = "No logged calls in the last 90 days yet. Every shared-scan run and every admin page call is logged; rows appear after the next scan.";
-  else if (totalWins + totalLosses === 0) note = `Calls are logged but none has been measured by the fixed labeller yet (since ${LABELLER_FIX_AT}). The labeller runs every 6 hours.`;
+  else if (totalWins + totalLosses === 0) note = `Calls are logged but none has a directional verdict after the legacy date cutoff (since ${LABELLER_FIX_AT}). The labeller runs every 6 hours.`;
 
   const positionHorizons = await loadPositionHorizonStats();
 

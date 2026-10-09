@@ -1,5 +1,7 @@
 "use client";
 
+import OutcomeCohortAnalysis from "@/components/admin/OutcomeCohortAnalysis";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import PositionHorizonOutcomes from "@/components/admin/PositionHorizonOutcomes";
@@ -78,7 +80,7 @@ export default function BacktestLabPage() {
           <p style={{ color: "#94A3B8", fontSize: 13, maxWidth: 720 }}>
             How past calls did over the last 90 days: every shared-scan signal (by playbook) and every call an admin
             page showed (Priority Desk, Morning Brief, alerts, Jarvis, edge packets, ARCA), grouped by setup and market.
-            Wins/losses are fixed-labeller 24h verdicts; hit rate = W ÷ (W + L); avg move is in the call&apos;s direction.
+            Wins/losses are 24h verdicts after the legacy date cutoff; hit rate = W ÷ (W + L); avg move is in the call&apos;s direction.
             Read-only — this lab studies past calls, it does not place anything.
           </p>
         </div>
@@ -99,6 +101,9 @@ export default function BacktestLabPage() {
           {loading ? "Refreshing…" : "Refresh"}
         </button>
       </header>
+
+      <OutcomeCohortAnalysis scope="backtest" />
+      <p className="my-3 text-sm text-slate-400">Historical analysis below: mixed or unknown method attribution. Date cutoffs alone do not verify the measurement method. The cohort selector above applies only to its own 24-hour panel.</p>
 
       {error && (
         <div style={{ padding: "0.75rem 1rem", background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.32)", borderRadius: 8, color: "#FCA5A5", marginBottom: "1rem" }}>
