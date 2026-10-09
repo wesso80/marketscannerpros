@@ -4,6 +4,6 @@
  */
 export function validAdminMutationOrigin(origin: string | null, requestOrigin: string): boolean {
   if (!origin) return true;
-  if (origin === 'https://marketscannerpros.app') return true;
+  if (origin === 'https://marketscannerpros.app' || origin === 'https://www.marketscannerpros.app') return true;
   return origin === requestOrigin;
 }
