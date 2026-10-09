@@ -24,5 +24,11 @@ it('Settings is read-only and says where each setting lives', () => {
   expect(html).toContain('href="/admin/health"');
   expect(html).toContain('12 hours');
   expect(html).toContain('CRYPTO_MARKETS_PAUSE_EXITS');
+  // Accuracy (Codex combined review): revocation covers issued cookies and logout ends both sessions (session PR),
+  // and the saved research-alert pause is pointed to rather than denied.
+  expect(html).toContain('including admin cookies already issued');
+  expect(html).toContain('Logout ends both the admin cookie and the app session');
+  expect(html).toContain('href="/admin/alerts"');
+  expect(html).not.toContain('notification preferences have no saved settings');
   expect(html).not.toMatch(/<input|<button|<form|Admin secret rotation|Manage Alpha Vantage, Stripe, and OpenAI API key configuration/);
 });

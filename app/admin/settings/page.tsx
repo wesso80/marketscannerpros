@@ -18,7 +18,8 @@ export default function SettingsPage() {
       <AdminCard title="Sign-in and sessions">
         <ul className="space-y-1 text-sm text-white/60">
           <li>Sign in at <Link className="underline" href="/admin/login">/admin/login</Link>, or with an app session for an email in <code>ADMIN_EMAILS</code>.</li>
-          <li>The admin session cookie lasts 12 hours. Removing an email from <code>ADMIN_EMAILS</code> revokes its admin access.</li>
+          <li>The admin session cookie lasts 12 hours. Removing an email from <code>ADMIN_EMAILS</code> revokes its admin access, including admin cookies already issued.</li>
+          <li>Logout ends both the admin cookie and the app session from the admin sign-in.</li>
           <li>The admin list and secrets are set in the Render environment, not here.</li>
         </ul>
       </AdminCard>
@@ -35,8 +36,11 @@ export default function SettingsPage() {
           <li>Current states and recent job outcomes are on <Link className="underline" href="/admin/health">Health</Link>.</li>
         </ul>
       </AdminCard>
-      <AdminCard title="Operator preferences">
-        <p className="text-sm text-white/60">Not available. Chart timeframes, scanner intervals and notification preferences have no saved settings yet.</p>
+      <AdminCard title="Notifications and preferences">
+        <ul className="space-y-1 text-sm text-white/60">
+          <li>Research-alert notifications can be paused for this workspace from <Link className="underline" href="/admin/alerts">Alerts</Link>; that setting is saved.</li>
+          <li>Chart timeframes and scanner intervals have no saved settings yet.</li>
+        </ul>
       </AdminCard>
     </div>
   );
