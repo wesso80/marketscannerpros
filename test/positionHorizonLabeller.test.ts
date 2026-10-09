@@ -213,10 +213,10 @@ describe('6w/12w stats', () => {
 });
 
 describe('POST /api/cron/label-ai-outcomes with the 6w/12w step', () => {
-  it('reports the 6w/12w step and keeps the run successful when the migration has not been run', async () => {
+  it('reports the missing 6w/12w step when horizon provenance is ready', async () => {
     process.env.CRON_SECRET = 'cron-test';
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    state.columns = [];
+    state.columns = ['outcome_provenance','outcome_4h_provenance','price_after_24h_at'];
     const res = await POST(new NextRequest('http://localhost/api/cron/label-ai-outcomes', { method: 'POST', headers: { 'x-cron-secret': 'cron-test' } }));
     const body = await res.json();
     expect(res.status).toBe(200);

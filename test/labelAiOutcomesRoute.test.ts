@@ -18,7 +18,7 @@ import { labellerTimeBudgetMs, maxRowsPerHorizon } from '@/lib/outcomes/labelBud
 
 const NOW = Date.parse('2026-09-26T12:00:00Z');
 const H = 3_600_000;
-const ALL_COLUMNS = ['outcome_4h', 'price_after_4h', 'pct_move_4h', 'price_after_4h_at', 'outcome_4h_measured_at', 'price_after_24h_at'];
+const ALL_COLUMNS = ['outcome_provenance','outcome_4h_provenance','outcome_4h', 'price_after_4h', 'pct_move_4h', 'price_after_4h_at', 'outcome_4h_measured_at', 'price_after_24h_at'];
 
 type Row = { id: number; symbol: string; asset_type: string; trade_bias: string | null; price_at_signal: number; signal_at: string };
 const row = (id: number, hoursAgo: number, over: Partial<Row> = {}): Row => ({
@@ -201,18 +201,23 @@ describe('POST /api/cron/label-ai-outcomes', () => {
     expect(sqlCalls(/lifecycle_state = \$1/)).toHaveLength(0);
   });
 
-  it('keeps labelling 24h (without the new column) and skips 4h until migration 103 is applied', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  it('fails before mutations or provider work when provenance migration is missing', async () => {
     state.columns = [];
     state.rows24 = [row(1, 30)];
-    mocks.resolve.mockResolvedValue({ price: 102, at: NOW - H, source: 'intraday' });
-    const body = await (await POST(req())).json();
-    expect(body.horizon4hEnabled).toBe(false);
-    expect(sqlCalls(/outcome_4h IS NULL/)).toHaveLength(0);
-    const upd24 = sqlCalls(/SET outcome = \$1/);
-    expect(String(upd24[0][0])).not.toContain('price_after_24h_at');
-    expect(upd24[0][1]).toEqual(['correct', 102, 2, 1]);
-    warn.mockRestore();
+    const res = await POST(req());
+    expect(res.status).toBe(503);
+    expect(mocks.resolve).not.toHaveBeenCalled();
+    expect(sqlCalls(/UPDATE|INSERT|DELETE/)).toHaveLength(0);
+  });
+
+  it('stores method and observed bar evidence in the same guarded update', async () => {
+    state.rows24 = [row(1,30)];
+    mocks.resolve.mockResolvedValue({price:100.5,at:NOW-H,source:'daily'});
+    await POST(req());
+    const call=sqlCalls(/SET outcome = \$1/)[0];
+    expect(call[0]).toContain('outcome_provenance = $6::jsonb');
+    expect(JSON.parse(call[1][5])).toMatchObject({writer:'label-ai-outcomes',method:'first-completed-close-v1',horizon:'24h',outcome:'neutral',pctMove:0.5,entryPrice:100,observedPrice:100.5,barSource:'daily',observedAt:new Date(NOW-H).toISOString()});
+    expect(sqlCalls(/SET lifecycle_state/)).toHaveLength(0);
   });
 
   it('expires rows still pending after 7 days', async () => {
