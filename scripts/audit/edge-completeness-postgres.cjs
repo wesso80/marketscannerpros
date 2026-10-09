@@ -7,7 +7,7 @@ if(!url || !['127.0.0.1','localhost'].includes(new URL(url).hostname)) throw new
 const db=new Client({connectionString:url});
 (async()=>{await db.connect();try {
  await db.query('BEGIN');
- await db.query(`CREATE TEMP TABLE ai_signal_log (id int, workspace_id text, trade_bias text, regime text, outcome text, signal_at timestamptz, outcome_measured_at timestamptz, pct_move_24h numeric,price_at_signal numeric,price_after_24h numeric)`);
+ await db.query(`CREATE TEMP TABLE ai_signal_log (id int, workspace_id text, trade_bias text, regime text, outcome text, signal_at timestamptz, outcome_measured_at timestamptz, pct_move_24h numeric, asset_type text DEFAULT 'equity', price_at_signal numeric DEFAULT 100, price_after_24h numeric)`);
  const fix='2026-09-26T13:52:24Z';
  const fixtures=[
   ['correct',fix,2,'measured'],['wrong',fix,-2,'measured'],['neutral',fix,0,'measured'],
