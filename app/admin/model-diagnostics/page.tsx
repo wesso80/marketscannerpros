@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 
 import TruthStampLine from "@/components/admin/shared/TruthStampLine";
+import OutcomeCohort from '@/components/admin/OutcomeCohort';
+import type {OutcomeCohort as Cohort,ProvenanceSummary} from '@/lib/admin/verifiedOutcomes';
 import ModelOutcomeBreakdowns from '@/components/admin/ModelOutcomeBreakdowns';
 import type { OutcomeBreakdowns } from '@/lib/admin/modelBreakdowns';
 interface CalibrationBucket {
@@ -59,6 +61,7 @@ interface ModelDiagnosticsResponse {
   overallHitRate?: number | null;
   buckets?: CalibrationBucket[];
   breakdowns?: OutcomeBreakdowns;
+  provenance?:ProvenanceSummary;
   drift?: DriftRow[];
   note?: string | null;
   definition?: Definition;
@@ -84,6 +87,7 @@ export default function ModelDiagnosticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [scoreField, setScoreField] = useState<ScoreField>("confluence");
+  const [cohort,setCohort]=useState<Cohort>('all');
   const requestVersion = useRef(0);
 
   const refresh = async (field: ScoreField = scoreField) => {
@@ -92,7 +96,7 @@ export default function ModelDiagnosticsPage() {
     setData(null);
     setError("");
     try {
-      const res = await fetch(`/api/admin/model-diagnostics?score=${field}`, { headers: authHeaders() });
+      const res = await fetch(`/api/admin/model-diagnostics?score=${field}&cohort=${cohort}`, { headers: authHeaders() });
       const json = (await res.json().catch(() => ({}))) as ModelDiagnosticsResponse;
       if (version !== requestVersion.current) return;
       if (!res.ok || !json.ok) {
@@ -111,7 +115,7 @@ export default function ModelDiagnosticsPage() {
   useEffect(() => {
     refresh(scoreField);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scoreField]);
+  }, [scoreField,cohort]);
 
   return (
     <div style={{ color: "#E5E7EB" }}>
@@ -123,8 +127,7 @@ export default function ModelDiagnosticsPage() {
           <h1 style={{ fontSize: "1.6rem", fontWeight: 800, margin: "0.2rem 0 0.4rem" }}>Model Diagnostics</h1>
           {data && <TruthStampLine truth={(data as any).truth} />}
           <p style={{ color: "#94A3B8", fontSize: 13, maxWidth: 720 }}>
-            Calibration of shared-scan signal scores against realised outcomes (ai_signal_log, fixed-labeller verdicts
-            only). Buckets use the {SCORE_OPTIONS.find((o) => o.value === scoreField)?.label.toLowerCase()}
+            Calibration of shared-scan signal scores against recorded outcomes (ai_signal_log). Historical method attribution may be unknown. Buckets use the {SCORE_OPTIONS.find((o) => o.value === scoreField)?.label.toLowerCase()}
             {data?.scoreColumn ? ` (${data.scoreColumn})` : ""}. Read-only telemetry — this page does not retrain or
             alter the model.
           </p>
@@ -160,6 +163,7 @@ export default function ModelDiagnosticsPage() {
         </div>
       </header>
 
+      <OutcomeCohort scope="Latest 1,000 score-bearing records, including unresolved outcomes. The cohort filter applies after this cap; it does not search older history." value={cohort} onChange={setCohort} summary={data?.provenance}/>
       {error && (
         <div role="alert" style={{ padding: "0.75rem 1rem", background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.32)", borderRadius: 8, color: "#FCA5A5", marginBottom: "1rem" }}>
           {error}

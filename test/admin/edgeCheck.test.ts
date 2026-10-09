@@ -3,6 +3,7 @@
  * fixed-labeller verdicts; whitelisted grouping only.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import {evidence} from './fixtures/outcomeEvidence';
 import { NextRequest } from 'next/server';
 import { readFileSync } from 'node:fs';
 import { ASSUMED_COST_PCT, MIN_SAMPLE, edgeCheck, meanInterval, summariseGroup, wilson, type EdgeRow } from '@/lib/admin/edgeCheck';
@@ -76,7 +77,7 @@ describe('GET /api/admin/edge-check', () => {
     expect(body.definition.split).toMatch(/not a held-out test/);
     expect(body.definition.intervals).toMatch(/assume independent observations/);
     expect(body.definition.caveats.join(' ')).toMatch(/no embargo/);
-    expect(body.definition.caveats.join(' ')).toMatch(/Not a recommendation/);
+    expect(body.definition.caveats.join(' ')).toMatch(/Trading analysis/);
     expect(body.truth.source).toMatch(/ai_signal_log/);
   });
   it('counts the full recorded cohort but passes only measured rows to statistics', async () => {
@@ -94,6 +95,23 @@ describe('GET /api/admin/edge-check', () => {
     m.auth=false;
     expect((await GET(new NextRequest('http://localhost/api/admin/edge-check'))).status).toBe(403);
     expect(m.sql).toHaveLength(0);
+  });
+  it('keeps verified measurements and uncertain history in distinct performance cohorts', async () => {
+    const base={grp:'A',signal_at:'2026-10-01T12:00:00Z',outcome:'correct',signed_move:2,inclusion_status:'measured'};
+    m.rows=[{...base,provenance_evidence:evidence()},{...base,outcome:'wrong',signed_move:-2}];
+    const verified=await (await GET(new NextRequest('http://localhost/api/admin/edge-check?cohort=verified'))).json();
+    const unverified=await (await GET(new NextRequest('http://localhost/api/admin/edge-check?cohort=unverified'))).json();
+    expect(verified.overall).toMatchObject({n:1,wins:1,losses:0});
+    expect(unverified.overall).toMatchObject({n:1,wins:0,losses:1});
+    expect(JSON.stringify(verified)).not.toContain('provenance_evidence');
+  });
+  it('does not silently substitute unknown history when verified records are requested', async () => {
+    m.rows=[{grp:'A',signal_at:'2026-10-01T00:00:00Z',outcome:'correct',signed_move:2,inclusion_status:'measured'}];
+    const body=await (await GET(new NextRequest('http://localhost/api/admin/edge-check?cohort=verified'))).json();
+    expect(body.overall.n).toBe(0);
+    expect(body.provenance).toMatchObject({cohort:'verified',total:1,unknown:1,verified:0,selected:0});
+    expect(body.completeness.total.measured).toBe(1);
+    expect(m.sql[0]).toContain("to_jsonb(ai_signal_log)->'outcome_provenance'");
   });
   it('ignores unknown grouping and clamps the window', async () => {
     await GET(new NextRequest('http://localhost/api/admin/edge-check?by=1;DROP&days=9999'));
