@@ -54,16 +54,11 @@ export function noSetupDisplay(c: CS | null | undefined): NoSetupDisplay | null 
   return { kind: 'no_setup', headline: 'No qualifying setup', detail: closest ? `Closest: ${closest}` : history };
 }
 
-/** Expected R when calibration recorded it. Otherwise a factor-reading note.
- *  No-setup rows keep their headline. The 0–100 composite is not shown. */
+/** Factor-reading note for a setup. No-setup rows keep their headline.
+ *  The 0–100 composite and the calibrated return label are not shown. */
 export function scoreLabel(c: CS): string {
   const none = noSetupDisplay(c);
   if (none) return none.headline;
-  const expected = c.calibration && typeof c.calibration.expectedR === 'number' ? c.calibration.expectedR : null;
-  if (isCalibrated(c) && expected != null && Number.isFinite(expected)) {
-    const r = expected >= 0 ? `+${expected.toFixed(2)}` : expected.toFixed(2);
-    return `expected ${r}R`;
-  }
   return 'Factor readings only';
 }
 
@@ -73,8 +68,7 @@ export function calibrationSummary(c: CS | null | undefined): string | null {
   if (c.setupType === 'NONE') return null; // no setup → nothing to calibrate (the context itself may be calibrated)
   if (!isCalibrated(c)) return 'Uncalibrated timeframe/asset — factor alignment only; no outcome statistics.';
   const k = c.calibration!;
-  const r = k.expectedR >= 0 ? `+${k.expectedR.toFixed(2)}` : k.expectedR.toFixed(2);
-  return `P(target before invalidation) ${Math.round(k.pTargetFirst * 100)}% · expected ${r}R after ${k.costsBps} bps costs · `
+  return `P(target before invalidation) ${Math.round(k.pTargetFirst * 100)}% · `
     + `${k.horizonBars}-bar horizon · n=${k.sample.toLocaleString('en-US')} historical setups`
     + (k.validatedEdge ? '' : ' · outcomes not validated on unseen data');
 }
@@ -108,12 +102,7 @@ export function gradeBasis(c: GradeInput): string {
     return 'No setup or a data block, so there is no factor read to compare.';
   }
   const out: string[] = [];
-  if (isCalibrated(c)) {
-    out.push('Expected R is compared with other setups of the same direction.');
-    out.push(GRADE_RELATIVE_SENTENCE);
-  } else {
-    out.push('Factor readings only. They are not a calibrated expected R.');
-  }
+  out.push(GRADE_RELATIVE_SENTENCE);
   const cautions = cautionTags(c);
   if (cautions.length) out.push(`Limited by: ${cautions.join(', ')}.`);
   const lowRR = (c.watchReasons ?? []).find((r) => r.code === 'RR_BELOW_MIN');
@@ -139,7 +128,7 @@ export function priceChangeBasisLabel(assetType: string | null | undefined, basi
 }
 
 /** Direction-neutral form for the grade tooltip (gradeBasis reads the same for long and short). */
-export const GRADE_RELATIVE_SENTENCE = 'Expected R is compared with other setups of the same direction, not against zero.';
+export const GRADE_RELATIVE_SENTENCE = 'Factor readings only.';
 
 /**
  * RS-17: a calibrated score/grade is a percentile of expected R among setups of the SAME direction, so a top-graded
@@ -147,13 +136,5 @@ export const GRADE_RELATIVE_SENTENCE = 'Expected R is compared with other setups
  */
 export function gradeRelativeNote(c: (C & { setupType?: string; direction?: string }) | null | undefined): string | null {
   if (!c || !isCalibrated(c) || c.setupType === 'NONE') return null;
-  const dir = c.direction === 'short' ? 'short' : c.direction === 'long' ? 'long' : 'same-direction';
-  const k = c.calibration!;
-  const base = `Expected R is compared with other ${dir} setups, not against zero.`;
-  if (!Number.isFinite(k.expectedR)) return base;
-  if (!(k.expectedR > 0)) {
-    const r = k.expectedR.toFixed(2);
-    return `${base} Expected R is still ${r}R here, so this is one of the less-negative ${dir} setups.`;
-  }
-  return base;
+  return GRADE_RELATIVE_SENTENCE;
 }

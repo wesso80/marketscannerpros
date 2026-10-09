@@ -1,11 +1,25 @@
+/** Stored types that still evaluate the composite. New alerts cannot use them. */
+export const RETIRED_SCANNER_CONDITION_TYPES = [
+  'scanner_buy_signal',
+  'scanner_sell_signal',
+  'scanner_score_above',
+  'scanner_score_below',
+] as const;
+
+export const SCANNER_CONDITIONS_ALERT_LABEL = 'Scanner conditions alert';
+
+export function isRetiredScannerCondition(type: string): boolean {
+  return (RETIRED_SCANNER_CONDITION_TYPES as readonly string[]).includes(type);
+}
+
 export function alertThreshold(value: unknown): number | null {
   if (value == null || value === '' || typeof value === 'boolean') return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
 export function alertConditionLabel(type: string, value: unknown): string {
+  if (isRetiredScannerCondition(type)) return SCANNER_CONDITIONS_ALERT_LABEL;
   const labels: Record<string,string> = {
-    scanner_buy_signal:'RSI above',scanner_sell_signal:'RSI below',
     scanner_bullish_flip:'scanner upside change',scanner_bearish_flip:'scanner downside change',
     strategy_buy_signal:'strategy upside condition',strategy_sell_signal:'strategy downside condition',
     oi_divergence_bull:'open interest up · price down',oi_divergence_bear:'open interest down · price up',
@@ -23,6 +37,7 @@ export function alertConditionLabel(type: string, value: unknown): string {
 /** Display-only cleanup for recorded condition codes; stored evidence is unchanged. */
 export function alertHistoryLabel(value: string | null | undefined): string {
   if (!value) return 'Condition not recorded';
+  if (isRetiredScannerCondition(value)) return SCANNER_CONDITIONS_ALERT_LABEL;
   return value.replace(/[A-Z]+_[A-Z_]+/g, code => code.toLowerCase().replaceAll('_', ' '))
     .replace(/\b(bullish|long|buy)\b/gi, 'upside')
     .replace(/\b(bearish|short|sell)\b/gi, 'downside')

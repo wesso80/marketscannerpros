@@ -22,7 +22,7 @@ it('shared labels distinguish research indicators from untested timing', async (
   const labels = await import('../lib/goldenEgg/labels');
   expect(labels.INDICATOR_COMPOSITE_LABEL).toBe('Indicator composite');
   expect(labels.INDICATOR_COMPOSITE_TOOLTIP).toContain('no timeframe or calendar input');
-  expect(labels.CANONICAL_SETUP_TOOLTIP).toContain('calibrated percentile');
+  expect(labels.CANONICAL_SETUP_TOOLTIP).toContain('Factor readings only');
   expect(labels.TIMEFRAME_PULL_LABEL).toBe('Timeframe pull (display only)');
   expect(labels.CLOSE_CALENDAR_LABEL).toBe('Close calendar (clock only)');
   expect(labels.TIMING_TOOLTIP).toContain('No tested outcome');

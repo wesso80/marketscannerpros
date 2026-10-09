@@ -55,7 +55,7 @@ describe('real verdicts are unchanged', () => {
     const watch = { setupType: 'PULLBACK', permission: 'WATCH', score: 80, scoreBasis: 'calibrated_expectancy_percentile', blockReasons: [],
       calibration: { pTargetFirst: 0.55, expectedR: 0.12, costsBps: 10, horizonBars: 20, sample: 1234, validatedEdge: false, percentile: 80 } } as unknown as V;
     expect(noSetupDisplay(watch)).toBeNull();
-    expect(scoreLabel(watch)).toBe('expected +0.12R');
+    expect(scoreLabel(watch)).toBe('Factor readings only');
     expect(calibrationSummary(watch)).toMatch(/^P\(target before invalidation\) 55%/);
   });
   it('pre-Phase-3 stored results (no scoreBasis, no setupType) render as before', () => {

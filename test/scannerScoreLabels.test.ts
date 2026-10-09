@@ -20,7 +20,7 @@ const noSetup = (direction: string) => ({
 describe('grade basis tooltip', () => {
   it('SUI-USD case: Setup score 10 is the 10th percentile, and C covers everything below 60', () => {
     const t = gradeBasis(c({}));
-    expect(t).toContain('Expected R is compared with other setups of the same direction.');
+    expect(t).toContain('Factor readings only.');
     expect(t).toContain('The summary number is not shown.');
   });
   it('names the caps (caution, low reward:risk, snapshot)', () => {
@@ -28,7 +28,7 @@ describe('grade basis tooltip', () => {
     expect(capped).toContain('Limited by: at resistance.');
     expect(capped).toContain('Limited by reward:risk below 1.');
     const snap = gradeBasis(c({ grade: 'B', score: 90, calibration: null, scoreBasis: 'factor_alignment_uncalibrated', thresholds: { pass: 70, watch: 50, gradeA: 80, gradeB: 65 } as any, flags: [{ code: 'SNAPSHOT_GRADE_CAP', message: 'Capped at B: snapshot data, no swing structure' }] }));
-    expect(snap).toContain('Factor readings only. They are not a calibrated expected R.');
+    expect(snap).toContain('Factor readings only.');
     expect(snap).toContain('Snapshot data has no swing structure, so the read stays limited.');
   });
   it('is the same text for long and short (apart from support/resistance wording)', () => {

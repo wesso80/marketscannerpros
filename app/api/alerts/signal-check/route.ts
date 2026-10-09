@@ -6,6 +6,7 @@ import { buildTriggeredAlertContent } from '@/lib/email';
 import { sendPushToUser } from '@/lib/pushServer';
 import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
 import { historyPriceInsert } from '@/lib/alerts/historyPrice';
+import { isRetiredScannerCondition, SCANNER_CONDITIONS_ALERT_LABEL } from '@/lib/alertPresentation';
 
 /**
  * Scanner Signal Alerts Checker
@@ -199,7 +200,7 @@ async function checkSignalAlerts(req: NextRequest) {
                     smart_alert_context = $2,
                     last_checked_at = NOW()
                 WHERE id = $3
-              `, [scanRsi(result) ?? null, JSON.stringify({ direction: result.direction, signals: result.signals, rsi: scanRsi(result) }), alert.id]);
+              `, [result.score, JSON.stringify({ direction: result.direction, signals: result.signals }), alert.id]);
             }
           } catch (err) {
             errors.push(`Error checking alert ${alert.id}: ${err}`);
@@ -244,7 +245,7 @@ function scanRsi(scan: ScanResult): number | null {
   return typeof scan.rsi === 'number' && Number.isFinite(scan.rsi) ? scan.rsi : null;
 }
 
-/** Customer text for an alert: RSI, percent change, volume, and indicator counts. Never the 0–100 composite. */
+/** Customer text: RSI, percent change, volume, and indicator count. Never the composite. */
 function measurementLine(scan: ScanResult): string {
   const parts: string[] = [];
   const rsi = scanRsi(scan);
@@ -255,8 +256,15 @@ function measurementLine(scan: ScanResult): string {
   if (typeof scan.volume === 'number' && Number.isFinite(scan.volume)) {
     parts.push(`volume ${Math.round(scan.volume).toLocaleString('en-US')}`);
   }
-  if (scan.signals) parts.push(`${scan.signals.bullish} upside and ${scan.signals.bearish} downside indicators`);
-  return parts.join(' · ') || 'RSI was not supplied';
+  if (scan.signals) {
+    const count = scan.signals.bullish + scan.signals.bearish + scan.signals.neutral;
+    parts.push(`${count} indicators`);
+  }
+  return parts.join(' · ') || 'measurements were not supplied';
+}
+
+function scannerConditionsMessage(scan: ScanResult): string {
+  return `${SCANNER_CONDITIONS_ALERT_LABEL}. ${measurementLine(scan)}`;
 }
 
 function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult {
@@ -266,19 +274,18 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
 
   switch (condition_type) {
     case 'scanner_buy_signal': {
-      // Existing rows keep this condition type. The stored threshold is now an RSI level.
-      const minRsi = condition_value || 65;
-      if (rsi != null && rsi >= minRsi && scan.direction === 'bullish') {
+      // Same composite comparison as before: score at or above the stored threshold, upside direction.
+      const minScore = condition_value || 65;
+      if (scan.score >= minScore && scan.direction === 'bullish') {
         return {
           triggered: true,
-          value: rsi,
-          threshold: minRsi,
-          message: `${scan.symbol} RSI is ${rsi.toFixed(1)} (threshold ${minRsi}) with an upside direction. ${measurementLine(scan)}`,
+          value: scan.score,
+          threshold: minScore,
+          message: scannerConditionsMessage(scan),
           context: { 
             direction: scan.direction, 
             signals: scan.signals,
             price: scan.price,
-            rsi,
           },
         };
       }
@@ -286,18 +293,17 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
     }
 
     case 'scanner_sell_signal': {
-      const maxRsi = condition_value || 35;
-      if (rsi != null && rsi <= maxRsi && scan.direction === 'bearish') {
+      const maxScore = condition_value || 35;
+      if (scan.score <= maxScore && scan.direction === 'bearish') {
         return {
           triggered: true,
-          value: rsi,
-          threshold: maxRsi,
-          message: `${scan.symbol} RSI is ${rsi.toFixed(1)} (threshold ${maxRsi}) with a downside direction. ${measurementLine(scan)}`,
+          value: scan.score,
+          threshold: maxScore,
+          message: scannerConditionsMessage(scan),
           context: { 
             direction: scan.direction, 
             signals: scan.signals,
             price: scan.price,
-            rsi,
           },
         };
       }
@@ -305,26 +311,26 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
     }
 
     case 'scanner_score_above': {
-      if (rsi != null && rsi >= condition_value) {
+      if (scan.score >= condition_value) {
         return {
           triggered: true,
-          value: rsi,
+          value: scan.score,
           threshold: condition_value,
-          message: `${scan.symbol} RSI is ${rsi.toFixed(1)} (threshold ${condition_value}). ${measurementLine(scan)}`,
-          context: { direction: scan.direction, signals: scan.signals, rsi },
+          message: scannerConditionsMessage(scan),
+          context: { direction: scan.direction, signals: scan.signals },
         };
       }
       break;
     }
 
     case 'scanner_score_below': {
-      if (rsi != null && rsi <= condition_value) {
+      if (scan.score <= condition_value) {
         return {
           triggered: true,
-          value: rsi,
+          value: scan.score,
           threshold: condition_value,
-          message: `${scan.symbol} RSI is ${rsi.toFixed(1)} (threshold ${condition_value}). ${measurementLine(scan)}`,
-          context: { direction: scan.direction, signals: scan.signals, rsi },
+          message: scannerConditionsMessage(scan),
+          context: { direction: scan.direction, signals: scan.signals },
         };
       }
       break;
@@ -408,7 +414,7 @@ async function triggerSignalAlert(alert: SignalAlert, result: CheckResult, scan:
            smart_alert_context = $2,
            last_checked_at = NOW()
        WHERE id = $3`,
-      [scanRsi(scan), JSON.stringify(result.context), alert.id]
+      [scan.score, JSON.stringify(result.context), alert.id]
     );
   } else {
     // One-time alert - deactivate
@@ -421,21 +427,28 @@ async function triggerSignalAlert(alert: SignalAlert, result: CheckResult, scan:
            smart_alert_context = $2,
            last_checked_at = NOW()
        WHERE id = $3`,
-      [scanRsi(scan), JSON.stringify(result.context), alert.id]
+      [scan.score, JSON.stringify(result.context), alert.id]
     );
   }
+
+  const retired = isRetiredScannerCondition(alert.condition_type);
+  const signalMessage = retired
+    ? (result.message || scannerConditionsMessage(scan))
+    : (result.message || `Direction change recorded`);
+  const alertName = retired ? SCANNER_CONDITIONS_ALERT_LABEL : (alert.name || 'Signal Alert');
 
   // Send email notification
   if (alert.notify_email && userEmail) {
     try {
-      const signalMessage = result.message || `Scanner signal triggered: ${alert.condition_type.replace(/_/g, ' ')}`;
       const content = buildTriggeredAlertContent({
         to: userEmail,
         symbol: alert.symbol,
-        alertName: alert.name || 'Signal Alert',
+        alertName,
         message: signalMessage,
-        value: result.value,
-        threshold: result.threshold || Number(alert.condition_value),
+        ...(retired ? {} : {
+          value: result.value,
+          threshold: result.threshold || Number(alert.condition_value),
+        }),
         alertType: 'smart',
       });
       const delivered = await deliverUserAlertEmail({
@@ -445,7 +458,7 @@ async function triggerSignalAlert(alert: SignalAlert, result: CheckResult, scan:
         html: content.html,
         line: `${alert.symbol}: ${signalMessage}`,
       });
-      console.log(`📧 Signal alert email ${delivered.action} (${delivered.reason}): ${alert.name || alert.condition_type}`);
+      console.log(`📧 Signal alert email ${delivered.action} (${delivered.reason}): ${alertName}`);
     } catch (emailErr) {
       console.error('Failed to send signal alert email:', emailErr);
     }
@@ -455,12 +468,12 @@ async function triggerSignalAlert(alert: SignalAlert, result: CheckResult, scan:
   if (alert.notify_push) {
     try {
       await sendPushToUser(alert.workspace_id, {
-        title: `🎯 ${alert.name || 'Signal Alert'}`,
-        body: result.message || `${alert.symbol}: ${alert.condition_type.replace(/_/g, ' ')}`,
+        title: retired ? SCANNER_CONDITIONS_ALERT_LABEL : `🎯 ${alert.name || 'Signal Alert'}`,
+        body: signalMessage,
         tag: `alert-${alert.id}`,
         data: { url: '/tools/scanner', alertId: alert.id },
       });
-      console.log(`🔔 Push sent for signal alert: ${alert.name || alert.condition_type}`);
+      console.log(`🔔 Push sent for signal alert: ${alertName}`);
     } catch (pushErr) {
       console.error('Failed to send signal alert push:', pushErr);
     }
@@ -468,8 +481,8 @@ async function triggerSignalAlert(alert: SignalAlert, result: CheckResult, scan:
 
   // The user's own Discord webhook, if enabled (TR-26). Last and never throws.
   await deliverAlertToUserDiscord(alert.workspace_id, {
-    title: `${alert.name || 'Signal Alert'} (${alert.symbol})`,
-    detail: result.message || `Scanner signal triggered: ${alert.condition_type.replace(/_/g, ' ')}`,
+    title: retired ? `${SCANNER_CONDITIONS_ALERT_LABEL} (${alert.symbol})` : `${alert.name || 'Signal Alert'} (${alert.symbol})`,
+    detail: signalMessage,
   });
 
   console.log(`✅ Signal alert triggered: ${alert.name || alert.condition_type} for ${alert.symbol}`);

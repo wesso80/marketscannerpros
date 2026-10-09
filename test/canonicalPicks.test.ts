@@ -68,7 +68,7 @@ describe('daily-pick columns and selection (Phase 3)', () => {
     const v = pickView({ score: 64, direction: 'bearish', canonical: c({ permission: 'WATCH', direction: 'long', score: 64 }) });
     expect(v.side).toBe('LONG');
     expect(v.label).toMatch(/^WATCH · /);
-    expect(v.basisNote).toMatch(/no validated edge|uncalibrated|not a probability/);
+    expect(v.basisNote).toMatch(/Factor readings only|uncalibrated|not a probability/);
     expect(pickView({ score: 0, direction: 'neutral', canonical: c({ permission: 'BLOCK', direction: 'long' }) })).toMatchObject({ side: 'WATCH', score: 0 });
     expect(pickView({ score: 70, direction: 'bullish', canonical: null })).toMatchObject({ side: 'LONG', score: 70, label: null });
   });

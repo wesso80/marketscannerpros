@@ -164,7 +164,7 @@ export function pickView(row: { score: number | null; direction: string | null; 
   }
   const side = c.permission === 'BLOCK' || c.direction === 'neutral' ? 'WATCH' : c.direction === 'long' ? 'LONG' : 'SHORT';
   const basisNote = c.scoreBasis === 'calibrated_expectancy_percentile'
-    ? 'Score = percentile of calibrated expected R among same-side setups. Factors only — no validated edge.'
+    ? 'Factor readings only.'
     : c.scoreBasis === 'factor_alignment_uncalibrated'
       ? 'Score = factor alignment (uncalibrated, not a probability).'
       : 'Canonical setup score (not a probability).';

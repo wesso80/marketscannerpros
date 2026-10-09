@@ -1,6 +1,6 @@
 'use client';
 
-import { alertConditionLabel, alertHistoryLabel } from '@/lib/alertPresentation';
+import { alertConditionLabel, alertHistoryLabel, isRetiredScannerCondition, SCANNER_CONDITIONS_ALERT_LABEL } from '@/lib/alertPresentation';
 import { publishAlertCapNotice } from '@/lib/alerts/planLimits';
 import { validateBasicAlertAssetType } from '@/lib/alerts/assetTypes';
 import { useState, useEffect, useCallback } from 'react';
@@ -265,10 +265,11 @@ export default function AlertsWidget({
       case 'oi_divergence_bull': return 'Open interest up · price down';
       case 'oi_divergence_bear': return 'Open interest down · price up';
       // Scanner signal alerts
-      case 'scanner_buy_signal': return 'Scanner upside condition';
-      case 'scanner_sell_signal': return 'Scanner downside condition';
-      case 'scanner_score_above': return 'RSI above';
-      case 'scanner_score_below': return 'RSI below';
+      case 'scanner_buy_signal':
+      case 'scanner_sell_signal':
+      case 'scanner_score_above':
+      case 'scanner_score_below':
+        return SCANNER_CONDITIONS_ALERT_LABEL;
       case 'scanner_bullish_flip': return 'Scanner upside change';
       case 'scanner_bearish_flip': return 'Scanner downside change';
       // Strategy alerts
@@ -293,10 +294,11 @@ export default function AlertsWidget({
       case 'oi_divergence_bull': return 'Open interest rises while price falls';
       case 'oi_divergence_bear': return 'Open interest falls while price rises';
       // Scanner signal descriptions
-      case 'scanner_buy_signal': return 'RSI is at or above the recorded threshold and the direction is upside';
-      case 'scanner_sell_signal': return 'RSI is at or below the recorded threshold and the direction is downside';
-      case 'scanner_score_above': return 'RSI rises above the recorded threshold';
-      case 'scanner_score_below': return 'RSI falls below the recorded threshold';
+      case 'scanner_buy_signal':
+      case 'scanner_sell_signal':
+      case 'scanner_score_above':
+      case 'scanner_score_below':
+        return 'RSI, percent change, volume, and indicator count';
       case 'scanner_bullish_flip': return 'Scanner classification changes to the upside';
       case 'scanner_bearish_flip': return 'Scanner classification changes to the downside';
       // Strategy signal descriptions
@@ -426,7 +428,7 @@ export default function AlertsWidget({
       symbol: entry.symbol,
       setup: entry.condition_met,
       strategy: entry.condition_type || 'alert_trigger',
-      score: entry.condition_value ? String(entry.condition_value) : '',
+      score: entry.condition_type && isRetiredScannerCondition(entry.condition_type) ? '' : (entry.condition_value ? String(entry.condition_value) : ''),
     });
     return `/tools/workspace?tab=journal&${params.toString()}`;
   };
@@ -817,8 +819,6 @@ export default function AlertsWidget({
                             // Custom Strategy Alert - starts with strategy type selected
                             'custom_strategy': { symbol: '', conditionType: 'strategy_buy_signal', conditionValue: '0', name: '', cooldownMinutes: 60, strategy: 'ema_crossover', timeframe: 'daily' },
                             // Scanner Signal Alerts
-                            'btc_buy_signal': { symbol: 'BTCUSDT', conditionType: 'scanner_buy_signal', conditionValue: '65', name: 'BTC upside condition', cooldownMinutes: 60 },
-                            'btc_sell_signal': { symbol: 'BTCUSDT', conditionType: 'scanner_sell_signal', conditionValue: '35', name: 'BTC downside condition', cooldownMinutes: 60 },
                             // Open Interest Alerts
                             'btc_oi_surge': { symbol: 'BTC', conditionType: 'oi_surge', conditionValue: '5', name: 'BTC OI Spike', cooldownMinutes: 60 },
                             'extreme_fear': { symbol: '', conditionType: 'fear_extreme', conditionValue: '25', name: 'Extreme Fear Alert', cooldownMinutes: 1440 },
@@ -834,10 +834,6 @@ export default function AlertsWidget({
                         <option value="">-- Select a template or create custom --</option>
                         <optgroup label="📊 Strategy Alerts (Pick Any Ticker!)">
                           <option value="custom_strategy">🎯 Custom Strategy Alert (Any Ticker + Strategy)</option>
-                        </optgroup>
-                        <optgroup label="🎯 Scanner Readings">
-                          <option value="btc_buy_signal">BTC Scanner upside condition</option>
-                          <option value="btc_sell_signal">BTC Scanner downside condition</option>
                         </optgroup>
                         <optgroup label="📊 Market Sentiment">
                           <option value="btc_oi_surge">BTC OI Spike</option>
@@ -869,12 +865,8 @@ export default function AlertsWidget({
                             <option value="strategy_exit">🚪 Strategy Exit</option>
                           </optgroup>
                           <optgroup label="🎯 Scanner Setups">
-                            <option value="scanner_buy_signal">RSI above with upside direction</option>
-                            <option value="scanner_sell_signal">RSI below with downside direction</option>
                             <option value="scanner_bullish_flip">Direction changes to upside</option>
                             <option value="scanner_bearish_flip">Direction changes to downside</option>
-                            <option value="scanner_score_above">RSI above</option>
-                            <option value="scanner_score_below">RSI below</option>
                           </optgroup>
                           <optgroup label="Open Interest">
                             <option value="oi_surge">📈 OI Surge</option>

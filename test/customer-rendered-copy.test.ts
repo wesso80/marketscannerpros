@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PHRASE_ALLOWLIST, SCAN_EXCLUSIONS, scanCustomerCopy } from './customerRenderedCopy';
+import { BANNED_PATTERNS, PHRASE_ALLOWLIST, SCAN_EXCLUSIONS, scanCustomerCopy } from './customerRenderedCopy';
 
 describe('customer-rendered copy has no scores, grades, verdicts, or banned words', () => {
   it('fails when banned words appear outside the documented allowlist', () => {
@@ -13,5 +13,6 @@ describe('customer-rendered copy has no scores, grades, verdicts, or banned word
     expect(SCAN_EXCLUSIONS.map((entry) => entry.reason).join('\n')).toMatch(/Admin pages/);
     expect(SCAN_EXCLUSIONS.some((entry) => entry.test('app/page.tsx'))).toBe(false);
     expect(SCAN_EXCLUSIONS.some((entry) => entry.test('components/public-design/ResearchHome.tsx'))).toBe(false);
+    expect(BANNED_PATTERNS.some((entry) => entry.id === 'expected-r')).toBe(true);
   });
 });

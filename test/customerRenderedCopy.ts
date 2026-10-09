@@ -39,6 +39,7 @@ export const BANNED_PATTERNS: { id: string; re: RegExp }[] = [
   { id: 'scoring', re: /\bscor(?:ing|ed)\b/gi },
   { id: 'graded', re: /\bgraded\b/gi },
   { id: 'probability-of-profit', re: /\bprobability of profit\b/gi },
+  { id: 'expected-r', re: /\bexpected\s+r\b/gi },
 ];
 
 /** Path prefixes and files left out of the failing scan, with reasons. */

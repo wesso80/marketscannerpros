@@ -9,16 +9,10 @@ const calibrated = (direction: 'long' | 'short', expectedR: number) => ({
 });
 
 describe('RS-17: calibrated grade is relative within its direction', () => {
-  it('META-style A short with negative expected R says it is the relative best, not a positive edge', () => {
-    const note = gradeRelativeNote(calibrated('short', -0.17))!;
-    expect(note).toContain('Expected R is compared with other short setups, not against zero');
-    expect(note).toContain('Expected R is still -0.17R');
-    expect(note).toContain('less-negative short setups');
-  });
-  it('positive expected R gets only the relative sentence', () => {
-    const note = gradeRelativeNote(calibrated('long', 0.12))!;
-    expect(note).toContain('other long setups');
-    expect(note).not.toContain('Expected R is still');
+  it('a calibrated short or long reads as factor readings, without a projected return', () => {
+    expect(gradeRelativeNote(calibrated('short', -0.17))).toBe('Factor readings only.');
+    expect(gradeRelativeNote(calibrated('long', 0.12))).toBe('Factor readings only.');
+    expect(gradeRelativeNote(calibrated('short', -0.17))).not.toMatch(/expected\s+r/i);
   });
   it('no note for uncalibrated results or no setup', () => {
     expect(gradeRelativeNote({ score: 70, permission: 'WATCH', scoreBasis: 'factor_alignment_uncalibrated' } as never)).toBeNull();
@@ -27,7 +21,8 @@ describe('RS-17: calibrated grade is relative within its direction', () => {
   });
   it('the grade tooltip (gradeBasis) carries the same sentence; the grade itself is unchanged (no cap)', () => {
     const c = calibrated('short', -0.17);
-    expect(gradeBasis(c)).toContain('Expected R is compared with other setups of the same direction.');
+    expect(gradeBasis(c)).toContain('Factor readings only.');
+    expect(gradeBasis(c)).not.toMatch(/expected\s+r/i);
     expect(gradeBasis(c)).not.toMatch(/\bgrade\b/i);
   });
 });

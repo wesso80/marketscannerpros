@@ -7,6 +7,7 @@ import { ALERT_LIMITS, alertLimitReachedPayload } from '@/lib/alerts/planLimits'
 import { countActiveAlertsForCap, countsTowardAlertCap } from '@/lib/alerts/activeCount';
 import { ACTIVE_WORKFLOW_AUTO_ORPHAN_SQL } from '@/lib/alerts/priceOrphan';
 import { newAlertCooldownMinutes } from '@/lib/alerts/alertTiming';
+import { isRetiredScannerCondition } from '@/lib/alertPresentation';
 
 /**
  * Price Alerts API
@@ -236,6 +237,17 @@ export async function POST(req: NextRequest) {
     if (!isMultiCondition && (!body.conditionType || body.conditionValue === undefined)) {
       return NextResponse.json(
         { error: 'Missing required fields: conditionType, conditionValue' },
+        { status: 400 }
+      );
+    }
+
+    // Existing rows of these four types still evaluate. Creating a new one is rejected.
+    if (!isMultiCondition && isRetiredScannerCondition(body.conditionType)) {
+      return NextResponse.json(
+        {
+          error: 'Scanner conditions alerts cannot be created',
+          message: 'New alerts use RSI, percent change, or volume. An existing scanner conditions alert still runs and can be deleted.',
+        },
         { status: 400 }
       );
     }
