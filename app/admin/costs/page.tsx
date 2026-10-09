@@ -1,4 +1,5 @@
 "use client";
+import design from "@/components/admin/AdminResearchSurface.module.css";
 import { startVisiblePolling } from "@/lib/client/visiblePolling";
 
 import { useState, useEffect } from "react";
@@ -81,7 +82,7 @@ export default function AdminCostsPage() {
   const formatTokens = (tokens: number) => tokens.toLocaleString();
 
   if (loading) {
-    return <div style={{ color: "#9CA3AF" }}>Loading cost data...</div>;
+    return <div style={{ color: "var(--msp-text-muted)" }}>Loading cost data...</div>;
   }
 
   if (error) {
@@ -89,7 +90,7 @@ export default function AdminCostsPage() {
   }
 
   const cardStyle: React.CSSProperties = {
-    background: "rgba(17, 24, 39, 0.8)",
+    background: "var(--msp-panel)",
     border: "1px solid rgba(16, 185, 129, 0.2)",
     borderRadius: "1rem",
     padding: "1.5rem",
@@ -110,13 +111,13 @@ export default function AdminCostsPage() {
     : 0;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
+    <div className={design.surface}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB" }}>
+        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--msp-text)" }}>
           AI Cost Tracker
         </h1>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#9CA3AF", fontSize: "0.875rem" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "var(--msp-text-muted)", fontSize: "0.875rem" }}>
             <input
               type="checkbox"
               checked={autoRefresh}
@@ -160,8 +161,8 @@ export default function AdminCostsPage() {
           <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#10B981" }}>
             {formatCost(stats?.today.cost || 0)}
           </div>
-          <div style={{ color: "#9CA3AF", fontSize: "0.875rem" }}>Cost Today</div>
-          <div style={{ color: "#6B7280", fontSize: "0.75rem", marginTop: "0.25rem" }}>
+          <div style={{ color: "var(--msp-text-muted)", fontSize: "0.875rem" }}>Cost Today</div>
+          <div style={{ color: "var(--msp-text-muted)", fontSize: "0.75rem", marginTop: "0.25rem" }}>
             {stats?.today.requests || 0} requests
           </div>
         </div>
@@ -169,8 +170,8 @@ export default function AdminCostsPage() {
           <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--msp-accent)" }}>
             {formatCost(stats?.last30Days.cost || 0)}
           </div>
-          <div style={{ color: "#9CA3AF", fontSize: "0.875rem" }}>Last 30 Days</div>
-          <div style={{ color: "#6B7280", fontSize: "0.75rem", marginTop: "0.25rem" }}>
+          <div style={{ color: "var(--msp-text-muted)", fontSize: "0.875rem" }}>Last 30 Days</div>
+          <div style={{ color: "var(--msp-text-muted)", fontSize: "0.75rem", marginTop: "0.25rem" }}>
             {stats?.last30Days.requests || 0} requests
           </div>
         </div>
@@ -178,8 +179,8 @@ export default function AdminCostsPage() {
           <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#F59E0B" }}>
             {formatTokens(stats?.today.totalTokens || 0)}
           </div>
-          <div style={{ color: "#9CA3AF", fontSize: "0.875rem" }}>Tokens Today</div>
-          <div style={{ color: "#6B7280", fontSize: "0.75rem", marginTop: "0.25rem" }}>
+          <div style={{ color: "var(--msp-text-muted)", fontSize: "0.875rem" }}>Tokens Today</div>
+          <div style={{ color: "var(--msp-text-muted)", fontSize: "0.75rem", marginTop: "0.25rem" }}>
             {formatTokens(stats?.today.promptTokens || 0)} in / {formatTokens(stats?.today.completionTokens || 0)} out
           </div>
         </div>
@@ -187,8 +188,8 @@ export default function AdminCostsPage() {
           <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--msp-accent)" }}>
             ~{formatCost(projectedMonthly)}
           </div>
-          <div style={{ color: "#9CA3AF", fontSize: "0.875rem" }}>Projected Monthly</div>
-          <div style={{ color: "#6B7280", fontSize: "0.75rem", marginTop: "0.25rem" }}>
+          <div style={{ color: "var(--msp-text-muted)", fontSize: "0.875rem" }}>Projected Monthly</div>
+          <div style={{ color: "var(--msp-text-muted)", fontSize: "0.75rem", marginTop: "0.25rem" }}>
             Based on 30-day avg
           </div>
         </div>
@@ -197,7 +198,7 @@ export default function AdminCostsPage() {
       <div className="grid-equal-2-col-responsive" style={{ gap: "1.5rem" }}>
         {/* Last 7 days breakdown */}
         <div style={cardStyle}>
-          <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
+          <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--msp-text)", marginBottom: "1rem" }}>
             Last 7 Days
           </h2>
           {stats?.last7Days.length ? (
@@ -208,14 +209,14 @@ export default function AdminCostsPage() {
                   justifyContent: "space-between",
                   alignItems: "center",
                   padding: "0.5rem 0",
-                  borderBottom: "1px solid rgba(255,255,255,0.1)",
+                  borderBottom: "1px solid var(--msp-border)",
                 }}>
-                  <span style={{ color: "#9CA3AF" }}>
+                  <span style={{ color: "var(--msp-text-muted)" }}>
                     {new Date(day.date).toLocaleDateString('en-AU', { weekday: 'short', month: 'short', day: 'numeric' })}
                   </span>
                   <div style={{ textAlign: "right" }}>
                     <span style={{ color: "#10B981", fontWeight: 600 }}>{formatCost(day.cost)}</span>
-                    <span style={{ color: "#6B7280", fontSize: "0.75rem", marginLeft: "0.5rem" }}>
+                    <span style={{ color: "var(--msp-text-muted)", fontSize: "0.75rem", marginLeft: "0.5rem" }}>
                       ({day.requests} req)
                     </span>
                   </div>
@@ -228,20 +229,20 @@ export default function AdminCostsPage() {
                 display: "flex",
                 justifyContent: "space-between"
               }}>
-                <span style={{ color: "#E5E7EB", fontWeight: 600 }}>7-Day Total</span>
+                <span style={{ color: "var(--msp-text)", fontWeight: 600 }}>7-Day Total</span>
                 <span style={{ color: "#10B981", fontWeight: 700 }}>
                   {formatCost(stats.last7Days.reduce((sum, d) => sum + d.cost, 0))}
                 </span>
               </div>
             </div>
           ) : (
-            <p style={{ color: "#6B7280" }}>No data yet (token tracking just enabled)</p>
+            <p style={{ color: "var(--msp-text-muted)" }}>No data yet (token tracking just enabled)</p>
           )}
         </div>
 
         {/* Cost by tier */}
         <div style={cardStyle}>
-          <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
+          <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--msp-text)", marginBottom: "1rem" }}>
             Cost by Tier (30 Days)
           </h2>
           {stats?.byTier.length ? (
@@ -263,12 +264,12 @@ export default function AdminCostsPage() {
                       borderRadius: "0.25rem",
                       fontSize: "0.875rem",
                       color: tier.tier === "pro_trader" ? "#F59E0B" : 
-                             tier.tier === "pro" ? "var(--msp-accent)" : "#9CA3AF",
+                             tier.tier === "pro" ? "var(--msp-accent)" : "var(--msp-text-muted)",
                       textTransform: "capitalize",
                     }}>
                       {tier.tier.replace("_", " ")}
                     </span>
-                    <span style={{ color: "#6B7280", fontSize: "0.75rem", marginLeft: "0.5rem" }}>
+                    <span style={{ color: "var(--msp-text-muted)", fontSize: "0.75rem", marginLeft: "0.5rem" }}>
                       {tier.requests} requests
                     </span>
                   </div>
@@ -277,13 +278,13 @@ export default function AdminCostsPage() {
               ))}
             </div>
           ) : (
-            <p style={{ color: "#6B7280" }}>No tier data yet</p>
+            <p style={{ color: "var(--msp-text-muted)" }}>No tier data yet</p>
           )}
         </div>
 
         {/* Top cost users */}
         <div style={{ ...cardStyle, gridColumn: "span 2" }}>
-          <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
+          <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--msp-text)", marginBottom: "1rem" }}>
             Top Cost Users (30 Days)
           </h2>
           {stats?.topCostUsers.length ? (
@@ -299,17 +300,17 @@ export default function AdminCostsPage() {
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                     <span style={{ 
-                      color: i < 3 ? "#F59E0B" : "#6B7280",
+                      color: i < 3 ? "#F59E0B" : "var(--msp-text-muted)",
                       fontWeight: i < 3 ? 700 : 400,
                       width: "1.5rem"
                     }}>
                       {i + 1}.
                     </span>
                     <div>
-                      <div style={{ color: "#9CA3AF", fontSize: "0.875rem" }}>
+                      <div style={{ color: "var(--msp-text-muted)", fontSize: "0.875rem" }}>
                         {user.workspaceId.slice(0, 8)}...
                       </div>
-                      <div style={{ fontSize: "0.75rem", color: "#6B7280" }}>
+                      <div style={{ fontSize: "0.75rem", color: "var(--msp-text-muted)" }}>
                         {user.requests} req • {formatTokens(user.promptTokens + user.completionTokens)} tokens
                       </div>
                     </div>
@@ -323,7 +324,7 @@ export default function AdminCostsPage() {
                       borderRadius: "0.25rem",
                       fontSize: "0.625rem",
                       color: user.tier === "pro_trader" ? "#F59E0B" : 
-                             user.tier === "pro" ? "var(--msp-accent)" : "#9CA3AF",
+                             user.tier === "pro" ? "var(--msp-accent)" : "var(--msp-text-muted)",
                     }}>
                       {user.tier}
                     </span>
@@ -332,7 +333,7 @@ export default function AdminCostsPage() {
               ))}
             </div>
           ) : (
-            <p style={{ color: "#6B7280" }}>No user data yet</p>
+            <p style={{ color: "var(--msp-text-muted)" }}>No user data yet</p>
           )}
         </div>
       </div>
@@ -344,9 +345,9 @@ export default function AdminCostsPage() {
         background: "rgba(0,0,0,0.3)",
         borderRadius: "0.5rem",
         fontSize: "0.875rem",
-        color: "#6B7280"
+        color: "var(--msp-text-muted)"
       }}>
-        <strong style={{ color: "#9CA3AF" }}>30-Day Token Breakdown:</strong>
+        <strong style={{ color: "var(--msp-text-muted)" }}>30-Day Token Breakdown:</strong>
         <div style={{ marginTop: "0.5rem", display: "flex", gap: "2rem" }}>
           <span>Input: {formatTokens(stats?.last30Days.promptTokens || 0)} tokens</span>
           <span>Output: {formatTokens(stats?.last30Days.completionTokens || 0)} tokens</span>

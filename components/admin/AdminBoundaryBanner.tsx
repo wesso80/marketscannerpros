@@ -14,15 +14,15 @@ export default function AdminBoundaryBanner() {
       role="note"
       aria-label="Admin boundary notice"
       style={{
-        background: "linear-gradient(90deg, rgba(15,23,42,0.95) 0%, rgba(30,41,59,0.95) 100%)",
-        borderBottom: "1px solid rgba(16, 185, 129, 0.25)",
+        background: "var(--msp-panel)",
+        borderBottom: "1px solid var(--msp-border)",
         padding: "0.4rem 1rem",
         textAlign: "center",
         fontSize: "0.65rem",
         fontWeight: 700,
-        letterSpacing: "0.18em",
+        letterSpacing: "0.1em",
         textTransform: "uppercase",
-        color: "#10B981",
+        color: "var(--msp-text-muted)",
         userSelect: "none",
       }}
     >

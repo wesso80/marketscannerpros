@@ -13,6 +13,7 @@ import { hashWorkspaceId } from '@/lib/auth';
 import { q } from '@/lib/db';
 import type Stripe from 'stripe';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = 'nodejs';
 
 // Price ID mappings (same as webhook — new + legacy env vars).
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
 
           synced.push({ email, tier, status: sub.status });
         } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : 'Unknown error';
+          const msg = adminErrorText(err, '/api/admin/sync-stripe');
           errors.push(msg);
         }
       }
@@ -124,7 +125,7 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     console.error('[admin:sync-stripe] Error:', err);
     return NextResponse.json(
-      { error: 'Sync failed', detail: err instanceof Error ? err.message : 'Unknown error' },
+      { error: 'Sync failed', detail: adminErrorText(err, '/api/admin/sync-stripe') },
       { status: 500 },
     );
   }

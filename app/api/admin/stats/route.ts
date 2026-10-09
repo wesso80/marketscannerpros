@@ -3,6 +3,7 @@ import { q } from "@/lib/db";
 import { requireAdmin } from '@/lib/adminAuth';
 import { wrapTruth } from '@/lib/admin';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 type DegradationState = {
   failedQueries: string[];
   warnings: string[];
@@ -10,7 +11,7 @@ type DegradationState = {
 
 function recordQueryFailure(state: DegradationState, queryName: string, error: unknown) {
   state.failedQueries.push(queryName);
-  const message = error instanceof Error ? error.message : String(error);
+  const message = adminErrorText(error, '/api/admin/stats');
   state.warnings.push(`${queryName} unavailable: ${message}`);
   console.warn(`Admin stats query failed: ${queryName}`, error);
 }
@@ -181,7 +182,7 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error("Admin stats error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch stats", details: error.message },
+      { error: "Failed to fetch stats", details: adminErrorText(error, '/api/admin/stats') },
       { status: 500 }
     );
   }

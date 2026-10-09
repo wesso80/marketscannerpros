@@ -1,4 +1,5 @@
 "use client";
+import design from "@/components/admin/AdminResearchSurface.module.css";
 
 /**
  * Admin Equity Research Brief — MSP daily research note.
@@ -127,12 +128,12 @@ export default function EquityResearchPage() {
   const note = resp?.data?.note;
 
   return (
-    <main
+    <main className={design.surface}
       style={{
         minHeight: "100vh",
-        background: "#0B1220",
-        color: "#E5E7EB",
-        padding: 20,
+        background: "var(--msp-bg)",
+        color: "var(--msp-text)",
+        padding: 0,
       }}
     >
       <header
@@ -144,10 +145,10 @@ export default function EquityResearchPage() {
         }}
       >
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, color: "#F9FAFB" }}>
+          <h1 style={{ margin: 0, fontSize: 22, color: "var(--msp-text)" }}>
             Equity Research Brief
           </h1>
-          <p style={{ margin: "4px 0 0", fontSize: 13, color: "#9CA3AF" }}>
+          <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--msp-text-muted)" }}>
             MSP fundamental analysis · research-only · no execution.
           </p>
         </div>
@@ -156,14 +157,14 @@ export default function EquityResearchPage() {
 
       <section
         style={{
-          background: "#0F172A",
-          border: "1px solid #1F2937",
+          background: "var(--msp-panel)",
+          border: "1px solid var(--msp-border)",
           borderRadius: 12,
           padding: 16,
           marginBottom: 16,
         }}
       >
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))", gap: 12 }}>
           <label style={lbl}>
             Ticker
             <input
@@ -205,8 +206,8 @@ export default function EquityResearchPage() {
             disabled={loading || !ticker.trim()}
             style={{
               padding: "8px 16px",
-              background: loading ? "#1F2937" : "#10B981",
-              color: "#0B1220",
+              background: loading ? "var(--msp-border)" : "var(--msp-accent)",
+              color: "var(--msp-bg)",
               border: "none",
               borderRadius: 6,
               fontWeight: 700,
@@ -215,7 +216,7 @@ export default function EquityResearchPage() {
           >
             {loading ? "Generating…" : "Generate brief"}
           </button>
-          <span style={{ fontSize: 12, color: "#6B7280" }}>
+          <span style={{ fontSize: 12, color: "var(--msp-text-muted)" }}>
             Pulls Alpha Vantage OVERVIEW + INCOME + BALANCE + CASHFLOW, then runs gpt-4.1.
           </span>
         </div>
@@ -262,18 +263,18 @@ function ResearchNoteView({
       <section
         style={{
           padding: 16,
-          background: "#0F172A",
+          background: "var(--msp-panel)",
           border: `2px solid ${verdictColor}55`,
           borderRadius: 12,
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <div style={{ fontSize: 12, color: "#9CA3AF", letterSpacing: 0.3, textTransform: "uppercase" }}>
+            <div style={{ fontSize: 12, color: "var(--msp-text-muted)", letterSpacing: 0.3, textTransform: "uppercase" }}>
               Research Verdict
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginTop: 4 }}>
-              <h2 style={{ margin: 0, fontSize: 28, color: "#F9FAFB" }}>{note.ticker}</h2>
+              <h2 style={{ margin: 0, fontSize: 28, color: "var(--msp-text)" }}>{note.ticker}</h2>
               <span
                 style={{
                   padding: "4px 12px",
@@ -288,7 +289,7 @@ function ResearchNoteView({
                 {note.rating.verdict} · conviction {note.rating.conviction}/5
               </span>
             </div>
-            <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 6 }}>
+            <div style={{ fontSize: 12, color: "var(--msp-text-muted)", marginTop: 6 }}>
               {truth.source} · {truth.freshness} · confidence {truth.confidence}
               {truth.confidenceReason ? ` — ${truth.confidenceReason}` : ""}
             </div>
@@ -299,11 +300,11 @@ function ResearchNoteView({
             <ExposureBox flag={note.personalExposureFlag} />
           </div>
         </div>
-        <div style={{ marginTop: 12, padding: 10, background: "#0B1220", border: "1px solid #1F2937", borderRadius: 6 }}>
-          <strong style={{ color: "#E5E7EB" }}>Confidence: </strong>
+        <div style={{ marginTop: 12, padding: 10, background: "var(--msp-bg)", border: "1px solid var(--msp-border)", borderRadius: 6 }}>
+          <strong style={{ color: "var(--msp-text)" }}>Confidence: </strong>
           <span style={{ color: "#D1D5DB" }}>{note.confidenceStatement}</span>
         </div>
-        <div style={{ marginTop: 8, fontSize: 12, color: "#9CA3AF" }}>
+        <div style={{ marginTop: 8, fontSize: 12, color: "var(--msp-text-muted)" }}>
           Bull target: {fmtTarget(note.rating.bullTarget)} · Bear target:{" "}
           {fmtTarget(note.rating.bearTarget)}
         </div>
@@ -319,7 +320,7 @@ function ResearchNoteView({
           }}>
             {note.recommendedAction.action.toUpperCase()}
           </span>
-          <span style={{ fontSize: 12, color: "#9CA3AF" }}>
+          <span style={{ fontSize: 12, color: "var(--msp-text-muted)" }}>
             horizon: {note.recommendedAction.timeHorizon}
           </span>
         </div>
@@ -335,7 +336,7 @@ function ResearchNoteView({
       <Card title="Revenue Streams">
         <table style={{ width: "100%", fontSize: 13 }}>
           <thead>
-            <tr style={{ color: "#9CA3AF", textAlign: "left" }}>
+            <tr style={{ color: "var(--msp-text-muted)", textAlign: "left" }}>
               <th style={th}>Segment</th>
               <th style={th}>Share</th>
               <th style={th}>Growth</th>
@@ -343,7 +344,7 @@ function ResearchNoteView({
           </thead>
           <tbody>
             {note.revenueStreams.map((s, i) => (
-              <tr key={i} style={{ borderTop: "1px solid #1F2937" }}>
+              <tr key={i} style={{ borderTop: "1px solid var(--msp-border)" }}>
                 <td style={td}>{s.segment}</td>
                 <td style={td}>{s.share}</td>
                 <td style={td}>{s.growth}</td>
@@ -380,7 +381,7 @@ function ResearchNoteView({
       </div>
 
       <Card title="Competitive Moat (1–10)">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, 100%), 1fr))", gap: 8 }}>
           <Pillar label="Pricing power" v={note.moat.pricingPower} />
           <Pillar label="Brand strength" v={note.moat.brandStrength} />
           <Pillar label="Switching costs" v={note.moat.switchingCosts} />
@@ -430,7 +431,7 @@ function ResearchNoteView({
 
       <Card title="Verdict">
         <p style={paraStyle}>{note.verdictParagraph}</p>
-        <div style={{ fontSize: 11, color: "#6B7280", marginTop: 10 }}>
+        <div style={{ fontSize: 11, color: "var(--msp-text-muted)", marginTop: 10 }}>
           Classification: ADMIN_RESEARCH_NOTE_NOT_BROKER_EXECUTION ·
           Personal exposure ({note.personalExposureFlag}) does NOT alter this verdict.
           Generated {note.generatedAt}.
@@ -454,8 +455,8 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   return (
     <section
       style={{
-        background: "#0F172A",
-        border: "1px solid #1F2937",
+        background: "var(--msp-panel)",
+        border: "1px solid var(--msp-border)",
         borderRadius: 12,
         padding: 16,
       }}
@@ -465,7 +466,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
           margin: "0 0 10px",
           fontSize: 12,
           fontWeight: 700,
-          color: "#9CA3AF",
+          color: "var(--msp-text-muted)",
           letterSpacing: 0.4,
           textTransform: "uppercase",
         }}
@@ -479,18 +480,18 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 
 function ScoreBox({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div style={{ background: "#0B1220", border: `1px solid ${color}33`, borderRadius: 6, padding: "6px 10px", minWidth: 90 }}>
-      <div style={{ fontSize: 10, color: "#9CA3AF" }}>{label}</div>
+    <div style={{ background: "var(--msp-bg)", border: `1px solid ${color}33`, borderRadius: 6, padding: "6px 10px", minWidth: 90 }}>
+      <div style={{ fontSize: 10, color: "var(--msp-text-muted)" }}>{label}</div>
       <div style={{ fontSize: 18, color, fontWeight: 700 }}>{Math.round(value)}</div>
     </div>
   );
 }
 
 function ExposureBox({ flag }: { flag: ExposureFlag }) {
-  const c = flag === "none" ? "#6B7280" : flag === "high" ? "#EC4899" : "#F59E0B";
+  const c = flag === "none" ? "var(--msp-text-muted)" : flag === "high" ? "#EC4899" : "#F59E0B";
   return (
-    <div style={{ background: "#0B1220", border: `1px solid ${c}33`, borderRadius: 6, padding: "6px 10px", minWidth: 90 }}>
-      <div style={{ fontSize: 10, color: "#9CA3AF" }}>Exposure</div>
+    <div style={{ background: "var(--msp-bg)", border: `1px solid ${c}33`, borderRadius: 6, padding: "6px 10px", minWidth: 90 }}>
+      <div style={{ fontSize: 10, color: "var(--msp-text-muted)" }}>Exposure</div>
       <div style={{ fontSize: 14, color: c, fontWeight: 700 }}>{flag}</div>
     </div>
   );
@@ -498,9 +499,9 @@ function ExposureBox({ flag }: { flag: ExposureFlag }) {
 
 function KV({ k, v }: { k: string; v: string }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #1F2937", fontSize: 13 }}>
-      <span style={{ color: "#9CA3AF" }}>{k}</span>
-      <span style={{ color: "#E5E7EB", textAlign: "right", maxWidth: "60%" }}>{v}</span>
+    <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid var(--msp-border)", fontSize: 13 }}>
+      <span style={{ color: "var(--msp-text-muted)" }}>{k}</span>
+      <span style={{ color: "var(--msp-text)", textAlign: "right", maxWidth: "60%" }}>{v}</span>
     </div>
   );
 }
@@ -508,8 +509,8 @@ function KV({ k, v }: { k: string; v: string }) {
 function Pillar({ label, v }: { label: string; v: number }) {
   const c = v >= 8 ? "#10B981" : v >= 5 ? "#60A5FA" : "#F59E0B";
   return (
-    <div style={{ background: "#0B1220", border: "1px solid #1F2937", borderRadius: 6, padding: 8, textAlign: "center" }}>
-      <div style={{ fontSize: 10, color: "#9CA3AF" }}>{label}</div>
+    <div style={{ background: "var(--msp-bg)", border: "1px solid var(--msp-border)", borderRadius: 6, padding: 8, textAlign: "center" }}>
+      <div style={{ fontSize: 10, color: "var(--msp-text-muted)" }}>{label}</div>
       <div style={{ fontSize: 20, color: c, fontWeight: 700 }}>{v}/10</div>
     </div>
   );
@@ -530,20 +531,20 @@ const navLink: React.CSSProperties = {
   textDecoration: "none",
   padding: "6px 10px",
   borderRadius: 6,
-  border: "1px solid #1F2937",
+  border: "1px solid var(--msp-border)",
 };
-const lbl: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "#9CA3AF" };
+const lbl: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: "var(--msp-text-muted)" };
 const inp: React.CSSProperties = {
   padding: "8px 10px",
-  background: "#0B1220",
-  border: "1px solid #1F2937",
+  background: "var(--msp-bg)",
+  border: "1px solid var(--msp-border)",
   borderRadius: 6,
-  color: "#E5E7EB",
+  color: "var(--msp-text)",
   fontSize: 13,
 };
-const paraStyle: React.CSSProperties = { margin: 0, fontSize: 13, color: "#E5E7EB", lineHeight: 1.6 };
-const grid2: React.CSSProperties = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 };
+const paraStyle: React.CSSProperties = { margin: 0, fontSize: 13, color: "var(--msp-text)", lineHeight: 1.6 };
+const grid2: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))", gap: 16 };
 const th: React.CSSProperties = { padding: "6px 4px", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.4 };
-const td: React.CSSProperties = { padding: "6px 4px", fontSize: 13, color: "#E5E7EB" };
+const td: React.CSSProperties = { padding: "6px 4px", fontSize: 13, color: "var(--msp-text)" };
 const ul: React.CSSProperties = { listStyle: "none", padding: 0, margin: 0 };
-const li: React.CSSProperties = { padding: "4px 0", fontSize: 13, color: "#E5E7EB", borderBottom: "1px solid #1F2937" };
+const li: React.CSSProperties = { padding: "4px 0", fontSize: 13, color: "var(--msp-text)", borderBottom: "1px solid var(--msp-border)" };

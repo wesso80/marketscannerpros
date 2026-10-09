@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
 import { getRiskGovernorThresholdsFromEnv } from '@/lib/operator/riskGovernor';
+import { operatorAccessDenied } from '@/lib/operator/privateAccess';
 
 type DecisionPacketRow = {
   packet_id: string;
@@ -166,6 +167,8 @@ export async function GET(req: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const operatorDenied = operatorAccessDenied(session);
+    if (operatorDenied) return operatorDenied;
 
     const { searchParams } = new URL(req.url);
     const limit = Math.max(1, Math.min(20, Number(searchParams.get('limit') || 8)));

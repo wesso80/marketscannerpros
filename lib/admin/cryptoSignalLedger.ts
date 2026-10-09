@@ -147,8 +147,8 @@ export async function resolveSkippedSignals(now=Date.now()){
 }
 
 /** Read model: counts and taken-vs-skipped outcome comparison by plan (resolved skipped signals only). */
-export async function signalLedgerView(){
- if(!ready)return null;
+export async function signalLedgerView(tableAvailable=ready){
+ if(!tableAvailable)return null;
  try{
   const rows=await q<{decision:string;status:string;n:string}>(`SELECT decision,status,COUNT(*) n FROM crypto_signal_ledger WHERE source='live-4h' GROUP BY 1,2`);
   const res=await q<{reason:string;outcomes:any}>(`SELECT unnest(reasons) AS reason,outcomes FROM crypto_signal_ledger WHERE status='RESOLVED' AND decision='SKIPPED' AND source='live-4h'`);

@@ -1,0 +1,11 @@
+.page { min-height: 100dvh; padding: clamp(32px, 8vh, 96px) 20px; background: #0b141a; color: #edf1ed; font-family: Arial, sans-serif; }
+.card { width: 100%; max-width: 480px; margin: auto; padding: clamp(24px, 5vw, 40px); background: #111e26; border: 1px solid #293a42; border-radius: 12px; }
+.eyebrow { color: #a5e8cf; text-transform: uppercase; letter-spacing: 1.5px; font-size: 11px; margin-bottom: 24px; }
+.card h1 { font-size: 32px; font-weight: 500; letter-spacing: -.7px; line-height: 1.2; }
+.intro { color: #a8b9bf; font-size: 14px; line-height: 1.7; margin-top: 16px; }
+.card > div { background: transparent; border: 0; padding: 0; }
+.card form input { min-height: 48px; border-radius: 6px; background: #0b141a; border-color: #38534d; color: #edf1ed; }
+.card form input::placeholder { color: #a8b9bf; }
+.card form button { min-height: 48px; border-radius: 6px; background: #a5e8cf; color: #10241c; border-color: transparent; font-weight: 500; }
+.card :is(input, button):focus-visible { outline: 2px solid #a5e8cf; outline-offset: 4px; }
+.card form button:disabled { opacity: .5; }

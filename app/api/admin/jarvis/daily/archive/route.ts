@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { q } from '@/lib/db';
 import { pgReportStore } from '@/lib/jarvis/report/persistDailyReport';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
@@ -15,6 +16,6 @@ export async function GET(req: NextRequest) {
     const items = await pgReportStore(q).listArchive(limit);
     return NextResponse.json({ items, limit }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Failed to load archive' }, { status: 500 });
+    return NextResponse.json({ error: adminErrorText(e, '/api/admin/jarvis/daily/archive') }, { status: 500 });
   }
 }

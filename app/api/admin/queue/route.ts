@@ -23,6 +23,7 @@ import {
   loadActiveQueue,
 } from "@/lib/admin/queueStore";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal error" },
+      { error: adminErrorText(err, '/api/admin/queue') },
       { status: 500 },
     );
   }

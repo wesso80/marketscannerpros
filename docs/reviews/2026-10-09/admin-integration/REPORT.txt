@@ -1,0 +1,39 @@
+Admin combined integration check — 9 October 2026
+
+LOCAL COMBINATION ONLY. No GitHub merge, deployment or production data change.
+Base: admin-integration 88785fa7e2fa5f30f4ad6c7b99a50fa44efb81e9.
+Exact reviewed heads:
+#547 ac4d209bb69b1bf32d5fdb5a95403619e82aabbd — operator gate
+#549 d9e75ec267a4711e5322bed590dd7da7668a4952 — admin session lifecycle
+#551 a54be83a48ceb2b50af5014b303932f10a83fc96 — retire secret login
+#550 ca0051b5d23be8d07f6acebb584b173eb1c92e07 — Health overview
+#553 0c849fbe519475437c292b43b5ad3969de1109cb — paper reads without setup
+Scratch combination commit before harness: 400bf6ca. All five combine without conflicts.
+
+Results
+- Combined admin selection: 190 test files, 1611 tests pass.
+- Dedicated cross-layer/auth selection: 58 tests pass (included in the wider total).
+- TypeScript clean: --noEmit --incremental false --typeRoots ./node_modules/@types.
+- Actual Next dev app in Chromium, authenticated with a synthetic signed admin token: /admin/health loads inside the real admin shell; /api/admin/verify returns 200. Both 1280 and 390 widths have no horizontal overflow.
+- Health browser check deliberately has database unreachable and Redis disabled; unavailable state is shown rather than invented success. Other browser API calls are intercepted and external browser traffic blocked.
+- Browser connection failed when server/browser were launched in separate tool sessions; launching them together succeeded. Failed initial attempt is not counted as verification.
+
+Cross-layer matrix (real middleware, requireAdmin and route handlers; fake database/Redis and portfolio store)
+Signed out / non-admin / expired / forged: middleware 401; direct Health and paper handlers 403; no database/provider calls.
+Valid cus_* admin: middleware admits; verify, Health, paper JSON and CSV succeed. Queries are SELECT-only.
+Refreshed admin token with is_admin omitted: still admitted by middleware and Health route through current admin-email workspace binding.
+Legacy verify POST: 410; no admin cookie minted.
+Optional paper tables present on a cold process: data readable without writer initialization.
+Optional tables missing or partially present: core account remains readable; absent optional fields unavailable.
+
+Reproduction
+On a local combination of the exact heads above, copy the companion adminCombinedIntegration.test.ts.txt to test/adminCombinedIntegration.test.ts. Run Vitest with the repository alias @ resolving to its root and the node environment. It contains 13 cases, including six paper read checks and seven cross-layer checks. No real credentials needed.
+Full selection: vitest run test/admin test/operatorRouteAccess.test.ts test/middlewareAdminPauseAfterAuth.test.ts.
+Isolated runtime used locked dependencies and LF SQL files matching Git. No source migrations or assertions changed.
+
+Scope and remaining checks
+- #552 (low-float scanner endpoint) excluded: separate public-response access change, outside this admin-only combination.
+- These results do not authorize a release. Live staging credentials, real PostgreSQL migration compatibility, production worker liveness and full public regression suite were not tested.
+- Successful paper JSON/CSV used fake stored data; real browser verified Health's unavailable-data path, not live paper balances.
+- Shared middleware and private operator entry points changed by Claude are included; no additional public-page changes were made during validation.
+- Next recommended task: read-only review of admin mutation routes (origin checks, duplicate submissions, workspace binding and shared-worker effects), preserving deployment hold.

@@ -31,6 +31,7 @@ import {
   deriveMacroEvidenceScore,
 } from "@/lib/admin/macroMemo";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
@@ -137,7 +138,7 @@ export async function POST(req: NextRequest) {
     const v = validateMacroMemo(parsed);
     aiResult = v.ok ? { ok: true, memo: v } : { ok: false, reason: v.reason };
   } catch (e) {
-    aiResult = { ok: false, reason: e instanceof Error ? e.message : "openai_error" };
+    aiResult = { ok: false, reason: adminErrorText(e, '/api/admin/macro-outlook') };
   }
 
   const baseConfidence: "high" | "medium" | "low" =

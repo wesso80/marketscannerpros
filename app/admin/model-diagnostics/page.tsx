@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import TruthStampLine from "@/components/admin/shared/TruthStampLine";
 interface CalibrationBucket {
   band: string;
   min: number;
@@ -82,6 +83,7 @@ export default function ModelDiagnosticsPage() {
             System
           </div>
           <h1 style={{ fontSize: "1.6rem", fontWeight: 800, margin: "0.2rem 0 0.4rem" }}>Model Diagnostics</h1>
+          {data && <TruthStampLine truth={(data as any).truth} />}
           <p style={{ color: "#94A3B8", fontSize: 13, maxWidth: 720 }}>
             Calibration of shared-scan signal scores against realised outcomes (ai_signal_log, fixed-labeller verdicts
             only). Buckets use the {SCORE_OPTIONS.find((o) => o.value === scoreField)?.label.toLowerCase()}

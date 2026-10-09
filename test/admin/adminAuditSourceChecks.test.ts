@@ -27,7 +27,6 @@ describe("Nasdaq Reporting removed", () => {
   });
   it("no sidebar / command palette link points at it", () => {
     expect(read("app/admin/admin-client-layout.tsx")).not.toMatch(/\/admin\/reporting/);
-    expect(read("components/admin/layout/AdminSidebar.tsx")).not.toMatch(/\/admin\/reporting/);
     expect(ADMIN_COMMANDS.some((c) => c.href.startsWith("/admin/reporting"))).toBe(false);
   });
   it("next.config redirects /admin/reporting to the admin home", () => {

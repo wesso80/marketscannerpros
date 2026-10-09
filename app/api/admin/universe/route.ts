@@ -15,6 +15,7 @@ import {
   deleteUniverseEntry,
 } from '@/lib/universe/personalUniverse';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
     const entries = await listUniverse(session.workspaceId, includeInactive);
     return NextResponse.json({ ok: true, entries });
   } catch (e: unknown) {
-    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: adminErrorText(e, '/api/admin/universe') }, { status: 500 });
   }
 }
 
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ ok: true, entry });
   } catch (e: unknown) {
-    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: adminErrorText(e, '/api/admin/universe') }, { status: 500 });
   }
 }
 
@@ -79,6 +80,6 @@ export async function DELETE(req: NextRequest) {
     const removed = await deleteUniverseEntry(session.workspaceId, symbol);
     return NextResponse.json({ ok: true, removed });
   } catch (e: unknown) {
-    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: adminErrorText(e, '/api/admin/universe') }, { status: 500 });
   }
 }

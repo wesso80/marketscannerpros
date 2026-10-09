@@ -15,7 +15,8 @@ vi.mock('next/headers', () => ({
 }));
 
 vi.mock('../lib/quant/operatorAuth', () => ({
-  isOperator: vi.fn(() => false),
+  // Only the test admin identity is on the admin list.
+  isOperator: vi.fn((cid: string) => cid === 'admin_founder@example.com'),
 }));
 
 const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -31,6 +32,7 @@ function request(path = '/api/admin/verify', init: RequestInit = {}) {
     ...init,
     headers: {
       host: 'localhost:3000',
+      origin: 'http://localhost',
       ...(init.headers || {}),
     },
   });
@@ -75,11 +77,51 @@ describe('/api/admin/verify', () => {
     await expect(verifyAdminRequest(request())).resolves.toEqual({ ok: false });
   });
 
-  it('wires the route to require admin secret before minting ms_admin', () => {
-    const route = readFileSync(join(process.cwd(), 'app/api/admin/verify/route.ts'), 'utf8');
-
-    expect(route).toContain('if (!verifyAdminAuth(req))');
-    expect(route).toContain('return NextResponse.json({ error: "Unauthorized" }, { status: 401 })');
-    expect(route).toContain('res.cookies.set(ADMIN_SESSION_COOKIE, createAdminSessionToken(), getAdminSessionCookieOptions(req))');
+  it('legacy secret login is retired: POST returns 410 and mints no admin cookie', async () => {
+    const { POST } = await import('../app/api/admin/verify/route');
+    const res = await POST();
+    expect(res.status).toBe(410);
+    expect(res.headers.get('set-cookie')).toBeNull();
   });
+
+  it('GET refuses a valid admin secret header without a session, and mints no cookie', async () => {
+    const { GET } = await import('../app/api/admin/verify/route');
+    for (const headers of [{ 'x-admin-secret': 'correct-admin-secret' }, { authorization: 'Bearer correct-admin-secret' }]) {
+      const res = await GET(request('/api/admin/verify', { headers }) as any);
+      expect(res.status).toBe(401);
+      expect(res.headers.get('set-cookie')).toBeNull();
+    }
+  });
+
+  it('GET accepts a valid admin session cookie', async () => {
+    cookiesMock.mockResolvedValue(cookieStore({ ms_admin: createAdminSessionToken('admin_founder@example.com') }));
+    const { GET } = await import('../app/api/admin/verify/route');
+    const res = await GET(request() as any);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, source: 'admin_session' });
+  });
+
+  it('DELETE (admin logout) clears both the admin cookie and the admin app session', async () => {
+    const { DELETE } = await import('../app/api/admin/verify/route');
+    const res = await DELETE(request('/api/admin/verify', { method: 'DELETE' }) as any);
+    const cookies = res.headers.getSetCookie?.() ?? [res.headers.get('set-cookie') ?? ''];
+    const all = cookies.join('\n');
+    expect(all).toContain('ms_admin=;');
+    expect(all).toContain('ms_auth=;');
+  });
+
+  it('an ms_admin cookie for an identity no longer on the admin list is refused', async () => {
+    cookiesMock.mockResolvedValue(cookieStore({ ms_admin: createAdminSessionToken('admin_removed@example.com') }));
+    await expect(verifyAdminRequest(request())).resolves.toEqual({ ok: false });
+    cookiesMock.mockResolvedValue(cookieStore({ ms_admin: createAdminSessionToken() })); // retired secret-login cookie
+    await expect(verifyAdminRequest(request())).resolves.toEqual({ ok: false });
+  });
+
+  it('the admin layout has no secret form and points signed-out admins at /admin/login', () => {
+    const layout = readFileSync(join(process.cwd(), 'app/admin/admin-client-layout.tsx'), 'utf8');
+    expect(layout).not.toContain('Enter admin secret');
+    expect(layout).not.toContain('Authorization: `Bearer ${key}`');
+    expect(layout).toContain('href="/admin/login"');
+  });
+
 });

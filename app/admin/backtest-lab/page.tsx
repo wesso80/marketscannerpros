@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import PositionHorizonOutcomes from "@/components/admin/PositionHorizonOutcomes";
 import type { PositionHorizonStats } from "@/lib/admin/positionHorizonStats";
 
+import TruthStampLine from "@/components/admin/shared/TruthStampLine";
 interface SetupBreakdown {
   setup: string;
   market: string;
@@ -73,6 +74,7 @@ export default function BacktestLabPage() {
             Markets
           </div>
           <h1 style={{ fontSize: "1.6rem", fontWeight: 800, margin: "0.2rem 0 0.4rem" }}>Backtest Lab</h1>
+          {data && <TruthStampLine truth={(data as any).truth} />}
           <p style={{ color: "#94A3B8", fontSize: 13, maxWidth: 720 }}>
             How past calls did over the last 90 days: every shared-scan signal (by playbook) and every call an admin
             page showed (Priority Desk, Morning Brief, alerts, Jarvis, edge packets, ARCA), grouped by setup and market.

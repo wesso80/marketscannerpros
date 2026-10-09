@@ -7,7 +7,7 @@ import {setupDisplayLabel,type VolumeMomentum,type MomentumScanRow} from '@/lib/
 import {catalystText,chartDetail,chartText,jevDetail,jevScored} from '@/lib/admin/cryptoJevEvidence';
 type RuleRow=VolumeMomentum&{id?:string;symbol?:string;jev?:MomentumScanRow['jev'];catalyst?:MomentumScanRow['catalyst'];chart?:MomentumScanRow['chart'];shadow?:MomentumScanRow['shadow']};
 const fmt=(n?:number|null)=>typeof n==='number'&&Number.isFinite(n)?n.toPrecision(6):'—';
-const DARK={layout:{background:{type:ColorType.Solid,color:'#0f172a'},textColor:'#cbd5e1'},grid:{vertLines:{color:'#1e293b'},horzLines:{color:'#1e293b'}},timeScale:{timeVisible:true,secondsVisible:false},handleScroll:{vertTouchDrag:false}} as const;
+const DARK={layout:{background:{type:ColorType.Solid,color:'#111e26'},textColor:'#a8b9bf'},grid:{vertLines:{color:'#293a42'},horzLines:{color:'#293a42'}},timeScale:{timeVisible:true,secondsVisible:false},handleScroll:{vertTouchDrag:false}} as const;
 const pricePrecision=(lows:number[])=>Math.min(12,Math.max(2,3-Math.floor(Math.log10(Math.max(1e-12,Math.min(...lows))))));
 /** Rule levels in one place so both charts label them identically. */
 function ruleLevels(row:RuleRow):Array<readonly [string,number|undefined,string,string]>{
