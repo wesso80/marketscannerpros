@@ -63,7 +63,7 @@ Health overview (#550); paper reads without DDL (#553); momentum GET read-only (
 
 - [ ] Codex's #568 (mobile navigation and visual work) merged into `admin-integration` (or explicitly deferred).
 - [ ] Hold items in section 2 resolved or explicitly deferred by the owner.
-- [ ] Owner re-confirms the public changes (#552, #556, #576).
+- [x] Owner re-confirmed the public changes (#552, #556, #576) on 2026-10-09 in the Claude session.
 - [x] #569 (Health guard skip removal) merged.
 - [ ] Final tip re-validated: full vitest, `tsc --noEmit`, `next build`.
 - [ ] **Apply `migrations/130_admin_manual_order_requests.sql`** to the production Neon database (owner runs it;
