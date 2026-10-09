@@ -17,6 +17,7 @@ import { LABELLER_FIX_AT, signedMoveSql } from '@/lib/admin/signalStats';
 import { ASSUMED_COST_PCT, MIN_HALF_SAMPLE, MIN_SAMPLE, edgeCheck } from '@/lib/admin/edgeCheck';
 import { OUTCOME_MOVE_THRESHOLD_PCT } from '@/lib/outcomes/aiOutcomeLabel';
 import { EVIDENCE_SQL, parseCohort, selectOutcomeCohort, type EvidenceRecord } from '@/lib/admin/verifiedOutcomes';
+import { pendingMaturity } from '@/lib/admin/pendingMaturity';
 import { outcomeCompleteness, type CompletenessStatus } from '@/lib/admin/outcomeCompleteness';
 import { adminErrorText } from '@/lib/admin/errorResponse';
 
@@ -44,8 +45,8 @@ export async function GET(req: NextRequest) {
   const days = Number.isFinite(daysRaw) ? Math.min(365, Math.max(1, Math.round(daysRaw))) : 90;
 
   try {
-    const rows = await q<{ grp: string; signal_at: string; outcome: string; signed_move: string | number | null; inclusion_status: CompletenessStatus; provenance_evidence?:EvidenceRecord }>(
-      `SELECT ${GROUP_SQL[by]} AS grp, signal_at, outcome, ${signedMoveSql('pct_move_24h')} AS signed_move,
+    const rows = await q<{ grp: string; signal_at: string; outcome: string; signed_move: string | number | null; inclusion_status: CompletenessStatus; provenance_evidence?:EvidenceRecord; observed_at:string; asset_type:string|null; price_at_signal:string|number|null }>(
+      `SELECT ${GROUP_SQL[by]} AS grp, signal_at, asset_type, price_at_signal, NOW() AS observed_at, outcome, ${signedMoveSql('pct_move_24h')} AS signed_move,
               CASE
                 WHEN outcome IN ('correct', 'wrong', 'neutral')
                   AND outcome_measured_at >= $1::timestamptz
@@ -75,6 +76,7 @@ export async function GET(req: NextRequest) {
       ...result,
       completeness: outcomeCompleteness(rows),
       provenance: cohort.summary,
+      pendingMaturity: pendingMaturity(rows, rows[0]?.observed_at ? new Date(rows[0].observed_at).toISOString() : new Date().toISOString()),
       definition: {
         completeness: 'All recorded LONG/SHORT shared-scan signals in the requested window, counted once by UTC signal date. Only measured rows enter Edge Check statistics. Pending is a recorded status, not a claim that a measurement is overdue. UTC days are calendar periods, not the group-specific earlier/later split. Empty dates are not shown.',
         cohort: 'Provenance counts cover the eligible measured population before the selected cohort filter. Daily completeness still covers every recorded row in the window.',
