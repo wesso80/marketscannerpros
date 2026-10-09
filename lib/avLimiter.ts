@@ -4,30 +4,28 @@
  * Licence is 600 calls/min. AV_BUDGET_MODE picks the split. AV_PROCESS_ROLE
  * picks this process's fallback. A feature name does not.
  *
- * split (default). A Redis timeout can still land server-side, so fallbacks add:
- *   shared Redis ceiling          300
- *   web fallback                   80
- *   worker fallback               100
- *   Jarvis fallback               120
- *   worst case                    600
- *   lane reserves on 300: user 50, alerts 30, scheduled 100, backfill 120
- *   Jarvis floor on that ceiling: 300 - (50 + 30 + 100) = 120
+ * Worst case is additive in both modes. A Redis timeout can land server-side
+ * and on the process fallback at the same time:
+ *   split: 300 + 80 web + 100 worker + 120 Jarvis = 600
+ *   540:   540 + 20 web + 20 worker + 20 Jarvis = 600
+ * Startup throws if that sum is above 600. The message names AV_BUDGET_MODE.
  *
- * 540. Everyone shares 540. Fallbacks stay 80 / 100 / 120 and sit inside that
- * 540; they are not added again. Lanes scale by 540/300:
- *   user 90, alerts 54, scheduled 180, backfill 216
- *   Jarvis floor: 540 - (90 + 54 + 180) = 216, which is at least 120
- *   worst case                    540
- *
- * Startup throws if the worst case is above 600 or Jarvis's shared floor is
- * below 120. The message names AV_BUDGET_MODE.
+ * Lane reserves on the shared pool are minimums, not caps.
+ *   split: user 50, alerts 30, scheduled 100, backfill 120
+ *   Jarvis shared floor: 300 - (50 + 30 + 100) = 120
+ *   540 scales those by 540/300: user 90, alerts 54, scheduled 180, backfill 216
+ *   Jarvis shared floor: 540 - (90 + 54 + 180) = 216
+ * The floor check is the shared pool only. A 20/min Jarvis fallback is allowed.
+ * The user lane may borrow idle alerts and scheduled capacity, and stops before
+ * the backfill minimum. Alerts and scheduled keep their minimums against every
+ * other borrower. Each process fallback keeps that role's lane split, scaled
+ * to the smaller 540 amount.
  *
  * Untagged calls are the user lane (a page request). Cron routes, job routes,
- * and the worker pass their lane. Joining the shared window needs
- * UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.
+ * and the worker pass their lane. AV_PROCESS_ROLE is set by the worker and
+ * Jarvis entrypoints, so Render does not need a new env var. Joining the
+ * shared window needs UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.
  *
- * Priority, highest first: user, alerts, scheduled, backfill.
- * A lower lane must leave unused higher reserves.
  * Limiter Redis commands abort after 400ms. Timeout or error uses this
  * process's fallback. The fallback log is a count of codes (timeout, error,
  * absent), once per 5 minutes.
@@ -43,8 +41,10 @@ export const AV_540_CEILING_PER_MIN = 540;
 export const AV_CEILING_PER_MIN = AV_SPLIT_CEILING_PER_MIN;
 export const AV_WEB_FALLBACK_PER_MIN = 80;
 export const AV_WORKER_FALLBACK_PER_MIN = 100;
-/** Jarvis need on the shared pool and on the Jarvis process fallback. */
+/** Shared-pool Jarvis floor, and the split-mode Jarvis process fallback. */
 export const AV_JARVIS_FALLBACK_PER_MIN = 120;
+/** Each process fallback in 540 mode. Counted on top of the 540 ceiling. */
+export const AV_540_FALLBACK_PER_MIN = 20;
 export const AV_JARVIS_FEATURE = 'jarvis-overnight';
 export const AV_WORKER_FEATURE = 'worker-ingest';
 /** Same 400ms as LIMITER_REDIS_TIMEOUT_MS in lib/redis.ts. Not imported, so a Redis mock that only stubs getRedis still loads. */
@@ -58,8 +58,8 @@ export type AvProcessRole = 'web' | 'worker' | 'jarvis';
 export type AvFallbackCode = 'timeout' | 'error' | 'absent';
 
 /**
- * Split reserves. Backfill is 120 so Jarvis still has 120 when the higher
- * lanes have not spent their reserves: 300 - (50 + 30 + 100) = 120.
+ * Split minimums. They fill the 300 pool: 50 + 30 + 100 + 120.
+ * Backfill stays available when the other three sit on their minimums.
  */
 export const AV_LANE_RESERVE: Record<AvLane, number> = {
   user: 50,
@@ -100,13 +100,17 @@ export function jarvisSharedFloor(ceiling: number, reserves: Record<AvLane, numb
   return ceiling - reserves.user - reserves.alerts - reserves.scheduled;
 }
 
+export function additiveAvWorstCase(plan: Pick<AvBudgetPlan, 'ceiling' | 'webFallback' | 'workerFallback' | 'jarvisFallback'>): number {
+  return plan.ceiling + plan.webFallback + plan.workerFallback + plan.jarvisFallback;
+}
+
 export function avBudgetPlanForMode(mode: AvBudgetMode): AvBudgetPlan {
-  const webFallback = AV_WEB_FALLBACK_PER_MIN;
-  const workerFallback = AV_WORKER_FALLBACK_PER_MIN;
-  const jarvisFallback = AV_JARVIS_FALLBACK_PER_MIN;
   if (mode === '540') {
     const ceiling = AV_540_CEILING_PER_MIN;
     const reserves = reservesForCeiling(ceiling);
+    const webFallback = AV_540_FALLBACK_PER_MIN;
+    const workerFallback = AV_540_FALLBACK_PER_MIN;
+    const jarvisFallback = AV_540_FALLBACK_PER_MIN;
     return {
       mode,
       ceiling,
@@ -114,12 +118,15 @@ export function avBudgetPlanForMode(mode: AvBudgetMode): AvBudgetPlan {
       webFallback,
       workerFallback,
       jarvisFallback,
-      worstCase: ceiling,
+      worstCase: ceiling + webFallback + workerFallback + jarvisFallback,
       jarvisFloor: jarvisSharedFloor(ceiling, reserves),
     };
   }
   const ceiling = AV_SPLIT_CEILING_PER_MIN;
   const reserves = { ...AV_LANE_RESERVE };
+  const webFallback = AV_WEB_FALLBACK_PER_MIN;
+  const workerFallback = AV_WORKER_FALLBACK_PER_MIN;
+  const jarvisFallback = AV_JARVIS_FALLBACK_PER_MIN;
   return {
     mode: 'split',
     ceiling,
@@ -140,14 +147,16 @@ export function readAvBudgetMode(env: NodeJS.ProcessEnv = process.env): AvBudget
 }
 
 export function refuseIllegalAvBudget(plan: AvBudgetPlan): AvBudgetPlan {
-  if (plan.worstCase > AV_LICENCE_PER_MIN || plan.ceiling > AV_LICENCE_PER_MIN) {
+  const additive = additiveAvWorstCase(plan);
+  const worstCase = Math.max(additive, plan.worstCase);
+  if (worstCase > AV_LICENCE_PER_MIN || plan.ceiling > AV_LICENCE_PER_MIN) {
     throw new Error(
-      `AV budget worst case is ${plan.worstCase}/min, above the ${AV_LICENCE_PER_MIN}/min licence. AV_BUDGET_MODE=${plan.mode} ceiling=${plan.ceiling} web fallback=${plan.webFallback} worker fallback=${plan.workerFallback} jarvis fallback=${plan.jarvisFallback}. Refusing to start.`,
+      `AV budget worst case is ${worstCase}/min (ceiling ${plan.ceiling} + web fallback ${plan.webFallback} + worker fallback ${plan.workerFallback} + jarvis fallback ${plan.jarvisFallback}), above the ${AV_LICENCE_PER_MIN}/min licence. AV_BUDGET_MODE=${plan.mode}. Refusing to start.`,
     );
   }
   if (plan.jarvisFloor < AV_JARVIS_FALLBACK_PER_MIN) {
     throw new Error(
-      `Jarvis shared floor is ${plan.jarvisFloor}/min, below ${AV_JARVIS_FALLBACK_PER_MIN}. AV_BUDGET_MODE=${plan.mode} ceiling=${plan.ceiling}. Refusing to start.`,
+      `Jarvis shared-pool floor is ${plan.jarvisFloor}/min, below ${AV_JARVIS_FALLBACK_PER_MIN}. AV_BUDGET_MODE=${plan.mode} ceiling=${plan.ceiling}. The process fallback is not part of this check. Refusing to start.`,
     );
   }
   return plan;
@@ -197,7 +206,7 @@ export const AV_BUDGET_CONTRACT = {
   body: { lane: 'backfill', feature: 'jarvis-overnight', count: 1 },
   countMax: 20,
   granted: { granted: 1, ceiling: AV_CEILING_PER_MIN, lane: 'backfill', feature: 'jarvis-overnight', retryAfterMs: 0 },
-  note: 'Take one token per Alpha Vantage HTTP call. Do not call Alpha Vantage when granted is 0. The Jarvis process sets AV_PROCESS_ROLE=jarvis. UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN put it on the shared window. Without them the Jarvis process uses its 120/min fallback. Posting feature=jarvis-overnight to this web route does not.',
+  note: 'Take one token per Alpha Vantage HTTP call. Do not call Alpha Vantage when granted is 0. The Jarvis script sets AV_PROCESS_ROLE=jarvis and the worker sets AV_PROCESS_ROLE=worker. No Render env change is required for the role. UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN put the process on the shared window. Without them the process uses its own fallback (120/min for Jarvis in split, 20/min in 540 mode). Posting feature=jarvis-overnight to the web route does not.',
 } as const;
 
 const REDIS_KEY = 'av_limiter:minute';
@@ -240,6 +249,29 @@ export function sanitizeFeature(value: string): string {
   return cleaned || 'unspecified';
 }
 
+/**
+ * Minimums still owed to each lane after the user lane has borrowed idle
+ * alerts and scheduled capacity. A started lane keeps its own remainder.
+ * Backfill is never borrowed.
+ */
+export function laneMinimumsStillOwed(
+  reserve: Record<AvLane, number>,
+  usedByLane: Partial<Record<AvLane, number>>,
+): Record<AvLane, number> {
+  const unused = Object.fromEntries(AV_LANES.map((lane) => [
+    lane,
+    Math.max(0, (reserve[lane] ?? 0) - (usedByLane[lane] ?? 0)),
+  ])) as Record<AvLane, number>;
+  let borrowed = Math.max(0, (usedByLane.user ?? 0) - (reserve.user ?? 0));
+  for (const lane of ['scheduled', 'alerts'] as const) {
+    if ((usedByLane[lane] ?? 0) > 0) continue;
+    const take = Math.min(unused[lane], borrowed);
+    unused[lane] -= take;
+    borrowed -= take;
+  }
+  return unused;
+}
+
 export function decideAvTake(input: {
   lane: AvLane;
   usedTotal: number;
@@ -250,10 +282,15 @@ export function decideAvTake(input: {
   const plan = currentAvBudgetPlan();
   const ceiling = input.ceiling ?? plan.ceiling;
   const reserve = input.reserve ?? plan.reserves;
+  const owed = laneMinimumsStillOwed(reserve, input.usedByLane);
   let mustLeave = 0;
-  for (const higher of AV_LANES) {
-    if (higher === input.lane) break;
-    mustLeave += Math.max(0, (reserve[higher] ?? 0) - (input.usedByLane[higher] ?? 0));
+  for (const other of AV_LANES) {
+    if (other === input.lane) continue;
+    const userBorrowsIdle = input.lane === 'user'
+      && (other === 'alerts' || other === 'scheduled')
+      && (input.usedByLane[other] ?? 0) === 0;
+    if (userBorrowsIdle) continue;
+    mustLeave += owed[other];
   }
   return { allow: input.usedTotal + 1 + mustLeave <= ceiling, mustLeave };
 }
@@ -276,11 +313,29 @@ for _, m in ipairs(rows) do
   local l = string.match(m, '^%d+:[^:]+:([^:]+):')
   if l and used[l] ~= nil then used[l] = used[l] + 1 end
 end
+local unused = {}
+for _, name in ipairs(order) do
+  local left = (reserves[name] or 0) - (used[name] or 0)
+  if left < 0 then left = 0 end
+  unused[name] = left
+end
+local borrowed = (used['user'] or 0) - (reserves['user'] or 0)
+if borrowed < 0 then borrowed = 0 end
+for _, name in ipairs({'scheduled', 'alerts'}) do
+  if (used[name] or 0) == 0 then
+    local room = unused[name] or 0
+    local take = room
+    if borrowed < take then take = borrowed end
+    unused[name] = room - take
+    borrowed = borrowed - take
+  end
+end
 local mustLeave = 0
 for _, name in ipairs(order) do
-  if name == lane then break end
-  local unused = (reserves[name] or 0) - (used[name] or 0)
-  if unused > 0 then mustLeave = mustLeave + unused end
+  if name ~= lane then
+    local userBorrowsIdle = (lane == 'user' and (name == 'alerts' or name == 'scheduled') and (used[name] or 0) == 0)
+    if not userBorrowsIdle then mustLeave = mustLeave + (unused[name] or 0) end
+  end
 end
 if total + 1 + mustLeave > ceiling then return 0 end
 redis.call('ZADD', key, now, member)
@@ -294,20 +349,27 @@ let lastFallbackLog = 0;
 let pendingFallbackCode: AvFallbackCode = 'absent';
 const fallbackCounts: Record<AvFallbackCode, number> = { timeout: 0, error: 0, absent: 0 };
 
-/** This process's fallback. The feature name is ignored on purpose. */
+function emptyReserve(): Record<AvLane, number> {
+  return { user: 0, alerts: 0, scheduled: 0, backfill: 0 };
+}
+
+/**
+ * This process's fallback. The feature name is ignored on purpose.
+ * Web keeps the shared lane ratios, scaled to this mode's web fallback.
+ * Worker stays on scheduled and Jarvis stays on backfill, scaled to the
+ * smaller fallback in 540 mode (20 instead of 100 and 120).
+ */
 export function fallbackBudget(role: AvProcessRole = currentAvProcessRole()): { ceiling: number; reserve: Record<AvLane, number> } {
   const plan = currentAvBudgetPlan();
   if (role === 'jarvis') {
-    return {
-      ceiling: plan.jarvisFallback,
-      reserve: { user: 0, alerts: 0, scheduled: 0, backfill: plan.jarvisFallback },
-    };
+    const reserve = emptyReserve();
+    reserve.backfill = plan.jarvisFallback;
+    return { ceiling: plan.jarvisFallback, reserve };
   }
   if (role === 'worker') {
-    return {
-      ceiling: plan.workerFallback,
-      reserve: { user: 0, alerts: 0, scheduled: plan.workerFallback, backfill: 0 },
-    };
+    const reserve = emptyReserve();
+    reserve.scheduled = plan.workerFallback;
+    return { ceiling: plan.workerFallback, reserve };
   }
   return { ceiling: plan.webFallback, reserve: reservesForCeiling(plan.webFallback, plan.reserves, plan.ceiling) };
 }

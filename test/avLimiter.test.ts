@@ -18,6 +18,7 @@ vi.mock('@/lib/redis', () => ({
 
 import {
   AV_540_CEILING_PER_MIN,
+  AV_540_FALLBACK_PER_MIN,
   AV_ALLOWANCE_SUM,
   AV_CEILING_PER_MIN,
   AV_FALLBACK_LOG_EVERY_MS,
@@ -37,6 +38,7 @@ import {
   avTryTake,
   decideAvTake,
   fallbackBudget,
+  type AvLane,
   flushAvFeatureCounts,
   jarvisSharedFloor,
   normalizeBudget,
@@ -47,7 +49,7 @@ import {
   resetAvLimiterLocalForTests,
 } from '@/lib/avLimiter';
 
-/** Same steps as AV_LIMITER_LUA: parse lane, sum unused higher reserves, deny when total + 1 + mustLeave > ceiling. */
+/** Same steps as AV_LIMITER_LUA: owed minimums, user borrow of idle alerts/scheduled, deny when total + 1 + mustLeave > ceiling. */
 function luaWouldGrant(input: {
   rows: string[];
   lane: string;
@@ -62,13 +64,36 @@ function luaWouldGrant(input: {
     const lane = /^\d+:[^:]+:([^:]+):/.exec(member)?.[1];
     if (lane && used[lane] != null) used[lane] += 1;
   }
+  const unused: Record<string, number> = {};
+  for (const name of input.order) unused[name] = Math.max(0, (input.reserves[name] || 0) - (used[name] || 0));
+  let borrowed = Math.max(0, (used.user || 0) - (input.reserves.user || 0));
+  for (const name of ['scheduled', 'alerts']) {
+    if ((used[name] || 0) === 0) {
+      const take = Math.min(unused[name] || 0, borrowed);
+      unused[name] -= take;
+      borrowed -= take;
+    }
+  }
   let mustLeave = 0;
   for (const name of input.order) {
-    if (name === input.lane) break;
-    const unused = (input.reserves[name] || 0) - (used[name] || 0);
-    if (unused > 0) mustLeave += unused;
+    if (name === input.lane) continue;
+    const userBorrowsIdle = input.lane === 'user' && (name === 'alerts' || name === 'scheduled') && (used[name] || 0) === 0;
+    if (!userBorrowsIdle) mustLeave += unused[name] || 0;
   }
   return total + 1 + mustLeave <= input.ceiling;
+}
+
+function takesFrom(lane: AvLane, start: Partial<Record<AvLane, number>>, ceiling?: number, reserve?: Record<AvLane, number>): number {
+  const usedByLane: Record<AvLane, number> = { user: 0, alerts: 0, scheduled: 0, backfill: 0, ...start };
+  let total = AV_LANES.reduce((sum, name) => sum + usedByLane[name], 0);
+  let n = 0;
+  while (decideAvTake({ lane, usedTotal: total, usedByLane, ceiling, reserve }).allow) {
+    usedByLane[lane] += 1;
+    total += 1;
+    n += 1;
+    if (n > 1000) break;
+  }
+  return n;
 }
 
 describe('shared AV limiter', () => {
@@ -85,11 +110,15 @@ describe('shared AV limiter', () => {
     vi.useRealTimers();
   });
 
-  it('keeps split at 600 and 540 mode inside the licence, with Jarvis at 120 in both', () => {
+  it('adds the fallbacks in both modes and refuses 540 + 61', () => {
     const split = avBudgetPlanForMode('split');
     expect(AV_CEILING_PER_MIN).toBe(300);
     expect(split.reserves).toEqual({ user: 50, alerts: 30, scheduled: 100, backfill: 120 });
     expect(split.jarvisFloor).toBe(120);
+    expect(split.webFallback).toBe(80);
+    expect(split.workerFallback).toBe(100);
+    expect(split.jarvisFallback).toBe(120);
+    expect(split.worstCase).toBe(300 + 80 + 100 + 120);
     expect(split.worstCase).toBe(600);
     expect(AV_ALLOWANCE_SUM).toBe(AV_LICENCE_PER_MIN);
     expect(AV_LANES.reduce((sum, lane) => sum + AV_LANE_RESERVE[lane], 0)).toBe(300);
@@ -98,11 +127,53 @@ describe('shared AV limiter', () => {
     expect(wide.ceiling).toBe(AV_540_CEILING_PER_MIN);
     expect(wide.reserves).toEqual({ user: 90, alerts: 54, scheduled: 180, backfill: 216 });
     expect(wide.jarvisFloor).toBe(216);
-    expect(wide.worstCase).toBe(540);
-    expect(wide.worstCase).toBeLessThanOrEqual(600);
+    expect(wide.webFallback).toBe(AV_540_FALLBACK_PER_MIN);
+    expect(wide.workerFallback).toBe(20);
+    expect(wide.jarvisFallback).toBe(20);
+    expect(wide.worstCase).toBe(540 + 20 + 20 + 20);
+    expect(wide.worstCase).toBe(600);
     expect(AV_LANES.reduce((sum, lane) => sum + reservesForCeiling(AV_WEB_FALLBACK_PER_MIN)[lane], 0)).toBe(AV_WEB_FALLBACK_PER_MIN);
+    expect(reservesForCeiling(20, wide.reserves, wide.ceiling)).toEqual({ user: 3, alerts: 2, scheduled: 7, backfill: 8 });
     expect(() => readAvBudgetMode({ AV_BUDGET_MODE: 'wide' } as NodeJS.ProcessEnv)).toThrow(/AV_BUDGET_MODE=wide/);
     expect(() => refuseIllegalAvBudget({ ...split, worstCase: 601 })).toThrow(/AV_BUDGET_MODE=split/);
+    expect(() => refuseIllegalAvBudget({ ...wide, webFallback: 21 })).toThrow(/AV_BUDGET_MODE=540/);
+    expect(() => refuseIllegalAvBudget({ ...wide, webFallback: 21 })).toThrow(/601/);
+    expect(() => applyAvBudgetForTests({ AV_BUDGET_MODE: '540' })).not.toThrow();
+    expect(fallbackBudget('web')).toEqual({
+      ceiling: 20,
+      reserve: { user: 3, alerts: 2, scheduled: 7, backfill: 8 },
+    });
+    expect(fallbackBudget('worker')).toEqual({
+      ceiling: 20,
+      reserve: { user: 0, alerts: 0, scheduled: 20, backfill: 0 },
+    });
+    expect(fallbackBudget('jarvis')).toEqual({
+      ceiling: 20,
+      reserve: { user: 0, alerts: 0, scheduled: 0, backfill: 20 },
+    });
+    expect(() => refuseIllegalAvBudget({ ...wide, jarvisFallback: 1 })).not.toThrow();
+    expect(() => refuseIllegalAvBudget({ ...wide, jarvisFloor: 119 })).toThrow(/AV_BUDGET_MODE=540/);
+    applyAvBudgetForTests({ AV_BUDGET_MODE: 'split' });
+  });
+
+  it('treats reserves as minimums the user can borrow past, without giving away the other floors', () => {
+    const idle = { user: 50, alerts: 0, scheduled: 0, backfill: 0 };
+    expect(decideAvTake({ lane: 'user', usedTotal: 50, usedByLane: idle }).allow).toBe(true);
+    expect(takesFrom('user', idle)).toBe(130);
+    expect(decideAvTake({ lane: 'user', usedTotal: 180, usedByLane: { user: 180, alerts: 0, scheduled: 0, backfill: 0 } }).allow).toBe(false);
+
+    const userLoad = { user: 180, alerts: 0, scheduled: 0, backfill: 0 };
+    expect(takesFrom('backfill', userLoad)).toBe(120);
+    expect(decideAvTake({ lane: 'user', usedTotal: 180, usedByLane: userLoad }).allow).toBe(false);
+
+    const fair = { user: 50, alerts: 0, scheduled: 0, backfill: 0 };
+    expect(takesFrom('alerts', fair)).toBe(30);
+    expect(takesFrom('scheduled', fair)).toBe(100);
+    expect(takesFrom('backfill', fair)).toBe(120);
+
+    const scheduledStarted = { user: 50, alerts: 0, scheduled: 1, backfill: 0 };
+    expect(takesFrom('scheduled', scheduledStarted)).toBe(99);
+    expect(takesFrom('user', scheduledStarted)).toBeLessThan(130);
   });
 
   it('lets a user take a token when backfill has used its 120 floor', () => {
@@ -164,7 +235,10 @@ describe('shared AV limiter', () => {
     for (let i = 0; i < 90; i += 1) {
       if (await avTryTake({ lane: 'user', feature: 'page' }, webAt + i)) web += 1;
     }
-    expect(web).toBe(AV_WEB_FALLBACK_PER_MIN);
+    const webSplit = reservesForCeiling(AV_WEB_FALLBACK_PER_MIN);
+    expect(web).toBe(AV_WEB_FALLBACK_PER_MIN - webSplit.backfill);
+    expect(web).toBeGreaterThan(webSplit.user);
+    expect(fallbackBudget('web').ceiling).toBe(AV_WEB_FALLBACK_PER_MIN);
   });
 
   it('logs the fallback warning once per five minutes, not once per call', async () => {

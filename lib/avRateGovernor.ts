@@ -29,7 +29,7 @@ export async function avTakeToken(budget?: Partial<AvBudget>): Promise<void> {
   await takeSharedToken(budget);
 }
 
-/** Non-blocking shared take. False means the ceiling or a higher lane's reserve is full. */
+/** Non-blocking shared take. False means the ceiling or another lane's minimum is full. */
 export async function avTryToken(budget?: Partial<AvBudget>): Promise<boolean> {
   return avTryTake(budget);
 }

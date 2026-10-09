@@ -15,9 +15,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config();
-// AV_PROCESS_ROLE selects the 120/min fallback. The feature name does not.
-// AV_BUDGET_MODE=split: shared 300 + fallbacks 80/100/120 = 600, Jarvis floor 120.
-// AV_BUDGET_MODE=540: shared 540 with those fallbacks inside it, Jarvis floor 216.
+// The entrypoint sets the role, so Render does not need AV_PROCESS_ROLE.
+// The feature name does not select the fallback.
+// split: shared 300 + fallbacks 80/100/120 = 600. Shared Jarvis floor 120. This process's fallback is 120 on backfill.
+// 540: shared 540 + fallbacks 20/20/20 = 600. Shared Jarvis floor 216. This process's fallback is 20 on backfill.
 process.env.AV_PROCESS_ROLE ??= 'jarvis';
 process.env.ALPHA_VANTAGE_RPM ??= '120';
 

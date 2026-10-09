@@ -22,6 +22,7 @@ import { Redis } from '@upstash/redis';
 import { sleep, TokenBucket } from '../lib/rateLimiter';
 import { avTakeToken } from '../lib/avRateGovernor';
 import { runWithAvBudget } from '../lib/avLimiter';
+// The entrypoint sets the role, so Render does not need AV_PROCESS_ROLE.
 process.env.AV_PROCESS_ROLE ??= 'worker';
 import { calculateAllIndicators, detectSqueeze, getIndicatorWarmupStatus, OHLCVBar } from '../lib/indicators';
 import { CACHE_KEYS, CACHE_TTL } from '../lib/redis';
