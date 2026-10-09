@@ -46,11 +46,29 @@ function ShadowLock({lock}:{lock?:LockState|null}){
  return <p className="text-xs text-slate-300 tabular-nums">Shadow portfolio lock (arms at open P&amp;L {money(lock.armUsd)}, triggers on a 40% fall from peak; tightens stops in shadow only): {lock.phase==='TRIGGERED'&&e?<>triggered {new Date(e.triggeredAt).toLocaleString()} (peak {money(e.peakOpenPnl)} → {money(e.triggerOpenPnl)}); {e.positions.filter(p=>p.status!=='OPEN').length} of {e.positions.length} locked positions resolved.</>:<>watching · peak {money(lock.peakOpenPnl)} since {new Date(lock.since).toLocaleString()} · {lock.peakOpenPnl>=lock.armUsd?'armed':'not armed'}.</>} {done.length?<>Completed episodes: {done.length} · lock {lockSum>=0?'+':''}{lockSum.toFixed(2)}R vs ledger {ledgerSum>=0?'+':''}{ledgerSum.toFixed(2)}R on the same positions.</>:'No completed episodes yet.'}</p>;
 }
 export default function CryptoPaperAccount({now,refreshVersion=0,onRefresh}:{now:number;refreshVersion?:number;onRefresh?:()=>void}){
- const [data,setData]=useState<State|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+ const [data,setData]=useState<State|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[needsRefresh,setNeedsRefresh]=useState(false),[actionNotice,setActionNotice]=useState('');
  async function load(action?:'enable'|'pause'|'cycle'|'auto_enable'|'auto_pause'){
-  setBusy(true);setError('');setNotice('');
-  try{const r=await fetch('/api/admin/crypto-markets/paper',{method:action?'POST':'GET',cache:'no-store',...(action?{headers:{'Content-Type':'application/json'},body:JSON.stringify({action})}:{})}),b=await r.json();if(!r.ok)throw Error(b.error||'Paper account unavailable');setData(b);publishPaperSnapshot(b);if(b.cycle?.reason)setNotice(b.cycle.reason);}
-  catch(e){setError((e as Error).message);}finally{setBusy(false);}
+  setBusy(true);setError('');setNotice('');if(action)setActionNotice('');
+  try{
+   const r=await fetch('/api/admin/crypto-markets/paper',{method:action?'POST':'GET',cache:'no-store',...(action?{headers:{'Content-Type':'application/json'},body:JSON.stringify({action})}:{})}),b=await r.json();
+   if(action){
+    const labels:Record<string,string>={auto_enable:'Enable background scans',auto_pause:'Pause background scans',enable:'Enable paper entries',pause:'Pause paper entries',cycle:'Paper cycle'};
+    const status=b.actionResult?.status;
+    const steps:Record<string,string>={background_scans:'Background scan setting',paper_entries:'Paper entry setting',base_entries:'Base entry setting',paper_cycle:'Paper cycle',base_cycle:'Base cycle'};
+    const detail=(b.actionResult?.steps??[]).map((step:{name:string;status:string})=>`${steps[step.name]??'Action step'}: ${step.status}`).join('; ');
+    setActionNotice(`${labels[action]}: ${status==='completed'?'completed':status==='skipped'?'skipped':status==='partial'?'partially confirmed':'outcome unconfirmed'}.${detail?' '+detail:''}`);
+   }
+   if(!r.ok)throw Error(b.error||'Paper account unavailable');
+   if(b.snapshot?.status==='unavailable'){
+    setNeedsRefresh(true);setNotice('Account refresh unavailable. Showing the previous snapshot, if any. Refresh saved state before another action.');return;
+   }
+   setData(b);publishPaperSnapshot(b);setNeedsRefresh(b.actionResult?.status==='partial'||b.actionResult?.status==='unknown');
+   if(b.actionResult?.status==='partial')setNotice('Some steps are unconfirmed. Refresh saved state before another action.');
+   else if(b.cycle?.reason)setNotice(b.cycle.reason);
+  }
+  catch(e){setNeedsRefresh(true);setError(action?'Action outcome may be incomplete. Refresh saved state before deciding whether to retry.':(e as Error).message);if(action)setActionNotice(previous=>previous||'Action outcome unconfirmed.');}
+  finally{setBusy(false);}
+
  }
  useEffect(()=>{void load();},[refreshVersion]);
  // Adopt newer snapshots loaded by the attention strip so the summary and this table always match.
@@ -72,21 +90,23 @@ export default function CryptoPaperAccount({now,refreshVersion=0,onRefresh}:{now
   {p?<p className="text-lg tabular-nums">Entries <span className={p.status==='ACTIVE'?'text-emerald-300':'text-amber-300'}>{p.status}</span> · Equity {money(p.totalEquity)} · Cash {money(p.currentCash)} · Realised {money(p.realisedPnl)} · Open P&amp;L <span className={p.unrealisedPnl<0?'text-red-300':'text-emerald-300'}>{money(p.unrealisedPnl)}</span> <span className="text-xs text-slate-400">(before exit costs)</span></p>
    :data&&<p>No paper account yet. Enable it below; nothing is sent to an exchange.</p>}
   <div className="flex flex-wrap gap-3">
-   <button disabled={busy} onClick={()=>void load(p?.status==='ACTIVE'?'pause':'enable')} className="rounded bg-violet-800 px-3 py-2 disabled:opacity-50">{p?.status==='ACTIVE'?'Pause paper entries':p?'Resume paper entries':'Enable crypto paper account'}</button>
-   {p&&<button disabled={busy} onClick={()=>void load('cycle')} className="rounded border px-3 py-2">Run paper cycle</button>}
-   <button disabled={busy||!data} onClick={()=>void load(data?.automation?.enabled?'auto_pause':'auto_enable')} className="rounded border px-3 py-2">{data?.automation?.enabled?'Pause background scans':'Enable background scans'}</button>
-   <button disabled={busy} onClick={()=>onRefresh?onRefresh():void load()} className="rounded border px-3 py-2">Refresh paper account</button>
+   <button disabled={busy||needsRefresh} onClick={()=>void load(p?.status==='ACTIVE'?'pause':'enable')} className="rounded bg-violet-800 px-3 py-2 disabled:opacity-50">{p?.status==='ACTIVE'?'Pause paper entries':p?'Resume paper entries':'Enable crypto paper account'}</button>
+   {p&&<button disabled={busy||needsRefresh} onClick={()=>void load('cycle')} className="rounded border px-3 py-2 disabled:opacity-50">Run paper cycle</button>}
+   <button disabled={busy||needsRefresh||!data} onClick={()=>void load(data?.automation?.enabled?'auto_pause':'auto_enable')} className="rounded border px-3 py-2 disabled:opacity-50">{data?.automation?.enabled?'Pause background scans':'Enable background scans'}</button>
+   <button disabled={busy} onClick={()=>needsRefresh?void load():onRefresh?onRefresh():void load()} className="rounded border px-3 py-2 disabled:opacity-50">Refresh paper account</button>
   </div>
+  {actionNotice&&<p role="status" className="text-amber-200">{actionNotice}</p>}
+  {needsRefresh&&<p className="text-amber-200">Displayed account values may be stale. Refresh paper account before another action.</p>}
   {busy&&<p>Updating paper account…</p>}{error&&<p role="alert" className="text-red-300">{error}</p>}
   <ul className="space-y-1 text-sm">
    <li>Last cycle: {last?<>{last.title} · {new Date(last.createdAt).toLocaleString()}{cycleOverdue&&<span className="text-amber-300"> · OVERDUE — check monitoring</span>}</>:'no completed cycle recorded yet'}</li>
-   <li>Background scans: <span className={data?.automation?.enabled?'text-emerald-300':'text-amber-300'}>{data?.automation?.enabled?'ENABLED':'OFF'}</span>{data?.automation?.last&&<> · last batch {new Date(data.automation.last.at).toLocaleString()} · {data.automation.last.ok?'completed':<span className="text-red-300">FAILED {data.automation.last.error??''}</span>}</>} · manual scans remain available</li>
+   <li>Background scans{needsRefresh?' (previous snapshot)':''}: <span className={data?.automation?.enabled?'text-emerald-300':'text-amber-300'}>{data?.automation?.enabled?'ENABLED':'OFF'}</span>{data?.automation?.last&&<> · last batch {new Date(data.automation.last.at).toLocaleString()} · {data.automation.last.ok?'completed':<span className="text-red-300">FAILED {data.automation.last.error??''}</span>}</>} · manual scans remain available</li>
    {data&&noise&&<li>{data.stats?`${withR} of 30 closed trades with R`:'Closed trades with R could not be read.'} · Open risk {p?money(openRiskUsd):'—'} · cap {data.limits?.openRiskPct??'—'}%{p&&data.limits?` (${money(p.totalEquity*data.limits.openRiskPct/100)})`:''} · Cluster cap {data.limits?.clusterRiskPct??'—'}% of equity{p&&data.limits?.clusterRiskPct!=null?` (${money(p.totalEquity*data.limits.clusterRiskPct/100)})`:''}</li>}
    {clusters!==undefined&&<li>Correlated clusters (latest cycle): {clusters===null?'recheck unavailable':!clusters.length?'none at ≥0.7':clusters.map((x,i)=><span key={x.coins.join()} className={x.overCap?'text-red-300':''}>{i?'; ':''}{x.coins.join(' + ')} · risk {money(x.riskUsd)} of {money(x.capUsd)} cap{x.overCap?' · OVER CAP (not resized; new correlated entries blocked)':''}</span>)}</li>}
    <li>BTC daily trend: {data?.btcRegime?<>{data.btcRegime.state}{data.btcRegime.state!=='UNAVAILABLE'&&<> · close {data.btcRegime.close?.toLocaleString()} vs 20d {data.btcRegime.sma20?.toFixed(0)} / 50d {data.btcRegime.sma50?.toFixed(0)}</>} · 200-day {data.btcRegime.longTrend??'NOT_RECORDED'} · <span title={`${data.btcRegime.reason} · ${data.btcRegime.source}, candle ${data.btcRegime.asOf??'—'}`}>checked {new Date(data.btcRegime.checkedAt).toLocaleString()}</span>{now-Date.parse(data.btcRegime.checkedAt)>26*3600000?<span className="text-amber-300"> · STALE</span>:''}</>:'not checked yet (runs on the next entry cycle with candidates)'} · recorded on each entry; DOWN skips live-sleeve entries (the research sleeve still records them for comparison)</li>
    {last?.arcaReasoning&&<li className="text-slate-400">{last.arcaReasoning}</li>}
   </ul>
-  {!!noticeLines.length&&<div className="rounded border border-slate-700 p-3 text-sm"><p className="text-xs text-slate-400">Latest cycle notes</p><ul className="mt-1 list-disc space-y-1 pl-5">{noticeLines.map((line,i)=><li key={i}>{line}</li>)}</ul></div>}
+  {!!noticeLines.length&&<div className="rounded border border-slate-700 p-3 text-sm"><p className="text-xs text-slate-400">Account and cycle notes</p><ul className="mt-1 list-disc space-y-1 pl-5">{noticeLines.map((line,i)=><li key={i}>{line}</li>)}</ul></div>}
   {data?.limits&&!noise&&<p className="text-xs text-slate-400">BETA DATA-COLLECTION LIMITS: {data.limits.riskPerTradePct}% risk per trade, reduced by 1/√(1+n) when n open positions have ≥0.7 correlation over the last 30 4h returns (minimum 25%; missing history counts as correlated){data.limits.clusterRiskPct!=null?<> · combined risk of any correlated cluster (a new entry plus the open positions correlated with it) capped at {data.limits.clusterRiskPct}% of equity; existing positions are never resized, an over-cap cluster is logged and blocks new correlated entries</>:null} · targets 2R from the actual fill (rule fill-2R-v1; earlier trades used 2R above the signal close) · {data.limits.notionalPct}% maximum notional per position · at most {data.limits.maxPairVolumePct}% of the pair's 24h volume (volume evidence under {data.limits.maxVolumeAgeHours}h old or no entry) · {data.limits.positions} open positions · {data.limits.openRiskPct}% open-risk cap · {data.limits.dailyEntries} entries per day · pause new entries below {100-data.limits.lossFromStartPct}% of starting equity. Raised to collect more trade outcomes; open positions are often correlated, so account-level drawdown is not representative of a live allocation. Judge the strategy by expectancy in R below.</p>}
   <details className="rounded border border-slate-700 p-3"><summary className="cursor-pointer text-sm">How the paper account works (sleeves, schedule, exits, conversion, fees)</summary>
   <p className="text-xs text-slate-400"><b>Two sleeves.</b> Research sleeve: today's beta limits; it records an entry the live sleeve refused. Live sleeve: one open position per correlation cluster; a new entry is refused when that cluster is already over the cap, and open positions are not resized. Both are independent $200,000 paper ledgers taking Coinbase USD and OKX USDT momentum breakouts and continuations with no daily base requirement. OKX prices are converted into USD using observed Coinbase USDT/USD quotes. Other venues remain research-only.</p>
