@@ -25,7 +25,7 @@ export const FREE_COPY = {
   scanLimit: (n: number) => `Today’s ${n} scans are used. Pro includes unlimited scans.`,
   price: 'Price', rsi: 'RSI', coverage: 'Coverage', scanSource: 'Scanner', lastBar: 'Last completed bar', fullAnalysis: 'Open full analysis',
   treasury: 'US Treasury · 10 year', inflation: 'Inflation rate', macroSource: 'Macro database', observation: 'Published observation', deepMacro: 'Explore macro research',
-  picks: 'research picks',
+  picks: 'stored observations',
   seeAll: 'See all', loading: 'Loading…', unavailable: 'Not available right now', retry: 'Try again',
   signIn: 'Sign in', signedIn: 'Signed in. Opening your page…',
   upgrade: 'Unlock with Pro', guarantee: '7-day money-back guarantee', example: 'Example',
