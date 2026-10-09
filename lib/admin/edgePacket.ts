@@ -105,7 +105,8 @@ export interface AdminEdgePacket {
   timingScore: number;
   volatilityScore: number;
   liquidityScore: number;
-  optionsScore: number;
+  /** Options axis; null when there is no real options-chain data (it is then left out of the rank, not filled in). */
+  optionsScore: number | null;
   structureScore: number;
   trapRiskScore: number;              // higher = worse
   invalidationClarityScore: number;
@@ -227,7 +228,6 @@ export function projectEdgePacket(
   const liquidityScore = clamp01to100(
     0.6 * structureScore + 0.4 * deriveTargetClarity(packet),
   );
-  const optionsScore = clamp01to100(axes.options ?? 50);
   const trapRiskScore = clamp01to100(
     packet.trapDetection?.trapRiskScore ?? (packet.snapshot?.dve?.trap ? 70 : 20),
   );
@@ -241,6 +241,10 @@ export function projectEdgePacket(
   // synthetic options, unknown catalyst / regime / news, no crypto derivatives context.
   const dataTrustScore = clamp01to100(packet.dataTruth?.trustScore ?? 0);
   const completeness = evidenceCompleteness(packet);
+  // The options axis only counts with real options-chain data. Without it (today: always, the options engine is a
+  // synthetic placeholder and the axis is a cross-market proxy) it is left out of the rank rather than filled with 50.
+  const hasRealOptions = !completeness.missing.some((m) => m.startsWith("options"));
+  const optionsScore = hasRealOptions && Number.isFinite(axes.options) ? clamp01to100(axes.options as number) : null;
   const evidenceQualityScore = clamp01to100(dataTrustScore * completeness.factor);
 
   const opportunityRankScore = computeRankScore({
@@ -536,21 +540,25 @@ function computeRankScore(s: {
   timingScore: number;
   volatilityScore: number;
   liquidityScore: number;
-  optionsScore: number;
+  optionsScore: number | null;
   structureScore: number;
   trapRiskScore: number;
   invalidationClarityScore: number;
   evidenceQualityScore: number;
 }): number {
-  const raw =
-    0.22 * s.asymmetryScore +
-    0.18 * s.timingScore +
-    0.15 * s.volatilityScore +
-    0.12 * s.structureScore +
-    0.12 * s.liquidityScore +
-    0.11 * s.optionsScore +
-    0.10 * s.invalidationClarityScore -
-    0.20 * s.trapRiskScore;
+  // Positive axes are a weighted mean over the axes that have data (weights sum to 1 with options). A missing options
+  // axis is dropped and the rest re-weighted, so the scale is unchanged and nothing stands in for the missing value.
+  const parts: Array<[number, number]> = [
+    [0.22, s.asymmetryScore],
+    [0.18, s.timingScore],
+    [0.15, s.volatilityScore],
+    [0.12, s.structureScore],
+    [0.12, s.liquidityScore],
+    [0.10, s.invalidationClarityScore],
+  ];
+  if (s.optionsScore !== null) parts.push([0.11, s.optionsScore]);
+  const weight = parts.reduce((t, [w]) => t + w, 0);
+  const raw = parts.reduce((t, [w, v]) => t + w * v, 0) / weight - 0.20 * s.trapRiskScore;
   // Evidence cap: degraded data can never out-rank live.
   return clamp01to100((raw * s.evidenceQualityScore) / 100);
 }

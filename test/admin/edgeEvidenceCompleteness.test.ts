@@ -1,7 +1,7 @@
 /**
  * Evidence Quality reflects missing context (rules: missing options data reduces Evidence Quality, never a proxy):
  * synthetic options, unknown catalyst / regime / news, no crypto derivatives context. The opportunity rank keeps its
- * data-trust cap, so ranking is unchanged.
+ * data-trust cap. The options axis counts in the rank only with real options-chain data.
  */
 import { describe, expect, it } from "vitest";
 import { MISSING_CONTEXT_PENALTY, evidenceCompleteness, projectEdgePacket } from "../../lib/admin/edgePacket";
@@ -94,10 +94,22 @@ describe("Evidence Quality and missing context", () => {
     expect(missing.some((m) => m.startsWith("catalyst"))).toBe(false);
   });
 
-  it("does not change the opportunity rank (it keeps the data-trust cap)", () => {
-    const full = projectEdgePacket(basePacket({ optionsIntelligence: realOptions, earningsContext: knownEarnings }));
+  it("lowering Evidence Quality for missing catalyst / news does not change the opportunity rank", () => {
+    const full = projectEdgePacket(basePacket({ optionsIntelligence: syntheticOptions, earningsContext: knownEarnings }));
     const thin = projectEdgePacket(basePacket({ optionsIntelligence: syntheticOptions, newsContext: { status: "UNKNOWN", note: "" } }));
     expect(thin.evidenceQualityScore).toBeLessThan(full.evidenceQualityScore);
     expect(thin.opportunityRankScore).toBe(full.opportunityRankScore);
+  });
+
+  it("the options axis counts only with real options data; otherwise it is left out, not filled with 50", () => {
+    const axes = (options: number) => ({ ...basePacket().internalResearchScore, axes: { ...basePacket().internalResearchScore.axes, options } }) as AdminResearchPacket["internalResearchScore"];
+    const synthLow = projectEdgePacket(basePacket({ optionsIntelligence: syntheticOptions, internalResearchScore: axes(0) }));
+    const synthHigh = projectEdgePacket(basePacket({ optionsIntelligence: syntheticOptions, internalResearchScore: axes(100) }));
+    expect(synthLow.optionsScore).toBeNull();
+    expect(synthHigh.opportunityRankScore).toBe(synthLow.opportunityRankScore); // proxy value has no effect
+    const realLow = projectEdgePacket(basePacket({ optionsIntelligence: realOptions, internalResearchScore: axes(0) }));
+    const realHigh = projectEdgePacket(basePacket({ optionsIntelligence: realOptions, internalResearchScore: axes(100) }));
+    expect(realLow.optionsScore).toBe(0);
+    expect(realHigh.opportunityRankScore).toBeGreaterThan(realLow.opportunityRankScore);
   });
 });
