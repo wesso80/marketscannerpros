@@ -32,8 +32,8 @@ is fully open, and `/api/scanner/`, `/api/jobs/`, `/api/alerts/`, `/api/catalyst
 
 ## P2: tidy-up
 
-- `_check_picks.js`, `_mock.json` at repo root: scratch files, tracked. Remove.
-- `/api/options` returns HTTP 301 with a JSON body (deprecated): make it 410.
+- ~~`_check_picks.js`, `_mock.json` at repo root: scratch files, tracked. Remove.~~ Removed.
+- ~~`/api/options` returns HTTP 301 with a JSON body (deprecated): make it 410.~~ Now 410 via `retiredRouteResponse()`.
 - `/api/migrations/daily-picks` still accepts the admin secret as a `?key=` query parameter (logged in URLs). Header only.
 - `app/tools/signal-accuracy` shows historical R:R: fine if labelled as history; confirm.
 - Dead code waiting on Codex's test edits: `components/msp/options/**`, `src/features/goldenEgg/GoldenEggPage.tsx`.

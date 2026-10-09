@@ -1,18 +1,10 @@
-import { NextResponse } from 'next/server';
-import { redirect } from 'next/navigation';
+import { retiredRouteResponse } from '@/lib/api/retiredRoute';
 
-// Deprecated — use /api/options-scan instead
+// Retired: the old options endpoint answered with a 301 JSON pointer to /api/options-scan and has no caller in the app.
 export async function POST() {
-  return NextResponse.json(
-    { success: false, error: 'Options API has moved to /api/options-scan', redirect: '/api/options-scan' },
-    { status: 301 }
-  );
+  return retiredRouteResponse();
 }
 
 export async function GET() {
-  return NextResponse.json(
-    { success: false, error: 'Options API has moved to /api/options-scan', redirect: '/api/options-scan' },
-    { status: 301 }
-  );
+  return retiredRouteResponse();
 }
-
