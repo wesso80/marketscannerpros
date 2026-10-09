@@ -1,3 +1,4 @@
+import { loadJournalExpectancy, unavailableJournalExpectancy, type JournalExpectancyItem, type JournalExpectancyDashboard } from "./journalExpectancy";
 import { accountChecklistStatus, accountDisplaySize } from '@/lib/admin/accountPresentation';
 import { reviewStoredCatalyst } from '@/lib/catalyst/researchIntegrity';
 import { q } from "@/lib/db";
@@ -175,25 +176,8 @@ export type MorningOutcomeGrade = {
   }>;
 };
 
-export type MorningExpectancyItem = {
-  key: string;
-  sample: number;
-  winRate: number | null;
-  avgR: number;
-  totalR: number;
-  profitFactor: number | null;
-  note: string;
-};
-
-export type MorningExpectancyDashboard = {
-  generatedAt: string;
-  sampleTrades: number;
-  bestSymbols: MorningExpectancyItem[];
-  weakestSymbols: MorningExpectancyItem[];
-  bestPlaybooks: MorningExpectancyItem[];
-  weakestPlaybooks: MorningExpectancyItem[];
-  notes: string[];
-};
+export type MorningExpectancyItem = JournalExpectancyItem;
+export type MorningExpectancyDashboard = JournalExpectancyDashboard;
 
 export type MorningRiskGovernor = {
   mode: "NORMAL" | "THROTTLED" | "DEFENSIVE" | "LOCKED";
@@ -1108,7 +1092,7 @@ export function renderMorningBriefEmail(brief: MorningBrief): string {
             ${miniCell("Risk Source", brief.risk.source.replace("_", " ").toUpperCase())}
             ${miniCell("Worker Freshness", brief.universe.workerStatus.freshness.toUpperCase())}
             ${miniCell("Scanner Health", `${brief.health.scanner} / ${brief.health.feed}`)}
-            ${miniCell("Learning Sample", `${brief.learning.labeled + brief.learning.briefFeedbackTotal} labels / ${brief.expectancy.sampleTrades} trades`)}
+            ${miniCell("Learning Sample", `${brief.learning.labeled + brief.learning.briefFeedbackTotal} labels / ${brief.expectancy.sampleTrades ?? "unavailable"} trades`)}
           </tr>
         </table>
         <p style="margin:12px 0 0;color:#94a3b8;font-size:13px;line-height:1.5;">${escapeHtml(brief.universe.workerStatus.note)} ${escapeHtml(brief.risk.notes[0] || "Risk source unavailable.")}</p>
@@ -2001,47 +1985,8 @@ async function buildPreviousBriefOutcomeGrade(workspaceIdOverride?: string): Pro
 }
 
 async function loadExpectancyDashboard(workspaceIdOverride?: string): Promise<MorningExpectancyDashboard> {
-  const generatedAt = new Date().toISOString();
-  const workspaceId = workspaceIdOverride ?? await resolveOperatorWorkspaceId();
-  if (!workspaceId) {
-    return {
-      generatedAt,
-      sampleTrades: 0,
-      bestSymbols: [],
-      weakestSymbols: [],
-      bestPlaybooks: [],
-      weakestPlaybooks: [],
-      notes: ["No operator workspace found; expectancy will activate once journal trades are available."],
-    };
-  }
-  try {
-    const [symbolRows, playbookRows] = await Promise.all([
-      q<any>(expectancySql("symbol"), [workspaceId]).catch(() => []),
-      q<any>(expectancySql("COALESCE(NULLIF(strategy, ''), NULLIF(setup, ''), NULLIF(trade_type, ''), 'Unclassified')"), [workspaceId]).catch(() => []),
-    ]);
-    const symbolItems = symbolRows.map(expectancyItemFromRow);
-    const playbookItems = playbookRows.map(expectancyItemFromRow);
-    const sampleTrades = symbolItems.reduce((sum, item) => sum + item.sample, 0);
-    return {
-      generatedAt,
-      sampleTrades,
-      bestSymbols: symbolItems.filter((item) => item.sample >= 2).sort((a, b) => b.avgR - a.avgR).slice(0, 4),
-      weakestSymbols: symbolItems.filter((item) => item.sample >= 2).sort((a, b) => a.avgR - b.avgR).slice(0, 4),
-      bestPlaybooks: playbookItems.filter((item) => item.sample >= 2).sort((a, b) => b.avgR - a.avgR).slice(0, 4),
-      weakestPlaybooks: playbookItems.filter((item) => item.sample >= 2).sort((a, b) => a.avgR - b.avgR).slice(0, 4),
-      notes: buildExpectancyNotes(sampleTrades, symbolItems, playbookItems),
-    };
-  } catch {
-    return {
-      generatedAt,
-      sampleTrades: 0,
-      bestSymbols: [],
-      weakestSymbols: [],
-      bestPlaybooks: [],
-      weakestPlaybooks: [],
-      notes: ["Expectancy query failed; using feedback scorecards only for this brief."],
-    };
-  }
+  try { return await loadJournalExpectancy(workspaceIdOverride ?? await resolveOperatorWorkspaceId()); }
+  catch { return unavailableJournalExpectancy("Journal expectancy unavailable: operator workspace could not be resolved."); }
 }
 
 function buildMorningRiskGovernor(
@@ -2067,7 +2012,7 @@ function buildMorningRiskGovernor(
     ? "LOCKED"
     : risk.dailyDrawdown >= 0.02 || risk.correlationRisk >= 0.65 || sessionScore.disciplineScore < 70
       ? "DEFENSIVE"
-      : expectancy.sampleTrades < 30
+      : (expectancy.validRCount ?? 0) < 30
         ? "THROTTLED"
         : "NORMAL";
   const maxRiskPerTradePct = mode === "NORMAL" ? 0.01 : mode === "THROTTLED" ? 0.0075 : mode === "DEFENSIVE" ? 0.005 : 0;
@@ -2708,66 +2653,6 @@ function buildOutcomeGradeSummary(
 ) {
   if (grade === "INC") return `${unreviewed} play${unreviewed === 1 ? "" : "s"} still need review; current outcome is ${worked} worked, ${failed} failed, ${missed} missed.`;
   return `Grade ${grade}: ${worked} worked, ${failed} failed, ${missed} missed, ${invalidated} invalidated. Journal result ${formatUsd(totalPl)}, ${totalR.toFixed(2)}R.`;
-}
-
-function expectancySql(groupExpression: string) {
-  return `
-    SELECT ${groupExpression} AS key,
-           COUNT(*)::int AS sample,
-           COUNT(*) FILTER (WHERE outcome = 'win' OR COALESCE(pl::numeric, 0) > 0)::int AS wins,
-           COALESCE(AVG(COALESCE(r_multiple::numeric, dynamic_r::numeric, normalized_r::numeric, 0)), 0)::text AS avg_r,
-           COALESCE(SUM(COALESCE(r_multiple::numeric, dynamic_r::numeric, normalized_r::numeric, 0)), 0)::text AS total_r,
-           COALESCE(SUM(GREATEST(COALESCE(r_multiple::numeric, dynamic_r::numeric, normalized_r::numeric, 0), 0)), 0)::text AS gross_win_r,
-           ABS(COALESCE(SUM(LEAST(COALESCE(r_multiple::numeric, dynamic_r::numeric, normalized_r::numeric, 0), 0)), 0))::text AS gross_loss_r
-    FROM journal_entries
-    WHERE workspace_id = $1
-      AND is_open = FALSE
-      AND COALESCE(exit_date, trade_date) >= CURRENT_DATE - INTERVAL '90 days'
-    GROUP BY ${groupExpression}
-    ORDER BY sample DESC
-    LIMIT 40
-  `;
-}
-
-function expectancyItemFromRow(row: any): MorningExpectancyItem {
-  const sample = Number(row.sample ?? 0);
-  const wins = Number(row.wins ?? 0);
-  const avgR = Number(row.avg_r ?? 0);
-  const totalR = Number(row.total_r ?? 0);
-  const grossWin = Number(row.gross_win_r ?? 0);
-  const grossLoss = Number(row.gross_loss_r ?? 0);
-  const profitFactor = grossLoss > 0 ? grossWin / grossLoss : grossWin > 0 ? null : 0;
-  return {
-    key: String(row.key || "Unknown"),
-    sample,
-    winRate: sample > 0 ? wins / sample : null,
-    avgR,
-    totalR,
-    profitFactor,
-    note: `${sample} trade sample, avg ${avgR.toFixed(2)}R, total ${totalR.toFixed(2)}R.`,
-  };
-}
-
-function buildExpectancyNotes(
-  sampleTrades: number,
-  symbols: MorningExpectancyItem[],
-  playbooks: MorningExpectancyItem[],
-) {
-  if (sampleTrades === 0) return ["No closed-trade sample found yet; use scanner evidence and manual review labels first."];
-  const bestSymbol = symbols.filter((item) => item.sample >= 2).sort((a, b) => b.avgR - a.avgR)[0];
-  const weakPlaybook = playbooks.filter((item) => item.sample >= 2).sort((a, b) => a.avgR - b.avgR)[0];
-  const sampleNote =
-    sampleTrades < 30
-      ? `Sample is critically thin (${sampleTrades} trades). Do not treat any metric as calibrated; use scanner evidence and manual confirmation only.`
-      : sampleTrades < 100
-        ? `Sample is still developing (${sampleTrades} trades). Treat metrics as directional indicators, not stable calibrations.`
-        : null;
-  return [
-    `${sampleTrades} closed journal trades are feeding expectancy over the last 90 days.`,
-    ...(sampleNote ? [sampleNote] : []),
-    bestSymbol ? `Best symbol expectancy: ${bestSymbol.key} at ${bestSymbol.avgR.toFixed(2)}R average.` : "Need at least two trades per symbol before symbol expectancy becomes meaningful.",
-    weakPlaybook ? `Weakest playbook sample: ${weakPlaybook.key} at ${weakPlaybook.avgR.toFixed(2)}R average; demand stronger confirmation.` : "Playbook expectancy still needs a deeper sample.",
-  ];
 }
 
 async function buildBriefComparison(
