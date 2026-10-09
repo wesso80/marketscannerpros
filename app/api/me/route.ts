@@ -98,6 +98,7 @@ export async function GET() {
       email: null,
       has_billing: false,
       is_manual_grant: false,
+      is_trial: false,
       trial_ends_at: null,
     });
   }
@@ -131,7 +132,8 @@ export async function GET() {
 
   const has_billing = rows.some((row) => isStripeCustomerId(typeof row.stripe_customer_id === 'string' ? row.stripe_customer_id.trim() : ''));
   const paid = effectiveTier === 'pro' || effectiveTier === 'pro_trader';
-  const is_manual_grant = paid && !has_billing && !isFreeForAllMode() && !isTrialAccess(session.cid, dbSub);
+  const is_trial = isTrialAccess(session.cid, dbSub);
+  const is_manual_grant = paid && !has_billing && !isFreeForAllMode() && !is_trial;
   const trial_ends_at = trialEndDate(session.cid, dbSub);
 
   return NextResponse.json({ 
@@ -142,6 +144,7 @@ export async function GET() {
     email: email || null,
     has_billing,
     is_manual_grant,
+    is_trial,
     trial_ends_at,
   });
 }

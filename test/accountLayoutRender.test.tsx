@@ -5,12 +5,13 @@ import {cleanup,fireEvent,render,screen,waitFor} from '@testing-library/react';
 import {AI_DAILY_LIMITS} from '@/lib/entitlements';
 import {ALERT_LIMITS} from '@/lib/alerts/planLimits';
 import {WATCHLIST_LIMITS} from '@/lib/tiers';
-const state=vi.hoisted(()=>({tier:'pro',publicPolicy:false,missing:false,failed:false,portal:false,manualGrant:false,hasBilling:true,trialEndsAt:null as string|null,requests:[] as string[]}));
-vi.mock('@/lib/useUserTier',()=>({useUserTier:()=>({tier:state.tier,isLoading:false,isLoggedIn:state.tier!=='anonymous'})}));
+const state=vi.hoisted(()=>({tier:'pro',publicPolicy:false,missing:false,failed:false,portal:false,manualGrant:false,hasBilling:true,isTrial:false,trialEndsAt:null as string|null,requests:[] as string[]}));
+vi.mock('@/lib/useUserTier',async()=>{const actual=await vi.importActual<typeof import('@/lib/useUserTier')>('@/lib/useUserTier');return {...actual,useUserTier:()=>({tier:state.tier,isLoading:false,isLoggedIn:state.tier!=='anonymous',email:null as string|null})};});
 vi.mock('next/navigation',()=>({redirect:(url:string)=>{throw Error(`redirect:${url}`);}}));
 import AccountPage from '@/app/account/page';
+import AccountSection from '@/app/tools/workspace/AccountSection';
 import ReferralsPage from '@/app/tools/referrals/page';
-beforeEach(()=>{vi.stubGlobal('React',React);state.tier='pro';state.publicPolicy=false;state.missing=false;state.failed=false;state.portal=false;state.manualGrant=false;state.hasBilling=true;state.trialEndsAt=null;state.requests=[];vi.stubGlobal('fetch',vi.fn(async(url,init)=>{state.requests.push(init?.method??'GET');if(String(url)==='/api/payments/portal')return {ok:!state.portal,status:state.portal?404:200,json:async()=>({error:state.portal?'no_billing_account':null,url:state.portal?null:'https://billing.example.test'})};return {ok:!state.failed,status:state.failed?503:200,json:async()=>String(url)==='/api/public-usage'?(state.publicPolicy?{enabled:true,quotas:[{kind:'ai',limit:20,completed:2,pending:1}]}:{enabled:false}):String(url)==='/api/entitlements'?(state.missing?{tier:'pro'}:{aiUsedToday:7}):String(url)==='/api/alerts'?{alerts:[{is_active:true},{is_active:true},{is_active:false}],quota:{used:1,max:100}}:String(url)==='/api/watchlists'?{watchlists:[{id:'1'},{id:'2'}]}:String(url)==='/api/referral/dashboard'?{referralUrl:'https://example.test/ref',stats:{conversions:0,creditsEarned:0,nextEntryProgress:0},contest:{period:'October 2026',drawDate:'2026-11-01',yourEntries:0,totalEntries:0},leaderboard:[],history:[]}:String(url)==='/api/me'?{email:'fixture@example.test',has_billing:state.hasBilling,is_manual_grant:state.manualGrant,trial_ends_at:state.trialEndsAt}:{email:'fixture@example.test',prefs:{}}};}));});
+beforeEach(()=>{vi.stubGlobal('React',React);state.tier='pro';state.publicPolicy=false;state.missing=false;state.failed=false;state.portal=false;state.manualGrant=false;state.hasBilling=true;state.isTrial=false;state.trialEndsAt=null;state.requests=[];vi.stubGlobal('fetch',vi.fn(async(url,init)=>{state.requests.push(init?.method??'GET');if(String(url)==='/api/payments/portal')return {ok:!state.portal,status:state.portal?404:200,json:async()=>({error:state.portal?'no_billing_account':null,url:state.portal?null:'https://billing.example.test'})};return {ok:!state.failed,status:state.failed?503:200,json:async()=>String(url)==='/api/public-usage'?(state.publicPolicy?{enabled:true,quotas:[{kind:'ai',limit:20,completed:2,pending:1}]}:{enabled:false}):String(url)==='/api/entitlements'?(state.missing?{tier:'pro'}:{aiUsedToday:7}):String(url)==='/api/alerts'?{alerts:[{is_active:true},{is_active:true},{is_active:false}],quota:{used:1,max:100}}:String(url)==='/api/watchlists'?{watchlists:[{id:'1'},{id:'2'}]}:String(url)==='/api/referral/dashboard'?{referralUrl:'https://example.test/ref',stats:{clicks:0,signups:0,conversions:0,creditsEarned:0,contestEntries:0,nextEntryProgress:0},contest:{period:'October 2026',drawDate:'2026-11-01',prizePool:'$500',yourEntries:0,totalEntries:0},leaderboard:[],history:[]}:String(url)==='/api/me'?{email:'fixture@example.test',has_billing:state.hasBilling,is_manual_grant:state.manualGrant,is_trial:state.isTrial,trial_ends_at:state.trialEndsAt}:{email:'fixture@example.test',prefs:{}}};}));});
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 it.each(['pro','pro_trader','free'])('uses existing limits and closed folds for %s',async tier=>{
  state.tier=tier;
@@ -44,10 +45,19 @@ it('shows a manual grant from /api/me and hides Manage Billing', async () => {
 });
 it('shows a trial end date from /api/me and hides Manage Billing', async () => {
  state.hasBilling=false;
+ state.isTrial=true;
  state.trialEndsAt='2026-12-01';
  render(<AccountPage/>);
  expect(await screen.findByText('Pro trial · ends 2026-12-01')).toBeTruthy();
  expect(screen.queryByText('Pro access granted manually')).toBeNull();
+ expect(screen.queryByRole('button', { name: 'Manage Billing' })).toBeNull();
+});
+it('shows Pro trial when a trial has no end date', async () => {
+ state.hasBilling=false;
+ state.isTrial=true;
+ render(<AccountPage/>);
+ expect(await screen.findByText('Pro trial')).toBeTruthy();
+ expect(screen.queryByText('Active · Renewal date in billing portal')).toBeNull();
  expect(screen.queryByRole('button', { name: 'Manage Billing' })).toBeNull();
 });
 it('shows the paid plan label and Manage Billing when /api/me reports billing', async () => {
@@ -88,3 +98,41 @@ it('redirects the referral page to the embedded card',()=>{
 });
 
 it('uses the active public Copilot quota instead of the legacy Analyst allowance',async()=>{state.publicPolicy=true;render(<AccountPage/>);await screen.findByText('3 / 20');expect(screen.getByText('MSP Copilot')).toBeTruthy();expect(screen.queryByText('MSP AI Analyst')).toBeNull();});
+
+it('workspace account shows Manage Billing only when paid and billed', async () => {
+ render(<AccountSection />);
+ expect(await screen.findByRole('button', { name: 'Manage Billing' })).toBeTruthy();
+ expect(screen.getByText('Active · Renewal date in billing portal')).toBeTruthy();
+});
+it('workspace account labels a manual grant on load and hides Manage Billing', async () => {
+ state.manualGrant=true;
+ state.hasBilling=false;
+ render(<AccountSection />);
+ expect(await screen.findByText('Pro access granted manually')).toBeTruthy();
+ expect(screen.queryByText('Active · Renewal date in billing portal')).toBeNull();
+ expect(screen.queryByRole('button', { name: 'Manage Billing' })).toBeNull();
+});
+it('workspace account shows a dated trial from /api/me', async () => {
+ state.hasBilling=false;
+ state.isTrial=true;
+ state.trialEndsAt='2026-12-01';
+ render(<AccountSection />);
+ expect(await screen.findByText('Pro trial · ends 2026-12-01')).toBeTruthy();
+ expect(screen.queryByRole('button', { name: 'Manage Billing' })).toBeNull();
+});
+it('workspace account shows Pro trial when the trial has no end date', async () => {
+ state.hasBilling=false;
+ state.isTrial=true;
+ render(<AccountSection />);
+ expect(await screen.findByText('Pro trial')).toBeTruthy();
+ expect(screen.queryByText('Active · Renewal date in billing portal')).toBeNull();
+ expect(screen.queryByRole('button', { name: 'Manage Billing' })).toBeNull();
+});
+it('workspace account keeps the paid label when the portal reports no billing account', async () => {
+ state.portal=true;
+ render(<AccountSection />);
+ fireEvent.click(await screen.findByRole('button', { name: 'Manage Billing' }));
+ expect(await screen.findByText("There's no billing account on this login yet. Pro access here isn't billed through Stripe.")).toBeTruthy();
+ expect(screen.getByText('Active · Renewal date in billing portal')).toBeTruthy();
+ expect(screen.queryByText('Pro access granted manually')).toBeNull();
+});

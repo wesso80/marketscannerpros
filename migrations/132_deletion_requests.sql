@@ -4,6 +4,7 @@
 -- no-op on production. Apply by hand; this file is not executed by the app.
 
 CREATE TABLE IF NOT EXISTS deletion_requests (
+    id SERIAL PRIMARY KEY,
     workspace_id TEXT NOT NULL UNIQUE,
     customer_id TEXT,
     requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

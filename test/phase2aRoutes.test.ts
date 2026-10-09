@@ -62,6 +62,7 @@ it.each([
       source,
       destination,
       permanent: true,
+      ...(String(source).startsWith("/partners") ? { statusCode: 301 } : {}),
     });
     expect(
       existsSync(

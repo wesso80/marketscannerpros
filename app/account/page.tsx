@@ -38,6 +38,7 @@ export default function AccountPage() {
   const [billingNote, setBillingNote] = useState<string | null>(null);
   const [manualGrant, setManualGrant] = useState(false);
   const [hasBilling, setHasBilling] = useState(false);
+  const [isTrial, setIsTrial] = useState(false);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>({
     inAppEnabled: true,
@@ -63,6 +64,7 @@ export default function AccountPage() {
         if (data?.email) setEmail(data.email);
         setManualGrant(data?.is_manual_grant === true);
         setHasBilling(data?.has_billing === true);
+        setIsTrial(data?.is_trial === true);
         setTrialEndsAt(typeof data?.trial_ends_at === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.trial_ends_at) ? data.trial_ends_at : null);
       })
       .catch(() => {});
@@ -335,8 +337,8 @@ export default function AccountPage() {
                   <div className="text-xs text-white/60">
                     {normalizedTier === "free"
                       ? "Free tier · Upgrade any time"
-                      : trialEndsAt
-                        ? `Pro trial · ends ${trialEndsAt}`
+                      : isTrial
+                        ? (trialEndsAt ? `Pro trial · ends ${trialEndsAt}` : "Pro trial")
                         : manualGrant
                           ? "Pro access granted manually"
                           : "Active · Renewal date in billing portal"}

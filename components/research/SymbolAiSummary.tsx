@@ -60,7 +60,7 @@ export default function SymbolAiSummary({ symbol, type, timeframe, expiry }: { s
       </div>
       {data.narrative ? (
         <div data-summary-narrative className="rounded-2xl border border-indigo-300/20 bg-[linear-gradient(135deg,rgba(99,102,241,0.12),rgba(17,23,38,1))] p-5">
-          <div className="mb-1 text-xs text-slate-400">AI-written summary ({data.narrativeSource}); it can be wrong, so check it against the evidence above</div>
+          <div className="mb-1 text-xs text-slate-400">AI summary. It can be wrong, so check it against the evidence above.</div>
           <p className="whitespace-pre-wrap break-words leading-5">{data.narrative}</p>
         </div>
       ) : <p className="text-xs text-slate-400">AI text unavailable; the evidence above is complete without it.</p>}
