@@ -42,3 +42,15 @@ The shared `/api/cron/label-ai-outcomes` route was already allowed and remains u
 Verify production schema/migration availability and saved evidence completeness using read-only access. Then, on an authorized preview/deployment, check the seven pages with an admin session and the denial paths with signed-out/non-admin sessions. These local tests do not establish production schema readiness or live browser layout. No deployment was requested or performed here.
 
 Next recommended task: a read-only production schema and evidence-coverage check, recording what is available versus missing without running migrations, rebuilding briefs or changing scores.
+
+## Independent review follow-ups (Claude, 9 Oct)
+
+- **Stale saved brief:** while paused, every Morning Brief builder is off, so the newest saved brief only gets older.
+  The page now shows a warning above any saved brief more than 6 hours old. It gives the age and build time and says
+  the cache status, desk state and plays describe that time, not now. It uses the same thresholds as the API's
+  `truth.freshness` (`lib/admin/morningBriefFreshness.ts`).
+- **Test isolation:** `test/admin/discoveryOnly.test.ts` sets `ADMIN_DISCOVERY_ONLY=true` for every test. Before
+  this, 93 of its 159 tests failed when the environment had `ADMIN_DISCOVERY_ONLY=false`.
+- **Not changed:** `/api/cron/label-ai-outcomes` still accepts an admin session while discovery-only is on. The page
+  button is disabled, but the server does not refuse a direct call. This matches the deployed behaviour and the
+  handoff ("do not claim the shared labeler is globally paused"). Closing it is a separate decision.

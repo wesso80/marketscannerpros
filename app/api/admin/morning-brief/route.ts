@@ -11,6 +11,7 @@
  * Legacy: GET with ?symbols=A,B builds a live brief for that custom list and returns it WITHOUT saving it.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { morningBriefFreshness } from "@/lib/admin/morningBriefFreshness";
 import { requireAdmin } from "@/lib/adminAuth";
 import {
   buildMorningBrief,
@@ -46,7 +47,7 @@ function respond(saved: SavedMorningBrief, extra: Record<string, unknown> = {}) 
       { source: "admin:morning-brief", briefId: saved.brief.briefId },
       {
         source: "admin:morning-brief",
-        freshness: saved.ageSec <= 900 ? "real-time" : saved.ageSec <= 6 * 3600 ? "delayed" : "stale",
+        freshness: morningBriefFreshness(saved.ageSec),
         simulated: false,
         confidence: fromSaved ? "medium" : "high",
         confidenceReason: `Saved ${saved.source} brief from ${saved.ageLabel}${fromSaved ? ", built from the shared saved admin scan" : ""}.`,

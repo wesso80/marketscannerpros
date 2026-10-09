@@ -1,6 +1,7 @@
 "use client";
 
 import { useAdmin } from "@/app/admin/admin-client-layout";
+import { staleBriefWarning } from "@/lib/admin/morningBriefFreshness";
 import { accountDisplaySize } from "@/lib/admin/accountPresentation";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -594,6 +595,8 @@ export default function MorningBriefPage() {
     return new Date(brief.generatedAt).toLocaleString();
   }, [brief?.generatedAt]);
 
+  const staleWarning = staleBriefWarning(savedMeta, discoveryPaused);
+
   if (loading && !brief) {
     return <main className="min-h-screen bg-[#0F172A] p-6 text-white">Loading saved morning brief...</main>;
   }
@@ -601,6 +604,7 @@ export default function MorningBriefPage() {
   return (
     <main className="min-h-screen bg-[#0F172A] p-6 text-white">
       {discoveryPaused && <p role="status" className="mb-4 rounded-md border border-sky-400/20 bg-sky-400/5 p-3 text-sm text-sky-100">Saved brief only. Rebuilds, emails, plans and feedback are paused; reloading reads the saved snapshot.</p>}
+      {staleWarning && <p role="alert" className="mb-4 rounded-md border border-amber-400/40 bg-amber-400/10 p-3 text-sm font-semibold text-amber-100">{staleWarning}</p>}
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2">

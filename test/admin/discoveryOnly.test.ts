@@ -1,6 +1,8 @@
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { adminDiscoveryOnly, analyticsReadScope, adminNavVisibleWhilePaused, businessScope, discoveryOnlyAction } from '@/lib/admin/discoveryOnly';
+// Every test runs with discovery-only explicitly on, so a deployment or CI env value cannot change what is asserted.
+beforeEach(() => vi.stubEnv('ADMIN_DISCOVERY_ONLY', 'true'));
 afterEach(() => vi.unstubAllEnvs());
 it('defaults to the owner-requested discovery-only scope and can be explicitly restored', () => {
   vi.stubEnv('ADMIN_DISCOVERY_ONLY', undefined);
