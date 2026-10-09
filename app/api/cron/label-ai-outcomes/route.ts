@@ -81,7 +81,7 @@ function candidateSql(horizon: OutcomeHorizon): string {
  * Labels ai_signal_log rows per horizon:
  *   - 4h  → outcome_4h / price_after_4h / pct_move_4h (migration 103; skipped until it is applied)
  *   - 24h → outcome / price_after_24h / pct_move_24h (the columns behind the public win rates)
- *   - 6w / 12w → outcome_6w / outcome_12w and friends on DAILY bars (migration 105; skipped until it is applied;
+ *   - 6w / 12w → outcome_6w / outcome_12w and friends on DAILY bars (migrations 105 + 134 for provenance; skipped until both are applied;
  *     lib/outcomes/positionHorizonLabeller.ts)
  * A horizon is only labelled once it has passed AND a completed bar at/after it exists. Rows without a usable price,
  * direction (LONG/SHORT), entry price or supported asset type are left for a later run; anything still pending after

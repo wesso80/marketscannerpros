@@ -12,6 +12,9 @@
  * - Rows whose horizon bar is not there yet stay pending (NULL). Rows that can never be measured (history does not
  *   reach back to the call, a split in the window, no bars 30 days past the horizon) get outcome 'no_data' + a note.
  * - Every UPDATE is guarded on "still NULL for this horizon": overlapping runs cannot relabel a row.
+ * - Provenance (migration 134): every result, measured or no_data, is written with outcome_<h>_provenance in the same
+ *   UPDATE; the migration's trigger then makes that evidence immutable. Until 134 is run, 6w/12w labelling is skipped
+ *   (with a note) rather than writing results without provenance.
  */
 import { q } from '@/lib/db';
 import { avFetch } from '@/lib/avRateGovernor';
@@ -30,6 +33,13 @@ import {
 } from './positionHorizon';
 
 export const POSITION_MIGRATION_FILE = 'migrations/105_ai_signal_outcome_6w_12w.sql';
+export const POSITION_PROVENANCE_MIGRATION_FILE = 'migrations/134_ai_outcome_long_horizon_provenance.sql';
+/** Recorded in outcome_<h>_provenance; bump when the measurement rules in positionHorizon.ts change. */
+export const POSITION_PROVENANCE_METHOD = 'daily-bar-horizon-v1';
+const BAR_SOURCE: Record<OutcomeAssetClass, string> = {
+  equity: 'daily-cache+ohlcv_bars',
+  crypto: 'alpha-vantage-digital-currency-daily',
+};
 
 const SUPPORTED_ASSET_SQL = `LOWER(TRIM(asset_type)) IN ('equity','equities','stock','stocks','etf','crypto')`;
 const DIRECTIONAL_SQL = `UPPER(TRIM(COALESCE(trade_bias, ''))) IN ('LONG','SHORT')`;
@@ -43,6 +53,11 @@ export function positionHorizonColumns(h: PositionHorizon): string[] {
     `mfe_pct_${h}`, `mae_pct_${h}`, `first_hit_${h}`, `first_hit_${h}_date`, `r_multiple_${h}`, `bars_${h}`,
     `outcome_${h}_note`, `outcome_${h}_measured_at`,
   ];
+}
+
+/** Provenance column migration 134 adds, per horizon. */
+export function positionProvenanceColumn(h: PositionHorizon): string {
+  return `outcome_${h}_provenance`;
 }
 
 /** Rows per horizon per run (oldest first). AI_OUTCOME_POSITION_MAX_ROWS overrides (1..1000). */
@@ -63,6 +78,23 @@ export async function detectPositionHorizons(): Promise<PositionHorizon[]> {
     );
     const have = new Set(rows.map((r) => r.column_name));
     return POSITION_HORIZONS.filter((h) => positionHorizonColumns(h).every((c) => have.has(c)));
+  } catch {
+    return [];
+  }
+}
+
+/** Which of `horizons` have their provenance column (migration 134). Empty on any error. */
+export async function detectPositionProvenance(horizons: PositionHorizon[]): Promise<PositionHorizon[]> {
+  if (!horizons.length) return [];
+  try {
+    const rows = await q<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_schema = current_schema() AND table_name = 'ai_signal_log'
+         AND column_name = ANY($1::text[])`,
+      [horizons.map(positionProvenanceColumn)],
+    );
+    const have = new Set(rows.map((r) => r.column_name));
+    return horizons.filter((h) => have.has(positionProvenanceColumn(h)));
   } catch {
     return [];
   }
@@ -171,11 +203,21 @@ export async function labelPositionHorizons(opts: {
   loaders?: DailyBarLoaders;
 }): Promise<PositionHorizonRunResult> {
   const loaders = opts.loaders ?? defaultDailyBarLoaders;
-  const horizons = await detectPositionHorizons();
-  if (!horizons.length) {
+  const withColumns = await detectPositionHorizons();
+  if (!withColumns.length) {
     const note = `6w/12w outcome columns missing (run ${POSITION_MIGRATION_FILE}); 6w/12w labelling skipped`;
     console.warn(`[label-ai-outcomes] ${note}`);
     return { enabled: false, horizons: {}, barLoads: { equity: 0, crypto: 0 }, deferredOverBudget: 0, note };
+  }
+  // Results are only written with provenance; without migration 134 a horizon waits rather than writing unverified rows.
+  const horizons = await detectPositionProvenance(withColumns);
+  const missingProvenance = withColumns.filter((h) => !horizons.includes(h));
+  const provenanceNote = missingProvenance.length
+    ? `${missingProvenance.join('/')} provenance column missing (run ${POSITION_PROVENANCE_MIGRATION_FILE}); ${missingProvenance.join('/')} labelling skipped`
+    : undefined;
+  if (provenanceNote) console.warn(`[label-ai-outcomes] ${provenanceNote}`);
+  if (!horizons.length) {
+    return { enabled: false, horizons: {}, barLoads: { equity: 0, crypto: 0 }, deferredOverBudget: 0, note: provenanceNote };
   }
 
   const started = Date.now();
@@ -192,7 +234,7 @@ export async function labelPositionHorizons(opts: {
     return p;
   };
 
-  const result: PositionHorizonRunResult = { enabled: true, horizons: {}, barLoads, deferredOverBudget: 0 };
+  const result: PositionHorizonRunResult = { enabled: true, horizons: {}, barLoads, deferredOverBudget: 0, ...(provenanceNote ? { note: provenanceNote } : {}) };
   for (const h of horizons) {
     const t = tally();
     result.horizons[h] = t;
@@ -214,34 +256,51 @@ export async function labelPositionHorizons(opts: {
       if (Date.now() - started >= opts.budgetMs) { result.deferredOverBudget++; continue; }
 
       const bars = await load(row.symbol, asset);
+      const stop = numOrNull(row.stop_loss);
+      const target = numOrNull(row.target_1);
       const m = measurePositionHorizon({
-        direction, entry, signalAtMs, horizon: h, nowMs: opts.nowMs,
-        stop: numOrNull(row.stop_loss), target: numOrNull(row.target_1), bars: bars ?? [],
+        direction, entry, signalAtMs, horizon: h, nowMs: opts.nowMs, stop, target, bars: bars ?? [],
       });
       if (m.status === 'pending') { t.stillPending++; continue; }
+
+      const base = {
+        writer: 'label-ai-outcomes', method: POSITION_PROVENANCE_METHOD, horizon: h, horizonDays: POSITION_HORIZON_DAYS[h],
+        direction, signalAt: new Date(signalAtMs).toISOString(), entryPrice: entry, stopLoss: stop, target,
+        barSource: BAR_SOURCE[asset], barCount: bars?.length ?? 0,
+      };
+      const provenance = JSON.stringify(m.status === 'no_data'
+        ? { ...base, outcome: 'no_data', reason: m.reason }
+        : {
+            ...base, outcome: m.outcome, exitPrice: m.exitPrice, exitAt: new Date(m.exitAt).toISOString(), pctMove: m.pctMove,
+            maxPrice: m.maxPrice, minPrice: m.minPrice, mfePct: m.mfePct, maePct: m.maePct, firstHit: m.firstHit,
+            firstHitDay: m.firstHitDay, rMultiple: m.rMultiple, bars: m.bars,
+          });
+      const prov = positionProvenanceColumn(h);
 
       let updated: { id: number }[] = [];
       try {
         updated = m.status === 'no_data'
           ? await q<{ id: number }>(
               `UPDATE ai_signal_log
-               SET outcome_${h} = 'no_data', outcome_${h}_note = $2, outcome_${h}_measured_at = NOW()
+               SET outcome_${h} = 'no_data', outcome_${h}_note = $2, outcome_${h}_measured_at = NOW(),
+                   ${prov} = $3::jsonb || jsonb_build_object('processedAt', NOW())
                WHERE id = $1 AND outcome_${h} IS NULL
                RETURNING id`,
-              [row.id, m.reason.slice(0, 120)],
+              [row.id, m.reason.slice(0, 120), provenance],
             )
           : await q<{ id: number }>(
               `UPDATE ai_signal_log
                SET outcome_${h} = $2, price_after_${h} = $3, price_after_${h}_at = $4, pct_move_${h} = $5,
                    max_price_${h} = $6, min_price_${h} = $7, mfe_pct_${h} = $8, mae_pct_${h} = $9,
                    first_hit_${h} = $10, first_hit_${h}_date = $11::date, r_multiple_${h} = $12, bars_${h} = $13,
-                   outcome_${h}_note = NULL, outcome_${h}_measured_at = NOW()
+                   outcome_${h}_note = NULL, outcome_${h}_measured_at = NOW(),
+                   ${prov} = $14::jsonb || jsonb_build_object('processedAt', NOW())
                WHERE id = $1 AND outcome_${h} IS NULL
                RETURNING id`,
               [
                 row.id, m.outcome, m.exitPrice, new Date(m.exitAt).toISOString(), m.pctMove,
                 m.maxPrice, m.minPrice, m.mfePct, m.maePct,
-                m.firstHit, m.firstHitDay, m.rMultiple, m.bars,
+                m.firstHit, m.firstHitDay, m.rMultiple, m.bars, provenance,
               ],
             );
       } catch (err) {
