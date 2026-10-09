@@ -210,7 +210,9 @@ type MorningBrief = {
   };
   expectancy: {
     generatedAt: string;
-    sampleTrades: number;
+    sampleTrades: number | null;
+    validRCount?: number | null;
+    status?: "available" | "unavailable";
     bestSymbols: ExpectancyItem[];
     weakestSymbols: ExpectancyItem[];
     bestPlaybooks: ExpectancyItem[];
@@ -254,6 +256,9 @@ type MorningBrief = {
 };
 
 type ExpectancyItem = {
+  validRCount?: number;
+  missingRCount?: number;
+  invalidRCount?: number;
   key: string;
   sample: number;
   winRate: number | null;
@@ -735,10 +740,10 @@ export default function MorningBriefPage() {
             <AdminCard>
               <SectionTitle title="Expectancy Dashboard" subtitle="Last 90 days of closed journal trades by symbol and playbook." />
               <div className="mb-3 grid gap-2 md:grid-cols-2">
-                <ExpectancyBucket title="Best Symbols" items={brief.expectancy.bestSymbols} tone="green" />
-                <ExpectancyBucket title="Weak Symbols" items={brief.expectancy.weakestSymbols} tone="yellow" />
-                <ExpectancyBucket title="Best Playbooks" items={brief.expectancy.bestPlaybooks} tone="blue" />
-                <ExpectancyBucket title="Weak Playbooks" items={brief.expectancy.weakestPlaybooks} tone="red" />
+                <ExpectancyBucket title="Best Symbols" unavailable={brief.expectancy.status === "unavailable"} items={brief.expectancy.bestSymbols} tone="green" />
+                <ExpectancyBucket title="Weak Symbols" unavailable={brief.expectancy.status === "unavailable"} items={brief.expectancy.weakestSymbols} tone="yellow" />
+                <ExpectancyBucket title="Best Playbooks" unavailable={brief.expectancy.status === "unavailable"} items={brief.expectancy.bestPlaybooks} tone="blue" />
+                <ExpectancyBucket title="Weak Playbooks" unavailable={brief.expectancy.status === "unavailable"} items={brief.expectancy.weakestPlaybooks} tone="red" />
               </div>
               <div className="space-y-2 text-xs leading-5 text-slate-400">
                 {brief.expectancy.notes.map((note) => <div key={note} className="rounded border border-white/10 bg-slate-950/40 p-2">{note}</div>)}
@@ -1113,7 +1118,7 @@ function DataTruthStrip({ brief }: { brief: MorningBrief }) {
   ].filter(Boolean) as string[];
   const learningWarnings = [
     learningSample < 30 ? `Learning sample is still low at ${learningSample} labels.` : null,
-    brief.expectancy.sampleTrades < 30 ? `${brief.expectancy.sampleTrades} closed journal trades in expectancy sample.` : null,
+    (brief.expectancy.validRCount ?? 0) < 30 ? `${brief.expectancy.sampleTrades ?? "unavailable"} closed journal trades in expectancy sample.` : null,
     brief.learning.pending > 0 ? `${brief.learning.pending} pending signal labels.` : null,
   ].filter(Boolean) as string[];
   const statusItems = [
@@ -1157,7 +1162,7 @@ function DataTruthStrip({ brief }: { brief: MorningBrief }) {
       status: buildMarketDataProviderStatus({
         source: "admin-learning-sample",
         provider: "journal and brief feedback",
-        degraded: learningSample < 30 || brief.expectancy.sampleTrades < 30,
+        degraded: learningSample < 30 || (brief.expectancy.validRCount ?? 0) < 30,
         warnings: learningWarnings,
       }),
       coverageScore: Math.min(100, Math.round((learningSample / 30) * 100)),
@@ -1187,7 +1192,7 @@ function DataTruthStrip({ brief }: { brief: MorningBrief }) {
       label: "Learning Sample",
       value: `${learningSample} labels`,
       status: learningSample >= 30 ? "supportive" as const : learningSample >= 10 ? "neutral" as const : "missing" as const,
-      detail: `${brief.expectancy.sampleTrades} closed journal trades; ${brief.learning.pending} pending signal labels.`,
+      detail: `${brief.expectancy.sampleTrades ?? "unavailable"} closed journal trades; ${brief.learning.pending} pending signal labels.`,
     },
   ];
   const riskFlags = [
@@ -1392,7 +1397,7 @@ function ScorecardBucket({ title, items, tone }: { title: string; items: Scoreca
   );
 }
 
-function ExpectancyBucket({ title, items, tone }: { title: string; items: ExpectancyItem[]; tone: "green" | "yellow" | "blue" | "red" }) {
+function ExpectancyBucket({ title, items, tone, unavailable }: { unavailable?: boolean; title: string; items: ExpectancyItem[]; tone: "green" | "yellow" | "blue" | "red" }) {
   return (
     <div className="rounded-md border border-white/10 bg-slate-950/40 p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -1407,10 +1412,11 @@ function ExpectancyBucket({ title, items, tone }: { title: string; items: Expect
               <span className="text-xs text-slate-500">{item.avgR.toFixed(2)}R</span>
             </div>
             <div className="mt-1 text-xs leading-4 text-slate-400">
-              {item.sample} trades / {item.winRate == null ? "n/a" : `${(item.winRate * 100).toFixed(0)}%`} win / total {item.totalR.toFixed(2)}R
+              {item.sample} trades / {item.validRCount ?? "unrecorded"} valid R / {item.winRate == null ? "n/a" : `${(item.winRate * 100).toFixed(0)}%`} {item.validRCount == null ? "legacy win basis" : "positive R"} / total {item.totalR.toFixed(2)}R
+              <div>{item.note}</div>
             </div>
           </div>
-        )) : <div className="text-xs text-slate-500">No sample yet.</div>}
+        )) : <div className="text-xs text-slate-500">{unavailable ? "Journal expectancy unavailable." : "No group has two valid R observations."}</div>}
       </div>
     </div>
   );
