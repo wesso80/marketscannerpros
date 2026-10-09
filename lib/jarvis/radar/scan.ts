@@ -10,7 +10,7 @@ import { scoreAsset } from './priority';
 import { detectPreMove, type PreMove } from './premove';
 import { computeVelocity, crcsHistory, rsRanks } from './velocity';
 import { buildThemes, themeOf, type Theme } from './themes';
-import { runStage1 } from './stage1';
+import { rethrowStockListingsFailure, runStage1 } from './stage1';
 import { budget, resetBudget } from './budget';
 import { loadRecentRuns, loadWatchlist, saveRun, saveWatchlist, type OverviewCache, type WatchEntry } from './store';
 import { updateWatchlist } from './watchlist';
@@ -54,7 +54,10 @@ export async function runOvernightScan(opt: ScanOptions): Promise<{ report: Morn
       s1c = { listed: s1.listed, quoted: s1.quoted, liquid: s1.liquid, movers: s1.movers };
       for (const s of s1.selected) if (!rowsBySym.has(s)) rowsBySym.set(s, expandedRow(s, s1.names.get(s) ?? null, s1.etfs.has(s)));
       providers.push({ name: 'Alpha Vantage LISTING_STATUS + REALTIME_BULK_QUOTES (Stage 1)', status: s1.quoted > 1000 ? 'OK' : 'DEGRADED', detail: `${s1.listed} listings → ${s1.quoted} quoted (${Math.ceil(s1.quoted / 100)} bulk calls) → ${s1.liquid} liquid ≥$10M/day, ${s1.movers} movers ≥5% → ${s1.selected.length} selected for Stage 2 (cap ${maxEq}); session ${s1.tradingDay}` });
-    } catch (e) { gaps.push(`Stage 1 bulk screen failed (${(e as Error).message}) — scanned core universe only`); }
+    } catch (e) {
+      rethrowStockListingsFailure(e);
+      gaps.push(`Stage 1 bulk screen failed (${(e as Error).message}) — scanned core universe only`);
+    }
   } else providers.push({ name: 'Stage 1 bulk screen', status: 'SKIPPED', detail: 'JARVIS_STAGE1=off' });
   const equityUniverse = [...rowsBySym.values()];
   const coreSet = new Set(coreRows.map((r) => r.symbol));

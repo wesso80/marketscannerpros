@@ -16,13 +16,14 @@
  *   Jarvis shared floor: 300 - (50 + 30 + 100) = 120
  *   540 scales those by 540/300: user 90, alerts 54, scheduled 180, backfill 216
  *   Jarvis shared floor: 540 - (90 + 54 + 180) = 216
- * A floor is held only while that lane is active. user, alerts, and scheduled
- * are active once they have used a call in the current window. Backfill is
- * active only while the Jarvis heartbeat key is present. An idle floor is
- * spare, including the whole Jarvis floor when the heartbeat is absent.
- * A take is allowed when used + 1 + the other active lanes' unmet floors
- * (floor minus used) is within the ceiling. Borrowing cannot push an active
- * lane below its floor, and the total cannot pass the ceiling.
+ * The user floor (50 in split, 90 in 540) is always reserved, even when the
+ * user lane has not called. alerts and scheduled stay active for 120s after
+ * their last granted call, via a per-lane key set in the same Lua script.
+ * Backfill is active only while the Jarvis heartbeat key is present. Any
+ * other idle floor is spare, including the whole Jarvis floor when the
+ * heartbeat is absent. A take is allowed when used + 1 + the other active
+ * lanes' unmet floors (floor minus used) is within the ceiling. The script
+ * reads Redis TIME for the window, not the client clock.
  * Web fallback holds nothing for backfill. It splits across user, alerts, and
  * scheduled. Worker fallback is all scheduled. Jarvis fallback is all backfill.
  *
@@ -220,6 +221,34 @@ const WINDOW_MS = 60_000;
 export const AV_JARVIS_HEARTBEAT_KEY = 'av_limiter:jarvis';
 export const AV_JARVIS_HEARTBEAT_TTL_SEC = 90;
 export const AV_JARVIS_HEARTBEAT_EVERY_MS = 30_000;
+/** alerts and scheduled keep their floor for this long after the last granted call. */
+export const AV_LANE_ACTIVE_MS = 120_000;
+
+export function avLaneLastUsedKey(lane: 'alerts' | 'scheduled'): string {
+  return `av_limiter:last:${lane}`;
+}
+
+/** KEYS for AV_LIMITER_LUA. The last-used keys are written inside that script. */
+export function avLimiterEvalKeys(): string[] {
+  return [REDIS_KEY, AV_JARVIS_HEARTBEAT_KEY, avLaneLastUsedKey('alerts'), avLaneLastUsedKey('scheduled')];
+}
+
+export function avLimiterEvalArgv(input: {
+  ceiling: number;
+  lane: AvLane;
+  member: string;
+  reserves: Record<AvLane, number>;
+}): string[] {
+  return [
+    String(WINDOW_MS),
+    String(input.ceiling),
+    input.lane,
+    input.member,
+    JSON.stringify(input.reserves),
+    JSON.stringify(AV_LANES),
+    String(AV_LANE_ACTIVE_MS),
+  ];
+}
 
 export interface AvBudget {
   lane: AvLane;
@@ -259,15 +288,21 @@ export function sanitizeFeature(value: string): string {
 }
 
 /**
- * A floor is held only for an active lane. user, alerts, and scheduled become
- * active by using a call in this window. Backfill is active only when the
- * Jarvis run has refreshed its heartbeat. Used tokens without that heartbeat
- * do not keep the rest of the backfill floor.
+ * user is always reserved. alerts and scheduled are reserved while they have
+ * used a call this minute or their 120s last-used mark is still set. Backfill
+ * is reserved only while the Jarvis heartbeat is present.
  */
-function laneFloorIsHeld(lane: AvLane, used: number, floor: number, jarvisActive: boolean): boolean {
+function laneFloorIsHeld(
+  lane: AvLane,
+  used: number,
+  floor: number,
+  jarvisActive: boolean,
+  recentlyActive: boolean,
+): boolean {
   if (floor <= 0) return false;
+  if (lane === 'user') return true;
   if (lane === 'backfill') return jarvisActive;
-  return used > 0;
+  return used > 0 || recentlyActive;
 }
 
 export function decideAvTake(input: {
@@ -277,6 +312,8 @@ export function decideAvTake(input: {
   ceiling?: number;
   reserve?: Record<AvLane, number>;
   jarvisActive?: boolean;
+  /** alerts/scheduled still inside the 120s window after their last granted call. */
+  laneActive?: Partial<Record<AvLane, boolean>>;
 }): { allow: boolean; mustLeave: number } {
   const plan = currentAvBudgetPlan();
   const ceiling = input.ceiling ?? plan.ceiling;
@@ -287,7 +324,7 @@ export function decideAvTake(input: {
     if (other === input.lane) continue;
     const used = input.usedByLane[other] ?? 0;
     const floor = reserve[other] ?? 0;
-    if (!laneFloorIsHeld(other, used, floor, jarvisActive)) continue;
+    if (!laneFloorIsHeld(other, used, floor, jarvisActive, input.laneActive?.[other] === true)) continue;
     mustLeave += Math.max(0, floor - used);
   }
   return { allow: input.usedTotal + 1 + mustLeave <= ceiling, mustLeave };
@@ -296,13 +333,24 @@ export function decideAvTake(input: {
 export const AV_LIMITER_LUA = `
 local key = KEYS[1]
 local heartbeat = KEYS[2]
-local now = tonumber(ARGV[1])
-local windowMs = tonumber(ARGV[2])
-local ceiling = tonumber(ARGV[3])
-local lane = ARGV[4]
-local member = ARGV[5]
-local reserves = cjson.decode(ARGV[6])
-local order = cjson.decode(ARGV[7])
+local alertsLast = KEYS[3]
+local scheduledLast = KEYS[4]
+local windowMs = tonumber(ARGV[1])
+local ceiling = tonumber(ARGV[2])
+local lane = ARGV[3]
+local member = ARGV[4]
+local reserves = cjson.decode(ARGV[5])
+local order = cjson.decode(ARGV[6])
+local activeMs = tonumber(ARGV[7])
+local time = redis.call('TIME')
+local now = tonumber(time[1]) * 1000 + math.floor(tonumber(time[2]) / 1000)
+local function fresh(lastKey)
+  local raw = redis.call('GET', lastKey)
+  if raw == false or raw == nil then return false end
+  local at = tonumber(raw)
+  if at == nil then return false end
+  return now - at < activeMs
+end
 redis.call('ZREMRANGEBYSCORE', key, '-inf', now - windowMs)
 local rows = redis.call('ZRANGE', key, 0, -1)
 local used = {}
@@ -314,6 +362,8 @@ for _, m in ipairs(rows) do
 end
 local hb = redis.call('GET', heartbeat)
 local jarvisActive = hb ~= false and hb ~= nil
+local alertsRecent = fresh(alertsLast)
+local scheduledRecent = fresh(scheduledLast)
 local mustLeave = 0
 for _, name in ipairs(order) do
   if name ~= lane then
@@ -321,8 +371,11 @@ for _, name in ipairs(order) do
     local floor = reserves[name] or 0
     local reserved = false
     if floor > 0 then
-      if name == 'backfill' then reserved = jarvisActive
-      else reserved = count > 0 end
+      if name == 'user' then reserved = true
+      elseif name == 'backfill' then reserved = jarvisActive
+      elseif name == 'alerts' then reserved = count > 0 or alertsRecent
+      elseif name == 'scheduled' then reserved = count > 0 or scheduledRecent
+      end
     end
     if reserved then
       local left = floor - count
@@ -333,11 +386,14 @@ end
 if total + 1 + mustLeave > ceiling then return 0 end
 redis.call('ZADD', key, now, member)
 redis.call('EXPIRE', key, 70)
+if lane == 'alerts' then redis.call('SET', alertsLast, tostring(now), 'PX', activeMs) end
+if lane == 'scheduled' then redis.call('SET', scheduledLast, tostring(now), 'PX', activeMs) end
 return 1
 `;
 
 type LocalEvent = { at: number; lane: AvLane };
 const localEvents: LocalEvent[] = [];
+const localLastUsed: Partial<Record<AvLane, number>> = {};
 let lastFallbackLog = 0;
 let pendingFallbackCode: AvFallbackCode = 'absent';
 const fallbackCounts: Record<AvFallbackCode, number> = { timeout: 0, error: 0, absent: 0 };
@@ -395,11 +451,21 @@ function noteFallback(code: AvFallbackCode, now: number, ceiling: number): void 
 /** Test hook. Clears the in-process window and the fallback log clock. */
 export function resetAvLimiterLocalForTests(): void {
   localEvents.length = 0;
+  for (const lane of AV_LANES) delete localLastUsed[lane];
   lastFallbackLog = 0;
   pendingFallbackCode = 'absent';
   fallbackCounts.timeout = 0;
   fallbackCounts.error = 0;
   fallbackCounts.absent = 0;
+}
+
+function recentLaneActive(now: number): Partial<Record<AvLane, boolean>> {
+  const active: Partial<Record<AvLane, boolean>> = {};
+  for (const lane of ['alerts', 'scheduled'] as const) {
+    const at = localLastUsed[lane];
+    if (at != null && now - at < AV_LANE_ACTIVE_MS) active[lane] = true;
+  }
+  return active;
 }
 
 function localSnapshot(now: number): { usedTotal: number; usedByLane: Record<AvLane, number> } {
@@ -423,9 +489,11 @@ function tryLocal(lane: AvLane, now: number): boolean {
     ceiling: budget.ceiling,
     reserve: budget.reserve,
     jarvisActive: currentAvProcessRole() === 'jarvis',
+    laneActive: recentLaneActive(now),
   });
   if (!decision.allow) return false;
   localEvents.push({ at: now, lane });
+  if (lane === 'alerts' || lane === 'scheduled') localLastUsed[lane] = now;
   return true;
 }
 
@@ -482,8 +550,8 @@ async function tryRedis(budget: AvBudget, now: number): Promise<boolean | null> 
       if (typeof redis.eval === 'function') {
         const granted = await redis.eval(
           AV_LIMITER_LUA,
-          [REDIS_KEY, AV_JARVIS_HEARTBEAT_KEY],
-          [String(now), String(WINDOW_MS), String(plan.ceiling), budget.lane, member, JSON.stringify(plan.reserves), JSON.stringify(AV_LANES)],
+          avLimiterEvalKeys(),
+          avLimiterEvalArgv({ ceiling: plan.ceiling, lane: budget.lane, member, reserves: plan.reserves }),
         );
         return Number(granted) === 1;
       }
@@ -495,11 +563,20 @@ async function tryRedis(budget: AvBudget, now: number): Promise<boolean | null> 
         if (usedByLane[lane] != null) usedByLane[lane] += 1;
       }
       const hb = typeof redis.get === 'function' ? await redis.get(AV_JARVIS_HEARTBEAT_KEY) : null;
+      const laneActive: Partial<Record<AvLane, boolean>> = {};
+      if (typeof redis.get === 'function') {
+        for (const watched of ['alerts', 'scheduled'] as const) {
+          const raw = await redis.get(avLaneLastUsedKey(watched));
+          const at = Number(raw);
+          if (raw != null && raw !== false && Number.isFinite(at) && now - at < AV_LANE_ACTIVE_MS) laneActive[watched] = true;
+        }
+      }
       const decision = decideAvTake({
         lane: budget.lane,
         usedTotal: rows.length,
         usedByLane,
         jarvisActive: hb != null && hb !== false,
+        laneActive,
       });
       if (!decision.allow) return false;
       await redis.zadd(REDIS_KEY, { score: now, member });
@@ -508,6 +585,9 @@ async function tryRedis(budget: AvBudget, now: number): Promise<boolean | null> 
       if ((used ?? 0) > plan.ceiling) {
         await redis.zrem(REDIS_KEY, member);
         return false;
+      }
+      if ((budget.lane === 'alerts' || budget.lane === 'scheduled') && typeof redis.set === 'function') {
+        await redis.set(avLaneLastUsedKey(budget.lane), String(now), { px: AV_LANE_ACTIVE_MS });
       }
       return true;
     })());

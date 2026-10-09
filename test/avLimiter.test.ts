@@ -35,6 +35,9 @@ import {
   AV_JARVIS_HEARTBEAT_EVERY_MS,
   AV_JARVIS_HEARTBEAT_KEY,
   AV_JARVIS_HEARTBEAT_TTL_SEC,
+  AV_LANE_ACTIVE_MS,
+  avLaneLastUsedKey,
+  avLimiterEvalKeys,
   AV_LANES,
   AV_LANE_RESERVE,
   AV_LICENCE_PER_MIN,
@@ -71,6 +74,7 @@ function luaWouldGrant(input: {
   reserves: Record<string, number>;
   order: readonly string[];
   jarvisActive?: boolean;
+  laneActive?: Partial<Record<string, boolean>>;
 }): boolean {
   const used: Record<string, number> = {};
   for (const name of input.order) used[name] = 0;
@@ -84,7 +88,13 @@ function luaWouldGrant(input: {
     if (name === input.lane) continue;
     const count = used[name] || 0;
     const floor = input.reserves[name] || 0;
-    const reserved = floor > 0 && (name === 'backfill' ? Boolean(input.jarvisActive) : count > 0);
+    const reserved = floor > 0 && (
+      name === 'user'
+        ? true
+        : name === 'backfill'
+          ? Boolean(input.jarvisActive)
+          : count > 0 || Boolean(input.laneActive?.[name])
+    );
     if (reserved) mustLeave += Math.max(0, floor - count);
   }
   return total + 1 + mustLeave <= input.ceiling;
@@ -93,7 +103,7 @@ function luaWouldGrant(input: {
 function takesFrom(
   lane: AvLane,
   start: Partial<Record<AvLane, number>>,
-  opts?: { ceiling?: number; reserve?: Record<AvLane, number>; jarvisActive?: boolean },
+  opts?: { ceiling?: number; reserve?: Record<AvLane, number>; jarvisActive?: boolean; laneActive?: Partial<Record<AvLane, boolean>> },
 ): number {
   const usedByLane: Record<AvLane, number> = { user: 0, alerts: 0, scheduled: 0, backfill: 0, ...start };
   let total = AV_LANES.reduce((sum, name) => sum + usedByLane[name], 0);
@@ -173,11 +183,49 @@ describe('shared AV limiter', () => {
     applyAvBudgetForTests({ AV_BUDGET_MODE: 'split' });
   });
 
+  it('always reserves the user floor, including when that lane has not called', () => {
+    expect(takesFrom('scheduled', {})).toBe(AV_CEILING_PER_MIN - AV_LANE_RESERVE.user);
+    expect(takesFrom('scheduled', {})).toBe(250);
+    expect(takesFrom('alerts', {})).toBe(250);
+    expect(takesFrom('backfill', {})).toBe(250);
+    const wide = avBudgetPlanForMode('540');
+    expect(wide.reserves.user).toBe(90);
+    expect(takesFrom('scheduled', {}, { ceiling: wide.ceiling, reserve: wide.reserves })).toBe(wide.ceiling - 90);
+    expect(takesFrom('backfill', {}, { ceiling: wide.ceiling, reserve: wide.reserves })).toBe(wide.ceiling - 90);
+    expect(takesFrom('user', {})).toBe(AV_CEILING_PER_MIN);
+  });
+
   it('lets scheduled use idle backfill capacity well above 100', () => {
-    expect(takesFrom('scheduled', {})).toBe(AV_CEILING_PER_MIN);
     const floorsMet = { user: 50, alerts: 30, scheduled: 0, backfill: 0 };
     expect(takesFrom('scheduled', floorsMet)).toBe(220);
     expect(takesFrom('scheduled', floorsMet)).toBeGreaterThan(100);
+    expect(takesFrom('scheduled', {})).toBeGreaterThan(100);
+  });
+
+  it('holds the scheduled floor on the process fallback for 120s after its last call', async () => {
+    const t = 90_000_000;
+    expect(await avTryTake({ lane: 'scheduled', feature: 'daily-scan' }, t)).toBe(true);
+    let user = 0;
+    for (let i = 0; i < 80; i += 1) {
+      if (await avTryTake({ lane: 'user', feature: 'page' }, t + 90_000 + i)) user += 1;
+    }
+    expect(user).toBe(35);
+    resetAvLimiterLocalForTests();
+    expect(await avTryTake({ lane: 'scheduled', feature: 'daily-scan' }, t)).toBe(true);
+    user = 0;
+    for (let i = 0; i < 80; i += 1) {
+      if (await avTryTake({ lane: 'user', feature: 'page' }, t + AV_LANE_ACTIVE_MS + i)) user += 1;
+    }
+    expect(user).toBe(AV_WEB_FALLBACK_PER_MIN);
+  });
+
+  it('keeps alerts and scheduled active for 120s after their last call', () => {
+    expect(AV_LANE_ACTIVE_MS).toBe(120_000);
+    expect(takesFrom('user', {}, { laneActive: { scheduled: true } })).toBe(200);
+    expect(takesFrom('backfill', {}, { laneActive: { scheduled: true } })).toBe(150);
+    expect(takesFrom('user', {}, { laneActive: { alerts: true } })).toBe(270);
+    expect(takesFrom('user', {}, { laneActive: { alerts: true, scheduled: true } })).toBe(170);
+    expect(takesFrom('user', { scheduled: 40 }, { laneActive: { scheduled: true } })).toBe(200);
   });
 
   it('lets the user reach 200 per minute while the worker is running', () => {
@@ -255,7 +303,8 @@ describe('shared AV limiter', () => {
       if (await avTryTake({ lane: 'backfill', feature: AV_JARVIS_FEATURE }, t + i)) postedAsJarvis += 1;
     }
     expect(fallbackBudget('web').reserve).toEqual({ user: 22, alerts: 13, scheduled: 45, backfill: 0 });
-    expect(postedAsJarvis).toBe(AV_WEB_FALLBACK_PER_MIN);
+    expect(postedAsJarvis).toBe(AV_WEB_FALLBACK_PER_MIN - fallbackBudget('web').reserve.user);
+    expect(postedAsJarvis).toBe(58);
     expect(postedAsJarvis).toBeLessThan(AV_JARVIS_FALLBACK_PER_MIN);
 
     resetAvLimiterLocalForTests();
@@ -312,7 +361,16 @@ describe('shared AV limiter', () => {
     expect(AV_LIMITER_LUA).toContain("string.match(m, '^%d+:[^:]+:([^:]+):')");
     expect(AV_LIMITER_LUA).toContain('if total + 1 + mustLeave > ceiling then return 0 end');
     expect(AV_LIMITER_LUA).toContain("redis.call('GET', heartbeat)");
+    expect(AV_LIMITER_LUA).toContain("redis.call('TIME')");
+    expect(AV_LIMITER_LUA).toContain("name == 'user' then reserved = true");
+    expect(AV_LIMITER_LUA).toContain("redis.call('SET', scheduledLast, tostring(now), 'PX', activeMs)");
     expect(AV_LIMITER_LUA).toContain("name == 'backfill'");
+    expect(avLimiterEvalKeys()).toEqual([
+      'av_limiter:minute',
+      AV_JARVIS_HEARTBEAT_KEY,
+      avLaneLastUsedKey('alerts'),
+      avLaneLastUsedKey('scheduled'),
+    ]);
     const rows = [
       '1000:aa:backfill:worker-ingest',
       '1001:bb:user:page',
@@ -378,7 +436,7 @@ describe('shared AV limiter', () => {
     expect(await avTryTake({ lane: 'user', feature: 'page' }, 100_000_001)).toBe(true);
     expect(redisHarness.evalFn).toHaveBeenCalledWith(
       AV_LIMITER_LUA,
-      ['av_limiter:minute', AV_JARVIS_HEARTBEAT_KEY],
+      avLimiterEvalKeys(),
       expect.any(Array),
     );
   });

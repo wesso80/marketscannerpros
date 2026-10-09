@@ -11,8 +11,8 @@ import {
 } from '@/lib/avLimiter';
 
 /**
- * Shared Alpha Vantage budget for a process that is not this web app or worker.
- * Jarvis on the other box must POST here before each Alpha Vantage call.
+ * Shared Alpha Vantage budget for a caller that is not already inside this process.
+ * Jarvis runs on the Render crons and takes tokens in-process. It does not POST here.
  * Auth is the existing cron secret. count is how many tokens to take now (max 20).
  * granted 0 means do not call Alpha Vantage; wait retryAfterMs and try again.
  */
