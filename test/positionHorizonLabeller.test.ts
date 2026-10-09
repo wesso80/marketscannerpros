@@ -177,7 +177,7 @@ describe('6w/12w stats', () => {
   it('shows "not enough data" (null figures) below the minimum sample, with pending always counted', () => {
     const small = summarizeHorizon({ setup: 'BREAKOUT', measured: 4, correct: 3, wrong: 1, waiting: 7, due: 2, avg_signed_move: '5.1', avg_r: '0.8', r_count: 4 });
     expect(small).toMatchObject({ measured: 4, pending: 9, waiting: 7, due: 2, enoughData: false, winRate: null, avgReturnPct: null, avgR: null });
-    const big = summarizeHorizon({ setup: 'BREAKOUT', measured: 20, correct: 12, wrong: 6, neutral: 2, waiting: 1, due: 0, avg_signed_move: '2.345', avg_r: '0.456', r_count: 18, target_first: 5, stop_first: 11, neither: 2 });
+    const big = summarizeHorizon({ setup: 'BREAKOUT', measured: 20, return_count: 20, correct: 12, wrong: 6, neutral: 2, waiting: 1, due: 0, avg_signed_move: '2.345', avg_r: '0.456', r_count: 18, target_first: 5, stop_first: 11, neither: 2 });
     expect(big).toMatchObject({ enoughData: true, winRate: 66.7, avgReturnPct: 2.35, avgR: 0.46, rCount: 18, targetFirst: 5, stopFirst: 11 });
     expect(MIN_HORIZON_SAMPLE).toBe(10);
   });
@@ -185,7 +185,7 @@ describe('6w/12w stats', () => {
   it('groups by setup (plus an all-setups row), signs returns to the call, counts both-on-one-day as stop first', () => {
     const sql = horizonStatsSql('12w');
     expect(sql).toMatch(/GROUP BY GROUPING SETS/);
-    expect(sql).toContain("CASE WHEN UPPER(trade_bias) = 'SHORT' THEN -pct_move_12w ELSE pct_move_12w END");
+    expect(sql).toContain("CASE WHEN UPPER(TRIM(trade_bias)) = 'SHORT' THEN -pct_move_12w ELSE pct_move_12w END");
     expect(sql).toContain("first_hit_12w IN ('stop','both_same_day')");
     expect(sql).toContain("INTERVAL '84 days'");
     expect(sql).toContain("workspace_id LIKE 'admin-call:%'");
