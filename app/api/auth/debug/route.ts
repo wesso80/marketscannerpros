@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
     };
     return NextResponse.json(body);
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "debug failed" }, { status: 500 });
+    console.error('[auth/debug] failed', e);
+    return NextResponse.json({ error: "debug failed" }, { status: 500 });
   }
 }

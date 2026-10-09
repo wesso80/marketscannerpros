@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { q } from "@/lib/db";
 import { verifyCronAuth } from "@/lib/adminAuth";
 import { alertCronFailure } from "@/lib/opsAlerting";
+import { MARKET_FOCUS_SYSTEM_PROMPT, MARKET_FOCUS_UNAVAILABLE, buildMarketFocusPrompt, finalizeMarketFocusText } from "@/lib/marketFocus/prompt";
 
 export const runtime = "nodejs";
 
@@ -56,62 +57,22 @@ async function fetchCandidates(assetClass: Candidate["assetClass"]): Promise<Can
   return (data.candidates ?? []) as Candidate[];
 }
 
-function buildMSPPrompt(c: Candidate): string {
-  return `
-You are MSP AI Analyst v1.1 for MarketScanner Pros.
-
-Task:
-Generate a concise institutional-style explanation for today's DAILY AI MARKET FOCUS pick.
-
-Asset:
-- Asset class: ${c.assetClass}
-- Symbol: ${c.symbol}
-- Name: ${c.name ?? "N/A"}
-- Venue: ${c.venue ?? "N/A"}
-- Score: ${c.score}
-
-Scanner outputs (raw):
-${JSON.stringify(c.scannerPayload, null, 2)}
-
-Key Levels:
-${JSON.stringify(c.keyLevels, null, 2)}
-
-Identified Risks:
-${JSON.stringify(c.risks, null, 2)}
-
-Rules:
-- Do NOT give buy/sell instructions.
-- Do NOT predict exact prices.
-- Use MSP language: Bullish Phase / Bearish Phase / Consolidation Phase (Orange), Multi-TF Alignment, Liquidity Zone, Breakout Confirmation, Trend Continuation vs Exhaustion.
-- Keep response under 200 words.
-- Output format (exact headings):
-Executive Summary:
-Core Analysis:
-Key Levels / Liquidity: 
-Risks / Invalidation:
-Next Steps (How to use on MSP):
-`.trim();
-}
-
 async function generateExplanation(c: Candidate): Promise<string> {
-  const input = buildMSPPrompt(c);
   const client = getOpenAIClient();
-
   try {
     const resp = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: "You are MSP AI Analyst, a professional market structure analyst for MarketScanner Pros." },
-        { role: "user", content: input }
+        { role: "system", content: MARKET_FOCUS_SYSTEM_PROMPT },
+        { role: "user", content: buildMarketFocusPrompt(c) }
       ],
-      max_tokens: 500,
-      temperature: 0.7,
+      max_tokens: 400,
+      temperature: 0.3,
     });
-
-    return resp.choices[0]?.message?.content ?? "";
+    return finalizeMarketFocusText(resp.choices[0]?.message?.content);
   } catch (err: any) {
-    console.error("[generate-market-focus] OpenAI error:", err?.message);
-    return `Analysis unavailable: ${err?.message || "OpenAI error"}`;
+    console.error("[generate-market-focus] OpenAI error:", err);
+    return MARKET_FOCUS_UNAVAILABLE;
   }
 }
 

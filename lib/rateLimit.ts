@@ -158,6 +158,18 @@ export const aiLimiter = createRateLimiter("ai", {
 });
 
 /** Deep analysis: 5 per minute per IP (expensive - multiple AV calls) */
+/** Pro bulk scan (hundreds of symbols, provider calls): per workspace and per IP. */
+export const bulkScanLimiter = createRateLimiter("bulk-scan", {
+  windowMs: 60 * 1000,  // 1 minute
+  max: 6,
+});
+
+/** Catalyst event reads (database): per workspace and per IP. */
+export const catalystLimiter = createRateLimiter("catalyst-events", {
+  windowMs: 60 * 1000,  // 1 minute
+  max: 60,
+});
+
 export const deepAnalysisLimiter = createRateLimiter("deep-analysis", {
   windowMs: 60 * 1000,  // 1 minute
   max: 5,

@@ -126,9 +126,10 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
+    console.error('[options/gex] failed', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to calculate GEX',
+      error: 'Failed to calculate GEX',
     }, { status: 500 });
   }
 }

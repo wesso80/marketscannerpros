@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMidpointService } from '@/lib/midpointService';
 import { getCandleProcessor, type OHLCVBar } from '@/lib/candleProcessor';
+import { requireAdmin, verifyCronAuth } from '@/lib/adminAuth';
+
+/**
+ * Ops-only: POST inserts candles, PUT re-tags and DELETE resets midpoints that feed the Time Gravity Map, and GET is a
+ * diagnostic. No app caller; every method requires an admin session/secret or the cron secret.
+ */
+// Ops data and diagnostics: no response is ever stored by a shared cache.
+const PRIVATE = { 'Cache-Control': 'private, no-store, max-age=0', Vary: 'Cookie' };
+const json = (body: unknown, init?: { status?: number }) => NextResponse.json(body, { status: init?.status ?? 200, headers: PRIVATE });
+
+async function opsOnly(request: NextRequest): Promise<NextResponse | null> {
+  // Only consult the cron check when a cron header is sent (it logs every miss).
+  if (request.headers.get('x-cron-secret') && verifyCronAuth(request)) return null;
+  if ((await requireAdmin(request)).ok) return null;
+  return json({ error: 'Unauthorized' }, { status: 401 });
+}
 
 /**
  * Midpoint Management API
@@ -14,6 +30,8 @@ import { getCandleProcessor, type OHLCVBar } from '@/lib/candleProcessor';
  * Fetch untagged midpoints for a symbol
  */
 export async function GET(request: NextRequest) {
+  const denied = await opsOnly(request);
+  if (denied) return denied;
   try {
     const { searchParams } = new URL(request.url);
     
@@ -23,14 +41,14 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '100', 10);
     
     if (!symbol) {
-      return NextResponse.json(
+      return json(
         { error: 'Missing required parameter: symbol' },
         { status: 400 }
       );
     }
     
     if (!priceStr) {
-      return NextResponse.json(
+      return json(
         { error: 'Missing required parameter: currentPrice' },
         { status: 400 }
       );
@@ -39,7 +57,7 @@ export async function GET(request: NextRequest) {
     const currentPrice = parseFloat(priceStr);
     
     if (isNaN(currentPrice) || currentPrice <= 0) {
-      return NextResponse.json(
+      return json(
         { error: 'Invalid currentPrice value' },
         { status: 400 }
       );
@@ -56,7 +74,7 @@ export async function GET(request: NextRequest) {
     // Get stats
     const stats = await service.getMidpointStats(symbol);
     
-    return NextResponse.json({
+    return json({
       success: true,
       symbol,
       currentPrice,
@@ -70,10 +88,9 @@ export async function GET(request: NextRequest) {
     
   } catch (error) {
     console.error('Midpoints API Error:', error);
-    return NextResponse.json(
+    return json(
       {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );
@@ -94,13 +111,15 @@ export async function GET(request: NextRequest) {
  * }
  */
 export async function POST(request: NextRequest) {
+  const denied = await opsOnly(request);
+  if (denied) return denied;
   try {
     const body = await request.json();
     
     const { symbol, timeframe, candle, assetType = 'crypto' } = body;
     
     if (!symbol || !timeframe || !candle) {
-      return NextResponse.json(
+      return json(
         { error: 'Missing required fields: symbol, timeframe, candle' },
         { status: 400 }
       );
@@ -108,7 +127,7 @@ export async function POST(request: NextRequest) {
     
     // Validate candle data
     if (!candle.time || !candle.high || !candle.low) {
-      return NextResponse.json(
+      return json(
         { error: 'Invalid candle data: time, high, low are required' },
         { status: 400 }
       );
@@ -128,13 +147,13 @@ export async function POST(request: NextRequest) {
     const success = await processor.processCandle(symbol, timeframe, bar, assetType);
     
     if (!success) {
-      return NextResponse.json(
+      return json(
         { error: 'Failed to process candle' },
         { status: 500 }
       );
     }
     
-    return NextResponse.json({
+    return json({
       success: true,
       symbol,
       timeframe,
@@ -144,10 +163,9 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('Midpoints API Error:', error);
-    return NextResponse.json(
+    return json(
       {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );
@@ -167,13 +185,15 @@ export async function POST(request: NextRequest) {
  * }
  */
 export async function PUT(request: NextRequest) {
+  const denied = await opsOnly(request);
+  if (denied) return denied;
   try {
     const body = await request.json();
     
     const { symbol, currentHigh, currentLow } = body;
     
     if (!symbol || !currentHigh || !currentLow) {
-      return NextResponse.json(
+      return json(
         { error: 'Missing required fields: symbol, currentHigh, currentLow' },
         { status: 400 }
       );
@@ -182,7 +202,7 @@ export async function PUT(request: NextRequest) {
     const processor = getCandleProcessor();
     const taggedCount = await processor.updateTaggingStatus(symbol, currentHigh, currentLow);
     
-    return NextResponse.json({
+    return json({
       success: true,
       symbol,
       taggedCount,
@@ -192,10 +212,9 @@ export async function PUT(request: NextRequest) {
     
   } catch (error) {
     console.error('Midpoints API Error:', error);
-    return NextResponse.json(
+    return json(
       {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );
@@ -209,6 +228,8 @@ export async function PUT(request: NextRequest) {
  * If no symbol is provided, resets ALL tagged midpoints.
  */
 export async function DELETE(request: NextRequest) {
+  const denied = await opsOnly(request);
+  if (denied) return denied;
   try {
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get('symbol') || undefined;
@@ -216,7 +237,7 @@ export async function DELETE(request: NextRequest) {
     const service = getMidpointService();
     const resetCount = await service.resetTaggedMidpoints(symbol);
     
-    return NextResponse.json({
+    return json({
       success: true,
       symbol: symbol || 'ALL',
       resetCount,
@@ -226,10 +247,9 @@ export async function DELETE(request: NextRequest) {
     
   } catch (error) {
     console.error('Midpoints Reset API Error:', error);
-    return NextResponse.json(
+    return json(
       {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );

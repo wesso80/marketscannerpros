@@ -404,8 +404,8 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
             <summary className="cursor-pointer list-none px-3 py-3 lg:px-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-sm font-semibold text-slate-100">Market pressure</span>
-                  <span className="ml-2 text-xs text-slate-400">Composite pressure from time, volatility, liquidity & options</span>
+                  <span className="text-sm font-semibold text-slate-100">Market inputs</span>
+                  <span className="ml-2 text-xs text-slate-400">Measured volatility, derivatives and options-chain inputs, each with source and time</span>
                 </div>
                 <div className="text-xs text-slate-500">▾ expand</div>
               </div>

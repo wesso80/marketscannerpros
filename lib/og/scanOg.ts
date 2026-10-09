@@ -15,11 +15,8 @@ export const OG_SCAN_HEIGHT = 630;
 export const OG_SCAN_DISCLAIMER = 'Educational research only. Not financial advice.';
 const SITE_ORIGIN = 'https://marketscannerpros.app';
 
-export type OgSide = 'LONG' | 'SHORT' | 'WATCH';
-
 export interface ScanOgModel {
   symbol: string;
-  side: OgSide;
   headline: string;
   sub: string;
   stats: Array<{ label: string; value: string }>;
@@ -65,19 +62,16 @@ export function ogSafeText(value: unknown, max: number): string {
 }
 
 export function scanOgModelFromShare(d: ShareData): ScanOgModel {
+  // Measured values only (W3): no side, verdict, grade or score on the image.
   const stats: ScanOgModel['stats'] = [];
-  // Same wording as the share card's Score cell ("95th pct", "74/100 factors (uncalibrated)"), never a bare "/100"
-  // that reads like a probability. Legacy rows without a canonical verdict keep their signal-count score.
-  if (d.scoreText) stats.push({ label: 'Score', value: ogSafeText(d.scoreText, 30) });
-  else if (d.score != null && Number.isFinite(d.score)) stats.push({ label: d.verdict ? 'Setup score' : 'Opp score', value: `${Math.round(d.score)}/100` });
   if (d.price != null && Number.isFinite(d.price)) stats.push({ label: 'Price', value: `$${d.price.toFixed(2)}` });
+  if (d.changePct != null && Number.isFinite(d.changePct)) stats.push({ label: 'Session chg', value: `${d.changePct >= 0 ? '+' : ''}${d.changePct.toFixed(2)}%` });
   if (d.float) stats.push({ label: 'Float', value: ogSafeText(d.float, 10) });
   if (d.shortPct != null && Number.isFinite(d.shortPct)) stats.push({ label: 'Short %', value: `${d.shortPct.toFixed(1)}%` });
   if (d.sector) stats.push({ label: 'Sector', value: ogSafeText(d.sector, 22) });
   const asOf = /^\d{4}-\d{2}-\d{2}/.test(d.fetchedAt) ? d.fetchedAt.slice(0, 10) : null;
   return {
     symbol: ogSafeText(d.symbol, 16),
-    side: d.side,
     headline: ogSafeText(d.headline, 110),
     sub: asOf ? `Snapshot ${asOf} · ${OG_SCAN_DISCLAIMER}` : OG_SCAN_DISCLAIMER,
     stats: stats.slice(0, 4),
@@ -85,12 +79,12 @@ export function scanOgModelFromShare(d: ShareData): ScanOgModel {
 }
 
 export function dailyOgModel(day: DayData): ScanOgModel {
-  const top = day.picks.slice(0, 3).map((p) => ogSafeText(proDisplaySymbol(p.symbol, p.asset_class), 16)).filter(Boolean);
+  // The loader's order is symbol A–Z, so these are the first symbols alphabetically, not a ranking.
+  const first = day.picks.slice(0, 3).map((p) => ogSafeText(proDisplaySymbol(p.symbol, p.asset_class), 16)).filter(Boolean);
   return {
     symbol: 'DAILY',
-    side: 'WATCH',
-    headline: ogSafeText(`Top picks for ${day.scan_date}`, 60),
-    sub: top.length ? `${top.join(', ')} · ${OG_SCAN_DISCLAIMER}` : OG_SCAN_DISCLAIMER,
+    headline: ogSafeText(`Daily scan observations for ${day.scan_date}`, 60),
+    sub: first.length ? `${day.picks.length} symbols, A–Z: ${first.join(', ')}… · ${OG_SCAN_DISCLAIMER}` : OG_SCAN_DISCLAIMER,
     stats: [],
   };
 }

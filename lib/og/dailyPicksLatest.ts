@@ -1,32 +1,30 @@
 import { evaluateDailyPickTrust } from '@/lib/scanner/dailyPickTrust';
 import { dailyPickPriceBasis } from '@/lib/scanner/dailyPickPriceBasis';
 /**
- * Latest daily-picks snapshot (top 10, canonical-first), shared by the /daily-pick page and the /api/og/scan DAILY
- * card so the card always shows the same symbols as the page. Moved verbatim from app/daily-pick/page.tsx.
+ * Latest daily-scan observations, shared by the public /daily-pick page and the /api/og/scan DAILY card so the card
+ * always shows the same symbols as the page.
+ *
+ * Public (W3, 8 Oct): no grade, verdict, direction, score, levels or ranking. Every stored row of the latest scan per
+ * market, sorted by symbol A–Z (SORT_NOTE / SELECTION_NOTE are shown with the list).
  */
 import { q } from '@/lib/db';
-import { rankDailyPicks, readStoredCanonical } from '@/lib/scoring/canonical/dailyPick';
-import type { CanonicalResult } from '@/lib/scoring/canonical/types';
+import { readStoredCanonical } from '@/lib/scoring/canonical/dailyPick';
+import { SELECTION_NOTE, SORT_NOTE } from '@/lib/research/publicDailyObservations';
 import { toYmd } from '@/lib/time/usSession';
 
+export { SELECTION_NOTE, SORT_NOTE };
+
 export interface DailyPickRow {
-  rank: number;
   dataAsOf?: string | null;
   stale?: boolean;
   priceLabel?: string;
   asset_class: string;
   symbol: string;
-  score: number;
-  direction: string;
   price: number | null;
   change_percent: number | null;
   sector: string | null;
   shares_float: number | null;
   short_pct_float: number | null;
-  /** Canonical engine verdict (primary). Null for scans written before the canonical engine. */
-  canonical: CanonicalResult | null;
-  /** Legacy signal-count score (secondary). */
-  legacyScore: number;
 }
 
 export interface DayData {
@@ -47,6 +45,12 @@ function toDateString(v: unknown): string {
   return toYmd(v) ?? '';
 }
 
+type Row = {
+  asset_class: string; symbol: string; price: string | null; change_percent: string | null;
+  sector: string | null; shares_float: string | null; short_pct_float: string | null;
+  indicators?: Record<string, any>; scan_date?: string; created_at?: string;
+};
+
 export async function loadLatestDailyPicks(): Promise<DayData | null> {
   const latest = await q<{ scan_date: unknown }>(
     `SELECT scan_date FROM daily_picks ORDER BY scan_date DESC LIMIT 1`,
@@ -54,89 +58,51 @@ export async function loadLatestDailyPicks(): Promise<DayData | null> {
   if (latest.length === 0) return null;
   const scan_date = toDateString(latest[0].scan_date);
 
-  // Try the enriched query first (requires migration 097). If shares_float /
-  // short_pct_float columns don't exist yet, fall back to the picks-only
-  // query so the page still renders during phased rollout.
-  let rows: Array<{
-    asset_class: string;
-    symbol: string;
-    score: number;
-    direction: string;
-    price: string | null;
-    change_percent: string | null;
-    sector: string | null;
-    shares_float: string | null;
-    short_pct_float: string | null;
-    indicators?: Record<string, any>;
-    scan_date?: string;
-    created_at?: string;
-    canonical?: unknown;
-    legacy_score?: string | null;
-  }>;
+  // Enriched query needs migration 097 (shares_float / short_pct_float); fall back to picks only. Symbol order, no score.
+  const LATEST = `dp.scan_date = (SELECT MAX(d.scan_date) FROM daily_picks d WHERE d.asset_class = dp.asset_class) AND $1::date IS NOT NULL`;
+  let rows: Row[];
   try {
-    rows = await q(
-      `SELECT dp.asset_class, dp.symbol, dp.score, dp.direction,
-              dp.price, dp.change_percent, dp.indicators, dp.scan_date, dp.created_at, dp.indicators->'canonical' AS canonical, dp.indicators->'legacy'->>'score' AS legacy_score,
+    rows = await q<Row>(
+      `SELECT DISTINCT ON (dp.symbol, dp.asset_class) dp.asset_class, dp.symbol, dp.price, dp.change_percent, dp.indicators, dp.scan_date, dp.created_at,
               co.sector, co.shares_float, co.short_pct_float
          FROM daily_picks dp
          LEFT JOIN company_overview co ON co.symbol = dp.symbol
-        WHERE dp.scan_date = (SELECT MAX(d.scan_date) FROM daily_picks d WHERE d.asset_class = dp.asset_class) AND $1::date IS NOT NULL
-        ORDER BY dp.score DESC
-        LIMIT 60`,
+        WHERE ${LATEST}
+        ORDER BY dp.symbol, dp.asset_class
+        LIMIT 120`,
       [scan_date],
     );
   } catch (err) {
     console.warn('[daily-pick] enriched query failed, falling back:', err);
-    const fallback = await q<{
-      asset_class: string;
-      symbol: string;
-      score: number;
-      direction: string;
-      price: string | null;
-      change_percent: string | null;
-      indicators?: Record<string, any>;
-    scan_date?: string;
-    created_at?: string;
-    canonical?: unknown;
-      legacy_score?: string | null;
-    }>(
-      `SELECT asset_class, symbol, score, direction, price, change_percent, indicators, scan_date, created_at, indicators->'canonical' AS canonical, indicators->'legacy'->>'score' AS legacy_score
+    const fallback = await q<Row>(
+      `SELECT DISTINCT ON (dp.symbol, dp.asset_class) dp.asset_class, dp.symbol, dp.price, dp.change_percent, dp.indicators, dp.scan_date, dp.created_at
          FROM daily_picks dp
-        WHERE scan_date = (SELECT MAX(d.scan_date) FROM daily_picks d WHERE d.asset_class = dp.asset_class) AND $1::date IS NOT NULL
-        ORDER BY score DESC
-        LIMIT 60`,
+        WHERE ${LATEST}
+        ORDER BY dp.symbol, dp.asset_class
+        LIMIT 120`,
       [scan_date],
     );
-    rows = fallback.map((r) => ({
-      ...r,
-      sector: null,
-      shares_float: null,
-      short_pct_float: null,
-    }));
+    rows = fallback.map((r) => ({ ...r, sector: null, shares_float: null, short_pct_float: null }));
   }
 
-  // Canonical verdict first (permission → grade → score); older rows without one fall back to the legacy score.
-  const ranked = rankDailyPicks(rows.map((r) => ({ ...r, canonical: readStoredCanonical({ canonical: r.canonical }) }))).slice(0, 10);
+  const visible = rows.filter((r) => r.asset_class === 'equity' || r.asset_class === 'crypto');
+  visible.sort((a, b) => a.symbol.localeCompare(b.symbol) || a.asset_class.localeCompare(b.asset_class));
   return {
     scan_date,
-    picks: ranked.map((r, i) => ({
-      rank: i + 1,
-      dataAsOf: evaluateDailyPickTrust(r).dataAsOf,
-      stale: evaluateDailyPickTrust(r).freshness !== 'fresh',
-      priceLabel: dailyPickPriceBasis(r.price, r.canonical, r.asset_class).priceBasisLabel,
-      asset_class: r.asset_class,
-      symbol: r.symbol,
-      score: r.canonical ? r.canonical.score : r.score,
-      legacyScore: r.legacy_score != null ? Number(r.legacy_score) : r.score, // columns hold canonical values from Phase 3
-      canonical: r.canonical,
-      direction: r.canonical
-        ? (r.canonical.direction === 'long' ? 'bullish' : r.canonical.direction === 'short' ? 'bearish' : 'neutral')
-        : r.direction,
-      price: r.price ? Number(r.price) : null,
-      change_percent: r.change_percent ? Number(r.change_percent) : null,
-      sector: r.sector,
-      shares_float: r.shares_float ? Number(r.shares_float) : null,
-      short_pct_float: r.short_pct_float ? Number(r.short_pct_float) : null,
-    })),
+    picks: visible.map((r) => {
+      const trust = evaluateDailyPickTrust(r);
+      return {
+        dataAsOf: trust.dataAsOf,
+        stale: trust.freshness !== 'fresh',
+        priceLabel: dailyPickPriceBasis(r.price, readStoredCanonical(r.indicators), r.asset_class).priceBasisLabel,
+        asset_class: r.asset_class,
+        symbol: r.symbol,
+        price: r.price ? Number(r.price) : null,
+        change_percent: r.change_percent ? Number(r.change_percent) : null,
+        sector: r.sector,
+        shares_float: r.shares_float ? Number(r.shares_float) : null,
+        short_pct_float: r.short_pct_float ? Number(r.short_pct_float) : null,
+      };
+    }),
   };
 }

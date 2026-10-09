@@ -240,7 +240,6 @@ export async function GET(req: NextRequest) {
     console.error('[Intraday API] Error:', error);
     return NextResponse.json({ 
       error: 'Failed to fetch intraday data',
-      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }

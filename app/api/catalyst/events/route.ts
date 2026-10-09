@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { catalystLimiter, getClientIP } from '@/lib/rateLimit';
 import { q } from '@/lib/db';
 import { CatalystSubtype } from '@/lib/catalyst/types';
 
@@ -15,6 +16,13 @@ export async function GET(req: NextRequest) {
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    // /api/catalyst/ is exempt from the middleware quota, so this route limits itself: per workspace and per IP.
+    const byWorkspace = catalystLimiter.check(`ws:${session.workspaceId}`);
+    const byIp = catalystLimiter.check(`ip:${getClientIP(req)}`);
+    if (!byWorkspace.allowed || !byIp.allowed) {
+      const retryAfter = Math.max(byWorkspace.retryAfter ?? 0, byIp.retryAfter ?? 0) || 60;
+      return NextResponse.json({ error: 'Too many requests. Please wait and try again.', retryAfter }, { status: 429, headers: { 'Retry-After': String(retryAfter) } });
     }
 
     const { searchParams } = new URL(req.url);

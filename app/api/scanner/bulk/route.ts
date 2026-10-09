@@ -50,6 +50,7 @@ import { isAsciiCryptoTicker } from '@/lib/scanner/cryptoTicker';
 import { cachedMoversToAdd, completedSessionAvgVolume, parseEquityQuote } from '@/lib/scanner/equityScanInputs';
 import { riskOffThresholds } from '@/lib/regime-classifier';
 import { easternBarTimeToIso, intradayAvgDailyVolume } from '@/lib/scanner/intradayEquityBars';
+import { bulkScanLimiter, getClientIP } from '@/lib/rateLimit';
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 60 seconds max for client requests
@@ -2261,6 +2262,16 @@ async function runBulkScanner(req: NextRequest) {
         error: 'Advanced research scanner requires Pro access.',
         compliance: scannerComplianceMetadata(),
       }, { status: 403 });
+    }
+
+    // /api/scanner/ is exempt from the middleware quota, so this expensive route limits itself: per workspace and per IP.
+    {
+      const byWorkspace = bulkScanLimiter.check(`ws:${session.workspaceId}`);
+      const byIp = bulkScanLimiter.check(`ip:${getClientIP(req)}`);
+      if (!byWorkspace.allowed || !byIp.allowed) {
+        const retryAfter = Math.max(byWorkspace.retryAfter ?? 0, byIp.retryAfter ?? 0) || 60;
+        return NextResponse.json({ error: 'Too many bulk scans. Please wait before scanning again.', retryAfter }, { status: 429, headers: { 'Retry-After': String(retryAfter) } });
+      }
     }
 
     const adaptive = session?.workspaceId

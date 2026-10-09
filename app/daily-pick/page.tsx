@@ -20,20 +20,20 @@ const latestPickState = cache(async () => {
 export async function generateMetadata(): Promise<Metadata> {
   const { data, unavailable } = await latestPickState();
   const dateStr = data?.scan_date ?? new Date().toISOString().slice(0, 10);
-  const topSymbols = (data?.picks ?? []).slice(0, 3).map((p) => p.symbol).join(', ') || 'today';
-  const title = unavailable ? 'Daily Picks unavailable · MarketScanner Pros' : `Daily Picks ${dateStr} · ${topSymbols} · MarketScanner Pros`;
-  const description = `Top scanner-ranked stocks and crypto for the ${formatSessionDate(dateStr)} US session: ${topSymbols}. Educational technical-analysis snapshots updated daily.`;
+  const count = data?.picks.length ?? 0;
+  const title = unavailable ? 'Daily scan unavailable · MarketScanner Pros' : `Daily scan observations ${dateStr} · MarketScanner Pros`;
+  const description = `${count ? `${count} stocks and crypto` : 'Symbols'} stored by the daily scan for the ${formatSessionDate(dateStr)} US session, listed A–Z with measured price, session change, float and short interest. Educational snapshots, not ratings or recommendations.`;
   const url = 'https://marketscannerpros.app/daily-pick';
   // The card's text is built server-side from the same snapshot; the date only makes the URL change daily.
   const og = scanOgImageUrl('DAILY', data?.scan_date ?? null);
   return {
-    title: 'Daily Picks',
+    title: 'Daily scan observations',
     description,
     alternates: {
       canonical: url,
       types: {
         'application/rss+xml': [
-          { url: `${url}/feed.xml`, title: 'MarketScanner Pros — Daily Picks RSS' },
+          { url: `${url}/feed.xml`, title: 'MarketScanner Pros — Daily scan RSS' },
         ],
       },
     },
@@ -49,9 +49,9 @@ export default async function DailyPickPage() {
     return (
       <main style={pageStyle}>
         <div style={containerStyle}>
-          <h1 style={h1Style}>Daily Picks</h1>
+          <h1 style={h1Style}>Daily scan observations</h1>
           <p style={{ color: 'var(--msp-flat)' }}>
-            {unavailable ? 'Daily picks are unavailable because the latest scanner snapshot could not be loaded. Refresh to retry.' : 'No picks scored yet for the latest session — check back after the next scanner run.'}
+            {unavailable ? 'Daily scan observations are unavailable because the latest snapshot could not be loaded. Refresh to retry.' : 'No observations stored yet for the latest session. Check back after the next scan.'}
           </p>
         </div>
       </main>

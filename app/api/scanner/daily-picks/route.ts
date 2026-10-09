@@ -1,9 +1,10 @@
 /**
- * Daily Ranked Research API
- * 
+ * Daily scan observations API
+ *
  * @route GET /api/scanner/daily-picks
- * @description Returns pre-computed educational research observations for each asset class.
- *              Includes both bullish-alignment and bearish-alignment observations.
+ * Admin / operator callers: the full stored rows (canonical verdict, levels, top/bottom split, legacy score), unchanged.
+ * Everyone else: the public contract (lib/research/publicDailyObservations): measured rows only, no grade, verdict,
+ * direction, score, levels or top/bottom split, sorted by symbol (A–Z) — a disclosed factual order, not a ranking.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -14,10 +15,12 @@ import { evaluateDailyPickTrust, summarizeDailyPickTrust, type DailyPickTrust } 
 import { canonicalPickFields, rankDailyPicks, readStoredCanonical, storedLegacyScore } from "@/lib/scoring/canonical/dailyPick";
 import { omitForexPicks } from "@/lib/scanner/omitForexPicks";
 import { formatSessionDate, toYmd } from "@/lib/time/usSession";
+import { requireAdmin } from "@/lib/adminAuth";
+import { PUBLIC_DAILY_OBSERVATIONS_CONTRACT, SELECTION_NOTE, SORT_NOTE, sortObservations, toPublicDailyObservation, type PublicDailyObservation } from "@/lib/research/publicDailyObservations";
 
 export const runtime = "nodejs";
 
-export async function GET(req: NextRequest) {
+async function adminFullResponse(req: NextRequest) {
   try {
     // Get query params
     const { searchParams } = new URL(req.url);
@@ -200,5 +203,84 @@ export async function GET(req: NextRequest) {
         warnings: ['Unable to load daily research observations.'],
       }),
     }, { status: 500 });
+  }
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// The same URL returns the admin variant or the public projection depending on the cookie, so no response may be
+// stored by a shared cache: every response (admin and public, success and error) is private, no-store, Vary: Cookie.
+const PRIVATE = { 'Cache-Control': 'private, no-store, max-age=0', Vary: 'Cookie' };
+
+export async function GET(req: NextRequest) {
+  // Admin and operator views keep the full stored rows (verdict, levels, ranking) exactly as before.
+  const isAdmin = await requireAdmin(req).then((a) => a.ok, () => false);
+  if (isAdmin) {
+    const full = await adminFullResponse(req);
+    full.headers.set('Cache-Control', PRIVATE['Cache-Control']);
+    full.headers.set('Vary', PRIVATE.Vary);
+    return full;
+  }
+  return publicObservations(req);
+}
+
+async function publicObservations(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const rawLimit = Number(searchParams.get('limit') ?? 20);
+    const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(Math.floor(rawLimit), 40)) : 20;
+    const date = searchParams.get('date');
+    if (date && (!DATE_RE.test(date) || !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date)) {
+      return NextResponse.json({ error: 'date must be a valid YYYY-MM-DD' }, { status: 400, headers: PRIVATE });
+    }
+    const source = date ? `SELECT (jsonb_populate_record(NULL::daily_picks, pick)).* FROM daily_picks_history WHERE scan_date = $1::date` : `SELECT * FROM daily_picks`;
+    // Every stored row of the latest scan per market (both stored sides), in symbol order. No score ordering or cut.
+    const rows = await q(`
+      WITH source_picks AS (${source}), latest_date AS (
+        SELECT asset_class, MAX(scan_date) AS scan_date FROM source_picks GROUP BY asset_class
+      )
+      SELECT DISTINCT ON (dp.asset_class, dp.symbol) dp.asset_class, dp.symbol, dp.price, dp.change_percent, dp.indicators, dp.scan_date, dp.created_at
+        FROM source_picks dp JOIN latest_date ld ON dp.asset_class = ld.asset_class AND dp.scan_date = ld.scan_date
+       ORDER BY dp.asset_class, dp.symbol
+       LIMIT 400
+    `, date ? [date] : []);
+    const visible = omitForexPicks(rows);
+    const nowMs = Date.now();
+    const trusts: DailyPickTrust[] = [];
+    const byMarket: Record<'equity' | 'crypto', PublicDailyObservation[]> = { equity: [], crypto: [] };
+    for (const r of visible) {
+      if (r.asset_class !== 'equity' && r.asset_class !== 'crypto') continue;
+      const trust = evaluateDailyPickTrust(r, nowMs);
+      trusts.push(trust);
+      const priceInfo = dailyPickPriceBasis(r.price, readStoredCanonical(r.indicators), r.asset_class);
+      byMarket[r.asset_class as 'equity' | 'crypto'].push(toPublicDailyObservation({ ...r, scan_date: toYmd(r.scan_date) }, priceInfo, trust));
+    }
+    const totals = { equity: byMarket.equity.length, crypto: byMarket.crypto.length };
+    const observations = { equity: sortObservations(byMarket.equity).slice(0, limit), crypto: sortObservations(byMarket.crypto).slice(0, limit) };
+    const scanDate = visible.length ? toYmd(visible[0].scan_date) : null;
+    const summary = summarizeDailyPickTrust(trusts);
+    return NextResponse.json({
+      success: true,
+      contract: PUBLIC_DAILY_OBSERVATIONS_CONTRACT,
+      history: date ? { requestedDate: date, basis: 'first publication; legacy rows archived at migration time' } : null,
+      compliance: scannerComplianceMetadata(),
+      scanDate,
+      scanDateBasis: 'US equity market session (America/New_York) the scan belongs to. Crypto rows use the latest completed UTC daily candle at scan time; each row carries its own data timestamp.',
+      selection: { note: SELECTION_NOTE, sort: 'symbol_asc', sortNote: SORT_NOTE, limitPerMarket: limit, storedPerMarket: totals },
+      observations,
+      dataQuality: {
+        ...scannerDataQualityMetadata({
+          source: 'daily_picks_database', computedAt: scanDate, stale: summary.stale, coverageScore: summary.coverageScore,
+          warnings: visible.length ? [
+            ...(summary.staleCount ? [`${summary.staleCount} observation(s) are based on stale data.`] : []),
+            ...(summary.insufficientCount ? [`${summary.insufficientCount} observation(s) have insufficient indicator coverage.`] : []),
+          ] : ['No daily scan observations are available yet.'],
+        }),
+        oldestDataTimestamp: summary.oldestDataTimestamp,
+      },
+      attribution: { marketData: 'Powered by licensed market data providers' },
+    }, { headers: PRIVATE });
+  } catch (error) {
+    console.error('Daily observations error:', error);
+    return NextResponse.json({ success: false, contract: PUBLIC_DAILY_OBSERVATIONS_CONTRACT, error: 'Failed to fetch daily scan observations', observations: { equity: [], crypto: [] } }, { status: 500, headers: PRIVATE });
   }
 }
