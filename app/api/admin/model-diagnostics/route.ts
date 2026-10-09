@@ -107,6 +107,10 @@ export async function GET(req: NextRequest) {
 
   const scoreField = parseScoreField(req.nextUrl.searchParams.get("score"));
   const signals = await loadSignalOutcomes(scoreField);
+  if (signals.error) {
+    return NextResponse.json({ ok: false, error: "Model diagnostics are unavailable. Try again later." },
+      { status: 503, headers: { "Cache-Control": "private, no-store" } });
+  }
   const { buckets, totalLabelled, overallHitRate, drift } = computeCalibration(signals.rows);
   const totalSignals = signals.rows.length;
   const times = signals.rows.map((r) => (r.signal_at ? new Date(r.signal_at).getTime() : NaN)).filter(Number.isFinite);
@@ -117,9 +121,9 @@ export async function GET(req: NextRequest) {
     note = "No ai_signal_log signals recorded yet — every shared-scan run logs its signals, so this fills after the next scan.";
   } else if (totalLabelled === 0) {
     note = `No outcomes labelled by the fixed labeller yet (since ${LABELLER_FIX_AT}). Hit rates stay empty until signals are measured` +
-      (signals.oldMethodLabelled > 0 ? `; ${signals.oldMethodLabelled} old-method verdict(s) are excluded.` : ".");
+      (signals.oldMethodLabelled > 0 ? `; ${signals.oldMethodLabelled} old-method verdict(s) exist across all workspace history, not just this sample.` : ".");
   } else if (signals.oldMethodLabelled > 0) {
-    note = `${signals.oldMethodLabelled} verdict(s) from the old labelling method (before ${LABELLER_FIX_AT}) are excluded from hit rates.`;
+    note = `${signals.oldMethodLabelled} verdict(s) from the old labelling method (before ${LABELLER_FIX_AT}) exist across all workspace history, not just this sample. Old-method verdicts are excluded from hit rates.`;
   }
 
   return NextResponse.json({
@@ -146,14 +150,14 @@ export async function GET(req: NextRequest) {
       sample: `Latest ${totalSignals} shared-scan signals with a ${SCORE_COLUMN[scoreField]} value (newest first, capped at 1000)`,
       sampleFrom: times.length ? new Date(Math.min(...times)).toISOString() : null,
       sampleTo: times.length ? new Date(Math.max(...times)).toISOString() : null,
-      label: `24h close vs price at signal, in the call's direction: correct >= +${OUTCOME_MOVE_THRESHOLD_PCT}%, wrong <= -${OUTCOME_MOVE_THRESHOLD_PCT}%, otherwise neutral`,
-      hitRateDenominator: "correct + wrong per band (labelled); neutral, pending and old-method verdicts are left out",
+      label: `First completed close at or after 24h vs price at signal, in the call's direction: correct >= +${OUTCOME_MOVE_THRESHOLD_PCT}%, wrong <= -${OUTCOME_MOVE_THRESHOLD_PCT}%, otherwise neutral. Daily fallback can measure later than 24h; this does not test target-before-stop`,
+      hitRateDenominator: "correct + wrong per band (labelled); neutral, pending, expired and excluded/unknown verdicts are left out",
       labelledSince: LABELLER_FIX_AT,
       costs: `Hit rates and avg moves are before costs; 'after cost' subtracts an assumed ${ASSUMED_ROUND_TRIP_COST_PCT}% round trip (not measured). No funding, sizing or overlap adjustment.`,
       minLabelledForComparison: MIN_LABELLED_FOR_COMPARISON,
       zeroScoreSignals: zeroScore,
       zeroScoreNote: zeroScore > 0
-        ? "Score 0 rows predate the 2026-09-28 recorder rule that stopped logging score-0 signals; they are legacy rows, not missing values."
+        ? "These rows have a recorded score of 0, not a missing value. Check their dates and recorder version before comparing them with current signals."
         : null,
       overlap: "Signals on the same symbol in the same window are counted separately and are not independent.",
     },
