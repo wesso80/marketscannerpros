@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
-import {act,cleanup,fireEvent,render,screen} from '@testing-library/react';
+import {act,cleanup,fireEvent,render,screen,waitFor} from '@testing-library/react';
 import Page from '@/app/admin/model-diagnostics/page';
 vi.mock('@/components/admin/shared/TruthStampLine',()=>({default:()=>null}));
 beforeEach(()=>vi.stubGlobal('React',React));
@@ -29,4 +29,12 @@ it('does not let an earlier score request overwrite the current selection',async
  await act(async()=>finishFirst(response(payload('confluence_score'))));
  expect(screen.queryByText(/\(confluence_score\)/)).toBeNull();
  expect(screen.getByText(/\(elite_score\)/)).toBeTruthy();
+});
+
+it('requests a verified cohort explicitly and keeps mixed-history selection available',async()=>{
+ const fetch=vi.fn().mockResolvedValue(response(payload()));vi.stubGlobal('fetch',fetch);
+ render(<Page/>);await screen.findByText(/of 2 labelled/);
+ fireEvent.change(screen.getByRole('combobox',{name:'Measurement records'}),{target:{value:'verified'}});
+ await waitFor(()=>expect(fetch.mock.calls.at(-1)?.[0]).toContain('cohort=verified'));
+ expect(screen.getByRole('option',{name:'All eligible records (mixed provenance)'})).toBeTruthy();
 });

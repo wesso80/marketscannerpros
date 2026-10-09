@@ -212,7 +212,7 @@ export async function GET(req: NextRequest) {
       },
       sinceFix: {
         since: LABELLER_FIX_AT,
-        note: "Labels made by the fixed labeller (#167, from 23:52 AEST Sat 26 Sep 2026). All-time figures include older labels made by the old labeller (old method).",
+        note: "Historical timestamp cohort from the labeller cutoff (#167). Timestamps alone do not prove writer or measurement method; all-time figures also include earlier labels.",
         labeled: labeledSinceFix,
         correct: o.correct_since_fix ?? 0,
         wrong: o.wrong_since_fix ?? 0,

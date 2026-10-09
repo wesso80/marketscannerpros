@@ -4,12 +4,13 @@
  * correct → win, wrong → loss; only fixed-labeller verdicts (outcome_measured_at >= LABELLER_FIX_AT) count.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import {evidence} from './fixtures/outcomeEvidence';
 import { NextRequest } from "next/server";
 
 const m = vi.hoisted(() => ({
   sql: [] as string[],
   params: [] as unknown[][],
-  signals: [] as { score: number; outcome: string | null; signedMove?: number | null; signal_at?: string }[],
+  signals: [] as { score: number; outcome: string | null; signedMove?: number | null; signal_at?: string; provenance_evidence?: import('@/lib/admin/verifiedOutcomes').EvidenceRecord }[],
   old: 0,
   fail: false,
 }));
@@ -102,6 +103,21 @@ describe("computeCalibration denominators, moves and drift", () => {
 });
 
 describe("GET /api/admin/model-diagnostics", () => {
+  it('computes calibration from only the requested provenance cohort', async () => {
+    m.signals=[{score:80,outcome:'correct',signedMove:2,signal_at:'2026-10-01T12:00:00Z',provenance_evidence:evidence()},{score:80,outcome:'wrong',signedMove:-2}];
+    const body=await (await GET(new NextRequest('http://localhost/api/admin/model-diagnostics?cohort=verified'))).json();
+    expect(body.totalLabelled).toBe(1);expect(body.overallHitRate).toBe(100);
+    expect(body.provenance).toMatchObject({total:2,verified:1,unknown:1,selected:1});
+    expect(JSON.stringify(body)).not.toContain('provenance_evidence');
+  });
+  it('retains the population denominator when verified records are absent', async () => {
+    m.signals=[{score:80,outcome:'correct',signedMove:2,signal_at:'2026-10-01T00:00:00Z'}];
+    const body=await (await GET(new NextRequest('http://localhost/api/admin/model-diagnostics?cohort=verified'))).json();
+    expect(body.totalSignals).toBe(0);expect(body.totalLabelled).toBe(0);
+    expect(body.provenance).toMatchObject({total:1,unknown:1,selected:0});
+    expect(body.sources.cohortPopulation).toBe(1);
+  });
+
   it("reports a database failure as unavailable without counts or raw error text", async () => {
     m.fail = true;
     const response = await GET(new NextRequest('http://localhost/api/admin/model-diagnostics'));

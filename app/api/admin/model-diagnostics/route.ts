@@ -28,20 +28,11 @@ import { ASSUMED_ROUND_TRIP_COST_PCT, MIN_LABELLED_FOR_COMPARISON, computeCalibr
 import { OUTCOME_MOVE_THRESHOLD_PCT } from "@/lib/outcomes/aiOutcomeLabel";
 import { computeBreakdowns, type BreakdownRow } from '@/lib/admin/modelBreakdowns';
 
+import { EVIDENCE_SQL, parseCohort, selectOutcomeCohort, type EvidenceRecord } from '@/lib/admin/verifiedOutcomes';
 import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 
 const SIGNAL_WORKSPACE = "operator-terminal";
-
-/** Newest signal time for the truth stamp; null (shown as not recorded) if it cannot be read. */
-async function latestSignalAt(): Promise<string | null> {
-  try {
-    const rows = await q<{ latest: string | null }>(`SELECT MAX(signal_at) AS latest FROM ai_signal_log WHERE workspace_id = $1`, [SIGNAL_WORKSPACE]);
-    return rows?.[0]?.latest ?? null;
-  } catch {
-    return null;
-  }
-}
 
 export type ScoreField = "confluence" | "elite" | "confidence";
 
@@ -63,7 +54,7 @@ function parseScoreField(v: string | null | undefined): ScoreField {
   return s === "elite" || s === "confidence" ? s : "confluence";
 }
 
-type SignalRow = BreakdownRow;
+type SignalRow = BreakdownRow & {provenance_evidence?:EvidenceRecord};
 
 interface SignalLoad {
   rows: SignalRow[];
@@ -80,7 +71,7 @@ async function loadSignalOutcomes(field: ScoreField): Promise<SignalLoad> {
                 CASE WHEN outcome IN ('correct', 'wrong', 'neutral', 'expired') AND (outcome_measured_at IS NULL OR outcome_measured_at < $2::timestamptz)
                      THEN NULL ELSE outcome END AS outcome,
                 CASE WHEN outcome IN ('correct', 'wrong', 'neutral') AND outcome_measured_at >= $2::timestamptz
-                     THEN ${signedMoveSql("pct_move_24h")} ELSE NULL END AS "signedMove"
+                     THEN ${signedMoveSql("pct_move_24h")} ELSE NULL END AS "signedMove", ${EVIDENCE_SQL}
            FROM ai_signal_log
           WHERE workspace_id = $1 AND ${SCORE_COLUMN[field]} IS NOT NULL
           ORDER BY signal_at DESC
@@ -112,14 +103,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Model diagnostics are unavailable. Try again later." },
       { status: 503, headers: { "Cache-Control": "private, no-store" } });
   }
-  const { buckets, totalLabelled, overallHitRate, drift } = computeCalibration(signals.rows);
-  const totalSignals = signals.rows.length;
-  const times = signals.rows.map((r) => (r.signal_at ? new Date(r.signal_at).getTime() : NaN)).filter(Number.isFinite);
-  const zeroScore = signals.rows.filter((r) => Number(r.score) === 0).length;
+  const cohort = selectOutcomeCohort(signals.rows, parseCohort(req.nextUrl.searchParams.get('cohort')));
+  const selected = cohort.rows;
+  const { buckets, totalLabelled, overallHitRate, drift } = computeCalibration(selected);
+  const totalSignals = selected.length;
+  const times = selected.map((r) => (r.signal_at ? new Date(r.signal_at).getTime() : NaN)).filter(Number.isFinite);
+  const zeroScore = selected.filter((r) => Number(r.score) === 0).length;
 
   let note: string | null = null;
   if (totalSignals === 0) {
-    note = "No ai_signal_log signals recorded yet — every shared-scan run logs its signals, so this fills after the next scan.";
+    note = "No records match this measurement cohort within the latest score-bearing sample. Other cohorts may contain records.";
   } else if (totalLabelled === 0) {
     note = `No outcomes labelled by the fixed labeller yet (since ${LABELLER_FIX_AT}). Hit rates stay empty until signals are measured` +
       (signals.oldMethodLabelled > 0 ? `; ${signals.oldMethodLabelled} old-method verdict(s) exist across all workspace history, not just this sample.` : ".");
@@ -138,10 +131,12 @@ export async function GET(req: NextRequest) {
     totalLabelled,
     overallHitRate,
     buckets,
-    breakdowns: computeBreakdowns(signals.rows),
+    provenance: cohort.summary,
+    breakdowns: computeBreakdowns(selected),
     drift,
     sources: {
-      aiSignalLog: signals.rows.length,
+      aiSignalLog: selected.length,
+      cohortPopulation: signals.rows.length,
       aiSignalLogError: signals.error,
       labelledSince: LABELLER_FIX_AT,
       oldMethodLabelled: signals.oldMethodLabelled,
@@ -149,7 +144,7 @@ export async function GET(req: NextRequest) {
     note,
     /** What the numbers mean, so a hit rate is never read without its denominator, horizon and cost basis. */
     definition: {
-      sample: `Latest ${totalSignals} shared-scan signals with a ${SCORE_COLUMN[scoreField]} value (newest first, capped at 1000)`,
+      sample: `${totalSignals} ${cohort.summary.cohort} records selected within latest ${signals.rows.length} shared-scan signals with a ${SCORE_COLUMN[scoreField]} value (newest first, capped at 1000)`,
       sampleFrom: times.length ? new Date(Math.min(...times)).toISOString() : null,
       sampleTo: times.length ? new Date(Math.max(...times)).toISOString() : null,
       label: `First completed close at or after 24h vs price at signal, in the call's direction: correct >= +${OUTCOME_MOVE_THRESHOLD_PCT}%, wrong <= -${OUTCOME_MOVE_THRESHOLD_PCT}%, otherwise neutral. Daily fallback can measure later than 24h; this does not test target-before-stop`,
@@ -163,6 +158,6 @@ export async function GET(req: NextRequest) {
         : null,
       overlap: "Signals on the same symbol in the same window are counted separately and are not independent.",
     },
-    truth: storedTruth({ source: 'ai_signal_log (Postgres)', dataAsOf: await latestSignalAt(), staleAfterMinutes: 24 * 60 }),
+    truth: storedTruth({ source: 'ai_signal_log (Postgres)', dataAsOf: times.length ? new Date(Math.max(...times)).toISOString() : null, staleAfterMinutes: 24 * 60 }),
   });
 }

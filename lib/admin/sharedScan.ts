@@ -361,7 +361,8 @@ async function executeRun(input: {
             .catch((err) => console.error("[sharedScan] signal recording failed:", err));
         }
         const appeared = summary.radarChanges.filter((c) => c.action === "appeared");
-        if (appeared.length > 0 && adminRadarDiscordEnabled()) {
+        // Equities posts wait for ADMIN_RADAR_DISCORD_ENABLED. Crypto posts stay on, as before that flag.
+        if (appeared.length > 0 && (market !== "EQUITIES" || adminRadarDiscordEnabled())) {
           opsAlert({
             title: `Shared admin scan — ${appeared.length} new radar signal(s)`,
             message: appeared.map((a) => `${a.symbol} (${a.permission} @ ${(a.confidence * 100).toFixed(1)}%)`).join("\n"),

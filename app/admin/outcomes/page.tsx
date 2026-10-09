@@ -1,5 +1,7 @@
 "use client";
 
+import OutcomeCohortAnalysis from "@/components/admin/OutcomeCohortAnalysis";
+
 import { useState, useEffect, useCallback } from "react";
 import PositionHorizonOutcomes from "@/components/admin/PositionHorizonOutcomes";
 import type { PositionHorizonStats } from "@/lib/admin/positionHorizonStats";
@@ -333,6 +335,9 @@ export default function OutcomesPage() {
         </div>
       )}
 
+      <OutcomeCohortAnalysis scope="signals" />
+      <p className="my-3 text-sm text-slate-400">Historical analysis below: mixed or unknown method attribution. Date cutoffs alone do not verify the measurement method. The cohort selector above applies only to its own 24-hour panel.</p>
+
       {loading ? (
         <div style={{ color: "#6B7280", textAlign: "center", padding: "3rem" }}>Loading signal data…</div>
       ) : (
@@ -343,7 +348,7 @@ export default function OutcomesPage() {
             <StatCard label="Hit rate (all-time, incl. neutral/expired, old method included)" value={stats?.overall.accuracyRate != null ? `${stats.overall.accuracyRate}%` : "—"} color="#10B981" />
             <StatCard label="Since labeller fix (incl. neutral/expired)" value={stats?.sinceFix?.accuracyRate != null ? `${stats.sinceFix.accuracyRate}% of ${stats.sinceFix.labeled}` : "— (none yet)"} color="#10B981" />
             <StatCard label="Since fix: correct ÷ (correct + wrong)" value={stats?.sinceFix?.directionalHitRate != null ? `${stats.sinceFix.directionalHitRate}%` : "—"} color="#10B981" />
-            <StatCard label="Old-method labels (before #167)" value={stats?.overall.labeledOldMethod ?? 0} color="#9CA3AF" />
+            <StatCard label="Labels before the #167 cutoff" value={stats?.overall.labeledOldMethod ?? 0} color="#9CA3AF" />
             <StatCard label="Correct" value={stats?.overall.correct ?? 0} color="#10B981" />
             <StatCard label="Wrong" value={stats?.overall.wrong ?? 0} color="#EF4444" />
             <StatCard label="Pending (24h)" value={stats?.overall.pending ?? 0} color="#FBBF24" />

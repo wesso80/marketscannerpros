@@ -69,7 +69,7 @@ describe("GET /api/admin/backtest-lab", () => {
     expect(body.note).toMatch(/No logged calls/);
     m.q.mockResolvedValue([{ setup: "JARVIS", market: "EQUITIES", cases: 3, avg_score: 50, wins: 0, losses: 0, neutral: 0, pending: 3, avg_move_pct: null }]);
     body = await (await backtestGET(new NextRequest("http://localhost/api/admin/backtest-lab"))).json();
-    expect(body.note).toMatch(/none has been measured/);
+    expect(body.note).toMatch(/none has a directional verdict after the legacy date cutoff/);
     m.q.mockRejectedValue(new Error("boom"));
     body = await (await backtestGET(new NextRequest("http://localhost/api/admin/backtest-lab"))).json();
     expect(body.note).toMatch(/unavailable/);

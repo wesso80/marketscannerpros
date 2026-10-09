@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       ok: true, traceId, minSample, rows,
       since: LABELLER_FIX_AT,
-      note: 'Shared-scan LONG/SHORT signals, fixed-labeller outcomes only (last 90 days). Win rate = wins ÷ (wins + losses); '
+      note: 'Shared-scan LONG/SHORT signals, outcomes after the legacy date cutoff (last 90 days; method attribution unverified). Win rate = wins ÷ (wins + losses); '
         + 'avg move is the 24h move in the call\'s direction.',
       truth: wrapTruth({ rows }, { source: 'admin:postgres', freshness: 'real-time' }),
     });

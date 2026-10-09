@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { OverlapInterval } from '@/lib/admin/overlapUncertainty';
+import OutcomeCohort from '@/components/admin/OutcomeCohort';
+import type {OutcomeCohort as Cohort,ProvenanceSummary} from '@/lib/admin/verifiedOutcomes';
 import OutcomeCompleteness from '@/components/admin/OutcomeCompleteness';
 import type { OutcomeCompleteness as Completeness } from '@/lib/admin/outcomeCompleteness';
 import TruthStampLine from "@/components/admin/shared/TruthStampLine";
@@ -20,6 +22,7 @@ interface Response {
   overall?: Group; groups?: Group[];
   definition?: { outcome: string; costs: string; intervals: string; split: string; minSample: number; minHalfSample: number; caveats: string[]; labelledSince: string };
   completeness?: Completeness;
+  provenance?:ProvenanceSummary;
   truth?: Record<string, unknown>;
 }
 
@@ -76,6 +79,7 @@ function Row({ g }: { g: Group }) {
 
 export default function EdgeCheckPage() {
   const [by, setBy] = useState("playbook_direction");
+  const [cohort,setCohort]=useState<Cohort>('all');
   const [days, setDays] = useState(90);
   const [data, setData] = useState<Response | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,13 +87,14 @@ export default function EdgeCheckPage() {
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    fetch(`/api/admin/edge-check?by=${encodeURIComponent(by)}&days=${days}`, { cache: "no-store" })
+    setData(null);
+    fetch(`/api/admin/edge-check?by=${encodeURIComponent(by)}&days=${days}&cohort=${cohort}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => { if (alive) setData(j); })
       .catch(() => { if (alive) setData({ ok: false, error: "Request failed" }); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [by, days]);
+  }, [by, days, cohort]);
 
   return (
     <div style={{ padding: "1rem", color: "#CBD5E1" }}>
@@ -110,6 +115,7 @@ export default function EdgeCheckPage() {
           </select>
         </label>
       </div>
+      <OutcomeCohort scope="Eligible measured records in the selected window; provenance counts precede this filter. Daily completeness covers the full recorded population." value={cohort} onChange={setCohort} summary={data?.provenance}/>
       {data?.truth && <TruthStampLine truth={data.truth as never} />}
       {loading && <p>Loading…</p>}
       {!loading && data && !data.ok && <p style={{ color: "#F87171" }}>{data.error ?? "Unavailable"}</p>}

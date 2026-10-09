@@ -7,7 +7,7 @@
  * call's direction. Costs are an assumed round trip (lib/admin/edgeCheck). See that module for the verdict rules.
  *
  * Query: ?by=playbook|playbook_direction|direction|asset|regime|timeframe (default playbook_direction), ?days=1..365 (90).
- * BOUNDARY: read-only research telemetry. Verdicts are evidence labels, not trade instructions.
+ * BOUNDARY: read-only private trading analytics. No execution or broker integration.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
@@ -16,6 +16,7 @@ import { storedTruth } from '@/lib/admin/truthLayer';
 import { LABELLER_FIX_AT, signedMoveSql } from '@/lib/admin/signalStats';
 import { ASSUMED_COST_PCT, MIN_HALF_SAMPLE, MIN_SAMPLE, edgeCheck } from '@/lib/admin/edgeCheck';
 import { OUTCOME_MOVE_THRESHOLD_PCT } from '@/lib/outcomes/aiOutcomeLabel';
+import { EVIDENCE_SQL, parseCohort, selectOutcomeCohort, type EvidenceRecord } from '@/lib/admin/verifiedOutcomes';
 import { outcomeCompleteness, type CompletenessStatus } from '@/lib/admin/outcomeCompleteness';
 import { adminErrorText } from '@/lib/admin/errorResponse';
 
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
   const days = Number.isFinite(daysRaw) ? Math.min(365, Math.max(1, Math.round(daysRaw))) : 90;
 
   try {
-    const rows = await q<{ grp: string; signal_at: string; outcome: string; signed_move: string | number | null; inclusion_status: CompletenessStatus }>(
+    const rows = await q<{ grp: string; signal_at: string; outcome: string; signed_move: string | number | null; inclusion_status: CompletenessStatus; provenance_evidence?:EvidenceRecord }>(
       `SELECT ${GROUP_SQL[by]} AS grp, signal_at, outcome, ${signedMoveSql('pct_move_24h')} AS signed_move,
               CASE
                 WHEN outcome IN ('correct', 'wrong', 'neutral')
@@ -55,7 +56,7 @@ export async function GET(req: NextRequest) {
                   AND (outcome_measured_at IS NULL OR outcome_measured_at < $1::timestamptz) THEN 'old_method'
                 WHEN outcome IN ('correct', 'wrong', 'neutral') THEN 'invalid_move'
                 ELSE 'unknown'
-              END AS inclusion_status
+              END AS inclusion_status, ${EVIDENCE_SQL}
          FROM ai_signal_log
         WHERE workspace_id = 'operator-terminal'
           AND UPPER(trade_bias) IN ('LONG', 'SHORT')
@@ -63,7 +64,8 @@ export async function GET(req: NextRequest) {
         ORDER BY signal_at ASC`,
       [LABELLER_FIX_AT, days],
     );
-    const measured = rows.filter(r => r.inclusion_status === 'measured');
+    const cohort = selectOutcomeCohort(rows.filter(r => r.inclusion_status === 'measured'), parseCohort(req.nextUrl.searchParams.get('cohort')));
+    const measured = cohort.rows;
     const result = edgeCheck(measured.map((r) => ({ group: r.grp, signalAt: r.signal_at, outcome: r.outcome, signedMove: Number(r.signed_move) })));
     const latest = measured.length ? measured[measured.length - 1].signal_at : null;
     return NextResponse.json({
@@ -72,8 +74,10 @@ export async function GET(req: NextRequest) {
       days,
       ...result,
       completeness: outcomeCompleteness(rows),
+      provenance: cohort.summary,
       definition: {
         completeness: 'All recorded LONG/SHORT shared-scan signals in the requested window, counted once by UTC signal date. Only measured rows enter Edge Check statistics. Pending is a recorded status, not a claim that a measurement is overdue. UTC days are calendar periods, not the group-specific earlier/later split. Empty dates are not shown.',
+        cohort: 'Provenance counts cover the eligible measured population before the selected cohort filter. Daily completeness still covers every recorded row in the window.',
         source: "ai_signal_log, shared-scan signals (workspace operator-terminal), LONG/SHORT calls",
         outcome: `24h close vs price at signal in the call's direction; correct >= +${OUTCOME_MOVE_THRESHOLD_PCT}%, wrong <= -${OUTCOME_MOVE_THRESHOLD_PCT}%, else neutral`,
         labelledSince: LABELLER_FIX_AT,
@@ -92,7 +96,7 @@ export async function GET(req: NextRequest) {
           'There is no embargo between periods: 24h outcome windows can overlap the split, and daily fallback may measure later than 24h.',
           'Only measured outcomes enter this sample; pending, expired and old-method outcomes are excluded. Recent periods may be less complete.',
           'A 24h move is not a trade result: no stops, targets or holding rules are applied.',
-          'Research evidence only. Not a recommendation and not an instruction to trade.',
+          'Trading analysis: lifecycle target/stop outcomes and fixed-horizon returns measure different results.',
         ],
       },
       truth: storedTruth({ source: 'ai_signal_log (Postgres)', dataAsOf: latest, staleAfterMinutes: 48 * 60 }),
