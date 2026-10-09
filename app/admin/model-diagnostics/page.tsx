@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import TruthStampLine from "@/components/admin/shared/TruthStampLine";
+import ModelOutcomeBreakdowns from '@/components/admin/ModelOutcomeBreakdowns';
+import type { OutcomeBreakdowns } from '@/lib/admin/modelBreakdowns';
 interface CalibrationBucket {
   band: string;
   min: number;
@@ -12,6 +14,9 @@ interface CalibrationBucket {
   wins?: number;
   losses?: number;
   neutral?: number;
+  pending?: number;
+  expired?: number;
+  excludedOrUnknown?: number;
   hitRate: number | null;
   avgScore: number | null;
   measured?: number;
@@ -53,6 +58,7 @@ interface ModelDiagnosticsResponse {
   totalLabelled?: number;
   overallHitRate?: number | null;
   buckets?: CalibrationBucket[];
+  breakdowns?: OutcomeBreakdowns;
   drift?: DriftRow[];
   note?: string | null;
   definition?: Definition;
@@ -78,12 +84,17 @@ export default function ModelDiagnosticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [scoreField, setScoreField] = useState<ScoreField>("confluence");
+  const requestVersion = useRef(0);
 
   const refresh = async (field: ScoreField = scoreField) => {
+    const version = ++requestVersion.current;
     setLoading(true);
+    setData(null);
+    setError("");
     try {
       const res = await fetch(`/api/admin/model-diagnostics?score=${field}`, { headers: authHeaders() });
       const json = (await res.json().catch(() => ({}))) as ModelDiagnosticsResponse;
+      if (version !== requestVersion.current) return;
       if (!res.ok || !json.ok) {
         setError(json.error || "Failed to load model diagnostics.");
       } else {
@@ -91,9 +102,9 @@ export default function ModelDiagnosticsPage() {
         setError("");
       }
     } catch {
-      setError("Failed to load model diagnostics.");
+      if (version === requestVersion.current) setError("Failed to load model diagnostics.");
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) setLoading(false);
     }
   };
 
@@ -104,7 +115,7 @@ export default function ModelDiagnosticsPage() {
 
   return (
     <div style={{ color: "#E5E7EB" }}>
-      <header style={{ marginBottom: "1.4rem", display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+      <header style={{ marginBottom: "1.4rem", display: "flex", flexWrap: "wrap", gap: "1rem", alignItems: "flex-end", justifyContent: "space-between" }}>
         <div>
           <div style={{ color: "#64748B", fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase" }}>
             System
@@ -150,7 +161,7 @@ export default function ModelDiagnosticsPage() {
       </header>
 
       {error && (
-        <div style={{ padding: "0.75rem 1rem", background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.32)", borderRadius: 8, color: "#FCA5A5", marginBottom: "1rem" }}>
+        <div role="alert" style={{ padding: "0.75rem 1rem", background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.32)", borderRadius: 8, color: "#FCA5A5", marginBottom: "1rem" }}>
           {error}
         </div>
       )}
@@ -212,6 +223,9 @@ export default function ModelDiagnosticsPage() {
                   <div data-band-labelled style={{ color: "#CBD5E1", fontSize: 11 }}>
                     of {b.labelled ?? 0} labelled ({b.wins ?? 0} correct / {b.losses ?? 0} wrong) · {b.neutral ?? 0} neutral
                   </div>
+                  <div data-band-unresolved style={{ color: "#94A3B8", fontSize: 11 }}>
+                    {b.pending ?? "—"} pending · {b.expired ?? "—"} expired · {b.excludedOrUnknown ?? "—"} excluded/unknown
+                  </div>
                   {b.smallSample && (
                     <div data-band-small style={{ color: "#FBBF24", fontSize: 11 }}>
                       Too few labelled to compare (under {data.definition?.minLabelledForComparison ?? 20})
@@ -227,6 +241,8 @@ export default function ModelDiagnosticsPage() {
               ))}
             </div>
           </section>
+
+          {data.breakdowns && <ModelOutcomeBreakdowns data={data.breakdowns} minimum={data.definition?.minLabelledForComparison ?? 20} />}
 
           {data.drift && data.drift.length > 0 && (
             <section style={{ marginBottom: "1.5rem" }}>
@@ -269,6 +285,8 @@ export default function ModelDiagnosticsPage() {
             >
               <div style={{ color: "#E5E7EB", fontWeight: 700, marginBottom: 4 }}>What these numbers mean</div>
               <ul style={{ margin: 0, paddingLeft: "1rem", display: "grid", gap: 2 }}>
+                <li>Excluded/unknown includes old-method verdicts and missing or unrecognised labels; it is not a count of pending signals.</li>
+                <li>Band comparisons are descriptive; the minimum sample rule does not establish statistical significance.</li>
                 <li>
                   Sample: {data.definition.sample}
                   {data.definition.sampleFrom && data.definition.sampleTo

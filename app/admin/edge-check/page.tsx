@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { OverlapInterval } from '@/lib/admin/overlapUncertainty';
 import TruthStampLine from "@/components/admin/shared/TruthStampLine";
 
 type Verdict = "insufficient_sample" | "no_edge_after_costs" | "inconsistent" | "positive_after_costs";
@@ -9,6 +10,7 @@ interface Group {
   group: string; n: number; wins: number; losses: number; neutral: number;
   hitRate: number | null; hitRateLow: number | null; hitRateHigh: number | null;
   avgMove: number | null; avgMoveAfterCost: number | null; moveLow: number | null; moveHigh: number | null;
+  overlap?: { daily: OverlapInterval; weekly: OverlapInterval };
   earlier: Half; later: Half; verdict: Verdict;
 }
 interface Response {
@@ -30,12 +32,20 @@ const BY_OPTIONS = [
 const VERDICT: Record<Verdict, { label: string; color: string }> = {
   positive_after_costs: { label: "Positive after costs (in-sample, not validated)", color: "#10B981" },
   inconsistent: { label: "Inconsistent: later half not positive", color: "#FBBF24" },
-  no_edge_after_costs: { label: "No edge after costs", color: "#F87171" },
+  no_edge_after_costs: { label: "Positive after-cost mean not established", color: "#F87171" },
   insufficient_sample: { label: "Too few signals", color: "#94A3B8" },
 };
 
 const pct = (n: number | null | undefined) => (n === null || n === undefined ? "—" : `${n > 0 ? "+" : ""}${n}%`);
-const day = (s: string | null) => (s ? new Date(s).toLocaleDateString() : "—");
+const day = (s: string | null) => (s ? new Date(s).toLocaleString() : "—");
+
+function Overlap({ value }: { value: OverlapInterval }) {
+  return <div style={{ marginBottom: 8 }}>
+    {value.blockDays === 1 ? 'UTC day' : 'Seven-day'}: {value.blocks} blocks · {value.signals} signals
+    <div>{value.status === 'available' ? `${pct(value.low === null ? null : Math.round(value.low * 100) / 100)} to ${pct(value.high === null ? null : Math.round(value.high * 100) / 100)} (approx. 95%)` : 'Interval unavailable: fewer than 30 blocks'}</div>
+    <div style={{fontSize:11}}>Largest block: {value.largestBlock} signals{value.excluded > 0 ? ` · ${value.excluded} excluded` : ''}</div>
+  </div>;
+}
 
 function Row({ g }: { g: Group }) {
   const v = VERDICT[g.verdict];
@@ -53,9 +63,10 @@ function Row({ g }: { g: Group }) {
       </td>
       <td style={{ padding: "6px 8px", textAlign: "right" }}>
         {pct(g.earlier.avgMoveAfterCost)} → {pct(g.later.avgMoveAfterCost)}
-        <div style={{ color: "#64748B", fontSize: 11 }}>{g.earlier.n} ({day(g.earlier.from)}) / {g.later.n} (to {day(g.later.to)})</div>
+        <div style={{ color: "#64748B", fontSize: 11 }}>Earlier: {g.earlier.n} · {day(g.earlier.from)} to {day(g.earlier.to)}<br />Later: {g.later.n} · {day(g.later.from)} to {day(g.later.to)}</div>
       </td>
-      <td data-verdict={g.verdict} style={{ padding: "6px 8px", color: v.color, fontWeight: 600 }}>{v.label}</td>
+      <td style={{ padding: "6px 8px", color: "#CBD5E1" }}>{g.overlap ? <><Overlap value={g.overlap.daily}/><Overlap value={g.overlap.weekly}/></> : "Not available"}</td>
+      <td data-verdict={g.verdict} style={{ padding: "6px 8px", color: "#94A3B8", fontWeight: 600 }}>Nominal: {v.label}</td>
     </tr>
   );
 }
@@ -81,8 +92,8 @@ export default function EdgeCheckPage() {
     <div style={{ padding: "1rem", color: "#CBD5E1" }}>
       <h1 style={{ fontSize: "1.25rem", fontWeight: 800, color: "#E5E7EB" }}>Edge Check</h1>
       <p style={{ fontSize: 13, color: "#94A3B8", maxWidth: 860 }}>
-        Do any groups of scanner signals show a measurable edge after costs, and does it hold on newer signals? Research
-        evidence only, not a recommendation or an instruction to trade.
+        Compare historical scanner observations after an assumed cost across earlier and later periods.
+        These in-sample comparisons do not establish a reliable trading edge.
       </p>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", margin: "0.75rem 0" }}>
         <label style={{ fontSize: 13 }}>Group by{" "}
@@ -107,10 +118,11 @@ export default function EdgeCheckPage() {
                 <tr style={{ color: "#94A3B8", textAlign: "left" }}>
                   <th style={{ padding: "6px 8px" }}>Group</th>
                   <th style={{ padding: "6px 8px", textAlign: "right" }}>Signals</th>
-                  <th style={{ padding: "6px 8px", textAlign: "right" }}>Hit rate (95%)</th>
-                  <th style={{ padding: "6px 8px", textAlign: "right" }}>Avg 24h move after cost (95%)</th>
-                  <th style={{ padding: "6px 8px", textAlign: "right" }}>Earlier → later half</th>
-                  <th style={{ padding: "6px 8px" }}>Evidence</th>
+                  <th style={{ padding: "6px 8px", textAlign: "right" }}>Hit rate (nominal 95%)</th>
+                  <th style={{ padding: "6px 8px", textAlign: "right" }}>Avg 24h move after cost (nominal 95%)</th>
+                  <th style={{ padding: "6px 8px", textAlign: "right" }}>Earlier → later period</th>
+                  <th style={{ padding: "6px 8px" }}>Overlap sensitivity</th>
+                  <th style={{ padding: "6px 8px" }}>Nominal evidence</th>
                 </tr>
               </thead>
               <tbody>
@@ -126,7 +138,7 @@ export default function EdgeCheckPage() {
                 <li>Outcome: {data.definition.outcome}. Labelled since {new Date(data.definition.labelledSince).toLocaleString()}.</li>
                 <li>{data.definition.costs}</li>
                 <li>{data.definition.intervals}</li>
-                <li>{data.definition.split} Groups need {data.definition.minSample} signals and {data.definition.minHalfSample} per half.</li>
+                <li>{data.definition.split} Groups need {data.definition.minSample} signals and {data.definition.minHalfSample} per period.</li>
                 {data.definition.caveats.map((c) => <li key={c}>{c}</li>)}
               </ul>
             </section>

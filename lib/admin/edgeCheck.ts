@@ -1,3 +1,5 @@
+import { clusteredMean, type OverlapInterval } from './overlapUncertainty';
+
 /**
  * Edge check: does any group of shared-scan signals show a measurable edge after costs, and does it hold on the
  * later half of its own history? Pure maths so it can be unit-tested; the route supplies the rows.
@@ -46,6 +48,7 @@ export interface EdgeGroup {
   earlier: HalfStats;
   later: HalfStats;
   verdict: EdgeVerdict;
+  overlap: { daily: OverlapInterval; weekly: OverlapInterval };
 }
 
 export const MIN_SAMPLE = 30;
@@ -96,14 +99,24 @@ export function summariseGroup(group: string, input: EdgeRow[], cost = ASSUMED_C
   const labelled = wins + losses;
   const hr = wilson(wins, labelled);
   const after = meanInterval(rows.map((r) => r.signedMove - cost));
-  const mid = Math.floor(n / 2);
+  // Choose the closest balanced boundary between distinct timestamps. Never split a scan batch.
+  // With only one timestamp there is no earlier period, so the comparison stays insufficient.
+  let mid = 0;
+  let imbalance = Infinity;
+  for (let i = 1; i < n; i++) {
+    if (new Date(rows[i - 1].signalAt).getTime() === new Date(rows[i].signalAt).getTime()) continue;
+    const distance = Math.abs(n - 2 * i);
+    if (distance < imbalance) { mid = i; imbalance = distance; }
+  }
   const earlier = half(rows.slice(0, mid), cost);
   const later = half(rows.slice(mid), cost);
+
+  const laterMean = meanInterval(rows.slice(mid).map(r => r.signedMove - cost))?.mean ?? 0;
 
   let verdict: EdgeVerdict;
   if (n < MIN_SAMPLE || earlier.n < MIN_HALF_SAMPLE || later.n < MIN_HALF_SAMPLE || !after) verdict = 'insufficient_sample';
   else if (after.low <= 0) verdict = 'no_edge_after_costs';
-  else if ((later.avgMoveAfterCost ?? 0) <= 0) verdict = 'inconsistent';
+  else if (laterMean <= 0) verdict = 'inconsistent';
   else verdict = 'positive_after_costs';
 
   return {
@@ -116,6 +129,7 @@ export function summariseGroup(group: string, input: EdgeRow[], cost = ASSUMED_C
     moveLow: after ? r2(after.low) : null,
     moveHigh: after ? r2(after.high) : null,
     earlier, later, verdict,
+    overlap: { daily: clusteredMean(rows, cost, 1), weekly: clusteredMean(rows, cost, 7) },
   };
 }
 
