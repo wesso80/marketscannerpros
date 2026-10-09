@@ -62,33 +62,21 @@ export const businessScope = {
     '/api/admin/research-scheduler',
   ],
 } as const;
-/**
- * Read-only trading analysis the owner works from: always open, even while discovery-only is on.
- * Pages are open; matching APIs allow GET only. Every API here only reads stored outcomes (no writes, no provider
- * calls), so leaving them open cannot restart paused scans, jobs or mail.
- */
-export const analysisScope = {
+/** Reviewed saved-data analytics. Exact GET APIs only; adjacent writers remain paused. */
+export const analyticsReadScope = {
   pages: [
-    '/admin/edge-check',
-    '/admin/model-diagnostics',
-    '/admin/outcomes',
-    '/admin/outcomes/scorecard',
-    '/admin/backtest-lab',
-    '/admin/expectancy-shadow',
+    '/admin/edge-check', '/admin/model-diagnostics', '/admin/outcomes',
+    '/admin/outcomes/scorecard', '/admin/backtest-lab', '/admin/expectancy-shadow',
+    '/admin/morning-brief',
   ],
   getApis: [
-    '/api/admin/edge-check',
-    '/api/admin/model-diagnostics',
-    '/api/admin/signals',
-    '/api/admin/signals/stats',
-    '/api/admin/signals/scorecard',
-    '/api/admin/backtest-lab',
-    '/api/admin/outcome-cohorts',
-    '/api/admin/expectancy-shadow',
+    '/api/admin/edge-check', '/api/admin/model-diagnostics', '/api/admin/signals',
+    '/api/admin/signals/stats', '/api/admin/signals/scorecard', '/api/admin/backtest-lab',
+    '/api/admin/outcome-cohorts', '/api/admin/expectancy-shadow', '/api/admin/morning-brief',
   ],
 } as const;
-const analysisPages = new Set<string>(analysisScope.pages);
-const analysisGetApis = new Set<string>(analysisScope.getApis);
+const analyticsPages = new Set<string>(analyticsReadScope.pages);
+const analyticsGetApis = new Set<string>(analyticsReadScope.getApis);
 const businessPages = new Set<string>(businessScope.pages);
 const businessGetApis = new Set<string>(businessScope.getApis);
 
@@ -97,7 +85,7 @@ export function adminNavVisibleWhilePaused(href: string): boolean {
   const path = href.split(/[?#]/)[0].replace(/\/+$/, '') || '/';
   if (path === '/admin/crypto-markets' || path.startsWith('/admin/crypto-markets/')) return true;
   if (path === '/admin/equity-research' || path === '/admin/transcripts') return true;
-  return businessPages.has(path) || analysisPages.has(path);
+  return businessPages.has(path) || analyticsPages.has(path);
 }
 
 function readMethod(method: string | undefined): boolean {
@@ -160,9 +148,9 @@ export function discoveryOnlyAction(path: string, method?: string, hint?: Discov
   if (equityDiscoveryExempt(path, hint)) return 'allow';
   if (background.has(path)) return 'skip_job';
   if (cryptoScope.has(path) || jevEquityScope.has(path)) return 'allow';
+  if (analyticsPages.has(path)) return readMethod(method) ? 'allow' : 'pause_page';
+  if (analyticsGetApis.has(path)) return readMethod(method) ? 'allow' : 'pause_api';
   if (businessPages.has(path)) return 'allow';
-  if (analysisPages.has(path)) return 'allow';
-  if (analysisGetApis.has(path)) return readMethod(method) ? 'allow' : 'pause_api';
   if (businessGetApis.has(path)) return readMethod(method) ? 'allow' : 'pause_api';
   if (path === '/api/admin' || path.startsWith('/api/admin/') || path.startsWith('/api/operator/engine/')) return 'pause_api';
   if (path === '/admin/crypto-markets' || path === '/admin/crypto-discovery' || path === '/admin/paused') return 'allow';

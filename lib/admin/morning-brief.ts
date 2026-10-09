@@ -706,17 +706,26 @@ export type SavedMorningBrief = {
 };
 
 /** Newest saved brief for a market (any source), with its age. Null when none has been saved. */
-export async function loadLatestMorningBrief(market: Market, timeframe = "15m", nowMs: number = Date.now(), workspaceId?: string): Promise<SavedMorningBrief | null> {
-  await ensureMorningBriefTables();
-  const rows = await q<{ brief_id: string; generated_at: string | Date; source: string; snapshot: MorningBrief }>(
-    `SELECT brief_id, generated_at, source, snapshot
-       FROM admin_morning_briefs
-      WHERE market = $1 AND timeframe = $2
-        ${workspaceId ? "AND snapshot #>> '{risk,workspaceId}' = $3" : ""}
-      ORDER BY generated_at DESC
-      LIMIT 1`,
-    workspaceId ? [market, timeframe, workspaceId] : [market, timeframe],
-  );
+export async function loadLatestMorningBrief(market: Market, timeframe = "15m", nowMs: number = Date.now(), workspaceId?: string, options: { readOnly?: boolean } = {}): Promise<SavedMorningBrief | null> {
+  // Paused readers must not run CREATE TABLE/INDEX even when the table is missing.
+  if (!options.readOnly) await ensureMorningBriefTables();
+  let rows: { brief_id: string; generated_at: string | Date; source: string; snapshot: MorningBrief }[];
+  try {
+    rows = await q<{ brief_id: string; generated_at: string | Date; source: string; snapshot: MorningBrief }>(
+      `SELECT brief_id, generated_at, source, snapshot
+         FROM admin_morning_briefs
+        WHERE market = $1 AND timeframe = $2
+          ${workspaceId ? "AND snapshot #>> '{risk,workspaceId}' = $3" : ""}
+        ORDER BY generated_at DESC
+        LIMIT 1`,
+      workspaceId ? [market, timeframe, workspaceId] : [market, timeframe],
+    );
+  } catch (err) {
+    // A paused reader cannot create the table, so a never-created table means "no saved brief" (route answers 404).
+    // Any other database error still surfaces.
+    if (options.readOnly && (err as { code?: string } | null)?.code === "42P01") return null;
+    throw err;
+  }
   const row = rows[0];
   if (!row?.snapshot || typeof row.snapshot !== "object") return null;
   const generatedAt = new Date(row.generated_at).toISOString();
