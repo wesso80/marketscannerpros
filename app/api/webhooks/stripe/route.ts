@@ -215,7 +215,7 @@ async function claimSideEffects(eventId: string, eventType: string): Promise<'cl
       console.error(`[Webhook] stripe_processed_events is not migrated yet; guarding side effects in memory (${eventId})`);
       return 'untracked';
     }
-    console.error(`[Webhook] could not record processed event ${eventId}`, error);
+    console.error(`[Webhook] could not record processed event ${eventId}`, { code: loggedErrorCode(error) });
     throw error;
   }
 }
@@ -553,7 +553,7 @@ export async function POST(req: NextRequest) {
           const workspaceId = hashWorkspaceId(loaded.email.toLowerCase());
           const periodEnd = subscriptionPeriodDate(subscription, 'current_period_end');
           if (!periodEnd) {
-            console.error(`[Webhook] checkout.session.completed subscription ${subscription.id}: current_period_end missing or unusable on items.data[0] and on the subscription; storing null`);
+            console.error('[Webhook] checkout.session.completed: current_period_end missing or unusable on items.data[0] and on the subscription; storing null');
           }
           
           const wrote = await upsertSubscription(
@@ -629,7 +629,7 @@ export async function POST(req: NextRequest) {
         const workspaceId = hashWorkspaceId(loaded.email.toLowerCase());
         const periodEnd = subscriptionPeriodDate(subscription, 'current_period_end');
         if (!periodEnd) {
-          console.error(`[Webhook] ${event.type} subscription ${subscription.id}: current_period_end missing or unusable on items.data[0] and on the subscription; storing null`);
+          console.error(`[Webhook] ${event.type}: current_period_end missing or unusable on items.data[0] and on the subscription; storing null`);
         }
         
         const wrote = await upsertSubscription(
@@ -665,7 +665,7 @@ export async function POST(req: NextRequest) {
             typeof error === 'object' &&
             (error as { code?: unknown }).code === 'resource_missing'
           ) {
-            console.error(`[Webhook] customer.subscription.deleted: Stripe resource_missing; canceling by subscription id ${subscription.id}`);
+            console.error('[Webhook] customer.subscription.deleted: Stripe resource_missing; canceling the subscription');
             loaded = null;
           } else {
             throw error;
@@ -695,7 +695,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (replacement) {
-          console.error(`[Webhook] customer.subscription.deleted ${subscription.id}: customer still has ${replacement.status} ${replacement.id}; re-pointing`);
+          console.error(`[Webhook] customer.subscription.deleted: customer still has ${replacement.status}; re-pointing`);
           const periodEnd = subscriptionPeriodDate(replacement, 'current_period_end');
           const mapped = tierFromSubscriptionItems(replacement.items?.data);
           if (loaded && loaded !== 'deleted' && loaded !== 'no-email') {
@@ -725,7 +725,7 @@ export async function POST(req: NextRequest) {
             false
           );
         } else if (loaded === 'deleted' || loaded === 'no-email') {
-          console.error(`[Webhook] customer.subscription.deleted: ${loaded === 'deleted' ? 'Stripe customer is deleted' : 'customer email is empty'}; canceling by subscription id ${subscription.id}`);
+          console.error(`[Webhook] customer.subscription.deleted: ${loaded === 'deleted' ? 'Stripe customer is deleted' : 'customer email is empty'}; canceling the subscription`);
         }
 
         await cancelSubscriptionById(subscription.id);
@@ -766,7 +766,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error('[Webhook] Error processing event:', error);
+    console.error('[Webhook] Error processing event', { code: loggedErrorCode(error) });
     // Only a deleted-subscription event whose customer is already gone can be
     // acknowledged. Retrying resource_missing never succeeds. Every other failure
     // stays 500 so Stripe retries.

@@ -210,7 +210,7 @@ export const TIME_CONFLUENCE_PROMPT = `
 TIME CONFLUENCE INTEGRATION — MSP Unique Edge
 ================================================
 
-MarketScanner Pros has a UNIQUE feature: the Time Confluence Scanner.
+MarketScannerPros has a UNIQUE feature: the Time Confluence Scanner.
 This tracks when multiple timeframe candle closes converge, predicting volatility expansion windows.
 
 When time confluence data is available (or when discussing timing):

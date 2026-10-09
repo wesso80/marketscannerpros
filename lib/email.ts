@@ -33,7 +33,7 @@ interface SendEmailParams {
 }
 
 /** Dedicated sign-in sender. The domain is already verified with Resend, so this mailbox does not need its own DNS. */
-export const DEFAULT_AUTH_FROM_EMAIL = "MarketScanner Pros <login@marketscannerpros.app>";
+export const DEFAULT_AUTH_FROM_EMAIL = "MarketScannerPros <login@marketscannerpros.app>";
 
 export const SIGN_IN_EMAIL_SUBJECT = "Your sign-in link";
 
@@ -205,7 +205,7 @@ export async function sendWelcomeEmail(to: string, tier: 'pro' | 'pro_trader') {
     )
     .join('');
 
-  const subject = `Welcome to MarketScanner Pros ${planName}`;
+  const subject = `Welcome to MarketScannerPros ${planName}`;
 
   const html = `
 <!DOCTYPE html>
@@ -243,7 +243,7 @@ export async function sendWelcomeEmail(to: string, tier: 'pro' | 'pro_trader') {
 
     <div style="border-top:1px solid #334155;padding-top:20px;text-align:center;">
       <p style="color:#64748b;font-size:13px;margin:0 0 4px;">Need help? Reply to this email or visit our <a href="https://marketscannerpros.app/guide" style="color:${accent};text-decoration:none;">Platform Guide</a>.</p>
-      <p style="color:#475569;font-size:12px;margin:0;">MarketScanner Pros &bull; Real-time market intelligence</p>
+      <p style="color:#475569;font-size:12px;margin:0;">MarketScannerPros &bull; Real-time market intelligence</p>
     </div>
   </div>
 </body>
@@ -267,7 +267,7 @@ export async function sendNewSignupNotification(email: string, tier: string) {
       <tr><td style="color:#94a3b8;padding:6px 0;">Tier</td><td style="color:#f1f5f9;padding:6px 0;font-weight:600;">${tier}</td></tr>
       <tr><td style="color:#94a3b8;padding:6px 0;">Time (AEST)</td><td style="color:#f1f5f9;padding:6px 0;">${now}</td></tr>
     </table>
-    <p style="color:#64748b;font-size:12px;margin:20px 0 0;">MarketScanner Pros</p>
+    <p style="color:#64748b;font-size:12px;margin:20px 0 0;">MarketScannerPros</p>
   </div>
 </body>
 </html>`.trim();
@@ -298,7 +298,7 @@ async function sendEmail({ to, subject, html, text, from, replyTo, headers }: Se
     throw new Error('RESEND_API_KEY not set');
   }
 
-  const fromEmail = (from || "").trim() || process.env.RESEND_FROM_EMAIL || "MarketScanner Pros <alerts@marketscannerpros.app>";
+  const fromEmail = (from || "").trim() || process.env.RESEND_FROM_EMAIL || "MarketScannerPros <alerts@marketscannerpros.app>";
 
   try {
     const payload: {
@@ -328,6 +328,26 @@ async function sendEmail({ to, subject, html, text, from, replyTo, headers }: Se
     console.error("Email send failed:", err instanceof Error ? err.message : "send failed");
     throw err;
   }
+}
+
+function escapeEmailText(value: string): string {
+  return value.replace(/[&<>"']/g, (ch) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] ?? ch
+  ));
+}
+
+/** Backup record for support. The body is the workspace id, customer id, and time. The log path stays in sendEmail. */
+export async function sendDeletionRequestEmail(input: { workspaceId: string; customerId: string; requestedAt: string }): Promise<void> {
+  const subject = 'Data deletion request';
+  const text = [
+    'Data deletion request',
+    `Workspace: ${input.workspaceId}`,
+    `Customer: ${input.customerId}`,
+    `Requested at: ${input.requestedAt}`,
+    'Confirm to the customer within 48 hours.',
+  ].join('\n');
+  const html = `<p>Data deletion request</p><p>Workspace: ${escapeEmailText(input.workspaceId)}</p><p>Customer: ${escapeEmailText(input.customerId)}</p><p>Requested at: ${escapeEmailText(input.requestedAt)}</p><p>Confirm to the customer within 48 hours.</p>`;
+  await sendEmail({ to: 'support@marketscannerpros.app', subject, html, text });
 }
 
 export async function sendSignInEmail(params: { to: string; verifyUrl: string }) {

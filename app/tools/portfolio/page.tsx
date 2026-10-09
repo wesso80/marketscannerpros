@@ -1892,7 +1892,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             <div className="mx-auto max-w-md rounded-xl border border-slate-700 bg-slate-900/80 p-8 text-center">
               <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-md border border-slate-700 bg-slate-950 text-xs font-black uppercase text-slate-400">PF</div>
               <h2 className="mb-2 text-xl font-bold text-white">Sign in to access Portfolio</h2>
-              <p className="mb-6 text-sm text-slate-400">Track positions, performance, and risk by signing in with your MarketScanner Pros account.</p>
+              <p className="mb-6 text-sm text-slate-400">Track positions, performance, and risk by signing in with your MarketScannerPros account.</p>
               <Link href="/auth?next=/tools/workspace%3Ftab%3Dportfolio" className="inline-block rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 transition-colors">
                 Sign In
               </Link>

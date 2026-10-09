@@ -281,7 +281,7 @@ describe('layout and flow audit regressions', () => {
     expect(email).toContain('https://app.marketscannerpros.app/tools/workspace?tab=alerts');
     expect(email).toContain("const alertCode = isSmartAlert ? 'AI' : 'PX';");
     expect(email).toContain("['SCAN', 'Unlimited Scanner'");
-    expect(email).toContain('Welcome to MarketScanner Pros ${planName}');
+    expect(email).toContain('Welcome to MarketScannerPros ${planName}');
     expect(email).not.toContain('🎉 Welcome');
     expect(email).not.toContain('📧 Email sent');
     expect(discordBridge).toContain('url: `${APP_BASE}/tools/scanner`');
@@ -724,7 +724,7 @@ describe('layout and flow audit regressions', () => {
     expect(economicCalendarPage).toContain('REVIEW: {gate.reviewState}');
     expect(economicCalendarPage).toContain('Research Mode: ${gate.researchMode}');
     expect(economicCalendarPage).not.toContain('Override permission output');
-    expect(toolsLayout).toContain('The MSP market research workflow');
+    expect(toolsLayout).toContain('The MarketScannerPros market research workflow');
   });
 
   it('keeps Workspace Alerts compact without duplicate compliance chrome', () => {

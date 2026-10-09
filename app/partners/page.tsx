@@ -33,7 +33,7 @@ export default function PartnersPage() {
           </div>
 
           <h1 style={{ fontSize: 'clamp(32px, 4vw, 50px)', fontWeight: 500, lineHeight: 1.2, marginBottom: 20 }}>
-            MarketScanner Pros — <br/>
+            MarketScannerPros — <br/>
             <span style={{ color: 'var(--msp-accent)' }}>Partner & Educator Program</span>
           </h1>
 
@@ -42,7 +42,7 @@ export default function PartnersPage() {
           </p>
 
           <p style={{ fontSize: 16, color: 'var(--research-muted)', maxWidth: 700, margin: '0 auto 32px', lineHeight: 1.7 }}>
-            MarketScanner Pros partners with trading educators and communities to combine your expertise with our market intelligence platform.
+            MarketScannerPros partners with trading educators and communities to combine your expertise with our market intelligence platform.
           </p>
 
           <div style={{ 
@@ -241,7 +241,7 @@ export default function PartnersPage() {
       }}>
         <div style={{ maxWidth: 1120, margin: '0 auto' }}>
           <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 16, textAlign: 'center' }}>
-            The MSP Partner Solution
+            The MarketScannerPros Partner Solution
           </h2>
           <p style={{ fontSize: 20, color: 'var(--msp-accent)', marginBottom: 24, textAlign: 'center' }}>
             Your System. Our Intelligence Engine.
@@ -390,9 +390,9 @@ export default function PartnersPage() {
                 margin: 0,
                 paddingLeft: 20
               }}>
-                <li>A branded page on MarketScanner Pros</li>
+                <li>A branded page on MarketScannerPros</li>
                 <li>Your methodology explained clearly</li>
-                <li>Your rules mapped to MSP scanners</li>
+                <li>Your rules mapped to MarketScannerPros scanners</li>
                 <li>Direct links to your Discord, courses, or community</li>
               </ul>
             </div>
@@ -405,7 +405,7 @@ export default function PartnersPage() {
             }}>
               <p style={{ fontSize: 14, color: 'var(--research-muted)', margin: 0, fontStyle: 'italic' }}>
                 <strong style={{ color: 'var(--msp-accent)' }}>Example:</strong><br/>
-                "This page shows how [Partner Name] uses MarketScanner Pros to identify structure, phases, and technically aligned conditions."
+                "This page shows how [Partner Name] uses MarketScannerPros to identify structure, phases, and technically aligned conditions."
               </p>
             </div>
           </div>
@@ -432,7 +432,7 @@ export default function PartnersPage() {
                 2
               </div>
               <h3 style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>
-                Your Logic, Mapped to MSP Structure
+                Your Logic, Mapped to MarketScannerPros Structure
               </h3>
             </div>
 
@@ -467,7 +467,7 @@ export default function PartnersPage() {
                 borderRadius: 8
               }}>
                 <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--msp-accent)', marginBottom: 12 }}>
-                  MSP Structure:
+                  MarketScannerPros Structure:
                 </p>
                 <ul style={{ fontSize: 14, color: '#e5e7eb', lineHeight: 1.7, margin: 0, paddingLeft: 20 }}>
                   <li>Bullish / Bearish / Consolidation Phases</li>
@@ -585,7 +585,7 @@ export default function PartnersPage() {
                 <li style={{ marginBottom: 10 }}>✓ Higher-quality members</li>
                 <li style={{ marginBottom: 10 }}>✓ Reduced signal misuse</li>
                 <li style={{ marginBottom: 10 }}>✓ Increased trust and retention</li>
-                <li>✓ Cross-promotion to MSP users</li>
+                <li>✓ Cross-promotion to MarketScannerPros users</li>
               </ul>
             </div>
 
@@ -663,7 +663,7 @@ export default function PartnersPage() {
             gap: 20
           }}>
             {[
-              { role: 'Educator', use: 'Uses MSP scanners to teach phase logic live' },
+              { role: 'Educator', use: 'Uses MarketScannerPros scanners to teach phase logic live' },
               { role: 'Discord Owner', use: 'Replaces raw alerts with explained setups' },
               { role: 'YouTuber', use: 'Walks through AI Analyst explanations on video' },
               { role: 'Signal Provider', use: 'Transitions from "alerts" to "analysis"' }
@@ -771,7 +771,7 @@ export default function PartnersPage() {
               textDecoration: 'none',
               boxShadow: '0 4px 15px rgba(20,184,166,0.4)'
             }}>
-              Partner With MarketScanner Pros
+              Partner With MarketScannerPros
             </Link>
             <Link href="/contact" style={{
               display: 'inline-block',

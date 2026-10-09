@@ -45,6 +45,6 @@ export function renderEmailHtml(r: DailyReport, fullReportUrl: string): string {
   <p style="color:#f1f5f9;text-align:center;margin:0 0 18px;font-size:14px;font-weight:600;">${esc(r.headline)}</p>
   ${parts.join('')}
   <div style="text-align:center;margin:20px 0 8px;"><a href="${esc(fullReportUrl)}" style="display:inline-block;background:${ACCENT};color:#0f172a;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;">Open full report</a></div>
-  <p style="color:#64748b;font-size:12px;text-align:center;margin:16px 0 0;line-height:1.5;">${esc(r.disclaimer)}<br/>MarketScanner Pros · private owner report · not for distribution</p>
+  <p style="color:#64748b;font-size:12px;text-align:center;margin:16px 0 0;line-height:1.5;">${esc(r.disclaimer)}<br/>MarketScannerPros · private owner report · not for distribution</p>
 </div></body></html>`;
 }

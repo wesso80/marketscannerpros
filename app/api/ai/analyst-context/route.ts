@@ -31,7 +31,7 @@ function getOpenAIClient() {
 // ─── System Prompt ──────────────────────────────────
 
 const ANALYST_CONTEXT_SYSTEM_PROMPT = `
-You are MSP AI Analyst — a contextual intelligence engine for MarketScanner Pros.
+You are MSP AI Analyst — a contextual intelligence engine for MarketScannerPros.
 
 You are NOT a chatbot. You receive a structured snapshot of platform state and produce
 analysis for exactly 4 tabs. Each tab has a strict format.

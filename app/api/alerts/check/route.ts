@@ -337,7 +337,7 @@ async function triggerAlert(alert: Alert, quote: AlertQuote) {
             
             <hr style="border: none; border-top: 1px solid #334155; margin: 20px 0;" />
             <p style="color: #64748b; font-size: 11px;">
-              MarketScanner Pros • <a href="https://marketscannerpros.app/tools/workspace?tab=alerts" style="color: #64748b;">Manage Alerts</a>
+              MarketScannerPros • <a href="https://marketscannerpros.app/tools/workspace?tab=alerts" style="color: #64748b;">Manage Alerts</a>
             </p>
           </div>
         `,

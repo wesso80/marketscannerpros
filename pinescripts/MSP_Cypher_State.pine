@@ -1,5 +1,5 @@
 // This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
-// © MarketScanner Pros — Multi-Timeframe v1
+// © MarketScannerPros — Multi-Timeframe v1
 // Replicates: MSP STATE panel + TIMEFRAME columns
 // Shows trend state (TRENDING UP/DOWN, RANGING) across 5 timeframes
 // Plus live price ticker and session context

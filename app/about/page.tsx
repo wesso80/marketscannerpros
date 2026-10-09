@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "About",
   description:
-    "Learn about MarketScanner Pros — an advanced market scanning and trading intelligence platform for retail and professional traders.",
+    "Learn about MarketScannerPros — an advanced market scanning and trading intelligence platform for retail and professional traders.",
   alternates: { canonical: "/about" },
 };
 
@@ -17,10 +17,10 @@ export default function AboutPage() {
             <h1 className="text-2xl font-bold text-emerald-400">About</h1>
             <p data-learn-verdict className="text-sm">Market research and simulation tools.</p>
             <div className="space-y-3">
-            <CollapsibleSection title="About MarketScanner Pros">
+            <CollapsibleSection title="About MarketScannerPros">
 
             <p>
-              MarketScanner Pros is an advanced market scanning and trading
+              MarketScannerPros is an advanced market scanning and trading
               intelligence platform built for retail and professional traders. We
               combine real-time technical analysis, AI-powered insights, and
               professional-level tools in a single web-based dashboard.
@@ -63,7 +63,7 @@ export default function AboutPage() {
             <CollapsibleSection title="Our mission">
             <p>
               We believe every trader deserves access to the same calibre of
-              tools used by institutional desks. MarketScanner Pros levels the
+              tools used by institutional desks. MarketScannerPros levels the
               playing field by delivering powerful analysis at an accessible
               price — no expensive terminals, no lock-in contracts.
             </p>
@@ -71,7 +71,7 @@ export default function AboutPage() {
             </CollapsibleSection>
             <CollapsibleSection title="Jurisdiction">
             <p>
-              MarketScanner Pros operates under the laws of New South Wales,
+              MarketScannerPros operates under the laws of New South Wales,
               Australia. For full legal details, see our{" "}
               <a href="/terms">Terms of Service</a> and{" "}
               <a href="/privacy">Privacy Policy</a>.
@@ -88,7 +88,7 @@ export default function AboutPage() {
             </p>
             </CollapsibleSection>
             </div>
-            <p data-source-line className="text-xs text-slate-400">Source · MarketScanner Pros documentation</p>
+            <p data-source-line className="text-xs text-slate-400">Source · MarketScannerPros documentation</p>
           </div>
         </div>
       </div>

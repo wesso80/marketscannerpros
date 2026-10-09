@@ -1,20 +1,25 @@
 import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
-import { copilotReadingLabel } from '@/components/MSPCopilot';
 import { computeAdaptiveMatch, type AdaptiveProfile } from '@/lib/adaptiveTrader';
 import { buildJournalSummary } from '@/lib/ai/legacyJournalAnalysis';
-import { buildSignalMemoryContext, showSignalOutcomeStats } from '@/lib/prompts/arcaV3Engine';
+import { loggedErrorCode } from '@/lib/auth';
+import { buildSignalMemoryContext } from '@/lib/prompts/arcaV3Engine';
+import { SHOW_SIGNAL_OUTCOME_STATS } from '@/lib/signals/outcomeStatsVisibility';
 import { PUBLIC_DAILY_LIMITS } from '@/lib/publicPlans';
 
 const read = (path: string) => readFileSync(path, 'utf8');
 
-it('replaces tradable, conditional and blocked readings with evidence labels', () => {
-  expect(copilotReadingLabel('tradable')).toBe('Data complete');
-  expect(copilotReadingLabel('CONDITIONAL')).toBe('Mixed readings');
-  expect(copilotReadingLabel('blocked')).toBe('Insufficient data');
-  expect(copilotReadingLabel('TRADABLE')).not.toMatch(/tradable|conditional|blocked/i);
-  expect(read('components/LiveDeskFeedPanel.tsx')).toContain('Alignment reading:');
-  expect(read('components/LiveDeskFeedPanel.tsx')).not.toContain('Alignment Score');
+it('removes the copilot reading row and the unused live desk panel', () => {
+  const copilot = read('components/MSPCopilot.tsx');
+  expect(copilot).not.toContain("label: 'Reading'");
+  expect(copilot).not.toContain("label: 'Signal'");
+  expect(copilot).not.toContain("label: 'Quality'");
+  expect(copilot).not.toContain("label: 'Research Status'");
+  expect(copilot).not.toContain('copilotReadingLabel');
+  expect(copilot).not.toContain("quality === 'A+'");
+  expect(copilot).not.toContain('rMultiple >= 2');
+  expect(read('components/free/LockedPreview.tsx')).not.toContain('>74<');
+  expect(read('components/free/LockedPreview.tsx')).toContain('Sample layout');
 });
 
 it('drops the historical win-rate reason and labels member trade tables', () => {
@@ -37,7 +42,7 @@ it('drops the historical win-rate reason and labels member trade tables', () => 
   expect(read('app/api/workflow/events/route.ts')).not.toContain('Win Rate:');
 });
 
-it('keeps last-five outcome marks behind SHOW_SIGNAL_OUTCOME_STATS, which defaults off', () => {
+it('keeps last-five outcome marks behind showOutcomeStats, which defaults off', () => {
   const stats = {
     totalSignals: 2,
     regimeStats: [{ regime: 'trend', count: 2, winRate: 50 }],
@@ -46,13 +51,12 @@ it('keeps last-five outcome marks behind SHOW_SIGNAL_OUTCOME_STATS, which defaul
       { symbol: 'MSFT', verdict: 'watch', confidence: 40, outcome: 'wrong' },
     ],
   };
-  expect(showSignalOutcomeStats({})).toBe(false);
-  expect(showSignalOutcomeStats({ SHOW_SIGNAL_OUTCOME_STATS: 'yes' })).toBe(true);
-  const hidden = buildSignalMemoryContext(stats, {});
+  expect(SHOW_SIGNAL_OUTCOME_STATS).toBe(false);
+  const hidden = buildSignalMemoryContext(stats, false);
   expect(hidden).not.toContain('✅');
   expect(hidden).not.toContain('❌');
   expect(hidden).not.toContain('AAPL');
-  const shown = buildSignalMemoryContext(stats, { SHOW_SIGNAL_OUTCOME_STATS: 'true' });
+  const shown = buildSignalMemoryContext(stats, true);
   expect(shown).toContain('✅ AAPL');
   expect(shown).toContain('❌ MSFT');
 });
@@ -111,9 +115,18 @@ it('logs an error code or a fixed message from the older webhook and auth paths'
   expect(stripe).not.toContain('sent to ${loaded.email}');
   expect(stripe).not.toContain('${stripeCustomerId}');
   expect(stripe).not.toContain('${stripeSubscriptionId}');
-  // #564 owns these two payment_failed lines. Leave them so that PR's wording wins.
-  expect(stripe).toContain('invoice.payment_failed subscription ${subscriptionId}');
-  expect(stripe).toContain('Marked subscription as past_due: ${loaded.email}');
+  expect(stripe).toContain('invoice.payment_failed live status is ${subscription.status}');
+  expect(stripe).toContain("console.log('[Webhook] Marked subscription as past_due')");
+  expect(stripe).not.toContain('invoice.payment_failed subscription ${subscriptionId}');
+  expect(stripe).not.toContain('Marked subscription as past_due: ${loaded.email}');
+  expect(stripe).toContain('[Webhook] checkout.session.completed: current_period_end missing');
+  expect(stripe).not.toContain('checkout.session.completed subscription ${subscription.id}');
+  expect(stripe).not.toContain('canceling by subscription id');
+  expect(stripe).toContain("console.error('[Webhook] Error processing event', { code: loggedErrorCode(error) })");
+  expect(stripe).not.toContain("console.error('[Webhook] Error processing event:', error)");
+  expect(loggedErrorCode({ code: '23505', name: 'error' })).toBe('23505');
+  expect(loggedErrorCode({ name: 'StripeError' })).toBe('StripeError');
+  expect(loggedErrorCode(new Error('hidden'))).toBe('Error');
 
   const login = read('app/api/auth/login/route.ts');
   expect(login).toContain("console.error('Trial check error', { code: subscriptionFailureCode(error) })");
@@ -128,7 +141,9 @@ it('logs an error code or a fixed message from the older webhook and auth paths'
   expect(read('app/api/auth/debug/route.ts')).toContain("console.error('[auth/debug] failed', { code: loggedErrorCode(e) })");
   expect(read('app/api/auth/magic-link/route.ts')).not.toContain('error.message');
   const deletion = read('app/api/auth/delete-request/route.ts');
-  expect(deletion).toContain("console.log('Deletion request recorded')");
+  expect(deletion).toContain('sendDeletionRequestEmail');
+  expect(deletion).toContain('Deletion request was not recorded');
+  expect(deletion).toContain('within 48 hours');
   expect(deletion).not.toContain('Customer ID:');
   expect(deletion).not.toContain('Workspace ID:');
   expect(read('lib/auth.ts')).toContain("console.error('[auth] trial subscription read failed', { code: loggedErrorCode(err) })");

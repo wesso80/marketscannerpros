@@ -11,7 +11,7 @@ export const metadata: Metadata = {
       'Run educational historical simulations with visible assumptions, multi-timeframe testing, equity curves, AI-assisted review, and performance metrics.',
     url: 'https://marketscannerpros.app/tools/workspace?tab=backtest',
     siteName: 'MarketScannerPros',
-    images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScanner Pros — Strategy Backtester' }],
+    images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScannerPros — Strategy Backtester' }],
     type: 'website',
   },
   twitter: {

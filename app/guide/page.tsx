@@ -27,7 +27,7 @@ export default async function UserGuidePage({
         <div id="platform-guide" className="mb-3 scroll-mt-20"><CollapsibleSection title="Platform walkthrough" open={section === 'platform-guide'}><PlatformGuide /></CollapsibleSection></div>
         <div id="research-guides" className="mb-3 scroll-mt-20"><CollapsibleSection title="Research guides" open={section === 'research-guides'}><TradingGuides /></CollapsibleSection></div>
         <ToolGuideSearch guides={TOOL_GUIDES} />
-        <p data-source-line className="mt-4 text-xs text-msp-text-muted">Source · MarketScanner Pros documentation</p>
+        <p data-source-line className="mt-4 text-xs text-msp-text-muted">Source · MarketScannerPros documentation</p>
       </div>
     </div>
   );

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     template: TITLE_TEMPLATE,
   },
   description:
-    'The MSP market research workflow: scan, validate, test, journal, monitor alerts, and review macro context. Educational tools only — no advice or execution.',
+    'The MarketScannerPros market research workflow: scan, validate, test, journal, monitor alerts, and review macro context. Educational tools only — no advice or execution.',
   alternates: {
     canonical: 'https://marketscannerpros.app/tools',
   },
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
         url: '/scan-banner.png',
         width: 1200,
         height: 630,
-        alt: 'MarketScanner Pros workflow map',
+        alt: 'MarketScannerPros workflow map',
       },
     ],
   },

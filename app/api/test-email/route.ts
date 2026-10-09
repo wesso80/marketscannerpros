@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     // Send test email
     const result = await sendAlertEmail({
       to: email,
-      subject: '✅ MarketScanner Pros - Email Test Successful!',
+      subject: '✅ MarketScannerPros - Email Test Successful!',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #0f172a; color: #fff;">
           <h1 style="color: #10b981; margin-bottom: 20px;">✅ Email Test Successful!</h1>
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
           <hr style="border: none; border-top: 1px solid #334155; margin: 20px 0;">
           
           <p style="color: #64748b; font-size: 12px; text-align: center; margin: 0;">
-            Sent from MarketScanner Pros • ${new Date().toISOString()}
+            Sent from MarketScannerPros • ${new Date().toISOString()}
           </p>
         </div>
       `,

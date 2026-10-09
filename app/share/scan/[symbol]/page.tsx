@@ -49,7 +49,7 @@ export default async function ShareScanPage(
     <main style={{ minHeight: '100vh', background: 'var(--msp-bg)', color: '#F8FAFC', padding: '48px 20px' }}>
       <div style={{ maxWidth: 880, margin: '0 auto' }}>
         <div style={{ fontSize: 13, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--msp-flat)' }}>
-          MarketScanner Pros · shared study snapshot
+          MarketScannerPros · shared study snapshot
         </div>
         <h1 style={{ fontSize: 64, margin: '8px 0 4px', fontWeight: 800 }}>{data.symbol}</h1>
         <p style={{ fontSize: 22, color: 'var(--msp-text)', marginTop: 20, lineHeight: 1.4 }}>{data.headline}</p>
@@ -68,7 +68,7 @@ export default async function ShareScanPage(
             See the research workspace →
           </Link>
           <Link href={`/tools/scanner?symbol=${data.symbol}`} style={{ padding: '14px 22px', border: '1px solid rgba(255,255,255,0.18)', color: '#F8FAFC', borderRadius: 10, fontWeight: 600, textDecoration: 'none' }}>
-            Open {data.symbol} in MSP
+            Open {data.symbol} in MarketScannerPros
           </Link>
         </div>
 

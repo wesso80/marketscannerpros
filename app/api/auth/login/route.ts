@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { subscriptionPeriodDate } from "@/lib/stripe/subscriptionPeriod";
-import { hashWorkspaceId, signSessionToken, verifySessionToken } from "@/lib/auth";
+import { hashWorkspaceId, loggedErrorCode, signSessionToken, verifySessionToken } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { loginLimiter, getClientIP } from "@/lib/rateLimit";
 import { isValidAdminSecret } from "@/lib/adminAuth";
@@ -127,9 +127,7 @@ async function trackSubscription(
 }
 
 function subscriptionFailureCode(error: unknown): string | number | undefined {
-  if (!error || typeof error !== 'object' || !('code' in error)) return undefined;
-  const code = (error as { code?: unknown }).code;
-  return typeof code === 'string' || typeof code === 'number' ? code : undefined;
+  return loggedErrorCode(error);
 }
 
 // Check if user has an active trial

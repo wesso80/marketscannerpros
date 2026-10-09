@@ -73,7 +73,7 @@ export default function SessionStartBriefing({ children }: { children: React.Rea
         {/* Header */}
         <div className="mb-6 text-center">
           <div className="text-[0.65rem] font-extrabold uppercase tracking-[0.15em] text-slate-500">
-            MarketScanner Pros — Institutional Session Briefing
+            MarketScannerPros — Institutional Session Briefing
           </div>
           <div className="mt-2 text-2xl font-black text-slate-100">
             Session Start Review

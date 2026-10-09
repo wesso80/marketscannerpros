@@ -1,5 +1,5 @@
 // This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
-// © MarketScanner Pros — Day Trader v2 Anti-Lookahead
+// © MarketScannerPros — Day Trader v2 Anti-Lookahead
 // Strict anti-lookahead rewrite:
 // - confirmed HTF values only
 // - confirmed-bar signals only

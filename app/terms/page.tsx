@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
-  description: "Terms of Service for MarketScanner Pros.",
+  description: "Terms of Service for MarketScannerPros.",
   alternates: { canonical: "/terms" },
   robots: { index: false, follow: true }
 };
@@ -18,7 +18,7 @@ export default function TermsPage() {
       <p><strong>Effective Date:</strong> {effective}</p>
 
       <p>
-        Welcome to MarketScanner Pros (&ldquo;the App&rdquo;, &ldquo;we&rdquo;, &ldquo;our&rdquo;, &ldquo;us&rdquo;). By accessing or using the
+        Welcome to MarketScannerPros (&ldquo;the App&rdquo;, &ldquo;we&rdquo;, &ldquo;our&rdquo;, &ldquo;us&rdquo;). By accessing or using the
         App, you agree to these Terms of Service. Please read them carefully.
       </p>
 
@@ -37,11 +37,10 @@ export default function TermsPage() {
 
       <h2 id="paper">2A. Paper Trade &amp; Simulation System</h2>
       <ul>
-        <li>The App is an <strong className="text-amber-500">educational research workspace</strong>. No feature of the App executes real trades, connects to live brokerage accounts, or places orders on any exchange.</li>
-        <li>The portfolio tracker, trade journal, risk analysis engine, scenario plans, and all analysis outputs are for educational and simulated paper trading purposes only.</li>
-        <li>Scores, alignment readings, confluence percentages, and scenario analyses reflect indicator agreement and technical pattern recognition &mdash; they do not represent profit probability, guaranteed outcomes, or trading instructions.</li>
+        <li><strong className="text-amber-500">MarketScannerPros is an educational research workspace.</strong> The portfolio tracker, trade journal, risk analysis engine, scenario plans, and all analysis outputs are for education and practice records only. Nothing on this platform executes a real trade, connects to a live brokerage account, or places an order on any exchange.</li>
+        <li>Readings, measurements, and scenario analyses describe recorded indicator agreement and technical patterns. They are not a probability of profit, not a promised result, and not trading instructions. Each person is solely responsible for decisions they make with their own capital outside this platform.</li>
         <li>Edge Profile insights are derived from your own journal data and reflect historical patterns only. Past performance does not guarantee future results.</li>
-        <li><strong className="text-amber-500">MarketScanner Pros does not hold an Australian Financial Services Licence (AFSL)</strong> and is not authorised to provide personal or general financial product advice under the Corporations Act 2001 (Cth).</li>
+        <li><strong className="text-amber-500">MarketScannerPros does not hold an Australian Financial Services Licence (AFSL)</strong> and is not authorised to provide personal or general financial product advice under the Corporations Act 2001 (Cth).</li>
       </ul>
 
       <h2 id="ai">2B. AI-Generated Content</h2>
@@ -68,7 +67,7 @@ export default function TermsPage() {
 
       <h2 id="ip">4. Intellectual Property</h2>
       <p>
-        All content, features, and code within the App are owned by MarketScanner Pros. You may not
+        All content, features, and code within the App are owned by MarketScannerPros. You may not
         copy, modify, distribute, or resell without prior written permission.
       </p>
 
@@ -80,7 +79,7 @@ export default function TermsPage() {
 
       <h2 id="liability">6. Limitation of Liability</h2>
       <p>
-        To the maximum extent permitted by law, MarketScanner Pros shall not be liable for any losses
+        To the maximum extent permitted by law, MarketScannerPros shall not be liable for any losses
         or damages arising from use of the App, including but not limited to trading losses.
       </p>
 
@@ -113,7 +112,7 @@ export default function TermsPage() {
 
       <h2 id="indemnification">11. Indemnification</h2>
       <p>
-        You agree to indemnify, defend, and hold harmless MarketScanner Pros, its officers, directors, employees, and agents from any claims, damages, losses, liabilities, or expenses (including legal fees) arising from your use of the App, violation of these Terms, or infringement of any third-party rights.
+        You agree to indemnify, defend, and hold harmless MarketScannerPros, its officers, directors, employees, and agents from any claims, damages, losses, liabilities, or expenses (including legal fees) arising from your use of the App, violation of these Terms, or infringement of any third-party rights.
       </p>
 
       <h2 id="changes">12. Changes</h2>

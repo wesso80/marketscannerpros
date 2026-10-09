@@ -169,7 +169,7 @@ describe('GET /api/me', () => {
     qMock.mockResolvedValue([{ email: 'trial@example.com', tier: 'pro_trader', status: 'trialing', current_period_end: PAST }]);
     const { GET } = await import('../app/api/me/route');
     const expired = await GET();
-    expect(await expired.json()).toMatchObject({ authenticated: true, tier: 'free' });
+    expect(await expired.json()).toMatchObject({ authenticated: true, tier: 'free', has_billing: false, is_manual_grant: false });
 
     qMock.mockResolvedValue([{ email: 'grant@example.com', tier: 'pro_trader', status: 'active', current_period_end: null }]);
     sessionMock.mockResolvedValue({
@@ -179,7 +179,7 @@ describe('GET /api/me', () => {
       exp: NOW / 1000 + 3600,
     });
     const granted = await GET();
-    expect(await granted.json()).toMatchObject({ authenticated: true, tier: 'pro_trader' });
+    expect(await granted.json()).toMatchObject({ authenticated: true, tier: 'pro_trader', has_billing: false, is_manual_grant: true });
   });
 
   it('reports Pro for a trial that has not ended', async () => {

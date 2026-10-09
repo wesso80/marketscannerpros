@@ -1,5 +1,5 @@
 // This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
-// © MarketScanner Pros — Correlation & Risk Governor
+// © MarketScannerPros — Correlation & Risk Governor
 // Upgraded from Regime Classifier into terminal-grade macro/correlation governor
 
 //@version=6

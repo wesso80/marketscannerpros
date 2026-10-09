@@ -14,11 +14,18 @@ if (!process.env.APP_SIGNING_SECRET && isProductionRuntime) {
 
 const APP_SIGNING_SECRET: string = process.env.APP_SIGNING_SECRET || 'msp-local-dev-signing-secret-do-not-use-in-production';
 
-/** Stripe/Postgres `code` only. Never the message, the query, or the thrown object. */
+/** A Stripe/Postgres `code`, or `error.name` when there is no code. Never the message, the query, or the thrown object. */
 export function loggedErrorCode(error: unknown): string | number | undefined {
-  if (!error || typeof error !== 'object' || !('code' in error)) return undefined;
-  const code = (error as { code?: unknown }).code;
-  return typeof code === 'string' || typeof code === 'number' ? code : undefined;
+  if (!error || typeof error !== 'object') return undefined;
+  if ('code' in error) {
+    const code = (error as { code?: unknown }).code;
+    if (typeof code === 'string' || typeof code === 'number') return code;
+  }
+  if ('name' in error) {
+    const name = (error as { name?: unknown }).name;
+    if (typeof name === 'string' && name.length > 0) return name;
+  }
+  return undefined;
 }
 
 function verify(token: string) {

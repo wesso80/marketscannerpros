@@ -19,15 +19,6 @@ import type {
 } from '@/lib/ai/types';
 import { SKILL_CONFIGS } from '@/lib/ai/types';
 
-/** Evidence-first reading. Avoids tradable / conditional / blocked verdicts. */
-export function copilotReadingLabel(verdict: unknown): string {
-  const value = typeof verdict === 'string' ? verdict.trim().toLowerCase() : '';
-  if (value === 'tradable') return 'Data complete';
-  if (value === 'conditional') return 'Mixed readings';
-  if (value === 'blocked') return 'Insufficient data';
-  return 'Reading unavailable';
-}
-
 interface MSPCopilotProps {
   skill: PageSkill;
   pageData?: Record<string, unknown>;
@@ -91,7 +82,7 @@ export default function MSPCopilot({
           { label: 'Scan Type', value: `${scanType.toUpperCase()} · ${tf}`, highlight: true },
           { label: 'Results', value: `${totalResults} setups from ${totalScanned} scanned` },
           { label: 'Bias', value: `${bullish} Bullish / ${bearish} Bearish`, color: bullish > bearish ? 'var(--msp-bull)' : bearish > bullish ? 'var(--msp-bear)' : 'var(--msp-text-muted)' },
-          { label: 'Avg Confluence', value: `${avgConf}%`, color: avgConf >= 65 ? 'var(--msp-bull)' : avgConf >= 50 ? 'var(--msp-warn)' : 'var(--msp-bear)' },
+          { label: 'Avg Confluence', value: `${avgConf}%`, color: 'var(--msp-text)' },
           ...top3.map((p, i) => ({
             label: `#${i + 1}`,
             value: `${p.symbol} · ${String(p.direction).toUpperCase()} · ${p.confidence}%`,
@@ -144,9 +135,7 @@ export default function MSPCopilot({
       const symbol = pageData.symbol as string || 'N/A';
       const price = pageData.currentPrice as number || pageData.price as number;
       const direction = pageData.direction as string;
-      const quality = pageData.tradeQuality as string;
       const confluence = pageData.confluenceStack as number;
-      const signalStrength = pageData.signalStrength as string;
 
       // Markets page IDL fields
       const verdict = pageData.verdict as string;
@@ -174,29 +163,25 @@ export default function MSPCopilot({
       const explainContent = isMarketsPage ? [
         { label: 'Symbol', value: symbol, highlight: true },
         { label: 'Price', value: price && typeof price === 'number' ? `$${price.toFixed(2)}` : 'N/A' },
-        { label: 'Reading', value: copilotReadingLabel(verdict), color: verdict === 'tradable' ? 'var(--msp-bull)' : verdict === 'conditional' ? 'var(--msp-warn)' : verdict === 'blocked' ? 'var(--msp-bear)' : 'var(--msp-text-muted)' },
-        { label: 'Alignment', value: alignment !== undefined ? `${alignment}%` : 'N/A', color: alignment >= 70 ? 'var(--msp-bull)' : alignment >= 50 ? 'var(--msp-warn)' : 'var(--msp-bear)' },
-        { label: 'Confluence', value: confidence !== undefined ? `${confidence}%` : 'N/A', color: confidence >= 60 ? 'var(--msp-bull)' : confidence >= 40 ? 'var(--msp-warn)' : 'var(--msp-bear)' },
-        { label: 'Research Status', value: authorization || 'N/A', color: authorization === 'ALIGNED' || authorization === 'ALLOW' ? 'var(--msp-bull)' : authorization === 'CONDITIONAL' || authorization === 'ALLOW_REDUCED' ? 'var(--msp-warn)' : 'var(--msp-bear)' },
+        { label: 'Alignment', value: alignment !== undefined ? `${alignment}%` : 'N/A', color: 'var(--msp-text)' },
+        { label: 'Confluence', value: confidence !== undefined ? `${confidence}%` : 'N/A', color: 'var(--msp-text)' },
         { label: 'Vol State', value: volState || 'N/A' },
         { label: 'Event Risk', value: (eventRisk || 'N/A').toUpperCase(), color: eventRisk === 'high' ? 'var(--msp-bear)' : eventRisk === 'medium' ? 'var(--msp-warn)' : 'var(--msp-bull)' },
       ] : [
         { label: 'Symbol', value: symbol, highlight: true },
         { label: 'Price', value: price && typeof price === 'number' ? `$${price.toFixed(2)}` : 'N/A' },
         { label: 'Direction', value: direction?.toUpperCase() || 'Neutral', color: direction === 'bullish' ? 'var(--msp-bull)' : direction === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-text-muted)' },
-        { label: 'Quality', value: quality || 'N/A', color: quality === 'A+' || quality === 'A' ? 'var(--msp-bull)' : quality === 'B' ? 'var(--msp-warn)' : 'var(--msp-text-muted)' },
-        { label: 'Confluence', value: confluence !== undefined ? `${confluence}/8` : 'N/A' },
-        { label: 'Signal', value: signalStrength || 'N/A' },
+        { label: 'Confluence', value: confluence !== undefined ? `${confluence}/8` : 'N/A', color: 'var(--msp-text)' },
       ];
 
       const planContent = isMarketsPage ? [
         { label: 'Bull', value: bullScenario || 'N/A', color: 'var(--msp-bull)' },
         { label: 'Bear', value: bearScenario || 'N/A', color: 'var(--msp-bear)' },
-        { label: 'R-Multiple', value: rMultiple !== undefined ? `${rMultiple.toFixed(1)}R` : 'N/A', color: rMultiple >= 2 ? 'var(--msp-bull)' : rMultiple >= 1 ? 'var(--msp-warn)' : 'var(--msp-bear)' },
+        { label: 'R-Multiple', value: rMultiple !== undefined ? `${rMultiple.toFixed(1)}R` : 'N/A', color: 'var(--msp-text)' },
         { label: 'R Budget', value: ruBudget || 'N/A' },
         { label: 'Exp. Move', value: expectedMove || 'N/A' },
         ...(marketMode ? [{ label: 'Flow Mode', value: `${marketMode.toUpperCase()} / ${gammaState || '?'} gamma`, color: flowBias === 'bullish' ? 'var(--msp-bull)' : flowBias === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-text-muted)' }] : []),
-        ...(flowConviction ? [{ label: 'Confluence', value: `${flowConviction}%`, color: flowConviction >= 70 ? 'var(--msp-bull)' : flowConviction >= 40 ? 'var(--msp-warn)' : 'var(--msp-text-muted)' }] : []),
+        ...(flowConviction ? [{ label: 'Confluence', value: `${flowConviction}%`, color: 'var(--msp-text)' }] : []),
       ] : direction ? [
         { label: 'Bias', value: direction.toUpperCase(), color: direction === 'bullish' ? 'var(--msp-bull)' : 'var(--msp-bear)' },
         { label: 'Reference', value: pageData.entryTiming ? (pageData.entryTiming as { idealEntryWindow?: string })?.idealEntryWindow || 'See timing' : 'Wait for confirmation' },

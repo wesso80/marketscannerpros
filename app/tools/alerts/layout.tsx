@@ -11,7 +11,7 @@ export const metadata: Metadata = {
       'Smart price alerts with multi-condition logic, strategy-linked triggers, cooldown intelligence, and live trigger logging.',
     url: 'https://marketscannerpros.app/tools/workspace?tab=alerts',
     siteName: 'MarketScannerPros',
-    images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScanner Pros — Alert Intelligence' }],
+    images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScannerPros — Alert Intelligence' }],
     type: 'website',
   },
   twitter: {

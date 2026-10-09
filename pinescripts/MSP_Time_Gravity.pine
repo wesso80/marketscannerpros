@@ -1,5 +1,5 @@
 // This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
-// © MarketScanner Pros — Time Gravity Map v1
+// © MarketScannerPros — Time Gravity Map v1
 // Full gravitational field model: multi-TF 50% midpoints act as masses pulling price.
 // Integrates: decompression windows, midpoint debt, gravity zones, close stacking,
 // today-close boost, zone clustering with confidence scoring.

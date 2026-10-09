@@ -58,7 +58,7 @@ export default function Footer() {
     <footer className="mt-8 border-t border-[var(--msp-border)] bg-[var(--msp-bg)] text-[var(--msp-text)]">
       <div className="border-b border-[var(--msp-border)] bg-[var(--msp-warn-tint)] px-4 py-4 text-center">
         <p className="mx-auto max-w-[900px] text-[13px] leading-relaxed text-[var(--msp-text-muted)]">
-          <strong className="text-[var(--msp-warn)]">Important:</strong> MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.
+          <strong className="text-[var(--msp-warn)]">Important:</strong> MarketScannerPros provides general information only and does not hold an Australian Financial Services Licence (AFSL). Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.
         </p>
       </div>
 

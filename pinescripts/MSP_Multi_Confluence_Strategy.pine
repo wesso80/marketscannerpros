@@ -1,5 +1,5 @@
 // This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
-// © MarketScanner Pros — Multi-Confluence Strategy v2
+// © MarketScannerPros — Multi-Confluence Strategy v2
 // High-conviction refactor: stricter core filters, DVE hard gate,
 // cohesion penalty, grade filter, cooldown, session gating, quality exits
 

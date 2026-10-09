@@ -21,7 +21,12 @@ baseline.terms.text = baseline.terms.text
  .replace('AI usage is subject to daily limits based on your subscription tier (5/50/unlimited questions per day).', 'MSP Copilot is available on eligible paid plans. The current daily question allowance is shown on the pricing page and in the app.')
  .replace('MSP AI (powered by OpenAI GPT-4) generates educational insights only.', 'MSP Copilot generates educational explanations of the available page evidence only.')
  .replace('The App is an educational paper trade simulation system.', 'The App is an educational research workspace.')
- .replace('Pro Trader is a legacy plan identifier mapped to Pro.', 'A stored Pro Trader identifier is the earlier name for Pro and keeps Pro access.');
+ .replace('Pro Trader is a legacy plan identifier mapped to Pro.', 'A stored Pro Trader identifier is the earlier name for Pro and keeps Pro access.')
+ .replace('The App is an educational research workspace. No feature of the App executes real trades, connects to live brokerage accounts, or places orders on any exchange.The portfolio tracker, trade journal, risk analysis engine, scenario plans, and all analysis outputs are for educational and simulated paper trading purposes only.Scores, alignment readings, confluence percentages, and scenario analyses reflect indicator agreement and technical pattern recognition — they do not represent profit probability, guaranteed outcomes, or trading instructions.', 'MarketScannerPros is an educational research workspace. The portfolio tracker, trade journal, risk analysis engine, scenario plans, and all analysis outputs are for education and practice records only. Nothing on this platform executes a real trade, connects to a live brokerage account, or places an order on any exchange.Readings, measurements, and scenario analyses describe recorded indicator agreement and technical patterns. They are not a probability of profit, not a promised result, and not trading instructions. Each person is solely responsible for decisions they make with their own capital outside this platform.');
+
+for (const slug of ['refund-policy', 'cookie-policy', 'terms'] as const) {
+  baseline[slug].text = baseline[slug].text.replaceAll('MarketScanner Pros', 'MarketScannerPros');
+}
 
 const TERMS_HEADING_IDS = [
   "eligibility",

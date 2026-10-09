@@ -190,7 +190,7 @@ async function handlePost(req: NextRequest) {
       // Generate with AI
       const startTime = Date.now();
       
-      const systemPrompt = `You are a concise trading education assistant for MarketScanner Pros. 
+      const systemPrompt = `You are a concise trading education assistant for MarketScannerPros. 
 Explain trading metrics clearly in 2-3 sentences max. 
 Always include: what it measures, why traders care, and one actionable insight.
 Be specific to the current value when provided.

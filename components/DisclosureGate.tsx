@@ -163,11 +163,11 @@ export default function DisclosureGate({ children }: { children: React.ReactNode
         }}>
           <p style={{ margin: '0 0 12px' }}>
             <strong style={{ color: 'var(--msp-warn)' }}>General Advice Warning:</strong>{' '}
-            MarketScanner Pros (&quot;MSP&quot;) provides <strong>general information only</strong>. 
+            MarketScannerPros provides <strong>general information only</strong>. 
             It does not consider your personal objectives, financial situation, or needs.
           </p>
           <p style={{ margin: '0 0 12px' }}>
-            MSP <strong>does not hold an Australian Financial Services Licence (AFSL)</strong> and 
+            MarketScannerPros <strong>does not hold an Australian Financial Services Licence (AFSL)</strong> and 
             is not a licensed financial adviser, broker, dealer, or fund manager.
           </p>
           <p style={{ margin: '0 0 12px' }}>
@@ -212,7 +212,7 @@ export default function DisclosureGate({ children }: { children: React.ReactNode
             style={{ marginTop: 1, accentColor: 'var(--msp-bull)', width: 22, height: 22, flexShrink: 0 }}
           />
           <span>
-            I acknowledge that MarketScanner Pros provides general information only and does not 
+            I acknowledge that MarketScannerPros provides general information only and does not 
             provide financial advice. I accept full responsibility for my own investment decisions 
             and agree to the{' '}
             <a href="/terms" target="_blank" style={{ color: 'var(--msp-bull)' }}>Terms of Service</a>.

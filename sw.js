@@ -1,4 +1,4 @@
-// MarketScanner Pros Service Worker
+// MarketScannerPros Service Worker
 // Handles push notifications and caching
 
 const CACHE_NAME = 'msp-v2';

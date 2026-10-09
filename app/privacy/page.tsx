@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "How MarketScanner Pros collects, uses, and protects your data, including secure access code authentication and Stripe billing.",
+    "How MarketScannerPros collects, uses, and protects your data, including secure access code authentication and Stripe billing.",
   alternates: { canonical: "https://marketscannerpros.app/privacy" },
   robots: { index: false, follow: true },
 };
@@ -19,7 +19,7 @@ export default function PrivacyPage() {
 
       <h2>Overview</h2>
       <p>
-        MarketScanner Pros (&ldquo;we&rdquo;, &ldquo;us&rdquo;) provides a trading dashboard and related services.
+        MarketScannerPros (&ldquo;we&rdquo;, &ldquo;us&rdquo;) provides a trading dashboard and related services.
         This policy explains what we collect, why, and your choices.
       </p>
 

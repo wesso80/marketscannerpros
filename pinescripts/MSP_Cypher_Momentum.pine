@@ -1,5 +1,5 @@
 // This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
-// © MarketScanner Pros — Momentum & Conviction Engine v1
+// © MarketScannerPros — Momentum & Conviction Engine v1
 // Replicates: Momentum (Volatility) + Conviction (Effort) + Interest (Pressure) panels
 // 3-layer momentum scoring with multi-timeframe pulse detection
 

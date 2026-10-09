@@ -69,7 +69,7 @@ const capabilities = [
 const integrations = [
   {
     model: "White-Label Embed",
-    description: "Full MSP platform embedded in your client portal via iframe or subdomain. Your branding, our engine.",
+    description: "Full MarketScannerPros platform embedded in your client portal via iframe or subdomain. Your branding, our engine.",
     icon: "WL",
     effort: "Low",
   },
@@ -82,7 +82,7 @@ const integrations = [
   },
   {
     model: "Authorised Rep Model",
-    description: "MSP operates under your AFSL as an authorised representative. Your licence, our technology â€” fully covered by your existing compliance framework.",
+    description: "MarketScannerPros operates under your AFSL as an authorised representative. Your licence, our technology â€” fully covered by your existing compliance framework.",
     icon: "LEGAL",
     effort: "Legal review",
   },
@@ -91,7 +91,7 @@ const integrations = [
 /* â”€â”€â”€ Revenue models â”€â”€â”€ */
 const revenueModels = [
   { model: "SaaS Fee", description: "Fixed monthly/annual fee for platform access", icon: "SaaS" },
-  { model: "Per-Seat Pricing", description: "Pay per active user accessing MSP tools", icon: "SEAT" },
+  { model: "Per-Seat Pricing", description: "Pay per active user accessing MarketScannerPros tools", icon: "SEAT" },
   { model: "Revenue Share", description: "Percentage of premium tier fees from your clients", icon: "REV" },
   { model: "Custom Enterprise", description: "Tailored pricing for large-scale deployments", icon: "ENT" },
 ];
@@ -128,7 +128,7 @@ export default function PartnerDemoPage() {
           </div>
 
           <h1 style={{ fontSize: 'clamp(32px, 4vw, 50px)', fontWeight: 500, lineHeight: 1.15, marginBottom: 20 }}>
-            Add MarketScanner Pros<br />
+            Add MarketScannerPros<br />
             <span style={{ color: "#10b981" }}>To Your Platform</span>
           </h1>
 
@@ -186,7 +186,7 @@ export default function PartnerDemoPage() {
       }}>
         <div style={{ maxWidth: 960, margin: "0 auto" }}>
           <h2 style={{ fontSize: 28, fontWeight: 700, textAlign: "center", marginBottom: 12 }}>
-            Why Brokers Add MSP
+            Why Brokers Add MarketScannerPros
           </h2>
           <p style={{ fontSize: 16, color: "#94a3b8", textAlign: "center", marginBottom: 40, maxWidth: 600, marginLeft: "auto", marginRight: "auto" }}>
             Differentiate your platform. Retain active traders. Generate premium-tier revenue.
@@ -422,7 +422,7 @@ export default function PartnerDemoPage() {
               <li>Completed: mandatory disclaimers on every AI response, backtest result, and tool page</li>
               <li>Completed: no execution capability, broker connections, or order submission</li>
               <li>Completed: paper trade simulation only, clearly labelled throughout</li>
-              <li>Completed: General Advice Warning, footer disclaimer, and dedicated disclaimer page; MSP does not hold an AFSL and operates under the partner&apos;s licence</li>
+              <li>Completed: General Advice Warning, footer disclaimer, and dedicated disclaimer page; MarketScannerPros does not hold an AFSL and operates under the partner&apos;s licence</li>
               <li>Completed: risk metrics engine uses simulation-language and review-state wording</li>
               <li>Completed: AI system prompts explicitly forbid financial advice and directive language</li>
               <li>Completed: Full Legal Briefing Pack (v1.3) prepared for external counsel review</li>

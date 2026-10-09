@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Confirming Checkout',
-  description: 'Secure checkout confirmation for MarketScanner Pros subscriptions.',
+  description: 'Secure checkout confirmation for MarketScannerPros subscriptions.',
   alternates: { canonical: '/after-checkout' },
   robots: { index: false, follow: false },
 };

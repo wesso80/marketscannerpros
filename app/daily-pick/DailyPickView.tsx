@@ -12,7 +12,7 @@ export default function DailyPickView({ data }: { data: DayData }) {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    name: `MarketScanner Pros daily scan observations ${data.scan_date}`,
+    name: `MarketScannerPros daily scan observations ${data.scan_date}`,
     dateModified: data.scan_date,
     itemListOrder: 'https://schema.org/ItemListUnordered',
     numberOfItems: data.picks.length,
@@ -29,7 +29,7 @@ export default function DailyPickView({ data }: { data: DayData }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div style={containerStyle}>
         <div style={{ color: 'var(--msp-flat)', fontSize: 13, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-          MarketScanner Pros · Daily scan
+          MarketScannerPros · Daily scan
         </div>
         <h1 style={h1Style}>Daily scan observations · {session}</h1>
         <p data-daily-picks-summary style={{ color: 'var(--msp-text)', fontSize: 17, lineHeight: 1.6, marginTop: 6, maxWidth: 760 }}>
@@ -76,7 +76,7 @@ export default function DailyPickView({ data }: { data: DayData }) {
         <div style={{ marginTop: 32, padding: '20px 22px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 14 }}>
           <h2 style={{ margin: 0, fontSize: 22, color: '#F8FAFC' }}>Want the full research workspace?</h2>
           <p style={{ margin: '8px 0 16px', color: 'var(--msp-text)' }}>
-            This page is a daily snapshot. The full MSP workspace covers more symbols with measured evidence pages, backtesting
+            This page is a daily snapshot. The full MarketScannerPros workspace covers more symbols with measured evidence pages, backtesting
             and a research journal.
           </p>
           <Link href="/pricing" style={{ display: 'inline-block', padding: '12px 22px', background: 'var(--msp-bull)', color: 'var(--msp-bg)', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>

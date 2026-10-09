@@ -36,6 +36,7 @@ export default function AccountPage() {
   const [email, setEmail] = useState<string | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
   const [billingNote, setBillingNote] = useState<string | null>(null);
+  const [manualGrant, setManualGrant] = useState(false);
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>({
     inAppEnabled: true,
     emailEnabled: false,
@@ -58,6 +59,7 @@ export default function AccountPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data?.email) setEmail(data.email);
+        setManualGrant(data?.is_manual_grant === true);
       })
       .catch(() => {});
   }, []);
@@ -329,7 +331,7 @@ export default function AccountPage() {
                   <div className="text-xs text-white/60">
                     {normalizedTier === "free"
                       ? "Free tier · Upgrade any time"
-                      : billingNote === NO_BILLING_ACCOUNT_MESSAGE
+                      : manualGrant || billingNote === NO_BILLING_ACCOUNT_MESSAGE
                         ? "Pro access granted manually"
                         : "Active · Renewal date in billing portal"}
                   </div>

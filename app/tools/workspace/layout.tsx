@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     description: 'Organize watchlists, journal notes, portfolio research, alerts, and workflow context.',
     url: 'https://marketscannerpros.app/tools/workspace',
     type: 'website',
-    images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScanner Pros — Workspace' }],
+    images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScannerPros — Workspace' }],
   },
   twitter: {
     card: 'summary_large_image',

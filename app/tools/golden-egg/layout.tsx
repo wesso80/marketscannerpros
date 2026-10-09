@@ -16,7 +16,7 @@ export const metadata: Metadata = {
         url: "/scan-banner.png",
         width: 1200,
         height: 630,
-        alt: "MarketScanner Pros — Golden Egg",
+        alt: "MarketScannerPros — Golden Egg",
       },
     ],
   },
