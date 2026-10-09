@@ -23,8 +23,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { storedTruth } from '@/lib/admin/truthLayer';
 import { requireAdmin } from "@/lib/adminAuth";
 import { q } from "@/lib/db";
-import { LABELLER_FIX_AT } from "@/lib/admin/signalStats";
-import { computeCalibration, type OutcomeRow } from "@/lib/admin/modelDiagnostics";
+import { LABELLER_FIX_AT, signedMoveSql } from "@/lib/admin/signalStats";
+import { ASSUMED_ROUND_TRIP_COST_PCT, MIN_LABELLED_FOR_COMPARISON, computeCalibration, type OutcomeRow } from "@/lib/admin/modelDiagnostics";
+import { OUTCOME_MOVE_THRESHOLD_PCT } from "@/lib/outcomes/aiOutcomeLabel";
 
 import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
@@ -61,8 +62,10 @@ function parseScoreField(v: string | null | undefined): ScoreField {
   return s === "elite" || s === "confidence" ? s : "confluence";
 }
 
+type SignalRow = OutcomeRow & { signal_at?: string | Date | null };
+
 interface SignalLoad {
-  rows: OutcomeRow[];
+  rows: SignalRow[];
   oldMethodLabelled: number;
   error: string | null;
 }
@@ -71,10 +74,12 @@ async function loadSignalOutcomes(field: ScoreField): Promise<SignalLoad> {
   try {
     const [rows, old] = await Promise.all([
       // Verdicts from before the labeller fix are nulled so they don't count as labelled.
-      q<OutcomeRow>(
-        `SELECT ${SCORE_SQL[field]} AS score,
+      q<SignalRow>(
+        `SELECT ${SCORE_SQL[field]} AS score, signal_at,
                 CASE WHEN outcome IN ('correct', 'wrong', 'neutral', 'expired') AND (outcome_measured_at IS NULL OR outcome_measured_at < $2::timestamptz)
-                     THEN NULL ELSE outcome END AS outcome
+                     THEN NULL ELSE outcome END AS outcome,
+                CASE WHEN outcome IN ('correct', 'wrong', 'neutral') AND outcome_measured_at >= $2::timestamptz
+                     THEN ${signedMoveSql("pct_move_24h")} ELSE NULL END AS "signedMove"
            FROM ai_signal_log
           WHERE workspace_id = $1 AND ${SCORE_COLUMN[field]} IS NOT NULL
           ORDER BY signal_at DESC
@@ -104,6 +109,8 @@ export async function GET(req: NextRequest) {
   const signals = await loadSignalOutcomes(scoreField);
   const { buckets, totalLabelled, overallHitRate, drift } = computeCalibration(signals.rows);
   const totalSignals = signals.rows.length;
+  const times = signals.rows.map((r) => (r.signal_at ? new Date(r.signal_at).getTime() : NaN)).filter(Number.isFinite);
+  const zeroScore = signals.rows.filter((r) => Number(r.score) === 0).length;
 
   let note: string | null = null;
   if (totalSignals === 0) {
@@ -134,6 +141,22 @@ export async function GET(req: NextRequest) {
       oldMethodLabelled: signals.oldMethodLabelled,
     },
     note,
+    /** What the numbers mean, so a hit rate is never read without its denominator, horizon and cost basis. */
+    definition: {
+      sample: `Latest ${totalSignals} shared-scan signals with a ${SCORE_COLUMN[scoreField]} value (newest first, capped at 1000)`,
+      sampleFrom: times.length ? new Date(Math.min(...times)).toISOString() : null,
+      sampleTo: times.length ? new Date(Math.max(...times)).toISOString() : null,
+      label: `24h close vs price at signal, in the call's direction: correct >= +${OUTCOME_MOVE_THRESHOLD_PCT}%, wrong <= -${OUTCOME_MOVE_THRESHOLD_PCT}%, otherwise neutral`,
+      hitRateDenominator: "correct + wrong per band (labelled); neutral, pending and old-method verdicts are left out",
+      labelledSince: LABELLER_FIX_AT,
+      costs: `Hit rates and avg moves are before costs; 'after cost' subtracts an assumed ${ASSUMED_ROUND_TRIP_COST_PCT}% round trip (not measured). No funding, sizing or overlap adjustment.`,
+      minLabelledForComparison: MIN_LABELLED_FOR_COMPARISON,
+      zeroScoreSignals: zeroScore,
+      zeroScoreNote: zeroScore > 0
+        ? "Score 0 rows predate the 2026-09-28 recorder rule that stopped logging score-0 signals; they are legacy rows, not missing values."
+        : null,
+      overlap: "Signals on the same symbol in the same window are counted separately and are not independent.",
+    },
     truth: storedTruth({ source: 'ai_signal_log (Postgres)', dataAsOf: await latestSignalAt(), staleAfterMinutes: 24 * 60 }),
   });
 }
