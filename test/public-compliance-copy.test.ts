@@ -5,7 +5,6 @@ import { join } from 'path';
 const root = process.cwd();
 
 const PUBLIC_SURFACES = [
-  'app/api/msp-analyst/route.ts',
   'app/api/golden-egg/route.ts',
   'app/api/market-focus/generate/route.ts',
   'app/api/research-case/route.ts',
@@ -24,9 +23,15 @@ const PUBLIC_SURFACES = [
   'lib/autoLog.ts',
   'lib/backtest/diagnostics.ts',
   'lib/plan-builder.ts',
+  'lib/prompts/mspAnalystV11.ts',
+];
+
+// Admin-only (owner's private trading desk): direct trade plans are allowed there, so they are not public surfaces.
+// test/adminOperatorPrompts.test.ts proves they stay admin-gated and out of the public copilot (it reads this list).
+const ADMIN_ONLY_AI_SURFACES = [
+  'app/api/msp-analyst/route.ts',
   'lib/prompts/scannerExplainerRules.ts',
   'lib/prompts/mspAnalystV2.ts',
-  'lib/prompts/mspAnalystV11.ts',
   'lib/prompts/arcaV3Engine.ts',
 ];
 
