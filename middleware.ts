@@ -1,6 +1,7 @@
 import { consumeApiQuota, GLOBAL_API_WINDOW_MS } from '@/lib/apiQuota';
 import { discoveryOnlyAction, ADMIN_DISCOVERY_ONLY_MESSAGE } from './lib/admin/discoveryOnly';
 import { pausedAdminRequest, ADMIN_EQUITIES_PAUSED_MESSAGE } from './lib/admin/adminEquities';
+import { researchReadGrant, RESEARCH_READ_HEADER } from './lib/admin/researchReadKey';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { isFreeForAllMode } from '@/lib/entitlements';
@@ -227,7 +228,18 @@ export async function middleware(req: NextRequest) {
       appIsAdmin = await sessionMatchesAdminList(await verify(cookie), ADMIN_EMAILS_MW, ADMIN_CIDS);
     }
 
-    if (!adminSession && !appIsAdmin) {
+    // Read-only research key (agents): GET/HEAD on an allowlisted read path only; handlers re-check it.
+    const researchGrant = !adminSession && !appIsAdmin
+      ? researchReadGrant({
+          pathname, method: req.method, searchParams: req.nextUrl.searchParams,
+          headerValue: req.headers.get(RESEARCH_READ_HEADER),
+          keysRaw: process.env.ADMIN_RESEARCH_READ_KEYS, email: process.env.ADMIN_RESEARCH_READ_EMAIL,
+          adminEmails: ADMIN_EMAILS_MW,
+        })
+      : null;
+    if (researchGrant) console.info(`[admin-research-read] key=${researchGrant.label} ${req.method} ${pathname}`);
+
+    if (!adminSession && !appIsAdmin && !researchGrant) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401, headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
