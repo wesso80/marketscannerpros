@@ -32,11 +32,12 @@ export default function AdminClientLayout({ children, discoveryPaused = false }:
   const [inputSecret, setInputSecret] = useState("");
   const pathname = usePathname();
 
-  // Check auth on mount
+  // The passphrase page does not use the operator-secret check.
   useEffect(() => {
+    if (pathname === '/admin/login') return;
     const stored = sessionStorage.getItem("admin_secret") || "";
     verifyAuth(stored);
-  }, []);
+  }, [pathname]);
 
   const verifyAuth = async (key = "") => {
     try {
