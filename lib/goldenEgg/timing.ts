@@ -78,7 +78,7 @@ export function assessTimingEvidence(input: TimingInput): TimingAssessment {
     Math.abs(tc.scoreBreakdown.directionScore) >= TIMING_WARNING.minDirectionScore &&
     tc.scoreBreakdown.activeTFs >= TIMING_WARNING.minActiveTFs;
 
-  const warning = warningEligible ? `Timing note: the close-schedule read leans ${effectiveDirection} while the setup is ${setupDirection.toLowerCase()}. This read is mean-reversion toward prior candle midpoints and has no tested edge.` : null;
+  const warning = warningEligible ? `Timing note: the close-schedule read leans ${effectiveDirection} while the setup is ${setupDirection.toLowerCase()}. This read is mean-reversion toward prior candle midpoints and has not been tested on unseen data.` : null;
   if (warning) reasons.push(warning);
   else if (relation === 'conflict') reasons.push('Timing conflict below warning thresholds; display only.');
   if (valid && relation === 'neutral' && setupDirection === 'NEUTRAL') reasons.push('setup direction neutral — timing cannot agree or disagree');

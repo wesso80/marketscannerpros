@@ -30,7 +30,7 @@ const VARIANT_COPY: Record<ComplianceVariant, { title: string; body: string }> =
   },
   cryptoDerivatives: {
     title: 'Crypto Derivatives Risk — Educational Only',
-    body: 'Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading signals, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.',
+    body: 'Funding, open interest, liquidation, long/short, and flow readings are volatile derived observations that can reverse quickly and may differ by exchange. They are not trading instructions, not leverage advice, and not a recommendation to use derivatives, margin, or short exposure.',
   },
   intraday: {
     title: 'Intraday Research Only',

@@ -3,8 +3,9 @@
  *
  * Phase 3 validation found no setup × direction with a validated out-of-sample edge, so the product runs in
  * "factors only" mode: no PASS claims; calibrated context (daily equity/crypto) shows the calibrated probability of
- * the target printing before the invalidation and the expected R after costs, with horizon and sample size;
+ * the target printing before the invalidation, with horizon and sample size;
  * everything else is labelled uncalibrated. Results stored before Phase 3 (no scoreBasis) render as before.
+ * The projected-return label is not shown. Canonical display says "Factor readings only".
  */
 import { ordinal } from '@/lib/utils/ordinal';
 import { CANONICAL_MIN_RR } from './thresholds';
@@ -131,8 +132,7 @@ export function priceChangeBasisLabel(assetType: string | null | undefined, basi
 export const GRADE_RELATIVE_SENTENCE = 'Factor readings only.';
 
 /**
- * RS-17: a calibrated score/grade is a percentile of expected R among setups of the SAME direction, so a top-graded
- * short can still have negative expected R (it is the least-bad short). Says so; null when not calibrated/no setup.
+ * Direction-neutral factor note. Null when not calibrated or when there is no setup.
  */
 export function gradeRelativeNote(c: (C & { setupType?: string; direction?: string }) | null | undefined): string | null {
   if (!c || !isCalibrated(c) || c.setupType === 'NONE') return null;

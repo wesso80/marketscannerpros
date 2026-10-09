@@ -283,7 +283,7 @@ export default function OpenInterestGuidePage() {
               <p className="text-slate-300 text-sm">
                 The <strong>strongest trends</strong> have rising OI + price moving in the trend direction.
                 When OI falls during a price move, it's often shorts/longs being <strong>forced out</strong>, 
-                not new conviction entering - these moves tend to reverse.
+                not new participation entering - these moves tend to reverse.
               </p>
             </div>
           </div>

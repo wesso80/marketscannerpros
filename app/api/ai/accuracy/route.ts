@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionFromCookie } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { verifySessionToken } from "@/lib/auth";
+import { isOperator } from "@/lib/quant/operatorAuth";
 import { getRecentSignals, getOverallStats } from "@/lib/signalRecorder";
 import { q } from "@/lib/db";
 import { ACCURACY_DISPLAY_HORIZONS, isAccuracyDisplayHorizon } from "@/lib/signals/accuracyHorizons";
@@ -26,7 +28,24 @@ const MIN_SAMPLE_SIZE = 30;
  * - minSamples: Minimum correct+wrong outcomes to show a past-threshold share (default: 30)
  * The stored rows always cover the last 90 days (refresh_signal_accuracy(90)).
  */
+async function requesterIsAdmin(): Promise<boolean> {
+  try {
+    const jar = await cookies();
+    const token = jar.get("ms_admin")?.value || jar.get("ms_auth")?.value;
+    if (!token) return false;
+    const payload = verifySessionToken(token);
+    const cid = typeof payload.cid === "string" ? payload.cid : "";
+    const workspaceId = typeof payload.workspaceId === "string" ? payload.workspaceId : undefined;
+    return Boolean(cid && (payload.kind === "admin" || isOperator(cid, workspaceId)));
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(req: NextRequest) {
+  if (!(await requesterIsAdmin())) {
+    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+  }
   if (!SHOW_SIGNAL_OUTCOME_STATS) {
     return NextResponse.json({
       success: true,
@@ -45,14 +64,6 @@ export async function GET(req: NextRequest) {
     });
   }
   try {
-    const session = await getSessionFromCookie();
-    if (!session?.workspaceId) {
-      return NextResponse.json(
-        { error: "Please log in to view accuracy stats" },
-        { status: 401 }
-      );
-    }
-    
     const url = new URL(req.url);
     const scannerType = url.searchParams.get('scanner') || undefined;
     const horizonMinutes = url.searchParams.get('horizon') 

@@ -68,7 +68,7 @@ describe('time confluence policy (Part A)', () => {
     const conflict = assessTimingEvidence({ tc: strong(), setupDirection: 'LONG', assetClass: 'crypto', sessionOpen: true });
     expect(conflict.relation).toBe('conflict');
     expect(conflict.eligibleForHardGate).toBe(false);
-    expect(conflict.warning).toMatch(/no tested edge/);
+    expect(conflict.warning).toMatch(/has not been tested on unseen data/);
     expect(timingVerdict(conflict)).toBe('disagree');
     const bull = assessTimingEvidence({ tc: { ...strong(), direction: 'bullish', scoreBreakdown: { ...strong().scoreBreakdown, directionScore: 70 } }, setupDirection: 'LONG', assetClass: 'crypto', sessionOpen: true });
     expect(bull.relation).toBe('supportive');
@@ -125,8 +125,9 @@ describe('indicator semantics (Part H)', () => {
     expect(rsiRead(62).state).toBe('bull');
   });
   it('DVE strength renders on the 0–100 scale', () => {
-    expect(dveStrengthLabel(66)).toBe('66/100');
-    expect(dveStrengthLabel(6600)).toBe('100/100');
+    expect(dveStrengthLabel(66)).toBe('66');
+    expect(dveStrengthLabel(6600)).toBe('100');
+    expect(dveStrengthLabel(66)).not.toContain('/100');
   });
   it('overbought RSI in a strong trend is an extended TREND, not mean reversion', () => {
     const s = classifySetup({ rsi: 73, adx: 62, bbWidthPct: 12, changePct: 1, atrPct: 4, direction: 'LONG' });

@@ -8,7 +8,7 @@ import { FREE_COPY } from './copy';
 export function scoreTone(value: number) { return value >= 75 ? 'var(--msp-bull)' : value >= 50 ? 'var(--msp-warn)' : 'var(--msp-text-muted)'; }
 /** Public daily-scan observation (public-daily-observations-v1): measured values only, no score, grade or ranking. */
 type Pick = { symbol: string; assetClass?: string; changePercent?: number | null; scanDate?: string | null; dataQuality?: { dataTimestamp?: string | null; scannedAt?: string | null } };
-const SORT_NOTE = 'Listed A–Z, not ranked.';
+const SORT_NOTE = 'Listed A–Z.';
 export default function SavedPicks() {
   const [picks, setPicks] = useState<Pick[] | null>(null);
   useEffect(() => {

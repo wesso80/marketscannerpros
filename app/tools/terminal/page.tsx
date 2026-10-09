@@ -29,7 +29,7 @@ const FuturesTerminalPanel = dynamic(() => import('@/components/terminal/futures
 const OptionsConfluence = dynamic(() => import('@/components/options-terminal/OptionsChainEvidence'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options timing…</div> });
 const OptionsFlow = dynamic(() => import('@/components/options-terminal/OptionsFlowView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Flow…</div> });
 const TimeScanner = dynamic(() => import('@/app/tools/time-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Gravity…</div> });
-const ConfluenceScanner = dynamic(() => import('@/app/tools/confluence-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Close timing Scanner…</div> });
+const ConfluenceScanner = dynamic(() => import('@/app/tools/confluence-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading close timing…</div> });
 import {
   useCloseCalendar,
   useFlow,
@@ -739,7 +739,7 @@ export default function TerminalPage() {
         </UpgradeGate>
       )}
 
-      {/* ─── Close timing Scanner ─── */}
+      {/* ─── Close timing ─── */}
       {tab === 'Close timing' && (
         <TerminalSubviewFrame tab="Close timing" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
           <ConfluenceScanner key={`${asset}:${sym}:${requestedTimeframe}`} symbol={sym} assetType={asset} timeframe={requestedTimeframe} embeddedInTerminal />

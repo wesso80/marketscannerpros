@@ -5,9 +5,17 @@ import { NextRequest } from 'next/server';
 const q = vi.hoisted(() => vi.fn());
 const getRecentSignals = vi.hoisted(() => vi.fn());
 const getOverallStats = vi.hoisted(() => vi.fn());
+const adminPayload = vi.hoisted(() => ({ value: { kind: 'admin', cid: 'admin_test', workspaceId: 'ws' } as Record<string, unknown> }));
 
 vi.mock('@/lib/db', () => ({ q }));
-vi.mock('@/lib/auth', () => ({ getSessionFromCookie: vi.fn(async () => ({ workspaceId: 'ws' })) }));
+vi.mock('next/headers', () => ({
+  cookies: vi.fn(async () => ({
+    get: (name: string) => (name === 'ms_auth' || name === 'ms_admin' ? { value: 'token' } : undefined),
+  })),
+}));
+vi.mock('@/lib/auth', () => ({
+  verifySessionToken: vi.fn(() => adminPayload.value),
+}));
 vi.mock('@/lib/signalRecorder', () => ({ getRecentSignals, getOverallStats }));
 vi.mock('@/lib/signals/outcomeStatsVisibility', () => ({ SHOW_SIGNAL_OUTCOME_STATS: true }));
 
@@ -50,11 +58,22 @@ beforeEach(() => {
   getOverallStats.mockReset();
   getRecentSignals.mockResolvedValue([]);
   getOverallStats.mockResolvedValue({});
+  adminPayload.value = { kind: 'admin', cid: 'admin_test', workspaceId: 'ws' };
 });
 
 function request(query = '') {
   return new NextRequest(`http://localhost/api/ai/accuracy${query}`);
 }
+
+it('refuses a signed-in non-admin before reading accuracy stats', async () => {
+  adminPayload.value = { kind: 'user', cid: 'member@example.com', workspaceId: 'ws' };
+  const res = await GET(request());
+  expect(res.status).toBe(403);
+  expect(await res.json()).toEqual({ error: 'Admin access required' });
+  expect(q).not.toHaveBeenCalled();
+  expect(routeSource).toContain("payload.kind === \"admin\"");
+  expect(routeSource).toContain('isOperator');
+});
 
 it('queries the 003 columns and returns only the 1d and 1w horizons', async () => {
   q.mockImplementation(async (sql: string) => {

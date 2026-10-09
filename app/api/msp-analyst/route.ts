@@ -999,26 +999,7 @@ Always mention which derivatives signals support or contradict your analysis.
       responseLength: text.length
     });
 
-    // ===== POST-GENERATION CONFLUENCE GATE ENFORCEMENT =====
-    // Server-side override: if the LLM text claims Trade-Ready but the
-    // quantitative pipeline disagrees, append a correction banner.
     let validatedText = text;
-    if (promptMode === 'analyst') {
-      const serverVerdict = aclResult.authorization === 'BLOCKED' ? 'NO_TRADE' :
-                            aclResult.authorization === 'CONDITIONAL' ? 'CONDITIONAL' :
-                            regimeScoring.tradeBias === 'HIGH_CONFLUENCE' ? 'TRADE_READY' : 'WATCH';
-      const score = Math.round(regimeScoring.weightedScore);
-      const textLower = text.toLowerCase();
-      const claimsTrade = textLower.includes('conditions aligned') || textLower.includes('conditions-aligned') || textLower.includes('trade-ready') || textLower.includes('trade ready');
-
-      if (claimsTrade && score < 55) {
-        validatedText += `\n\n---\n⚠️ **Confluence Gate Override** — The quantitative pipeline scored this setup at ${score}/100 (below the 55-point threshold). Server verdict: **${serverVerdict}**. Do not treat this as a confirmed setup.`;
-        logger.warn('Confluence gate override triggered', { score, serverVerdict, symbol: context?.symbol });
-      } else if (serverVerdict === 'NO_TRADE' && claimsTrade) {
-        validatedText += `\n\n---\n⚠️ **Risk Gate Override** — The institutional risk pipeline has **blocked** this setup (ACL: ${aclResult.authorization}). Server verdict: **NO_TRADE**. Stand aside.`;
-        logger.warn('Risk gate override triggered', { authorization: aclResult.authorization, symbol: context?.symbol });
-      }
-    }
 
     validatedText = appendPublicAISafetyCorrection(validatedText);
 

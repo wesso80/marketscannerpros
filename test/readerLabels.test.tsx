@@ -36,7 +36,7 @@ const mapped: Array<[string, string]> = [
   ['sourcesCheck', 'Sources check'],
   ['ruleCheck', 'Rule check'],
   ['price', 'Price'],
-  ['no_signal', 'No signal'],
+  ['no_signal', 'No reading'],
   ['always_open', 'Always open'],
   ['EVENT_RISK', 'Event risk'],
   ['POSITIVE', 'Positive'],

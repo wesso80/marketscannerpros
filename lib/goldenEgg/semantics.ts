@@ -34,11 +34,11 @@ export function stochasticRead(k: number | null | undefined): { label: string; s
   return { label: `${k.toFixed(0)}`, state: 'neutral', extended: false };
 }
 
-/** DVE `signal.strength` is 0–100 (see computeSignalStrength). Never multiply by 100. */
+/** DVE `signal.strength` is 0–100 (see computeSignalStrength). Never multiply by 100. The label is the number only. */
 export function dveStrengthLabel(strength: number | null | undefined): string {
   if (strength == null || !Number.isFinite(strength)) return 'n/a';
   const s = Math.max(0, Math.min(100, Math.round(strength)));
-  return `${s}/100`;
+  return String(s);
 }
 
 export type SetupType = 'trend' | 'breakout' | 'mean_reversion' | 'reversal' | 'squeeze' | 'range';

@@ -308,7 +308,7 @@ export default function CapitalFlowCard({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
             <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Flow Analysis Matrix</div>
             <div style={{ color: flow.flow_trade_permission.blocked ? 'var(--msp-bear)' : 'var(--msp-bull)', fontSize: '0.72rem', fontWeight: 800 }}>
-              {flow.flow_trade_permission.blocked ? (flow.flow_trade_permission.sessionLimited ? 'Unavailable this session' : 'What to check: flow is blocked') : 'What to check: flow is open'}
+              {flow.flow_trade_permission.blocked && flow.flow_trade_permission.sessionLimited ? 'Unavailable this session' : `What to check: risk ${flow.flow_trade_permission.riskMode.replaceAll('_', ' ')}, size ${Math.round(toNum(flow.flow_trade_permission.sizeMultiplier) * 100)}%, invalidation ${flow.flow_trade_permission.stopStyle.replaceAll('_', ' ')}`}
             </div>
           </div>
 

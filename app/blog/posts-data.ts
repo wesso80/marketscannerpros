@@ -173,7 +173,7 @@ Before diving into specific tools, here's what serious market researchers often 
 
 ---
 
-### 4. CryptoQuant Readings
+### 4. CryptoQuant
 **Suited to:** On-chain data and whale tracking
 
 **Pros:**

@@ -22,9 +22,8 @@ it('hides historical outcome totals by default', async () => {
 
   const res = await GET(new NextRequest('http://localhost/api/ai/accuracy'));
   const body = await res.json();
-  expect(res.status).toBe(200);
-  expect(body.hidden).toBe(true);
-  expect(body.stats).toEqual([]);
-  expect(body.overall).toBeNull();
-  expect(body.metadata.note).toContain('General information only, not financial advice.');
+  expect(res.status).toBe(403);
+  expect(body).toEqual({ error: 'Admin access required' });
+  expect(body.stats).toBeUndefined();
+  expect(body.overall).toBeUndefined();
 });

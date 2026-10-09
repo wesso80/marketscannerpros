@@ -58,7 +58,7 @@ export default function FindSymbols() {
     {!validFilters && <p role="alert">RSI and ADX filters must be between 0 and 100.</p>}
     {error && <p role="alert">{error}</p>}
     {packet?.notice && <p role="status" className={studio.notice}>{packet.notice}</p>}
-    {packet && <p className={studio.coverage}>{rows.length} of {packet.observations.length} loaded observations match. Symbol A–Z; no composite ranking. Attempted {packet.coverage?.attempted ?? 'unknown'} of {packet.coverage?.universe ?? 'unknown'} universe symbols; unavailable {packet.coverage?.unavailable ?? 'unknown'}. This is a sample, not a whole-market screen.</p>}
+    {packet && <p className={studio.coverage}>{rows.length} of {packet.observations.length} loaded observations match. Symbol A–Z. Attempted {packet.coverage?.attempted ?? 'unknown'} of {packet.coverage?.universe ?? 'unknown'} universe symbols; unavailable {packet.coverage?.unavailable ?? 'unknown'}. This is a sample, not a whole-market screen.</p>}
     <div className={studio.sectionHeading}><h2>Measured observations</h2><span>{packet ? `${rows.length} symbols · A–Z` : "Your research starts here"}</span></div>
     <div aria-live="polite" className={studio.results}>
       {rows.map(row => <article key={`${row.assetClass}:${row.symbol}`} className={studio.row}>

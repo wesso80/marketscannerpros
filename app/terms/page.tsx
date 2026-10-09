@@ -39,7 +39,7 @@ export default function TermsPage() {
       <ul>
         <li><strong className="text-amber-500">MarketScannerPros is an educational research workspace.</strong> The portfolio tracker, trade journal, risk analysis engine, scenario plans, and all analysis outputs are for education and practice records only. Nothing on this platform executes a real trade, connects to a live brokerage account, or places an order on any exchange.</li>
         <li>Readings, measurements, and scenario analyses describe recorded indicator agreement and technical patterns. They are not a probability of profit, not a promised result, and not trading instructions. Each person is solely responsible for decisions they make with their own capital outside this platform.</li>
-        <li>Your own trades insights are derived from your own journal data and reflect historical patterns only. Past performance does not guarantee future results.</li>
+        <li>Insights from your own trades are derived from your own journal data and reflect historical patterns only. Past performance does not guarantee future results.</li>
         <li><strong className="text-amber-500">MarketScannerPros does not hold an Australian Financial Services Licence (AFSL)</strong> and is not authorised to provide personal or general financial product advice under the Corporations Act 2001 (Cth).</li>
       </ul>
 

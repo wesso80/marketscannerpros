@@ -441,7 +441,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
               <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
                 <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Risk State</div>
                 <div className="mt-0.5 truncate text-sm font-black" style={{ color: gate ? (gate.riskState === 'risk_on' ? 'var(--msp-bull)' : gate.riskState === 'risk_off' ? 'var(--msp-bear)' : 'var(--msp-warn)') : 'var(--msp-flat)' }}>{gate ? gate.riskState.replace('_', '-').toUpperCase() : 'Loading'}</div>
-                <div className="mt-0.5 truncate text-[11px] text-slate-500" title="USD is inferred from rates and is not scored separately">USD {gate?.usdRegime ?? '—'} (from rates) · Rates {gate?.ratesRegime ?? '—'}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-500" title="USD is inferred from rates">USD {gate?.usdRegime ?? '—'} (from rates) · Rates {gate?.ratesRegime ?? '—'}</div>
               </div>
               <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
                 <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Liquidity</div>
@@ -590,7 +590,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                     ['Risk State', gate.riskState.replace('_', '-').toUpperCase()],
                     ['Liquidity', gate.liquidity],
                     ['Volatility', gate.volRegime],
-                    ['USD Regime (inferred from rates, not scored)', gate.usdRegime],
+                    ['USD Regime (inferred from rates)', gate.usdRegime],
                     ['Rates Regime', gate.ratesRegime],
                   ].map(([label, value]) => (
                     <div key={label} className="h-14 rounded-xl border border-white/10 bg-black/20 px-3 py-2">

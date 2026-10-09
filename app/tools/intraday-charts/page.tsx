@@ -925,7 +925,7 @@ export default function IntradayChartsPage({
       ? 'Educational caution: elevated session risk; review only until conditions improve.'
       : 'Monitor VWAP reclaim/reject behavior before treating the scenario as stronger.';
 
-  const reviewBlockReason = reviewState === 'Blocked' ? 'Conditions are not aligned due to session risk state' : '';
+  const reviewBlockReason = reviewState === 'Blocked' ? 'Conditions differ because of the session risk state' : '';
 
   if (tierLoading) return <div className="min-h-screen bg-[var(--msp-bg)]" />;
   if (!canAccessPortfolioInsights(tier)) return <UpgradeGate requiredTier="pro" feature="Intraday Charts" />;

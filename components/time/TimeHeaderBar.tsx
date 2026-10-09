@@ -13,7 +13,7 @@ export default function TimeHeaderBar(props: TimeHeaderBarProps) {
     <div className="border-b border-white/5 bg-[#070d18]">
       <div className="mx-auto flex w-full max-w-none items-center justify-between px-4 py-4">
         <div>
-          <div className="text-sm text-slate-400">Close timing Scanner</div>
+          <div className="text-sm text-slate-400">Close timing</div>
           <div className="mt-1 text-xl font-semibold">{props.symbol}</div>
         </div>
 

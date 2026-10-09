@@ -29,7 +29,7 @@ export interface MoversViewProps {
 const control = 'inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-700 px-3 py-2 text-sm';
 const pct = (n: number) => Number.isFinite(n) ? `${n >= 0 ? '+' : ''}${n.toFixed(2)}%` : 'Not collected';
 const number = (n: number | undefined | null, digits = 1) => n != null && Number.isFinite(n) ? n.toLocaleString('en-US', { maximumFractionDigits: digits }) : 'Not collected';
-const stateLabel = (state: EvaluatedMover['deployment']) => state === 'eligible' ? 'Aligned' : state === 'conditional' ? 'Mixed evidence' : 'Excluded';
+const stateLabel = (state: EvaluatedMover['deployment']) => state === 'eligible' ? 'Included' : state === 'conditional' ? 'Mixed evidence' : 'Excluded';
 
 function MoversChart({ title, rows, medianVol }: { title: string; rows: MoversData['topGainers']; medianVol: number }) {
   const base = medianVol > 0 ? medianVol : 1;

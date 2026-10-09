@@ -12,7 +12,6 @@
 
 import { useState } from 'react';
 import type { ScanResult } from '@/app/v2/_lib/api';
-import { ordinal } from '@/lib/utils/ordinal';
 
 type CompositeV2 = NonNullable<ScanResult['compositeV2']>;
 
@@ -38,7 +37,6 @@ const REGIME_LABEL: Record<string, string> = {
 
 export default function CompositeBreakdown({ v2, compact = false, expanded = false }: { v2: CompositeV2; compact?: boolean; expanded?: boolean }) {
   const [open, setOpen] = useState(false);
-  const topPct = Math.max(1, 100 - v2.percentileRank);
   const contributions = [...(v2.factorContributions ?? [])].sort((a, b) => b.weight - a.weight);
 
   return (
@@ -46,22 +44,10 @@ export default function CompositeBreakdown({ v2, compact = false, expanded = fal
       <div className="flex flex-wrap items-center gap-1.5">
         {v2.permission ? <span className={`text-[10px] font-bold ${v2.permission === 'BLOCK' ? 'text-rose-300' : v2.permission === 'WATCH' ? 'text-amber-300' : 'text-emerald-300'}`}>{v2.permission} · {Math.round((v2.coverage ?? 0) * 100)}% factor coverage</span> : null}
         <span
-          className="rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300"
-          title="Cross-sectional order within the symbols scanned this run"
-        >
-          Top {topPct}% of scan
-        </span>
-        <span
           className="rounded border border-slate-600/40 bg-slate-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300"
           title="Market regime whose factor-weight mix was applied to this reading"
         >
           {REGIME_LABEL[v2.regime] ?? v2.regime}
-        </span>
-        <span
-          className="rounded border border-slate-600/40 bg-slate-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400"
-          title="Percentile of the composite reading across the scanned universe"
-        >
-          {ordinal(v2.percentileRank)} pct
         </span>
         {v2.liquidityMultiplier < 1 ? (
           <span

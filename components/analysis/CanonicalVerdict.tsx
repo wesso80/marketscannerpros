@@ -4,8 +4,7 @@
  * CanonicalVerdict — the canonical engine's verdict for one symbol (lib/scoring/canonical): permission, setup type,
  * direction, grade, score, the bar it was computed on, factor pass/fail with RAW values, structural levels, and the
  * reasons for any block/watch. Primary everywhere; the legacy composite may be shown underneath as a secondary label.
- * Phase 3: no setup has a validated edge, so the card shows a "factors only" banner plus the calibrated probability of
- * target-before-invalidation and expected R (daily equity/crypto) or an "uncalibrated" label (other contexts).
+ * Phase 3: no setup has a validated edge, so the card shows a "factors only" banner. The projected-return label is not shown.
  */
 import type { CanonicalResult } from '@/lib/scoring/canonical/types';
 import { NO_EDGE_BANNER, cautionTags, targetBasisLabel } from '@/lib/scoring/canonical/display';

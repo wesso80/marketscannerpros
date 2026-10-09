@@ -12,7 +12,8 @@
  * components/home is scanned. Customer-facing lib modules (guides, presentation,
  * display helpers, alert email text) are scanned, including plain string
  * constants and variables. Phrase allowlist entries are exact substrings;
- * only the allowlisted span is exempt. A banned word after not/no/never is allowed.
+ * only the allowlisted span is exempt. A banned word is allowed only when it
+ * sits inside one of the known disclaimer phrases.
  */
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { join, relative } from 'path';
@@ -259,14 +260,129 @@ export function isExcluded(file: string): boolean {
   return SCAN_EXCLUSIONS.some((entry) => entry.test(file));
 }
 
+/** Banned words are allowed only inside these exact disclaimer phrases. */
+export const DISCLAIMER_NEGATIONS = [
+  'not a rating',
+  'not a ranking',
+  'not a probability of profit',
+  'not a promised result',
+] as const;
+
+export function disclaimerCovers(text: string, index: number, length: number): boolean {
+  const lower = text.toLowerCase();
+  return DISCLAIMER_NEGATIONS.some((phrase) => {
+    let from = 0;
+    while (from < lower.length) {
+      const at = lower.indexOf(phrase, from);
+      if (at < 0) return false;
+      if (index >= at && index + length <= at + phrase.length) return true;
+      from = at + phrase.length;
+    }
+    return false;
+  });
+}
+
 function allowed(file: string, text: string, index: number, length: number): boolean {
   if (PHRASE_ALLOWLIST.some((entry) => {
     if (entry.file !== file) return false;
     const at = text.indexOf(entry.phrase);
     return at >= 0 && index >= at && index + length <= at + entry.phrase.length;
   })) return true;
-  const before = text.slice(Math.max(0, index - 48), index);
-  return /\b(?:not|no|never|without|isn['’]t|aren['’]t|don['’]t|doesn['’]t|cannot|can['’]t|non-)\b(?:\s+\w+){0,4}\s*$/i.test(before);
+  return disclaimerCovers(text, index, length);
+}
+
+/** Composite N/100 in customer copy. Fear & Greed keeps its published index. */
+export function isCompositeFraction(text: string): boolean {
+  return /\/\s*100\b/.test(text) && !/fear|greed/i.test(text);
+}
+
+function staticCopy(node: ts.Node | undefined, depth = 0): string | null {
+  if (!node || depth > 8) return null;
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
+  if (ts.isTemplateExpression(node)) {
+    return node.head.text + node.templateSpans.map((span) => span.literal.text).join('');
+  }
+  if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isSatisfiesExpression(node) || ts.isTypeAssertionExpression(node) || ts.isNonNullExpression(node)) {
+    return staticCopy(node.expression, depth + 1);
+  }
+  if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+    const left = staticCopy(node.left, depth + 1);
+    const right = staticCopy(node.right, depth + 1);
+    if (left == null && right == null) return null;
+    return `${left ?? ''}${right ?? ''}`;
+  }
+  return null;
+}
+
+function collectFractionTexts(node: ts.Node | undefined, file: string, hits: { file: string; line: number; kind: string; text: string }[], depth = 0) {
+  if (!node || depth > 12) return;
+  const joined = staticCopy(node);
+  if (joined && isCompositeFraction(joined) && !joined.includes('://')) {
+    const sf = node.getSourceFile();
+    const pos = sf.getLineAndCharacterOfPosition(node.getStart(sf));
+    hits.push({ file, line: pos.line + 1, kind: 'fraction', text: joined.replace(/\s+/g, ' ').trim() });
+  }
+  if (ts.isConditionalExpression(node)) {
+    collectFractionTexts(node.whenTrue, file, hits, depth + 1);
+    collectFractionTexts(node.whenFalse, file, hits, depth + 1);
+  }
+}
+
+function visitFractions(sf: ts.SourceFile, file: string, bag: { file: string; line: number; kind: string; text: string }[]) {
+  function rec(node: ts.Node) {
+    if (ts.isJsxText(node) && isCompositeFraction(node.text)) {
+      const pos = sf.getLineAndCharacterOfPosition(node.getStart(sf));
+      bag.push({ file, line: pos.line + 1, kind: 'jsx-text', text: node.text.replace(/\s+/g, ' ').trim() });
+    }
+    if (ts.isJsxExpression(node) && node.expression && node.parent && (ts.isJsxElement(node.parent) || ts.isJsxFragment(node.parent) || ts.isJsxAttribute(node.parent))) {
+      const attr = ts.isJsxAttribute(node.parent) ? propName(node.parent.name) : '';
+      if (!attr || COPY_KEYS.has(attr) || attr.startsWith('aria-')) collectFractionTexts(node.expression, file, bag);
+    }
+    if (ts.isJsxAttribute(node) && node.initializer && ts.isStringLiteral(node.initializer)) {
+      const name = propName(node.name);
+      if ((COPY_KEYS.has(name) || name.startsWith('aria-')) && !SKIP_ATTRS.has(name) && isCompositeFraction(node.initializer.text)) {
+        const pos = sf.getLineAndCharacterOfPosition(node.initializer.getStart(sf));
+        bag.push({ file, line: pos.line + 1, kind: `attr:${name}`, text: node.initializer.text });
+      }
+    }
+    if (ts.isPropertyAssignment(node)) {
+      const name = propName(node.name);
+      if (!SKIP_VALUE_KEYS.has(name) && (COPY_KEYS.has(name) || ts.isStringLiteral(node.initializer) || ts.isNoSubstitutionTemplateLiteral(node.initializer) || ts.isTemplateExpression(node.initializer) || ts.isBinaryExpression(node.initializer))) {
+        collectFractionTexts(node.initializer, file, bag);
+      }
+    }
+    if ((ts.isVariableDeclaration(node) || ts.isPropertyDeclaration(node)) && node.initializer) {
+      collectFractionTexts(node.initializer, file, bag);
+    }
+    if (ts.isReturnStatement(node) && node.expression) collectFractionTexts(node.expression, file, bag);
+    ts.forEachChild(node, rec);
+  }
+  rec(sf);
+}
+
+export function scanCompositeFractions(root = process.cwd()): CopyHit[] {
+  const files = [
+    ...walkFiles(join(root, 'app')),
+    ...walkFiles(join(root, 'components')),
+    ...walkFiles(join(root, 'lib')),
+  ];
+  const hits: CopyHit[] = [];
+  const seen = new Set<string>();
+  for (const full of files) {
+    const file = relative(root, full).replaceAll('\\', '/');
+    if (isExcluded(file)) continue;
+    const source = readFileSync(full, 'utf8');
+    const sf = ts.createSourceFile(full, source, ts.ScriptTarget.Latest, true, full.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+    const bag: { file: string; line: number; kind: string; text: string }[] = [];
+    visitFractions(sf, file, bag);
+    for (const item of bag) {
+      const key = `${file}:${item.line}:${item.text}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      hits.push({ ...item, word: 'composite-fraction' });
+    }
+  }
+  return hits;
 }
 
 export function scanCustomerCopy(root = process.cwd(), options?: { includeExcluded?: boolean }): CopyHit[] {

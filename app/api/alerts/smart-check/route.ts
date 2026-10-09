@@ -313,6 +313,8 @@ interface CheckResult {
   threshold?: number;
   message?: string;
   context?: Record<string, any>;
+  /** Keep the composite in the row, and leave it out of the customer email. */
+  omitMetric?: boolean;
 }
 
 function checkSmartCondition(alert: SmartAlert, data: DerivativesData): CheckResult {
@@ -543,7 +545,8 @@ async function checkExtendedCondition(alert: SmartAlert, data: DerivativesData):
           triggered: true,
           value: mpe.composite,
           threshold: condition_value,
-          message: `🔥 MPE HIGH PRESSURE: ${symbol} MPE ${Math.round(mpe.composite)}/100 (threshold: ${condition_value})`,
+          omitMetric: true,
+          message: `Market pressure is high for ${symbol}. Time ${Math.round(mpe.time)}, volatility ${Math.round(mpe.volatility)}, liquidity ${Math.round(mpe.liquidity)}.`,
           context: { time: mpe.time, volatility: mpe.volatility, liquidity: mpe.liquidity },
         };
       }
@@ -559,7 +562,8 @@ async function checkExtendedCondition(alert: SmartAlert, data: DerivativesData):
           triggered: true,
           value: mpe.composite,
           threshold: condition_value,
-          message: `❄️ MPE LOW PRESSURE: ${symbol} MPE ${Math.round(mpe.composite)}/100 (threshold: ${condition_value})`,
+          omitMetric: true,
+          message: `Market pressure is low for ${symbol}. Time ${Math.round(mpe.time)}, volatility ${Math.round(mpe.volatility)}, liquidity ${Math.round(mpe.liquidity)}.`,
           context: { time: mpe.time, volatility: mpe.volatility, liquidity: mpe.liquidity },
         };
       }
@@ -658,8 +662,8 @@ async function triggerSmartAlert(alert: SmartAlert, result: CheckResult) {
         alertName: alert.name || 'Smart Alert',
         symbol: alert.symbol || 'MARKET',
         message: result.message,
-        value: result.value,
-        threshold: result.threshold,
+        value: result.omitMetric ? undefined : result.value,
+        threshold: result.omitMetric ? undefined : result.threshold,
         alertType: 'smart',
       });
       await deliverUserAlertEmail({

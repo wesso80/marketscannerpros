@@ -4,7 +4,7 @@ const reasons: Record<string, string> = {
   NO_SETUP: 'No qualifying setup',
   NO_STRUCTURAL_STOP: 'No clear stop level in the chart',
   'NO_VALIDATED_EDGE: TREND_CONTINUATION': 'Trend-continuation rule not met',
-  NO_VALIDATED_EDGE: 'No validated research edge',
+  NO_VALIDATED_EDGE: 'No validated research result',
   RR_BELOW_MIN: 'Reward-to-risk below the minimum',
 };
 export function symbolText(value: unknown): string {
@@ -13,7 +13,7 @@ export function symbolText(value: unknown): string {
   for (const [code, label] of Object.entries(reasons)) text = text.replaceAll(code, label);
   return text.replace(/\b[A-Z]+(?:_[A-Z]+)+\b/g, code => code.toLowerCase().replaceAll('_', ' '))
     .replace(/\b(?:time unknown|time unavailable)\b/gi, 'observation time not recorded')
-    .replace(/\bpercentile unavailable\b/gi, 'rank not recorded')
+    .replace(/\bpercentile unavailable\b/gi, 'percentile not recorded')
     .replace(/\b(?:Unknown|Unavailable|Unverified|N\/A|undefined|NaN)\b/gi, 'Not recorded')
     .replace(/\bDegraded\b/gi, 'Data checks failed')
     .replace(/\bTrade Ideas\b/gi, 'Research scenarios')
@@ -149,7 +149,7 @@ const READER: Record<string, string> = {
   STALE: 'Older data',
   'INSUFFICIENT DATA': 'Not enough data',
   'NO STRUCTURAL STOP': 'No clear stop level in the chart',
-  'NO VALIDATED EDGE': 'No validated research edge',
+  'NO VALIDATED EDGE': 'No validated research result',
   'RR BELOW MIN': 'Reward-to-risk below the minimum',
   'STALE DATA': 'Older data',
   'EARNINGS IN WINDOW': 'Earnings inside the holding window',
@@ -161,7 +161,7 @@ const READER: Record<string, string> = {
   'PROJECTED TARGET': 'Projected target',
   'UNCALIBRATED TIMEFRAME': 'Uncalibrated timeframe',
   UNCALIBRATED: 'Uncalibrated',
-  'NO SIGNAL': 'No signal',
+  'NO SIGNAL': 'No reading',
   'ALWAYS OPEN': 'Always open',
   'LONG CROWDED': 'Crowded long',
   'SHORT CROWDED': 'Crowded short',

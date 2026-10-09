@@ -438,12 +438,12 @@ export function buildPayload(
     { key: 'Momentum', val: momentumScore },
   ].filter(d => components.some(c => c.key === d.key && c.present && c.applicable !== false)).sort((a, b) => b.val - a.val);
   if (!drivers.length) drivers.push({key: 'Evidence unavailable', val: 0});
-  const primaryDriver = `${drivers[0].key} leads at ${drivers[0].val.toFixed(0)}/100 — ${describeScore(drivers[0].key, drivers[0].val, ind, opts, cryptoDerivs, price, structureQ.notes, flow.notes)}`;
+  const primaryDriver = `${drivers[0].key} leads — ${describeScore(drivers[0].key, drivers[0].val, ind, opts, cryptoDerivs, price, structureQ.notes, flow.notes)}`;
   const weakest = drivers[drivers.length - 1];
   let primaryBlocker: string | undefined;
   if (trust.level === 'INSUFFICIENT_DATA' || trust.level === 'STALE') primaryBlocker = `Data trust ${trust.level.toLowerCase().replace('_', ' ')}: ${trust.reasons[0] ?? 'inputs unreliable'}`;
-  else if (weakest.val < 55) primaryBlocker = `${weakest.key} holding back at ${weakest.val.toFixed(0)}/100 — ${describeScore(weakest.key, weakest.val, ind, opts, cryptoDerivs, price, structureQ.notes, flow.notes)}`;
-  else if (riskScore < 50) primaryBlocker = `Risk conditions ${riskScore}/100 — ${riskQ.reasons[0]}`;
+  else if (weakest.val < 55) primaryBlocker = `${weakest.key} holding back — ${describeScore(weakest.key, weakest.val, ind, opts, cryptoDerivs, price, structureQ.notes, flow.notes)}`;
+  else if (riskScore < 50) primaryBlocker = `Risk conditions — ${riskQ.reasons[0]}`;
   else if (setup.extended) primaryBlocker = `Extension — ${setup.note}`;
   else if (macroOpposes) primaryBlocker = macroRegime!.riskState === 'risk_off' ? `Macro regime RISK_OFF (${macroRegime!.concerns.join(', ')})` : 'Macro regime RISK_ON opposes the short scenario';
 
@@ -591,7 +591,6 @@ export function buildPayload(
     enabled: true,
     verdict: mpe.composite >= 60 ? 'agree' : mpe.composite >= 40 ? 'neutral' : 'disagree',
     items: [
-      { name: 'MPE Composite', value: `${mpe.composite.toFixed(0)}/100`, state: mpe.composite >= 60 ? 'bull' : mpe.composite < 40 ? 'bear' : 'neutral' },
       { name: 'Time Pressure', value: `${mpe.time.toFixed(0)}`, state: mpe.time >= 50 ? 'bull' : 'neutral' },
       { name: 'Vol Pressure', value: `${mpe.volatility.toFixed(0)}`, state: mpe.volatility >= 50 ? 'bull' : 'neutral' },
       { name: 'Liquidity Pressure', value: `${mpe.liquidity.toFixed(0)}`, state: mpe.liquidity >= 50 ? 'bull' : 'neutral' },

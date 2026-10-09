@@ -96,7 +96,7 @@ function PremiumGate() {
   return (
     <div className="py-4 text-center">
       <div className="text-xs text-slate-400 mb-3">
-        Your own trades insights require a Pro subscription.
+        Insights from your own trades require a Pro subscription.
       </div>
       <a
         href="/pricing"

@@ -6,9 +6,13 @@ describe('scanner labels describe, they do not forecast',()=>{
   const page=read('app/tools/scanner/page.tsx');
   expect(page).toContain('data-scanner-ordering-note');
   expect(page).toContain('historical validation on unseen data is not established');
+  expect(page).toContain('Ordered by');
+  expect(page).toContain("sortKey === 'change' ? 'percent change'");
+  expect(page).toContain("sortKey === 'volume' ? 'volume'");
+  expect(page).toContain("sortKey === 'price' ? 'price'");
   expect(page).not.toContain("'Strong confluence'");
   expect(page).not.toContain('>Confluence<');
-  expect(page).toContain('Reading (unvalidated)');
+  expect(page).not.toContain('Reading (unvalidated)');
   expect(page).not.toContain('Score (unvalidated)');
   const templates = read('components/scanner/ScanTemplatesBar.tsx');
   expect(templates).toContain("label: 'Indicators agreeing'");

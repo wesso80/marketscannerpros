@@ -168,7 +168,7 @@ export default function StateMachineTraderEyeCard({
 
       {!!stateMachine?.block_reasons?.length && (
         <div style={{ color: '#FCA5A5', fontSize: '0.7rem' }}>
-          <strong>NOT ALIGNED:</strong> {stateMachine.block_reasons[0]}
+          <strong>DIFFERS:</strong> {stateMachine.block_reasons[0]}
         </div>
       )}
     </div>
