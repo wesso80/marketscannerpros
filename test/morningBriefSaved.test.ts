@@ -241,3 +241,12 @@ it('read-only saved brief loading never creates tables or indexes, including on 
   expect(m.q).toHaveBeenCalledTimes(1);
   expect(m.q.mock.calls[0][0].trim()).toMatch(/^SELECT /);
 });
+
+it('read-only loading treats a never-created brief table (42P01) as no saved brief, without creating it', async () => {
+  m.q.mockReset().mockRejectedValue(Object.assign(new Error('relation "admin_morning_briefs" does not exist'), { code: '42P01' }));
+  await expect(loadLatestMorningBrief('EQUITIES', '15m', Date.now(), 'workspace-a', { readOnly: true })).resolves.toBeNull();
+  expect(m.q).toHaveBeenCalledTimes(1);
+  expect(m.q.mock.calls[0][0].trim()).toMatch(/^SELECT /);
+  m.q.mockReset().mockRejectedValue(Object.assign(new Error('permission denied'), { code: '42501' }));
+  await expect(loadLatestMorningBrief('EQUITIES', '15m', Date.now(), 'workspace-a', { readOnly: true })).rejects.toThrow('permission denied');
+});
