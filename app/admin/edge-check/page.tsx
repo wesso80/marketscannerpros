@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { OverlapInterval } from '@/lib/admin/overlapUncertainty';
 import OutcomeCohort from '@/components/admin/OutcomeCohort';
@@ -115,6 +116,7 @@ export default function EdgeCheckPage() {
           </select>
         </label>
       </div>
+      <p><Link href="/admin/expectancy-shadow" style={{color:"#6EE7B7"}}>Compare current and verified-only expectancy</Link></p>
       <OutcomeCohort scope="Eligible measured records in the selected window; provenance counts precede this filter. Daily completeness covers the full recorded population." value={cohort} onChange={setCohort} summary={data?.provenance}/>
       {data?.truth && <TruthStampLine truth={data.truth as never} />}
       {loading && <p>Loading…</p>}
