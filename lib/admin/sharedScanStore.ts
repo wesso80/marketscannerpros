@@ -7,6 +7,7 @@ import type { AdminResearchPacket } from "@/lib/admin/getAdminResearchPacket";
 import type { ScannerHit } from "@/lib/admin/types";
 import { normalizeHitConfidence } from "@/lib/admin/hitIntegrity";
 import type { BulkQuote, PriorResult, RadarChange, SharedScanMarket } from "@/lib/admin/sharedScanLogic";
+import { guardScanChangePercent } from "@/lib/admin/scanMoveGuard";
 
 /** A running row older than this is treated as a crashed run and no longer blocks new runs. */
 export const RUN_STALE_MIN = 20;
@@ -269,7 +270,10 @@ export async function saveQuotes(market: SharedScanMarket, timeframe: string, ru
       WHERE r.market = $1 AND r.timeframe = $2 AND r.symbol = x.symbol`,
     [
       market, timeframe, runId,
-      JSON.stringify(quotes.map((qt) => ({ symbol: qt.symbol, price: qt.price, change_pct: qt.changePercent, quote_at: qt.quoteAt ?? new Date().toISOString() }))),
+      JSON.stringify(quotes.map((qt) => {
+        const guarded = guardScanChangePercent(qt.symbol, market, qt.changePercent);
+        return { symbol: qt.symbol, price: qt.price, change_pct: guarded.withheld ? null : guarded.changePercent, quote_at: qt.quoteAt ?? new Date().toISOString() };
+      })),
     ],
   );
 }

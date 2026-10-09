@@ -11,6 +11,7 @@ import { marketText } from '@/lib/marketsPresentation';
 import { isAccuracyDisplayHorizon } from '@/lib/signals/accuracyHorizons';
 import { formatSignedPercent, pastThresholdLabel, signedPctMove } from '@/lib/signals/accuracyDisplay';
 import { collectionStatus, thresholdChip, THRESHOLD_RULE_NOTE } from '@/lib/signals/thresholdLabels';
+import { SHOW_SIGNAL_OUTCOME_STATS } from '@/lib/signals/outcomeStatsVisibility';
 
 type Stat = {
   signal_type: string;
@@ -70,6 +71,10 @@ export default function SignalAccuracyPage() {
   const [showRecent, setShowRecent] = useState(false);
 
   useEffect(() => {
+    if (!SHOW_SIGNAL_OUTCOME_STATS) {
+      setLoading(false);
+      return;
+    }
     if (tierLoading || !isLoggedIn) return;
     fetchData();
   }, [tierLoading, isLoggedIn, minSamples]);
@@ -117,6 +122,16 @@ export default function SignalAccuracyPage() {
   const collecting = overall ? collectionStatus(overall.total, overall.labeled) : null;
   const verdict = loading ? 'Loading observations…' : error ? 'Observations could not be loaded' : collecting ?? (labeledCount === 0 ? 'Outcomes pending' : `${labeledCount.toLocaleString()} labelled outcomes collected`);
   const observationLabel = (value: string | null | undefined) => value === 'unknown' || value === 'pending' || !value ? 'Outcome pending' : marketText(value);
+
+  if (!SHOW_SIGNAL_OUTCOME_STATS) {
+    return (
+      <div className="bg-[#0F172A] text-white p-3 max-w-7xl mx-auto space-y-3">
+        <h1 className="text-2xl font-semibold">Setup accuracy</h1>
+        <p>Historical outcome totals are hidden while stored labels are being checked.</p>
+        <p className="text-xs text-slate-400">General information only, not financial advice.</p>
+      </div>
+    );
+  }
 
   // Gate: Pro (legacy pro_trader and admins included)
   if (!tierLoading && isLoggedIn && !isPaidTier(tier)) {

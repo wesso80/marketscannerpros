@@ -89,6 +89,16 @@ export function filterMoversByFloor<T extends MoverFloorItem>(movers: T[], optio
 
 /** Minimum session volume (shares) for an equity mover (OV-9). */
 export const EQUITY_MOVER_MIN_VOLUME = 100_000;
+/**
+ * Crypto decliners use the same $1 price floor as equity gainers.
+ * Crypto gainers still keep sub-dollar prices (a coin such as DOGE can be under $1 and liquid).
+ */
+export const CRYPTO_LOSER_MIN_PRICE = 1;
+
+export function passesCryptoLoserPrice(price: string | number | null | undefined, min = CRYPTO_LOSER_MIN_PRICE): boolean {
+  const n = parseMoverNumber(price);
+  return Number.isFinite(n) && n >= min;
+}
 
 /**
  * Nasdaq five-letter symbols whose fifth letter marks a warrant (W), right (R) or unit (U), e.g. PDYNW,

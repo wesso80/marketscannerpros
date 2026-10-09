@@ -3,7 +3,7 @@ import { getTopGainersLosers, getMarketData } from '@/lib/coingecko';
 import { q } from '@/lib/db';
 import { normalizeCryptoMover } from '@/lib/analysis/publicMover';
 import { fetchAvTopMovers } from '@/lib/avTopMovers';
-import { EQUITY_MOVER_MIN_VOLUME, isExtremeDailyMove, isUncheckedExtremeMove, passesServerMoverFilter } from '@/lib/analysis/moverQuality';
+import { EQUITY_MOVER_MIN_VOLUME, isExtremeDailyMove, isUncheckedExtremeMove, passesCryptoLoserPrice, passesServerMoverFilter } from '@/lib/analysis/moverQuality';
 import { isWarmupStatus, momentumAccelFromWarmup, type MomentumBar } from '@/lib/movers/momentumAccel';
 import { latestUsSessionDate, toYmd, usSessionsBetween } from '@/lib/time/usSession';
 
@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
     const eqLoserPool = equityMovers.losers.map(normalizeAVMover).filter(passes);
     const eqActivePool = equityMovers.active.map(normalizeAVMover).filter(passes);
     const cryptoGainerPool = (topMovers?.top_gainers || []).map(coin => normalizeCryptoMover(coin, duration)).filter(passes);
-    const cryptoLoserPool = (topMovers?.top_losers || []).map(coin => normalizeCryptoMover(coin, duration)).filter(passes);
+    const cryptoLoserPool = (topMovers?.top_losers || []).map(coin => normalizeCryptoMover(coin, duration)).filter(passes).filter((m) => passesCryptoLoserPrice(m.price));
     // Most-active crypto keeps its existing floor (none). Only the extreme-move check is new.
     const cryptoActivePool = (mostActive || []).map(normalizeMostActive);
 

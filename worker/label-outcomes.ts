@@ -21,7 +21,11 @@ dotenv.config({ path: '.env.local' });
 
 import { Pool } from 'pg';
 import { alertWorkerError } from '../lib/opsAlerting';
-import { bandForHorizon, bandsFromRows, classifyMove, horizonsWithFallback } from '../lib/signals/outcomeRule';
+import { COINGECKO_ID_MAP } from '../lib/coingecko';
+import { bandForHorizon, bandsFromRows, horizonsWithFallback } from '../lib/signals/outcomeRule';
+import {
+  allowUnclassifiedEquityBars, declaredAssetClass, inCryptoSymbolMap, labelHorizonMove, resolveOutcomeLabelAsset, symbolBase,
+} from '../lib/signals/outcomeGuard';
 
 // Lazy database connection
 let pool: Pool | null = null;
@@ -63,64 +67,99 @@ const TOLERANCE_WINDOWS: Record<number, { bars: number; minutes: number }> = {
   10080: { bars: 2, minutes: 2880 },   // 1w: allow +2 days
 };
 
+interface ScopedBar {
+  close: string;
+  ts: string;
+  bar_class: string;
+}
+
 /**
- * Get price at a specific time from ohlcv_bars.
+ * Bars for one symbol in a time window, tagged by asset class.
  *
- * The ingest worker writes timeframe 'daily' (stamped 00:00 UTC of the session
- * date). It fetches 60min bars for midpoints but does not insert them here, so
- * '1h' / '60min' rows are rare. A 1d or 1w window is long enough to include the
- * next daily bar. A 1h or 4h window usually is not, and then quotes_latest is
- * used only while the tolerance window is still open. After that the row is
- * 'unknown', not wrong.
+ * Equity rows are ohlcv_bars joined to an equity symbol_universe row, plus
+ * ohlcv_bars with no universe row when $5 is true (no coin-map hit and no
+ * crypto universe row). A crypto universe row excludes the bar.
+ * Crypto history is cg_hist_daily matched on coin_id ($4) only. A mapped id
+ * does not match cg_hist_coins.symbol. Crypto ohlcv rows still require a
+ * crypto universe row. quotes_latest is never used.
  *
- * CRITICAL: To avoid label leakage, we must use the FIRST bar's CLOSE
- * that is >= target time. Not the high/low during the window,
- * not the closest bar, but strictly the first bar AFTER horizon.
- *
- * @param horizonMinutes - Used to determine tolerance window
+ * Symbols are stored uppercased, so compare to UPPER($1) and leave the symbol index usable.
  */
-async function getPriceAtTime(
-  symbol: string, 
-  targetTime: Date,
-  horizonMinutes: number = 1440
-): Promise<{ price: number | null; withinTolerance: boolean }> {
-  const tolerance = TOLERANCE_WINDOWS[horizonMinutes] || { bars: 2, minutes: 240 };
-  const maxTime = new Date(targetTime.getTime() + tolerance.minutes * 60 * 1000);
-  
-  // STRICT: First bar AFTER target time (avoids label leakage). Symbols are
-  // stored uppercased, so compare to UPPER($1) and leave the symbol index usable.
-  const firstBarAfter = await q<{ close: string, ts: string }>(
-    `SELECT close, ts FROM ohlcv_bars 
-     WHERE symbol = UPPER($1)
-       AND timeframe IN ('daily', '1h', '60min')
-       AND ts >= $2
-       AND ts <= $3
-     ORDER BY ts ASC
-     LIMIT 1`,
-    [symbol, targetTime, maxTime]
+async function getScopedBars(
+  symbol: string,
+  from: Date,
+  to: Date,
+  coinId: string,
+  allowUnclassifiedEquity: boolean,
+): Promise<ScopedBar[]> {
+  return q<ScopedBar>(
+    `SELECT close, ts, bar_class FROM (
+       SELECT b.close::text AS close, b.ts, 'equity'::text AS bar_class
+         FROM ohlcv_bars b
+        WHERE b.symbol = UPPER($1)
+          AND b.timeframe IN ('daily', '1h', '60min')
+          AND b.ts >= $2
+          AND b.ts <= $3
+          AND NOT EXISTS (
+            SELECT 1 FROM symbol_universe c
+             WHERE c.symbol = b.symbol
+               AND lower(c.asset_type) IN ('crypto', 'cryptocurrency')
+          )
+          AND (
+            EXISTS (
+              SELECT 1 FROM symbol_universe u
+               WHERE u.symbol = b.symbol
+                 AND lower(u.asset_type) IN ('equity', 'equities', 'stock', 'etf')
+            )
+            OR (
+              NOT EXISTS (SELECT 1 FROM symbol_universe u WHERE u.symbol = b.symbol)
+              AND $5::boolean
+            )
+          )
+       UNION ALL
+       SELECT COALESCE(d.close, d.price)::text AS close,
+              ((d.day + 1)::timestamp AT TIME ZONE 'UTC') - INTERVAL '1 millisecond' AS ts,
+              'crypto'::text AS bar_class
+         FROM cg_hist_daily d
+        WHERE d.coin_id = $4
+          AND $4 <> ''
+          AND COALESCE(d.close, d.price) IS NOT NULL
+          AND ((d.day + 1)::timestamp AT TIME ZONE 'UTC') - INTERVAL '1 millisecond' >= $2
+          AND ((d.day + 1)::timestamp AT TIME ZONE 'UTC') - INTERVAL '1 millisecond' <= $3
+       UNION ALL
+       SELECT b.close::text AS close, b.ts, 'crypto'::text AS bar_class
+         FROM ohlcv_bars b
+         JOIN symbol_universe u ON u.symbol = b.symbol
+        WHERE b.symbol = UPPER($1)
+          AND lower(u.asset_type) IN ('crypto', 'cryptocurrency')
+          AND b.timeframe IN ('daily', '1h', '60min')
+          AND b.ts >= $2
+          AND b.ts <= $3
+     ) class_bars`,
+    [symbol, from, to, coinId, allowUnclassifiedEquity],
   );
-  
-  if (firstBarAfter.length > 0) {
-    return { price: parseFloat(firstBarAfter[0].close), withinTolerance: true };
-  }
-  
-  // If no bar within tolerance window, check if signal is recent enough to use current quote
-  const now = new Date();
-  const hoursSinceTarget = (now.getTime() - targetTime.getTime()) / (1000 * 60 * 60);
-  
-  // Only use current quote if we're within tolerance window of target
-  if (hoursSinceTarget >= 0 && hoursSinceTarget * 60 < tolerance.minutes) {
-    const quote = await q<{ price: string }>(
-      'SELECT price FROM quotes_latest WHERE symbol = UPPER($1)',
-      [symbol]
-    );
-    if (quote.length > 0) {
-      return { price: parseFloat(quote[0].price), withinTolerance: true };
+}
+
+function pickClassBar(
+  rows: ScopedBar[],
+  assetClass: 'equity' | 'crypto',
+  order: 'asc' | 'desc',
+): { price: number; observedAtMs: number; barClass: 'equity' | 'crypto' } | { otherClassOnly: true } | null {
+  const sorted = [...rows].sort((a, b) => {
+    const delta = new Date(a.ts).getTime() - new Date(b.ts).getTime();
+    return order === 'asc' ? delta : -delta;
+  });
+  const same = sorted.find((row) => row.bar_class === assetClass);
+  if (same) {
+    const price = parseFloat(same.close);
+    const observedAtMs = new Date(same.ts).getTime();
+    if (!Number.isFinite(price) || !(price > 0) || !Number.isFinite(observedAtMs)) {
+      return sorted.some((row) => row.bar_class !== assetClass) ? { otherClassOnly: true } : null;
     }
+    return { price, observedAtMs, barClass: assetClass };
   }
-  
-  // No price found within tolerance
-  return { price: null, withinTolerance: false };
+  if (sorted.some((row) => row.bar_class !== assetClass)) return { otherClassOnly: true };
+  return null;
 }
 
 async function labelOutcomes() {
@@ -169,6 +208,27 @@ async function labelOutcomes() {
     }
     
     console.log(`   Found ${unlabeled.length} signals to label`);
+
+    const featureById = new Map<number, unknown>();
+    const universeBySymbol = new Map<string, string[]>();
+    try {
+      const metas = await q<{ id: string; features_json: unknown }>(
+        `SELECT id, features_json FROM signals_fired WHERE id = ANY($1::bigint[])`,
+        [unlabeled.map((row) => row.signal_id)],
+      );
+      for (const row of metas) featureById.set(Number(row.id), row.features_json);
+      const symbols = [...new Set(unlabeled.map((row) => String(row.symbol).toUpperCase()))];
+      const universe = await q<{ symbol: string; asset_type: string }>(
+        `SELECT symbol, asset_type FROM symbol_universe WHERE symbol = ANY($1::text[])`,
+        [symbols],
+      );
+      for (const row of universe) {
+        const key = String(row.symbol).toUpperCase();
+        universeBySymbol.set(key, [...(universeBySymbol.get(key) ?? []), row.asset_type]);
+      }
+    } catch (err) {
+      console.warn('[outcomes] symbol class read failed; collisions are judged from the coin map only', err instanceof Error ? err.message : err);
+    }
     
     let labeled = 0;
     let skipped = 0;
@@ -182,63 +242,71 @@ async function labelOutcomes() {
         continue;
       }
       
-      // Calculate target time
       const signalTime = new Date(signal_at);
       const targetTime = new Date(signalTime.getTime() + horizon_minutes * 60 * 1000);
-      
-      // Get price at target time with tolerance
-      const { price: priceLater, withinTolerance } = await getPriceAtTime(symbol, targetTime, horizon_minutes);
-      
-      // If no price found within tolerance, mark as unknown (not wrong!)
-      if (priceLater === null) {
-        // Only mark as unknown if the signal is old enough that we SHOULD have data
-        const now = new Date();
+      const asset = resolveOutcomeLabelAsset({
+        symbol,
+        declared: declaredAssetClass(featureById.get(Number(signal_id))),
+        universeTypes: universeBySymbol.get(String(symbol).toUpperCase()) ?? [],
+        inCryptoMap: inCryptoSymbolMap(symbolBase(symbol), COINGECKO_ID_MAP),
+      });
+      let observation: { price: number; observedAtMs: number; live: false; barClass: 'equity' | 'crypto' } | null = null;
+      let otherClassOnly = false;
+      if (asset.status === 'ok') {
         const tolerance = TOLERANCE_WINDOWS[horizon_minutes] || { bars: 2, minutes: 240 };
-        const shouldHaveData = now.getTime() > targetTime.getTime() + tolerance.minutes * 60 * 1000;
-        
-        if (shouldHaveData) {
-          // Record as unknown - data should exist but doesn't
-          try {
-            await q(
-              `INSERT INTO signal_outcomes (signal_id, horizon_minutes, price_later, pct_move, outcome)
-               VALUES ($1, $2, NULL, NULL, 'unknown')
-               ON CONFLICT (signal_id, horizon_minutes) 
-               DO UPDATE SET outcome = 'unknown', labeled_at = NOW()`,
-              [signal_id, horizon_minutes]
-            );
-            unknown++;
-          } catch (err) {
-            console.error(`   ⚠️ Error marking ${symbol} as unknown:`, err instanceof Error ? err.message : err);
-          }
-        } else {
-          // Not old enough yet, skip and try again later
-          skipped++;
+        const windowEnd = new Date(targetTime.getTime() + tolerance.minutes * 60 * 1000);
+        const entryFrom = new Date(signalTime.getTime() - 2 * 24 * 60 * 60 * 1000);
+        const universeTypes = universeBySymbol.get(String(symbol).toUpperCase()) ?? [];
+        const coinId = COINGECKO_ID_MAP[symbolBase(symbol)] ?? '';
+        const allowUnclassifiedEquity = allowUnclassifiedEquityBars({
+          inCryptoMap: inCryptoSymbolMap(symbolBase(symbol), COINGECKO_ID_MAP),
+          universeTypes,
+        });
+        const entryRows = await getScopedBars(symbol, entryFrom, signalTime, coinId, allowUnclassifiedEquity);
+        const horizonRows = await getScopedBars(symbol, targetTime, windowEnd, coinId, allowUnclassifiedEquity);
+        const entryBar = pickClassBar(entryRows, asset.assetClass, 'desc');
+        const horizonBar = pickClassBar(horizonRows, asset.assetClass, 'asc');
+        otherClassOnly = (!!entryBar && 'otherClassOnly' in entryBar) || (!!horizonBar && 'otherClassOnly' in horizonBar);
+        if (!otherClassOnly && horizonBar && 'price' in horizonBar) {
+          observation = { price: horizonBar.price, observedAtMs: horizonBar.observedAtMs, live: false, barClass: horizonBar.barClass };
         }
+      }
+      const decision = labelHorizonMove({
+        direction,
+        bandPct: bandForHorizon(horizon_minutes, bandMap),
+        priceAtSignal,
+        nowMs: Date.now(),
+        signalAtMs: signalTime.getTime(),
+        horizonMinutes: horizon_minutes,
+        asset,
+        observation,
+        otherClassOnly,
+      });
+
+      if (decision.action === 'skip') {
+        skipped++;
         continue;
       }
+
+      if (decision.reason === 'suspect' || decision.reason === 'ambiguous' || decision.reason === 'expired' || decision.reason === 'wrong_asset') {
+        console.warn(`[outcomes] ${symbol} ${decision.reason}${decision.pctMove != null ? ` ${decision.pctMove.toFixed(2)}%` : ''} → unknown`);
+      }
       
-      // Calculate % move
-      const pctMove = ((priceLater - priceAtSignal) / priceAtSignal) * 100;
-      
-      // Shared per-horizon band from this run's table map (default map if that was empty).
-      const outcome = classifyMove(direction, pctMove, bandForHorizon(horizon_minutes, bandMap));
-      
-      // Insert outcome
       try {
         await q(
           `INSERT INTO signal_outcomes (signal_id, horizon_minutes, price_later, pct_move, outcome)
            VALUES ($1, $2, $3, $4, $5)
            ON CONFLICT (signal_id, horizon_minutes) 
            DO UPDATE SET price_later = $3, pct_move = $4, outcome = $5, labeled_at = NOW()`,
-          [signal_id, horizon_minutes, priceLater, pctMove, outcome]
+          [signal_id, horizon_minutes, decision.priceLater, decision.pctMove, decision.outcome]
         );
-        labeled++;
+        if (decision.outcome === 'unknown') unknown++;
+        else labeled++;
         
-        // Log interesting results
-        if (outcome === 'correct' || outcome === 'wrong') {
-          const icon = outcome === 'correct' ? '✅' : '❌';
-          const sign = pctMove >= 0 ? '+' : '';
-          console.log(`   ${icon} ${symbol} (${direction}): ${sign}${pctMove.toFixed(2)}% → ${outcome}`);
+        if (decision.outcome === 'correct' || decision.outcome === 'wrong') {
+          const icon = decision.outcome === 'correct' ? '✅' : '❌';
+          const sign = (decision.pctMove ?? 0) >= 0 ? '+' : '';
+          console.log(`   ${icon} ${symbol} (${direction}): ${sign}${(decision.pctMove ?? 0).toFixed(2)}% → ${decision.outcome}`);
         }
       } catch (err) {
         console.error(`   ❌ Error labeling ${symbol}:`, err instanceof Error ? err.message : err);

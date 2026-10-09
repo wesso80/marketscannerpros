@@ -79,7 +79,8 @@ it('the session labeler uses the same boundary as classifyMove, including an unm
  expect(labeler).toContain('classifyMove');
  expect(labeler).toContain('bandForHorizon');
  const worker=readFileSync('worker/label-outcomes.ts','utf8');
- expect(worker).toContain('classifyMove');
+ expect(worker).toContain('labelHorizonMove');
+ expect(readFileSync('lib/signals/outcomeGuard.ts','utf8')).toContain('classifyMove');
  expect(worker).toContain('horizonsWithFallback');
  expect(worker).not.toContain('function computeOutcome');
  expect(worker).toContain('refresh_signal_accuracy');
@@ -93,6 +94,16 @@ it('the session labeler uses the same boundary as classifyMove, including an unm
  expect(worker).toContain('bandsFromRows');
  expect(worker).toContain('symbol = UPPER($1)');
  expect(worker).not.toContain('UPPER(symbol)');
+ expect(worker).not.toMatch(/FROM quotes_latest/i);
+ expect(worker).toContain('cg_hist_daily');
+ expect(worker).toContain('symbol_universe');
+ expect(worker).toContain('resolveOutcomeLabelAsset');
+ expect(worker).toContain('d.coin_id = $4');
+ expect(worker).toContain('$4 <> \'\'');
+ expect(worker).not.toMatch(/upper\(c\.symbol\)/i);
+ expect(worker).toContain('allowUnclassifiedEquityBars');
+ expect(worker).toContain('$5::boolean');
+ expect(worker).toContain('NOT EXISTS (SELECT 1 FROM symbol_universe u WHERE u.symbol = b.symbol)');
 });
 
 const signalRow={id:1,symbol:'AAPL',direction:'bullish' as const,price_at_signal:100,signal_at:'2026-10-01T14:00:00Z',timeframe:'1d'};

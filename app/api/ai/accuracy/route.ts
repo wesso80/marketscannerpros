@@ -4,6 +4,7 @@ import { getRecentSignals, getOverallStats } from "@/lib/signalRecorder";
 import { q } from "@/lib/db";
 import { ACCURACY_DISPLAY_HORIZONS, isAccuracyDisplayHorizon } from "@/lib/signals/accuracyHorizons";
 import { decisiveOutcomes, directionAdjustedMoves, finiteNumber, moveExpectancy } from "@/lib/signals/accuracyDisplay";
+import { SHOW_SIGNAL_OUTCOME_STATS } from "@/lib/signals/outcomeStatsVisibility";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,6 +27,23 @@ const MIN_SAMPLE_SIZE = 30;
  * The stored rows always cover the last 90 days (refresh_signal_accuracy(90)).
  */
 export async function GET(req: NextRequest) {
+  if (!SHOW_SIGNAL_OUTCOME_STATS) {
+    return NextResponse.json({
+      success: true,
+      hidden: true,
+      stats: [],
+      summary: { total_signals_all: 0, total_labeled_all: 0, total_unknown_all: 0, scanner_versions: [] },
+      recentSignals: [],
+      overall: null,
+      thresholds: [],
+      metadata: {
+        timestamp: new Date().toISOString(),
+        lookbackDays: 90,
+        schemaNote: null,
+        note: 'Historical outcome totals are hidden while stored labels are being checked. General information only, not financial advice.',
+      },
+    });
+  }
   try {
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {

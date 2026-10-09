@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { nyCalendarDaysBetween } from '@/lib/time/usSession';
 import { buildCalendarFeed } from '@/lib/macro/calendar/feed';
 import { parseCountryFilter } from '@/lib/macro/calendar/countries';
 import { parseFocusAssets } from '@/lib/macro/calendar/relevance';
@@ -56,7 +57,8 @@ export async function GET(req: NextRequest) {
         grouped,
         count: feed.events.length,
         nextMajorEvent: nextMajor,
-        daysUntilMajor: msUntilMajor !== null ? Math.ceil(msUntilMajor / 86_400_000) : null,
+        // New York calendar dates, not ceil(hours / 24). 9.6 hours later on the same NY date is 0.
+        daysUntilMajor: nextMajor ? nyCalendarDaysBetween(nowMs, Date.parse(nextMajor.releaseTimeUtc)) : null,
         minutesUntilMajor: msUntilMajor !== null ? Math.max(0, Math.floor(msUntilMajor / 60_000)) : null,
         nextRelevantEvent: feed.nextRelevantEvent,
         focusAssets: feed.focusAssets,
