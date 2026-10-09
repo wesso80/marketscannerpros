@@ -806,28 +806,36 @@ async function sendNotification(workspaceId: string, payload: Record<string, any
   return { kind: 'notify_send', queued: true };
 }
 
-function exportOrderDraft(payload: Record<string, any>) {
+/**
+ * `order.export` is kept as an action key for compatibility, but it returns a research note, not an order ticket:
+ * no side/quantity/market-order fields, levels labelled as reference levels, and the standard admin classification.
+ * No broker connection, order routing or execution exists (no-broker-execution rule).
+ */
+function exportResearchNote(payload: Record<string, any>) {
   const symbol = asUpper(payload.symbol, 20) || 'SYMBOL';
-  const side = asUpper(payload.side || 'BUY', 8) || 'BUY';
-  const qty = Math.max(1, Math.round(asNumber(payload.quantity, 1)));
-  const entry = asNumber(payload.entryPrice ?? payload.entry ?? 0, 0);
-  const stop = asNumber(payload.stop ?? payload.stopLoss ?? 0, 0);
-  const targets = Array.isArray(payload.targets) ? payload.targets : [];
+  const side = asUpper(payload.side || '', 8);
+  const direction = side === 'BUY' || side === 'LONG' ? 'upside' : side === 'SELL' || side === 'SHORT' ? 'downside' : 'not stated';
+  const reference = asNumber(payload.entryPrice ?? payload.entry ?? 0, 0);
+  const invalidation = asNumber(payload.stop ?? payload.stopLoss ?? 0, 0);
+  const levels = (Array.isArray(payload.targets) ? payload.targets : [])
+    .map((level: unknown) => Number(level))
+    .filter((level: number) => Number.isFinite(level) && level > 0);
 
   const lines = [
-    `SYMBOL=${symbol}`,
-    `SIDE=${side}`,
-    `QTY=${qty}`,
-    `ENTRY=${entry > 0 ? entry.toFixed(2) : 'MKT'}`,
-    `STOP=${stop > 0 ? stop.toFixed(2) : 'N/A'}`,
-    `TARGETS=${targets.length ? targets.map((target) => Number(target).toFixed(2)).join(',') : 'N/A'}`,
-    'BROKER_EXECUTION=MANUAL_ONLY',
+    'RESEARCH NOTE (not an order)',
+    `Symbol: ${symbol}`,
+    `Scenario studied: ${direction}`,
+    `Reference level: ${reference > 0 ? reference.toFixed(2) : 'not collected'}`,
+    `Invalidation level: ${invalidation > 0 ? invalidation.toFixed(2) : 'not collected'}`,
+    `Levels of interest: ${levels.length ? levels.map((level: number) => level.toFixed(2)).join(', ') : 'not collected'}`,
+    'Classification: ADMIN_RESEARCH_NOTE_NOT_BROKER_EXECUTION',
   ];
 
   return {
-    kind: 'order_export',
+    kind: 'research_note',
+    classification: 'ADMIN_RESEARCH_NOTE_NOT_BROKER_EXECUTION',
     format: 'text/plain',
-    draft: lines.join('\n'),
+    note: lines.join('\n'),
   };
 }
 
@@ -846,7 +854,7 @@ async function performAction(
   if (actionType === 'focus.snooze') return snoozeFocus(workspaceId, payload);
   if (actionType === 'watchlist.add') return addToWatchlist(workspaceId, payload);
   if (actionType === 'notify.send') return sendNotification(workspaceId, payload);
-  if (actionType === 'order.export') return exportOrderDraft(payload);
+  if (actionType === 'order.export') return exportResearchNote(payload);
 
   throw new Error(`Unsupported action type: ${actionType}`);
 }
