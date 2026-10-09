@@ -43,7 +43,7 @@ export default function RightRail({ ctx }: { ctx: TickerContext }) {
             )}
             {ctx.options && (
               <>
-                <QuickStat label="IV Rank" value={ctx.options.ivRank != null ? `${ctx.options.ivRank.toFixed(0)}%` : 'n/a'} />
+                <QuickStat label="IV percentile" value={ctx.options.ivRank != null ? `${ctx.options.ivRank.toFixed(0)}%` : 'n/a'} />
                 <QuickStat label="Exp Move" value={`±${(ctx.options.expectedMove ?? 0).toFixed(1)}%`} />
               </>
             )}

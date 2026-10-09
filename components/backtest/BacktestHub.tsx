@@ -313,7 +313,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
             {mode === 'scanner' && (
               <p className="text-xs text-slate-400 mb-3">
                 Historical technical proxy v1. Upside cases require a reading ≥ {minScore}; downside cases require ≤ {100 - minScore}.
-                This test excludes the full MSP composite’s historical access checks, relative ranks, options, funding and news.
+                This test excludes the full MSP composite’s historical access checks, relative order, options, funding and news.
               </p>
             )}
             {/* Scanner-specific controls */}

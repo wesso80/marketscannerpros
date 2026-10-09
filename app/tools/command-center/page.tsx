@@ -463,7 +463,7 @@ function LegacyCommandCenter() {
       {/* LAYER 3 — STRENGTH / WEAKNESS */}
       <div className="grid gap-3 md:grid-cols-2">
         <Card className="p-4">
-          <SectionTitle n="04" title="Relative Strength" hint="ranked by observed change" />
+          <SectionTitle n="04" title="Relative Strength" hint="sorted by observed change" />
           {strength.strongest.length ? (
             <ul className="space-y-1">
               {strength.strongest.map((s) => (
@@ -476,7 +476,7 @@ function LegacyCommandCenter() {
           ) : <p className="text-sm text-slate-500">Sector data is not in this snapshot.</p>}
         </Card>
         <Card className="p-4">
-          <SectionTitle n="05" title="Relative Weakness" hint="ranked by observed change" />
+          <SectionTitle n="05" title="Relative Weakness" hint="sorted by observed change" />
           {strength.weakest.length ? (
             <ul className="space-y-1">
               {strength.weakest.map((s) => (

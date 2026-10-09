@@ -83,11 +83,10 @@ export default function MethodologyPage() {
               </p>
             <CollapsibleSection title="A composite reading is a weighted summary, not a probability">
               <p className="text-xs leading-5 text-slate-300">
-                A number like <strong className="text-slate-200">Composite Strength 78 / 100</strong> is a weighted summary of how much of the current evidence points one
-                way. It is a <em>heuristic</em> — the weights are rules chosen for transparency, not calibrated against
-                historical outcomes. A 78 does <strong className="text-slate-200">not</strong> mean a 78% chance of
-                anything. Where a tooltip says the number reflects how many indicators agree, and not a probability, that
-                is the literal truth of the number.
+                When several indicators point the same way, that agreement is the measurement. It is a <em>heuristic</em> — the
+                weights are rules chosen for transparency, not calibrated against historical outcomes. Counting how many
+                indicators agree describes that agreement. It is not an odds figure. Where a tooltip
+                says the count is how many indicators agree, that is the literal meaning.
               </p>
             </CollapsibleSection>
 

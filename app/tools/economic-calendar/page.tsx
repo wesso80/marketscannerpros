@@ -591,7 +591,7 @@ export default function EconomicCalendarPage({ embeddedInResearch = false }: { e
                 </div>
                 <div className="grid grid-cols-1 gap-2 text-xs text-white/70 sm:grid-cols-2 lg:grid-cols-4">
                   {[
-                    { label: 'Tokyo CPI', point: japan.tokyoCpi, badge: 'LEADING INFLATION SIGNAL' },
+                    { label: 'Tokyo CPI', point: japan.tokyoCpi, badge: 'TOKYO CPI LEAD' },
                     { label: 'National CPI', point: japan.nationalCpi, badge: null },
                     { label: 'Wages', point: japan.wages, badge: null },
                   ].map((item) => (

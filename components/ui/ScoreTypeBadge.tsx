@@ -74,7 +74,7 @@ const SCORE_TYPE_META: Record<ScoreType, {
   },
   'evidence-alignment': {
     label: 'Evidence Alignment',
-    title: 'Multi-factor what to check. Reflects how many indicators agree, not a probability of any outcome.',
+    title: 'Counts how many indicators agree. It is not a probability of any outcome.',
     bg: 'bg-teal-500/10',
     border: 'border-teal-500/30',
     text: 'text-teal-300',

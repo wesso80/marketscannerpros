@@ -140,7 +140,7 @@ describe('layout and flow audit regressions', () => {
     expect(resourcesPage).toContain("redirect('/guide')");
     expect(platformGuide).toContain('Market Research Dashboard');
     expect(platformGuide).toContain('Treat dashboard bias as context, not a trigger.');
-    expect(platformGuide).toContain('Compare derivatives evidence before increasing confidence in a scenario.');
+    expect(platformGuide).toContain('Compare derivatives evidence before treating a scenario as confirmed.');
     expect(tradingGuides).toContain('Research checklist');
     expect(tradingGuides).toContain('Review state');
     expect(openInterestGuide).toContain('How to Read Open Interest');
@@ -361,9 +361,9 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).toContain('<ComplianceDisclaimer compact variant={asset === \'crypto\' ? \'cryptoDerivatives\' : \'options\'} />');
     expect(terminalPage).toContain('function TerminalTabRail');
     expect(terminalPage).toContain('const TERMINAL_TAB_PARAM_MAP');
-    expect(terminalPage).toContain("'options-confluence': 'Options Confluence'");
+    expect(terminalPage).toContain("'options-confluence': 'Options timing'");
     expect(terminalPage).toContain("'crypto-terminal': 'Crypto'");
-    expect(terminalPage).toContain("'time-scanner': 'Time Confluence'");
+    expect(terminalPage).toContain("'time-scanner': 'Close timing'");
     expect(terminalPage).toContain('useSearchParams');
     expect(terminalPage).toContain('if (requestedTab) setTab(requestedTab);');
     expect(terminalPage).toContain('grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-5');
@@ -371,10 +371,10 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).not.toContain('min-w-[9rem] shrink-0 rounded-md border px-3 py-1.5');
     expect(terminalPage).toContain('function TerminalSubviewFrame');
     expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Time Gravity\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>");
-    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Options Confluence\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>");
+    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Options timing\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>");
     expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Options Flow\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>");
     expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Crypto\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>");
-    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Time Confluence\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>");
+    expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Close timing\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>");
     expect(terminalPage).toContain("<TerminalSubviewFrame tab=\"Capital Pressure\" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>");
     expect(terminalPage).toContain('Continue to Backtest');
     expect(terminalPage).toContain('Back to Symbol');
@@ -580,7 +580,7 @@ describe('layout and flow audit regressions', () => {
     expect(dashboardPage).toContain("Data health strip");
     expect(dashboardPage).toContain("Continue workflow");
     expect(dashboardPage).toContain('Next: review in Symbol');
-    expect(dashboardPage).toContain('Ranked queue (not yet validated)');
+    expect(dashboardPage).toContain('Scan list (not yet validated)');
     expect(dashboardPage).toContain('Live movement');
     expect(dashboardPage).toContain('Calendar risk');
     expect(dashboardPage).toContain('Context map');
@@ -672,7 +672,7 @@ describe('layout and flow audit regressions', () => {
     expect(scanTemplatesBar).toContain("icon: 'ALN'");
     expect(toolsLayoutClient).toContain("pathname !== '/tools/scanner'");
     // Boilerplate suffix in rank explanations is stripped at render-time in summarizeRankedReason.
-    expect(rankExplanation).toContain('rank is reduced when evidence is missing');
+    expect(rankExplanation).toContain('Missing, stale, or thin liquidity evidence is noted on the row');
   });
 
 
@@ -990,7 +990,7 @@ describe('layout and flow audit regressions', () => {
     expect(scannerPage).not.toContain('h-full min-w-[9rem] rounded-md border px-3 py-1.5');
     expect(scannerPage).not.toContain('<SectionHeader title="Scanner"');
     expect(scannerPage).not.toContain('<ComplianceDisclaimer collapsible />');
-    expect(scannerPage).toContain("{ id: 'ranked', label: 'Ranked'");
+    expect(scannerPage).toContain("{ id: 'queue', label: 'List'");
     expect(scannerPage).toContain("{ id: 'pro', label: 'Pro'");
     expect(scannerPage).toContain("{ id: 'analysis', label: 'Analysis'");
     expect(scannerPage).toContain('onSelectAnalysis');

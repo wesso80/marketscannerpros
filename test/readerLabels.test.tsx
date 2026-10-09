@@ -26,7 +26,7 @@ const mapped: Array<[string, string]> = [
   ['DEGRADED', 'Some checks failed'],
   ['INSUFFICIENT DATA', 'Not enough data'],
   ['INSUFFICIENT_DATA', 'Not enough data'],
-  ['legacy grade', 'Indicator grade'],
+  ['legacy grade', 'Indicator reading'],
   ['legacy confluence', 'Earlier indicator read'],
   ['NO_STRUCTURAL_STOP', 'No clear stop level in the chart'],
   ['NO_SETUP', 'No setup'],
@@ -83,7 +83,7 @@ it('leaves prose intact and only rewrites underscore tokens inside a sentence', 
   expect(readerLabel(interest)).toBe(interest);
   expect(readerLabel('Setup is TREND_CONTINUATION into the close.')).toBe('Setup is Trend continuation into the close.');
   expect(readerLabel('LONG term TREND_CONTINUATION still PASS.')).toBe('LONG term Trend continuation still PASS.');
-  expect(readerLabel('The legacy grade was revised.')).toBe('The Indicator grade was revised.');
+  expect(readerLabel('The legacy grade was revised.')).toBe('The Indicator reading was revised.');
   expect(readerLabel('LONG')).toBe('Upward');
   expect(readerLabel('PASS')).toBe('Checks passed');
   expect(readerLabel('GOOD')).toBe('Checks passed');
@@ -146,7 +146,7 @@ it('shows NEAR risk labels and the AAPL source line as reader text', async () =>
   const deepBefore = 'TREND_CONTINUATION · legacy grade F · LONG · NO_STRUCTURAL_STOP · INSUFFICIENT DATA · EXHAUSTION_FADE';
   const deepAfter = ['TREND_CONTINUATION', 'legacy grade', 'F', 'LONG', 'NO_STRUCTURAL_STOP', 'INSUFFICIENT DATA', 'EXHAUSTION_FADE'].map((part) => readerLabel(part)).join(' · ');
   const deepView = render(<p data-deep-reader>{deepAfter}</p>);
-  expect(deepView.container.textContent).toBe('Trend continuation · Indicator grade · F · Upward · No clear stop level in the chart · Not enough data · Exhaustion fade');
+  expect(deepView.container.textContent).toBe('Trend continuation · Indicator reading · F · Upward · No clear stop level in the chart · Not enough data · Exhaustion fade');
   expect(deepView.container.textContent).not.toMatch(RAW_TOKEN);
   expect(deepBefore).toMatch(RAW_TOKEN);
 });

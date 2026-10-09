@@ -150,6 +150,8 @@ export interface ScanResult {
   target?: number;
   rMultiple?: number;
   rsi?: number;
+  changePercent?: number;
+  volume?: number;
   atr?: number;
   adx?: number;
   dveFlags?: string[];

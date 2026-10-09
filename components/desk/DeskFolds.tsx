@@ -401,7 +401,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
         <DSCard>
           <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <SectionEyebrow>Today&apos;s research queue · Ranked queue (not yet validated)</SectionEyebrow>
+              <SectionEyebrow>Today&apos;s research queue · Scan list (not yet validated)</SectionEyebrow>
               <h2 style={{ fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>Top of today&apos;s daily scan.</h2>
               <p className="mt-1" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', lineHeight: 1.5 }}>Click a symbol to open Symbol. Review context only; no trade instructions.</p>
             </div>
@@ -634,7 +634,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
             </div>
             <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', color: 'var(--msp-text-muted)', fontSize: 'var(--msp-text-body-sm)' }}>
               <div style={{ fontWeight: 500, color: 'var(--msp-text)', marginBottom: 4 }}>Today&apos;s research questions</div>
-              <div>· Which symbols have the most aligned evidence?</div>
+              <div>· Which symbols have the most inputs in agreement?</div>
               <div>· What invalidates the top setup?</div>
               <div>· What does the volatility phase suggest?</div>
             </div>

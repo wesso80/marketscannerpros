@@ -122,12 +122,6 @@ function fmtPrice(n: number): string {
 
 const DIRECTION_NOT_INFERRED = 'Direction not inferred (snapshot data)';
 
-function convictionColor(c: number): string {
-  if (c > 30) return 'var(--msp-bull)';
-  if (c < -30) return 'var(--msp-bear)';
-  return 'var(--msp-warn)';
-}
-
 function dirColor(d: string): string {
   if (d === 'bullish' || d === 'bought') return 'var(--msp-bull)';
   if (d === 'bearish' || d === 'sold') return 'var(--msp-bear)';
@@ -326,12 +320,6 @@ export default function OptionsFlowPage({ embeddedInTerminal = false, symbol: pr
                   </div>
                   {inferred && data.aggregate.conviction !== null && data.smartMoney.direction ? (
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '10px', color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Conviction</div>
-                      <div style={{ fontSize: '22px', fontWeight: 800, color: convictionColor(data.aggregate.conviction) }}>
-                        {data.aggregate.conviction > 0 ? '+' : ''}{data.aggregate.conviction}
-                      </div>
-                    </div>
                     <div style={{ textAlign: 'center' }}>
                       <div style={{ fontSize: '10px', color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }} title="Direction of the larger estimated trades in the snapshot; not a statement about who traded">Large-trade lean</div>
                       <div style={{ fontSize: '14px', fontWeight: 700, color: dirColor(data.smartMoney.direction), textTransform: 'uppercase' }}>

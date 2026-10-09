@@ -12,7 +12,7 @@ export interface ProScanFilters {
   rsiBand?: [number, number];
   preset?: 'momentum' | 'mean_reversion';
 }
-export type ProScanSort = 'rank' | 'confidence' | 'volatility' | 'trend';
+export type ProScanSort = 'rank' | 'confidence' | 'volatility' | 'trend' | 'rsi' | 'change' | 'volume';
 const positive = (value: unknown): number | null => typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
 const finite = (value: unknown): number | null => typeof value === 'number' && Number.isFinite(value) ? value : null;
 
@@ -80,6 +80,8 @@ export function proCandidateMetrics(pick: any) {
     alignmentAvailable: rsi !== null && bull !== null && bear !== null && neutral !== null,
     squeeze: typeof ind.squeeze === 'boolean' ? ind.squeeze : null,
     relativeStrength: finite(ind.sectorRelStr),
+    changePercent: finite(pick.changePercent) ?? finite(ind.changePercent) ?? finite(pick.change_pct),
+    volume: finite(pick.volume) ?? finite(ind.volume) ?? finite(pick.liquidity?.volumeRatio),
   };
 }
 
@@ -156,7 +158,15 @@ export function selectProCandidates<T extends { symbol: string }>(candidates: T[
     if (!drop) matches.push({ pick, index });
     else { excluded.push({ symbol: pick.symbol, ...drop }); exclusions[drop.reason] = (exclusions[drop.reason] ?? 0) + 1; }
   });
-  const metric = (pick: T) => { const m = proCandidateMetrics(pick); return sort === 'volatility' ? m.atrPct : sort === 'trend' ? m.adx : m.confidence; };
+  const metric = (pick: T) => {
+    const m = proCandidateMetrics(pick);
+    if (sort === 'volatility') return m.atrPct;
+    if (sort === 'trend') return m.adx;
+    if (sort === 'rsi') return m.rsi;
+    if (sort === 'change') return m.changePercent;
+    if (sort === 'volume') return m.volume;
+    return m.confidence;
+  };
   matches.sort((a, b) => {
     if (sort === 'rank') return a.index - b.index;
     const av = metric(a.pick), bv = metric(b.pick);

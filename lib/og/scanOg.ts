@@ -106,7 +106,7 @@ export async function buildScanOgModel(sp: URLSearchParams, loaders: OgScanLoade
   try {
     if (symbol === 'DAILY') {
       const day = await loaders.loadLatestDailyPicks();
-      if (!day || day.picks.length === 0) return { status: 404, error: 'no daily picks yet' };
+      if (!day || day.picks.length === 0) return { status: 404, error: 'no daily scan yet' };
       return { status: 200, model: dailyOgModel(day), key: `DAILY:${day.scan_date}` };
     }
     const data = await loaders.loadShare(symbol);

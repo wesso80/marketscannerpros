@@ -96,7 +96,7 @@ describe('Market inputs widget', () => {
     const text = container.textContent || '';
     expect(text).toContain('ADX (14)23.4');
     expect(text).toContain('Put/call (open interest)0.75');
-    expect(text).toContain('IV rankNot collected');
+    expect(text).toContain('IV percentileNot collected');
     expect(text).toContain('alpha_vantage options chain');
     expect(text).toContain('Squeeze = daily Bollinger Bands (20, 2)');
     expect(text).not.toMatch(/Pressure\b|Upside|Downside|Mixed evidence|Alignment|\/100|\bw\b|HIGH|BUILDING|Regime/);

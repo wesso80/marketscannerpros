@@ -33,7 +33,7 @@ export function foldedEngineDetail(verdict: DailyPickVerdict): string | null {
   const setup = SETUP_LABEL[verdict.setupType] ?? verdict.setupType;
   const prefix = `${verdict.permission} · ${verdict.grade} · ${setup}`;
   const extra = record.startsWith(prefix) ? record.slice(prefix.length) : '';
-  return `Engine code ${verdict.permission} · grade ${verdict.grade} · setup category ${setup}${extra}`;
+  return `Engine code ${verdict.permission} · marker ${verdict.grade} · setup category ${setup}${extra}`;
 }
 
 export function evidenceLabel(direction: string | null | undefined): string {

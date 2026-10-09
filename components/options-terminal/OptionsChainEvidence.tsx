@@ -84,7 +84,7 @@ export default function OptionsChainEvidence({ symbol, expiry, embeddedInTermina
           <ResearchFold title="Implied volatility and expected move">
             <dl className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
               <ResearchMetric label="ATM implied volatility" value={iv?.atmIvPct != null ? `${researchNumber(iv.atmIvPct, 1)}%` : 'Not collected'} />
-              <ResearchMetric label="IV rank" value={iv?.ivRank != null ? researchNumber(iv.ivRank) : 'Not collected'} />
+              <ResearchMetric label="IV percentile" value={iv?.ivRank != null ? researchNumber(iv.ivRank) : 'Not collected'} />
               <ResearchMetric label="Expected move to expiry" value={em?.pct != null ? `±${researchNumber(em.pct, 1)}%${em.usd != null ? ` (±${researchPrice(em.usd)})` : ''}` : 'Not collected'} />
             </dl>
             {iv && <p className="mt-2 text-xs text-slate-400">{iv.ivRankNote}</p>}

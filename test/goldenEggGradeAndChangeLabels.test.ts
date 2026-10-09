@@ -11,10 +11,9 @@ const calibrated = (direction: 'long' | 'short', expectedR: number) => ({
 describe('RS-17: calibrated grade is relative within its direction', () => {
   it('META-style A short with negative expected R says it is the relative best, not a positive edge', () => {
     const note = gradeRelativeNote(calibrated('short', -0.17))!;
-    expect(note).toContain('Grade is relative within direction');
-    expect(note).toContain('other short setups, not against zero');
+    expect(note).toContain('Expected R is compared with other short setups, not against zero');
     expect(note).toContain('Expected R is still -0.17R');
-    expect(note).toContain('not a positive edge');
+    expect(note).toContain('less-negative short setups');
   });
   it('positive expected R gets only the relative sentence', () => {
     const note = gradeRelativeNote(calibrated('long', 0.12))!;
@@ -28,8 +27,8 @@ describe('RS-17: calibrated grade is relative within its direction', () => {
   });
   it('the grade tooltip (gradeBasis) carries the same sentence; the grade itself is unchanged (no cap)', () => {
     const c = calibrated('short', -0.17);
-    expect(gradeBasis(c)).toContain('Grade A from the Setup score 95');
-    expect(gradeBasis(c)).toContain('Grade is relative within direction');
+    expect(gradeBasis(c)).toContain('Expected R is compared with other setups of the same direction.');
+    expect(gradeBasis(c)).not.toMatch(/\bgrade\b/i);
   });
 });
 

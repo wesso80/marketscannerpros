@@ -21,7 +21,7 @@ describe('Terminal research presentation',()=>{
  it('keeps capital blocks visible, folds evidence, and preserves numeric inputs',()=>{
   const before=JSON.stringify(capital),refresh=vi.fn();
   const {container}=render(<CapitalPressureView symbol="MU" data={capital} loading={false} error={null} onRefresh={refresh}/>);
-  assertCompact(container);expect(screen.getByText('Price direction').closest('details')).not.toBeNull();expect(container.textContent).not.toContain('Bullish');expect(screen.getByText('Pressure conditions are not aligned')).toBeTruthy();expect(screen.getByText('Prior day low')).toBeTruthy();expect(screen.getByText('Upward')).toBeTruthy();expect(screen.getByText('$249.35')).toBeTruthy();
+  assertCompact(container);expect(screen.getByText('Price direction').closest('details')).not.toBeNull();expect(container.textContent).not.toContain('Bullish');expect(screen.getByText('Pressure inputs differ')).toBeTruthy();expect(screen.getByText('Prior day low')).toBeTruthy();expect(screen.getByText('Upward')).toBeTruthy();expect(screen.getByText('$249.35')).toBeTruthy();
   fireEvent.click(screen.getByRole('button',{name:'Refresh'}));expect(refresh).toHaveBeenCalledOnce();expect(JSON.stringify(capital)).toBe(before);
  });
  it('keeps a hard risk block above folds even if other alignment conditions pass',()=>{

@@ -302,31 +302,31 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
 
     if (verdict === 'ALIGNED' && (!longsAllowed || !shortsAllowed)) verdict = 'CONDITIONAL';
 
-    const riskContext = verdict === 'ALIGNED' ? 'Standard review' : verdict === 'CONDITIONAL' ? 'Reduced conviction' : 'Observation';
+    const riskContext = verdict === 'ALIGNED' ? 'Standard review' : verdict === 'CONDITIONAL' ? 'Mixed inputs' : 'Observation';
 
     const subClusters = [
       {
         name: 'Large Caps',
-        review: riskState === 'Risk-Off' ? 'Weak' : leadership === 'Defensive Rotation' ? 'Mixed' : 'Supportive',
+        review: riskState === 'Risk-Off' ? 'Thin' : leadership === 'Defensive Rotation' ? 'Mixed' : 'Same direction',
       },
       {
         name: 'Mid/Alts',
-        review: !longsAllowed || breadthScore < 45 ? 'Weak' : breadthScore >= 60 ? 'Supportive' : 'Mixed',
+        review: !longsAllowed || breadthScore < 45 ? 'Thin' : breadthScore >= 60 ? 'Same direction' : 'Mixed',
       },
       {
         name: 'Meme/High Beta',
-        review: verdict === 'ALIGNED' && liquidity === 'Expanding' && volatility !== 'Dislocation' ? 'Supportive' : 'Weak',
+        review: verdict === 'ALIGNED' && liquidity === 'Expanding' && volatility !== 'Dislocation' ? 'Same direction' : 'Thin',
       },
       {
         name: 'DeFi',
-        review: liquidity === 'Expanding' && breadthScore >= 50 ? 'Supportive' : liquidity === 'Contracting' ? 'Weak' : 'Mixed',
+        review: liquidity === 'Expanding' && breadthScore >= 50 ? 'Same direction' : liquidity === 'Contracting' ? 'Thin' : 'Mixed',
       },
     ];
 
     const explanation =
       `${riskState} bias with ${leadership.toLowerCase()}. ` +
       `Liquidity is ${liquidity.toLowerCase()} and volatility is ${volatility.toLowerCase()}. ` +
-      `${verdict === 'ALIGNED' ? 'Indicators are broadly aligned.' : verdict === 'CONDITIONAL' ? 'Partial alignment — review more evidence before relying on the scenario.' : 'Indicators suggest caution — prioritize observation.'}`;
+      `${verdict === 'ALIGNED' ? 'Several inputs point the same way.' : verdict === 'CONDITIONAL' ? 'Only some inputs agree — review more evidence before relying on the scenario.' : 'Indicators suggest caution — prioritize observation.'}`;
 
     return {
       dataComplete: true,
@@ -661,7 +661,7 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
                   {(marketData?.trending?.coins || []).slice(0, 5).map((coin: any, idx: number) => (
                     <div key={`${coin.symbol}-${idx}`} className="flex items-center justify-between rounded border border-slate-700 bg-slate-900/70 px-1.5 py-1">
                       <span className="text-slate-300">{coin.symbol}</span>
-                      <span className="text-emerald-300">Rank {idx + 1}</span>
+                      <span className="text-emerald-300">#{idx + 1}</span>
                     </div>
                   ))}
                 </div>
@@ -677,8 +677,8 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
               <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                 {morningDecision.verdict === 'NOT ALIGNED' ? (
                   <>
-                    <p className="text-[11px] uppercase text-red-300">Caution Mode</p>
-                    <p className="mt-1 text-[11px] text-slate-400">Indicators not aligned. Focus on volatility alerts and observation.</p>
+                    <p className="text-[11px] uppercase text-red-300">Caution</p>
+                    <p className="mt-1 text-[11px] text-slate-400">Inputs differ. Focus on volatility alerts and observation.</p>
                     <div className="mt-1.5 flex gap-1.5">
                       <Link href="/tools/workspace?tab=alerts" className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300">Volatility Alerts</Link>
                       <Link href="/tools/workspace?tab=journal" className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300">Journal Review</Link>

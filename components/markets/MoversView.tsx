@@ -61,7 +61,7 @@ export default function MoversView(props: MoversViewProps) {
         <div className="flex flex-wrap gap-2" role="group" aria-label="Asset filter">{([['all','All assets'],['equity','Stocks'],['crypto','Crypto']] as const).map(([id,label]) => <button key={id} type="button" className={control} aria-pressed={assetFilter === id} onClick={() => props.onAsset(id)}>{label}</button>)}</div>
         <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Research filter">{([['breakout','Breakout'],['reversal','Reversal'],['momentum','Momentum']] as const).map(([id,label]) => <button key={id} type="button" className={control} aria-pressed={setupMode === id} onClick={() => props.onSetup(id)}>{label}</button>)}</div>
       </CollapsibleSection>
-      <p className="text-xs text-slate-400">Showing {visible.length} of {rows.length} movers · {permissionedCount} aligned in the evaluated list</p>
+      <p className="text-xs text-slate-400">Showing {visible.length} of {rows.length} movers · {permissionedCount} matching in the evaluated list</p>
       <ul className="space-y-2" aria-label="Mover observations">{visible.map((row, i) => {
         const research = moverResearchLink(row, environment.deploymentMode);
         return <li key={`${row.asset_class}/${row.ticker}/${i}`} data-mover-row className="min-w-0 rounded-lg border border-slate-700 p-3">

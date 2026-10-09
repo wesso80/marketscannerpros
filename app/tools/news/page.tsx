@@ -415,7 +415,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
       permission === 'NO'
         ? `Earnings density high with heavy pre-market catalysts; expect whipsaw and failed breakouts.`
         : permission === 'CONDITIONAL'
-          ? `Catalyst cluster is tradable only with tighter selection and risk controls.`
+          ? `Catalyst cluster needs tighter selection and risk controls.`
           : `Catalyst load is manageable; normal analysis allowed with plan discipline.`;
 
     const watchlist24 = enhancedEarningsRows

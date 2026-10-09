@@ -117,7 +117,7 @@ export default function OverviewTab({ ctx }: { ctx: TickerContext }) {
       {/* Crypto extra stats row */}
       {isCrypto && quote && (quote.marketCapRank || quote.circulatingSupply) && (
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-          {quote.marketCapRank && <StatCard label="MCap Rank" value={`#${quote.marketCapRank}`} />}
+          {quote.marketCapRank && <StatCard label="MCap order" value={`#${quote.marketCapRank}`} />}
           {quote.circulatingSupply && <StatCard label="Circ. Supply" value={fmtSupply(quote.circulatingSupply)} />}
           {quote.totalSupply && <StatCard label="Total Supply" value={fmtSupply(quote.totalSupply)} />}
           {quote.open != null && <StatCard label="Open (est.)" value={fmtPrice(quote.open)} />}

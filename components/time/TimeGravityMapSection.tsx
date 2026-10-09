@@ -185,7 +185,7 @@ export default function TimeGravityMapSection({
                   </div>
                   <div className="text-[10px] text-slate-500">Range: ${topZone.minPrice.toFixed(2)} – ${topZone.maxPrice.toFixed(2)}</div>
                   <div className="text-[10px] text-slate-400">
-                    {topZone.dominantTimeframes.join(', ')} • Rank #{topZone.rank} • G={topZone.totalGravity.toFixed(0)}
+                    {topZone.dominantTimeframes.join(', ')} • List #{topZone.rank} • G={topZone.totalGravity.toFixed(0)}
                   </div>
                 </div>
               ) : (

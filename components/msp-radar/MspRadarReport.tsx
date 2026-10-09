@@ -138,7 +138,7 @@ export default function MspRadarReport({ onAccessDenied }: { onAccessDenied?: (s
                 </ol>
               </Section>
 
-              <Section title="Top Research Candidates" subtitle="Ranked by setup quality, not by move size. Largest mover ≠ best candidate." primary>
+              <Section title="Top Research Candidates" subtitle="Sorted by RSI, volume, and percent change. A large move is a separate measurement." primary>
                 <CandidatesTable rows={r.candidates} />
               </Section>
 

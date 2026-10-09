@@ -50,18 +50,18 @@ function statusStyles(status: BadgeStatus) {
 }
 
 function confidenceGrade(confidence: number): string {
-  if (confidence >= 85) return "A+";
-  if (confidence >= 75) return "A";
-  if (confidence >= 65) return "B";
-  if (confidence >= 55) return "C";
-  return "D";
+  if (confidence >= 85) return "Broad";
+  if (confidence >= 75) return "Present";
+  if (confidence >= 65) return "Mixed";
+  if (confidence >= 55) return "Thin";
+  return "Limited";
 }
 
 export function SetupConfidenceCard({
   confidence,
   reasons,
   blockers = [],
-  title = "Setup Confidence",
+  title = "Setup checks",
 }: SetupConfidenceCardProps) {
   const normalized = Math.max(1, Math.min(99, Math.round(confidence)));
   const grade = confidenceGrade(normalized);
@@ -104,7 +104,7 @@ export function SetupConfidenceCard({
           >
             {grade}
           </span>
-          <span style={{ color: "#F8FAFC", fontSize: "1.25rem", fontWeight: 800 }}>{normalized}%</span>
+          <span style={{ color: "#F8FAFC", fontSize: "0.8rem" }}>{reasons.length} notes</span>
         </div>
       </div>
 

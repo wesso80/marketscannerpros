@@ -47,7 +47,7 @@ export default function CompositeBreakdown({ v2, compact = false, expanded = fal
         {v2.permission ? <span className={`text-[10px] font-bold ${v2.permission === 'BLOCK' ? 'text-rose-300' : v2.permission === 'WATCH' ? 'text-amber-300' : 'text-emerald-300'}`}>{v2.permission} · {Math.round((v2.coverage ?? 0) * 100)}% factor coverage</span> : null}
         <span
           className="rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300"
-          title="Cross-sectional rank within the symbols scanned this run"
+          title="Cross-sectional order within the symbols scanned this run"
         >
           Top {topPct}% of scan
         </span>

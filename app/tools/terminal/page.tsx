@@ -61,7 +61,7 @@ function TerminalMetric({ label, value, tone = 'var(--msp-text)', detail }: { la
 const TABS = [
   'Close Calendar',
   'Options Terminal',
-  'Options Confluence',
+  'Options timing',
   'Options Flow',
   'Crypto',
   'Futures Session',
@@ -70,7 +70,7 @@ const TABS = [
   'Liquidity & Volume',
   'Capital Pressure',
   'Time Gravity',
-  'Time Confluence',
+  'Close timing',
 ] as const;
 type TerminalTab = typeof TABS[number];
 
@@ -79,8 +79,8 @@ const TERMINAL_TAB_PARAM_MAP: Record<string, TerminalTab> = {
   calendar: 'Close Calendar',
   options: 'Options Terminal',
   'options-terminal': 'Options Terminal',
-  confluence: 'Options Confluence',
-  'options-confluence': 'Options Confluence',
+  confluence: 'Options timing',
+  'options-confluence': 'Options timing',
   flow: 'Options Flow',
   'options-flow': 'Options Flow',
   crypto: 'Crypto',
@@ -92,9 +92,9 @@ const TERMINAL_TAB_PARAM_MAP: Record<string, TerminalTab> = {
   liquidity: 'Liquidity & Volume',
   gravity: 'Time Gravity',
   'time-gravity': 'Time Gravity',
-  time: 'Time Confluence',
-  'time-scanner': 'Time Confluence',
-  'time-confluence': 'Time Confluence',
+  time: 'Close timing',
+  'time-scanner': 'Close timing',
+  'time-confluence': 'Close timing',
 };
 
 const TERMINAL_TAB_META: Record<TerminalTab, { eyebrow: string; description: string }> = {
@@ -106,7 +106,7 @@ const TERMINAL_TAB_META: Record<TerminalTab, { eyebrow: string; description: str
     eyebrow: '2. Chain quality',
     description: 'Inspect strikes, spreads, open interest, IV, and chain data truth.',
   },
-  'Options Confluence': {
+  'Options timing': {
     eyebrow: '3. Options setup',
     description: 'Check strike and expiry alignment against the selected research scenario.',
   },
@@ -142,7 +142,7 @@ const TERMINAL_TAB_META: Record<TerminalTab, { eyebrow: string; description: str
     eyebrow: '6. Gravity map',
     description: 'Locate decompression windows, midpoint debt, and gravity zones.',
   },
-  'Time Confluence': {
+  'Close timing': {
     eyebrow: '7. Final timing check',
     description: 'Combine timing, pressure, close calendar, and macro/fib agreement.',
   },
@@ -150,7 +150,7 @@ const TERMINAL_TAB_META: Record<TerminalTab, { eyebrow: string; description: str
 
 function visibleTabsForPath(marketPath: MarketPath, commodityFutures: boolean): TerminalTab[] {
   if (marketPath === 'crypto') {
-    return ['Close Calendar', 'Crypto', 'Capital Pressure', 'Time Gravity', 'Time Confluence'];
+    return ['Close Calendar', 'Crypto', 'Capital Pressure', 'Time Gravity', 'Close timing'];
   }
   if (marketPath === 'futures') {
     return [
@@ -160,10 +160,10 @@ function visibleTabsForPath(marketPath: MarketPath, commodityFutures: boolean): 
       'Liquidity & Volume',
       'Capital Pressure',
       'Time Gravity',
-      'Time Confluence',
+      'Close timing',
     ];
   }
-  return ['Close Calendar', 'Options Terminal', 'Options Confluence', 'Options Flow', 'Capital Pressure', 'Time Gravity', 'Time Confluence'];
+  return ['Close Calendar', 'Options Terminal', 'Options timing', 'Options Flow', 'Capital Pressure', 'Time Gravity', 'Close timing'];
 }
 
 function TerminalTabRail({
@@ -321,7 +321,7 @@ export default function TerminalPage() {
   const [cryptoTerminalState, setCryptoTerminalState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
 
   /* Symbol management */
-  const sym = requestedSymbol || (['Options Terminal','Options Confluence','Options Flow'].includes(requestedInitialTab) && !requestedType ? entrySymbol : selectedSymbol || symInput || 'BTCUSD');
+  const sym = requestedSymbol || (['Options Terminal','Options timing','Options Flow'].includes(requestedInitialTab) && !requestedType ? entrySymbol : selectedSymbol || symInput || 'BTCUSD');
   const marketPath: MarketPath = requestedType === 'crypto'
     ? 'crypto'
     : requestedType === 'equity'
@@ -715,9 +715,9 @@ export default function TerminalPage() {
       )}
 
       {/* ─── Options chain evidence (W3: replaces the setup scanner; measured chain evidence only) ─── */}
-      {tab === 'Options Confluence' && (
+      {tab === 'Options timing' && (
         <UpgradeGate requiredTier="pro" currentTier={tier} feature="Options chain evidence">
-          <TerminalSubviewFrame tab="Options Confluence" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
+          <TerminalSubviewFrame tab="Options timing" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
             <OptionsConfluence embeddedInTerminal symbol={sym} timeframe={requestedTimeframe} expiry={requestedExpiry} />
           </TerminalSubviewFrame>
         </UpgradeGate>
@@ -739,9 +739,9 @@ export default function TerminalPage() {
         </UpgradeGate>
       )}
 
-      {/* ─── Time Confluence Scanner ─── */}
-      {tab === 'Time Confluence' && (
-        <TerminalSubviewFrame tab="Time Confluence" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
+      {/* ─── Close timing Scanner ─── */}
+      {tab === 'Close timing' && (
+        <TerminalSubviewFrame tab="Close timing" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} timeframe={requestedTimeframe || undefined} onSelectTab={selectTab}>
           <ConfluenceScanner key={`${asset}:${sym}:${requestedTimeframe}`} symbol={sym} assetType={asset} timeframe={requestedTimeframe} embeddedInTerminal />
         </TerminalSubviewFrame>
       )}

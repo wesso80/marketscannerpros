@@ -103,9 +103,9 @@ describe('pickView.scoreText: the share card\'s score wording for the OG card', 
     levels: { entry: 1, invalidation: 2, target: 0.5, riskReward: 2, invalidationBasis: 'swing', targetBasis: 'ema20', flags: [] } };
   it('percentile when calibrated, factors label when not, null for legacy rows', () => {
     const cal = { ...canonical, scoreBasis: 'calibrated_expectancy_percentile', calibration: { pTargetFirst: 0.5, expectedR: 0.2, costsBps: 10, horizonBars: 10, sample: 900, validatedEdge: false } };
-    expect(pickView({ score: 95, direction: 'bearish', canonical: cal }).scoreText).toBe('95th pct');
+    expect(pickView({ score: 95, direction: 'bearish', canonical: cal }).scoreText).toBe('expected +0.20R');
     expect(pickView({ score: 74, direction: 'bullish', canonical: { ...canonical, score: 74, scoreBasis: 'factor_alignment_uncalibrated', calibration: null } }).scoreText)
-      .toBe('74/100 factors (uncalibrated)');
+      .toBe('Factor readings only');
     expect(pickView({ score: 60, direction: 'bullish', canonical: null }).scoreText).toBeNull();
   });
 });

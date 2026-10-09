@@ -166,10 +166,6 @@ export default function CapitalFlowCard({
           <span style={{ color: biasColor, fontWeight: 800 }}>{flow.bias.toUpperCase()}</span>
         </div>
         <div style={{ color: 'var(--msp-text)', fontSize: '0.74rem' }}>
-          <span style={{ color: 'var(--msp-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Conviction:</span>{' '}
-          <span style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{flow.conviction}</span>
-        </div>
-        <div style={{ color: 'var(--msp-text)', fontSize: '0.74rem' }}>
           <span style={{ color: 'var(--msp-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Pin Strike:</span>{' '}
           <span style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{flow.pin_strike ?? 'n/a'}</span>
         </div>

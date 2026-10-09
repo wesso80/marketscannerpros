@@ -59,11 +59,11 @@ it('translates permission into reader labels and keeps the engine line for the f
   expect(readerVerdict(null)).toBe('Reading not available right now');
   expect(engineRecord(watch)).toBe('WATCH · A · Pullback · factors only');
   expect(engineRecord(watch)).toBe(canonicalLabel(watch));
-  expect(foldedEngineDetail(watch)).toBe('Engine code WATCH · grade A · setup category Pullback · factors only');
-  expect(foldedEngineDetail(fade)).toBe('Engine code WATCH · grade C · setup category Exhaustion fade · uncalibrated');
-  expect(foldedEngineDetail(passed)).toBe('Engine code PASS · grade B · setup category Squeeze');
-  expect(foldedEngineDetail(blocked)).toBe('Engine code BLOCK · grade F · setup category No setup');
-  expect(foldedEngineDetail(verdict({ ...watch, scoreBasis: undefined, watchReasons: [{ code: 'AT_OPPOSING_LEVEL', message: '' }] }))).toBe('Engine code WATCH · grade A · setup category Pullback · at resistance');
+  expect(foldedEngineDetail(watch)).toBe('Engine code WATCH · marker A · setup category Pullback · factors only');
+  expect(foldedEngineDetail(fade)).toBe('Engine code WATCH · marker C · setup category Exhaustion fade · uncalibrated');
+  expect(foldedEngineDetail(passed)).toBe('Engine code PASS · marker B · setup category Squeeze');
+  expect(foldedEngineDetail(blocked)).toBe('Engine code BLOCK · marker F · setup category No setup');
+  expect(foldedEngineDetail(verdict({ ...watch, scoreBasis: undefined, watchReasons: [{ code: 'AT_OPPOSING_LEVEL', message: '' }] }))).toBe('Engine code WATCH · marker A · setup category Pullback · at resistance');
   expect(readableScore(76.06)).toBe('76.1');
   expect(readableScore(55.5)).toBe('55.5');
   expect(readableScore(91)).toBe('91');

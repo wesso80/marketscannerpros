@@ -188,10 +188,10 @@ function computeMacroGate(data: MacroData | null): MacroGate | null {
 
   const notes =
     permission === 'no'
-      ? 'Analysis: Unfavorable — indicators suggest caution; wait for regime clarity.'
+      ? 'Analysis: Caution — indicators suggest waiting for a clearer regime.'
       : permission === 'conditional'
-        ? 'Analysis: Mixed — indicators show partial alignment; review before acting.'
-        : 'Analysis: Favorable — indicators broadly aligned within current regime.';
+        ? 'Analysis: Mixed — only some indicators agree; review before acting.'
+        : 'Analysis: Several indicators point the same way within the current regime.';
 
   return {
     ts: data.timestamp,
@@ -377,7 +377,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
   }, [data, gate, setPageData]);
 
   const completeAssessment = !!data && [data.rates.fedFunds.value, data.rates.treasury10y.value, data.rates.yieldCurve.value, data.inflation.inflationRate.value, data.employment.unemployment.value, data.growth.realGDP.value].every(value => typeof value === 'number' && Number.isFinite(value));
-  const assessment = !completeAssessment ? 'Macro assessment not collected' : gate?.permission === 'yes' ? 'Aligned' : gate?.permission === 'conditional' ? 'Mixed' : 'Not aligned';
+  const assessment = !completeAssessment ? 'Macro assessment not collected' : gate?.permission === 'yes' ? 'Inputs agree' : gate?.permission === 'conditional' ? 'Mixed' : 'Inputs differ';
   const incompleteFeeds = [!completeAssessment && 'Required macro observations', commoditiesError && 'Commodities', correlationError && 'Cross-asset context', spyPCRError && 'Options positioning'].filter(Boolean);
 
   if (publicDesignEnabled() && !embeddedInDashboard) return <MacroResearch data={data} loading={(loading || tierLoading) && !accessDenied} error={Boolean(error) && !accessDenied} locked={accessDenied} retry={fetchData} paid={isAdmin || tier === 'pro' || tier === 'pro_trader'}/>;
@@ -763,6 +763,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                     const metrics = [
                       ['Regime', macroLabel(correlationRegime.regime)],
                       ['VIX regime', macroLabel(correlationRegime.vixRegime)],
+                      ['Weighting factor', typeof correlationRegime.sizeMultiplier === 'number' && correlationRegime.sizeMultiplier !== 0 ? `${macroNumber(correlationRegime.sizeMultiplier)}x` : 'Not collected'],
                       ['USD trend', macroLabel(correlationRegime.dxyTrend)],
                       ['BTC–SPY correlation (20d)', macroNumber(correlationRegime.btcSpyCorrelation)],
                       ['Sector rotation', macroLabel(correlationRegime.sectorRotation)],

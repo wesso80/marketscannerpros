@@ -453,7 +453,7 @@ function CryptoDetailPageContent({ embedded = false }: { embedded?: boolean }) {
         upeEligibility: upeSignal?.eligibilityUser,
         upeCrcs: upeSignal?.crcsFinal,
       },
-      summary: `Crypto Explorer: ${symbol} ($${(m.price_usd ?? 0).toFixed(2)}) — Rank #${m.rank || '?'}, 24h ${(coinData.price_changes?.['24h'] ?? 0).toFixed(1)}%, 7d ${(coinData.price_changes?.['7d'] ?? 0).toFixed(1)}%, Bias: ${decision.structureBias}, Structural context only; consult the market evidence gate before assigning permission.`,
+      summary: `Crypto Explorer: ${symbol} ($${(m.price_usd ?? 0).toFixed(2)}) — List #${m.rank || '?'}, 24h ${(coinData.price_changes?.['24h'] ?? 0).toFixed(1)}%, 7d ${(coinData.price_changes?.['7d'] ?? 0).toFixed(1)}%, Bias: ${decision.structureBias}, Structural context only; consult the market evidence gate before assigning permission.`,
     });
   }, [coinData, decision, upeSignal, marketGate, setPageData]);
 
@@ -470,21 +470,21 @@ function CryptoDetailPageContent({ embedded = false }: { embedded?: boolean }) {
   }
   const gateBlocked = !marketGate?.dataComplete || (decision.structureBias === 'Bullish' ? !marketGate.longsAllowed : decision.structureBias === 'Bearish' ? !marketGate.shortsAllowed : (!marketGate.longsAllowed && !marketGate.shortsAllowed));
   const permissionLabel = gateBlocked || upeSignal?.globalEligibility === 'blocked' || upeSignal?.eligibilityUser === 'blocked' || !coinData?.market?.total_volume_24h
-    ? 'Not aligned' : upeSignal
+    ? 'Inputs differ' : upeSignal
     ? upeSignal.eligibilityUser === 'eligible'
-      ? 'Aligned'
+      ? 'Inputs agree'
       : upeSignal.eligibilityUser === 'conditional'
       ? 'Conditional'
-      : 'Not aligned'
+      : 'Inputs differ'
     : decision.tradePermission === 'Yes'
-    ? 'Aligned'
+    ? 'Inputs agree'
     : decision.tradePermission === 'No'
-    ? 'Not aligned'
+    ? 'Inputs differ'
     : 'Conditional';
-  const isBlocked = permissionLabel === 'Not aligned';
+  const isBlocked = permissionLabel === 'Inputs differ';
   const blockReason = gateBlocked ? (marketGate?.hardBlocks.join(' • ') || 'Market evidence is loading or unavailable') : upeSignal?.overlayReasons?.length
     ? upeSignal.overlayReasons.join(' • ')
-    : 'Not aligned per governance profile or global gate';
+    : 'Blocked by the current data gate';
 
   return (
     <div className={`${embedded ? '' : 'min-h-screen'} bg-[var(--msp-bg)] text-white`}>
@@ -683,9 +683,9 @@ function CryptoDetailPageContent({ embedded = false }: { embedded?: boolean }) {
                       <p className="text-xs text-slate-400">Price {formatPrice(coinData.market.price_usd)}</p>
                     </div>
                     <p className="mt-1 text-xs text-slate-300">
-                      {permissionLabel === 'Aligned' && 'Structure and liquidity conditions support analysis workflow.'}
+                      {permissionLabel === 'Inputs agree' && 'Structure and liquidity conditions support analysis workflow.'}
                       {permissionLabel === 'Conditional' && 'Mixed conditions; confirmation is incomplete.'}
-                      {permissionLabel === 'Not aligned' && 'Conditions do not meet the assessment criteria.'}
+                      {permissionLabel === 'Inputs differ' && 'Conditions do not meet the assessment criteria.'}
                     </p>
                   </div>
 

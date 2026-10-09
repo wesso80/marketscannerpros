@@ -32,7 +32,7 @@ const oiScenarios = [
     scenario: "Falling OI + Falling Price",
     code: "LIQ",
     interpretation: "Long liquidation / capitulation",
-    meaning: "Longs are closing (selling) causing price to fall. Deleveraging event - could signal a bottom forming.",
+    meaning: "Longs are closing (selling) causing price to fall. Deleveraging event - could mark a bottom forming.",
     action: "Research note: analysts often monitor for capitulation exhaustion and reversal evidence.",
     color: "amber"
   }
@@ -148,7 +148,7 @@ export default function OpenInterestGuidePage() {
                     <ul className="text-slate-300 space-y-1 text-sm">
                       <li>• A new buyer opens a long AND a new seller opens a short</li>
                       <li>• Fresh money enters the market</li>
-                      <li>• Conviction is building in a direction</li>
+                      <li>• New positioning is building in a direction</li>
                     </ul>
                   </div>
                   <div className="bg-slate-900/50 rounded-lg p-4">
@@ -170,7 +170,7 @@ export default function OpenInterestGuidePage() {
                   <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-700 bg-slate-950 text-xs font-black text-slate-400">OI</div>
                   <h3 className="font-semibold mb-2">Trend Confirmation</h3>
                   <p className="text-slate-400 text-sm">
-                    Rising OI confirms that the current trend has conviction. Falling OI suggests the move may be exhausting.
+                    Rising OI confirms that new money is behind the current trend. Falling OI suggests the move may be exhausting.
                   </p>
                 </div>
                 <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
@@ -224,7 +224,7 @@ export default function OpenInterestGuidePage() {
                       </div>
                       <div className="flex items-center gap-2 bg-red-500/10 p-2 rounded">
                         <span className="text-red-400">↓ -5% OI</span>
-                        <span className="text-slate-300">= Deleveraging event, reduced conviction</span>
+                        <span className="text-slate-300">= Deleveraging event, reduced positioning</span>
                       </div>
                       <div className="flex items-center gap-2 bg-amber-500/10 p-2 rounded">
                         <span className="text-amber-400">Alt Dom &gt; 30%</span>

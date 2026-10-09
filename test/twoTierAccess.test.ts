@@ -112,7 +112,7 @@ describe('client gates that used to be Pro-Trader-only', () => {
   const formerlyProTraderOnly: Array<[string, string, RegExp]> = [
     ['Terminal › Capital Pressure tab', 'app/tools/terminal/page.tsx', /tab === 'Capital Pressure'[\s\S]{0,300}isPaidTier\(tier\) \?/],
     ['Scalper page', 'app/tools/scalper/page.tsx', /const canAccess = canAccessScalper\(tier\);/],
-    ['Signal Accuracy page', 'app/tools/signal-accuracy/page.tsx', /isLoggedIn && !isPaidTier\(tier\)/],
+    ['Signal Accuracy page', 'app/tools/signal-accuracy/page.tsx', /!tierLoading && !isAdmin/],
     ['Markets › Catalyst tab', 'components/markets/tabs/CatalystTab.tsx', /if \(!canAccessCatalystStudy\(tier\)\)/],
     ['Smart Alerts (AlertsWidget)', 'components/AlertsWidget.tsx', /isPaidTier\(tier\) \?/],
     ['Correlation coefficients + lead/lag', 'components/CorrelationConfluenceCard.tsx', /const isInstitutional = isPaidTier\(tier\);/],

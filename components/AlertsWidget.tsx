@@ -267,8 +267,8 @@ export default function AlertsWidget({
       // Scanner signal alerts
       case 'scanner_buy_signal': return 'Scanner upside condition';
       case 'scanner_sell_signal': return 'Scanner downside condition';
-      case 'scanner_score_above': return '📈 Score Above';
-      case 'scanner_score_below': return '📉 Score Below';
+      case 'scanner_score_above': return 'RSI above';
+      case 'scanner_score_below': return 'RSI below';
       case 'scanner_bullish_flip': return 'Scanner upside change';
       case 'scanner_bearish_flip': return 'Scanner downside change';
       // Strategy alerts
@@ -293,10 +293,10 @@ export default function AlertsWidget({
       case 'oi_divergence_bull': return 'Open interest rises while price falls';
       case 'oi_divergence_bear': return 'Open interest falls while price rises';
       // Scanner signal descriptions
-      case 'scanner_buy_signal': return 'Scanner score is above the recorded threshold';
-      case 'scanner_sell_signal': return 'Scanner score is below the recorded threshold';
-      case 'scanner_score_above': return 'Scanner score rises above threshold (momentum building)';
-      case 'scanner_score_below': return 'Scanner score drops below threshold (momentum fading)';
+      case 'scanner_buy_signal': return 'RSI is at or above the recorded threshold and the direction is upside';
+      case 'scanner_sell_signal': return 'RSI is at or below the recorded threshold and the direction is downside';
+      case 'scanner_score_above': return 'RSI rises above the recorded threshold';
+      case 'scanner_score_below': return 'RSI falls below the recorded threshold';
       case 'scanner_bullish_flip': return 'Scanner classification changes to the upside';
       case 'scanner_bearish_flip': return 'Scanner classification changes to the downside';
       // Strategy signal descriptions
@@ -463,7 +463,7 @@ export default function AlertsWidget({
           operatorRisk: operatorState.risk,
           operatorEdge: operatorState.edge,
           marketRegime: operatorState.risk === 'HIGH' ? 'Volatility Expansion' : operatorState.bias === 'NEUTRAL' ? 'Range' : 'Trend',
-          marketMood: operatorState.action === 'EXECUTE' ? 'Conditions Aligned' : operatorState.action === 'PREP' ? 'Building' : 'Defensive',
+          marketMood: operatorState.action === 'EXECUTE' ? 'Inputs agree' : operatorState.action === 'PREP' ? 'Building' : 'Defensive',
           derivativesBias: operatorState.bias,
           sectorStrength: operatorState.next,
         }),
@@ -869,12 +869,12 @@ export default function AlertsWidget({
                             <option value="strategy_exit">🚪 Strategy Exit</option>
                           </optgroup>
                           <optgroup label="🎯 Scanner Setups">
-                            <option value="scanner_buy_signal">Scanner upside condition (Reading Above)</option>
-                            <option value="scanner_sell_signal">Scanner downside condition (Reading Below)</option>
-                            <option value="scanner_bullish_flip">Scanner upside change (Direction Change)</option>
-                            <option value="scanner_bearish_flip">Scanner downside change (Direction Change)</option>
-                            <option value="scanner_score_above">📈 Reading Above Threshold</option>
-                            <option value="scanner_score_below">📉 Reading Below Threshold</option>
+                            <option value="scanner_buy_signal">RSI above with upside direction</option>
+                            <option value="scanner_sell_signal">RSI below with downside direction</option>
+                            <option value="scanner_bullish_flip">Direction changes to upside</option>
+                            <option value="scanner_bearish_flip">Direction changes to downside</option>
+                            <option value="scanner_score_above">RSI above</option>
+                            <option value="scanner_score_below">RSI below</option>
                           </optgroup>
                           <optgroup label="Open Interest">
                             <option value="oi_surge">📈 OI Surge</option>

@@ -460,9 +460,9 @@ function GoldenEggReport() {
       statusLabel: ge?.layer3?.timeConfluence?.enabled ? 'COMPUTED' : 'Not collected',
       status: buildMarketDataProviderStatus({
         source: 'time-confluence',
-        provider: 'time confluence',
+        provider: 'close timing',
         degraded: !ge?.layer3?.timeConfluence?.enabled,
-        warnings: ge?.layer3?.timeConfluence?.enabled ? [] : ['Time confluence unavailable.'],
+        warnings: ge?.layer3?.timeConfluence?.enabled ? [] : ['Close timing unavailable.'],
       }),
     },
   ];
@@ -717,7 +717,7 @@ function GoldenEggReport() {
                 const usd = (v: number | null) => (v != null ? formatUsdShort(v) : 'Not recorded');
                 const num = (v: number | null, d = 0) => (v != null ? v.toLocaleString(undefined, { maximumFractionDigits: d }) : 'Not recorded');
                 const tiles: Array<[string, string, string?]> = [
-                  ['Market cap', usd(n.marketCap), n.marketCapRank != null ? `rank #${n.marketCapRank}` : undefined],
+                  ['Market cap', usd(n.marketCap), n.marketCapRank != null ? `list #${n.marketCapRank}` : undefined],
                   ['FDV', usd(n.fdv), n.fdvBasis === 'derived_max_supply' ? 'price × max supply' : n.fdvBasis === 'provider' ? 'provider' : 'unavailable — uncapped/unknown supply'],
                   ['Circulating supply', num(n.circulatingSupply), n.supplyIssuedPct != null ? `${(n.supplyIssuedPct * 100).toFixed(0)}% of max` : 'max supply not recorded'],
                   ['Max supply', n.maxSupply != null ? num(n.maxSupply) : 'uncapped supply', n.totalSupply != null ? `total ${num(n.totalSupply)}` : undefined],

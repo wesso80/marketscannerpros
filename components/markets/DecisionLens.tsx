@@ -40,10 +40,10 @@ export default function DecisionLens({ ctx }: DecisionLensProps) {
   }
 
   const verdictStyles: Record<DecisionVerdict, { bg: string; border: string; text: string; label: string }> = {
-    tradable: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/40', text: 'text-emerald-400', label: 'ALIGNED' },
+    tradable: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/40', text: 'text-emerald-400', label: 'INPUTS AGREE' },
     conditional: { bg: 'bg-amber-500/10', border: 'border-amber-500/40', text: 'text-amber-400', label: 'CONDITIONAL' },
     noise: { bg: 'bg-slate-500/10', border: 'border-slate-500/40', text: 'text-slate-400', label: 'LOW AGREEMENT' },
-    blocked: { bg: 'bg-red-500/10', border: 'border-red-500/40', text: 'text-red-400', label: 'NOT ALIGNED' },
+    blocked: { bg: 'bg-red-500/10', border: 'border-red-500/40', text: 'text-red-400', label: 'INPUTS DIFFER' },
   };
   const vs = verdictStyles[lens.verdict];
 

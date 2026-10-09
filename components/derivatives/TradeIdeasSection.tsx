@@ -7,7 +7,7 @@ interface TradeIdeasSectionProps {
 export default function TradeIdeasSection({ ideas }: TradeIdeasSectionProps) {
   return (
     <div className="rounded-xl border border-white/10 bg-black/10 p-3 md:p-4">
-      <div className="text-xs text-white/50">Educational scenarios aligned to the current readings. Research only, not a trade instruction.</div>
+      <div className="text-xs text-white/50">Educational scenarios written from the current readings. Research only, not a trade instruction.</div>
 
       {ideas.length === 0 && <p className="mt-3 text-sm text-amber-200">Scenarios stay folded until funding, long/short and open interest are all present.</p>}
       <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3">

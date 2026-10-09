@@ -15,7 +15,7 @@
  * Zone 3 is the extra company or asset block.
  */
 export const ASSET_EXPLORER_LABELS: Record<string, string> = {
-  CRCS: 'Capital score',
+  CRCS: 'Capital reading',
   'ΔHR': 'Hourly adjustment',
   'ZONE 1': 'Equity analysis gate',
   'ZONE 2 ACTION': 'Price and alignment',

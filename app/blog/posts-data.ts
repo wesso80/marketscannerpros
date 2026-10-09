@@ -69,7 +69,7 @@ Many squeeze studies review alignment across multiple timeframes:
 
 [MarketScannerPros](/) automates squeeze detection across hundreds of symbols:
 - **Real-time squeeze indicators** on multiple timeframes
-- **Agreement scoring** to rank highest-agreement setups
+- **Timeframe agreement** so you can compare setups that agree on more than one chart
 - **ATR-based scenario levels** for risk review
 - **Alert hooks** to notify you before crowds notice
 
@@ -102,7 +102,7 @@ Short squeezes can produce explosive move potential, but they can also reverse v
     content: `
 # Free Crypto Screeners in 2025 (Comparison Guide)
 
-Finding technically aligned crypto conditions manually is time-consuming and inefficient. The right screening tool can save hours and surface research candidates you'd otherwise miss. Here's an honest comparison of free crypto screeners available in 2025.
+Finding crypto conditions that agree across charts manually is time-consuming and inefficient. The right screening tool can save hours and surface research candidates you'd otherwise miss. Here's an honest comparison of free crypto screeners available in 2025.
 
 ## What Makes a Good Crypto Screener?
 
@@ -254,7 +254,7 @@ All have free tiers—test each and see what fits your workflow.
   {
     slug: "multi-timeframe-confluence-trading",
     title: "Multi-Timeframe Agreement: A Framework for Better Analysis",
-    excerpt: "Learn how multi-timeframe analysis can help confirm technically aligned conditions and reduce false observations.",
+    excerpt: "Learn how multi-timeframe analysis can help confirm conditions that agree across charts and reduce false observations.",
     category: "Strategy",
     readTime: "6 min read",
     content: `
@@ -269,7 +269,7 @@ Agreement means **multiple pieces of evidence pointing to the same conclusion**.
 - Medium timeframe confirms momentum
 - Lower timeframe confirms timing alignment
 
-When all three align → technically aligned condition.
+When all three agree → the condition shows up on more than one chart.
 When they conflict → low-coverage research context.
 
 ## Why Single-Timeframe Analysis Fails

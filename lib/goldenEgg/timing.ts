@@ -44,7 +44,7 @@ export interface TimingInput {
 export function assessTimingEvidence(input: TimingInput): TimingAssessment {
   const { tc, setupDirection, assetClass, sessionOpen, scanAgeMs } = input;
   const reasons: string[] = [];
-  if (!tc) return { warning: null, valid: false, eligibleForHardGate: false, effectiveDirection: 'neutral', relation: 'unavailable', reasons: ['time confluence unavailable'] };
+  if (!tc) return { warning: null, valid: false, eligibleForHardGate: false, effectiveDirection: 'neutral', relation: 'unavailable', reasons: ['close timing unavailable'] };
 
   let valid = true;
   if (assetClass === 'equity' && !sessionOpen) {
@@ -112,7 +112,7 @@ export function sanitizeTimeConfluence(tc: TimeConfluenceData, opts: { assetClas
   const displayNote = equityClosed
     ? 'US equity session closed — intraday close timing resumes at the next regular session; daily+ closes shown.'
     : noSignal
-      ? 'No timing signal: the agent\'s gates (active TFs, cluster ratio, directional conviction) are not met. Direction score is shown for context only.'
+      ? 'No timing read: the agent\'s gates (active timeframes, cluster ratio, directional agreement) are not met. Direction is shown for context only.'
       : undefined;
 
   return {

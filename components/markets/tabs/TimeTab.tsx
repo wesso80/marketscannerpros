@@ -61,9 +61,9 @@ export default function TimeTab({ ctx }: { ctx: TickerContext }) {
       <div className="rounded-md border border-dashed border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 text-[11px] text-[var(--msp-text-faint)]">
         <p className="font-semibold text-[var(--msp-text-muted)] mb-1">How Close timing Works</p>
         <p>
-          Multiple timeframe candle closes + Fibonacci time ratios + TWAP windows are scored together.
-          When several time factors align, the what to check rises — historically correlated with higher directional hit rates.
-          Higher readings = stronger agreement windows for analysis.
+          Multiple timeframe candle closes, Fibonacci time ratios, and TWAP windows are checked together.
+          When several time factors agree, more of those checks line up. In past samples that has coincided with higher directional hit rates.
+          More agreeing timeframes mean a tighter window to review.
         </p>
       </div>
     </div>

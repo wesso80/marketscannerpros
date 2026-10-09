@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   alternates: { canonical: 'https://marketscannerpros.app/tools/options' },
   title: 'Options',
   description:
-    'Educational strike and expiry context powered by options agreement and multi-timeframe alignment scoring.',
+    'Educational strike and expiry context from the options chain and timeframe measurements.',
   robots: { index: false, follow: false },
 };
 

@@ -204,7 +204,7 @@ describe('alert_history price columns', () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({
       ok: true,
       json: async () => ({
-        results: [{ symbol: 'AAPL', score: 80, direction: 'bullish', signals: { bullish: 4, bearish: 1, neutral: 0 }, price: 210.25 }],
+        results: [{ symbol: 'AAPL', score: 80, rsi: 80, direction: 'bullish', signals: { bullish: 4, bearish: 1, neutral: 0 }, price: 210.25 }],
       }),
     })));
     const body = await (await signalCheck(new NextRequest('https://example.test/api/alerts/signal-check'))).json();
@@ -231,7 +231,7 @@ describe('alert_history price columns', () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({
       ok: true,
       json: async () => ({
-        results: [{ symbol: 'AAPL', score: 80, direction: 'bullish', signals: { bullish: 4, bearish: 1, neutral: 0 } }],
+        results: [{ symbol: 'AAPL', score: 80, rsi: 80, direction: 'bullish', signals: { bullish: 4, bearish: 1, neutral: 0 } }],
       }),
     })));
     const body = await (await signalCheck(new NextRequest('https://example.test/api/alerts/signal-check'))).json();

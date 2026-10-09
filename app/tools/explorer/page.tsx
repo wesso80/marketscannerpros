@@ -412,7 +412,7 @@ export default function ExplorerPage() {
             )}
             {commodities.error && <div className="text-[11px] text-red-400/60 mt-2">Error: {commodities.error}</div>}
             <div className="mt-3 rounded-md border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-200">
-              <strong>Pro unlocks the deep commodities view</strong> with rotation leaders, breadth scoring, and scenario implications.
+              <strong>Pro unlocks the deep commodities view</strong> with rotation leaders, breadth readings, and scenario implications.
             </div>
           </Card>
         )

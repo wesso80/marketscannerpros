@@ -164,7 +164,7 @@ export async function sendAlertEmail(params: SendEmailParams | SendAlertEmailPar
 const PRO_FEATURES = [
   ['SCAN', 'Unlimited Scanner', 'Run unlimited technical scans across the full market'],
   ['AI', 'AI Analyst (20/day)', 'AI-powered market analysis and research tools'],
-  ['OPT', 'Options Terminal & Confluence', 'Options chain, Greeks, IV and multi-signal options flow analysis'],
+  ['OPT', 'Options timing', 'Options chain, Greeks, IV and options-flow measurements'],
   ['BT', 'Strategy Backtester', 'Test strategies against historical data'],
   ['JRNL', 'Trade Journal', 'Log, review, and analyze every trade'],
   ['CRYP', 'Crypto Derivatives', 'Perpetuals, funding rates, and open interest'],

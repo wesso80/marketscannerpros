@@ -44,8 +44,8 @@ const EXPLICIT: Record<string, string> = {
   GENUINE_GROUP_MOVE: 'Genuine Group Move',
   MIXED: 'Mixed',
   SINGLE_NAME: 'Single Name',
-  NOT_ALIGNED: 'Not Aligned',
-  ALIGNED: 'Aligned',
+  NOT_ALIGNED: 'Inputs differ',
+  ALIGNED: 'Inputs agree',
   CONDITIONAL: 'Conditional',
 };
 

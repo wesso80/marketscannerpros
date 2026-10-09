@@ -157,7 +157,7 @@ export default function StateMachineTraderEyeCard({
 
       <div style={{ color: '#A7F3D0', fontSize: '0.7rem' }}>
         <strong>REVIEW:</strong>{' '}
-        {stateMachine?.gates?.risk_governor?.permission === 'ALLOW' ? 'ALIGNED' : stateMachine?.gates?.risk_governor?.permission === 'ALLOW_SMALL' ? 'REDUCED CONTEXT' : stateMachine?.gates?.risk_governor?.permission === 'BLOCK' ? 'NOT ALIGNED' : 'N/A'} ({Math.round((stateMachine?.gates?.risk_governor?.size_multiplier ?? 0) * 100)}% context)
+        {stateMachine?.gates?.risk_governor?.permission === 'ALLOW' ? 'Inputs agree' : stateMachine?.gates?.risk_governor?.permission === 'ALLOW_SMALL' ? 'Reduced context' : stateMachine?.gates?.risk_governor?.permission === 'BLOCK' ? 'Inputs differ' : 'N/A'} ({Math.round((stateMachine?.gates?.risk_governor?.size_multiplier ?? 0) * 100)}% context)
       </div>
 
       {stateMachine?.gates?.setup_quality?.invalidate_level !== null && stateMachine?.gates?.setup_quality?.invalidate_level !== undefined && (

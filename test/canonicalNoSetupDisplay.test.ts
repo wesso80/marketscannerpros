@@ -48,18 +48,18 @@ describe('real verdicts are unchanged', () => {
     const blocked: V = { setupType: 'PULLBACK', permission: 'BLOCK', score: 62, scoreBasis: 'factor_alignment_uncalibrated', calibration: null,
       blockReasons: [{ code: 'EARNINGS_IN_WINDOW', message: 'Earnings in 2d' }] };
     expect(noSetupDisplay(blocked)).toBeNull();
-    expect(scoreLabel(blocked)).toBe('62/100 factors (uncalibrated)');
+    expect(scoreLabel(blocked)).toBe('Factor readings only');
     expect(calibrationSummary(blocked)).toMatch(/^Uncalibrated timeframe\/asset/);
   });
   it('a calibrated WATCH keeps its percentile and statistics', () => {
     const watch = { setupType: 'PULLBACK', permission: 'WATCH', score: 80, scoreBasis: 'calibrated_expectancy_percentile', blockReasons: [],
       calibration: { pTargetFirst: 0.55, expectedR: 0.12, costsBps: 10, horizonBars: 20, sample: 1234, validatedEdge: false, percentile: 80 } } as unknown as V;
     expect(noSetupDisplay(watch)).toBeNull();
-    expect(scoreLabel(watch)).toBe('80th pct');
+    expect(scoreLabel(watch)).toBe('expected +0.12R');
     expect(calibrationSummary(watch)).toMatch(/^P\(target before invalidation\) 55%/);
   });
   it('pre-Phase-3 stored results (no scoreBasis, no setupType) render as before', () => {
-    expect(scoreLabel({ score: 70, permission: 'WATCH' })).toBe('70/100');
+    expect(scoreLabel({ score: 70, permission: 'WATCH' })).toBe('Factor readings only');
     expect(calibrationSummary({ score: 70, permission: 'WATCH' })).toBeNull();
   });
 });

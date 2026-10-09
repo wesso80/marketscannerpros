@@ -137,8 +137,8 @@ const READER: Record<string, string> = {
   LONG: 'Upward',
   SHORT: 'Downward',
   NEUTRAL: 'Neutral',
-  ALIGNED: 'Aligned',
-  'NOT ALIGNED': 'Not aligned',
+  ALIGNED: 'Inputs agree',
+  'NOT ALIGNED': 'Inputs differ',
   PASS: 'Checks passed',
   WATCH: 'Watch',
   BLOCK: 'Blocked',
@@ -196,7 +196,7 @@ const SECTION_EXACT: Record<string, string> = {
 };
 
 const LEGACY_EXACT: Record<string, string> = {
-  'legacy grade': 'Indicator grade',
+  'legacy grade': 'Indicator reading',
   'legacy confluence': 'Earlier indicator read',
   'legacy engine': 'Earlier read',
 };
@@ -214,7 +214,7 @@ function readerFallback(value: string): string {
 
 function applyLegacyPhrases(text: string): string {
   return text
-    .replace(/\blegacy grade\b/gi, 'Indicator grade')
+    .replace(/\blegacy grade\b/gi, 'Indicator reading')
     .replace(/\blegacy confluence\b/gi, 'Earlier indicator read')
     .replace(/\blegacy engine\b/gi, 'Earlier read');
 }

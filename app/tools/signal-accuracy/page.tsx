@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { FREE_COPY } from '@/components/free/copy';
 import { useUserTier } from '@/lib/useUserTier';
-import { isPaidTier } from '@/lib/tiers';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import StatTile from '@/components/visual/StatTile';
@@ -62,7 +61,7 @@ type AccuracyData = {
 };
 
 export default function SignalAccuracyPage() {
-  const { tier, isLoading: tierLoading, isLoggedIn } = useUserTier();
+  const { isLoading: tierLoading, isLoggedIn, isAdmin } = useUserTier();
   const [data, setData] = useState<AccuracyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -133,15 +132,14 @@ export default function SignalAccuracyPage() {
     );
   }
 
-  // Gate: Pro (legacy pro_trader and admins included)
-  if (!tierLoading && isLoggedIn && !isPaidTier(tier)) {
+  if (!tierLoading && !isAdmin) {
     return (
       <div className="bg-[#0F172A] flex items-center justify-center p-6">
         <div className="bg-slate-800/60 rounded-lg p-8 max-w-md text-center border border-slate-700">
           <div className="mx-auto mb-3 h-10 w-10 rounded-full border border-slate-600 bg-slate-900" aria-hidden="true" />
-          <h2 className="text-xl font-bold text-white mb-2">Pro Feature</h2>
-          <p className="text-slate-400 text-sm">Historical observation analytics require a Pro subscription to review AI research outcomes over time.</p>
-          <a className="inline-flex min-h-10 items-center underline" href="/pricing">{FREE_COPY.upgrade}</a>
+          <h2 className="text-xl font-bold text-white mb-2">Administrators only</h2>
+          <p className="text-slate-400 text-sm">Setup accuracy is limited to administrators.</p>
+          {!isLoggedIn ? <a className="inline-flex min-h-10 items-center underline" href="/auth?next=/tools/signal-accuracy">{FREE_COPY.signIn}</a> : null}
         </div>
       </div>
     );
@@ -256,7 +254,7 @@ export default function SignalAccuracyPage() {
                           <th className="text-left px-3 py-2">Horizon</th>
                           <th className="text-right px-3 py-2">Observations</th>
                           <th className="text-right px-3 py-2">Past threshold</th>
-                          <th className="text-right px-3 py-2">Avg favorable</th>
+                          <th className="text-right px-3 py-2">Avg up move</th>
                           <th className="text-right px-3 py-2">Avg adverse</th>
                           <th className="text-right px-3 py-2">R:R</th>
                           <th className="text-right px-3 py-2">Move expectancy</th>
@@ -313,7 +311,7 @@ export default function SignalAccuracyPage() {
               <div className="px-4 py-3 border-b border-slate-700/50">
                 <h3 className="text-sm font-bold text-white">Recent Observations</h3>
               </div>
-              <div className="divide-y divide-white/10 p-3 sm:hidden">{shownRecent.map((row,i) => <div data-recent-card key={i} className="py-2 text-xs"><p className="font-semibold">{row.symbol} · {marketText(row.score)}</p><p>{marketText(row.direction)} context · {observationLabel(row.outcome)}</p>{row.pct_move != null && <p>{formatSignedPercent(signedPctMove(row.direction, row.pct_move))} recorded move</p>}<p className="text-slate-400">{new Date(row.created_at).toLocaleDateString()}</p></div>)}</div>
+              <div className="divide-y divide-white/10 p-3 sm:hidden">{shownRecent.map((row,i) => <div data-recent-card key={i} className="py-2 text-xs"><p className="font-semibold">{row.symbol}</p><p>{marketText(row.direction)} context · {observationLabel(row.outcome)}</p>{row.pct_move != null && <p>{formatSignedPercent(signedPctMove(row.direction, row.pct_move))} recorded move</p>}<p className="text-slate-400">{new Date(row.created_at).toLocaleDateString()}</p></div>)}</div>
               <div className="hidden overflow-x-auto sm:block">
                 <table className="w-full text-xs">
                   <thead>
@@ -321,7 +319,6 @@ export default function SignalAccuracyPage() {
                       <th className="text-left px-4 py-2">Symbol</th>
                       <th className="text-left px-3 py-2">Context</th>
                       <th className="text-left px-3 py-2">Scanner</th>
-                      <th className="text-right px-3 py-2">Reading</th>
                       <th className="text-right px-3 py-2">Move</th>
                       <th className="text-center px-3 py-2">Outcome</th>
                       <th className="text-right px-3 py-2">Date</th>
@@ -339,7 +336,6 @@ export default function SignalAccuracyPage() {
                           </span>
                         </td>
                         <td className="px-3 py-2 text-slate-400">{marketText(s.scanner_type)}</td>
-                        <td className="px-3 py-2 text-right text-slate-300">{marketText(s.score)}</td>
                         <td className={`px-3 py-2 text-right font-medium ${move != null && move >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                           {formatSignedPercent(move)}
                         </td>

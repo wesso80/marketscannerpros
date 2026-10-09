@@ -49,12 +49,6 @@ const metadata: Record<string, Partial<ToolPage>> = {
     icon: "TM",
     tier: "pro",
   },
-  "/tools/signal-accuracy": {
-    key: "signal-accuracy",
-    description: "Recorded research outcomes",
-    icon: "AC",
-    tier: "pro",
-  },
   "/tools/explorer?tab=crypto-command": {
     key: "crypto",
     description: "Cryptocurrency market overview",
@@ -69,7 +63,7 @@ const metadata: Record<string, Partial<ToolPage>> = {
   },
   "/tools/explorer?tab=crypto-intel": {
     key: "crypto-intel",
-    description: "GT Score, whale tracker, treasury & crypto news (in Markets)",
+    description: "Whale tracker, treasury, and crypto news (in Markets)",
     icon: "CI",
     tier: "pro",
   },

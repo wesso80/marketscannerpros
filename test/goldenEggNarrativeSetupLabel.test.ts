@@ -12,7 +12,7 @@ const l1 = { confluenceScore: 40, direction: 'SHORT' as const };
 describe('Golden Egg narrative: setup code in plain words', () => {
   it('WATCH reason "EXHAUSTION_FADE short: …" reads "exhaustion fade (short): …" (was "eXHAUSTION_FADE short")', () => {
     const s = canonicalNarrativeSummary('META', c({ watchReasons: [{ code: 'NO_VALIDATED_EDGE', message: 'EXHAUSTION_FADE short: no out-of-sample edge after costs (historical -0.174R per trade, target-first 27%, n=3122) — factors only' }] }), l1);
-    expect(s).toMatch(/^META: a short exhaustion fade setup is forming but is on watch \(grade A\) because exhaustion fade \(short\): no out-of-sample edge after costs/);
+    expect(s).toMatch(/^META: a short exhaustion fade setup is forming but is on watch because exhaustion fade \(short\): no out-of-sample edge after costs/);
     expect(s).not.toMatch(/EXHAUSTION_FADE|eXHAUSTION/);
   });
   it('BLOCK reason with a code reads in words too; unknown codes lose their underscores', () => {

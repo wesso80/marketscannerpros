@@ -159,7 +159,7 @@ export function computeRiskQuality(r: RiskInput): { score: number; reasons: stri
   const stochExt = r.stochK != null && (r.stochK >= 80 || r.stochK <= 20);
   if (rsiExt && stochExt) { score -= 15; reasons.push(`extension — RSI ${r.rsi!.toFixed(0)} and stochastic ${r.stochK!.toFixed(0)} both at extremes`); }
   else if (rsiExt || stochExt) { score -= 8; reasons.push('extension — momentum oscillator at an extreme'); }
-  if (r.exhaustionRisk != null && r.exhaustionRisk >= 60) { score -= 12; reasons.push(`DVE exhaustion risk ${Math.round(r.exhaustionRisk)}/100`); }
+  if (r.exhaustionRisk != null && r.exhaustionRisk >= 60) { score -= 12; reasons.push(`DVE exhaustion risk ${Math.round(r.exhaustionRisk)}`); }
   if (r.trapDetected) { score -= 10; reasons.push('DVE volatility trap detected'); }
   if (r.assetClass !== 'forex' && r.advUsd != null && r.advUsd < 5_000_000) { score -= 15; reasons.push(`thin liquidity — ${formatUsdShort(r.advUsd)} average dollar volume`); }
   if (r.dataTrustLevel === 'DEGRADED') { score -= 8; reasons.push('data trust degraded'); }

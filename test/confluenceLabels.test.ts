@@ -25,5 +25,5 @@ it('shared labels distinguish research indicators from untested timing', async (
   expect(labels.CANONICAL_SETUP_TOOLTIP).toContain('calibrated percentile');
   expect(labels.TIMEFRAME_PULL_LABEL).toBe('Timeframe pull (display only)');
   expect(labels.CLOSE_CALENDAR_LABEL).toBe('Close calendar (clock only)');
-  expect(labels.TIMING_TOOLTIP).toContain('No tested edge');
+  expect(labels.TIMING_TOOLTIP).toContain('No tested outcome');
 });

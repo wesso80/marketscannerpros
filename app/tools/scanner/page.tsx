@@ -19,7 +19,7 @@ import { useMemo, useState, useCallback, useEffect, useRef, Suspense } from 'rea
 import { formatExclusionBreakdown, proCandidateMetrics, type ProScanFilters } from '@/lib/scanner/proSelection';
 import { RANKED_VERDICT_CLASS, rankedVerdictBadge } from '@/lib/scanner/rankedVerdict';
 import { boundedJsonFetch } from '@/lib/boundedFetch';
-import { HIGH_MSP_SCORE, rowHasWeakData } from '@/lib/scanner/researchValidity';
+import { rowHasWeakData } from '@/lib/scanner/researchValidity';
 import { legacyExecutionReason } from '@/lib/scanner/legacyReason';
 import Link from 'next/link';
 import { useV2 } from '@/app/v2/_lib/V2Context';
@@ -39,7 +39,7 @@ import ScannerInsightStrip from '@/components/analysis/ScannerInsightStrip';
 import CompositeBreakdown from '@/components/analysis/CompositeBreakdown';
 import CanonicalVerdict from '@/components/analysis/CanonicalVerdict';
 import { compareCanonicalRows } from '@/lib/scoring/canonical/scannerAdapter';
-import { isNoSetupRow, noSetupRankedReason, rankedBiasTitle, rankedClaimedDirection, rankedScoreLabel } from '@/lib/scanner/rankedDisplay';
+import { isNoSetupRow, noSetupRankedReason, rankedBiasTitle, rankedClaimedDirection } from '@/lib/scanner/rankedDisplay';
 import { type ScanTemplate } from '@/components/scanner/ScanTemplatesBar';
 import { useRegisterPageData } from '@/lib/ai/pageContext';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
@@ -216,8 +216,8 @@ function summarizeDetailNextCheck(args: { hasScenarioLevels: boolean; trendAlign
   if (!args.hasScenarioLevels) return 'Wait for valid reference and invalidation levels before escalation.';
   if (args.regime === 'Range' && args.direction !== 'neutral' && args.trendAligned) return 'Wait for a confirmed range break with volume or ADX expansion before escalation.';
   if (!args.trendAligned) return 'Watch for structure to align with the observed direction.';
-  if (!args.momentumAligned) return 'Watch for momentum confirmation before treating the case as aligned.';
-  if (!args.flowAligned) return 'Check whether signal split improves from mixed to aligned.';
+  if (!args.momentumAligned) return 'Watch for momentum confirmation before treating the case as confirmed.';
+  if (!args.flowAligned) return 'Check whether flow disagreement improves from mixed to matching.';
   if (args.direction === 'neutral') return 'Wait for directional structure to resolve.';
   return 'Monitor whether price respects the reference level and data quality holds.';
 }
@@ -234,15 +234,6 @@ function compactBiasLabel(direction?: string | null): string {
   return 'Neutral';
 }
 
-function ScoreBar({ score }: { score: number | null }) {
-  if (score == null) return <div className="mt-3 h-1.5 rounded-full bg-[var(--msp-border)]" data-testid="score-bar" />;
-  return (
-    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--msp-border)]" data-testid="score-bar">
-      <div className="h-full rounded-full" style={{ width: `${Math.max(4, Math.min(100, score))}%`, background: 'var(--msp-green)' }} />
-    </div>
-  );
-}
-
 function lifecycleLabel(lifecycle: LifecycleState): string {
   if (lifecycle === 'READY') return 'Multi-confirmed pattern';
   if (lifecycle === 'SETTING_UP') return 'Pattern still forming';
@@ -252,15 +243,15 @@ function lifecycleLabel(lifecycle: LifecycleState): string {
   return plain;
 }
 
-const TABS = ['All', 'Bullish', 'Bearish', 'Strong match', 'DVE Signals', 'Squeeze', 'Regime Match'] as const;
+const TABS = ['All', 'Bullish', 'Bearish', 'RSI 60+', 'DVE flags', 'Squeeze', 'Regime Match'] as const;
 const LEGACY_MULTI_FACTOR_STATUS = ['TRADE', 'READY'].join('_');
 const LEGACY_LOW_ALIGNMENT_STATUS = ['NO', 'TRADE'].join('_');
-type SortKey = 'symbol' | 'score' | 'direction' | 'confidence' | 'rsi' | 'price' | 'dveBbwp' | 'mspScore';
+type SortKey = 'symbol' | 'score' | 'direction' | 'confidence' | 'rsi' | 'price' | 'dveBbwp' | 'mspScore' | 'change' | 'volume';
 type SortDir = 'asc' | 'desc';
 
 // Ranking helpers live in lib/scanner/rankedQueue so Scanner and Command Center share ONE research queue.
 
-type ScannerMode = 'ranked' | 'pro';
+type ScannerMode = 'queue' | 'pro';
 type ScannerStage = ScannerMode | 'analysis';
 type AssetClass = 'crypto' | 'equity' | 'forex';
 /** Below the md breakpoint (matches the .msp-scanner-mobile rules in globals.css). */
@@ -282,7 +273,7 @@ function ScannerFlowRail({
   canOpenAnalysis: boolean;
 }) {
   const stages: Array<{ id: ScannerStage; label: string; eyebrow: string; detail: string }> = [
-    { id: 'ranked', label: 'Ranked', eyebrow: '1. Triage', detail: 'Auto-ranked market queue' },
+    { id: 'queue', label: 'List', eyebrow: '1. Triage', detail: 'Symbols ordered by RSI' },
     { id: 'pro', label: 'Pro', eyebrow: '2. Configure', detail: 'Manual scan controls' },
     { id: 'analysis', label: 'Analysis', eyebrow: '3. Inspect', detail: selectedSymbol ? `${selectedSymbol} case review` : 'Opens after symbol select' },
   ];
@@ -307,7 +298,7 @@ function ScannerFlowRail({
           </div>
         );
 
-        if (stage.id === 'ranked' || stage.id === 'pro') {
+        if (stage.id === 'queue' || stage.id === 'pro') {
           const selectableStage = stage.id;
           return (
             <button key={stage.id} type="button" onClick={() => onSelectMode(selectableStage)} aria-pressed={isActive} className="block w-full rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50">
@@ -355,11 +346,9 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
     <div className="msp-scanner-mobile-cards grid-cols-1 gap-3">
       {rows.map((row, index) => {
         const lifecycle = deriveLifecycleState(row, activeRegime);
-        const msp = computeMspScore(row, activeRegime);
         const trust = rankedTrustLabel(row);
         const trustDetail = rankedTrustDetail(row);
         const reason = summarizeRankedReason(row, lifecycle, isRegimeCompatibleForRegime(row, activeRegime), activeRegime);
-        const mspColor = msp >= 70 ? 'var(--msp-bull)' : msp >= 50 ? 'var(--msp-warn)' : msp >= 30 ? 'var(--msp-flat)' : 'var(--msp-bear)';
         return (
           <button
             key={`${(row as any)._assetClass || 'asset'}-${row.symbol || 'unknown'}-${index}`}
@@ -370,7 +359,7 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">Rank {index + 1}</div>
+                <div className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">RSI {row.rsi != null ? row.rsi.toFixed(0) : '—'}</div>
                 <div className="mt-1 text-xl font-black text-white">{row.symbol || 'Unknown'}</div>
                 {/* SC-14: same price as the desktop Ranked table's Price column. */}
                 <div className="sr-only"><div data-testid="ranked-card-price"><ScannerRowStamp row={row} /></div></div>
@@ -382,8 +371,8 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2 text-center">
               <div className="rounded-lg bg-slate-950/45 px-2 py-2">
-                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">{rankedScoreLabel(row)}</div>
-                <div className="mt-1 text-sm font-black" style={{ color: mspColor }}>{isNoSetupRow(row) ? '—' : msp}</div>
+                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">RSI</div>
+                <div className="mt-1 text-sm font-black text-slate-100">{row.rsi != null ? row.rsi.toFixed(0) : '—'}</div>
               </div>
               <div className="rounded-lg bg-slate-950/45 px-2 py-2">
                 <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Bias</div>
@@ -394,7 +383,7 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
                 <div className="mt-1 text-xs font-black text-white">{row.compositeV2?.coverage != null ? `${Math.round(row.compositeV2.coverage * 100)}%` : 'Not supplied'}</div>
               </div>
             </div>
-            <ScoreBar score={isNoSetupRow(row) ? null : msp} />
+            <p className="mt-2 text-xs text-slate-400">ADX {row.adx != null ? row.adx.toFixed(1) : 'not collected'} · change {row.changePercent != null ? `${row.changePercent.toFixed(2)}%` : 'not collected'}</p>
             <p className="mt-2 text-xs text-[var(--msp-text-muted)]">90-day line not supplied with this row</p>
             {/* Algorithm truth labels */}
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -457,14 +446,14 @@ function ScannerContent() {
 
   /* ─── Scanner mode toggle ─── */
   const [showAllRows, setShowAllRows] = useState(false);
-  const [mode, setMode] = useState<ScannerMode>('ranked');
+  const [mode, setMode] = useState<ScannerMode>('queue');
 
   /* ─── V2 Ranked Scan state ─── */
   const [v2Timeframe, setV2Timeframe] = useState<ScanTimeframe>('daily');
   const equity = useManualScannerResults('equity', v2Timeframe);
   const crypto = useManualScannerResults('crypto', v2Timeframe);
   const [activeTab, setActiveTab] = useState<typeof TABS[number]>('All');
-  const [sortKey, setSortKey] = useState<SortKey>('mspScore');
+  const [sortKey, setSortKey] = useState<SortKey>('rsi');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   /* ─── Pro Scan state ─── */
@@ -481,13 +470,14 @@ function ScannerContent() {
   const [proScanLoading, setProScanLoading] = useState(false);
   const [proDirection, setProDirection] = useState<'all' | 'long' | 'short'>('all');
   const [proQuality, setProQuality] = useState<'all' | 'high' | 'medium'>('all');
-  const [proSort, setProSort] = useState<'rank' | 'confidence' | 'volatility' | 'trend'>('rank');
+  const [proSort, setProSort] = useState<'rank' | 'confidence' | 'volatility' | 'trend' | 'rsi' | 'change' | 'volume'>('rsi');
   const [proPresetConditions, setProPresetConditions] = useState<{ id?: string; requireRelativeStrength?: boolean; rsiBand?: [number, number]; minAdx?: number; maxAdx?: number }>({});
   const proFilters = useMemo<ProScanFilters>(() => ({
-    direction: proDirection, quality: proQuality, minConfidence: proMinConfidence,
+    direction: proDirection, quality: proQuality, minConfidence: 0,
+    rsiBand: proPresetConditions.rsiBand ?? (proMinConfidence > 0 ? [proMinConfidence, 100] as [number, number] : undefined),
     minAlignment: proMtfAlignment, volatility: proVolState, squeeze: proSqueeze === 'squeeze',
     requireRelativeStrength: proPresetConditions.requireRelativeStrength ?? false,
-    minAdx: proPresetConditions.minAdx, maxAdx: proPresetConditions.maxAdx, rsiBand: proPresetConditions.rsiBand,
+    minAdx: proPresetConditions.minAdx, maxAdx: proPresetConditions.maxAdx,
     preset: proPresetConditions.id === 'momentum' || proPresetConditions.id === 'mean_reversion' ? proPresetConditions.id : undefined,
   }), [proDirection, proQuality, proMinConfidence, proMtfAlignment, proVolState, proSqueeze, proPresetConditions]);
   const proRequestKey = JSON.stringify([proAsset, proTimeframe, proUniverseSize, proFilters, proSort]);
@@ -544,8 +534,8 @@ function ScannerContent() {
     switch (activeTab) {
       case 'Bullish': items = items.filter(r => rankedClaimedDirection(r) === 'bullish'); break;
       case 'Bearish': items = items.filter(r => rankedClaimedDirection(r) === 'bearish'); break;
-      case 'Strong match': items = items.filter(r => computeMspScore(r, currentRegime) >= HIGH_MSP_SCORE); break;
-      case 'DVE Signals': items = items.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)); break;
+      case 'RSI 60+': items = items.filter(r => (r.rsi ?? 0) >= 60); break;
+      case 'DVE flags': items = items.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)); break;
       case 'Squeeze': items = items.filter(r => r.dveFlags?.includes('SQUEEZE_FIRE')); break;
       case 'Regime Match': items = items.filter(r => isRegimeCompatible(r)); break;
     }
@@ -560,6 +550,8 @@ function ScannerContent() {
         case 'direction': av = a.direction ?? ''; bv = b.direction ?? ''; break;
         case 'confidence': av = a.compositeV2?.coverage ?? -1; bv = b.compositeV2?.coverage ?? -1; break;
         case 'rsi': av = a.rsi ?? 0; bv = b.rsi ?? 0; break;
+        case 'change': av = a.changePercent ?? 0; bv = b.changePercent ?? 0; break;
+        case 'volume': av = a.liquidity?.volumeRatio ?? a.volume ?? 0; bv = b.liquidity?.volumeRatio ?? b.volume ?? 0; break;
         case 'price': av = a.price ?? 0; bv = b.price ?? 0; break;
         case 'dveBbwp': av = a.dveBbwp ?? 0; bv = b.dveBbwp ?? 0; break;
         default: av = 0; bv = 0;
@@ -581,8 +573,8 @@ function ScannerContent() {
     Crypto: allResults.filter(r => (r as any)._assetClass === 'crypto').length,
     Bullish: allResults.filter(r => rankedClaimedDirection(r) === 'bullish').length,
     Bearish: allResults.filter(r => rankedClaimedDirection(r) === 'bearish').length,
-    'Strong match': allResults.filter(r => computeMspScore(r, currentRegime) >= HIGH_MSP_SCORE).length,
-    'DVE Signals': allResults.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)).length,
+    'RSI 60+': allResults.filter(r => (r.rsi ?? 0) >= 60).length,
+    'DVE flags': allResults.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)).length,
     Squeeze: allResults.filter(r => r.dveFlags?.includes('SQUEEZE_FIRE')).length,
     'Regime Match': allResults.filter(r => isRegimeCompatible(r)).length,
   }), [allResults, currentRegime]);
@@ -619,8 +611,8 @@ function ScannerContent() {
     return {
       mode,
       regime: currentRegime,
-      timeframe: mode === 'ranked' ? v2Timeframe : proTimeframe,
-      assetClass: mode === 'ranked' ? 'all' : proAsset,
+      timeframe: mode === 'queue' ? v2Timeframe : proTimeframe,
+      assetClass: mode === 'queue' ? 'all' : proAsset,
       totalResults: rankedRows.length,
       bullishCount: bullish,
       bearishCount: bearish,
@@ -642,7 +634,7 @@ function ScannerContent() {
   const aiSummary = useMemo(() => {
     const bullish = rankedRows.filter(r => r.direction === 'bullish').length;
     const bearish = rankedRows.filter(r => r.direction === 'bearish').length;
-    return `Scanner: ${rankedRows.length} results, ${bullish} bullish / ${bearish} bearish, Regime: ${currentRegime}, Timeframe: ${mode === 'ranked' ? v2Timeframe : proTimeframe}`;
+    return `Scanner: ${rankedRows.length} results, ${bullish} bullish / ${bearish} bearish, Regime: ${currentRegime}, Timeframe: ${mode === 'queue' ? v2Timeframe : proTimeframe}`;
   }, [rankedRows, currentRegime, mode, v2Timeframe, proTimeframe]);
 
   useRegisterPageData('scanner', aiData, aiSymbols, aiSummary);
@@ -818,12 +810,12 @@ function ScannerContent() {
   }
 
   /* ─── Command header derived values ─── */
-  const queueCount = mode === 'ranked' ? rankedRows.length : proScreenerRows.length;
+  const queueCount = mode === 'queue' ? rankedRows.length : proScreenerRows.length;
   const universeCount = proScanResults?.scanned ?? null;
   const headerStage: ScannerMode = mode;
-  const modeLabel = headerStage === 'ranked' ? 'Ranked queue' : 'Pro scan';
-  const modeDetail = headerStage === 'ranked'
-    ? 'System-ranked research opportunities'
+  const modeLabel = headerStage === 'queue' ? 'Scan list' : 'Pro scan';
+  const modeDetail = headerStage === 'queue'
+    ? 'Symbols with RSI, volume, and percent change'
     : 'Filters applied before the result limit';
   const queueValue = queueCount > 0
       ? `${queueCount} ${headerStage === 'pro' ? 'candidates' : 'symbols'}`
@@ -831,9 +823,9 @@ function ScannerContent() {
   const queueTone = queueCount > 0 ? 'var(--msp-bull)' : 'var(--msp-flat)';
   const queueDetail = headerStage === 'pro'
       ? universeCount != null ? `Scanned ${universeCount} symbols` : 'Run Educational Scan to populate'
-      : v2Loading ? 'Loading market data…' : queueCount > 0 ? 'Sorted by MSP score' : 'Awaiting scan results';
+      : v2Loading ? 'Loading market data…' : queueCount > 0 ? 'Sorted by RSI' : 'Awaiting scan results';
   const weakProRows = (proScanResults?.topPicks ?? []).filter(rowHasWeakData).length;
-  const dataIssues = (mode === 'ranked' ? [
+  const dataIssues = (mode === 'queue' ? [
     rankedLocalDemo ? 'Local demo rows' : null,
     equity.error ? 'Equity feed' : null,
     crypto.error ? 'Crypto feed' : null,
@@ -844,25 +836,25 @@ function ScannerContent() {
     weakProRows ? `${weakProRows} returned rows have weak data` : null,
     proScanResults?.universe?.valid < proScanResults?.universe?.input ? 'Partial universe coverage' : null,
   ]).filter(Boolean) as string[];
-  const dataLoadingCount = (mode === 'ranked' ? [equity.loading, crypto.loading] : [proScanLoading]).filter(Boolean).length;
+  const dataLoadingCount = (mode === 'queue' ? [equity.loading, crypto.loading] : [proScanLoading]).filter(Boolean).length;
   const dataHealthValue = dataIssues.length ? `${dataIssues.length} issue${dataIssues.length === 1 ? '' : 's'}` : dataLoadingCount ? `${dataLoadingCount} loading` : mode === 'pro' && !proScanResults ? 'Not scanned' : 'Ready';
   const dataHealthTone = dataIssues.length ? 'var(--msp-warn)' : dataLoadingCount ? 'var(--msp-flat)' : 'var(--msp-bull)';
   const dataHealthDetail = dataIssues.length ? dataIssues.join(', ') : dataLoadingCount ? 'Feeds syncing' : 'No feed errors reported';
   const topRankedSymbol = rankedRows[0]?.symbol;
   const topProSymbol = proScreenerRows[0]?.symbol;
-  const headerTopSymbol = mode === 'ranked' ? topRankedSymbol : topProSymbol;
+  const headerTopSymbol = mode === 'queue' ? topRankedSymbol : topProSymbol;
   const nextCheckValue = headerStage === 'pro'
       ? proScanResults
         ? topProSymbol ? `Review ${topProSymbol}` : 'Review filter exclusions'
         : 'Run Educational Scan'
-      : topRankedSymbol ? `Review ${topRankedSymbol}` : v2Loading ? 'Loading queue…' : 'Awaiting ranked data';
+      : topRankedSymbol ? `Review ${topRankedSymbol}` : v2Loading ? 'Loading queue…' : 'Awaiting scan data';
   const nextCheckDetail = headerStage === 'pro'
       ? proScanResults ? 'Click a row to inspect a candidate' : 'Configure filters then run scan'
-      : topRankedSymbol ? 'Top-ranked candidate' : 'Cached scanner data syncing';
+      : topRankedSymbol ? 'First symbol in the list' : 'Cached scanner data syncing';
   const nextCheckTone = headerTopSymbol ? 'var(--msp-warn)' : 'var(--msp-flat)';
   const topRankedAsset = rankedRows[0] ? (((rankedRows[0] as any)._assetClass === 'crypto' ? 'crypto' : 'equity') as 'crypto' | 'equity') : null;
-  const handoffAsset = mode === 'ranked' ? topRankedAsset : proAsset === 'crypto' ? 'crypto' : 'equity';
-  const handoffTimeframe = mode === 'ranked'
+  const handoffAsset = mode === 'queue' ? topRankedAsset : proAsset === 'crypto' ? 'crypto' : 'equity';
+  const handoffTimeframe = mode === 'queue'
     ? v2Timeframe
     : proTimeframe === '1d' ? 'daily' : proTimeframe === '30m' ? '30m' : proTimeframe;
   const handoffQuery = headerTopSymbol && handoffAsset
@@ -896,30 +888,30 @@ function ScannerContent() {
         <div className="mt-2 flex flex-wrap gap-3 text-xs"><Link href={goldenEggHref}>Open Symbol</Link><Link href={terminalHref}>Open Terminal</Link></div>
       </header>
       <ComplianceDisclaimer compact />
-      <TabBar label="Scanner mode" activeId={mode === 'pro' ? 'pro' : 'quick'} onChange={id=>{selectScannerMode(id==='pro'?'pro':'ranked');setShowAllRows(false);}} items={[{id:'quick',label:'Quick scan'},{id:'pro',label:'Pro scanner'}]} />
+      <TabBar label="Scanner mode" activeId={mode === 'pro' ? 'pro' : 'quick'} onChange={id=>{selectScannerMode(id==='pro'?'pro':'queue');setShowAllRows(false);}} items={[{id:'quick',label:'Quick scan'},{id:'pro',label:'Pro scanner'}]} />
       <div className="flex flex-wrap items-end gap-2">
         <label className="text-xs text-slate-400">Market<select aria-label="Market" value={marketAsset} onChange={e=>{selectMarket(e.target.value as 'equity'|'crypto');setShowAllRows(false);}} className="ml-2 rounded border border-slate-700 bg-slate-900 px-2"><option value="equity">Stocks</option><option value="crypto">Crypto</option></select></label>
         <button type="button" data-testid="run-educational-scan" onClick={()=>{setShowAllRows(false);if(mode==='pro')void runProScan();else void (marketAsset==='crypto'?crypto:equity).refetch();}} disabled={proScanLoading||v2Loading} className="ml-auto rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-2 text-sm text-amber-200">{proScanLoading||v2Loading?'Analyzing…':'Run Educational Scan'}</button>
       </div>
       <div className="grid grid-cols-3 gap-2" data-scanner-tiles>
         <StatTile label="Matches" value={String(queueCount)} />
-        <StatTile label="Aligned" value={String(mode==='ranked'?filtered.filter(r=>deriveLifecycleState(r,currentRegime)==='READY').length:proScreenerRows.filter(r=>r.permission==='COMPLIANT').length)} />
-        <StatTile label="Mixed evidence" value={String(mode==='ranked'?filtered.filter(r=>deriveLifecycleState(r,currentRegime)==='SETTING_UP').length:proScreenerRows.filter(r=>r.permission==='TIGHT').length)} warning />
+        <StatTile label="Ready" value={String(mode==='queue'?filtered.filter(r=>deriveLifecycleState(r,currentRegime)==='READY').length:proScreenerRows.filter(r=>r.permission==='COMPLIANT').length)} />
+        <StatTile label="Mixed evidence" value={String(mode==='queue'?filtered.filter(r=>deriveLifecycleState(r,currentRegime)==='SETTING_UP').length:proScreenerRows.filter(r=>r.permission==='TIGHT').length)} warning />
       </div>
       <CollapsibleSection title="Scan presets" summary="Select conditions, then run manually."><PresetCards activeId={activeTemplateId} onSelect={template=>{selectScannerMode('pro');if(activeTemplateId===template.id)clearTemplate();else applyTemplate(template);}} /></CollapsibleSection>
       <CollapsibleSection title="Data details" summary={dataHealthDetail}><p className="text-xs text-slate-400">{dataHealthValue}</p>{dataIssues.map(issue=><p key={issue} className="text-xs text-slate-400">{scannerCopy(issue)}</p>)}</CollapsibleSection>
 
       {/* ═══════════════════════════════ V2 RANKED SCAN ═══════════════════════════════ */}
-      {mode === 'ranked' && (
+      {mode === 'queue' && (
         <>
           <CollapsibleSection title="Queue filters" summary="Timeframe, evidence and sort.">
           <div className="flex flex-wrap gap-3 text-xs">
           <label>Timeframe<select value={v2Timeframe} onChange={e=>setV2Timeframe(e.target.value as ScanTimeframe)} className="ml-2 rounded bg-slate-900 p-2">{SCAN_TIMEFRAMES.map(tf=><option key={tf.value} value={tf.value}>{tf.label}</option>)}</select></label>
           <label>Evidence<select value={activeTab} onChange={e=>setActiveTab(e.target.value as typeof activeTab)} className="ml-2 rounded bg-slate-900 p-2">{TABS.map(tab=><option key={tab} value={tab}>{scannerCopy(tab)} ({tabCounts[tab]})</option>)}</select></label>
-          <label>Sort<select value={sortKey} onChange={e=>setSortKey(e.target.value as SortKey)} className="ml-2 rounded bg-slate-900 p-2"><option value="mspScore">Reading (unvalidated)</option><option value="symbol">Symbol</option><option value="price">Price</option></select></label>
+          <label>Sort<select value={sortKey} onChange={e=>setSortKey(e.target.value as SortKey)} className="ml-2 rounded bg-slate-900 p-2"><option value="rsi">RSI</option><option value="change">% change</option><option value="volume">Volume</option><option value="symbol">Symbol</option><option value="price">Price</option></select></label>
           <button onClick={()=>setSortDir(sortDir==='asc'?'desc':'asc')}>{sortDir==='asc'?'Ascending':'Descending'}</button>
           </div></CollapsibleSection>
-          <p data-scanner-ordering-note className="text-xs text-slate-400">Ordering uses the scanner&apos;s indicator and setup readings. They describe how strongly current conditions line up; they are not probabilities or forecasts, and historical validation on unseen data is not established. Educational research only.</p>
+          <p data-scanner-ordering-note className="text-xs text-slate-400">Reading (unvalidated). Ordering uses the scanner&apos;s indicator and setup readings. They describe how strongly current conditions line up; they are not probabilities or forecasts, and historical validation on unseen data is not established. Educational research only.</p>
           {rankedLocalDemo && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-200">
               <strong>Local demo scanner rows:</strong> live market data keys/cache are unavailable in this local environment, so these rows are sample data for workflow testing only. Do not treat them as live scanner output.
@@ -939,7 +931,7 @@ function ScannerContent() {
               <div data-scanner-example className="rounded-lg border border-[var(--msp-border)] p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--msp-warn)]">Example</p>
                 <p className="mt-2 text-sm">No live queue is loaded. This sample shows the card shape only. Run a scan when you want live rows.</p>
-                <ScoreBar score={72} />
+                <p className="mt-2 text-xs text-[var(--msp-text-muted)]">Sample: RSI 58 · ADX 22 · volume not supplied with this example</p>
                 <p className="mt-2 text-xs text-[var(--msp-text-muted)]">90-day line not supplied with this example</p>
                 <span className="mt-3 inline-flex rounded-md border px-2 py-0.5 text-[10px] font-black uppercase">Pattern still forming</span>
               </div>
@@ -996,7 +988,7 @@ function ScannerContent() {
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="pro-min-confidence" className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Min Evidence Reading</label>
+                    <label htmlFor="pro-min-confidence" className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Min RSI</label>
                     <select id="pro-min-confidence" value={proMinConfidence} onChange={e => setProMinConfidence(Number(e.target.value))}
                       className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
                       <option value={0}>Any</option><option value={30}>30</option><option value={40}>40</option><option value={50}>50</option><option value={60}>60</option><option value={70}>70</option><option value={80}>80</option>
@@ -1061,7 +1053,7 @@ function ScannerContent() {
                 <label htmlFor="pro-filter-sort" className="text-[11px] uppercase text-slate-500">Sort:</label>
                 <select id="pro-filter-sort" value={proSort} onChange={e => setProSort(e.target.value as any)}
                   className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200">
-                  <option value="rank">Rank</option><option value="confidence">Data coverage</option><option value="volatility">Volatility</option><option value="trend">Trend</option>
+                  <option value="rsi">RSI</option><option value="change">% change</option><option value="volume">Volume</option><option value="volatility">Volatility</option><option value="trend">ADX</option>
                 </select>
               </div>
 
@@ -1105,13 +1097,13 @@ function ScannerContent() {
       )}
 
       {/* Errors */}
-      {mode === 'ranked' && (equity.error || crypto.error) && (
+      {mode === 'queue' && (equity.error || crypto.error) && (
         <div className="text-[11px] text-red-400/60 border border-red-900/30 rounded-lg p-3">
           {equity.error && <div>Equity scan: {equity.error}</div>}
           {crypto.error && <div>Crypto scan: {crypto.error}</div>}
         </div>
       )}
-      <SourceLine source={rankedLocalDemo || proScanResults?.dataQuality?.source === 'local_demo' ? 'Example' : 'Scanner queue'} asOf={mode === 'ranked' ? rankedScanAsOf : proScanResults?.dataQuality?.computedAt ?? null} basis="Last completed bar" />
+      <SourceLine source={rankedLocalDemo || proScanResults?.dataQuality?.source === 'local_demo' ? 'Example' : 'Scanner queue'} asOf={mode === 'queue' ? rankedScanAsOf : proScanResults?.dataQuality?.computedAt ?? null} basis="Last completed bar" />
     </div>
   );
 }

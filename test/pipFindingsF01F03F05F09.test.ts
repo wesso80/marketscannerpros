@@ -17,7 +17,7 @@ describe("Pip audit follow-ups (display only)", () => {
 
   it('F09: the scanner source line carries the completed scan time for the active mode', () => {
     const page = read('app/tools/scanner/page.tsx');
-    expect(page).toContain("asOf={mode === 'ranked' ? rankedScanAsOf : proScanResults?.dataQuality?.computedAt ?? null}");
+    expect(page).toContain("asOf={mode === 'queue' ? rankedScanAsOf : proScanResults?.dataQuality?.computedAt ?? null}");
   });
 
   it('F09: every Terminal crypto tile carries the source and time from its own feed', () => {

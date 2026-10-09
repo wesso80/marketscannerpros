@@ -458,7 +458,7 @@ export default function CryptoTerminalView({
             {/* Quick stats */}
             {coin && (
               <div className="hidden lg:flex items-center gap-4 text-xs text-zinc-400">
-                <span>Rank #{coin.rank}</span>
+                <span>List #{coin.rank}</span>
                 <span>MCap {fmtUsd(coin.marketCap)}</span>
                 <span>Vol {fmtUsd(coin.volume24h)}</span>
                 <span>24h {fmtUsd(coin.low24h)} – {fmtUsd(coin.high24h)}</span>

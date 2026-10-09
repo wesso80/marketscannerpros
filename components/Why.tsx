@@ -14,8 +14,8 @@ export default function Why() {
     },
     {
       icon: "📊",
-      title: "Technically aligned setups only",
-      desc: "Focus on trades with multi-timeframe confluence. Filter out noise and see only what matters."
+      title: "Setups that match across timeframes",
+      desc: "Focus on names where several timeframes agree. Filter out noise and see only what matters."
     }
   ];
 

@@ -2232,7 +2232,7 @@ async function runBulkScanner(req: NextRequest) {
     const sort = body.sort ?? 'rank';
     try {
       filters = parseProFilters(body.filters);
-      if (!['rank', 'confidence', 'volatility', 'trend'].includes(sort)) throw new Error('Invalid sort');
+      if (!['rank', 'confidence', 'volatility', 'trend', 'rsi', 'change', 'volume'].includes(sort)) throw new Error('Invalid sort');
     } catch (error) {
       return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid filters' }, { status: 400 });
     }

@@ -7,6 +7,7 @@ vi.mock('@/lib/auth', () => ({ getSessionFromCookie: async () => ({ workspaceId:
 vi.mock('@/lib/entitlements', () => ({ getEffectiveTier: mocks.tier }));
 vi.mock('@/lib/adaptiveTrader', () => ({ getAdaptiveLayer: async () => null }));
 vi.mock('@/lib/db', () => ({ q: mocks.query }));
+vi.mock('@/lib/scoring/canonical/regimeOverlayData', () => ({ loadRegimeOverlayInputs: async () => null }));
 vi.mock('@/lib/coingecko', () => ({
   getMarketData: mocks.marketData, getDerivativesForSymbols: async () => [], getOHLC: async () => [],
   COINGECKO_ID_MAP: {}, resolveSymbolToId: async (symbol: string) => `${symbol.toLowerCase()}-coin`,

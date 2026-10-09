@@ -12,7 +12,7 @@ const testimonials = [
     handle: "@swingking"
   },
   {
-    quote: "Finally a scanner that shows multi-timeframe confluence clearly. No more tab chaos.",
+    quote: "Finally a scanner that shows multi-timeframe agreement clearly. No more tab chaos.",
     author: "Early adopter",
     handle: "@market_mike"
   }

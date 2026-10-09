@@ -63,14 +63,14 @@ export default function ScannerInsightStrip({ insight, compact = false }: { insi
         </Chip>
         {!compact && (whyRanked.length > 0 || cautions.length > 0) ? (
           <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="rounded border border-white/10 px-1.5 py-0.5 text-[10px] font-bold text-slate-400 hover:text-slate-200">
-            {open ? 'Hide why' : 'Why ranked'}
+            {open ? 'Hide why' : 'Why listed'}
           </button>
         ) : null}
       </div>
       {open ? (
         <div className="mt-1.5 grid gap-2 rounded-md border border-white/5 bg-slate-950/40 p-2 sm:grid-cols-2">
           <div>
-            <div className="text-[10px] font-black uppercase tracking-widest text-emerald-300/70">Why it ranked</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-emerald-300/70">Why it is listed</div>
             {whyRanked.length ? (
               <ul className="mt-0.5 list-disc pl-4 text-[11px] text-slate-300">
                 {whyRanked.map((r, i) => <li key={i}>{r}</li>)}

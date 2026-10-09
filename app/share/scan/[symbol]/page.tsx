@@ -73,7 +73,7 @@ export default async function ShareScanPage(
         </div>
 
         <p style={{ marginTop: 32, fontSize: 12, color: 'var(--msp-text-muted)', lineHeight: 1.6 }}>
-          Source: {data.source.replace('_', ' ')} · snapshot from{' '}
+          Source: {data.source === 'daily_picks' ? 'daily scan' : data.source.replaceAll('_', ' ')} · snapshot from{' '}
           {new Date(data.fetchedAt).toISOString().slice(0, 10)}.
           Educational research only. Not investment advice. No order routing. Past performance does not predict future returns.
         </p>

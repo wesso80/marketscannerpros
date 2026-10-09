@@ -13,7 +13,7 @@ const BADGES: Record<string, string> = {
   VOL: 'Volatility',
   DIR: 'Direction',
   PH: 'Phase',
-  SIG: 'Signal',
+  SIG: 'Marker',
   PROJ: 'Projection',
   SUP: 'Support',
 };
@@ -22,7 +22,7 @@ const HEADINGS: Record<string, string> = {
   VOL: 'Volatility state',
   DIR: 'Directional bias',
   PH: 'Phase persistence',
-  SIG: 'Signal and invalidation',
+  SIG: 'Marker and invalidation',
   PROJ: 'Outcome projection',
   SUP: 'Supporting analysis',
 };

@@ -493,7 +493,7 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
           </div>
         </header>}
 
-        <p data-layout-verdict className="font-semibold text-sm">{loading ? 'Loading stock observations…' : error ? 'Stock observations could not be collected.' : data ? `${data.company.symbol}: ${upeSignal ? (upeSignal.eligibilityUser === 'eligible' ? 'Aligned' : upeSignal.eligibilityUser === 'conditional' ? 'Conditional' : 'Not aligned') : 'Assessment has not been collected.'}` : 'Choose a stock to review its recorded evidence.'}</p>
+        <p data-layout-verdict className="font-semibold text-sm">{loading ? 'Loading stock observations…' : error ? 'Stock observations could not be collected.' : data ? `${data.company.symbol}: ${upeSignal ? (upeSignal.eligibilityUser === 'eligible' ? 'Inputs agree' : upeSignal.eligibilityUser === 'conditional' ? 'Conditional' : 'Inputs differ') : 'Assessment has not been collected.'}` : 'Choose a stock to review its recorded evidence.'}</p>
         <ComplianceDisclaimer compact />
 
         <section className="rounded-lg border border-slate-700 bg-slate-900 p-2">
@@ -585,11 +585,11 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
                     <span className="text-[11px] text-slate-500">US session anchor</span>
                   </div>
                   <div className="mb-2 flex flex-wrap gap-1">
-                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300">Status: <span className={`${upeSignal?.eligibilityUser === 'eligible' ? 'text-emerald-300' : upeSignal?.eligibilityUser === 'conditional' ? 'text-amber-300' : 'text-rose-300'} font-semibold`}>{upeSignal ? (upeSignal.eligibilityUser === 'eligible' ? 'Aligned' : upeSignal.eligibilityUser === 'conditional' ? 'Conditional' : 'Not aligned') : 'Pending'}</span></span>
-                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300">Risk Context: <span className="font-semibold text-slate-100">{!upeGlobal?.capitalMode ? 'Not collected' : upeGlobal.capitalMode === 'normal' ? 'Standard review' : upeGlobal?.capitalMode === 'defensive' ? 'Observation' : 'Reduced conviction'}</span></span>
+                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300">Status: <span className={`${upeSignal?.eligibilityUser === 'eligible' ? 'text-emerald-300' : upeSignal?.eligibilityUser === 'conditional' ? 'text-amber-300' : 'text-rose-300'} font-semibold`}>{upeSignal ? (upeSignal.eligibilityUser === 'eligible' ? 'Inputs agree' : upeSignal.eligibilityUser === 'conditional' ? 'Conditional' : 'Inputs differ') : 'Pending'}</span></span>
+                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300">Risk Context: <span className="font-semibold text-slate-100">{!upeGlobal?.capitalMode ? 'Not collected' : upeGlobal.capitalMode === 'normal' ? 'Standard review' : upeGlobal?.capitalMode === 'defensive' ? 'Observation' : 'Mixed inputs'}</span></span>
                     <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300">Vol Regime: <span className="font-semibold text-slate-100">{upeGlobal?.volatilityState || 'Not collected'}</span></span>
                   </div>
-                  <p className="mt-2 rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-[11px] text-slate-400">{upeSignal?.eligibilityUser === 'blocked' ? 'Conditions not aligned — observation mode only.' : upeSignal?.eligibilityUser === 'conditional' ? 'Mixed conditions — require trend + volume confirmation.' : 'Conditions are broadly aligned.'}</p>
+                  <p className="mt-2 rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-[11px] text-slate-400">{upeSignal?.eligibilityUser === 'blocked' ? 'Inputs differ — observation only.' : upeSignal?.eligibilityUser === 'conditional' ? 'Mixed conditions — require trend + volume confirmation.' : 'Several inputs point the same way.'}</p>
                 </div>
 
                 <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
@@ -612,7 +612,7 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
                 ['Asset', `${data.company.symbol} • ${data.company.exchange}`],
                 ['Price', formatPrice(data.quote.price)],
                 ['24h', `${(data.quote.changePercent ?? 0) >= 0 ? '+' : ''}${(data.quote.changePercent ?? 0).toFixed(2)}%`],
-                ['Permission', upeSignal ? (upeSignal.eligibilityUser === 'eligible' ? 'Aligned' : upeSignal.eligibilityUser === 'conditional' ? 'Conditional' : 'Not aligned') : 'Pending'],
+                ['Permission', upeSignal ? (upeSignal.eligibilityUser === 'eligible' ? 'Inputs agree' : upeSignal.eligibilityUser === 'conditional' ? 'Conditional' : 'Inputs differ') : 'Pending'],
                 [assetExplorerLabel('CRCS'), upeSignal && Number.isFinite(upeSignal.crcsUser) ? upeSignal.crcsUser.toFixed(1) : '—'],
                 [assetExplorerLabel('ΔHr'), upeSignal && Number.isFinite(upeSignal.microAdjustment) ? `${upeSignal.microAdjustment >= 0 ? '+' : ''}${upeSignal.microAdjustment.toFixed(2)}` : '—'],
                 ['Trend', getQuickSignals(data).trend.label],
@@ -682,10 +682,10 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
                 const signals = getQuickSignals(data);
                 const eligibilityLabel = upeSignal
                   ? upeSignal.eligibilityUser === 'eligible'
-                    ? 'Aligned'
+                    ? 'Inputs agree'
                     : upeSignal.eligibilityUser === 'conditional'
                     ? 'Conditional'
-                    : 'Not aligned'
+                    : 'Inputs differ'
                   : 'Pending';
                 return (
                   <div className="mt-2 flex flex-wrap justify-center gap-1">
@@ -711,11 +711,11 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
                       <span className="text-[11px] uppercase text-slate-500">Alignment</span>
                       <span
                         className={`text-xs font-semibold ${
-                          eligibilityLabel === 'Aligned'
+                          eligibilityLabel === 'Inputs agree'
                             ? 'text-emerald-300'
                             : eligibilityLabel === 'Conditional'
                             ? 'text-amber-300'
-                            : eligibilityLabel === 'Not aligned'
+                            : eligibilityLabel === 'Inputs differ'
                             ? 'text-rose-300'
                             : 'text-slate-400'
                         }`}
@@ -731,9 +731,9 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
                             type="button"
                             disabled
                             className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-[11px] text-slate-500"
-                            title={marketText(upeSignal.overlayReasons?.length ? upeSignal.overlayReasons.join(' • ') : 'Not aligned per governance profile or global gate')}
+                            title={marketText(upeSignal.overlayReasons?.length ? upeSignal.overlayReasons.join(' • ') : 'Blocked by the current data gate')}
                           >
-                            Not aligned
+                            Inputs differ
                           </button>
                         ) : (
                           <Link
@@ -779,7 +779,7 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
                     <p className="text-xs text-slate-200">Earnings: <span className="font-semibold">Upcoming schedule check</span> • News: <span className="font-semibold">{getAggregateSentiment(data.news)?.label || 'No ticker-specific news'}</span></p>
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1 text-[11px] text-slate-400">
-                    {upeSignal?.eligibilityUser === 'conditional' ? 'Conditional — trend + volume confirmation indicated.' : upeSignal?.eligibilityUser === 'blocked' ? 'Not aligned — conditions not aligned.' : 'Aligned — conditions broadly aligned.'}
+                    {upeSignal?.eligibilityUser === 'conditional' ? 'Conditional — trend + volume confirmation indicated.' : upeSignal?.eligibilityUser === 'blocked' ? 'Inputs differ.' : 'Inputs agree across the checks below.'}
                   </div>
                 </div>
               </div>

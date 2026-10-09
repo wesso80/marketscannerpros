@@ -11,6 +11,7 @@ describe('customer-rendered copy has no scores, grades, verdicts, or banned word
     expect(PHRASE_ALLOWLIST.length).toBeLessThanOrEqual(12);
     expect(PHRASE_ALLOWLIST.every((entry) => entry.reason.length > 20)).toBe(true);
     expect(SCAN_EXCLUSIONS.map((entry) => entry.reason).join('\n')).toMatch(/Admin pages/);
-    expect(SCAN_EXCLUSIONS.map((entry) => entry.reason).join('\n')).toMatch(/separate PR/);
+    expect(SCAN_EXCLUSIONS.some((entry) => entry.test('app/page.tsx'))).toBe(false);
+    expect(SCAN_EXCLUSIONS.some((entry) => entry.test('components/public-design/ResearchHome.tsx'))).toBe(false);
   });
 });

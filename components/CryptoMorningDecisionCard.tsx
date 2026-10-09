@@ -174,24 +174,24 @@ export default function CryptoMorningDecisionCard({ onDecision, compact = false 
 
     if (verdict === 'ALIGNED' && (!longsAllowed || !shortsAllowed)) verdict = 'CONDITIONAL';
 
-    const riskContext = verdict === 'ALIGNED' ? 'Standard review' : verdict === 'CONDITIONAL' ? 'Reduced conviction' : 'Observation';
+    const riskContext = verdict === 'ALIGNED' ? 'Standard review' : verdict === 'CONDITIONAL' ? 'Mixed inputs' : 'Observation';
 
     const subClusters = [
       {
         name: 'Large Caps',
-        condition: riskState === 'Risk-Off' ? 'Unfavorable' : leadership === 'Defensive Rotation' ? 'Mixed' : 'Favorable',
+        condition: riskState === 'Risk-Off' ? 'Caution' : leadership === 'Defensive Rotation' ? 'Mixed' : 'Same direction',
       },
       {
         name: 'Mid/Alts',
-        condition: !longsAllowed || breadthScore < 45 ? 'Unfavorable' : breadthScore >= 60 ? 'Favorable' : 'Mixed',
+        condition: !longsAllowed || breadthScore < 45 ? 'Caution' : breadthScore >= 60 ? 'Same direction' : 'Mixed',
       },
       {
         name: 'Meme/High Beta',
-        condition: verdict === 'ALIGNED' && liquidity === 'Expanding' && volatility !== 'Dislocation' ? 'Favorable' : 'Unfavorable',
+        condition: verdict === 'ALIGNED' && liquidity === 'Expanding' && volatility !== 'Dislocation' ? 'Same direction' : 'Caution',
       },
       {
         name: 'DeFi',
-        condition: liquidity === 'Expanding' && breadthScore >= 50 ? 'Favorable' : liquidity === 'Contracting' ? 'Unfavorable' : 'Mixed',
+        condition: liquidity === 'Expanding' && breadthScore >= 50 ? 'Same direction' : liquidity === 'Contracting' ? 'Caution' : 'Mixed',
       },
     ];
 

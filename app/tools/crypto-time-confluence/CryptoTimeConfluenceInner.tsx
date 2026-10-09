@@ -34,7 +34,7 @@ export default function CryptoTimeConfluenceInner() {
           <h1 className="text-4xl font-bold text-white mb-4">Crypto Close timing Engine</h1>
           <p className="text-lg text-slate-400 max-w-3xl mx-auto">
             Track crypto market cycles from 1 to 365 days, all anchored to the UTC daily close.
-            Detect when multiple important time cycles align for technically aligned setups.
+            Detect when multiple important time cycles close near each other.
           </p>
         </div>
         <div className="max-w-2xl mx-auto mb-12">

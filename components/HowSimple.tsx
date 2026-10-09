@@ -17,7 +17,7 @@ export default function HowSimple() {
     },
     {
       icon: BellAlertIcon,
-      title: "Review Aligned Setups",
+      title: "Review Matching Setups",
       text: "Set alerts, export CSVs, and monitor breakouts early — without the noise.",
     },
   ];

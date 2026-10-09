@@ -243,7 +243,7 @@ export default function EdgeInsightCards({ compact = false }: { compact?: boolea
       )}
 
       <div className="text-[9px] text-slate-600 leading-tight pt-1 border-t border-slate-800/40">
-        Past performance does not guarantee future results. notes from your own trades are based on your journal history and are for educational analysis only.
+        Past performance does not guarantee future results. Notes from your own trades are based on your journal history and are for educational analysis only.
       </div>
     </div>
   );

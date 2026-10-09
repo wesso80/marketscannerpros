@@ -54,7 +54,7 @@ export default function AboutPage() {
               </li>
               <li>
                 <strong>Close timing</strong> — proprietary timing
-                analysis that identifies technically aligned trade windows using
+                analysis that compares trade windows using
                 multi-timeframe data.
               </li>
             </ul>

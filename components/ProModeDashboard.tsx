@@ -103,10 +103,10 @@ export function ProModeDashboard({
               Indicators agreeing
             </div>
             <div style={{ color: 'var(--msp-flat)', fontSize: '12px' }}>
-              {probability.signalCount}/{probability.totalSignals} readings aligned
+              {probability.signalCount}/{probability.totalSignals} readings in agreement
             </div>
             <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px' }}>
-              Readings aligned
+              Readings in agreement
             </div>
           </div>
           
@@ -284,7 +284,7 @@ export function ProModeDashboard({
               {probability.signalCount}/{probability.totalSignals}
             </div>
             <div style={{ fontSize: '10px', color: 'var(--msp-flat)' }}>
-              Readings Aligned
+              Readings in agreement
             </div>
           </div>
           

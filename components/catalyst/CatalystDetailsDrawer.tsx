@@ -236,7 +236,7 @@ export default function CatalystDetailsDrawer({ study, open, onClose }: Props) {
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2 space-y-1">
                     <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">
-                      Max Favorable Excursion (MFE)
+                      Largest up move (MFE)
                     </p>
                     <StatRow label="Median" value={`+${study.intradayPath.mfePercent.median.toFixed(2)}`} unit="%" />
                     <StatRow label="P75" value={`+${study.intradayPath.mfePercent.p75.toFixed(2)}`} unit="%" />
