@@ -157,8 +157,8 @@ async function recordBookMark(workspaceId:string,book:{id:string;totalEquity:num
 }
 
 /** Read model for the Paper account view. Missing tables or rows yield nulls, never invented figures. */
-export async function giveBackView(portfolioId:string,positions:OpenPos[]){
- if(!ready)return null;
+export async function giveBackView(portfolioId:string,positions:OpenPos[],tablesAvailable=ready){
+ if(!tablesAvailable)return null;
  try{
   const [rows,marks]=await Promise.all([
    q<{position_id:string;status:string;mfe_r:number|null;mae_r:number|null;final_r:number|null;give_back:number|null;risk_usd:number|null;reason:string|null}>(`SELECT position_id,status,mfe_r,mae_r,final_r,give_back,risk_usd,reason FROM crypto_trade_excursions WHERE portfolio_id=$1`,[portfolioId]),
