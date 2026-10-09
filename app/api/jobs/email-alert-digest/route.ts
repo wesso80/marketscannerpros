@@ -1,3 +1,4 @@
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { NextRequest, NextResponse } from "next/server";
 import { verifyCronAuth } from "@/lib/adminAuth";
 import { sendDueAlertDigests } from "@/lib/alerts/emailControls";
@@ -12,7 +13,8 @@ export const maxDuration = 120;
  * which is 08:00 Sydney during AEDT and 07:00 during AEST.
  * Sends the previous Sydney day's queued alerts. No new Render service.
  */
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'job-email-alert-digest' }, () => POST(req));
   if (!verifyCronAuth(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }

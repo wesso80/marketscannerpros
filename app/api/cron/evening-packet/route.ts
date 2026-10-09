@@ -12,6 +12,7 @@
  * Auth: x-cron-secret header (CRON_SECRET env), or admin session.
  * Boundary: read-only aggregation + single insert. No execution.
  */
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { requireAdmin } from '@/lib/adminAuth';
@@ -92,7 +93,8 @@ async function persistPacket(workspaceId: string, dateISO: string, packetJson: u
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'cron-evening-packet' }, () => POST(req));
   if (!(await authorise(req))) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }

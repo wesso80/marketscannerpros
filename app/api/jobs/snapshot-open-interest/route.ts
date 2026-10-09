@@ -1,7 +1,9 @@
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyCronAuth } from '@/lib/adminAuth';
 import { getOiEvidence } from '@/lib/crypto/oiHistory';
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'job-snapshot-open-interest' }, () => POST(req));
  if (!verifyCronAuth(req)) return NextResponse.json({error:'Unauthorized'},{status:401});
  try {
   const data=await getOiEvidence();

@@ -7,6 +7,7 @@ import { sendPushToUser } from '@/lib/pushServer';
 import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
 import { DEFAULT_BACKTEST_STRATEGY, isBacktestStrategy } from '@/lib/strategies/registry';
 import { historyPriceInsert } from '@/lib/alerts/historyPrice';
+import { runWithAvBudget } from '@/lib/avLimiter';
 
 /**
  * Backtest Strategy Alerts Checker
@@ -71,11 +72,11 @@ interface BacktestSignal {
 }
 
 export async function GET(req: NextRequest) {
-  return checkStrategyAlerts(req);
+  return runWithAvBudget({ lane: 'alerts', feature: 'alerts-strategy-check' }, () => checkStrategyAlerts(req));
 }
 
 export async function POST(req: NextRequest) {
-  return checkStrategyAlerts(req);
+  return runWithAvBudget({ lane: 'alerts', feature: 'alerts-strategy-check' }, () => checkStrategyAlerts(req));
 }
 
 async function checkStrategyAlerts(req: NextRequest) {

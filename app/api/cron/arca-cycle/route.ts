@@ -1,3 +1,4 @@
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import {reportCryptoCycleHealth} from '@/lib/admin/cryptoOpsAlerts';
 import {runCryptoAutomation} from '@/lib/admin/cryptoAutomation';
 import {cryptoMarketsExitsPaused,cryptoMarketsPaused,pausedCryptoMarketsBody} from '@/lib/admin/cryptoMarketsPause';
@@ -60,7 +61,8 @@ async function authorise(req: NextRequest): Promise<boolean> {
   return session.ok;
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'cron-arca-cycle' }, () => POST(req));
   if (!(await authorise(req))) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }

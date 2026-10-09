@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { alertsHaveLastErrorColumn, readAlertPriceNotices } from '@/lib/alerts/priceNotice';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
@@ -143,6 +144,21 @@ export async function GET(req: NextRequest) {
     query += ` ORDER BY created_at DESC`;
 
     let alerts = await q(query, params);
+    const notices = await readAlertPriceNotices(alerts.map((alert: { id: string }) => alert.id));
+    if (await alertsHaveLastErrorColumn()) {
+      const stored = await q<{ id: string; last_error: string | null }>(
+        `SELECT id, last_error FROM alerts WHERE workspace_id = $1 AND last_error IS NOT NULL`,
+        [session.workspaceId],
+      ).catch(() => [] as { id: string; last_error: string | null }[]);
+      for (const row of stored) {
+        if (row.last_error && !notices[row.id]) notices[row.id] = row.last_error;
+      }
+    }
+    if (Object.keys(notices).length > 0) {
+      alerts = alerts.map((alert: { id: string }) => (
+        notices[alert.id] ? { ...alert, priceNotice: notices[alert.id] } : alert
+      ));
+    }
 
     // Fetch conditions for multi-condition alerts
     const multiAlertIds = alerts

@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { relationReady } from '@/lib/schema/relationReady';
 import { PLAYBOOKS } from '@/lib/doctrine/registry';
 
 const VALID_OUTCOMES = new Set(['win', 'loss', 'breakeven']);
@@ -52,6 +53,10 @@ export async function POST(req: NextRequest) {
   }
   if (!entryDate || !exitDate) {
     return NextResponse.json({ error: 'entryDate and exitDate are required' }, { status: 400 });
+  }
+
+  if (!(await relationReady('doctrine_outcomes'))) {
+    return NextResponse.json({ ok: false, unavailable: true });
   }
 
   try {

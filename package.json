@@ -85,6 +85,7 @@
   "devDependencies": {
     "@testing-library/react": "^16.3.3",
     "baseline-browser-mapping": "^2.10.0",
+    "ioredis": "^5.8.2",
     "jsdom": "^26.1.0",
     "postcss-scss": "^4.0.9",
     "stylelint": "^16.26.1",

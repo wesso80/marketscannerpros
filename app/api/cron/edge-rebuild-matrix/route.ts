@@ -6,6 +6,7 @@
  *
  * Auth: x-cron-secret header (CRON_SECRET env), or admin session.
  */
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { requireAdmin } from '@/lib/adminAuth';
@@ -40,7 +41,8 @@ async function authorise(req: NextRequest): Promise<boolean> {
   return session.ok;
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'cron-edge-rebuild-matrix' }, () => POST(req));
   if (!(await authorise(req))) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }

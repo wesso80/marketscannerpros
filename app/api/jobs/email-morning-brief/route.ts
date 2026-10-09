@@ -1,3 +1,4 @@
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, verifyCronAuth } from "@/lib/adminAuth";
 import { sendAlertEmail } from "@/lib/email";
@@ -27,7 +28,8 @@ export const maxDuration = 120;
  */
 const cronRunsInFlight = new Set<string>();
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'job-email-morning-brief' }, () => POST(req));
   const isCron = verifyCronAuth(req);
   const isAdmin = isCron ? false : (await requireAdmin(req)).ok;
 

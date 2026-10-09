@@ -6,6 +6,7 @@ import { buildTriggeredAlertContent } from '@/lib/email';
 import { sendPushToUser } from '@/lib/pushServer';
 import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
 import { historyPriceInsert } from '@/lib/alerts/historyPrice';
+import { runWithAvBudget } from '@/lib/avLimiter';
 
 /**
  * Scanner Signal Alerts Checker
@@ -63,11 +64,11 @@ interface ScanResult {
 }
 
 export async function GET(req: NextRequest) {
-  return checkSignalAlerts(req);
+  return runWithAvBudget({ lane: 'alerts', feature: 'alerts-signal-check' }, () => checkSignalAlerts(req));
 }
 
 export async function POST(req: NextRequest) {
-  return checkSignalAlerts(req);
+  return runWithAvBudget({ lane: 'alerts', feature: 'alerts-signal-check' }, () => checkSignalAlerts(req));
 }
 
 async function checkSignalAlerts(req: NextRequest) {

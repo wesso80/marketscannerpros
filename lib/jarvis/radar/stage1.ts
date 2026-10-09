@@ -4,9 +4,24 @@
  *   REALTIME_BULK_QUOTES     → 100 symbols per call: close, volume, change %
  * Output: a liquidity/mover-filtered candidate list for Stage 2 (daily series).
  */
-import { avTakeToken } from '../../avRateGovernor';
+import { avTakeToken, avTryToken } from '../../avRateGovernor';
 import { budget } from './budget';
 import { parseCsvLine } from '../../csv';
+
+/** Cold start waits through one full limiter minute before giving up on the first listings token. */
+export const JARVIS_LISTINGS_TOKEN_WAIT_MS = 65_000;
+
+export class StockListingsError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'StockListingsError';
+  }
+}
+
+/** Stage 1 must not continue as a quiet core-only scan when the listings file never arrived. */
+export function rethrowStockListingsFailure(error: unknown): void {
+  if (error instanceof StockListingsError) throw error;
+}
 
 export interface Listing { symbol: string; name: string; exchange: string; type: 'Stock' | 'ETF' }
 export interface BulkQuote { symbol: string; close: number; prevClose: number; changePct: number; volume: number; dollarVolume: number; tradingDay: string }
@@ -20,19 +35,53 @@ function splitCsv(line: string): string[] {
   return parseCsvLine(line).map((f) => f.trim());
 }
 
+async function waitForFirstListingsToken(): Promise<void> {
+  const started = Date.now();
+  for (;;) {
+    if (await avTryToken({ lane: 'backfill', feature: 'jarvis-listings' })) return;
+    if (Date.now() - started >= JARVIS_LISTINGS_TOKEN_WAIT_MS) {
+      throw new StockListingsError(`Stock listings download failed: no Alpha Vantage token for LISTING_STATUS after ${JARVIS_LISTINGS_TOKEN_WAIT_MS}ms`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+}
+
 export async function loadListings(): Promise<{ listings: Listing[]; total: number; excluded: number }> {
-  const key = process.env.ALPHA_VANTAGE_API_KEY; if (!key) return { listings: [], total: 0, excluded: 0 };
-  await avTakeToken(); budget.av++;
-  const res = await fetch(`https://www.alphavantage.co/query?function=LISTING_STATUS&apikey=${key}`, { signal: AbortSignal.timeout(30000) });
-  const text = await res.text();
+  const key = process.env.ALPHA_VANTAGE_API_KEY;
+  if (!key) throw new StockListingsError('Stock listings download failed: ALPHA_VANTAGE_API_KEY is not set');
+  try {
+    await waitForFirstListingsToken();
+  } catch (err) {
+    budget.errors++;
+    if (err instanceof StockListingsError) throw err;
+    throw new StockListingsError(`Stock listings download failed: no Alpha Vantage token for LISTING_STATUS (${err instanceof Error ? err.message : String(err)})`);
+  }
+  budget.av++;
+  let text = '';
+  try {
+    const res = await fetch(`https://www.alphavantage.co/query?function=LISTING_STATUS&apikey=${key}`, { signal: AbortSignal.timeout(30000) });
+    text = await res.text();
+    if (!res.ok) throw new StockListingsError(`Stock listings download failed: LISTING_STATUS returned HTTP ${res.status}`);
+  } catch (err) {
+    budget.errors++;
+    if (err instanceof StockListingsError) throw err;
+    throw new StockListingsError(`Stock listings download failed: LISTING_STATUS request failed (${err instanceof Error ? err.message : String(err)})`);
+  }
   const lines = text.split(/\r?\n/).filter(Boolean);
-  if (!lines[0]?.startsWith('symbol')) return { listings: [], total: 0, excluded: 0 };
+  if (!lines[0]?.startsWith('symbol')) {
+    budget.errors++;
+    throw new StockListingsError('Stock listings download failed: LISTING_STATUS did not return a stock listings file');
+  }
   const listings: Listing[] = []; let excluded = 0;
   for (const line of lines.slice(1)) {
     const [symbol, name, exchange, type, , , status] = splitCsv(line);
     if (status !== 'Active' || !ALLOWED_EXCHANGES.has(exchange) || (type !== 'Stock' && type !== 'ETF')) { excluded++; continue; }
     if (!/^[A-Z]{1,5}$/.test(symbol) || EXCLUDE_NAME.test(name ?? '')) { excluded++; continue; }
     listings.push({ symbol, name: name ?? '', exchange, type: type as 'Stock' | 'ETF' });
+  }
+  if (listings.length === 0) {
+    budget.errors++;
+    throw new StockListingsError('Stock listings download failed: LISTING_STATUS returned no stocks');
   }
   return { listings, total: lines.length - 1, excluded };
 }

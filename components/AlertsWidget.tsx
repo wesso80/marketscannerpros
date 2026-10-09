@@ -37,6 +37,7 @@ interface Alert {
   triggered_at?: string;
   trigger_count: number;
   last_price?: number;
+  priceNotice?: string;
   created_at: string;
   // Smart alert fields
   is_smart_alert?: boolean;
@@ -779,6 +780,9 @@ export default function AlertsWidget({
                     </div>
                   </div>
     
+                  {alert.priceNotice && (
+                    <p className="text-xs text-amber-300 mt-2">{alert.priceNotice}</p>
+                  )}
                   {alert.notes && (
                     <p className="text-xs text-slate-500 mt-2">{alert.notes}</p>
                   )}

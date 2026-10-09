@@ -1,3 +1,4 @@
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { NextRequest, NextResponse } from 'next/server';
 import { q, tx } from '@/lib/db';
 import { enqueueEngineJob } from '@/lib/engine/jobQueue';
@@ -238,7 +239,8 @@ async function closeEntry(args: {
   return result;
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'job-journal-auto-close' }, () => POST(req));
   try {
     const routeStart = Date.now();
 

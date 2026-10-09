@@ -24,6 +24,7 @@ import { q } from '@/lib/db';
 import { getOrComputeStudy } from '@/lib/catalyst/eventStudy';
 import { CatalystSubtype, type StudyCohort } from '@/lib/catalyst/types';
 import { verifyCronAuth } from '@/lib/adminAuth';
+import { runWithAvBudget } from '@/lib/avLimiter';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300; // 5 minutes
@@ -46,6 +47,10 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 }
 
 export async function POST(req: NextRequest) {
+  return runWithAvBudget({ lane: 'scheduled', feature: 'catalyst-study-compute' }, () => runCatalystCompute(req));
+}
+
+async function runCatalystCompute(req: NextRequest) {
   const startTime = Date.now();
 
   try {

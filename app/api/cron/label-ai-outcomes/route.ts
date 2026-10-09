@@ -1,3 +1,4 @@
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { maxRowsPerHorizon, labellerTimeBudgetMs, positionBudgetMs } from "@/lib/outcomes/labelBudget";
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
@@ -85,7 +86,8 @@ function candidateSql(horizon: OutcomeHorizon): string {
  * 7 days is expired. Every UPDATE is guarded on "not yet labelled for this horizon", so overlapping or duplicate runs
  * cannot relabel a row.
  */
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'cron-label-ai-outcomes' }, () => POST(req));
   // Accept cron secret (automated) or admin secret (manual trigger from admin panel)
   const cronSecret = process.env.CRON_SECRET || '';
   const adminSecret = process.env.ADMIN_SECRET || '';
