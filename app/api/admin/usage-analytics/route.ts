@@ -14,6 +14,7 @@ import { q } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminAuth';
 import { wrapTruth } from '@/lib/admin';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 type DegradationState = {
   failedQueries: string[];
   warnings: string[];
@@ -21,7 +22,7 @@ type DegradationState = {
 
 function recordQueryFailure(state: DegradationState, queryName: string, error: unknown) {
   state.failedQueries.push(queryName);
-  const message = error instanceof Error ? error.message : String(error);
+  const message = adminErrorText(error, '/api/admin/usage-analytics');
   state.warnings.push(`${queryName} unavailable: ${message}`);
   console.warn(`Usage analytics query failed: ${queryName}`, error);
 }
@@ -216,6 +217,6 @@ export async function GET(req: NextRequest) {
     });
   } catch (err: any) {
     console.error('Usage analytics error:', err);
-    return NextResponse.json({ error: 'Failed to load analytics', detail: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to load analytics', detail: adminErrorText(err, '/api/admin/usage-analytics') }, { status: 500 });
   }
 }

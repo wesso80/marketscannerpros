@@ -17,6 +17,7 @@ import { buildAdminResearchScan } from "@/lib/admin/getAdminResearchPacket";
 import { marketForSymbol, parseAdminMarket } from "@/lib/admin/adminMarket";
 import { defaultAdminMarket } from "@/lib/admin/defaultAdminMarket";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 
 export async function GET(
@@ -75,7 +76,7 @@ export async function GET(
   } catch (err: unknown) {
     console.error("[admin:symbol] Error:", err);
     return NextResponse.json(
-      { error: "Symbol fetch failed", detail: err instanceof Error ? err.message : "Unknown" },
+      { error: "Symbol fetch failed", detail: adminErrorText(err, '/api/admin/symbol/[symbol]') },
       { status: 500 },
     );
   }

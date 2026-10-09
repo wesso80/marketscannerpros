@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
 import { ingestInsiderForSymbol, recentInsiderForSymbol, insiderSummary } from '@/lib/insider/edgar';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
     ]);
     return NextResponse.json({ ok: true, summary, transactions });
   } catch (e: unknown) {
-    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: adminErrorText(e, '/api/admin/insider') }, { status: 500 });
   }
 }
 
@@ -43,6 +44,6 @@ export async function POST(req: NextRequest) {
     const result = await ingestInsiderForSymbol(body.symbol, { maxFilings: body.maxFilings });
     return NextResponse.json({ ok: true, result, durationMs: Date.now() - started });
   } catch (e: unknown) {
-    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: adminErrorText(e, '/api/admin/insider') }, { status: 500 });
   }
 }

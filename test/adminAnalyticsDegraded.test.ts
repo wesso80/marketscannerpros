@@ -37,7 +37,9 @@ describe('admin analytics degraded metadata', () => {
     expect(payload.meta.degraded).toBe(true);
     expect(payload.meta.failedQueries).toContain('total_workspaces');
     expect(payload.meta.failedQueries).toContain('stripe_paid_subscriptions');
-    expect(payload.meta.warnings.some((warning: string) => warning.includes('stats table missing'))).toBe(true);
+    // Admin audit A5: the warning names the failed query and a log reference, never the raw exception text.
+    expect(payload.meta.warnings.some((warning: string) => /unavailable: Request failed \(ref [0-9a-f]{8}\)/.test(warning))).toBe(true);
+    expect(JSON.stringify(payload)).not.toContain('stats table missing');
     expect(payload.overview.totalWorkspaces).toBe(0);
     expect(payload.overview.financials.monthlyCosts).toBeCloseTo(1365.08, 2);
     expect(payload.overview.financials.yearlyCosts).toBeCloseTo(1365.08 * 12, 2);
@@ -54,7 +56,9 @@ describe('admin analytics degraded metadata', () => {
     expect(payload.meta.failedQueries).toContain('active_users');
     expect(payload.meta.failedQueries).toContain('feature_adoption_journal');
     expect(payload.meta.failedQueries).toContain('top_active_workspaces');
-    expect(payload.meta.warnings.some((warning: string) => warning.includes('usage table missing'))).toBe(true);
+    // Admin audit A5: the warning names the failed query and a log reference, never the raw exception text.
+    expect(payload.meta.warnings.some((warning: string) => /unavailable: Request failed \(ref [0-9a-f]{8}\)/.test(warning))).toBe(true);
+    expect(JSON.stringify(payload)).not.toContain('usage table missing');
     expect(payload.activeUsers).toEqual({ dau: 0, wau: 0, mau: 0, online_now: 0 });
   });
 });

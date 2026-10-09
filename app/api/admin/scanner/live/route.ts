@@ -29,6 +29,7 @@ import { collapseHits } from "@/lib/admin/hitIntegrity";
 import { positionClearance } from "@/lib/admin/positionClearance";
 import { enrichStoredPositionEvidence } from "@/lib/admin/decisionEvidence";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
@@ -135,7 +136,7 @@ export async function GET(req: NextRequest) {
   } catch (err: unknown) {
     console.error("[admin:scanner:live] Error:", err);
     return NextResponse.json(
-      { error: "Scan failed", detail: err instanceof Error ? err.message : "Unknown" },
+      { error: "Scan failed", detail: adminErrorText(err, '/api/admin/scanner/live') },
       { status: 500 },
     );
   }

@@ -21,6 +21,7 @@ import {
 import { resolveAdminMarket } from "@/lib/admin/defaultAdminMarket";
 import { wrapTruth } from "@/lib/admin";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -79,7 +80,7 @@ export async function GET(req: NextRequest) {
   } catch (err: unknown) {
     console.error("[admin:morning-brief] Error:", err);
     return NextResponse.json(
-      { error: "Morning brief failed", detail: err instanceof Error ? err.message : "Unknown" },
+      { error: "Morning brief failed", detail: adminErrorText(err, '/api/admin/morning-brief') },
       { status: 500 },
     );
   }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
 import { requireAdmin } from '@/lib/adminAuth';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export async function GET(req: NextRequest) {
   if (!(await requireAdmin(req)).ok) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: any) {
     return NextResponse.json({ 
-      error: error.message,
+      error: adminErrorText(error, '/api/admin/check-db'),
       hint: "Check if ai_usage table exists"
     }, { status: 500 });
   }

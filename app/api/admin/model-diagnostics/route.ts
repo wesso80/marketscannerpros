@@ -26,6 +26,7 @@ import { wrapTruth } from "@/lib/admin";
 import { LABELLER_FIX_AT } from "@/lib/admin/signalStats";
 import { computeCalibration, type OutcomeRow } from "@/lib/admin/modelDiagnostics";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 
 const SIGNAL_WORKSPACE = "operator-terminal";
@@ -80,7 +81,7 @@ async function loadSignalOutcomes(field: ScoreField): Promise<SignalLoad> {
     ]);
     return { rows: rows ?? [], oldMethodLabelled: Number(old?.[0]?.n ?? 0) || 0, error: null };
   } catch (err) {
-    return { rows: [], oldMethodLabelled: 0, error: err instanceof Error ? err.message : String(err) };
+    return { rows: [], oldMethodLabelled: 0, error: adminErrorText(err, '/api/admin/model-diagnostics') };
   }
 }
 

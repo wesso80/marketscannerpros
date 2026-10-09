@@ -12,6 +12,7 @@ import { requireAdmin } from "@/lib/adminAuth";
 import { q } from "@/lib/db";
 import { wrapTruth } from "@/lib/admin";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 
 interface ResearchCaseInput {
@@ -114,7 +115,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, id: rows[0]?.id, createdAt: rows[0]?.created_at });
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to save research case" },
+      { error: adminErrorText(err, '/api/admin/research-cases') },
       { status: 500 },
     );
   }
@@ -145,7 +146,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ cases: rows, truth: wrapTruth({ count: rows.length }, { source: 'admin:postgres', freshness: 'real-time' }) });
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to load research cases" },
+      { error: adminErrorText(err, '/api/admin/research-cases') },
       { status: 500 },
     );
   }

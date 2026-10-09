@@ -22,6 +22,7 @@ import { isOperator } from "@/lib/quant/operatorAuth";
 import { q } from "@/lib/db";
 import { wrapTruth } from "@/lib/admin";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -86,7 +87,7 @@ export async function GET(req: NextRequest) {
     );
     surfacedCount = Number(surfaced?.count ?? 0);
   } catch (err) {
-    queryError = err instanceof Error ? err.message : String(err);
+    queryError = adminErrorText(err, '/api/admin/time-to-decision');
   }
 
   const latenciesMin: number[] = [];

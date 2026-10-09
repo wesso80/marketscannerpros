@@ -73,6 +73,8 @@ describe("GET /api/admin/backtest-lab", () => {
     m.q.mockRejectedValue(new Error("boom"));
     body = await (await backtestGET(new NextRequest("http://localhost/api/admin/backtest-lab"))).json();
     expect(body.note).toMatch(/unavailable/);
-    expect(body.error).toBe("boom");
+    // Admin audit A5: a log reference instead of the raw exception text.
+    expect(body.error).toMatch(/^Request failed \(ref [0-9a-f]{8}\)$/);
+    expect(JSON.stringify(body)).not.toContain("boom");
   });
 });

@@ -39,6 +39,7 @@ import {
   deriveOptionsEvidenceScore,
 } from "@/lib/admin/optionsMemo";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 export const maxDuration = 90;
 
@@ -172,7 +173,7 @@ export async function POST(req: NextRequest) {
     const v = validateOptionsMemo(parsed);
     aiResult = v.ok ? { ok: true, memo: { ok: true, memo: groundOptionsMemo(v.memo, snapshot, riskBudgetUSD) } } : { ok: false, reason: v.reason };
   } catch (e) {
-    aiResult = { ok: false, reason: e instanceof Error ? e.message : "openai_error" };
+    aiResult = { ok: false, reason: adminErrorText(e, '/api/admin/options-architect') };
   }
 
   if (!aiResult.ok) {
