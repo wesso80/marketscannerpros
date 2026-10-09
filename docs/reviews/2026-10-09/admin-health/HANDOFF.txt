@@ -1,0 +1,33 @@
+Admin Health overview — review handoff
+
+Base: origin/admin-integration at 88785fa7. Branch: codex/admin-health-overview.
+Scope: admin Health page, its existing API, new admin-only read model and tests.
+No public code, model, auth, worker schedule or paper mutation code changed.
+No merges or deployments authorized for this phase.
+
+Behavior
+- Shows web-service configuration separately from stored job outcomes. Enabled is not described as running.
+- Reads latest outcomes from worker:scheduler:last:<name>; skipped is distinct from succeeded.
+- Names schedule times as UTC. Missing, invalid and future run timestamps remain unknown.
+- Reads only current-workspace SIMULATED portfolio names, statuses and update timestamps with parameterized SELECT.
+- Never invokes cryptoPaperState, whose read path can initialize tables. Reconciliation explicitly not checked.
+- Removes rate-governor provider check, which deleted expired rate-limit members. Provider view is configuration-only.
+- Preserves the existing six health sections. Macro observation dates are no longer used to infer ingest success.
+- Discovery-paused evening packet job is not marked failed solely for old stored data.
+- Raw dependency errors withheld. All responses private/no-store. Authorization runs before data reads.
+- Failed refresh remains visible beside the older snapshot; overlapping refresh requests suppressed.
+
+Verification
+- Project TypeScript clean using --typeRoots ./node_modules/@types (excludes unrelated parent react-native ambient globals).
+- test/admin run: 1,545 passed, six SQL-vs-string failures caused by CRLF in isolated Windows validation checkout.
+- All six affected migration comparison suites passed after LF normalization in validation copy only (26 tests). No test assertions changed.
+- Eight new tests cover denial, auth exceptions, read-only SELECTs, workspace isolation, missing telemetry, redaction, skipped outcomes and invalid timestamps.
+- Browser fixture renders actual Health component with generated Tailwind styles at 1280 and 390 widths: no horizontal overflow; stale warning remains after failed refresh.
+- Browser fixture is not a deployed app or full admin-shell integration check. All data is synthetic.
+
+Limits / follow-up
+- Worker environment can differ from web environment; control flags are labelled accordingly.
+- Only last run retained, for up to seven days; no last-success history if the newest run failed.
+- Separate Render cron services, process liveness and paper reconciliation not monitored by this overview.
+- Verify with real authenticated staging data and Claude's access changes after integration, without production mutations.
+- Next suggested task: audit and separate the paper-account read path from schema initialization, on its own branch.

@@ -30,6 +30,7 @@ import {
   deriveSectorEvidenceScore,
 } from "@/lib/admin/sectorMemo";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
@@ -124,7 +125,7 @@ export async function POST(req: NextRequest) {
     const v = validateSectorMemo(parsed);
     aiResult = v.ok ? { ok: true, memo: v } : { ok: false, reason: v.reason };
   } catch (e) {
-    aiResult = { ok: false, reason: e instanceof Error ? e.message : "openai_error" };
+    aiResult = { ok: false, reason: adminErrorText(e, '/api/admin/sector-rotation') };
   }
 
   if (!aiResult.ok) {

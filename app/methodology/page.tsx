@@ -5,7 +5,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Methodology & Glossary",
   description:
-    "How MarketScanner Pros builds a reading: independent factor groups, evidence quality, lifecycle stage, extension state, data freshness, and market regime. The page describes the method and the data. Educational market analysis, not financial advice.",
+    "How MarketScannerPros builds a reading: independent factor groups, evidence quality, lifecycle stage, extension state, data freshness, and market regime. The page describes the method and the data. Educational market analysis, not financial advice.",
   alternates: { canonical: "/methodology" },
   robots: { index: true, follow: true },
 };
@@ -66,7 +66,7 @@ export default function MethodologyPage() {
             </section>
 <CollapsibleSection title="How to interpret the evidence">
 <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
-            MarketScanner Pros is an educational market-analysis platform. A reading is a
+            MarketScannerPros is an educational market-analysis platform. A reading is a
             <strong className="text-slate-200"> composite summary of the indicators and dates on the page</strong> — not a statistical probability,
             not a forecast, and never a personalised instruction to buy, sell, or hold. This page explains the method and the data
             behind each badge and state so you can judge the evidence for yourself.
@@ -159,13 +159,13 @@ export default function MethodologyPage() {
 
 </CollapsibleSection>
             <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.05] p-2 text-xs leading-5 text-slate-300">
-              MarketScanner Pros provides market data, analytical tools and educational research. It does not provide
+              MarketScannerPros provides market data, analytical tools and educational research. It does not provide
               personalised financial advice. Trading involves substantial risk. See our{" "}
               <Link href="/disclaimer" className="text-emerald-400 no-underline hover:underline">disclaimer</Link>{" "}
               and{" "}
               <Link href="/compliance-hub" className="text-emerald-400 no-underline hover:underline">compliance hub</Link>.
             </div>
-            <p data-source-line className="text-xs text-slate-400">Source · MarketScanner Pros methodology</p>
+            <p data-source-line className="text-xs text-slate-400">Source · MarketScannerPros methodology</p>
           </div>
         </div>
       </div>

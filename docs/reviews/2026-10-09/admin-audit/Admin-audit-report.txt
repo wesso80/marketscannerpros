@@ -1,0 +1,120 @@
+MarketScannerPros — read-only admin audit
+9 October 2026 (Australia/Sydney)
+
+AUDITED BASE
+Repository: wesso80/marketscannerpros
+Remote fetched before inspection. origin/main: c268bf625562f6f6c77ab28e748b888a16662005 (#543 release).
+Local inspection tree: C:/Users/brad/Documents/Codex/msp-combined-review. Its application tree matches this main commit; local candidate history differs because integration was prepared locally.
+No applicable AGENTS.md was found in the inspected checkout/ancestor paths or tracked repository. Read the private doctrine .claude/ADMIN_TERMINAL.md and .claude/ADMIN_RULES.md as architectural context.
+
+SCOPE AND LIMITS
+Read-only source audit and existing local tests. No application files edited, no branches pushed, no deployment, no live admin requests, provider requests, account mutations, scheduler runs or production database queries. Reports and inventories are saved only under outputs/admin-audit-2026-10-09.
+Inventory covers all admin page files and admin API route files. Deep review concentrates on entry/authentication, pause controls, crypto automation/paper accounting, scoring contracts, scheduler integration, public dependencies and representative business/mutation endpoints. This is not a line-by-line security proof of every helper or statistical validation of every model. No authenticated visual admin session was available or exercised.
+
+MAIN CONCLUSION
+Keep the private research functionality and models. Improve operational visibility and consistency before adding more screens. Admin is NOT a completely isolated application: identity, provider budgets, Redis/database infrastructure, webhooks and the worker are shared. An admin-only URL does not imply an admin-only effect.
+
+INVENTORY
+81 admin pages; 148 /api/admin route files; 84 are write-capable (including the growth alias); 221 lib/admin TypeScript files; 108 components/admin TSX files; 172 test/admin test files.
+Default discovery-only evaluation: 15 page routes allowed, 66 paused. These are code defaults, NOT a claim about production environment values. Route-specific equity/crypto pause flags can further change effective availability.
+Files supplied:
+- admin-pages.txt: complete page-file list.
+- admin-page-default-states.json: each page and its default discovery-only decision.
+- admin-api-inventory.csv: routes, exported methods, authentication markers, cache/header/origin text markers and direct imports.
+- admin-shared-imports.csv: 59 direct alias-import edges from outside the admin folders into lib/admin. Not a complete transitive dependency graph; relative imports and shared helpers outside lib/admin require review too.
+- file-reference-index.txt: key code anchors.
+Inventory markers are static search evidence, not proof of enforcement. Missing per-route cache text does NOT mean the response is cacheable: next.config.mjs applies no-store API headers globally.
+
+CAPABILITY MAP
+1. Crypto research: /admin/crypto-markets, /admin/crypto-discovery; /api/admin/crypto-markets/* and crypto-discovery/*; components/admin/Crypto*; lib/admin/crypto*. Discovery, momentum, bases, volume, context, Jev, replay, calibration, forward scores and model variants are private research systems. Most are explicitly allowed during discovery-only mode. Preserve their models and evidence labels.
+2. Paper accounts: CryptoPaperAccount and crypto-markets/paper; /admin/portfolio-lab/* and /api/admin/portfolio-lab/*. Account creation, cycles, reset, orders, fills, exits, reconciliation and journal operate on simulated ledgers. The crypto response's field named "live" still explicitly says mode SIMULATED; it is not proof of broker execution. ARCA pages are generally paused by discovery-only.
+3. Equity/options research: equity-research, transcripts, symbol/[symbol], terminal/[symbol], live-scanner, operator-terminal, quant-screener, options-architect. Selected Jev equity/transcript evidence is allowed; most other workflows pause by default. ADMIN_EQUITIES_PAUSED adds a separate restriction.
+4. Scores/models/learning: lib/admin/scoring.ts, truth layers, model diagnostics, learning engine, replay, backtest and outcomes. Opportunity, evidence quality and personal exposure are intentionally separate; do not apply the public score-removal redesign to these private contracts.
+5. Operations/data: health, data-health, operator-health, engine-health, research-scheduler, logs; lib/worker/schedule.ts and worker/scheduler.ts/ingest-data.ts. The same worker also performs public ingestion and user-facing jobs. It cannot be stopped wholesale to pause admin work.
+6. Business: usage, income, subscriptions, trials, AI usage, costs, deletion requests. Discovery-only explicitly allows read-only views while blocking their write methods. Trial/subscription/deletion writes directly affect public users and are outside the new admin-only scope.
+7. Delivery/growth: alerts, Discord bridge, research notifications, marketing/growth routes and email jobs. These can have external side effects; never test them by sending live messages during admin UI work.
+
+EXISTING PROTECTIONS TO PRESERVE
+- middleware.ts:167 protects /api/admin before route handlers; admin pages redirect unauthenticated visitors. Most handlers independently call requireAdmin.
+- lib/adminAuth.ts uses signed admin sessions, timing-safe secret comparisons and HttpOnly/SameSite cookies. Admin sessions have a 12-hour lifetime.
+- The two routes lacking the inventory's common auth markers are explained: claude/growth re-exports the guarded growth handler; crypto-markets/summary validates a dedicated CRYPTO_SUMMARY_KEY and is the narrow middleware bot exception. They are not unguarded routes on this evidence.
+- lib/publicDesign.ts:24 excludes /admin, /operator and /v2 from public design routing. Keep that exclusion.
+- discoveryOnly.ts, adminEquities.ts and cryptoMarketsPause.ts separate admin pauses from shared public ingestion. Crypto entry/spend pause and simulated-exit pause are distinct switches.
+- Paper account reads/writes commonly constrain workspace and portfolio IDs, use transactions/row locks, and expose reconciliation and simulated labels. Portfolio reset archives prior ledgers and validates the current portfolio ID, rather than deleting personal holdings.
+- cryptoAutomation.ts uses an NX/TTL reservation and token-checked release; paper cycle/accounting tests cover additional coordination. Do not replace these with an unguarded UI-triggered loop.
+- Global API response headers already prohibit caching; specific private responses add private/no-store. Redis admin prefixes and workspace-scoped ledger queries serve different purposes and must remain distinct.
+- scoring.ts defines three independent scoring layers. A high personal-exposure flag must not suppress an otherwise valid research opportunity.
+
+FINDINGS / PRIORITY
+A1 — P1: Authentication decisions differ across entry layers (confirmed code discrepancy; production incidence unknown).
+Evidence: middleware.ts:90 admits a signed is_admin claim or email/CID list. lib/adminAuth.ts:107 additionally uses isOperator with workspace matching. middleware.ts:277 refreshes ms_auth without retaining is_admin. app/api/auth/login/route.ts issues is_admin on Stripe-customer-ID sessions as well as email-prefixed sessions.
+Consequence: an administrator with a cus_* identity can lose the middleware admission claim after a refresh on a public page, even though the route helper can still recognise the workspace. Separately, AdminClientLayout advertises secret-based verification, but middleware rejects a cookie-free /api/admin/verify request before its secret-checking handler. This legacy path should be clarified, not fixed by broadly allowing secret headers everywhere.
+Tests currently cover helper acceptance and route source wiring, not the full middleware -> route -> refresh lifecycle.
+Proposal: a dedicated admin authentication contract and cross-layer tests. Decide whether the legacy secret login is supported or retired. Do NOT edit public login/refresh code under the present admin-only authorization; any shared-auth change needs its own scope review and public regression checks.
+Acceptance: signed-out/non-admin refused; approved admin session accepted; valid administrative app identity behaves consistently through refresh; invalid bot/header credentials cannot bypass middleware; public sign-in/tier outcomes unchanged.
+
+A2 — P1 boundary constraint: Admin business and worker operations can change public behavior (confirmed dependency, not a newly discovered exploit).
+Evidence: app/api/admin/trials/route.ts updates user_subscriptions; admin kill-switch uses lib/universe/personalUniverse; worker/ingest-data.ts and lib/worker/schedule.ts combine public ingestion, user jobs and admin jobs. Public CoinGecko webhook imports admin new-listing helpers.
+Proposal: classify all proposed edits as private presentation, private research, or shared/public-effecting before implementation. Keep business writes, public entitlement storage, provider governors, shared cron jobs and schema changes out of this workstream.
+Acceptance: public files unchanged; any shared-helper diff separately approved; no provider budget or worker schedule changes; no public response/entitlement/cache changes.
+
+A3 — P2: Reading the crypto paper account can perform schema setup (confirmed).
+Evidence: app/api/admin/crypto-markets/paper/route.ts:12 -> cryptoPaperState at lib/admin/cryptoPaper.ts:154 -> ensureExcursionTables and ensureSignalLedger. cryptoSignalLedger.ts:21/45 contains CREATE TABLE IF NOT EXISTS and executes the DDL statements. Errors are swallowed for optional sections.
+Consequence: a supposedly read-only dashboard view can require DDL rights, add cold-start database work, and hide a missing-schema condition behind absent sections. No production call was made to reproduce this.
+Proposal: move setup to explicit migrations in a separately authorised database task; have reads report readiness without DDL. Until then, do not use live paper-account GETs as a guaranteed read-only audit mechanism.
+Acceptance: GET executes no CREATE/ALTER/UPDATE; missing tables return a clear readiness state; existing ledger read/accounting behavior unchanged; migration tested only on an isolated database first.
+
+A4 — P2: Mutation protection and scope presentation are inconsistent (confirmed examples, not a claim all routes are vulnerable).
+Evidence: portfolio-lab/reset/route.ts:8 checks origin, current portfolio ID, simulated mode, row lock and private headers. crypto-markets/paper/route.ts:21 has no corresponding origin call and exposes both workspace paper actions and global automation actions. cryptoAutomation.ts:9/14 writes one global Redis automation key, not a workspace-specific setting.
+Consequence: an operator can reasonably confuse account-specific controls with a platform-wide toggle; the different route contracts are harder to audit. Existing session cookies and middleware remain protections; no cross-site exploit was demonstrated.
+Proposal: explicit global-versus-workspace labels, actor/reason audit events and a standard admin mutation wrapper where appropriate. Keep existing lock/idempotency behavior.
+Acceptance: action scope shown before mutation; denied action causes no provider/SQL work; cross-origin policy tested; repeated destructive request does not duplicate effects; public accounts untouched.
+
+A5 — P2: Admin error responses can expose internal exception text.
+Evidence: app/api/admin/kill-switch/route.ts:22/38 returns e.message/String(e) to the browser. Authentication still applies, so this is not evidence of anonymous exposure. Other handlers already return generic errors.
+Proposal: admin-only generic error responses with server correlation IDs; retain diagnostics in controlled logs.
+Acceptance: injected DB/provider error strings never appear in browser JSON; logs permit diagnosis without secrets; status and fail-closed behavior preserved.
+
+A6 — P2: Settings is a placeholder, and navigation has competing definitions.
+Evidence: app/admin/settings/page.tsx:6 renders explanatory cards without working controls. app/admin/admin-client-layout.tsx:70 defines the active extensive navigation; components/admin/layout/AdminShell.tsx and AdminSidebar.tsx define another shell/menu. Static search found no consumer of that alternate AdminShell. Discovery mode already hides many inactive destinations.
+Proposal: improve the active admin shell only; label unavailable features honestly. Do not build controls that change public credentials or billing as a cosmetic settings task. Confirm alternate-shell reachability before removal.
+Acceptance: one deliberate navigation source, working paths only, explicit active/paused state, no unimplemented settings promise; no public layout edits.
+
+A7 — P2: Status needs to explain the combination of pauses, data age and job outcome.
+Evidence: 66/81 pages pause under the default discovery-only rule, while admin equity pause, crypto spend pause, crypto exit pause, CoinGecko enablement and automation each have separate controls. Scheduler already distinguishes skipped from failed outcomes.
+Proposal: an admin-only status overview showing effective state, reason, last successful observation/run, source and next expected run. Display stored telemetry instead of adding polling that spends provider quota.
+Acceptance: intentionally skipped jobs never look failed or healthy-but-running; missing data never becomes zero; UI remains useful when Redis/provider services fail; no flag is toggled by viewing the page.
+
+PUBLIC BOUNDARY FOR FUTURE WORK
+Usually safe starting scope: admin presentation components and admin-only read models after import review. No automatic approval merely because a path contains admin.
+Protected: app/tools/**, components/public-design/**, lib/research/public* projections, public API routes, public quota/entitlement/auth logic, shared provider fetchers/governors, Redis and DB helpers, render.yaml, worker ingestion/schedules, webhooks and production schemas.
+Keep internal grades, verdicts, scoring, models, crypto engines and simulated accounts unchanged unless a later admin task explicitly calls for that change. No broker/order execution work is proposed.
+For each implementation PR: list changed files; identify direct/transitive public consumers; include denied-access and private-response tests; demonstrate no public route/UI snapshot changes; avoid public migrations/settings changes as incidental work.
+
+VALIDATION
+Existing test/admin suite: 1,541 passed, zero failed, zero skipped. Separate adminVerify suite: 4 passed. Logs and JSON are alongside this report. These are local mocked/fixture tests, not live-account or provider verification. The test source is the release-equivalent isolated checkout with committed dependencies. No new application tests or fixes were added.
+Source inventory resolved the two apparent auth-marker exceptions manually. Public cache isolation was not assumed: global no-store configuration and representative route headers were inspected, while Redis cache contents/production configuration were not accessed.
+
+PRIORITISED IMPLEMENTATION BACKLOG
+1. Admin health/status overview and active navigation inventory (smallest safe first build). Show stored pause/source/job/ledger states; add no mutation capability or provider polling. Use existing /admin/health rather than another overlapping dashboard. Keep public files unchanged.
+2. Admin auth lifecycle tests and supported-login decision (A1). Any change to shared authentication is a separate reviewed scope, not silently bundled with design work.
+3. Admin mutation contract/scope labels and error hygiene (A4/A5), one domain at a time, starting with paper controls; preserve accounting and locks.
+4. Move read-path DDL to a controlled migration/readiness workflow (A3), isolated rehearsal first; no production schema action under this audit.
+5. Consolidate admin navigation and replace/label placeholder settings (A6). Then redesign the private research workflows around their own purposes, retaining models/scores.
+6. Deep model/data-quality audit by domain: Crypto -> paper accounting/replay -> equity/options -> learning. Verify formulas, observation dates, samples and costs with archived fixtures before requesting fresh providers.
+
+OPEN QUESTIONS / UNVERIFIED
+- Which admin pause/enable flags are actually set in production? Defaults only were evaluated.
+- Should admin-secret login remain available, or is signed operator login the intended single entry point?
+- Is global automation intentionally shared by all admin workspaces? The current code is global.
+- Should paused equity/ARCA workflows stay paused? Do not turn them on as part of a UI refresh.
+- Which read-time schema setup routines remain necessary on existing databases? No production schema was inspected.
+- No live visual/navigation audit, provider-spend measurement, model backtest rerun or database transaction integration test was performed.
+
+RECOMMENDED NEXT TASK
+Build the admin-only health/status overview from stored telemetry, with active/paused/read-only labels and a clear admin/public dependency check. Preserve all research models and public behavior. Separately prioritise authentication lifecycle tests before expanding admin access.
+
+CLAUDE HANDOFF / USER CONSTRAINT — 9 October 2026
+This audit and its inventories are now copied into docs/reviews/2026-10-09/admin-audit for shared review. The original audit wrote only local output artifacts; this follow-up adds documentation only.
+User instruction: work on admin only; do not touch public behavior. No deployments until the admin work is complete and the user explicitly approves release. Do not merge work into an auto-deploying main branch during development. Keep work on separate draft branches and coordinate file ownership before editing shared areas.
+Suggested first workstream: existing admin Health page, using stored telemetry to explain active/paused/read-only status, freshness and job outcome. No new provider requests, model changes, paper-account mutations, environment toggles or public dependency edits as incidental work. Authentication lifecycle issues and read-time DDL are separate scoped follow-ups.

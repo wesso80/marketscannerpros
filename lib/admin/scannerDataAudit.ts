@@ -63,13 +63,13 @@ export async function scannerDataAudit(refresh=false):Promise<ScannerAuditReport
    FROM ohlcv_bars b LEFT JOIN symbol_universe u ON u.symbol=b.symbol WHERE b.timeframe='daily' GROUP BY b.symbol,u.asset_type`);
  const rows:SymbolDepth[]=depth.map(r=>({symbol:r.symbol,asset:r.asset??'unknown',bars:Number(r.bars),first:new Date(r.first).toISOString(),last:new Date(r.last).toISOString(),zeroVolume:Number(r.zero)}));
  const tfs=await q<{timeframe:string;n:string;symbols:string}>(`SELECT timeframe,COUNT(*) n,COUNT(DISTINCT symbol) symbols FROM ohlcv_bars GROUP BY timeframe ORDER BY 2 DESC`);
- const uni=await q<{asset:string;enabled:string;without:string}>(
-  `SELECT u.asset_type asset,COUNT(*) enabled,COUNT(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM ohlcv_bars b WHERE b.symbol=u.symbol AND b.timeframe='daily')) without FROM symbol_universe u WHERE u.enabled GROUP BY u.asset_type ORDER BY 2 DESC`);
+ const uni=await q<{asset:string;enabled:string;without_bars:string}>(
+  `SELECT u.asset_type asset,COUNT(*) enabled,COUNT(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM ohlcv_bars b WHERE b.symbol=u.symbol AND b.timeframe='daily')) AS without_bars FROM symbol_universe u WHERE u.enabled GROUP BY u.asset_type ORDER BY 2 DESC`);
  let cryptoHistory:ScannerAuditReport['cryptoHistory'];
  try{const [c]=await q<{coins:string;days:string;first:string|null;last:string|null}>(`SELECT COUNT(DISTINCT coin_id) coins,COUNT(DISTINCT day) days,MIN(day)::text first,MAX(day)::text last FROM cg_hist_daily`);
   cryptoHistory={coins:Number(c?.coins??0),days:Number(c?.days??0),first:c?.first??null,last:c?.last??null};}
  catch{cryptoHistory={unavailable:'CoinGecko history tables not created (History data job not run)'};}
- const assets=summarise(rows,now),universe=uni.map(u=>({asset:u.asset,enabled:Number(u.enabled),withoutBars:Number(u.without)}));
+ const assets=summarise(rows,now),universe=uni.map(u=>({asset:u.asset,enabled:Number(u.enabled),withoutBars:Number(u.without_bars)}));
  const report:ScannerAuditReport={version:SCANNER_AUDIT.version,generatedAt:new Date(now).toISOString(),source:'Neon: ohlcv_bars (worker daily bars), symbol_universe, cg_hist_daily',cached:false,
   assets,timeframes:tfs.map(t=>({timeframe:t.timeframe,rows:Number(t.n),symbols:Number(t.symbols)})),universe,cryptoHistory,
   calibration:{version:CALIBRATION_META.version,generated:CALIBRATION_META.generated,horizonBars:CALIBRATION_META.horizonBars},findings:findings(assets,universe)};

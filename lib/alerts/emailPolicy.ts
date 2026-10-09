@@ -144,9 +144,9 @@ export function escapeHtml(value: string): string {
 
 export function appendUnsubscribeNotice(html: string, text: string | undefined, url: string): { html: string; text: string } {
   const safeUrl = escapeHtml(url);
-  const link = `<p style="margin-top:24px;font-size:12px;line-height:1.5;color:#4b5563;">You get these alert emails because you have an alert on MarketScanner Pros. <a href="${safeUrl}">Unsubscribe from alert emails</a>. Sign-in emails are not affected.</p>`;
+  const link = `<p style="margin-top:24px;font-size:12px;line-height:1.5;color:#4b5563;">You get these alert emails because you have an alert on MarketScannerPros. <a href="${safeUrl}">Unsubscribe from alert emails</a>. Sign-in emails are not affected.</p>`;
   const nextHtml = /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${link}</body>`) : `${html}${link}`;
-  const base = text && text.trim() ? text.replace(/\s+$/, "") : "MarketScanner Pros alert.";
+  const base = text && text.trim() ? text.replace(/\s+$/, "") : "MarketScannerPros alert.";
   const nextText = `${base}\n\nUnsubscribe from alert emails: ${url}\nSign-in emails are not affected.\n`;
   return { html: nextHtml, text: nextText };
 }

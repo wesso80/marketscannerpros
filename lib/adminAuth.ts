@@ -1,14 +1,16 @@
 import crypto from 'crypto';
+import { validAdminWriteOrigin } from './admin/adminWriteOrigin';
 import { cookies } from 'next/headers';
 import { hashWorkspaceId, signSessionToken, verifySessionToken } from './auth';
 import { isOperator } from './quant/operatorAuth';
+import { adminEmailList, researchReadGrant, RESEARCH_READ_HEADER } from './admin/researchReadKey';
 
 export const ADMIN_SESSION_COOKIE = 'ms_admin';
 const ADMIN_SESSION_MAX_AGE = 60 * 60 * 12;
 
 export type AdminAuthResult = {
   ok: boolean;
-  source?: 'admin_session' | 'app_session' | 'admin_secret';
+  source?: 'admin_session' | 'app_session' | 'admin_secret' | 'research_key';
   cid?: string;
   workspaceId?: string;
 };
@@ -68,7 +70,7 @@ export function verifyAdminAuth(request: Request): boolean {
 
   const header = request.headers.get('x-admin-secret') ?? request.headers.get('authorization') ?? '';
   const stripped = header.replace(/^Bearer\s+/i, '');
-  return isValidAdminSecret(stripped, adminSecret);
+  return isValidAdminSecret(stripped, adminSecret) && validAdminWriteOrigin(request, 'header');
 }
 
 export function createAdminSessionToken(subject: string = 'admin_secret'): string {
@@ -93,6 +95,8 @@ async function verifyAdminSessionCookie(): Promise<AdminAuthResult> {
   try {
     const payload = verifySessionToken(token);
     if (payload.kind !== 'admin') return { ok: false };
+    // Revocation: the cookie's identity must still be an admin (same rule as middleware).
+    if (typeof payload.cid !== 'string' || !isOperator(payload.cid)) return { ok: false };
     return {
       ok: true,
       source: 'admin_session',
@@ -106,7 +110,7 @@ async function verifyAdminSessionCookie(): Promise<AdminAuthResult> {
 
 export async function verifyAdminRequest(request: Request): Promise<AdminAuthResult> {
   const adminSession = await verifyAdminSessionCookie();
-  if (adminSession.ok) return adminSession;
+  if (adminSession.ok) return validAdminWriteOrigin(request, 'cookie') ? adminSession : { ok: false };
 
   const cookieStore = await cookies();
   const appToken = cookieStore.get('ms_auth')?.value;
@@ -116,6 +120,7 @@ export async function verifyAdminRequest(request: Request): Promise<AdminAuthRes
       const cid = typeof payload.cid === 'string' ? payload.cid : '';
       const workspaceId = typeof payload.workspaceId === 'string' ? payload.workspaceId : undefined;
       if (cid && isOperator(cid, workspaceId)) {
+        if (!validAdminWriteOrigin(request, 'cookie')) return { ok: false };
         return { ok: true, source: 'app_session', cid, workspaceId };
       }
     } catch {
@@ -123,11 +128,29 @@ export async function verifyAdminRequest(request: Request): Promise<AdminAuthRes
     }
   }
 
+  // Read-only research key: only GET/HEAD on allowlisted read paths (lib/admin/researchReadKey.ts). Acts as the
+  // configured admin's /admin/login workspace so reads match what that admin sees; never authorizes writes.
+  const research = researchReadFromRequest(request);
+  if (research) return research;
+
   if (verifyAdminAuth(request)) {
     return { ok: true, source: 'admin_secret', cid: 'admin_secret', workspaceId: hashWorkspaceId('admin_secret') };
   }
 
   return { ok: false };
+}
+
+function researchReadFromRequest(request: Request): AdminAuthResult | null {
+  let url: URL;
+  try { url = new URL(request.url); } catch { return null; }
+  const grant = researchReadGrant({
+    pathname: url.pathname, method: request.method, searchParams: url.searchParams,
+    headerValue: request.headers.get(RESEARCH_READ_HEADER),
+    keysRaw: process.env.ADMIN_RESEARCH_READ_KEYS, email: process.env.ADMIN_RESEARCH_READ_EMAIL,
+    adminEmails: adminEmailList(process.env.ADMIN_EMAILS),
+  });
+  if (!grant || !isOperator(grant.cid)) return null;
+  return { ok: true, source: 'research_key', cid: grant.cid, workspaceId: hashWorkspaceId(grant.cid) };
 }
 
 export async function requireAdmin(request: Request): Promise<AdminAuthResult> {

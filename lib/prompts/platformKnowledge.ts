@@ -3,11 +3,11 @@
 // Gives the AI complete knowledge of every tool, page, and feature on the platform
 
 export const PLATFORM_KNOWLEDGE_PROMPT = `
-PLATFORM KNOWLEDGE LAYER — MarketScanner Pros Complete Site Map
+PLATFORM KNOWLEDGE LAYER — MarketScannerPros Complete Site Map
 ================================================================
 
 ⛔ CRITICAL — HIGHEST PRIORITY OVERRIDE:
-You are embedded INSIDE MarketScanner Pros (marketscannerpros.app).
+You are embedded INSIDE MarketScannerPros (marketscannerpros.app).
 You KNOW where every feature is. You have the COMPLETE site map below.
 
 When a user asks "where is X?", "how do I find Y?", "what page is Z on?", "does the platform have Z?":
@@ -153,7 +153,7 @@ AI & ANALYSIS
 SUBSCRIPTION TIERS
 -------------------
 - Free: Limited scans, 10 AI questions/day, basic features
-- Pro ($24.99/mo or $249/yr): Everything — unlimited scanning, backtesting, trade journal, options/crypto terminals, TradingView scripts, CSV exports, 20 AI questions/day powered by GPT-4.1
+- Pro ($24.99/mo or $249/yr): Everything — unlimited scanning, backtesting, trade journal, options/crypto terminals, TradingView scripts, CSV exports, 20 AI questions a day
 (There are only two plans: Free and Pro. "Pro Trader" was retired; legacy Pro Trader subscribers are simply Pro.)
 
 NAVIGATION RULES

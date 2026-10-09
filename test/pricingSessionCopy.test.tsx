@@ -34,7 +34,7 @@ it('an unauthenticated tier claim does not grant plan management',async()=>{
  expect(screen.getByText('No card needed for Free.')).toBeTruthy();
 });
 it('approved pricing uses configured prices, states the AI cap and the 7-day trial from the Terms',async()=>{
- render(<PricingPage/>);await screen.findByText('Educational MSP Copilot: 20 questions per day');
+ render(<PricingPage/>);await screen.findByText('20 AI questions a day');
  expect(document.body.textContent).toContain('US'+PLAN_PRICES.pro.monthly);
  fireEvent.click(screen.getByRole('button',{name:'Annual'}));
  expect(document.body.textContent).toContain('US'+PLAN_PRICES.pro.yearly);

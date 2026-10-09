@@ -16,7 +16,8 @@ it('places every evidence section before the labelled AI explanation', async () 
   const narrative = container.querySelector('[data-summary-narrative]')!;
   for (const section of container.querySelectorAll('[data-summary-block]')) expect(section.compareDocumentPosition(narrative) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(container.querySelectorAll('[data-summary-block]')).toHaveLength(5);
-  expect(screen.getByText(/AI-written summary/).textContent).toContain('evidence above');
+  expect(screen.getByText(/^AI summary/).textContent).toContain('evidence above');
+  expect(screen.queryByText(/OpenAI|gpt-4|GPT/)).toBeNull();
   expect(vi.mocked(fetch).mock.calls[0][0]).toContain('expiry=2026-10-09');
 });
 it('keeps evidence and the removed-line count when all AI text is unavailable', async () => {

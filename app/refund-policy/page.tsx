@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Refund Policy",
-  description: "Refund and cancellation policy for MarketScanner Pros subscriptions.",
+  description: "Refund and cancellation policy for MarketScannerPros subscriptions.",
   alternates: { canonical: "/refund-policy" },
   robots: { index: false, follow: true }
 };
@@ -19,7 +19,7 @@ export default function RefundPolicyPage() {
       <h2>Overview</h2>
       <p>
         This Refund Policy explains our policy regarding refunds, cancellations, and subscription
-        management for MarketScanner Pros ("the App", "we", "our", "us").
+        management for MarketScannerPros ("the App", "we", "our", "us").
       </p>
 
       <h2>Free Trial Period</h2>
@@ -86,7 +86,7 @@ export default function RefundPolicyPage() {
         <li>Open Settings on your iPhone/iPad</li>
         <li>Tap your name at the top</li>
         <li>Tap "Subscriptions"</li>
-        <li>Select "MarketScanner Pros"</li>
+        <li>Select "MarketScannerPros"</li>
         <li>Tap "Cancel Subscription"</li>
       </ol>
 
@@ -117,7 +117,7 @@ export default function RefundPolicyPage() {
 
       <h2>Agreement</h2>
       <p>
-        By subscribing to MarketScanner Pros, you acknowledge that you have read, understood, and
+        By subscribing to MarketScannerPros, you acknowledge that you have read, understood, and
         agree to this Refund Policy.
       </p>
     </LegalPageLayout>

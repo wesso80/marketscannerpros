@@ -1,6 +1,7 @@
 import { consumeApiQuota, GLOBAL_API_WINDOW_MS } from '@/lib/apiQuota';
 import { discoveryOnlyAction, ADMIN_DISCOVERY_ONLY_MESSAGE } from './lib/admin/discoveryOnly';
 import { pausedAdminRequest, ADMIN_EQUITIES_PAUSED_MESSAGE } from './lib/admin/adminEquities';
+import { researchReadGrant, RESEARCH_READ_HEADER } from './lib/admin/researchReadKey';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { isFreeForAllMode } from '@/lib/entitlements';
@@ -76,10 +77,17 @@ async function verify(token: string) {
   return payload;
 }
 
-async function verifyAdminSessionToken(token: string | undefined) {
+/**
+ * A signed ms_admin cookie counts only while its identity is still on the admin list, so removing an email from
+ * ADMIN_EMAILS revokes cookies already issued (not just new sign-ins). Cookies minted by the retired secret login
+ * (cid admin_admin_secret) no longer pass.
+ */
+async function verifyAdminSessionToken(token: string | undefined, adminCids: string[]) {
   if (!token) return null;
   const payload = await verify(token);
-  return (payload as { kind?: string } | null)?.kind === 'admin' ? payload : null;
+  if ((payload as { kind?: string } | null)?.kind !== 'admin') return null;
+  const cid = String((payload as { cid?: string }).cid ?? '').toLowerCase();
+  return cid && adminCids.includes(cid) ? payload : null;
 }
 
 function withNoIndexHeaders(res: NextResponse) {
@@ -87,8 +95,15 @@ function withNoIndexHeaders(res: NextResponse) {
   return res;
 }
 
-function sessionMatchesAdminList(
-  session: { cid?: string; is_admin?: boolean } | null,
+/** Same UUID shape as lib/workspaceHash.ts hashWorkspaceId (sha256 of the email), computed with Web Crypto. */
+async function workspaceIdForEmail(email: string): Promise<string> {
+  const hex = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(email))))
+    .map((b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
+
+async function sessionMatchesAdminList(
+  session: { cid?: string; is_admin?: boolean; workspaceId?: string } | null,
   adminEmails: string[],
   adminCids: string[],
 ) {
@@ -96,7 +111,14 @@ function sessionMatchesAdminList(
   if (session?.is_admin === true) return true;
   // Fallback: CID-prefix check for sessions issued before is_admin was added
   const cid = session?.cid?.toLowerCase() || '';
-  return Boolean(cid && (adminCids.includes(cid) || adminEmails.includes(cid)));
+  if (cid && (adminCids.includes(cid) || adminEmails.includes(cid))) return true;
+  // Stripe-customer (cus_*) admin sessions: the workspace is the hash of a current admin email. This is the rule the
+  // route-level check (isOperator) already applies, so an admin keeps access after a token refresh that carries no
+  // is_admin claim, and removing an email from ADMIN_EMAILS still revokes it.
+  const workspaceId = session?.workspaceId;
+  if (!workspaceId) return false;
+  for (const email of adminEmails) if (await workspaceIdForEmail(email) === workspaceId) return true;
+  return false;
 }
 
 // ─── Global API rate limiter (Edge-compatible, in-memory) ───
@@ -122,6 +144,34 @@ setInterval(() => {
   }
 }, 300_000);
 
+// ─── Admin/operator mutation origin check ───
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+// Exact origins (scheme, host and port), so http:// or another port never matches the HTTPS site. The public site is
+// trusted on apex and www; the request's own origin covers localhost and Render previews. No wildcard subdomains.
+const TRUSTED_SITE_ORIGINS = new Set(['https://marketscannerpros.app', 'https://www.marketscannerpros.app']);
+
+function isAdminMutationPath(pathname: string): boolean {
+  return pathname.startsWith('/api/admin/') || pathname.startsWith('/api/operator/') || pathname === '/api/actions/execute';
+}
+
+/**
+ * Browser requests that change admin/operator state must come from this site. A request with an Origin header must
+ * exactly match this request's origin or the public HTTPS site (apex or www); without Origin, a browser's
+ * Sec-Fetch-Site: cross-site is
+ * refused. Server-to-server callers (cron, worker, scripts) send neither header and are unaffected; their
+ * secret/session checks still apply in the route.
+ */
+function crossSiteAdminMutation(req: NextRequest): boolean {
+  if (!MUTATING_METHODS.has(req.method) || !isAdminMutationPath(req.nextUrl.pathname)) return false;
+  const origin = req.headers.get('origin');
+  if (origin !== null) {
+    let normalized: string;
+    try { normalized = new URL(origin).origin.toLowerCase(); } catch { return true; } // includes the literal "null"
+    return !(normalized === req.nextUrl.origin.toLowerCase() || TRUSTED_SITE_ORIGINS.has(normalized));
+  }
+  return req.headers.get('sec-fetch-site') === 'cross-site';
+}
+
 export async function middleware(req: NextRequest) {
   // ── Global rate limit on API routes ──
   const { pathname } = req.nextUrl;
@@ -134,6 +184,12 @@ export async function middleware(req: NextRequest) {
   // visitor never learns the pause state (no-public-leakage). Cron jobs and the operator engine authenticate
   // with secrets in their handlers, not sessions, so they keep this early skipped/paused answer.
   const adminSessionApi = pathname.startsWith('/api/admin/');
+  if (crossSiteAdminMutation(req)) {
+    return NextResponse.json(
+      { error: 'Cross-site request refused' },
+      { status: 403, headers: { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' } },
+    );
+  }
   if ((discoveryAction === 'pause_api' || discoveryAction === 'skip_job') && !adminSessionApi) return discoveryPausedJson();
   if (pathname.startsWith('/api/') && !pathname.startsWith('/api/webhooks') && !pathname.startsWith('/api/auth/') && !pathname.startsWith('/api/internal/') && !pathname.startsWith('/api/scanner/') && !pathname.startsWith('/api/jobs/') && !pathname.startsWith('/api/catalyst/') && !pathname.startsWith('/api/alerts/')) {
     const ip = getClientIP(req);
@@ -165,14 +221,25 @@ export async function middleware(req: NextRequest) {
   const summaryBot = pathname.replace(/\/+$/, '') === '/api/admin/crypto-markets/summary'
     && (Boolean(req.headers.get('x-crypto-summary-key')?.trim()) || /^Bearer\s+\S/i.test(req.headers.get('authorization') ?? ''));
   if (pathname.startsWith('/api/admin/') && !summaryBot) {
-    const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value);
+    const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value, ADMIN_CIDS);
     let appIsAdmin = false;
 
     if (!adminSession && cookie) {
-      appIsAdmin = sessionMatchesAdminList(await verify(cookie), ADMIN_EMAILS_MW, ADMIN_CIDS);
+      appIsAdmin = await sessionMatchesAdminList(await verify(cookie), ADMIN_EMAILS_MW, ADMIN_CIDS);
     }
 
-    if (!adminSession && !appIsAdmin) {
+    // Read-only research key (agents): GET/HEAD on an allowlisted read path only; handlers re-check it.
+    const researchGrant = !adminSession && !appIsAdmin
+      ? researchReadGrant({
+          pathname, method: req.method, searchParams: req.nextUrl.searchParams,
+          headerValue: req.headers.get(RESEARCH_READ_HEADER),
+          keysRaw: process.env.ADMIN_RESEARCH_READ_KEYS, email: process.env.ADMIN_RESEARCH_READ_EMAIL,
+          adminEmails: ADMIN_EMAILS_MW,
+        })
+      : null;
+    if (researchGrant) console.info(`[admin-research-read] key=${researchGrant.label} ${req.method} ${pathname}`);
+
+    if (!adminSession && !appIsAdmin && !researchGrant) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401, headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
@@ -199,11 +266,11 @@ export async function middleware(req: NextRequest) {
   }
 
   if (pathname === '/admin' || pathname.startsWith('/admin/')) {
-    const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value);
+    const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value, ADMIN_CIDS);
     let appSessionIsAdmin = false;
 
     if (!adminSession && cookie) {
-      appSessionIsAdmin = sessionMatchesAdminList(await verify(cookie), ADMIN_EMAILS_MW, ADMIN_CIDS);
+      appSessionIsAdmin = await sessionMatchesAdminList(await verify(cookie), ADMIN_EMAILS_MW, ADMIN_CIDS);
     }
 
     if (!adminSession && !appSessionIsAdmin) {
@@ -224,11 +291,11 @@ export async function middleware(req: NextRequest) {
   }
 
   if (pathname === '/operator' || pathname.startsWith('/operator/')) {
-    const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value);
+    const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value, ADMIN_CIDS);
     let appSessionIsOperator = false;
 
     if (!adminSession && cookie) {
-      appSessionIsOperator = sessionMatchesAdminList(await verify(cookie), ADMIN_EMAILS_MW, ADMIN_CIDS);
+      appSessionIsOperator = await sessionMatchesAdminList(await verify(cookie), ADMIN_EMAILS_MW, ADMIN_CIDS);
     }
 
     if (!adminSession && !appSessionIsOperator) {

@@ -1,7 +1,7 @@
 /**
  * Shared analytical terminology and the probability-honest presentation standard.
  *
- * This module is the single vocabulary for MarketScanner Pros' educational
+ * This module is the single vocabulary for MarketScannerPros' educational
  * market-analysis surfaces. It deliberately encodes the platform's core
  * principles as code:
  *
@@ -117,4 +117,4 @@ export function findProhibitedLanguage(text: string): string[] {
 
 /** Concise persistent educational disclosure for analytical surfaces. */
 export const EDUCATIONAL_DISCLOSURE =
-  'MarketScanner Pros provides market data, analytical tools and educational research. It does not provide personalised financial advice.';
+  'MarketScannerPros provides market data, analytical tools and educational research. It does not provide personalised financial advice.';

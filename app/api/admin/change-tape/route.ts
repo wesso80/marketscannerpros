@@ -19,6 +19,7 @@ import { wrapTruth } from "@/lib/admin";
 import { loadChangeTape, type ChangeTapeEventType } from "@/lib/admin/changeTape";
 import { getSessionFromCookie } from "@/lib/auth";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -60,7 +61,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal error" },
+      { error: adminErrorText(err, '/api/admin/change-tape') },
       { status: 500 },
     );
   }

@@ -1,38 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  ADMIN_SESSION_COOKIE,
-  createAdminSessionToken,
-  getAdminSessionCookieOptions,
-  verifyAdminAuth,
-  verifyAdminRequest,
-} from '@/lib/adminAuth';
+import { getAdminSessionCookieOptions, ADMIN_SESSION_COOKIE, verifyAdminRequest } from '@/lib/adminAuth';
+import { retiredRouteResponse } from '@/lib/api/retiredRoute';
 
+// Session check for the admin layout. Admin access comes from the admin session cookie (set by /admin/login) or an
+// admin app session. The legacy admin-secret login is retired: a secret header no longer counts here and no longer
+// mints an ms_admin cookie (middleware already refused cookie-free /api/admin calls, so it could not be used).
 export async function GET(req: NextRequest) {
   const auth = await verifyAdminRequest(req);
-  if (!auth.ok) {
+  if (!auth.ok || auth.source === 'admin_secret') {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const res = NextResponse.json({ ok: true, source: auth.source });
-  if (auth.source === 'admin_secret') {
-    res.cookies.set(ADMIN_SESSION_COOKIE, createAdminSessionToken(), getAdminSessionCookieOptions(req));
-  }
-  return res;
+  return NextResponse.json({ ok: true, source: auth.source });
 }
 
-export async function POST(req: NextRequest) {
-  if (!verifyAdminAuth(req)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const res = NextResponse.json({ ok: true, source: 'admin_secret' });
-  res.cookies.set(ADMIN_SESSION_COOKIE, createAdminSessionToken(), getAdminSessionCookieOptions(req));
-  return res;
+export async function POST() {
+  return retiredRouteResponse();
 }
 
+// Admin logout ends both sessions: the 12-hour admin cookie and the app session the admin sign-in issued (ms_auth),
+// which otherwise kept admin access through the app-session path. Same cookie scope as when they were set.
 export async function DELETE(req: NextRequest) {
+  const { validAdminWriteOrigin } = await import("@/lib/admin/adminWriteOrigin");
+  if (!validAdminWriteOrigin(req, "cookie")) return NextResponse.json({ error: "Origin rejected" }, { status: 403, headers: { "Cache-Control": "private, no-store" } });
   const res = NextResponse.json({ ok: true });
   const options = getAdminSessionCookieOptions(req);
   res.cookies.set(ADMIN_SESSION_COOKIE, '', { ...options, maxAge: 0 });
+  res.cookies.set('ms_auth', '', { ...options, maxAge: 0 });
   return res;
 }

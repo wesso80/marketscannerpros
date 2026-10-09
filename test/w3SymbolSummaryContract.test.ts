@@ -100,7 +100,7 @@ describe('W3 Option 2: /api/deep-analysis is a summary of the public Symbol evid
     expect(body.narrative).toContain('- Options data not available.');
     expect(body.narrative).not.toMatch(/rally|buy|88\/100|grade A/i);
     expect(body.removedLines).toBe(2);
-    expect(body.narrativeSource).toBe('gpt-4o, from the evidence sections only');
+    expect(body.narrativeSource).toBe('AI summary');
   });
 
   it('with no model key the evidence is still returned and the narrative is marked unavailable (no fabricated text)', async () => {

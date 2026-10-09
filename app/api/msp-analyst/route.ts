@@ -326,7 +326,7 @@ async function handlePost(req: NextRequest) {
           });
           
           const upgradeMsg = tier === 'free' 
-            ? 'Upgrade to Pro for 20 questions/day with GPT-4.1.' 
+            ? 'Upgrade to Pro for 20 AI questions a day' 
             : 'Limit resets at midnight UTC.';
           
           return new Response(

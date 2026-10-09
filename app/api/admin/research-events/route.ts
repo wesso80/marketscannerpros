@@ -1,3 +1,4 @@
+import { validAdminWriteOrigin } from '@/lib/admin/adminWriteOrigin';
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
@@ -10,6 +11,7 @@ export const runtime = "nodejs";
 async function authorize(req: NextRequest): Promise<{ ok: boolean; workspaceId: string }> {
   const adminAuth = await requireAdmin(req);
   if (adminAuth.ok) return { ok: true, workspaceId: adminAuth.workspaceId || "admin" };
+  if (!validAdminWriteOrigin(req, "cookie")) return { ok: false, workspaceId: "" };
   const session = await getSessionFromCookie();
   if (!session || !isOperator(session.cid, session.workspaceId)) return { ok: false, workspaceId: "" };
   return { ok: true, workspaceId: session.workspaceId };

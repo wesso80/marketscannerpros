@@ -15,7 +15,7 @@ export const metadata: Metadata = {
         url: '/scan-banner.png',
         width: 1200,
         height: 630,
-        alt: 'MarketScanner Pros — Market Scanner',
+        alt: 'MarketScannerPros — Market Scanner',
       },
     ],
     type: 'website',

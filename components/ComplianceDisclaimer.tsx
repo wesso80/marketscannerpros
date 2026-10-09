@@ -61,18 +61,18 @@ export default function ComplianceDisclaimer({
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left text-[11px] text-amber-300/90 hover:text-amber-200"
+          className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left text-sm text-amber-200 hover:text-amber-100"
         >
           <span>
             <span aria-hidden="true">ⓘ </span>
             <strong className="font-semibold">{copy.title}</strong> — educational use only.
           </span>
-          <span className="shrink-0 text-[10px] text-amber-300/70">
+          <span className="shrink-0 text-sm text-amber-200">
             {open ? 'Hide ▴' : 'Read ▾'}
           </span>
         </button>
         {open ? (
-          <p className="border-t border-amber-500/15 px-3 py-2 text-[11px] leading-relaxed text-amber-200/80">
+          <p className="border-t border-amber-500/15 px-3 py-2 text-sm leading-6 text-amber-100">
             {copy.body}
           </p>
         ) : null}
@@ -82,7 +82,7 @@ export default function ComplianceDisclaimer({
 
   if (compact) {
     return (
-      <div className="text-[11px] text-slate-600 leading-tight py-1">
+      <div className="py-1 text-sm leading-6 text-slate-300">
         <strong>{copy.title}</strong> — {copy.body}
       </div>
     );
@@ -90,7 +90,7 @@ export default function ComplianceDisclaimer({
 
   return (
     <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-2.5 text-center">
-      <p className="text-[11px] text-amber-600/90 leading-relaxed m-0">
+      <p className="m-0 text-sm leading-6 text-amber-100">
         <strong>{copy.title}</strong> — {copy.body}
       </p>
     </div>

@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { q } from '@/lib/db';
 import { pgReportStore } from '@/lib/jarvis/report/persistDailyReport';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
@@ -22,6 +23,6 @@ export async function GET(req: NextRequest) {
       generatedAt: row.generatedAt, updatedAt: row.updatedAt, emailStatus: row.emailStatus, emailSentAt: row.emailSentAt, report: row.reportJson, markdown: row.reportMarkdown, nav,
     }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Failed to load report' }, { status: 500 });
+    return NextResponse.json({ error: adminErrorText(e, '/api/admin/jarvis/daily') }, { status: 500 });
   }
 }

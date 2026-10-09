@@ -18,12 +18,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { storedTruth } from '@/lib/admin/truthLayer';
 import { requireAdmin } from "@/lib/adminAuth";
 import { q } from "@/lib/db";
-import { wrapTruth } from "@/lib/admin";
 import { loadPositionHorizonStats } from "@/lib/admin/positionHorizonStats";
 import { LABELLER_FIX_AT, pct1, saneMoveSql, signedMoveSql } from "@/lib/admin/signalStats";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 
 interface AggRow {
@@ -58,6 +59,18 @@ const FIXED = "outcome_measured_at >= $1::timestamptz";
 
 const n = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
+/** Newest case time for the truth stamp; null (shown as not recorded) if it cannot be read. */
+async function latestCaseAt(): Promise<string | null> {
+  try {
+    const rows = await q<{ latest: string | null }>(
+      `SELECT MAX(signal_at) AS latest FROM ai_signal_log WHERE (workspace_id = 'operator-terminal' OR workspace_id LIKE 'admin-call:%')`,
+    );
+    return rows?.[0]?.latest ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(req: NextRequest) {
   if (!(await requireAdmin(req)).ok) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
@@ -87,7 +100,7 @@ export async function GET(req: NextRequest) {
       [LABELLER_FIX_AT],
     )) ?? [];
   } catch (err) {
-    error = err instanceof Error ? err.message : String(err);
+    error = adminErrorText(err, '/api/admin/backtest-lab');
   }
 
   const breakdown: SetupBreakdown[] = rows.map((r) => {
@@ -136,6 +149,6 @@ export async function GET(req: NextRequest) {
     source: "ai_signal_log (operator-terminal + admin-call:*, last 90 days)",
     error,
     note,
-    truth: wrapTruth({ totalCases }, { source: 'admin:postgres', freshness: 'real-time' }),
+    truth: { ...storedTruth({ source: 'ai_signal_log (Postgres, last 90 days)', dataAsOf: await latestCaseAt(), staleAfterMinutes: 24 * 60 }), data: { totalCases } },
   });
 }

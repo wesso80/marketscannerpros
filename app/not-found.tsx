@@ -9,7 +9,7 @@ export default function NotFound() {
         <h1 className="text-4xl font-extrabold text-emerald-400 sm:text-6xl">404</h1>
         <h2 className="mt-3 text-xl font-bold text-slate-100">Page not found</h2>
         <p className="mt-2 max-w-md text-sm text-slate-400">
-          That route doesn&apos;t exist. Check the URL or head back to the dashboard.
+          That route doesn&apos;t exist. Check the URL or return to Tools.
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <Link

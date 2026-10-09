@@ -28,7 +28,7 @@ export default function M2History(){
  return <section className={styles.page} aria-label="M2 historical observations"><div className={styles.panel}>
   <p className={styles.eyebrow}>Pro · stored observations</p><h2>M2 through time</h2>
   <p>Explore one economic bloc at a time. Missing months remain gaps; changes in bloc coverage are not presented as a global growth series.</p>
-  {isLoading?<p role="status">Checking access…</p>:!paid?<><p>Your current M2 summary, sources and dates remain available on Free.</p><Link href="/pricing">Explore Pro history access ↗</Link></>:<>
+  {isLoading?<p role="status">Checking access…</p>:!paid?<><p>Your current M2 summary, sources and dates remain available on Free.</p><Link href="/pricing">Explore Pro history access</Link></>:<>
    <button type="button" aria-expanded={open} onClick={()=>setOpen(v=>!v)}>{open?'Close history':'Open M2 history'}</button>
    {open&&<>
     <div className={styles.historyControls}><label>Economic bloc<select aria-label="Economic bloc" value={bloc} onChange={e=>setBloc(e.target.value)}>{M2_HISTORY_BLOCS.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label><label>History window<select aria-label="History window" value={months} onChange={e=>setMonths(e.target.value)}><option value="12">12 months</option><option value="36">36 months</option><option value="60">60 months</option></select></label></div>

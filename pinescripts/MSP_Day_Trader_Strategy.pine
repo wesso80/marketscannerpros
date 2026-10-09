@@ -1,5 +1,5 @@
 // This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
-// © MarketScanner Pros — Day Trader v2
+// © MarketScannerPros — Day Trader v2
 // Refactored execution framework: continuation + reversal playbooks,
 // stricter gating, setup-specific exits, lower risk defaults
 

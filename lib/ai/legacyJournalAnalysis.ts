@@ -114,7 +114,7 @@ export async function legacyJournalAnalysis(req: NextRequest) {
   }
 }
 
-function buildJournalSummary(entries: any[]): string {
+export function buildJournalSummary(entries: any[]): string {
   let summary = "## TRADE JOURNAL ANALYSIS REQUEST\n\n";
 
   const openTrades = entries.filter((e: any) => e.isOpen || e.outcome === 'open');
@@ -153,8 +153,8 @@ function buildJournalSummary(entries: any[]): string {
   });
 
   if (Object.keys(strategyStats).length > 0) {
-    summary += `### STRATEGY PERFORMANCE\n`;
-    summary += "| Strategy | Trades | Win Rate | P&L |\n";
+    summary += `### STRATEGY PERFORMANCE — your own trades\n`;
+    summary += "| Strategy | Trades | Hit rate on your own trades | P&L |\n";
     summary += "|----------|--------|----------|-----|\n";
     Object.entries(strategyStats).forEach(([strategy, stats]) => {
       const strategyWinRate = stats.trades > 0 ? ((stats.wins / stats.trades) * 100).toFixed(0) : '0';
@@ -177,8 +177,8 @@ function buildJournalSummary(entries: any[]): string {
   });
 
   if (Object.keys(symbolStats).length > 0) {
-    summary += `### SYMBOL PERFORMANCE\n`;
-    summary += "| Symbol | Trades | Win Rate | P&L |\n";
+    summary += `### SYMBOL PERFORMANCE — your own trades\n`;
+    summary += "| Symbol | Trades | Hit rate on your own trades | P&L |\n";
     summary += "|--------|--------|----------|-----|\n";
     Object.entries(symbolStats)
       .sort((a, b) => b[1].pl - a[1].pl)
@@ -204,8 +204,8 @@ function buildJournalSummary(entries: any[]): string {
   });
 
   if (Object.keys(emotionStats).length > 0) {
-    summary += `### LOGGED EMOTION GROUPS\n`;
-    summary += "| Emotion/State | Trades | Win Rate | P&L |\n";
+    summary += `### LOGGED EMOTION GROUPS — your own trades\n`;
+    summary += "| Emotion/State | Trades | Hit rate on your own trades | P&L |\n";
     summary += "|---------------|--------|----------|-----|\n";
     Object.entries(emotionStats)
       .sort((a, b) => b[1].trades - a[1].trades)

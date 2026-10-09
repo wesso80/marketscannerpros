@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getSessionFromCookie } from "@/lib/auth";
+import { getSessionFromCookie, loggedErrorCode } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { checkoutCustomerFromSession } from "@/lib/checkoutSignIn";
 import { isStripeCustomerId } from "@/lib/billingPortal";
@@ -16,10 +16,8 @@ const PORTAL_RETURN_URL = "https://marketscannerpros.app/tools/explorer";
 type PortalSubscriptionRow = SubscriptionRowFields & { workspace_id?: string | null };
 
 function errorCode(error: unknown): string {
-  if (error && typeof error === 'object' && 'code' in error && typeof (error as { code?: unknown }).code === 'string') {
-    return (error as { code: string }).code;
-  }
-  return 'unknown';
+  const code = loggedErrorCode(error);
+  return code == null ? 'unknown' : String(code);
 }
 
 function customerIdOnRow(row: SubscriptionRowFields | null): string | null {

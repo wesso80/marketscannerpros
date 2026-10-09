@@ -8,6 +8,7 @@ import ScannerDataAuditPanel from "@/components/admin/ScannerDataAuditPanel";
 import Link from "next/link";
 import { useAdmin } from "../admin-client-layout";
 
+import TruthStampLine from "@/components/admin/shared/TruthStampLine";
 /**
  * /admin/data-health — Consolidated diagnostics page that replaces the
  * earlier split between /admin/diagnostics + /admin/system. Pure
@@ -17,6 +18,7 @@ import { useAdmin } from "../admin-client-layout";
 export default function DataHealthPage() {
   const { discoveryPaused } = useAdmin();
   const [providers, setProviders] = useState<Array<{ id: string; label: string; status: "OK" | "CONFIGURED" | "PAUSED" | "DEGRADED" | "DOWN" | "UNKNOWN"; latencyMs?: number | null; lastSeen?: string | null; note?: string }>>([]);
+  const [truth, setTruth] = useState<any>(null);
   const [webhooks, setWebhooks] = useState<Array<{ id: string; label: string; lastReceivedAt?: string | null; lastStatus?: "OK" | "IDLE" | "FAILED" | "NOT_CONFIGURED" | "NO_DATA" | "NOT_MONITORED" | "UNKNOWN"; count24h?: number; failures24h?: number; note?: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -36,6 +38,7 @@ export default function DataHealthPage() {
         } else {
           setProviders(Array.isArray(json.providers) ? json.providers : []);
           setWebhooks(Array.isArray(json.webhooks) ? json.webhooks : []);
+          setTruth(json.truth ?? null);
           setError("");
         }
       } catch {
@@ -58,6 +61,7 @@ export default function DataHealthPage() {
           System
         </div>
         <h1 style={{ fontSize: "1.6rem", fontWeight: 800, margin: "0.2rem 0 0.4rem" }}>Data Health</h1>
+        <TruthStampLine truth={truth} />
         <p style={{ color: "#94A3B8", fontSize: 13, maxWidth: 720 }}>
           Provider feeds, webhook receivers, and scanner heartbeat. Read-only — this page never modifies state or
           dispatches anything outbound.

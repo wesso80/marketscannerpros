@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { operatorAccessDenied } from '@/lib/operator/privateAccess';
 
 function toContextObject(value: unknown): Record<string, any> {
   if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, any>;
@@ -25,6 +26,8 @@ export async function POST(req: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const operatorDenied = operatorAccessDenied(session);
+    if (operatorDenied) return operatorDenied;
 
     const body = (await req.json()) as { symbol?: string; ttlMinutes?: number; reason?: string };
     const symbol = sanitizeSymbol(body.symbol);

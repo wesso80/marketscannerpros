@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { verifyAdminAuth, verifyCronAuth } from '@/lib/adminAuth';
+import { loggedErrorCode } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
     };
     return NextResponse.json(body);
   } catch (e: any) {
-    console.error('[auth/debug] failed', e);
+    console.error('[auth/debug] failed', { code: loggedErrorCode(e) });
     return NextResponse.json({ error: "debug failed" }, { status: 500 });
   }
 }

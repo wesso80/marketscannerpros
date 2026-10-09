@@ -1,0 +1,29 @@
+middleware.ts:90 — sessionMatchesAdminList
+middleware.ts:165 — const summaryBot
+middleware.ts:167 — if (pathname.startsWith('/api/admin/')
+middleware.ts:277 — const newToken = await signToken
+lib/adminAuth.ts:107 — export async function verifyAdminRequest
+lib/adminAuth.ts:74 — export function createAdminSessionToken
+app/admin/admin-client-layout.tsx:41 — const verifyAuth
+app/admin/admin-client-layout.tsx:70 — const navSections
+lib/admin/discoveryOnly.ts:2 — export function adminDiscoveryOnly
+lib/admin/discoveryOnly.ts:36 — export const businessScope
+lib/admin/discoveryOnly.ts:78 — export function discoveryOnlyAction
+app/api/admin/crypto-markets/paper/route.ts:12 — export async function GET
+app/api/admin/crypto-markets/paper/route.ts:21 — export async function POST
+lib/admin/cryptoPaper.ts:154 — export async function cryptoPaperState
+lib/admin/cryptoPaper.ts:178 — export async function setCryptoPaperActive
+lib/admin/cryptoSignalLedger.ts:21 — CREATE TABLE IF NOT EXISTS
+lib/admin/cryptoSignalLedger.ts:45 — export function ensureSignalLedger
+lib/admin/cryptoAutomation.ts:9 — const KEY=
+lib/admin/cryptoAutomation.ts:14 — export async function setCryptoAutomation
+app/api/admin/portfolio-lab/reset/route.ts:8 — export async function POST
+app/admin/settings/page.tsx:6 — export default function SettingsPage
+lib/admin/scoring.ts:15 — export interface OpportunityScore
+lib/admin/scoring.ts:51 — export interface ScoreBundle
+components/admin/layout/AdminShell.tsx:8 — export default function AdminShell
+app/api/admin/kill-switch/route.ts:22 — export async function GET
+app/api/admin/kill-switch/route.ts:38 — export async function POST
+lib/publicDesign.ts:24 — export function publicDesignScope
+lib/worker/schedule.ts:18 — export const SCHEDULE
+worker/ingest-data.ts:38 — startScheduler

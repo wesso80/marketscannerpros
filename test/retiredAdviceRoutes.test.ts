@@ -1,5 +1,5 @@
 /**
- * Public routes retired by the 2026-10-08 AI endpoint audit: each checks access first, then returns 410 with a
+ * Public routes retired by the 2026-10-08 AI endpoint audit (and analyst-context / explain on 2026-10-09): each checks access first, then returns 410 with a
  * private, detail-free body. No database, governor or provider is touched. Auth is a fake.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -21,6 +21,9 @@ const CASES: Case[] = [
   { path: '/api/ai/suggest', method: 'PATCH', paid: false, load: () => import('@/app/api/ai/suggest/route') },
   { path: '/api/execute-trade', method: 'POST', paid: false, load: () => import('@/app/api/execute-trade/route') },
   { path: '/api/ai-market-focus', method: 'GET', paid: true, load: () => import('@/app/api/ai-market-focus/route') },
+  { path: '/api/ai/analyst-context', method: 'POST', paid: false, load: () => import('@/app/api/ai/analyst-context/route') },
+  { path: '/api/ai/explain', method: 'GET', paid: false, load: () => import('@/app/api/ai/explain/route') },
+  { path: '/api/ai/explain', method: 'POST', paid: false, load: () => import('@/app/api/ai/explain/route') },
 ];
 const run = async (c: Case) => { const mod = await c.load(); const r = await mod[c.method](req(c.path, c.method)); return { status: r.status as number, headers: r.headers as Headers, body: await r.json() }; };
 beforeEach(() => { h.session = { workspaceId: 'ws-a', tier: 'pro' }; h.paid = true; });

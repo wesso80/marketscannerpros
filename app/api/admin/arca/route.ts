@@ -27,6 +27,7 @@ import {
 } from "@/lib/admin/arcaTypes";
 import { buildArcaSystemPrompt, buildArcaUserPrompt } from "@/lib/admin/arcaPrompt";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
@@ -130,7 +131,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     return NextResponse.json({
       ok: true,
-      output: fallbackOutput(body.mode, ctx, err instanceof Error ? err.message : "openai_error"),
+      output: fallbackOutput(body.mode, ctx, adminErrorText(err, '/api/admin/arca')),
     });
   }
 }

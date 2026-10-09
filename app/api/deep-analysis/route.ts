@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
       independenceNote: ev.independenceNote,
       news: { status: news.status, headline: news.headline, provider: news.provider, rule: news.rule, fetchedAt: news.fetchedAt, events: news.events.length },
       narrative: narrative.text,
-      narrativeSource: narrative.text ? 'gpt-4o, from the evidence sections only' : 'unavailable',
+      narrativeSource: narrative.text ? 'AI summary' : 'unavailable',
       removedLines: narrative.removedLines,
       localDemo: computed.localDemo || undefined,
       warnings: computed.warnings.length ? computed.warnings : undefined,

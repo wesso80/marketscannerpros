@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import AdminDirectLogin from "@/components/admin/AdminDirectLogin";
+import styles from "./AdminLogin.module.css";
 
 export const metadata: Metadata = {
   title: "Admin sign in",
@@ -8,10 +9,11 @@ export const metadata: Metadata = {
 
 export default function AdminLoginPage() {
   return (
-    <main className="min-h-screen bg-[#07110e] px-4 py-16 text-white">
-      <div className="mx-auto w-full max-w-md">
-        <h1 className="text-lg font-semibold">Admin sign in</h1>
-        <p className="mt-2 text-sm text-white/60">Use the admin email and passphrase. This page is not linked from the public site.</p>
+    <main className={styles.page}>
+      <div className={styles.card}>
+        <p className={styles.eyebrow}>MSP / Private workspace</p>
+        <h1>Admin sign in</h1>
+        <p className={styles.intro}>Use the admin email and passphrase. This page is not linked from the public site.</p>
         <AdminDirectLogin />
       </div>
     </main>

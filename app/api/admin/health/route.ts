@@ -12,14 +12,14 @@
  * Each section carries its own `status` (ok | warn | error | unknown) and a
  * human-readable note. The top-level `status` is the worst of all sections.
  *
- * Admin-only. Never throws — failures collapse to status="error" entries.
+ * Admin-only. Dependency failures are reported without raw error details.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
 import { q } from '@/lib/db';
-import { getAlphaVantageProviderStatus } from '@/lib/avRateGovernor';
-import { getCoinGeckoProviderStatus } from '@/lib/coingecko';
+import { discoveryOnlyAction } from '@/lib/admin/discoveryOnly';
+import { readHealthOperations } from '@/lib/admin/healthOverview';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,7 +32,7 @@ interface Section {
   data?: Record<string, unknown>;
 }
 
-const STATUS_RANK: Record<Status, number> = { unknown: 0, ok: 1, warn: 2, error: 3 };
+const STATUS_RANK: Record<Status, number> = { ok: 0, unknown: 1, warn: 2, error: 3 };
 function worst(...statuses: Status[]): Status {
   return statuses.reduce<Status>((acc, s) => (STATUS_RANK[s] > STATUS_RANK[acc] ? s : acc), 'ok');
 }
@@ -47,35 +47,15 @@ async function checkDatabase(): Promise<Section> {
       note: `db ping ${latencyMs}ms`,
       data: { latencyMs },
     };
-  } catch (e) {
-    return { status: 'error', note: `db unreachable: ${e instanceof Error ? e.message : String(e)}` };
+  } catch {
+    return { status: 'error', note: 'db unreachable. Details withheld.' };
   }
 }
 
 async function checkProviders(): Promise<Section> {
-  try {
-    const [av, cg] = await Promise.all([
-      getAlphaVantageProviderStatus(),
-      Promise.resolve(getCoinGeckoProviderStatus()),
-    ]);
-    const avStatus: Status = !av?.hasApiKey
-      ? 'error'
-      : av.availableNow === 0
-        ? 'warn'
-        : 'ok';
-    const cgStatus: Status = !cg?.hasApiKey
-      ? 'warn' // CoinGecko free tier OK without key, but flag as warn
-      : (cg.cooldowns ?? 0) > 0
-        ? 'warn'
-        : 'ok';
-    return {
-      status: worst(avStatus, cgStatus),
-      note: `av:${avStatus} · cg:${cgStatus}`,
-      data: { alphaVantage: av, coinGecko: cg },
-    };
-  } catch (e) {
-    return { status: 'unknown', note: `provider check failed: ${e instanceof Error ? e.message : String(e)}` };
-  }
+  return { status: 'unknown', note: 'Configuration only; provider reachability and quota are not tested.',
+    data: { alphaVantageConfigured: Boolean(process.env.ALPHA_VANTAGE_API_KEY),
+      coinGeckoConfigured: Boolean(process.env.COINGECKO_API_KEY || process.env.COINGECKO_PRO_API_KEY) } };
 }
 
 async function checkEveningPacket(): Promise<Section> {
@@ -90,14 +70,15 @@ async function checkEveningPacket(): Promise<Section> {
     if (!rows.length) return { status: 'warn', note: 'no evening packets recorded' };
     const r = rows[0];
     const ageHours = (Date.now() - new Date(r.generated_at).getTime()) / 36e5;
-    const status: Status = ageHours > 36 ? 'error' : ageHours > 28 ? 'warn' : 'ok';
+    const paused = discoveryOnlyAction('/api/cron/evening-packet') === 'skip_job';
+    const status: Status = paused || ageHours < 0 ? 'unknown' : ageHours > 36 ? 'error' : ageHours > 28 ? 'warn' : 'ok';
     return {
       status,
-      note: `last ${r.date_iso} (${ageHours.toFixed(1)}h ago, ${r.count} workspaces)`,
+      note: `${paused ? 'Job paused by web configuration; stored ' : ''}last ${r.date_iso} (${ageHours.toFixed(1)}h ago, ${r.count} workspaces)`,
       data: { lastDate: r.date_iso, generatedAt: new Date(r.generated_at).toISOString(), workspaces: Number(r.count), ageHours },
     };
-  } catch (e) {
-    return { status: 'unknown', note: `evening_packets table unavailable: ${e instanceof Error ? e.message : String(e)}` };
+  } catch {
+    return { status: 'unknown', note: 'evening_packets table unavailable. Details withheld.' };
   }
 }
 
@@ -110,15 +91,15 @@ async function checkMacroIngest(): Promise<Section> {
     const r = rows[0];
     if (!r?.last_obs) return { status: 'warn', note: 'no macro observations yet' };
     const ageHours = (Date.now() - new Date(r.last_obs).getTime()) / 36e5;
-    // FRED publishes daily/weekly — flag if older than 7d
-    const status: Status = ageHours > 24 * 7 ? 'error' : ageHours > 24 * 2 ? 'warn' : 'ok';
+    // Observation dates are not ingestion timestamps; mixed series have different release cadences.
+    const status: Status = 'unknown';
     return {
       status,
-      note: `${Number(r.series_count)} series · newest obs ${(ageHours / 24).toFixed(1)}d old`,
+      note: `${Number(r.series_count)} series · newest observation (not ingest time) ${(ageHours / 24).toFixed(1)}d old`,
       data: { lastObs: new Date(r.last_obs).toISOString(), seriesCount: Number(r.series_count), ageHours },
     };
-  } catch (e) {
-    return { status: 'unknown', note: `macro_series unavailable: ${e instanceof Error ? e.message : String(e)}` };
+  } catch {
+    return { status: 'unknown', note: 'macro_series unavailable. Details withheld.' };
   }
 }
 
@@ -130,7 +111,8 @@ async function checkAiSignals(): Promise<Section> {
        WHERE signal_at >= NOW() - INTERVAL '24 hours'`,
     );
     const r = rows[0];
-    const count = Number(r?.count_24h ?? 0);
+    if (!r || r.count_24h == null) return { status: 'unknown', note: 'Signal count unavailable' };
+    const count = Number(r.count_24h);
     const lastAgeMin = r?.last_signal ? (Date.now() - new Date(r.last_signal).getTime()) / 60000 : null;
     const status: Status = count === 0 ? 'warn' : 'ok';
     return {
@@ -138,8 +120,8 @@ async function checkAiSignals(): Promise<Section> {
       note: `${count} signals/24h${lastAgeMin != null ? ` · last ${lastAgeMin.toFixed(0)}m ago` : ''}`,
       data: { count24h: count, lastSignalAt: r?.last_signal ? new Date(r.last_signal).toISOString() : null },
     };
-  } catch (e) {
-    return { status: 'unknown', note: `ai_signal_log unavailable: ${e instanceof Error ? e.message : String(e)}` };
+  } catch {
+    return { status: 'unknown', note: 'ai_signal_log unavailable. Details withheld.' };
   }
 }
 
@@ -150,30 +132,34 @@ async function checkKillSwitches(): Promise<Section> {
        FROM workspace_settings
        WHERE kill_switch_enabled = TRUE`,
     );
-    const active = Number(rows[0]?.active ?? 0);
+    if (!rows[0] || rows[0].active == null) return { status: 'unknown', note: 'Kill switch count unavailable' };
+    const active = Number(rows[0].active);
     if (active === 0) return { status: 'ok', note: 'no kill switches active', data: { active: 0 } };
     return {
       status: 'warn',
       note: `${active} workspace(s) with kill switch ON`,
       data: { active, latest: rows[0]?.latest ? new Date(rows[0].latest).toISOString() : null },
     };
-  } catch (e) {
-    return { status: 'unknown', note: `workspace_settings unavailable: ${e instanceof Error ? e.message : String(e)}` };
+  } catch {
+    return { status: 'unknown', note: 'workspace_settings unavailable. Details withheld.' };
   }
 }
 
 export async function GET(req: NextRequest) {
-  if (!(await requireAdmin(req)).ok) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  const headers = { 'Cache-Control': 'private, no-store', Vary: 'Cookie, Authorization' };
+  const auth = await requireAdmin(req).catch(() => null);
+  if (!auth?.ok) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403, headers });
   }
   const started = Date.now();
-  const [database, providers, eveningPacket, macroIngest, aiSignals, killSwitches] = await Promise.all([
+  const [database, providers, eveningPacket, macroIngest, aiSignals, killSwitches, operations] = await Promise.all([
     checkDatabase(),
     checkProviders(),
     checkEveningPacket(),
     checkMacroIngest(),
     checkAiSignals(),
     checkKillSwitches(),
+    readHealthOperations(auth.workspaceId),
   ]);
 
   const overall = worst(
@@ -188,6 +174,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     overall,
+    operations,
     generatedAt: new Date().toISOString(),
     latencyMs: Date.now() - started,
     sections: {
@@ -198,5 +185,5 @@ export async function GET(req: NextRequest) {
       aiSignals,
       killSwitches,
     },
-  });
+  }, { headers });
 }

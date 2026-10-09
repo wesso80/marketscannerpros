@@ -2,7 +2,7 @@ import Reviews from './Reviews';
 
 export const metadata = {
   title: 'Reviews',
-  description: 'What our users are saying about MarketScanner Pros trading platform.',
+  description: 'What our users are saying about MarketScannerPros trading platform.',
 };
 
 export default function ReviewsPage() {

@@ -1,0 +1,50 @@
+ADMIN MOBILE SHELL
+Base: origin/admin-integration cb0ee180.
+Only admin navigation presentation changes. No public files, auth rules, database writes, merges or deployments.
+
+Below 768px the existing navigation becomes a drawer; content uses the full viewport. Desktop retains a 268px sidebar. Navigation closes on link selection, route changes, Escape, backdrop, close button and desktop resize. Focus enters the drawer, Tab wraps, close restores focus, and page scrolling is restored. Background content is inert while open. Existing sidebar entries, paused-mode filtering and auth logic are retained.
+
+Validation on the previously reviewed local combined admin candidate e80ab7d591f00aa97ba93d565c0e309566d4e219 with this layout patch applied:
+- Project TypeScript check clean (--noEmit --incremental false --typeRoots ./node_modules/@types).
+- 57 tests pass across navigationFrame, adminNavSettings, adminVerify, adminOriginCheck and adminWriteOrigin.
+- Real Next browser checks at 390 and 1280, Health and Settings. Local signed fixture, unavailable local database, browser API fixtures for unrelated requests. No production/provider access required. Discovery-only disabled in the local test environment to exercise the actual Settings page (it is otherwise paused).
+- Mobile content width 390 instead of 122; desktop remains 1012 at viewport 1280. Keyboard focus, Escape, backdrop, navigation and resize checked.
+- This is not a new full-suite run or a final integration approval.
+
+CLAUDE #566 REVIEW
+Reviewed aebe966e6299765e6b090b2bc56aa3ad307661de. Source and read-time separation is useful, but Symbol still mislabels packet-build time as observation freshness: app/api/admin/symbol/[symbol]/route.ts passes packet.createdAt to storedTruth; lib/admin/getAdminResearchPacket.ts generates that time on each build. Refreshing a packet with old inputs can make it look current. Requested underlying input timestamps or explicitly unknown input freshness, plus a route regression test.
+Sent to Claude: https://github.com/wesso80/marketscannerpros/pull/566#issuecomment-6074594824
+No edits made to Claude's files. #566 needs follow-up before approval.
+
+NEXT
+Review Claude's #566 correction, then verify the agreed combined admin candidate against current main. Keep #552/#556 public-affecting scope decisions separate. No deployment until final approval.
+
+VISUAL FOUNDATION FOLLOW-UP
+Matches the approved PublicDesign.module.css palette, Arial typography, quiet panel borders, mint navigation and heading hierarchy. Tokens and card/title selectors are scoped beneath AdminNavigationFrame; public CSS is unchanged. AdminCard and SectionTitle only receive class hooks, preserving their existing public-consumer appearance outside the admin wrapper. Boundary notice wording and all auth/data logic are unchanged.
+Validation: 8 focused navigation/boundary/settings tests pass; TypeScript clean; actual Next Health/Settings at 390 and 1280 pass drawer checks with no horizontal overflow. Screenshots updated. React checklist reviewed: stable component definitions, effect cleanup, scoped styles, focus management, no added requests.
+Remaining visual work: custom per-page charts/tables/panels, starting with Crypto Markets and paper accounts, then research/business pages and login. This foundation does not mean every legacy admin page is fully redesigned.
+
+CRYPTO MARKETS / PAPER VISUAL PASS
+Scoped CryptoWorkspace.module.css adds the approved header, horizontal tab strip, consistent neutral panels, 44px controls, and tabular table spacing. Paper balances now have labelled tiles; exact values, precision, statuses and action handlers are unchanged. CryptoReviewChart canvas background/text/grid match the approved palette; candles and rule-line colours remain unchanged.
+Actual Next fixture checks at 390 and 1280: populated paper account, empty discovery, tab navigation, positions table contained within its scroll region, no page errors or document overflow, no admin mutation requests. Analytics requests were intercepted locally. Synthetic data only. Screenshots attached. Chart rendering with real market data was not exercised; chart regression tests passed.
+22 focused chart/paper/pause tests passed; after balance markup changed, 9 relevant paper tests reran successfully. No public files, API/model/worker changes, merges or deployments.
+Remaining: detailed visual checks of the other Crypto Markets tabs, research/business pages, login, and the final combined release review.
+
+RESEARCH / BUSINESS AND CRYPTO TAB FOLLOW-UP
+Visual-only updates to Equity Research, Income, Costs, Usage Analytics and Subscriptions: approved neutral colours, consistent headings, responsive controls, and responsive Equity Research input/result grids. Added AdminResearchSurface.module.css, imported only by these admin pages. Status colours, financial values, fetches, permissions and action handlers remain unchanged.
+Browser: 14 remaining Crypto tabs at 390/1280 using unavailable-data responses (initial/error/empty layouts only), plus 5 admin pages at both widths. Income/Costs used synthetic summaries, Subscriptions an empty list, Equity Research its initial form, and Usage Analytics an error response. No page errors, document overflow or admin mutation requests. This does NOT validate populated model outputs or live provider data. Screenshots saved for Equity Research and Income.
+Validation: layoutFlowAudit and incomeRoute: 27 tests pass; project TypeScript clean. React checklist: scoped styles, no new effects or fetches, existing form labels and handlers retained. No public files, API/model/worker edits, merges or deployments.
+Next: populated research/model fixture review, login styling, and the combined admin release checklist. Keep the deployment hold.
+
+LOGIN / POPULATED MODEL REVIEW
+Admin login now matches the approved slate/mint card design. Email and passphrase have accessible names and browser autofill hints. Existing POST, credentials, redirects and authentication checks unchanged. AdminDirectLogin is referenced only by the private login page.
+Actual Next fixture checks at 390 and 1280: populated Shadow Model, Exit Selection and History Replay using the existing unit-test fixtures; no page errors or document overflow. Login submits fake credentials to an intercepted 401 response and displays the refusal. Tests wait for hydration before submission. No provider, database or real sign-in requests. Screenshots attached.
+Five focused login/model tests pass; project TypeScript check clean.
+
+RELEASE CHECKLIST REVIEW
+Reviewed Claude #570 at 68f7abb0864ca1b36d5a602e1709bb5e06cef756; integration tip d98ef088. It is not final validation for this visual branch.
+Hold: Symbol route still uses packet.createdAt as observation freshness. New packets can contain old inputs. Asked Claude to fix or explicitly defer this in the checklist.
+Public scope: checklist says #552/#556 were approved; this session has an admin-only/public-frozen boundary and does not independently establish that approval. Require explicit release scope before including them.
+Final exact-tip full suite, TypeScript and production build remain required after the candidate is agreed. Migration 130 and production checks must wait for rollout approval. Nothing merged, deployed or migrated here.
+Claude handoff: https://github.com/wesso80/marketscannerpros/pull/570#issuecomment-6074836306
+Next recommended task: resolve Symbol freshness, assemble the final candidate, then run the complete release validation.

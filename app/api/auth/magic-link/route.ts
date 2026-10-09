@@ -1,6 +1,6 @@
 import { safeNext } from '@/lib/free/safeNext';
 import { NextRequest, NextResponse } from "next/server";
-import { signSessionToken } from "@/lib/auth";
+import { loggedErrorCode, signSessionToken } from "@/lib/auth";
 import { sendSignInEmail } from "@/lib/email";
 import { createRateLimiter, getClientIP } from "@/lib/rateLimit";
 import { APP_URL } from "@/lib/appUrl";
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       await sendSignInEmail({ to: email, verifyUrl });
     } catch (error) {
       releaseMagicLinkEmailCooldown(email);
-      console.error("Magic link send failed:", error instanceof Error ? error.message : "send failed");
+      console.error('Magic link send failed', { code: loggedErrorCode(error) });
       return NextResponse.json({ error: "Failed to send sign-in link." }, { status: 500 });
     }
 
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
       message: "Secure sign-in link sent. Check your inbox and spam/promotions folders.",
     });
   } catch (error) {
-    console.error("Magic link send failed:", error instanceof Error ? error.message : "send failed");
+    console.error('Magic link send failed', { code: loggedErrorCode(error) });
     return NextResponse.json({ error: "Failed to send sign-in link." }, { status: 500 });
   }
 }

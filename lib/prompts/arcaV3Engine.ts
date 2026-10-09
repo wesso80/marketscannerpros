@@ -154,52 +154,47 @@ RULES:
 `;
 
 // =====================================================================
-// 5. TRADE CONSTRUCTION ENGINE
+// 5. SCENARIO ANALYSIS ENGINE (educational; no trade ticket)
 // =====================================================================
 export const TRADE_CONSTRUCTION_PROMPT = `
 SCENARIO ANALYSIS ENGINE — Educational Scenario Illustration
 ======================================================
 
 When the verdict is ✅ CONDITIONS ALIGNED or ⚠️ CONDITIONAL, output a structured scenario illustration.
-Professional analysis doesn't just say "aligned" — it maps out the complete scenario.
+It describes what the supplied data shows and which conditions would confirm or invalidate the scenario.
+It is not a trade ticket: no direction call, order details, sizing, or instruction to act.
 
 IMPORTANT: These are hypothetical educational scenarios, not financial advice or recommendations to act.
 
-FOR SPOT/EQUITY/CRYPTO DIRECTIONAL SCENARIOS:
+FOR SPOT/EQUITY/CRYPTO SCENARIOS:
 
 📋 SCENARIO ANALYSIS
 ──────────────────────────────────
-Direction:    [LONG / SHORT]
-Entry:        [Specific price or condition — e.g., "breakout above 72,380"]
-Invalidation: [ATR-based, below/above structure — ALWAYS include]
-Target 1:     [First target — nearest resistance/support]
-Target 2:     [Second target — if momentum continues]
-R:R:          [Risk-to-Reward ratio — MUST be ≥ 1.5:1]
-Size Context: [% of capital based on ATR and regime — e.g., "2% risk, ATR-adjusted"]
+Scenario Bias:      [Bullish / Bearish / Neutral — what the evidence currently leans toward]
+Level of Interest:  [Price or condition from the supplied data — e.g., "a close above 72,380"]
+Invalidation:       [ATR- or structure-based level where the scenario no longer holds — ALWAYS include]
+Key Levels:         [Nearest supplied resistance/support levels the scenario would react to]
+Volatility Context: [Regime and ATR context — how wide normal moves currently are]
 ──────────────────────────────────
 
-FOR OPTIONS TRADES (when options context available):
+FOR OPTIONS CONTEXT (only when options data is supplied):
 
-OPTIONS SCENARIO ANALYSIS
+OPTIONS CONTEXT
 ──────────────────────────────────
-Strategy:        [Call Debit Spread / Put Credit Spread / Iron Condor / etc.]
-Direction:       [Bullish / Bearish / Neutral]
-Strike(s):       [Specific strikes based on available chain data]
-DTE:             [Days to expiration based on analysis]
-IV Context:      [Current IV rank and whether buying or selling premium is favored]
-Max Risk:        [Maximum loss on the structure]
-Max Reward:      [Maximum gain]
-Breakeven:       [Breakeven price(s)]
-Exposure:        [% context range for study only]
+IV Context:      [Supplied IV rank/percentile and what that level has typically meant for option premiums]
+Expected Move:   [Supplied implied move, if available]
+Positioning:     [Supplied gamma / open-interest / max-pain context, if available]
+Data Gaps:       [Which options fields were not supplied]
 ──────────────────────────────────
 
 RULES:
 - ONLY output scenario analysis when verdict is CONDITIONS ALIGNED or CONDITIONAL
-- For CONDITIONAL verdicts, clearly state what confirmation is needed before conditions fully align
-- R:R MUST be ≥ 1.5:1. If it's not achievable, downgrade verdict to WATCH
+- For CONDITIONAL verdicts, clearly state what confirmation is still missing
+- If the nearest key level is closer than 1.5× the distance to invalidation, downgrade the verdict to WATCH
 - Invalidation level is MANDATORY. No scenario analysis without one.
-- If insufficient data for specific levels, give the METHOD: "Invalidation: 1.5× ATR below entry" instead of a made-up number
-- Exposure context must reference the volatility regime (expanded volatility = lower scenario conviction)
+- If insufficient data for specific levels, give the METHOD: "Invalidation: 1.5× ATR beyond the level of interest" instead of a made-up number
+- Never state position size, % of capital, % risk, leverage, specific option strikes, expiries or strategies
+- Never label lines Entry, Stop, Target, Take Profit, Direction LONG/SHORT or R:R
 - For CONDITIONS NOT MET or WATCH verdicts, do NOT output a scenario analysis — instead state what evidence would need to change
 `;
 
@@ -210,7 +205,7 @@ export const TIME_CONFLUENCE_PROMPT = `
 TIME CONFLUENCE INTEGRATION — MSP Unique Edge
 ================================================
 
-MarketScanner Pros has a UNIQUE feature: the Time Confluence Scanner.
+MarketScannerPros has a UNIQUE feature: the Time Confluence Scanner.
 This tracks when multiple timeframe candle closes converge, predicting volatility expansion windows.
 
 When time confluence data is available (or when discussing timing):
@@ -325,7 +320,7 @@ This is a fresh session.
     }
   }
 
-  if (stats.recentSignals.length > 0) {
+  if (showOutcomeStats && stats.recentSignals.length > 0) {
     lines.push('', 'Recent Signals:');
     for (const sig of stats.recentSignals.slice(0, 5)) {
       const outcomeEmoji = sig.outcome === 'correct' ? '✅' : sig.outcome === 'wrong' ? '❌' : '⏳';

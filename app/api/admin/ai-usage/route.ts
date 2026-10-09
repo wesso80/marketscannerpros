@@ -3,6 +3,7 @@ import { q } from "@/lib/db";
 import { requireAdmin } from '@/lib/adminAuth';
 import { wrapTruth } from '@/lib/admin';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 // Helper to safely run a query and return empty on error
 async function safeQuery<T = any>(queryFn: () => Promise<T[]>, defaultValue: T[] = []): Promise<T[]> {
   try {
@@ -108,7 +109,7 @@ export async function GET(req: NextRequest) {
       });
     }
     return NextResponse.json(
-      { error: "Failed to fetch AI usage", details: error.message },
+      { error: "Failed to fetch AI usage", details: adminErrorText(error, '/api/admin/ai-usage') },
       { status: 500 }
     );
   }

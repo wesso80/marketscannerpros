@@ -67,7 +67,7 @@ Many squeeze studies review alignment across multiple timeframes:
 
 ## Using MarketScanner to Find Squeezes
 
-[MarketScanner Pros](/) automates squeeze detection across hundreds of symbols:
+[MarketScannerPros](/) automates squeeze detection across hundreds of symbols:
 - **Real-time squeeze indicators** on multiple timeframes
 - **Confluence scoring** to rank highest-confluence setups
 - **ATR-based scenario levels** for risk review
@@ -117,7 +117,7 @@ Before diving into specific tools, here's what serious market researchers often 
 
 ## Top Free Crypto Screeners (2025)
 
-### 1. MarketScanner Pros (Free Tier)
+### 1. MarketScannerPros (Free Tier)
 **Best for:** Multi-timeframe confluence and squeeze detection
 
 **Pros:**
@@ -237,7 +237,7 @@ Sometimes a paid tool can save time, reduce manual checking, and improve researc
 ## Conclusion
 
 The best screener depends on your research workflow:
-- **Confluence-focused active researchers** → [MarketScanner Pros](/)
+- **Confluence-focused active researchers** → [MarketScannerPros](/)
 - **Advanced script users** → TradingView
 - **Fundamental researchers** → CoinMarketCap
 - **On-chain analysts** → CryptoQuant
@@ -363,7 +363,7 @@ Once direction (higher TF) and momentum (medium TF) align:
 
 Manually checking 3+ timeframes for dozens of symbols is slow. Scanning tools record those readings together.
 
-[MarketScanner Pros](/) records multi-timeframe indicator readings:
+[MarketScannerPros](/) records multi-timeframe indicator readings:
 - **EMA stack readings** across the timeframes on the page
 - **How many of those timeframes agree**, with the dates shown
 - **Squeeze readings** on multiple timeframes at once

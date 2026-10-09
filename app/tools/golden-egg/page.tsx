@@ -20,7 +20,6 @@ import { humanizeEnum } from '@/lib/presentation/labels';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useGoldenEgg, useDVE, useQuote, useRegime, type ScanTimeframe, SCAN_TIMEFRAMES } from '@/app/v2/_lib/api';
 import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
-import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { REGIME_COLORS, VERDICT_COLORS, CROSS_MARKET, LIFECYCLE_COLORS, REGIME_WEIGHTS } from '@/app/v2/_lib/constants';
 import type { RegimePriority } from '@/app/v2/_lib/types';
 import { useCachedTopSymbols } from '@/hooks/useCachedTopSymbols';
@@ -619,7 +618,7 @@ function GoldenEggReport() {
 
   return (
     <div className={designEnabled ? studio.page : "mx-auto max-w-6xl space-y-3"} data-symbol-studio={designEnabled || undefined}>
-      {designEnabled && <header className={studio.intro}><div><p>SYMBOL RESEARCH</p><h2>One symbol. The evidence in context.</h2></div><Link href="/tools/command-center">Back to Overview ↗</Link></header>}
+      {designEnabled && <header className={studio.intro}><div><p>SYMBOL RESEARCH</p><h2>One symbol. The evidence in context.</h2></div><Link href="/tools/command-center">Back to Overview</Link></header>}
       {designEnabled && symbolControls}
       <PublicUsageSummary onVisitorReady={() => goldenEgg.refetch()} refreshKey={`${sym}:${loading}:${goldenEgg.error || ''}`} />
       <SymbolSnapshotHeader name={geCanonical?.fundamentals?.name} symbol={sym} asset={snapshotAsset} timeframe={timeframe} stamp={symbolQuoteStamp(sym,snapshotAsset,quote.data)} pick={findSymbolPick(dailyPicks.data,sym,snapshotAsset)} rankLoading={dailyPicks.loading} rankError={dailyPicks.error} quiet={isAuthBlocked} compact/>
@@ -1244,7 +1243,6 @@ function GoldenEggReport() {
                 Open in Terminal
               </a>
             </div>
-            <div className="mt-2 text-[11px] text-slate-600">Levels are calculated from technical indicators for educational and informational purposes only. This does not constitute financial advice, does not recommend any course of action, and does not consider your personal circumstances. Past performance does not guarantee future results.</div>
           </Card>
 
           {/* Phase 4: the engine narrative (permission wording and a /100 composite) is not shown; the research snapshot
@@ -1256,7 +1254,7 @@ function GoldenEggReport() {
       </CollapsibleSection>}
       {!isAuthBlocked&&geCanonical?.historyBars!=null&&geCanonical.historyBars>0&&<CollapsibleSection deferMount title="Backtest" summary={`${geCanonical.historyBars} recorded ${geCanonical.barInterval??timeframe} bars`}><a className="inline-flex min-h-10 items-center underline" href={`/tools/workspace?tab=backtest&symbol=${encodeURIComponent(sym)}&type=${snapshotAsset}&timeframe=${timeframe}`}>Open Backtest with {symbolText(sym)}</a></CollapsibleSection>}
       {(quoteType==='crypto'?Boolean(cryptoStamp?.source&&cryptoStamp?.asOf):Boolean((geCanonical?.source??quote.data?.source)&&(geCanonical?.priceTs??quote.data?.observedAt)))&&<SourceLine {...(quoteType==='crypto'?{...cryptoStamp,source:readerSourceLabel(cryptoStamp?.source)}:{source:readerSourceLabel(geCanonical?.source??quote.data?.source),asOf:geCanonical?.priceTs??quote.data?.observedAt,basis:geCanonical?.barInterval??'Last session close'})}/>}
-      <ComplianceDisclaimer compact />
+      <p className={studio.disclaimer}>General information only, not financial advice.</p>
     </div>
   );
 }

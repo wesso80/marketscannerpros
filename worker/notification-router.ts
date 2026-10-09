@@ -280,7 +280,7 @@ async function deliverEmail(event: TradeEventRow, prefs: NotificationPrefs, titl
     <div style="font-family: Arial, sans-serif; line-height: 1.45; color: #0f172a;">
       <h2>${title}</h2>
       <p>${body}</p>
-      <p><a href="https://app.marketscannerpros.app${href || '/tools/workspace?tab=journal'}">Open in MarketScanner Pros</a></p>
+      <p><a href="https://app.marketscannerpros.app${href || '/tools/workspace?tab=journal'}">Open in MarketScannerPros</a></p>
       <p style="color:#64748b;font-size:12px;">Event: ${event.event_type} • ID: ${event.id}</p>
     </div>
   `.trim();

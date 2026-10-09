@@ -1172,7 +1172,7 @@ async function attachCoachSummaryToJournalDraft(workspaceId: string, coachEvent:
     '---',
     'AI Coach Auto-Analysis',
     `Coach Analysis ID: ${analysisId}`,
-    `Win Rate: ${summary?.win_rate ?? 'n/a'}%`,
+    `Hit rate on your own trades: ${summary?.win_rate ?? 'n/a'}%`,
     `Avg Win: ${summary?.avg_win ?? 'n/a'}`,
     `Avg Loss: ${summary?.avg_loss ?? 'n/a'}`,
     `Expectancy: ${summary?.expectancy ?? 'n/a'}`,

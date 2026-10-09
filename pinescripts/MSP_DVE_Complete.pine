@@ -1,5 +1,5 @@
 // This Pine Script source code is subject to the terms of the Mozilla Public License 2.0
-// Copyright MarketScanner Pros - Dynamic Volatility Engine (DVE) v2+
+// Copyright MarketScannerPros - Dynamic Volatility Engine (DVE) v2+
 // Full 5-layer implementation: BBWP, VHM, Vol Regime, Squeeze, Phase Persistence,
 // Signal Triggering, Breakout Readiness, Exhaustion Risk, Trap Detection
 // Display Modes: Clean / Pro / Diagnostic - Verdict-first table

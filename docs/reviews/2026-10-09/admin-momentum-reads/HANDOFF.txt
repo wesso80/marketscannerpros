@@ -1,0 +1,17 @@
+Momentum read/write separation — audit M2
+
+Base: admin-integration 88785fa7e2fa5f30f4ad6c7b99a50fa44efb81e9.
+Branch: codex/admin-momentum-read-only. No merge/deployment.
+
+GET /api/admin/crypto-markets/momentum now returns the stored scan unchanged. It no longer requests flow stamps, checks the batch lock, changes updatedAt or writes Redis. Missing scans remain null; missing stamps remain absent. Success, denial and storage-failure responses are private/no-store. Existing authentication is retained.
+
+The existing runMomentumBatch already enriches flow stamps, including a completed scan with no pending coins. That is now the sole enrichment path in this route/writer pair. Every initial, intermediate and final scan save atomically compares a random lock-owner token and publishes only if it still owns the batch lock. Expired/replaced ownership returns 409, preserving a successor's snapshot and skipping subsequent email/forward-score work for that rejected save.
+
+Existing pause checks, lease durations, cooldown behavior, calculations, provider-selection logic and models remain unchanged. No public files, authentication files, worker schedules or UI files changed. No overlap with Claude #555's listed files.
+
+Behavioral limit: this does not extend/renew the lock. A slow batch can now stop with 409 instead of publishing after expiry; previously saved partial progress remains. Provider work already completed before lease loss is not undone. Auxiliary enrichment may already have touched its own caches; the ownership fence protects the momentum scan snapshot. This is not a transaction across all enrichment caches or email delivery.
+
+Tests cover simultaneous GETs with missing stamps, auth-before-storage, null scans, redacted storage errors, completed-scan enrichment, contention and expiry/replacement at intermediate/final publication. The prior route test now expects GET to leave the stamp absent and POST to record an unavailable stamp on provider failure. Fakes perform no provider/email/database operations. Redis ownership tests model EVAL behavior; no live Redis instance was available for this run.
+
+No visual change: existing UI already tolerates absent flowStamp. Stale saved scans are not silently enriched by viewing them; the next authorized batch supplies enrichment.
+Validation: 32 focused tests pass; complete admin selection 185 files / 1551 tests pass. TypeScript clean with --noEmit --incremental false --typeRoots ./node_modules/@types. Isolated Windows validation copy uses Git LF SQL line endings.

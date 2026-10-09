@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/adminAuth";
 import { q } from "@/lib/db";
 import { wrapTruth } from "@/lib/admin";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 
 const ACTIONS = ["taken", "ignored", "missed", "worked", "failed", "invalidated", "rule_broken"] as const;
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     console.error("[admin:morning-brief:feedback:post] Error:", err);
     return NextResponse.json(
-      { error: "Feedback save failed", detail: err instanceof Error ? err.message : "Unknown" },
+      { error: "Feedback save failed", detail: adminErrorText(err, '/api/admin/morning-brief/feedback') },
       { status: 500 },
     );
   }

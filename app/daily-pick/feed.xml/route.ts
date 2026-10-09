@@ -82,7 +82,7 @@ export async function GET() {
     <title>MarketScannerPros — Daily scan observations</title>
     <link>${SITE}/daily-pick</link>
     <atom:link href="${SITE}/daily-pick/feed.xml" rel="self" type="application/rss+xml" />
-    <description>Symbols stored by the MarketScanner Pros daily scan, with measured price and session change, listed A–Z for each day. Not ratings, rankings or recommendations. Educational research only — not investment advice.</description>
+    <description>Symbols stored by the MarketScannerPros daily scan, with measured price and session change, listed A–Z for each day. Not ratings, rankings or recommendations. Educational research only — not investment advice.</description>
     <language>en-au</language>
     <lastBuildDate>${latestDate}</lastBuildDate>
     <ttl>60</ttl>

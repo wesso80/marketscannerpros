@@ -2,7 +2,7 @@
 // Direct login for admin emails only — no magic link required.
 // Requires ADMIN_LOGIN_SECRET env var as passphrase.
 import { NextRequest, NextResponse } from "next/server";
-import { hashWorkspaceId, signSessionToken } from "@/lib/auth";
+import { hashWorkspaceId, loggedErrorCode, signSessionToken } from "@/lib/auth";
 import { ADMIN_SESSION_COOKIE, createAdminSessionToken, getAdminSessionCookieOptions } from '@/lib/adminAuth';
 import { q } from "@/lib/db";
 import crypto from "crypto";
@@ -33,7 +33,7 @@ async function trackSubscription(
     `, [workspaceId, email, tier, status]);
   } catch (error: any) {
     if (!error?.message?.includes('does not exist')) {
-      console.error("Track subscription error:", error);
+      console.error('Track subscription error', { code: loggedErrorCode(error) });
     }
   }
 }
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     } catch (e: any) {
       // Non-fatal — table may not exist yet
       if (!e?.message?.includes('does not exist')) {
-        console.error('Workspace upsert error:', e);
+        console.error('Workspace upsert error', { code: loggedErrorCode(e) });
       }
     }
 
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
     res.cookies.set(ADMIN_SESSION_COOKIE, createAdminSessionToken(`admin_${email}`), getAdminSessionCookieOptions(req));
     return res;
   } catch (err) {
-    console.error("Admin login error:", err);
+    console.error('Admin login error', { code: loggedErrorCode(err) });
     return NextResponse.json({ error: "Authentication failed." }, { status: 500 });
   }
 }

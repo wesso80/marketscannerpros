@@ -21,6 +21,7 @@ import { alphaVantageProvider } from '@/lib/operator/market-data';
 import { opsAlert } from '@/lib/opsAlerting';
 import { radarState } from '@/lib/operator/radar-state';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = 'nodejs';
 
 // Conservative fallback context — used only when caller provides no context.
@@ -121,7 +122,7 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     console.error('[operator:engine:scan] Error:', err);
     return NextResponse.json(
-      { error: 'Scan failed', detail: err instanceof Error ? err.message : 'Unknown error' },
+      { error: 'Scan failed', detail: adminErrorText(err, '/api/operator/engine/scan') },
       { status: 500 },
     );
   }

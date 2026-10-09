@@ -1,0 +1,23 @@
+Admin paper read/setup separation
+
+Base: admin-integration 88785fa7e2fa5f30f4ad6c7b99a50fa44efb81e9.
+Branch: codex/admin-paper-read-only. No merges or deployments.
+
+The account read and CSV export previously called CREATE TABLE/INDEX helpers for optional research tables. Both now use a SELECT to_regclass schema-presence probe. A fresh web process can read existing optional tables without having run the writer first. Missing optional tables yield unavailable/null research fields; core account reads remain intact. The probe does not set or clear writer readiness.
+
+Writer initialization in trackExcursions, recordSignals and signal resolution is unchanged. No model, paper-cycle calculations, auth, public files, migrations or UI files changed. Existing account transaction and workspace-scoped portfolio lookup are retained. The base sleeve read already uses SELECT-only portfolio-store helpers and needs no change.
+
+Acceptance checks
+- Existing optional tables on a cold process: real read helpers return research data without DDL or provider fetches.
+- Absent/partially present optional tables: omit unavailable joins/views and preserve the core account.
+- CSV with and without optional tables: SELECT-only, no provider calls.
+- Missing account: no account creation.
+- Probe failure: no setup retry or mutation.
+- Writer readiness remains false after reads; existing paper-cycle tests remain green.
+
+Validation: 50 focused tests pass. Full admin selection: 185 files, 1549 tests pass. SQL files normalized to repository LF in the isolated Windows test copy only. Tests use fake DB/Redis data; no production database, market provider or real PostgreSQL migration was exercised. No visual change.
+
+Known limit: relation existence is not a full migration-version or SELECT-permission check. A concurrent schema drop or incompatible existing schema may still fail the account transaction; this change does not repair schemas on reads. Existing global research signal-ledger aggregation is unchanged.
+
+Coordination: Claude owns auth drafts #547/#549/#551. Health overview #550 is separate. Suggested next task is a local combined integration check of admin authentication, Health, paper JSON and CSV reads, without merging or deploying.
+TypeScript: clean with --noEmit --incremental false --typeRoots ./node_modules/@types (project-local ambient types).

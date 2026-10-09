@@ -1,7 +1,8 @@
 "use client";
 
 import { FREE_COPY } from '@/components/free/copy';
-import { getPortfolioLimit, getAILimit } from '@/lib/useUserTier';
+import { getPortfolioLimit } from '@/lib/useUserTier';
+import { PUBLIC_DAILY_LIMITS } from '@/lib/publicPlans';
 
 // 2026 pricing simplification: exactly two customer-facing plans, Free and Pro.
 // Legacy Pro Trader has been retired from the pricing page. Existing subscribers
@@ -177,6 +178,8 @@ export default function PricingPage() {
     void handleCheckout("pro", billing);
   }, [signedIn, isPaidUser, cycle]);
 
+  // Unreachable: publicDesignEnabled() is always true, so /pricing returns ResearchPricing above.
+  // Allowances stay aligned with lib/publicPlans.ts so this copy cannot drift back to 5 scans / 10 AI a day.
   const plans: Plan[] = [
     {
       id: "free",
@@ -191,7 +194,12 @@ export default function PricingPage() {
       benefits: [
         {
           group: "Scan",
-          lines: [FREE_COPY.pricing.scans, FREE_COPY.pricing.picks, FREE_COPY.pricing.alerts],
+          lines: [
+            `${PUBLIC_DAILY_LIMITS.free.symbol} Symbol reports a day`,
+            `Signed-out visitors: ${PUBLIC_DAILY_LIMITS.visitor.symbol} Symbol report a day`,
+            FREE_COPY.pricing.picks,
+            FREE_COPY.pricing.alerts,
+          ],
         },
         {
           group: "Research",
@@ -203,7 +211,7 @@ export default function PricingPage() {
         },
         {
           group: "Track",
-          lines: [FREE_COPY.portfolioCount(getPortfolioLimit("free")), FREE_COPY.pricing.journal, FREE_COPY.aiCount(getAILimit("free"))],
+          lines: [FREE_COPY.portfolioCount(getPortfolioLimit("free")), FREE_COPY.pricing.journal],
         },
       ],
     },
@@ -224,7 +232,7 @@ export default function PricingPage() {
           group: "Scan",
           lines: [
             "Unlimited Symbol reports",
-            "20 AI questions a day",
+            `${PUBLIC_DAILY_LIMITS.pro.ai} AI questions a day`,
           ],
         },
         {
@@ -240,7 +248,7 @@ export default function PricingPage() {
           lines: [
             "Every research and intelligence dashboard, unrestricted",
             "Crypto Command Centre + derivatives tools",
-            "MSP Copilot: 20 questions a day",
+            `MSP Copilot: ${PUBLIC_DAILY_LIMITS.pro.ai} AI questions a day`,
           ],
         },
         {

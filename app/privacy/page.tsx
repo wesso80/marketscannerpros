@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "How MarketScanner Pros collects, uses, and protects your data, including secure access code authentication and Stripe billing.",
+    "How MarketScannerPros collects, uses, and protects your data, including secure access code authentication and Stripe billing.",
   alternates: { canonical: "https://marketscannerpros.app/privacy" },
   robots: { index: false, follow: true },
 };
@@ -19,7 +19,7 @@ export default function PrivacyPage() {
 
       <h2>Overview</h2>
       <p>
-        MarketScanner Pros (&ldquo;we&rdquo;, &ldquo;us&rdquo;) provides a trading dashboard and related services.
+        MarketScannerPros (&ldquo;we&rdquo;, &ldquo;us&rdquo;) provides a trading dashboard and related services.
         This policy explains what we collect, why, and your choices.
       </p>
 
@@ -55,7 +55,7 @@ export default function PrivacyPage() {
       <h2>Sharing &amp; processors</h2>
       <ul>
         <li><strong>Stripe</strong> (payments &amp; portal).</li>
-        <li><strong>OpenAI</strong> (MSP AI chatbot powered by GPT-4 - does not train on your data).</li>
+        <li><strong>OpenAI</strong> (the MSP AI chatbot uses third-party large language models, currently from OpenAI, and those models are not trained on your data).</li>
         <li><strong>Alpha Vantage</strong> (real-time and historical market data provider).</li>
         <li><strong>Render</strong> (application hosting and web services).</li>
         <li><strong>Neon</strong> (PostgreSQL database hosting).</li>

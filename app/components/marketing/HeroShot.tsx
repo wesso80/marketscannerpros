@@ -19,7 +19,7 @@ export default function HeroShot() {
         {!err ? (
           <Image
             src="/marketing/hero-top.png"
-            alt="MarketScanner Pros — product preview"
+            alt="MarketScannerPros — product preview"
             fill
             priority
             sizes="(max-width: 640px) 90vw, (max-width: 1024px) 60vw, 800px"
@@ -36,7 +36,7 @@ export default function HeroShot() {
             </defs>
             <rect width="100%" height="100%" rx="16" fill="url(#g)" opacity="0.15" />
             <g textAnchor="middle" fill="#fff" opacity="0.9">
-              <text x="300" y="180" fontSize="22" fontWeight="700">MarketScanner Pros</text>
+              <text x="300" y="180" fontSize="22" fontWeight="700">MarketScannerPros</text>
               <text x="300" y="210" fontSize="14" opacity="0.8">Preview placeholder</text>
             </g>
           </svg>

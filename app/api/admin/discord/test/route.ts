@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { q } from '@/lib/db';
 import { wrapTruth } from '@/lib/admin';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = 'nodejs';
 
 const DEFAULT_CHANNEL_KEY = 'msp-alerts';
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
     username: 'MSP Admin Terminal',
     embeds: [
       {
-        title: 'MarketScanner Pros Alert',
+        title: 'MarketScannerPros Alert',
         description: 'Private admin research alert',
         color: 0x10B981,
         fields: [
@@ -113,7 +114,7 @@ export async function POST(req: NextRequest) {
       truth: wrapTruth({}, { source: 'admin:discord-test', freshness: 'real-time' }),
     }, { status: response.ok ? 200 : 502 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Discord webhook request failed';
+    const message = adminErrorText(error, '/api/admin/discord/test');
     console.error('[admin-discord-test] Discord request failed', { channelKey, source, error: message });
     return NextResponse.json(
       { ok: false, sent: false, channelKey, source, error: message },

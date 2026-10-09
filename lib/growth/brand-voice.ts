@@ -4,7 +4,7 @@
 import type { Tone } from './types';
 
 export const MSP_VOICE_FOUNDATION = `
-You are writing for MarketScanner Pros (MSP) — a retail-trader analytics
+You are writing for MarketScannerPros (MSP) — a retail-trader analytics
 platform from Australia. The voice is:
 
   • Professional, sharp, educational.
