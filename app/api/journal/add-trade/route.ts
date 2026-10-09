@@ -4,7 +4,6 @@ import { isPaidTier } from '@/lib/tiers';
 import { NextRequest, NextResponse } from 'next/server';
 import { q, atomicQueries } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
-import { getKillSwitchState } from '@/lib/universe/personalUniverse';
 import { resolveEntryLevels } from '@/lib/journal/entryLevels';
 
 /** Tags must be a short list of strings (a bare string would break the TEXT[] insert). */
@@ -23,10 +22,8 @@ function sanitizeTags(raw: unknown): string[] {
  * POST /api/journal/add-trade
  * Creates a single journal entry (manual trade).
  *
- * Kill-switch gate: when the workspace kill switch is ON, the operator
- * MUST acknowledge via body.killSwitchAck === true (with optional
- * killSwitchAckReason). Without the explicit ack we refuse the write
- * with HTTP 409 + structured error so the UI can prompt for confirmation.
+ * The admin kill switch does not gate Journal writes: it is an admin control and must not stop anyone using their
+ * Journal (owner decision, admin audit M6).
  */
 export async function POST(req: NextRequest) {
   try {
@@ -37,25 +34,6 @@ export async function POST(req: NextRequest) {
 
     const workspaceId = session.workspaceId;
     const body = await req.json();
-
-    // Kill-switch acknowledgement gate
-    try {
-      const ks = await getKillSwitchState(workspaceId);
-      if (ks.enabled && body.killSwitchAck !== true) {
-        return NextResponse.json({
-          error: 'kill_switch_active',
-          requiresAck: true,
-          killSwitch: {
-            enabled: true,
-            reason: ks.reason ?? null,
-            setAt: ks.setAt ?? null,
-          },
-          message: 'Kill switch is ON. Acknowledge with { killSwitchAck: true, killSwitchAckReason: "..." } to override.',
-        }, { status: 409 });
-      }
-    } catch {
-      // Best-effort: if kill-switch lookup fails we do not block writes.
-    }
 
     // Validate required fields
     const symbol = String(body.symbol || '').toUpperCase().trim();
