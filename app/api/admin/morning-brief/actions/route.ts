@@ -14,6 +14,7 @@ import {
 } from "@/lib/admin/morning-brief";
 import type { ScannerHit } from "@/lib/admin/types";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
@@ -98,7 +99,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("[admin:morning-brief:actions] Error:", error);
     return NextResponse.json(
-      { error: "Action failed", detail: error instanceof Error ? error.message : "Unknown error" },
+      { error: "Action failed", detail: adminErrorText(error, '/api/admin/morning-brief/actions') },
       { status: 500 },
     );
   }

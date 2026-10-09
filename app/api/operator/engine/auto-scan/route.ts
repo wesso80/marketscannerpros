@@ -24,6 +24,7 @@ import { DEFAULT_WATCHLISTS } from '@/lib/operator/watchlists';
 import { detachRun, readSavedScan, savedScanStaleAfterSec, startSharedScan, type StartSharedScanResult } from '@/lib/admin/sharedScan';
 import { loadRecentRadarChanges } from '@/lib/admin/sharedScanStore';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
@@ -180,7 +181,7 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     console.error('[operator:auto-scan] Error:', err);
     return NextResponse.json(
-      { error: 'Auto-scan failed', detail: err instanceof Error ? err.message : 'Unknown error' },
+      { error: 'Auto-scan failed', detail: adminErrorText(err, '/api/operator/engine/auto-scan') },
       { status: 500 },
     );
   }

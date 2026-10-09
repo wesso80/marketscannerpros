@@ -47,6 +47,7 @@ import {
   type TechnicalNote,
 } from "@/lib/admin/technicalNote";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 export const maxDuration = 90;
 
@@ -258,7 +259,7 @@ async function runFundamentalsAI(
   } catch (err) {
     return {
       ok: false,
-      reason: err instanceof Error ? err.message : "openai_error",
+      reason: adminErrorText(err, '/api/admin/daily-brief'),
     };
   }
 }
@@ -306,7 +307,7 @@ async function runTechnicalAI(
   } catch (err) {
     return {
       ok: false,
-      reason: err instanceof Error ? err.message : "openai_error",
+      reason: adminErrorText(err, '/api/admin/daily-brief'),
     };
   }
 }

@@ -20,15 +20,26 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { storedTruth } from '@/lib/admin/truthLayer';
 import { requireAdmin } from "@/lib/adminAuth";
 import { q } from "@/lib/db";
-import { wrapTruth } from "@/lib/admin";
 import { LABELLER_FIX_AT } from "@/lib/admin/signalStats";
 import { computeCalibration, type OutcomeRow } from "@/lib/admin/modelDiagnostics";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 
 const SIGNAL_WORKSPACE = "operator-terminal";
+
+/** Newest signal time for the truth stamp; null (shown as not recorded) if it cannot be read. */
+async function latestSignalAt(): Promise<string | null> {
+  try {
+    const rows = await q<{ latest: string | null }>(`SELECT MAX(signal_at) AS latest FROM ai_signal_log WHERE workspace_id = $1`, [SIGNAL_WORKSPACE]);
+    return rows?.[0]?.latest ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export type ScoreField = "confluence" | "elite" | "confidence";
 
@@ -80,7 +91,7 @@ async function loadSignalOutcomes(field: ScoreField): Promise<SignalLoad> {
     ]);
     return { rows: rows ?? [], oldMethodLabelled: Number(old?.[0]?.n ?? 0) || 0, error: null };
   } catch (err) {
-    return { rows: [], oldMethodLabelled: 0, error: err instanceof Error ? err.message : String(err) };
+    return { rows: [], oldMethodLabelled: 0, error: adminErrorText(err, '/api/admin/model-diagnostics') };
   }
 }
 
@@ -123,6 +134,6 @@ export async function GET(req: NextRequest) {
       oldMethodLabelled: signals.oldMethodLabelled,
     },
     note,
-    truth: wrapTruth({}, { source: 'admin:postgres', freshness: 'real-time' }),
+    truth: storedTruth({ source: 'ai_signal_log (Postgres)', dataAsOf: await latestSignalAt(), staleAfterMinutes: 24 * 60 }),
   });
 }

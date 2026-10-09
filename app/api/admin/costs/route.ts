@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
 import { requireAdmin } from '@/lib/adminAuth';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 // GPT-4o-mini pricing (as of Dec 2024)
 const PRICING = {
   'gpt-4o-mini': {
@@ -146,7 +147,7 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error("Admin costs error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch costs", details: error.message },
+      { error: "Failed to fetch costs", details: adminErrorText(error, '/api/admin/costs') },
       { status: 500 }
     );
   }

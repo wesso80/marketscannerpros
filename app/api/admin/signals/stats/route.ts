@@ -14,9 +14,9 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { storedTruth } from '@/lib/admin/truthLayer';
 import { requireAdmin } from "@/lib/adminAuth";
 import { q } from "@/lib/db";
-import { wrapTruth } from "@/lib/admin";
 import { loadPositionHorizonStats } from "@/lib/admin/positionHorizonStats";
 import { LABELLER_FIX_AT, saneMoveSql, signedMoveSql, summarizeDirectional, type DirectionalCounts } from "@/lib/admin/signalStats";
 
@@ -38,6 +38,7 @@ export async function GET(req: NextRequest) {
     const overall = await q(
       `SELECT
          COUNT(*)::int AS total_signals,
+         MAX(signal_at) AS latest_signal_at,
          COUNT(*) FILTER (WHERE outcome != 'pending')::int AS labeled,
          COUNT(*) FILTER (WHERE outcome = 'pending')::int AS pending,
          COUNT(*) FILTER (WHERE outcome = 'pending' AND signal_at > NOW() - INTERVAL '24 hours')::int AS pending_maturing,
@@ -293,7 +294,7 @@ export async function GET(req: NextRequest) {
               : null,
         },
       },
-      truth: wrapTruth({}, { source: 'admin:postgres', freshness: 'real-time' }),
+      truth: storedTruth({ source: 'ai_signal_log (Postgres)', dataAsOf: o.latest_signal_at ?? null, staleAfterMinutes: 24 * 60 }),
     });
   } catch (err: unknown) {
     console.error("[admin:signals:stats] Error:", err);

@@ -16,6 +16,7 @@ import { computeResearchDelta } from "@/lib/admin/researchDelta";
 import { marketForSymbol, parseAdminMarket } from "@/lib/admin/adminMarket";
 import { PositionLevelsCard } from "@/components/admin/PositionLevels";
 
+import TruthStampLine from "@/components/admin/shared/TruthStampLine";
 type SymbolResponse = AdminSymbolIntelligence & {
   research?: {
     dataTruth: DataTruth;
@@ -169,6 +170,12 @@ export default function SymbolResearchTerminalPage({
     <div style={{ padding: "1rem 1.25rem", color: "#E5E7EB", maxWidth: 1400, margin: "0 auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <h1 style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0 }}>Symbol Research Terminal</h1>
+        {data && <TruthStampLine truth={(data as any).adminTruth} />}
+        {data && (data as any).adminTruth?.data?.packetBuiltAt && (
+          <p style={{ fontSize: "0.7rem", color: "#94A3B8" }}>
+            Packet built: {new Date((data as any).adminTruth.data.packetBuiltAt).toLocaleString()} (build time, not data age)
+          </p>
+        )}
         <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: "0.75rem" }}>
           {/* Symbol search */}
           <form

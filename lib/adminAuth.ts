@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { validAdminWriteOrigin } from './admin/adminWriteOrigin';
 import { cookies } from 'next/headers';
 import { hashWorkspaceId, signSessionToken, verifySessionToken } from './auth';
 import { isOperator } from './quant/operatorAuth';
@@ -68,7 +69,7 @@ export function verifyAdminAuth(request: Request): boolean {
 
   const header = request.headers.get('x-admin-secret') ?? request.headers.get('authorization') ?? '';
   const stripped = header.replace(/^Bearer\s+/i, '');
-  return isValidAdminSecret(stripped, adminSecret);
+  return isValidAdminSecret(stripped, adminSecret) && validAdminWriteOrigin(request, 'header');
 }
 
 export function createAdminSessionToken(subject: string = 'admin_secret'): string {
@@ -93,6 +94,8 @@ async function verifyAdminSessionCookie(): Promise<AdminAuthResult> {
   try {
     const payload = verifySessionToken(token);
     if (payload.kind !== 'admin') return { ok: false };
+    // Revocation: the cookie's identity must still be an admin (same rule as middleware).
+    if (typeof payload.cid !== 'string' || !isOperator(payload.cid)) return { ok: false };
     return {
       ok: true,
       source: 'admin_session',
@@ -106,7 +109,7 @@ async function verifyAdminSessionCookie(): Promise<AdminAuthResult> {
 
 export async function verifyAdminRequest(request: Request): Promise<AdminAuthResult> {
   const adminSession = await verifyAdminSessionCookie();
-  if (adminSession.ok) return adminSession;
+  if (adminSession.ok) return validAdminWriteOrigin(request, 'cookie') ? adminSession : { ok: false };
 
   const cookieStore = await cookies();
   const appToken = cookieStore.get('ms_auth')?.value;
@@ -116,6 +119,7 @@ export async function verifyAdminRequest(request: Request): Promise<AdminAuthRes
       const cid = typeof payload.cid === 'string' ? payload.cid : '';
       const workspaceId = typeof payload.workspaceId === 'string' ? payload.workspaceId : undefined;
       if (cid && isOperator(cid, workspaceId)) {
+        if (!validAdminWriteOrigin(request, 'cookie')) return { ok: false };
         return { ok: true, source: 'app_session', cid, workspaceId };
       }
     } catch {

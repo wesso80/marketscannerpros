@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { listPerformance } from '@/lib/growth/db';
 import { wrapTruth } from '@/lib/admin';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export async function GET(req: NextRequest) {
   const auth = await requireAdmin(req);
   if (!auth.ok) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -37,6 +38,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ rows: [], message: 'social_post_metrics table not created yet — run migration 076.' });
     }
     console.error('[growth/metrics] failed:', err);
-    return NextResponse.json({ error: 'failed to load metrics', details: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'failed to load metrics', details: adminErrorText(err, '/api/admin/growth/metrics') }, { status: 500 });
   }
 }

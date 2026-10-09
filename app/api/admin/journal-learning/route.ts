@@ -23,6 +23,7 @@ import {
   type JournalCurrent,
 } from "@/lib/engines/journalLearning";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 
 interface DbRow {
@@ -73,7 +74,7 @@ export async function GET(req: NextRequest) {
       ok: true,
       summary: { totalCases: 0, groups: [], matches: [], hasMeaningfulMatch: false },
       boost: null,
-      note: err instanceof Error ? err.message : "no journal table",
+      note: adminErrorText(err, '/api/admin/journal-learning'),
     });
   }
 

@@ -30,6 +30,7 @@ import {
   deriveEvidenceQualityScore,
 } from "@/lib/admin/equityResearchNote";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
@@ -122,7 +123,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error: "openai_error",
-        detail: err instanceof Error ? err.message : "unknown",
+        detail: adminErrorText(err, '/api/admin/equity-research'),
       },
       { status: 502 },
     );

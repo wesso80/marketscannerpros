@@ -24,6 +24,7 @@ import {
 import { appendResearchEvent } from "@/lib/admin/researchEventTape";
 import { loadSavedScanPrices, recordAdminCalls } from "@/lib/admin/adminCallLog";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 
 interface AlertRow {
@@ -194,7 +195,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to evaluate alert" },
+      { error: adminErrorText(err, '/api/admin/research-alerts') },
       { status: 500 },
     );
   }
@@ -253,7 +254,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to load alerts" },
+      { error: adminErrorText(err, '/api/admin/research-alerts') },
       { status: 500 },
     );
   }

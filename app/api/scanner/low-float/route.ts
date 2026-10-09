@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
+import { requireAdmin } from '@/lib/adminAuth';
 import { q } from '@/lib/db';
 import { apiLimiter, getClientIP } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Pro required (legacy pro_trader and admins included).
+// Admin only (was Pro): the output is an admin research contract with private scores.
 
 /**
  * GET /api/scanner/low-float
@@ -34,10 +34,12 @@ export async function GET(req: NextRequest) {
   if (!session?.workspaceId) {
     return NextResponse.json({ error: 'Please log in' }, { status: 401 });
   }
-  if (!hasPaidSessionAccess(session)) {
+  // Admin only: the response carries the private opportunity / evidence-quality scores and research framing, which
+  // public responses must not include. No public page calls this route.
+  if (!(await requireAdmin(req)).ok) {
     return NextResponse.json(
-      { error: 'Pro subscription required for low-float scanning' },
-      { status: 403 },
+      { error: 'Admin access required' },
+      { status: 403, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } },
     );
   }
 

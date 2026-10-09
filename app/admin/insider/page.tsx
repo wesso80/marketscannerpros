@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 
+import TruthStampLine from "@/components/admin/shared/TruthStampLine";
 interface InsiderRow {
   id: number;
   reporterName: string | null;
@@ -52,6 +53,7 @@ function fmt(n: number | null, opts: { money?: boolean } = {}): string {
 
 export default function InsiderPage() {
   const [symbol, setSymbol] = useState('AAPL');
+  const [truth, setTruth] = useState<any>(null);
   const [windowDays, setWindowDays] = useState(90);
   const [summary, setSummary] = useState<InsiderSummary | null>(null);
   const [rows, setRows] = useState<InsiderRow[]>([]);
@@ -68,6 +70,7 @@ export default function InsiderPage() {
       if (!res.ok || !j.ok) throw new Error(j?.error ?? `HTTP ${res.status}`);
       setSummary(j.summary as InsiderSummary);
       setRows(j.transactions as InsiderRow[]);
+      setTruth(j.truth ?? null);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
     } finally { setLoading(false); }
@@ -96,6 +99,7 @@ export default function InsiderPage() {
     <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto', color: '#E5E7EB' }}>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ margin: 0, fontSize: 28, color: '#F9FAFB' }}>Insider Transactions (SEC Form 4)</h1>
+        <TruthStampLine truth={truth} />
         <p style={{ margin: '8px 0 0', color: '#9CA3AF', fontSize: 14, maxWidth: 760 }}>
           Pulls directly from SEC EDGAR. Cluster buying by multiple insiders is generally a stronger signal than
           single-name selling, which can be driven by 10b5-1 plans or tax events. Always read filings before acting.

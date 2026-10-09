@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
 import { readMacroSnapshot } from '@/lib/macro/fred';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +19,6 @@ export async function GET(req: NextRequest) {
     const snapshot = await readMacroSnapshot();
     return NextResponse.json({ ok: true, snapshot, generatedAt: new Date().toISOString() });
   } catch (e: unknown) {
-    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: adminErrorText(e, '/api/admin/macro-pulse') }, { status: 500 });
   }
 }

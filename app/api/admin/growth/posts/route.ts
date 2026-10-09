@@ -4,6 +4,7 @@ import { listPosts } from '@/lib/growth/db';
 import type { Platform, PostStatus } from '@/lib/growth/types';
 import { wrapTruth } from '@/lib/admin';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 const VALID_STATUSES: PostStatus[] = ['draft', 'review', 'approved', 'posted', 'rejected'];
 const VALID_PLATFORMS: Platform[] = ['x', 'instagram'];
 
@@ -59,6 +60,6 @@ export async function GET(req: NextRequest) {
       });
     }
     console.error('[growth/posts] list failed:', err);
-    return NextResponse.json({ error: 'failed to list posts', details: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'failed to list posts', details: adminErrorText(err, '/api/admin/growth/posts') }, { status: 500 });
   }
 }

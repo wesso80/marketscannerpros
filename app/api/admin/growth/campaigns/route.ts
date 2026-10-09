@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { createCampaign, listCampaigns } from '@/lib/growth/db';
 import type { Platform } from '@/lib/growth/types';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 const VALID_PLATFORMS: Platform[] = ['x', 'instagram'];
 
 export async function GET(req: NextRequest) {
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ campaigns: [], message: 'social_campaigns table not created yet — run migration 076.' });
     }
     console.error('[growth/campaigns] list failed:', err);
-    return NextResponse.json({ error: 'failed to list campaigns', details: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'failed to list campaigns', details: adminErrorText(err, '/api/admin/growth/campaigns') }, { status: 500 });
   }
 }
 

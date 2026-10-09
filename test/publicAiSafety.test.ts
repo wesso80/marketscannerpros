@@ -7,6 +7,7 @@ import {
   buildPublicAIDataBindingGuardrail,
   findPublicAdviceViolations,
 } from '../lib/prompts/publicAiSafety';
+import { buildV3EnginePrompt } from '../lib/prompts/arcaV3Engine';
 
 const root = process.cwd();
 
@@ -120,5 +121,53 @@ describe('public AI safety guardrails', () => {
       expect(guardrailIndex).toBeGreaterThan(-1);
       expect(userMessageIndex).toBeGreaterThan(-1);
     }
+  });
+});
+
+describe('public AI trade-ticket detection', () => {
+  it('flags trade-ticket labels, direction calls and position sizing', () => {
+    const ticket = [
+      '📋 SCENARIO ANALYSIS',
+      'Direction:    LONG',
+      'Entry:        breakout above 72,380',
+      '**Target 1:** 74,100',
+      '- Stop loss: 70,900',
+      'Size Context: 2% risk, ATR-adjusted',
+    ].join('\n');
+
+    expect(findPublicAdviceViolations(ticket)).toEqual(expect.arrayContaining([
+      'trade ticket label',
+      'direction call label',
+      'position sizing instruction',
+    ]));
+    expect(findPublicAdviceViolations('Risking 1% per trade keeps drawdowns small.')).toContain('position sizing instruction');
+    expect(findPublicAdviceViolations('Use 0.5% of capital on this idea.')).toContain('position sizing instruction');
+    expect(appendPublicAISafetyCorrection(ticket)).toContain('Safety correction:');
+  });
+
+  it('leaves scenario labels and ordinary prose alone', () => {
+    const scenario = [
+      'Scenario Bias:      Bullish',
+      'Level of Interest:  a close above 72,380',
+      'Invalidation:       a close below 70,900',
+      'Key Levels:         74,100 / 75,600',
+      'The entry of new buyers near support and a stop-run below the range are common in this regime.',
+      'Implied volatility is 40% higher than last month; the 5% move was within the expected range.',
+    ].join('\n');
+
+    expect(findPublicAdviceViolations(scenario)).toEqual([]);
+  });
+
+  it('the analyst-mode scenario template no longer asks for a trade ticket', () => {
+    const prompt = buildV3EnginePrompt(null);
+    const lines = prompt.split('\n');
+
+    expect(lines.filter((line) => /^\s*(?:Entry|Target \d|Size Context|Strike\(s\)|DTE|Strategy|R:R)\s*:/i.test(line))).toEqual([]);
+    expect(lines.filter((line) => /^\s*Direction\s*:.*(?:LONG|SHORT)/.test(line))).toEqual([]);
+    expect(prompt).not.toContain('% of capital based on');
+    expect(prompt).toContain('Level of Interest:');
+    expect(prompt).toContain('Invalidation:');
+    expect(prompt).toContain('Key Levels:');
+    expect(prompt).toContain('Never state position size, % of capital, % risk');
   });
 });

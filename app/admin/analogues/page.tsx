@@ -15,6 +15,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 
+import TruthStampLine from "@/components/admin/shared/TruthStampLine";
 interface Analogue {
   setupId: number;
   symbol: string;
@@ -108,6 +109,7 @@ export default function AnaloguesPage() {
     <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto', color: '#E5E7EB' }}>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ margin: 0, fontSize: 28, color: '#F9FAFB' }}>Historical Analogue Search</h1>
+        {result && <TruthStampLine truth={(result as any).truth} />}
         <p style={{ margin: '8px 0 0', color: '#9CA3AF', fontSize: 14, maxWidth: 760 }}>
           Find the closest historical setups (by feature similarity) and review their resolved R-multiples.
           Use as context, not as a forecast — outcomes are not predictions.

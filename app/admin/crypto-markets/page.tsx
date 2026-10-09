@@ -1,4 +1,5 @@
 'use client';
+import styles from './CryptoWorkspace.module.css';
 const CryptoSetupEmail = dynamic(()=>import('@/components/admin/CryptoSetupEmail'), {ssr:false});
 const CryptoPaperAccount = dynamic(()=>import('@/components/admin/CryptoPaperAccount'), {ssr:false});
 const CryptoBacktest = dynamic(()=>import('@/components/admin/CryptoBacktest'), {ssr:false});
@@ -81,13 +82,12 @@ export default function CryptoMarketsPage() {
   // The review route accepts a snapshot up to four hours old (levels need a quote under 15 min; the chart does not).
   const reviewable = !!data && now - Date.parse(data.startedAt) <= 4*3600000;
   const rows = data?.rows.filter(r=>`${r.symbol} ${r.name} ${r.id}`.toLowerCase().includes(query.toLowerCase())).slice(0,100) ?? [];
-  return <div className="space-y-5 p-6 text-slate-100">
-    <h1 className="text-2xl font-bold">Crypto Markets</h1>
-    <p>SIMULATED paper trading only; no real orders.</p>
+  return <div className={`${styles.workspace} space-y-5`}>
+    <header className={styles.heading}><div><p className={styles.eyebrow}>Private research / Digital assets</p><h1>Crypto Markets</h1></div><p className={styles.simulation}>SIMULATED paper trading only; no real orders.</p></header>
     {pauseMessage && <p role="status" className="rounded border border-amber-500 bg-amber-950/40 px-3 py-2 text-amber-100">Paused. {pauseMessage}</p>}
     {error && tab!=='watchlists' && <p role="alert" className="text-red-300">{error}</p>}
-    <div className="flex flex-wrap gap-3">
-      <button disabled={busy} onClick={()=>void load('POST')} className="rounded bg-emerald-700 px-4 py-2 disabled:opacity-50">{busy?'Loading…':'Scan major exchanges'}</button>
+    <div className={styles.toolbar}>
+      <button disabled={busy} onClick={()=>void load('POST')} className={styles.primary}>{busy?'Loading…':'Scan major exchanges'}</button>
       <button disabled={busy} onClick={refreshSaved} className="rounded border px-4 py-2">Refresh saved dashboard</button>
       <input aria-label="Find coin" placeholder="Find coin, e.g. QNT" value={query} onChange={e=>{setQuery(e.target.value);setTab('watchlists');}} className="rounded border bg-slate-900 px-3" />
     </div>
@@ -98,7 +98,7 @@ export default function CryptoMarketsPage() {
       <p>Analyze candles: up to 2 CoinGecko requests per coin, capped at 10 coins per shared 15-minute window. Uses completed daily / 4h / 1h candles. CoinGecko candles contain prices only; exchange candle volume can be checked inside a coin review.</p>
       <p>4-hour entry zone: a MOMENTUM_VOLUME close between the entry floor and the chase limit. EXTENDED names, and cycle decisions marked BLOCKED, are listed with one reason. That list is not a new scan.</p>
     </details>
-    <nav role="tablist" aria-label="Crypto Markets sections" className="flex flex-wrap gap-1 border-b border-slate-700">
+    <nav role="tablist" aria-label="Crypto Markets sections" className={styles.tabs}>
       {TABS.map(([k,label])=><button key={k} role="tab" aria-selected={tab===k} onClick={()=>setTab(k)} className={`rounded-t px-3 py-2 text-sm ${tab===k?'bg-slate-800 font-semibold':'text-slate-400 hover:text-slate-200'}`}>{label}</button>)}
     </nav>
     {tab==='alerts' && <CryptoSetupEmail refreshVersion={refreshVersion} />}

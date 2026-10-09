@@ -1,0 +1,122 @@
+import { createHash, createHmac } from 'node:crypto';
+import { NextRequest } from 'next/server';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+const m = vi.hoisted(() => { process.env.APP_SIGNING_SECRET='combined-admin-test'; process.env.ADMIN_EMAILS='owner@example.test'; process.env.ADMIN_DISCOVERY_ONLY='true'; return ({ cookies: {} as Record<string,string>, tables: { excursions: true, marks: true, signals: true }, sql: [] as string[], absent: false, probeFails: false, fetch: vi.fn(), redisGet: vi.fn(async () => null) }); });
+vi.mock('next/headers', () => ({cookies: async () => ({get: (name: string) => m.cookies[name] ? {value:m.cookies[name]} : undefined})}));
+vi.mock('@/lib/entitlements', () => ({isFreeForAllMode: () => false}));
+vi.mock('@/lib/db', () => ({
+  atomicQueries: async (work: () => Promise<unknown>) => work(),
+  q: vi.fn(async (sql: string) => {
+    m.sql.push(sql);
+    if (!/^SELECT\b/i.test(sql.trim())) throw new Error('Read attempted a mutation: ' + sql);
+    if (sql.includes('to_regclass')) { if (m.probeFails) throw Error('database unavailable'); return [m.tables]; }
+    if (sql.includes('AS net')) return [{ net: '0', fees: '0', count: '0', invalid: '0' }];
+    if (/crypto_trade_excursions|crypto_book_marks|crypto_signal_ledger/.test(sql)) {
+      if (sql.includes('crypto_trade_excursions') && !m.tables.excursions) throw Error('missing excursions');
+      if (sql.includes('crypto_book_marks') && !m.tables.marks) throw Error('missing marks');
+      if (sql.includes('crypto_signal_ledger') && !m.tables.signals) throw Error('missing signals');
+    }
+    return [];
+  }),
+}));
+vi.mock('@/lib/redis', () => ({ getRedis: () => ({ get: m.redisGet }) }));
+vi.mock('@/lib/admin/portfolio-lab/portfolioStore', () => {
+  const account = { id: 'book', workspaceId: 'workspace', name: 'Paper', startingBalance: 1000, currentCash: 1000, totalEquity: 1000, realisedPnl: 0, unrealisedPnl: 0 };
+  return { getDefaultPortfolio: vi.fn(async () => m.absent ? null : account), getPortfolioById: vi.fn(async () => account), listOpenPositions: vi.fn(async () => []), listTrades: vi.fn(async () => []), listJournal: vi.fn(async () => []), insertPortfolio: vi.fn() };
+});
+import { cryptoPaperState, cryptoPaperTradeLog } from '@/lib/admin/cryptoPaper';
+import { readPaperSchema } from '@/lib/admin/paperReadSchema';
+import { excursionTablesReady } from '@/lib/admin/cryptoPaperExcursion';
+import { signalLedgerReady } from '@/lib/admin/cryptoSignalLedger';
+beforeEach(() => {
+  m.tables = { excursions: true, marks: true, signals: true }; m.sql = []; m.absent = false; m.probeFails = false;
+  m.fetch.mockReset(); m.fetch.mockRejectedValue(new Error('Provider calls forbidden during reads'));
+  vi.stubGlobal('fetch', m.fetch);
+});
+afterEach(() => { vi.unstubAllGlobals(); });
+describe('paper reads never initialize tables', () => {
+  it('reads existing research tables in a cold process without changing writer readiness', async () => {
+    expect(excursionTablesReady()).toBe(false); expect(signalLedgerReady()).toBe(false);
+    const result = await cryptoPaperState('workspace');
+    expect(result.giveBack).not.toBeNull(); expect(result.signalLedger).not.toBeNull();
+    expect(excursionTablesReady()).toBe(false); expect(signalLedgerReady()).toBe(false);
+    expect(m.sql.every(sql => /^SELECT\b/.test(sql.trim()))).toBe(true);
+    expect(m.fetch).not.toHaveBeenCalled();
+  });
+  it('preserves the core account when optional tables have not been migrated', async () => {
+    m.tables = { excursions: false, marks: false, signals: false };
+    const result = await cryptoPaperState('workspace');
+    expect(result.portfolio?.id).toBe('book'); expect(result.giveBack).toBeNull(); expect(result.signalLedger).toBeNull();
+    expect(m.sql.filter(sql => !sql.includes('to_regclass')).join('\n')).not.toMatch(/crypto_trade_excursions|crypto_book_marks|crypto_signal_ledger/);
+  });
+  it('does not query book marks when only excursions exist', async () => {
+    m.tables.marks = false;
+    const result = await cryptoPaperState('workspace');
+    expect(result.giveBack).toBeNull(); expect(result.signalLedger).not.toBeNull();
+    expect(m.sql.some(sql => sql.includes('LEFT JOIN crypto_trade_excursions'))).toBe(true);
+    expect(m.sql.filter(sql => !sql.includes('to_regclass')).join('\n')).not.toContain('FROM crypto_book_marks');
+  });
+  it('exports CSV with and without research tables without DDL or provider calls', async () => {
+    for (const exists of [true, false]) {
+      m.tables.excursions = exists;
+      expect(typeof await cryptoPaperTradeLog('workspace')).toBe('string');
+    }
+    expect(m.sql.every(sql => /^SELECT\b/.test(sql.trim()))).toBe(true);
+    expect(m.fetch).not.toHaveBeenCalled();
+  });
+  it('returns no account without creating one', async () => {
+    m.absent = true;
+    expect((await cryptoPaperState('workspace')).portfolio).toBeNull();
+    expect(await cryptoPaperTradeLog('workspace')).toBeNull();
+    expect(m.sql.every(sql => /^SELECT\b/.test(sql.trim()))).toBe(true);
+  });
+  it('a failed schema probe remains unavailable without retrying setup', async () => {
+    m.probeFails = true;
+    expect(await readPaperSchema()).toEqual({ excursions: false, marks: false, signals: false });
+    expect(m.sql).toHaveLength(1);
+  });
+});
+
+import { middleware } from '../middleware';
+import { GET as healthGET } from '../app/api/admin/health/route';
+import { GET as paperGET } from '../app/api/admin/crypto-markets/paper/route';
+import { GET as verifyGET, POST as verifyPOST } from '../app/api/admin/verify/route';
+const workspace=(email:string)=>{const h=createHash('sha256').update(email).digest('hex');return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20,32)}`;};
+const token=(email:string,extra:Record<string,unknown>={})=>{const body=Buffer.from(JSON.stringify({cid:'cus_test',tier:'pro',workspaceId:workspace(email),exp:Math.floor(Date.now()/1000)+86400*10,...extra})).toString('base64url');return body+'.'+createHmac('sha256','combined-admin-test').update(body).digest('base64url');};
+const request=(path:string)=>new NextRequest('http://localhost'+path,{headers:{cookie:Object.entries(m.cookies).map(([k,v])=>`${k}=${v}`).join('; ')}});
+const handlers=[['/api/admin/health',healthGET],['/api/admin/crypto-markets/paper',paperGET],['/api/admin/crypto-markets/paper?format=csv',paperGET]] as const;
+describe('combined admin middleware and real route authentication',()=>{
+ beforeEach(()=>{m.cookies={};});
+ it.each(['signed out','non-admin','expired','forged'])('%s cannot reach data work',async(kind)=>{
+  if(kind!=='signed out')m.cookies.ms_auth=kind==='forged'?'forged.signature':token(kind==='non-admin'?'user@example.test':'owner@example.test',kind==='expired'?{exp:1}:{});
+  for(const [path,handler]of handlers){
+   expect((await middleware(request(path))).status).toBe(401);
+   expect((await handler(request(path))).status).toBe(403);
+  }
+  expect(m.sql).toEqual([]);expect(m.fetch).not.toHaveBeenCalled();
+ });
+ it('valid cus admin reaches Health, paper JSON and CSV using only stored data',async()=>{
+  m.cookies.ms_auth=token('owner@example.test');
+  expect((await verifyGET(request('/api/admin/verify'))).status).toBe(200);
+  for(const [path,handler]of handlers){
+   const gate=await middleware(request(path));expect(gate.headers.get('x-middleware-next')).toBe('1');
+   const response=await handler(request(path));expect(response.status,path).toBe(200);
+   if(path.includes('csv'))expect(response.headers.get('content-type')).toContain('text/csv');
+   else {const body=await response.json();expect(path.includes('health')?body.operations.paper.state:body.simulated).toBe(path.includes('health')?'no accounts':true);}
+  }
+  expect(m.sql.every(sql=>/^SELECT\b/.test(sql.trim()))).toBe(true);expect(m.fetch).not.toHaveBeenCalled();
+ });
+ it('a refreshed admin token without is_admin remains accepted by both layers',async()=>{
+  m.cookies.ms_auth=token('owner@example.test',{is_admin:true,exp:Math.floor(Date.now()/1000)+86400});
+  m.fetch.mockResolvedValueOnce(new Response(JSON.stringify({tier:'pro',status:'active'}),{status:200}));
+  const refreshed=await middleware(request('/tools/markets'));
+  const value=refreshed.cookies.get('ms_auth')?.value;expect(value).toBeTruthy();
+  expect(JSON.parse(Buffer.from(value!.split('.')[0],'base64url').toString()).is_admin).toBeUndefined();
+  m.cookies.ms_auth=value!;
+  expect((await middleware(request('/api/admin/health'))).headers.get('x-middleware-next')).toBe('1');
+  expect((await healthGET(request('/api/admin/health'))).status).toBe(200);
+ });
+ it('legacy secret login stays retired and never mints a cookie',async()=>{
+  const result=await verifyPOST();expect(result.status).toBe(410);expect(result.headers.get('set-cookie')).toBeNull();
+ });
+});

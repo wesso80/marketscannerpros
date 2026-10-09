@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import PositionHorizonOutcomes from "@/components/admin/PositionHorizonOutcomes";
 import type { PositionHorizonStats } from "@/lib/admin/positionHorizonStats";
 
+import TruthStampLine from "@/components/admin/shared/TruthStampLine";
 /* ── Types ── */
 interface Signal {
   id: number;
@@ -189,6 +190,7 @@ function AccuracyBar({ correct, wrong, total }: { correct: number; wrong: number
 /* ── Page ── */
 export default function OutcomesPage() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [truth, setTruth] = useState<any>(null);
   const [signals, setSignals] = useState<Signal[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -207,7 +209,7 @@ export default function OutcomesPage() {
   const fetchStats = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/signals/stats", { headers: authHeaders(), credentials: "include" });
-      if (res.ok) setStats(await res.json());
+      if (res.ok) { const s = await res.json(); setStats(s); setTruth(s?.truth ?? null); }
     } catch { /* ignore */ }
   }, []);
 
@@ -263,6 +265,7 @@ export default function OutcomesPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
         <div>
           <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#F9FAFB" }}>Signal Outcomes</h1>
+          <TruthStampLine truth={truth} />
           <p style={{ fontSize: "0.8rem", color: "#6B7280", marginTop: 2 }}>
             Every scanner signal logged · Outcome tracking across regimes & verdicts
           </p>
