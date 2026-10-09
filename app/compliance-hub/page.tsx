@@ -6,10 +6,10 @@ export const metadata: Metadata = {
   description: 'MarketScanner Pros compliance guardrails for educational use, no personal advice, no broker execution, data limitations, and risk disclosures.',
   alternates: { canonical: '/compliance-hub' },
   openGraph: {
-    title: 'MarketScanner Pros Compliance Hub',
+    title: 'MarketScannerPros Compliance Hub',
     description: 'Educational-use guardrails, legal disclosures, data limitations, and risk information for MarketScanner Pros.',
     url: 'https://marketscannerpros.app/compliance-hub',
-    siteName: 'MarketScanner Pros',
+    siteName: 'MarketScannerPros',
     images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScanner Pros compliance hub' }],
   },
   twitter: { card: 'summary_large_image', images: ['/scan-banner.png'] },

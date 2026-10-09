@@ -12,6 +12,7 @@ import { FREE_COPY } from '@/components/free/copy';
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useUserTier } from "@/lib/useUserTier";
+import { NO_BILLING_ACCOUNT_MESSAGE } from "@/lib/billingPortal";
 
 interface NotificationPrefs {
   inAppEnabled: boolean;
@@ -34,6 +35,7 @@ export default function AccountPage() {
   const { tier, isLoading, isLoggedIn } = useUserTier();
   const [email, setEmail] = useState<string | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
+  const [billingNote, setBillingNote] = useState<string | null>(null);
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>({
     inAppEnabled: true,
     emailEnabled: false,
@@ -159,6 +161,7 @@ export default function AccountPage() {
 
   const openBillingPortal = async () => {
     setBillingLoading(true);
+    setBillingNote(null);
     try {
       const res = await fetch("/api/payments/portal", {
         method: "POST",
@@ -167,6 +170,8 @@ export default function AccountPage() {
       const data = await res.json();
       if (data?.url) {
         window.location.href = data.url;
+      } else if (res.status === 404 && data?.error === "no_billing_account") {
+        setBillingNote(NO_BILLING_ACCOUNT_MESSAGE);
       } else {
         alert(data?.error || "Unable to open billing portal");
       }
@@ -277,14 +282,16 @@ export default function AccountPage() {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => void openBillingPortal()}
-              disabled={billingLoading || normalizedTier === "free"}
-              className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {billingLoading ? "Opening..." : "Manage Billing"}
-            </button>
+            {normalizedTier !== "free" ? (
+              <button
+                type="button"
+                onClick={() => void openBillingPortal()}
+                disabled={billingLoading}
+                className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {billingLoading ? "Opening..." : "Manage Billing"}
+              </button>
+            ) : null}
             {!isPaid ? (
               <Link href="/pricing" className="px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-sm font-semibold hover:bg-emerald-500/30">
                 Upgrade Plan
@@ -301,6 +308,14 @@ export default function AccountPage() {
               Sign Out
             </button>
           </div>
+          {billingNote ? (
+            <p role="status" className="mt-3 w-full basis-full text-sm text-white/70">
+              {billingNote}
+              {normalizedTier === "free" ? (
+                <> <Link href="/pricing" className="text-emerald-300 underline">See Pro pricing</Link>.</>
+              ) : null}
+            </p>
+          ) : null}
         </div>
 
         <div className="mt-4 space-y-3">

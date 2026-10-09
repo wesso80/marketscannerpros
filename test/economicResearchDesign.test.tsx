@@ -24,6 +24,14 @@ it('does not reuse stale macro values after an error',()=>{
  render(<MacroResearch data={macro} paid loading={false} error retry={()=>{}}/>);
  expect(screen.getByText('Macro observations unavailable')).toBeTruthy();expect(screen.queryByText('0%')).toBeNull();
 });
+it('shows the sign-in lock on 401 instead of the spinner or a fake reading',()=>{
+ render(<MacroResearch data={macro} paid={false} loading locked retry={()=>{}}/>);
+ expect(screen.getByText('Sign in required')).toBeTruthy();
+ expect(screen.getByRole('link',{name:'Sign In'}).getAttribute('href')).toBe('/auth?next=%2Ftools%2Fmacro');
+ expect(screen.queryByText('Loading macro observations…')).toBeNull();
+ expect(screen.queryByText('0%')).toBeNull();
+ expect(screen.queryByText('Macro observations unavailable')).toBeNull();
+});
 it('does not render a disabled M2 stand-in zero as a total',()=>{
  render(<M2Research data={{enabled:false,totalUsd:0,blocs:[]} as any} loading={false} error={false} retry={()=>{}}/>);
  expect(screen.getByText('Observations not collected')).toBeTruthy();expect(screen.queryByText('$0.00T')).toBeNull();

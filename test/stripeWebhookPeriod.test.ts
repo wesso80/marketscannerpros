@@ -777,13 +777,14 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
 
     expect(res.status).toBe(200);
     const insert = mocks.q.mock.calls.find((call) => String(call[0]).includes('INSERT INTO user_subscriptions'));
-    expect(String(insert![0])).toContain("WHEN EXCLUDED.tier = 'free' AND EXCLUDED.status IN ('active', 'trialing', 'past_due')");
+    expect(String(insert![0])).toContain("WHEN EXCLUDED.tier = 'free' AND EXCLUDED.status IN ('active', 'trialing')");
+    expect(String(insert![0])).toContain("THEN 'pro'");
     expect(String(insert![0])).toContain('THEN user_subscriptions.tier');
-    expect((insert![1] as unknown[])[2]).toBe('free');
+    expect((insert![1] as unknown[])[2]).toBe('pro');
     expect((insert![1] as unknown[])[3]).toBe('active');
     expect(errSpy.mock.calls.some((call) => {
       const line = String(call[0]);
-      return line.includes('sub_unknown_price') && line.includes('price_unknown') && line.includes('keeping the existing tier');
+      return line.includes('sub_unknown_price') && line.includes('price_unknown') && line.includes('storing pro');
     })).toBe(true);
     errSpy.mockRestore();
   });

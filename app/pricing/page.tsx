@@ -12,6 +12,7 @@ import React from "react";
 import { publicDesignEnabled } from "@/lib/publicDesign";
 import ResearchPricing from "@/components/public-design/ResearchPricing";
 import { PLAN_PRICES } from "@/lib/planPrices";
+import { checkoutSignInPath, goTo, shouldResumeCheckout } from "@/lib/checkoutSignIn";
 
 type BillingCycle = "monthly" | "yearly";
 
@@ -37,8 +38,9 @@ export default function PricingPage() {
   const [loadingPlan, setLoadingPlan] = React.useState<PlanId | null>(null);
   const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
   const [referralCode, setReferralCode] = React.useState<string | null>(null);
-  const [userEmail, setUserEmail] = React.useState<string | null>(null);
   const [currentTier, setCurrentTier] = React.useState<string | null>(null);
+  const [signedIn, setSignedIn] = React.useState<boolean | null>(null);
+  const resumedCheckout = React.useRef(false);
 
   React.useEffect(() => {
     const refFromQuery = new URLSearchParams(window.location.search).get("ref");
@@ -63,13 +65,14 @@ export default function PricingPage() {
   }, [referralCode]);
 
   React.useEffect(() => {
-    fetch("/api/me")
+    fetch("/api/me", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (d?.email) setUserEmail(d.email);
-        if (d?.tier && (!publicDesignEnabled() || d.authenticated === true)) setCurrentTier(d.tier);
+        const authed = d?.authenticated === true;
+        setSignedIn(authed);
+        if (d?.tier && (!publicDesignEnabled() || authed)) setCurrentTier(d.tier);
       })
-      .catch(() => {});
+      .catch(() => setSignedIn(false));
   }, []);
 
   const [quotasEnabled, setQuotasEnabled] = React.useState<boolean | null>(null);
@@ -84,9 +87,21 @@ export default function PricingPage() {
   const isPaidUser = currentTier === "pro" || currentTier === "pro_trader";
   const markedPlan = currentTier === "free" || isPaidUser;
 
-  const handleCheckout = async (planId: PlanId) => {
+  const handleCheckout = async (planId: PlanId, billing: BillingCycle = cycle) => {
     if (planId === "free") {
       window.location.href = publicDesignEnabled() ? (currentTier ? "/tools/command-center" : "/auth?next=%2Ftools%2Fcommand-center") : "/auth";
+      return;
+    }
+
+    let authed = signedIn;
+    if (authed == null) {
+      const me = await fetch("/api/me", { credentials: "include" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      authed = me?.authenticated === true;
+      setSignedIn(authed);
+      if (me?.tier && authed) setCurrentTier(me.tier);
+    }
+    if (!authed) {
+      goTo(checkoutSignInPath(billing));
       return;
     }
 
@@ -97,24 +112,41 @@ export default function PricingPage() {
       const res = await fetch("/api/payments/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           plan: planId,
-          billing: cycle,
+          billing,
           referralCode,
-          email: userEmail,
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        setLoadingPlan(null);
+        goTo(checkoutSignInPath(billing));
+        return;
+      }
       if (!res.ok || !data?.url) {
         throw new Error(data?.error || "Failed to start checkout");
       }
-      window.location.href = data.url;
+      goTo(data.url);
     } catch (error) {
       setCheckoutError(error instanceof Error ? error.message : "Failed to start checkout");
       setLoadingPlan(null);
     }
   };
+
+  React.useEffect(() => {
+    if (resumedCheckout.current || signedIn !== true || isPaidUser) return;
+    const billing = shouldResumeCheckout(window.location.search, true, false);
+    if (!billing) return;
+    if (billing !== cycle) {
+      setCycle(billing);
+      return;
+    }
+    resumedCheckout.current = true;
+    void handleCheckout("pro", billing);
+  }, [signedIn, isPaidUser, cycle]);
 
   const plans: Plan[] = [
     {

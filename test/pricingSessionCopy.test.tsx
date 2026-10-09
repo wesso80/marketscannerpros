@@ -33,11 +33,13 @@ it('an unauthenticated tier claim does not grant plan management',async()=>{
  expect(screen.queryByRole('link',{name:'Manage your Pro plan'})).toBeNull();
  expect(screen.getByText('No card needed for Free.')).toBeTruthy();
 });
-it('approved pricing uses configured prices, states the AI cap and does not promise an unbuilt trial',async()=>{
+it('approved pricing uses configured prices, states the AI cap and the 7-day trial from the Terms',async()=>{
  render(<PricingPage/>);await screen.findByText('Educational MSP Copilot: 20 questions per day');
  expect(document.body.textContent).toContain('US'+PLAN_PRICES.pro.monthly);
  fireEvent.click(screen.getByRole('button',{name:'Annual'}));
  expect(document.body.textContent).toContain('US'+PLAN_PRICES.pro.yearly);
- expect(document.body.textContent).not.toMatch(/Lead\/Lag|NQ Pressure|\bAuction\b|\bMaster\b|100 questions|unlimited AI|7-day trial/i);
+ expect(document.body.textContent).toMatch(/7-day free trial/);
+ expect(document.body.textContent).toContain('Terms');
+ expect(document.body.textContent).not.toMatch(/Lead\/Lag|NQ Pressure|\bAuction\b|\bMaster\b|100 questions|unlimited AI/i);
  expect(screen.getByText('Subscription details are shown at checkout.')).toBeTruthy();
 });

@@ -1,4 +1,5 @@
 import { isPaidTier } from "./tiers";
+import { chooseAccessSubscription, emailFromSessionCid } from "./subscriptionRow";
 export type AppTier = "free" | "pro" | "pro_trader";
 
 export const AI_DAILY_LIMITS: Record<AppTier, number> = {
@@ -156,41 +157,38 @@ export async function getEffectiveTier(
   if (!dbQuery) return normalizeTier(cookieTier);
 
   try {
-    type SubRow = { email: string; tier: string; status: string; current_period_end: Date | string | null };
-    // 1) Try by workspace_id (primary key — fastest path)
-    const rows = await dbQuery<SubRow>(
-      'SELECT email, tier, status, current_period_end FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1',
+    type SubRow = {
+      email: string;
+      tier: string;
+      status: string;
+      current_period_end: Date | string | null;
+      stripe_customer_id?: string | null;
+      stripe_subscription_id?: string | null;
+      updated_at?: Date | string | null;
+      created_at?: Date | string | null;
+      id?: number | null;
+    };
+    const columns = 'email, tier, status, current_period_end, stripe_customer_id, stripe_subscription_id, updated_at, created_at, id';
+    // Workspace row first. A second row for the same email (different workspace_id) is included below.
+    const workspaceRows = await dbQuery<SubRow>(
+      `SELECT ${columns} FROM user_subscriptions WHERE workspace_id = $1`,
       [workspaceId]
     );
-    let dbSub = rows.length > 0 ? rows[0] : null;
-
-    // 2) No row by workspace_id — try by stripe_customer_id
-    //    For Stripe users, cid IS the Stripe customer ID (cus_xxxxx)
-    if (!dbSub && cid && cid.startsWith('cus_')) {
-      const byCust = await dbQuery<SubRow>(
-        'SELECT email, tier, status, current_period_end FROM user_subscriptions WHERE stripe_customer_id = $1 LIMIT 1',
+    let otherRows: SubRow[] = [];
+    const emailFromCid = emailFromSessionCid(cid) ?? extractEmailFromCid(cid ?? '');
+    const email = emailFromCid || workspaceRows.find((row) => row.email)?.email || null;
+    if (email) {
+      otherRows = await dbQuery<SubRow>(
+        `SELECT ${columns} FROM user_subscriptions WHERE LOWER(email) = LOWER($1)`,
+        [email]
+      );
+    } else if (cid && cid.startsWith('cus_')) {
+      otherRows = await dbQuery<SubRow>(
+        `SELECT ${columns} FROM user_subscriptions WHERE stripe_customer_id = $1`,
         [cid]
       );
-      dbSub = byCust.length > 0 ? byCust[0] : null;
-      if (dbSub) {
-        console.info(`[getEffectiveTier] Found sub by stripe_customer_id=${cid} (workspace_id miss)`);
-      }
     }
-
-    // 3) No row by stripe_customer_id — try by email (for trial/free users)
-    if (!dbSub && cid) {
-      const emailFromCid = extractEmailFromCid(cid);
-      if (emailFromCid) {
-        const byEmail = await dbQuery<SubRow>(
-          'SELECT email, tier, status, current_period_end FROM user_subscriptions WHERE LOWER(email) = LOWER($1) AND (status = $2 OR status = $3) ORDER BY tier DESC LIMIT 1',
-          [emailFromCid, 'active', 'trialing']
-        );
-        dbSub = byEmail.length > 0 ? byEmail[0] : null;
-        if (dbSub) {
-          console.info(`[getEffectiveTier] Found sub by email=${emailFromCid} (workspace_id miss)`);
-        }
-      }
-    }
+    const dbSub = chooseAccessSubscription(workspaceRows, otherRows);
 
     if (dbSub) {
       // Check admin by DB email

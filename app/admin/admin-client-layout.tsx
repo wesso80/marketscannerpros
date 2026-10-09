@@ -32,11 +32,12 @@ export default function AdminClientLayout({ children, discoveryPaused = false }:
   const [inputSecret, setInputSecret] = useState("");
   const pathname = usePathname();
 
-  // Check auth on mount
+  // The passphrase page does not use the operator-secret check.
   useEffect(() => {
+    if (pathname === '/admin/login') return;
     const stored = sessionStorage.getItem("admin_secret") || "";
     verifyAuth(stored);
-  }, []);
+  }, [pathname]);
 
   const verifyAuth = async (key = "") => {
     try {
@@ -66,6 +67,11 @@ export default function AdminClientLayout({ children, discoveryPaused = false }:
     setIsAuthed(false);
     sessionStorage.removeItem("admin_secret");
   };
+
+  // Passphrase login cannot sit behind the operator-secret wall.
+  if (pathname === '/admin/login') {
+    return children;
+  }
 
   const navSections = [
     { label: "Crypto Markets", items: [{href:"/admin/crypto-markets", label:"Explorer & Charts", code:"CR"},{href:"/admin/crypto-markets#crypto-paper", label:"Paper Account", code:"CP"}] },

@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: 'Referral dashboard for sharing MarketScanner Pros and tracking subscription credits, contest entries, and referral history.',
   alternates: { canonical: 'https://marketscannerpros.app/tools/referrals' },
   openGraph: {
-    title: 'Referrals | MarketScanner Pros',
+    title: 'Referrals | MarketScannerPros',
     description: 'Share MarketScanner Pros and track referral credits and contest entries.',
     url: 'https://marketscannerpros.app/tools/referrals',
     type: 'website',
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Referrals | MarketScanner Pros',
+    title: 'Referrals | MarketScannerPros',
     description: 'Share MarketScanner Pros and track referral credits.',
     images: ['/scan-banner.png'],
   },

@@ -13,7 +13,7 @@ export function useDocumentTitle(name: string) {
   useEffect(() => {
     const route = ownedPath.current;
     if (!route || (pathname && pathname !== route) || window.location.pathname !== route) return;
-    const title = `${name} | MarketScanner Pros`;
+    const title = `${name} | MarketScannerPros`;
     const update = () => {
       if (window.location.pathname !== route) return;
       if (document.title !== title) document.title = title;

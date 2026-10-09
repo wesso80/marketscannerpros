@@ -4,7 +4,7 @@ import ResearchHome from '@/components/public-design/ResearchHome';
 import CommandHub from '@/components/home/CommandHub';
 
 export const metadata: Metadata = publicDesignEnabled() ? {
-  title: 'Evidence-first market research | MarketScannerPros',
+  title: { absolute: 'Evidence-first market research | MarketScannerPros' },
   description: 'Explore symbol research, macro context and your own records. Understand observations, sources and limitations before drawing conclusions.',
   alternates: { canonical: 'https://marketscannerpros.app/' },
   openGraph: {
@@ -13,12 +13,12 @@ export const metadata: Metadata = publicDesignEnabled() ? {
     url: 'https://marketscannerpros.app/',
   },
 } : {
-  title: 'Market Scanner for Stocks, Crypto & Options | MarketScanner Pros',
+  title: { absolute: 'Market Scanner for Stocks, Crypto & Options | MarketScannerPros' },
   description:
     'Scan equities, crypto, and options flow with multi-timeframe charts, AI research context, volatility analysis, and a structured research workflow. Educational use only â€” no financial advice.',
   alternates: { canonical: 'https://marketscannerpros.app/' },
   openGraph: {
-    title: 'Market Scanner for Stocks, Crypto & Options | MarketScanner Pros',
+    title: 'Market Scanner for Stocks, Crypto & Options | MarketScannerPros',
     description:
       'Scan equities, crypto, and options flow with multi-timeframe charts, AI research context, and a structured research workflow.',
     url: 'https://marketscannerpros.app/',

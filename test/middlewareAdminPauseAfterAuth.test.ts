@@ -16,7 +16,15 @@ describe('admin pause is answered only after the admin session check', () => {
     delete process.env.ADMIN_DISCOVERY_ONLY; // default: discovery-only on
   });
 
-  it.each(['/admin', '/admin/portfolio-lab', '/admin/overview'])('signed-out %s goes to sign-in, not the paused page', async (path) => {
+  it('signed-out /admin/login stays on the passphrase page and is noindex', async () => {
+    const { middleware } = await import('../middleware');
+    const res = await middleware(new NextRequest('http://localhost/admin/login'));
+    expect(res.headers.get('location')).toBeNull();
+    expect(res.headers.get('x-middleware-rewrite')).toBeNull();
+    expect(res.headers.get('x-robots-tag')).toContain('noindex');
+  });
+
+  it.each(['/admin', '/admin/portfolio-lab', '/admin/overview', '/admin/login/extra'])('signed-out %s goes to sign-in, not the paused page', async (path) => {
     const { middleware } = await import('../middleware');
     const res = await middleware(new NextRequest(`http://localhost${path}`));
     expect(res.status).toBe(307);
