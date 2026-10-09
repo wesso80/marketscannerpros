@@ -24,6 +24,7 @@ import { wrapTruth } from "@/lib/admin";
 import { loadPositionHorizonStats } from "@/lib/admin/positionHorizonStats";
 import { LABELLER_FIX_AT, pct1, saneMoveSql, signedMoveSql } from "@/lib/admin/signalStats";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 
 interface AggRow {
@@ -87,7 +88,7 @@ export async function GET(req: NextRequest) {
       [LABELLER_FIX_AT],
     )) ?? [];
   } catch (err) {
-    error = err instanceof Error ? err.message : String(err);
+    error = adminErrorText(err, '/api/admin/backtest-lab');
   }
 
   const breakdown: SetupBreakdown[] = rows.map((r) => {

@@ -8,6 +8,7 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { isOperator } from '@/lib/quant/operatorAuth';
 import { requireAdmin } from '@/lib/adminAuth';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     console.error('[operator:engine:approve] Error:', err);
     return NextResponse.json(
-      { error: 'Approval failed', detail: err instanceof Error ? err.message : 'Unknown error' },
+      { error: 'Approval failed', detail: adminErrorText(err, '/api/operator/engine/approve') },
       { status: 500 },
     );
   }

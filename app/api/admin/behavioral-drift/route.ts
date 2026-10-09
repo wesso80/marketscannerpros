@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
 import { buildDriftReport } from '@/lib/behavioral/drift';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +22,6 @@ export async function GET(req: NextRequest) {
     const report = await buildDriftReport(workspaceId, days);
     return NextResponse.json({ ok: true, report });
   } catch (e: unknown) {
-    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: adminErrorText(e, '/api/admin/behavioral-drift') }, { status: 500 });
   }
 }

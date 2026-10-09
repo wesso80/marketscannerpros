@@ -12,6 +12,7 @@ import { analyzeLearningWindow, applyAdjustments, loadActiveWeights, saveWeights
 import { DEFAULT_SCORING_WEIGHTS } from '@/lib/operator/shared';
 import type { LearningWindowRequest } from '@/types/operator';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = 'nodejs';
 
 function checkAuth(req: NextRequest): Promise<boolean> {
@@ -69,7 +70,7 @@ export async function GET(req: NextRequest) {
   } catch (err: unknown) {
     console.error('[operator:engine:learning] Error:', err);
     return NextResponse.json(
-      { error: 'Learning analysis failed', detail: err instanceof Error ? err.message : 'Unknown error' },
+      { error: 'Learning analysis failed', detail: adminErrorText(err, '/api/operator/engine/learning') },
       { status: 500 },
     );
   }
@@ -109,7 +110,7 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     console.error('[operator:engine:learning] Error:', err);
     return NextResponse.json(
-      { error: 'Weight adjustment failed', detail: err instanceof Error ? err.message : 'Unknown error' },
+      { error: 'Weight adjustment failed', detail: adminErrorText(err, '/api/operator/engine/learning') },
       { status: 500 },
     );
   }

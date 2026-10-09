@@ -10,6 +10,7 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { trainModel, scoreSetup, topWeightedFeatures } from '@/lib/ml/scorer';
 import { extractFeatures, type SetupFeatureInput } from '@/lib/ml/features';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +35,7 @@ export async function GET(req: NextRequest) {
       reliable: model.n >= 30,
     });
   } catch (e: unknown) {
-    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: adminErrorText(e, '/api/admin/ml-scorer') }, { status: 500 });
   }
 }
 
@@ -58,6 +59,6 @@ export async function POST(req: NextRequest) {
       modelN: model.n,
     });
   } catch (e: unknown) {
-    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: adminErrorText(e, '/api/admin/ml-scorer') }, { status: 500 });
   }
 }

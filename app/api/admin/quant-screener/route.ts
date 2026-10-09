@@ -36,6 +36,7 @@ import {
   DEFAULT_UNIVERSE,
 } from "@/lib/admin/quantMemo";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
@@ -133,7 +134,7 @@ export async function POST(req: NextRequest) {
     const v = validateQuantMemo(parsed);
     aiResult = v.ok ? { ok: true, memo: v } : { ok: false, reason: v.reason };
   } catch (e) {
-    aiResult = { ok: false, reason: e instanceof Error ? e.message : "openai_error" };
+    aiResult = { ok: false, reason: adminErrorText(e, '/api/admin/quant-screener') };
   }
 
   const okCount = snapshot.universeStats.okCount;

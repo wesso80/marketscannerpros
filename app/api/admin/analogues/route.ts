@@ -13,6 +13,7 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { findAnalogues, backfillEmbeddings } from '@/lib/analogues/search';
 import type { SetupFeatures } from '@/lib/analogues/featureEmbedding';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +45,6 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json(result);
   } catch (e: unknown) {
-    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: adminErrorText(e, '/api/admin/analogues') }, { status: 500 });
   }
 }

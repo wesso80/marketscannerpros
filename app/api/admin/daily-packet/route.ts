@@ -11,6 +11,7 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { buildDailyPacket } from '@/lib/dailyPacket/builder';
 import { renderDailyPacketHtml } from '@/lib/dailyPacket/htmlRenderer';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -32,6 +33,6 @@ export async function GET(req: NextRequest) {
     }
     return NextResponse.json({ ok: true, packet });
   } catch (e: unknown) {
-    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: adminErrorText(e, '/api/admin/daily-packet') }, { status: 500 });
   }
 }

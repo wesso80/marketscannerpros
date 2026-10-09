@@ -28,6 +28,7 @@ import { createSingleFlight } from "@/lib/admin/singleFlight";
 import { boundedMap } from "@/lib/admin/boundedMap";
 import { isRankable, readSavedScan, scanStatusForResponse, type SavedPacket, type SavedScanView } from "@/lib/admin/sharedScan";
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -208,7 +209,7 @@ async function buildOpportunities(req: NextRequest, workspaceId: string) {
     });
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal error" },
+      { error: adminErrorText(err, '/api/admin/opportunities') },
       { status: 500 },
     );
   }

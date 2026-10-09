@@ -10,6 +10,7 @@ import { isOperator } from '@/lib/quant/operatorAuth';
 import { requireAdmin } from '@/lib/adminAuth';
 import { q } from '@/lib/db';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
   } catch (err: unknown) {
     console.error('[operator:engine:kill-switch:get] Error:', err);
     return NextResponse.json(
-      { error: 'Kill switch read failed', detail: err instanceof Error ? err.message : 'Unknown error' },
+      { error: 'Kill switch read failed', detail: adminErrorText(err, '/api/operator/engine/kill-switch') },
       { status: 500 },
     );
   }
@@ -88,7 +89,7 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     console.error('[operator:engine:kill-switch] Error:', err);
     return NextResponse.json(
-      { error: 'Kill switch toggle failed', detail: err instanceof Error ? err.message : 'Unknown error' },
+      { error: 'Kill switch toggle failed', detail: adminErrorText(err, '/api/operator/engine/kill-switch') },
       { status: 500 },
     );
   }

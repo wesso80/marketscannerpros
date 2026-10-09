@@ -20,6 +20,7 @@ import {
 } from '@/lib/earnings/transcripts';
 import { auditAggregate, auditLatestSummary, getAudit } from '@/lib/admin/transcriptJevAudit';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
     const quarters = await listQuartersForSymbol(symbol);
     return NextResponse.json({ ok: true, quarters });
   } catch (e: unknown) {
-    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: adminErrorText(e, '/api/admin/transcripts') }, { status: 500 });
   }
 }
 
@@ -71,6 +72,6 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ ok: true, ...out });
   } catch (e: unknown) {
-    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: adminErrorText(e, '/api/admin/transcripts') }, { status: 500 });
   }
 }

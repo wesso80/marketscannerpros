@@ -12,6 +12,7 @@ import { requireAdmin } from '@/lib/adminAuth';
 import type { RadarOpportunity } from '@/types/operator';
 import { readSavedScan, savedScanStaleAfterSec } from '@/lib/admin/sharedScan';
 
+import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
   } catch (err: unknown) {
     console.error('[operator:engine:radar] Error:', err);
     return NextResponse.json(
-      { error: 'Radar fetch failed', detail: err instanceof Error ? err.message : 'Unknown error' },
+      { error: 'Radar fetch failed', detail: adminErrorText(err, '/api/operator/engine/radar') },
       { status: 500 },
     );
   }
