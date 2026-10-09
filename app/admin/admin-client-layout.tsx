@@ -4,6 +4,7 @@ import { useState, useEffect, createContext, useContext } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import CollapsibleAdminGroup from "@/components/admin/CollapsibleAdminGroup";
+import AdminNavigationFrame from "@/components/admin/AdminNavigationFrame";
 import AdminBoundaryBanner from "@/components/admin/AdminBoundaryBanner";
 import AdminCommandPalette from "@/components/admin/AdminCommandPalette";
 import { AdminModeProvider, AdminModeSwitcher } from "@/components/admin/AdminModeSwitcher";
@@ -261,21 +262,7 @@ export default function AdminClientLayout({ children, discoveryPaused = false }:
   return (
     <AdminContext.Provider value={{ secret, setSecret, isAuthed, setIsAuthed, discoveryPaused }}>
       <AdminModeProvider>
-      <div style={{
-        minHeight: "100vh",
-        background: "var(--msp-bg)",
-        display: "flex",
-      }}>
-        {/* Sidebar */}
-        <aside style={{
-          width: "268px",
-          background: "rgba(17, 24, 39, 0.95)",
-          borderRight: "1px solid rgba(16, 185, 129, 0.2)",
-          padding: "1.25rem 0.85rem",
-          display: "flex",
-          flexDirection: "column",
-          overflowY: "auto",
-        }}>
+      <AdminNavigationFrame sidebar={<>
           <div style={{
             fontSize: "1.15rem",
             fontWeight: 700,
@@ -353,16 +340,12 @@ export default function AdminClientLayout({ children, discoveryPaused = false }:
           >
               Logout
           </button>
-        </aside>
-
-        {/* Main content */}
-        <main style={{ flex: 1, padding: "0", overflow: "auto", display: "flex", flexDirection: "column" }}>
+      </>}>
           <AdminBoundaryBanner />
-          <div style={{ padding: "1.5rem 2rem 2rem", flex: 1 }}>
+          <div className="admin-page-content">
             {children}
           </div>
-        </main>
-      </div>
+      </AdminNavigationFrame>
       <AdminCommandPalette discoveryPaused={discoveryPaused} />
       </AdminModeProvider>
     </AdminContext.Provider>

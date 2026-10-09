@@ -1,0 +1,20 @@
+ADMIN MOBILE SHELL
+Base: origin/admin-integration cb0ee180.
+Only admin navigation presentation changes. No public files, auth rules, database writes, merges or deployments.
+
+Below 768px the existing navigation becomes a drawer; content uses the full viewport. Desktop retains a 268px sidebar. Navigation closes on link selection, route changes, Escape, backdrop, close button and desktop resize. Focus enters the drawer, Tab wraps, close restores focus, and page scrolling is restored. Background content is inert while open. Existing sidebar entries, paused-mode filtering and auth logic are retained.
+
+Validation on the previously reviewed local combined admin candidate e80ab7d591f00aa97ba93d565c0e309566d4e219 with this layout patch applied:
+- Project TypeScript check clean (--noEmit --incremental false --typeRoots ./node_modules/@types).
+- 57 tests pass across navigationFrame, adminNavSettings, adminVerify, adminOriginCheck and adminWriteOrigin.
+- Real Next browser checks at 390 and 1280, Health and Settings. Local signed fixture, unavailable local database, browser API fixtures for unrelated requests. No production/provider access required. Discovery-only disabled in the local test environment to exercise the actual Settings page (it is otherwise paused).
+- Mobile content width 390 instead of 122; desktop remains 1012 at viewport 1280. Keyboard focus, Escape, backdrop, navigation and resize checked.
+- This is not a new full-suite run or a final integration approval.
+
+CLAUDE #566 REVIEW
+Reviewed aebe966e6299765e6b090b2bc56aa3ad307661de. Source and read-time separation is useful, but Symbol still mislabels packet-build time as observation freshness: app/api/admin/symbol/[symbol]/route.ts passes packet.createdAt to storedTruth; lib/admin/getAdminResearchPacket.ts generates that time on each build. Refreshing a packet with old inputs can make it look current. Requested underlying input timestamps or explicitly unknown input freshness, plus a route regression test.
+Sent to Claude: https://github.com/wesso80/marketscannerpros/pull/566#issuecomment-6074594824
+No edits made to Claude's files. #566 needs follow-up before approval.
+
+NEXT
+Review Claude's #566 correction, then verify the agreed combined admin candidate against current main. Keep #552/#556 public-affecting scope decisions separate. No deployment until final approval.
