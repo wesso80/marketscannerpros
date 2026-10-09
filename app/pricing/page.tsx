@@ -32,11 +32,8 @@ type Plan = {
   benefits: { group: string; lines: string[] }[];
 };
 
-type FAQ = { q: string; a: string };
-
 export default function PricingPage() {
   const [cycle, setCycle] = React.useState<BillingCycle>("monthly");
-  const [openFaq, setOpenFaq] = React.useState<number | null>(0);
   const [loadingPlan, setLoadingPlan] = React.useState<PlanId | null>(null);
   const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
   const [referralCode, setReferralCode] = React.useState<string | null>(null);
@@ -201,29 +198,6 @@ export default function PricingPage() {
     },
   ];
 
-  const faqs: FAQ[] = [
-    {
-      q: "What does Free include?",
-      a: Object.values(FREE_COPY.pricing).join(" · "),
-    },
-    {
-      q: "What does Pro include?",
-      a: "Pro unlocks the full platform: unlimited scanning, Golden Egg, the live Intelligence modules (Global M2, Liquidity Transmission and Market Fragility), research and workspace premium features, portfolio/journal advanced analytics, backtesting, options and derivatives tools, alerts, exports and priority support.",
-    },
-    {
-      q: "Can I cancel anytime?",
-      a: "Yes. You can cancel from your account settings. Access remains until the end of your billing period.",
-    },
-    {
-      q: "Do you offer refunds?",
-      a: "We offer a 7-day money-back guarantee. If you're unhappy, contact support within 7 days of purchase for a full refund.",
-    },
-    {
-      q: "Do you provide financial advice?",
-      a: "No. MarketScannerPros is an educational and informational tool. Nothing here is investment advice. Always manage risk and consult a licensed professional if needed.",
-    },
-  ];
-
   const monthsFreeBesideMonthly = (plan: Plan) => {
     if (plan.priceMonthlyRaw === 0) return "";
     const yearlyEquivalent = plan.priceMonthlyRaw * 12;
@@ -310,20 +284,6 @@ export default function PricingPage() {
             {checkoutError}
           </div>
         ) : null}
-
-        <section className="mt-14">
-          <h2 className="text-center text-lg font-semibold">Frequently asked questions</h2>
-          <div className="mx-auto mt-6 max-w-3xl space-y-3">
-            {faqs.map((f, idx) => (
-              <FaqItem
-                key={idx}
-                faq={f}
-                open={openFaq === idx}
-                onToggle={() => setOpenFaq((v) => (v === idx ? null : idx))}
-              />
-            ))}
-          </div>
-        </section>
 
         <div className="mx-auto mt-10 max-w-3xl rounded-lg border border-white/10 bg-white/[0.04] p-4">
           <div className="text-xs text-white/60">Disclaimer</div>
@@ -464,24 +424,5 @@ function BillingSwitch({ cycle, onToggle }: { cycle: BillingCycle; onToggle: () 
         ].join(" ")}
       />
     </button>
-  );
-}
-
-function FaqItem({ faq, open, onToggle }: { faq: FAQ; open: boolean; onToggle: () => void }) {
-  return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.04]">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left"
-      >
-        <div className="text-sm font-semibold">{faq.q}</div>
-        <span className="text-xs text-white/60" aria-hidden="true">{open ? "—" : "+"}</span>
-      </button>
-      {open ? (
-        <div className="border-t border-white/10 px-4 py-4 text-sm text-white/70">{faq.a}</div>
-      ) : null}
-    </div>
   );
 }

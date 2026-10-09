@@ -37,7 +37,7 @@ export default function DisclaimerPage() {
             <span>·</span>
             <a href="#delay" style={{ color: 'var(--msp-bull)', textDecoration: 'none' }}>Data delays</a>
             <span>·</span>
-            <a href="#paper" style={{ color: 'var(--msp-bull)', textDecoration: 'none' }}>Paper trade system</a>
+            <a href="#paper" style={{ color: 'var(--msp-bull)', textDecoration: 'none' }}>Educational research workspace</a>
             <span>·</span>
             <a href="#backtests" style={{ color: 'var(--msp-bull)', textDecoration: 'none' }}>Backtests</a>
             <span>·</span>
@@ -109,7 +109,7 @@ export default function DisclaimerPage() {
         </section>
 
         <section>
-          <h2 id="paper" style={{ fontSize: 22, fontWeight: 650, marginBottom: 12, marginTop: 24, color: '#f9fafb' }}>Paper Trade &amp; Simulation System</h2>
+          <h2 id="paper" style={{ fontSize: 22, fontWeight: 650, marginBottom: 12, marginTop: 24, color: '#f9fafb' }}>Educational Research Workspace</h2>
           <p style={{ fontSize: 14, color: '#9ca3af', lineHeight: 1.6 }}>
             MarketScanner Pros is an educational paper trade simulation system. The portfolio tracker, 
             trade journal, risk analysis engine, scenario plans, and all analysis outputs are designed for 

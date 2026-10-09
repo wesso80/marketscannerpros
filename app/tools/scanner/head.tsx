@@ -4,7 +4,7 @@ export default function Head() {
       <title>Market Scanner Tool | MarketScanner Pros</title>
       <meta
         name="description"
-        content="Scan stocks and crypto with multi-timeframe confluence, technical indicators, and ranked opportunity scoring."
+        content="Scan stocks and crypto and review multi-timeframe indicator readings with the data shown for each symbol."
       />
       <link rel="canonical" href="https://marketscannerpros.app/tools/scanner" />
     </>
