@@ -1,3 +1,25 @@
+FOLLOW-UP — supersedes the initial release findings where marked below
+
+Claude pushed fixes during this review. They were combined cleanly on top of the initial reviewed tree:
+#560 f6d1a4b25452c75844de96992394c80472343be4 (Settings copy)
+#562 889e53bd621c89feb39969458935191a93c963b3 (exact scheme/host/port comparison)
+#567 a5960d7fea1f7f77e61f405e72eb9e2f6ed1987c (admin-cookie revocation and logout)
+Codex then updated #563 to addbcdf2 (explicit HTTPS www in the shared admin origin helper), aligning its handler layer with #562. This is the only application change made during the review; it is admin-scoped and remains an unmerged draft. No public routes/pages changed.
+
+Reconciled local test commit: e80ab7d591f00aa97ba93d565c0e309566d4e219. Followup-heads.json records its inputs. The final follow-up passed 121 focused tests in 12 files, including real middleware -> handler cases, both admin cookie types, logout, public Copilot/auth boundaries, and Settings; typecheck passed. The 6,462-test full-suite result below applies to the initial tree, not this later revision. No new full-suite claim is made for the follow-up.
+
+R1 RESOLVED in the reconciled candidate: HTTPS apex and HTTPS www both work across the middleware/handler boundary; HTTP downgrade is rejected before either effect. Non-default ports and lookalikes remain denied. The earlier apex-only proposed-origin-policy.patch.txt is historical review evidence and SHOULD NOT be applied. The remaining missing-Origin distinction is deliberate: authenticated admin cookies require Origin; eligible header-only clients retain their supported behavior; middleware additionally rejects explicit cross-site fetch metadata.
+R2 RESOLVED in the reconciled candidate: unlisted ms_admin identities are refused; logout clears ms_admin and ms_auth. Applying those deletions removes admin access. Admin logout now also ends that administrator's app sign-in, as documented in #567; this is not a public-user authentication change. Settings' revocation/logout statements depend on #567 and must travel with it.
+R4 RESOLVED by the Settings link/description for saved research notifications.
+R3 STILL OPEN: fixed mobile sidebar leaves 122px main content at 390px. The later revisions do not change that layout.
+R5 STILL OPEN: #556 public Journal and #552 low-float access require separate scope treatment before an admin-only release.
+
+#566 (freshness labels) arrived after the initial review and was not added to either tested candidate. It still needs review/integration checks. The newer main branch was not incorporated. Nothing merged or deployed.
+
+Next work: repair the mobile admin shell (without touching public layout), review #566, then recompute final heads and validate the final combined release candidate. Preserve #549 -> #562 and #551 -> #567 dependencies; include #563's latest alignment. Deployment hold remains.
+
+INITIAL SNAPSHOT / HISTORICAL EVIDENCE FOLLOWS
+
 Combined admin draft review — 9 October 2026
 
 OUTCOME: clean textual combination and green automated suite, but NOT ready to release as-is. Origin-policy differences, session guarantees, mobile layout and public-boundary decisions remain. No application code was edited in this review. No branch was merged, deployed, or used to change production data.

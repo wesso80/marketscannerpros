@@ -1,0 +1,52 @@
+import { beforeEach, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
+const h=vi.hoisted(()=>{
+ process.env.APP_SIGNING_SECRET='combined-origin-fixture';process.env.ADMIN_EMAILS='audit@example.com';process.env.ADMIN_DISCOVERY_ONLY='false';process.env.ADMIN_EQUITIES_PAUSED='false';process.env.ADMIN_SECRET='fixture-header-secret';
+ return {cookies:{} as Record<string,string>,effect:vi.fn(),q:vi.fn()};
+});
+vi.mock('next/headers',()=>({cookies:async()=>({get:(name:string)=>h.cookies[name]?{value:h.cookies[name]}:undefined})}));
+vi.mock('@/lib/db',()=>({q:h.q}));
+vi.mock('@/lib/universe/personalUniverse',()=>({setKillSwitch:h.effect,getKillSwitchState:vi.fn(),listKillSwitchLog:vi.fn()}));
+import {signSessionToken} from '@/lib/auth';
+import {middleware} from '../middleware';
+import {POST as adminWrite} from '@/app/api/admin/kill-switch/route';
+import {POST as operatorWrite} from '@/app/api/operator/focus/pin/route';
+const apex='https://marketscannerpros.app';
+beforeEach(()=>{h.effect.mockReset();h.effect.mockResolvedValue({enabled:true});h.q.mockReset();h.q.mockResolvedValue([]);h.cookies={ms_auth:signSessionToken({cid:'admin_audit@example.com',tier:'pro_trader',workspaceId:'fixture-workspace',exp:Math.floor(Date.now()/1000)+3600})};});
+async function chain(kind:'admin'|'operator',origin:string|null,site?:string){
+ const path=kind==='admin'?'/api/admin/kill-switch':'/api/operator/focus/pin';
+ const request=new NextRequest(apex+path,{method:'POST',headers:{host:'marketscannerpros.app',cookie:Object.entries(h.cookies).map(([key,value])=>key+'='+value).join('; '),'content-type':'application/json',...(origin===null?{}:{origin}),...(site?{'sec-fetch-site':site}:{})},body:JSON.stringify(kind==='admin'?{enabled:true}:{symbol:'AAPL'})});
+ const gate=await middleware(request);
+ const passed=gate.headers.get('x-middleware-next')==='1';
+ const response=passed?await(kind==='admin'?adminWrite(request):operatorWrite(request)):gate;
+ return {passed,status:response.status};
+}
+it.each([
+ ['admin',apex,true,200],['operator',apex,true,200],
+ ['admin','https://www.marketscannerpros.app',true,200],['operator','https://www.marketscannerpros.app',true,200],
+ ['admin','http://marketscannerpros.app',false,403],['operator','http://marketscannerpros.app',false,403],
+ ['admin',null,true,401],['operator',null,true,200],
+ ['admin','https://evil.example',false,403],['operator','https://evil.example',false,403],
+] as const)('records combined behavior: %s Origin=%s',async(kind,origin,passed,status)=>{
+ expect(await chain(kind,origin)).toEqual({passed,status});
+ if(status===200)expect(kind==='admin'?h.effect:h.q).toHaveBeenCalled();
+ else {expect(h.effect).not.toHaveBeenCalled();expect(h.q).not.toHaveBeenCalled();}
+});
+it.each(['admin','operator'] as const)('missing Origin with explicit cross-site metadata is blocked before %s effects',async(kind)=>{
+ expect(await chain(kind,null,'cross-site')).toEqual({passed:false,status:403});expect(h.effect).not.toHaveBeenCalled();expect(h.q).not.toHaveBeenCalled();
+});
+
+it('an unlisted admin-session token is refused by the corrected combined tree',async()=>{
+ const {createAdminSessionToken}=await import('@/lib/adminAuth');
+ h.cookies={ms_admin:createAdminSessionToken('removed@example.com')};
+ expect(await chain('admin',apex)).toEqual({passed:false,status:401});
+ expect(h.effect).not.toHaveBeenCalled();
+});
+it('logout clears both sessions; applying the cookie deletions removes access',async()=>{
+ const {DELETE}=await import('@/app/api/admin/verify/route');
+ const {requireAdmin}=await import('@/lib/adminAuth');
+ const response=await DELETE(new NextRequest(apex+'/api/admin/verify',{method:'DELETE',headers:{origin:apex}}));
+ expect(response.status).toBe(200);expect(response.headers.get('set-cookie')).toContain('ms_admin=;');expect(response.headers.get('set-cookie')).toContain('ms_auth=');
+ h.cookies={};
+ expect((await requireAdmin(new Request(apex+'/api/admin/health'))).ok).toBe(false);
+});
