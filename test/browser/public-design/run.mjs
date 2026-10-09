@@ -19,7 +19,7 @@ const fixturePlan=process.env.MSP_DESIGN_PLAN==='free'?'free':'pro';
 
 const baseUrl=process.env.MSP_BROWSER_BASE_URL || 'http://127.0.0.1:5178';
 let log='';
-const server=process.env.MSP_BROWSER_BASE_URL ? null : spawn(process.execPath,[createRequire(resolve('package.json')).resolve('next/dist/bin/next'),'dev','--webpack','-H','127.0.0.1','-p','5178'],{env:{...process.env,NEXT_TELEMETRY_DISABLED:'1',NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED:'true',APP_SIGNING_SECRET:'fixture-only',DATABASE_URL:'',OPENAI_API_KEY:''},stdio:['ignore','pipe','pipe']});
+const server=process.env.MSP_BROWSER_BASE_URL ? null : spawn(process.execPath,[createRequire(resolve('package.json')).resolve('next/dist/bin/next'),'dev',process.env.MSP_BROWSER_BUNDLER==='turbopack'?'--turbopack':'--webpack','-H','127.0.0.1','-p','5178'],{env:{...process.env,NEXT_TELEMETRY_DISABLED:'1',NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED:'true',APP_SIGNING_SECRET:'fixture-only',DATABASE_URL:'',OPENAI_API_KEY:''},stdio:['ignore','pipe','pipe']});
 server?.stdout.on('data',d=>{log+=d;process.stdout.write(d);});server?.stderr.on('data',d=>{log+=d;process.stderr.write(d);});
 let browser;
 try{
@@ -71,7 +71,7 @@ try{
  for(const width of JSON.parse(process.env.MSP_DESIGN_WIDTHS || '[1280,390]'))for(const path of (extraPaths || ['/pricing','/auth','/','/learn','/tools/golden-egg?symbol=AAPL&type=equity','/tools/command-center','/tools/command-center?fixture=populated','/tools/golden-egg?symbol=AAPL&type=equity&fixture=symbol','/tools/macro','/tools/macro?fixture=populated','/intelligence/global-m2','/intelligence/global-m2?fixture=populated','/tools/workspace?tab=Portfolio','/tools/workspace?tab=Portfolio&fixture=records','/tools/workspace?tab=Journal','/tools/workspace?tab=Journal&fixture=records']).filter(path=>process.env.MSP_DESIGN_SCOPE==='m2'?path.startsWith('/intelligence/global-m2'):process.env.MSP_DESIGN_SCOPE==='symbol'?path.startsWith('/tools/golden-egg'):process.env.MSP_DESIGN_SCOPE==='account'?['/pricing','/auth'].includes(path):process.env.MSP_DESIGN_SCOPE==='records'?path.startsWith('/tools/workspace'):process.env.MSP_DESIGN_SCOPE!=='economic'||path.startsWith('/tools/macro')||path.startsWith('/intelligence/global-m2'))){
   await page.setViewportSize({width,height:1000});
   const response=await page.goto(baseUrl+path,{timeout:Number(process.env.MSP_DESIGN_NAVIGATION_TIMEOUT_MS || 90000)});
-  await page.locator('[data-public-design]').waitFor();
+  await page.locator('[data-public-design]:visible').waitFor();
   const cookies=page.getByRole('button',{name:'Essential Only',exact:true});if(await cookies.count())await cookies.click();
   if(path==='/pricing'){
    await page.getByText('3 Symbol reports per day',{exact:true}).waitFor();
@@ -94,7 +94,7 @@ try{
    await page.getByText(fixturePlan==='free'?'Pro includes 20 questions daily.':'Verified evidence is not available here yet.',{exact:false}).waitFor();
    await page.getByRole('button',{name:/MSP Copilot/}).click();
   }
-  if(width===390&&await page.locator('summary').filter({hasText:'Browse destinations'}).count())await page.locator('summary').filter({hasText:'Browse destinations'}).click();
+  if(width===390&&await page.locator('summary:visible').filter({hasText:'Browse destinations'}).count())await page.locator('summary:visible').filter({hasText:'Browse destinations'}).click();
   if(path.includes('command-center')&&path.includes('fixture=populated')){
    await page.getByText('Synthetic release â€” browser fixture',{exact:true}).waitFor();
    await page.getByLabel('Observed change').selectOption('flat');
@@ -136,7 +136,7 @@ try{
   if(response.status()!==200||dimensions.scroll>width||errors.length)throw Error(JSON.stringify({path,width,status:response.status(),dimensions,errors}));
   await page.screenshot({path:out+'/public-design-'+path.replace(/[^a-zA-Z0-9]/g,'_')+'-'+width+'.png',fullPage:true});
   if(process.env.MSP_DESIGN_MANUAL==='true'&&path.includes('fixture=symbol')){
-   await page.locator('summary').filter({hasText:'Change symbol'}).click();
+   await page.locator('summary:visible').filter({hasText:'Change symbol'}).click();
    await page.getByRole('textbox',{name:'Symbol',exact:true}).fill('MSFT');
    await Promise.all([
     page.waitForRequest(r=>new URL(r.url()).pathname==='/api/golden-egg'&&new URL(r.url()).searchParams.get('symbol')==='MSFT'),
