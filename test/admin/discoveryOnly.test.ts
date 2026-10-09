@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { adminDiscoveryOnly, businessScope, discoveryOnlyAction } from '@/lib/admin/discoveryOnly';
+import { readFileSync } from 'node:fs';
+import { adminDiscoveryOnly, adminNavVisibleWhilePaused, analysisScope, businessScope, discoveryOnlyAction } from '@/lib/admin/discoveryOnly';
 afterEach(() => vi.unstubAllEnvs());
 it('defaults to the owner-requested discovery-only scope and can be explicitly restored', () => {
   vi.stubEnv('ADMIN_DISCOVERY_ONLY', undefined);
@@ -72,4 +73,30 @@ it('treats a missing method as GET and still pauses lowercase writes', () => {
   expect(discoveryOnlyAction('/api/admin/income')).toBe('allow');
   expect(discoveryOnlyAction('/api/admin/income/', 'post')).toBe('pause_api');
   expect(discoveryOnlyAction('/api/admin/trials/', 'DELETE')).toBe('pause_api');
+});
+
+it('opens read-only analysis pages and their GET data while discovery-only is on; writes and everything else stay paused', () => {
+  vi.stubEnv('ADMIN_DISCOVERY_ONLY', 'true');
+  for (const page of analysisScope.pages) {
+    expect(discoveryOnlyAction(page, 'GET'), page).toBe('allow');
+    expect(adminNavVisibleWhilePaused(page), page).toBe(true);
+  }
+  for (const api of analysisScope.getApis) {
+    expect(discoveryOnlyAction(api, 'GET'), api).toBe('allow');
+    expect(discoveryOnlyAction(`${api}/`, 'GET'), api).toBe('allow');
+    expect(discoveryOnlyAction(api, 'POST'), api).toBe('pause_api');
+  }
+  expect(discoveryOnlyAction('/api/admin/opportunities', 'GET')).toBe('pause_api');
+  expect(discoveryOnlyAction('/api/admin/symbol/AAPL', 'GET')).toBe('pause_api'); // live scan uses provider quota
+  expect(discoveryOnlyAction('/admin/opportunity-board', 'GET')).toBe('pause_page');
+  expect(discoveryOnlyAction('/api/cron/edge-rebuild-matrix', 'POST')).toBe('skip_job');
+});
+it('every always-open analysis API only reads: no INSERT/UPDATE/DELETE and no provider fetch in its GET handler', () => {
+  for (const api of analysisScope.getApis) {
+    const src = readFileSync(`app${api}/route.ts`, 'utf8');
+    const get = src.slice(src.search(/export (async function|const) GET/));
+    const body = get.split(/\nexport (async function|const) (POST|PUT|PATCH|DELETE)/)[0];
+    expect(body, api).not.toMatch(/\b(INSERT INTO|UPDATE \w+ SET|DELETE FROM)\b/);
+    expect(body, api).not.toMatch(/\bfetch\(|alphaVantage|avFetch|getMarketData\(/);
+  }
 });
