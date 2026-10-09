@@ -4,6 +4,7 @@
  *   (acknowledgement handled by separate /ack route)
  */
 import { NextRequest, NextResponse } from "next/server";
+import { storedTruth } from '@/lib/admin/truthLayer';
 import { requireAdmin } from "@/lib/adminAuth";
 import { wrapTruth } from "@/lib/admin/truthLayer";
 import { getDefaultPortfolio, listRiskEvents } from "@/lib/admin/portfolio-lab/portfolioStore";
@@ -24,6 +25,6 @@ export async function GET(req: NextRequest) {
   const limit = Math.max(1, Math.min(500, Number(url.searchParams.get("limit") || 100)));
   const events = await listRiskEvents(admin.workspaceId, portfolio.id, { onlyUnacknowledged: onlyUnack, limit });
   return NextResponse.json(
-    wrapTruth({ events }, { source: "arca:risk", simulated: true, freshness: "real-time", confidence: "high" }),
+    { ...storedTruth({ source: "arca:risk (simulated portfolio)", dataAsOf: events.reduce<string | null>((l, e) => (!l || e.createdAt > l ? e.createdAt : l), null), staleAfterMinutes: 24 * 60, simulated: true }), data: { events } },
   );
 }

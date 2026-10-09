@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { storedTruth } from '@/lib/admin/truthLayer';
 import { requireAdmin } from '@/lib/adminAuth';
 import { ingestInsiderForSymbol, recentInsiderForSymbol, insiderSummary } from '@/lib/insider/edgar';
 
@@ -28,7 +29,14 @@ export async function GET(req: NextRequest) {
       insiderSummary(symbol, windowDays),
       recentInsiderForSymbol(symbol, limit),
     ]);
-    return NextResponse.json({ ok: true, summary, transactions });
+    const newest = transactions.reduce<string | null>((latest, t) => {
+      const at = t.filedAt ?? t.transactionDate ?? null;
+      return at && (!latest || at > latest) ? at : latest;
+    }, null);
+    return NextResponse.json({
+      ok: true, summary, transactions,
+      truth: storedTruth({ source: 'SEC EDGAR Form 4 (stored filings)', dataAsOf: newest, staleAfterMinutes: 7 * 24 * 60 }),
+    });
   } catch (e: unknown) {
     return NextResponse.json({ ok: false, error: adminErrorText(e, '/api/admin/insider') }, { status: 500 });
   }
