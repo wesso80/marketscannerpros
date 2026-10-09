@@ -69,7 +69,13 @@ export default function CryptoPaperAccount({now,refreshVersion=0,onRefresh}:{now
  try{clusters=last?.evidence?.[0]?JSON.parse(last.evidence[0]).clusters:undefined;}catch{clusters=undefined;}
  return <section id="crypto-paper" aria-label="Crypto paper account" className="space-y-3 rounded border border-violet-700 p-4 scroll-mt-4">
   <h2 className="text-xl">Crypto paper account <span className="text-sm font-normal text-slate-400">· two independent $200,000 ledgers · SIMULATED, no exchange orders</span></h2>
-  {p?<p className="text-lg tabular-nums">Entries <span className={p.status==='ACTIVE'?'text-emerald-300':'text-amber-300'}>{p.status}</span> · Equity {money(p.totalEquity)} · Cash {money(p.currentCash)} · Realised {money(p.realisedPnl)} · Open P&amp;L <span className={p.unrealisedPnl<0?'text-red-300':'text-emerald-300'}>{money(p.unrealisedPnl)}</span> <span className="text-xs text-slate-400">(before exit costs)</span></p>
+  {p?<dl className="crypto-paper-balances">
+   <div><dt>Entries</dt><dd className={p.status==='ACTIVE'?'text-emerald-300':'text-amber-300'}>{p.status}</dd></div>
+   <div><dt>Equity</dt><dd>{money(p.totalEquity)}</dd></div>
+   <div><dt>Cash</dt><dd>{money(p.currentCash)}</dd></div>
+   <div><dt>Realised P&amp;L</dt><dd>{money(p.realisedPnl)}</dd></div>
+   <div><dt>Open P&amp;L</dt><dd className={p.unrealisedPnl<0?'text-red-300':'text-emerald-300'}>{money(p.unrealisedPnl)}</dd><span className="text-xs text-slate-400">before exit costs</span></div>
+  </dl>
    :data&&<p>No paper account yet. Enable it below; nothing is sent to an exchange.</p>}
   <div className="flex flex-wrap gap-3">
    <button disabled={busy} onClick={()=>void load(p?.status==='ACTIVE'?'pause':'enable')} className="rounded bg-violet-800 px-3 py-2 disabled:opacity-50">{p?.status==='ACTIVE'?'Pause paper entries':p?'Resume paper entries':'Enable crypto paper account'}</button>
