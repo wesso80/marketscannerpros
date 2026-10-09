@@ -3,10 +3,12 @@
 /**
  * 6-week / 12-week outcomes by setup type (Signal Outcomes, Backtest Lab). Data: lib/admin/positionHorizonStats via
  * /api/admin/signals/stats and /api/admin/backtest-lab (`positionHorizons`). Pending counts are always shown; figures
- * from fewer than `minSample` measured calls read "not enough data".
+ * from fewer than `minSample` measured calls read "not enough data". Each horizon shows how many labelled results are
+ * verified / unknown / inconsistent, and the figures switch between all results (mixed provenance, the default, like
+ * the 24-hour panels) and verified results only.
  */
-import type { CSSProperties } from "react";
-import type { HorizonBlock, HorizonSummary, PositionHorizonStats } from "@/lib/admin/positionHorizonStats";
+import { useState, type CSSProperties } from "react";
+import type { HorizonBlock, HorizonCohort, HorizonSummary, PositionHorizonStats } from "@/lib/admin/positionHorizonStats";
 
 const cell: CSSProperties = { padding: "0.35rem 0.5rem", textAlign: "right", whiteSpace: "nowrap" };
 const head: CSSProperties = { ...cell, color: "#6B7280", fontWeight: 600, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.04em" };
@@ -51,11 +53,18 @@ function Row({ s, minSample, label }: { s: HorizonSummary; minSample: number; la
   );
 }
 
-function HorizonTable({ block, minSample }: { block: HorizonBlock; minSample: number }) {
+function HorizonTable({ block, minSample, cohort }: { block: HorizonBlock; minSample: number; cohort: HorizonCohort }) {
+  const fig = cohort === "verified" ? block.verifiedOnly : block;
+  const ev = block.evidence;
   return (
     <div style={{ marginBottom: "1rem", overflowX: "auto" }}>
       <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#E5E7EB", margin: "0.25rem 0 0.4rem" }}>
         {block.horizon === "6w" ? "6 weeks" : "12 weeks"} <span style={{ color: "#6B7280", fontWeight: 400 }}>({block.days} calendar days after the call)</span>
+      </div>
+      <div style={{ fontSize: "0.7rem", color: "#9CA3AF", marginBottom: "0.4rem" }}>
+        Labelled results: <span style={{ color: "#10B981" }}>{ev.verified} verified</span> · {ev.unknown} unknown method
+        {ev.inconsistent > 0 && <span style={{ color: "#EF4444" }}> · {ev.inconsistent} record mismatch{ev.inconsistent === 1 ? "" : "es"}</span>}
+        {" "}· showing {cohort === "verified" ? "verified results only" : "all results (mixed provenance)"}
       </div>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem", color: "#D1D5DB" }}>
         <thead>
@@ -71,8 +80,8 @@ function HorizonTable({ block, minSample }: { block: HorizonBlock; minSample: nu
           </tr>
         </thead>
         <tbody>
-          <Row s={block.overall} minSample={minSample} label="All setups" />
-          {block.bySetup.map((s) => <Row key={s.setup} s={s} minSample={minSample} />)}
+          <Row s={fig.overall} minSample={minSample} label="All setups" />
+          {fig.bySetup.map((s) => <Row key={s.setup} s={s} minSample={minSample} />)}
         </tbody>
       </table>
     </div>
@@ -80,6 +89,7 @@ function HorizonTable({ block, minSample }: { block: HorizonBlock; minSample: nu
 }
 
 export default function PositionHorizonOutcomes({ stats }: { stats: PositionHorizonStats | null | undefined }) {
+  const [cohort, setCohort] = useState<HorizonCohort>("all");
   return (
     <div style={{
       background: "rgba(17, 24, 39, 0.6)", border: "1px solid rgba(255,255,255,0.06)",
@@ -97,7 +107,15 @@ export default function PositionHorizonOutcomes({ stats }: { stats: PositionHori
           <div style={{ fontSize: "0.7rem", color: "#9CA3AF", marginBottom: "0.6rem" }}>
             {stats.note} Each figure needs at least {stats.minSample} valid observations for its own denominator; below that they read &quot;not enough data&quot;.
           </div>
-          {stats.horizons.map((b) => <HorizonTable key={b.horizon} block={b} minSample={stats.minSample} />)}
+          <label style={{ display: "block", fontSize: "0.75rem", color: "#D1D5DB", marginBottom: "0.6rem" }}>
+            6w/12w results{" "}
+            <select aria-label="6w/12w results" value={cohort} onChange={(e) => setCohort(e.target.value as HorizonCohort)}
+              style={{ background: "#0F172A", color: "#E5E7EB", padding: 6, maxWidth: "100%" }}>
+              <option value="all">All results (mixed provenance)</option>
+              <option value="verified">Verified results only</option>
+            </select>
+          </label>
+          {stats.horizons.map((b) => <HorizonTable key={b.horizon} block={b} minSample={stats.minSample} cohort={cohort} />)}
         </>
       )}
     </div>
