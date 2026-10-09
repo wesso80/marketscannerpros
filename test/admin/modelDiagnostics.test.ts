@@ -143,6 +143,8 @@ describe("GET /api/admin/model-diagnostics", () => {
     const sigParams = m.params[m.sql.findIndex((s) => /FROM ai_signal_log/.test(s))];
     expect(sigParams).toEqual(["operator-terminal", LABELLER_FIX_AT]);
     expect(body.totalSignals).toBe(3); // signals only — research cases no longer pad the counts
+    expect(all).toContain('signal_at, asset_type, timeframe, regime');
+    expect(body.breakdowns.asset[0]).toMatchObject({name:'Not recorded',signals:3,labelled:2});
     expect(body.scoreField).toBe("confluence");
     expect(body.totalLabelled).toBe(2);
     expect(body.overallHitRate).toBe(50);

@@ -24,8 +24,9 @@ import { storedTruth } from '@/lib/admin/truthLayer';
 import { requireAdmin } from "@/lib/adminAuth";
 import { q } from "@/lib/db";
 import { LABELLER_FIX_AT, signedMoveSql } from "@/lib/admin/signalStats";
-import { ASSUMED_ROUND_TRIP_COST_PCT, MIN_LABELLED_FOR_COMPARISON, computeCalibration, type OutcomeRow } from "@/lib/admin/modelDiagnostics";
+import { ASSUMED_ROUND_TRIP_COST_PCT, MIN_LABELLED_FOR_COMPARISON, computeCalibration } from "@/lib/admin/modelDiagnostics";
 import { OUTCOME_MOVE_THRESHOLD_PCT } from "@/lib/outcomes/aiOutcomeLabel";
+import { computeBreakdowns, type BreakdownRow } from '@/lib/admin/modelBreakdowns';
 
 import { adminErrorText } from '@/lib/admin/errorResponse';
 export const runtime = "nodejs";
@@ -62,7 +63,7 @@ function parseScoreField(v: string | null | undefined): ScoreField {
   return s === "elite" || s === "confidence" ? s : "confluence";
 }
 
-type SignalRow = OutcomeRow & { signal_at?: string | Date | null };
+type SignalRow = BreakdownRow;
 
 interface SignalLoad {
   rows: SignalRow[];
@@ -75,7 +76,7 @@ async function loadSignalOutcomes(field: ScoreField): Promise<SignalLoad> {
     const [rows, old] = await Promise.all([
       // Verdicts from before the labeller fix are nulled so they don't count as labelled.
       q<SignalRow>(
-        `SELECT ${SCORE_SQL[field]} AS score, signal_at,
+        `SELECT ${SCORE_SQL[field]} AS score, signal_at, asset_type, timeframe, regime,
                 CASE WHEN outcome IN ('correct', 'wrong', 'neutral', 'expired') AND (outcome_measured_at IS NULL OR outcome_measured_at < $2::timestamptz)
                      THEN NULL ELSE outcome END AS outcome,
                 CASE WHEN outcome IN ('correct', 'wrong', 'neutral') AND outcome_measured_at >= $2::timestamptz
@@ -137,6 +138,7 @@ export async function GET(req: NextRequest) {
     totalLabelled,
     overallHitRate,
     buckets,
+    breakdowns: computeBreakdowns(signals.rows),
     drift,
     sources: {
       aiSignalLog: signals.rows.length,
