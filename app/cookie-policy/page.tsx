@@ -118,7 +118,7 @@ export default function CookiePolicyPage() {
 
       <h3>Do Not Track (DNT)</h3>
       <p>
-        We currently do not respond to "Do Not Track" browser settings because there is no universal
+        We currently do not respond to "Do Not Track" browser signals because there is no universal
         standard for how to interpret them. However, you can control tracking through your browser settings.
       </p>
 

@@ -182,9 +182,9 @@ describe('Crypto Derivatives tab', () => {
 describe('Time Confluence before a run', () => {
   it('does not render score 0 and Unavailable tiles together', () => {
     render(<TimeScannerPage embeddedInTerminal symbol="BTCUSD" assetType="crypto" />);
-    expect(screen.getByRole('heading', { name: 'Run Time Confluence for BTCUSD' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Run Close timing for BTCUSD' })).toBeTruthy();
     expect(screen.getAllByRole('button')).toHaveLength(1);
-    expect(screen.getByRole('button', { name: 'Run Time Confluence' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Run Close timing' })).toBeTruthy();
     const text = document.body.textContent || '';
     expect(text).not.toMatch(/Unavailable/);
     expect(text).not.toMatch(/UNKNOWN/);
@@ -196,8 +196,8 @@ describe('Time Confluence before a run', () => {
   it('shows one unlock card for free users inside Terminal', async () => {
     tierState.tier = 'free';
     render(<ConfluenceScannerPage embeddedInTerminal symbol="btcusd" assetType="crypto" />);
-    expect(await screen.findByRole('heading', { name: 'Time Confluence for BTCUSD' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Unlock Time Confluence' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Close timing for BTCUSD' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Unlock Close timing' })).toBeTruthy();
     const text = document.body.textContent || '';
     expect(text).not.toMatch(/Unavailable/);
     expect(text).not.toMatch(/UNKNOWN/);

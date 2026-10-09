@@ -825,7 +825,7 @@ describe('Stripe webhook period fields (API 2025-09-30.clover)', () => {
     expect((insert![1] as unknown[])[3]).toBe('active');
     expect(errSpy.mock.calls.some((call) => {
       const line = String(call[0]);
-      return line.includes('sub_unknown_price') && line.includes('price_unknown') && line.includes('storing pro');
+      return line.includes('unknown price id') && line.includes('storing pro') && !line.includes('sub_unknown_price') && !line.includes('price_unknown');
     })).toBe(true);
     errSpy.mockRestore();
   });

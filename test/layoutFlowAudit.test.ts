@@ -261,7 +261,7 @@ describe('layout and flow audit regressions', () => {
     expect(pricing).toContain('Full backtesting engine');
     expect(pricing).toContain("Symbol research");
     expect(pricing).not.toContain("Golden Egg Deep Analysis");
-    expect(pricing).toContain("Options Confluence Scanner");
+    expect(pricing).toContain("Options timing Scanner");
     expect(pricing).toContain("PLAN_PRICES.pro.monthly");
     expect(pricing).not.toContain('🤖');
     expect(pricing).not.toContain('📊');
@@ -607,8 +607,8 @@ describe('layout and flow audit regressions', () => {
     expect(dashboardPage).toContain('<MacroDashboard embeddedInDashboard />');
     expect(dashboardPage).not.toContain('rounded-t-md whitespace-nowrap transition-colors');
     expect(edgeInsightCards).toContain('const INSIGHT_CODES');
-    expect(edgeInsightCards).toContain('Edge Profile');
-    expect(edgeInsightCards).toContain('Not enough closed trades yet ({lock.progressLabel}). Close at least {lock.unlockAt} trades in your journal to unlock edge insights.');
+    expect(edgeInsightCards).toContain('Your own trades');
+    expect(edgeInsightCards).toContain('Not enough closed trades yet ({lock.progressLabel}). Close at least {lock.unlockAt} trades in your journal to unlock notes from your own trades.');
     // Dashboard polish — single-source regime in eyebrow, Next Check tile, adaptive workflow,
     // empty Edge Profile collapses to one-liner.
     expect(dashboardPage).not.toContain('flex items-center gap-2 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 flex-wrap');
@@ -771,7 +771,7 @@ describe('layout and flow audit regressions', () => {
     expect(cryptoPage).not.toContain('Capital Mode: {morningDecision.capitalMode}');
     expect(cryptoPage).not.toContain("Longs: {morningDecision.longsAllowed ? 'Allowed' : 'Restricted'}");
     expect(cryptoMorningCard).toContain('Crypto Review Gate');
-    expect(cryptoMorningCard).toContain('Risk Context: {decision.riskContext}');
+    expect(cryptoMorningCard).toContain('Risk state: {decision.riskState}');
     expect(cryptoMorningCard).not.toContain('Crypto Condition Gate');
     expect(cryptoMorningCard).not.toContain('Sizing Context: {decision.capitalMode}');
     expect(marketMoversPage).not.toContain('Today&apos;s Plays / Movers Queue');
@@ -851,7 +851,7 @@ describe('layout and flow audit regressions', () => {
     expect(regimeBanner).toContain('Review:');
     // OV-1: the regime no longer carries a position-sizing value, so the banner has no sizing/"Risk Context" slot.
     expect(regimeBanner).not.toContain('data.sizing');
-    expect(regimeBanner).toContain('Stale signals');
+    expect(regimeBanner).toContain('Stale readings');
     expect(regimeBanner).not.toContain('permissionColors');
     expect(regimeBanner).not.toContain('Sizing:');
     expect(regimeBanner).not.toContain('⚠ Stale signals');
@@ -927,7 +927,7 @@ describe('layout and flow audit regressions', () => {
     expect(timeScannerPageV2).not.toContain('function ExecutionField');
     expect(timeScannerPageV2).not.toContain('CONFLUENCE ENGINE + EXECUTION');
     expect(timeExecutionLayer).toContain('function TimingSummary');
-    expect(timeExecutionLayer).toContain('<MiniScore label="Timing" value={out.executionScore} />');
+    expect(timeExecutionLayer).not.toContain('<MiniScore label="Timing" value={out.executionScore} />');
     expect(timeExecutionLayer).not.toContain('function ExecutionSummary');
     expect(timeExecutionLayer).not.toContain('<MiniScore label="Exec" value={out.executionScore} />');
     expect(timeExecutionChecklist).toContain('Close Evidence');
@@ -959,8 +959,8 @@ describe('layout and flow audit regressions', () => {
     expect(mspOptionsTimingLayer).toContain('subtitle="Is the timing evidence clean?"');
     expect(mspOptionsTimingLayer).not.toContain('Can we enter efficiently?');
     expect(mspOptionsDecisionBar).toContain('setup evidence stronger than timing evidence');
-    expect(mspOptionsDecisionBar).toContain('Review State:');
-    expect(mspOptionsDecisionBar).toContain('Context/Setup/Timing:');
+    expect(mspOptionsDecisionBar).toContain('What to check: price, structure, and timing evidence.');
+    expect(mspOptionsDecisionBar).not.toContain('Context/Setup/Timing:');
     expect(mspOptionsDecisionBar).toContain('View Framework');
     expect(mspOptionsDecisionBar).not.toContain('setup strong but execution weaker');
     expect(mspOptionsDecisionBar).not.toContain('Context/Setup/Execution:');
@@ -1002,7 +1002,7 @@ describe('layout and flow audit regressions', () => {
     expect(scannerPage).toContain("{ id: 'analysis', label: 'Analysis'");
     expect(scannerPage).toContain('onSelectAnalysis');
     expect(scannerPage).toContain('function RankedMobileCards');
-    expect(scannerPage).toContain('Why This Rank / Review');
+    expect(scannerPage).toContain('text-emerald-300">Review</span>');
     expect(scannerPage).toContain("Review scenario for ${row.symbol}");
     expect(scannerPage).not.toContain("label=\"Direction\"");
     expect(scannerPage).not.toContain("label=\"Conf\"");

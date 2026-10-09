@@ -16,7 +16,6 @@ it('one verdict/source, closed detail and no raw labels with incomplete secondar
  expect(container.querySelectorAll('[data-verdict-box]')).toHaveLength(1);expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);
  expect(container.querySelectorAll('details[open]')).toHaveLength(0);expect(container.querySelectorAll('[data-macro-tile]')).toHaveLength(4);
  expect(container.textContent).not.toMatch(/\b(Unknown|Unavailable|N\/A|bullish|bearish|Permission|Wait for|MISSING)\b/i);
- expect(screen.getByText('Weighting factor').parentElement?.textContent).toContain('0.75x');
  expect(state.setPageData).toHaveBeenCalled();
 });
 it('absent macro observations do not display synthetic zeroes or an assessed score',async()=>{

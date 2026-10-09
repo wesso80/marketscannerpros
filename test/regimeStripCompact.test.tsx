@@ -18,9 +18,9 @@ it('keeps one regime in the closed summary and retains eligible evidence behind 
  const fold=container.querySelector('details')!;expect(fold.open).toBe(false);
  const summary=fold.querySelector('summary')!;
  expect(summary.textContent?.match(/Trend Up/g)).toHaveLength(1);
- expect(summary.textContent).toContain('2 supporting signals');
+ expect(summary.textContent).toContain('2 supporting readings');
  expect(summary.className).toContain('min-h-10');
- expect(screen.getByRole('list',{name:'Market regime supporting signals',hidden:true}).querySelectorAll('li')).toHaveLength(2);
+ expect(screen.getByRole('list',{name:'Market regime supporting readings',hidden:true}).querySelectorAll('li')).toHaveLength(2);
  expect(container.textContent).not.toMatch(/excluded|TREND_UP|macro_context/);
  expect(container.querySelector('[class*="overflow-x-auto"]')).toBeNull();
  expect(JSON.stringify(state.data)).toBe(original);

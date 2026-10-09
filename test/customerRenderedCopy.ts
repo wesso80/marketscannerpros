@@ -84,6 +84,11 @@ export const PHRASE_ALLOWLIST: { file: string; phrase: string; reason: string }[
     phrase: 'Win rate · your own trades',
     reason: 'The user\'s own recorded trades, labelled as their own.',
   },
+  {
+    file: 'app/cookie-policy/page.tsx',
+    phrase: 'We currently do not respond to "Do Not Track" browser signals',
+    reason: 'Legal description of the Do Not Track browser feature, not a market signal.',
+  },
 ];
 
 const COPY_KEYS = new Set([

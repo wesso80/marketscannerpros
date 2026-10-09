@@ -38,11 +38,11 @@ it('empty Learning has one Journal action and folded framework definitions',asyn
  expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);
  expect(container.textContent).not.toMatch(/Golden Egg|bullish|bearish|NO_SETUP/);
 });
-it('preserves Learning scores and formats measured values',async()=>{
+it('keeps the learning profile and formats the user\'s own measured values',async()=>{
  state.profile={totalTrades:24,edgeScore:62,overallWinRate:0.5833,overallAvgRR:1.42,doctrineStats:[],bestDoctrine:null,worstDoctrine:null,bestRegime:null,worstRegime:null};
  render(<LearningTab/>);
  await screen.findByText('24 recorded trades in your learning profile.');
- expect(screen.getByText('62')).toBeTruthy();expect(screen.getByText('58%')).toBeTruthy();expect(screen.getByText('1.4')).toBeTruthy();
+ expect(screen.queryByText('62')).toBeNull();expect(screen.getByText('58%')).toBeTruthy();expect(screen.getByText('1.4')).toBeTruthy();
  expect(state.profile.edgeScore).toBe(62);expect(state.profile.overallWinRate).toBe(0.5833);
 });
 it('reports a failed Learning feed instead of claiming no history',async()=>{
