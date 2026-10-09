@@ -21,7 +21,8 @@ import { loadRegimeOverlayInputs } from "@/lib/scoring/canonical/regimeOverlayDa
 import { parseAlphaVantageDailyBars } from "@/lib/scanner/avDailyBars";
 import { DAILY_SCAN_ASSETS, parseDailyScanAssets, type DailyScanAsset } from "@/lib/scanner/dailyScanAssets";
 import { dailyPublication, isCompletedDailyBar } from '@/lib/scanner/dailyPublication';
-import { latestUsSessionDate } from "@/lib/time/usSession";
+import { symbolsBehindEquitySession } from '@/lib/scanner/equityScanRefresh';
+import { lastCompletedUsSessionDate, latestUsSessionDate, toYmd } from "@/lib/time/usSession";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes max
@@ -322,6 +323,31 @@ async function scanForex(symbol: string, apiKey: string, overlay: RegimeOverlayI
   }
 }
 
+/** Symbols still missing the last completed US session. A failed read scans the whole list. */
+async function equitySymbolsDue(symbols: string[], nowMs: number): Promise<string[]> {
+  const expected = lastCompletedUsSessionDate(nowMs);
+  try {
+    const rows = await q<{ symbol: string; scan_date: unknown }>(
+      `SELECT symbol, MAX(scan_date) AS scan_date
+         FROM daily_picks
+        WHERE asset_class = 'equity' AND symbol = ANY($1)
+        GROUP BY symbol`,
+      [symbols],
+    );
+    const due = symbolsBehindEquitySession(
+      rows.map((row) => ({ symbol: row.symbol, scanDate: toYmd(row.scan_date) })),
+      expected,
+      symbols,
+    );
+    if (due.length === 0) console.log(`[scan-daily] equity session ${expected} already stored; no vendor fetch`);
+    else console.log(`[scan-daily] equity session ${expected}: ${due.length} of ${symbols.length} symbols still behind`);
+    return due;
+  } catch (err) {
+    console.warn('[scan-daily] stored equity session read failed; scanning the list', err instanceof Error ? err.message : err);
+    return symbols;
+  }
+}
+
 // Accept both GET (for cron-job.org) and POST
 export async function GET(req: NextRequest) {
   return runWithAvBudget({ lane: 'scheduled', feature: 'daily-scan' }, () => runDailyScan(req));
@@ -359,9 +385,12 @@ async function runDailyScan(req: NextRequest) {
     // Regime overlay inputs (VIX / credit / M2 / SPY-QQQ trend) once per run; fails soft to "no overlay".
     const overlay = await loadRegimeOverlayInputs().catch(() => null);
 
-    // Scan equities (top 15 — bail early if approaching timeout)
+    // Scan equities (top 15 — bail early if approaching timeout).
+    // Skip a symbol whose stored scan_date is already the last completed US session, so the 01:30 UTC
+    // catch-up does not call Alpha Vantage again after the 21:30 UTC run stored that close.
     console.log("Starting equity scan...");
-    const equitiesToScan = wants('equity') ? EQUITY_UNIVERSE.slice(0, 15) : [];
+    const equityList = wants('equity') ? EQUITY_UNIVERSE.slice(0, 15) : [];
+    const equitiesToScan = equityList.length ? await equitySymbolsDue(equityList, Date.now()) : [];
     for (const symbol of equitiesToScan) {
       if (!hasTime()) { console.log(`Time budget exhausted at equity:${symbol}`); break; }
       const result = await scanEquity(symbol, apiKey, overlay);

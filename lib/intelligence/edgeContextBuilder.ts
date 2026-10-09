@@ -52,7 +52,7 @@ export async function getEdgeContext(workspaceId: string): Promise<EdgeContext> 
     if (edgeSummary.preferredSide) {
       lines.push(`- Preferred direction: ${edgeSummary.preferredSide.toLowerCase()}.`);
     }
-    lines.push(`- Win rate: ${(edgeSummary.overallWinRate * 100).toFixed(0)}%, Avg R: ${edgeSummary.avgR.toFixed(2)}, Expectancy: ${edgeSummary.expectancy.toFixed(2)}R.`);
+    lines.push(`- Your own journal record (your own trades) win rate: ${(edgeSummary.overallWinRate * 100).toFixed(0)}%, Avg R: ${edgeSummary.avgR.toFixed(2)}, Expectancy: ${edgeSummary.expectancy.toFixed(2)}R.`);
 
     if (confLabel === 'low') {
       lines.push('NOTE: This profile has low statistical confluence. Treat these edges as preliminary patterns, not established advantages.');

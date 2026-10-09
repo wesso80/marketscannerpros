@@ -6,7 +6,8 @@ vi.mock('@/lib/db', () => ({ q: mocks.q }));
 vi.mock('@/lib/coingecko', () => ({ getTopGainersLosers: mocks.top, getMarketData: mocks.market }));
 vi.mock('@/lib/avRateGovernor', () => ({ avTakeToken: async () => undefined }));
 
-import { isWarrantRightOrUnit, passesServerMoverFilter } from '@/lib/analysis/moverQuality';
+import { readFileSync } from 'node:fs';
+import { isWarrantRightOrUnit, passesCryptoLoserPrice, passesServerMoverFilter } from '@/lib/analysis/moverQuality';
 import { latestUsSessionDate, previousUsTradingDay } from '@/lib/time/usSession';
 
 const row = (ticker: string, price: string, volume: string, pct = '50%') => ({ ticker, price, change_amount: '1', change_percentage: pct, volume });
@@ -24,6 +25,9 @@ describe('equity mover filter (OV-9)', () => {
     // Crypto keeps sub-dollar prices but not nano-caps.
     expect(passesServerMoverFilter({ asset_class: 'crypto', ticker: 'DOGE', price: '0.2', volume: '1', market_cap: '3e10' })).toBe(true);
     expect(passesServerMoverFilter({ asset_class: 'crypto', ticker: 'NANO1', price: '0.2', volume: '1', market_cap: '1000000' })).toBe(false);
+    expect(passesCryptoLoserPrice('0.06')).toBe(false);
+    expect(passesCryptoLoserPrice(1)).toBe(true);
+    expect(readFileSync('app/api/market-movers/route.ts', 'utf8')).toContain('passesCryptoLoserPrice(m.price)');
   });
 });
 

@@ -400,6 +400,7 @@ export const COINGECKO_ID_MAP: Record<string, string> = {
   'MATIC': 'matic-network',
   'MATICUSDT': 'matic-network',
   // MATIC migrated to POL (Polygon Ecosystem Token) in Sept 2024.
+  // Outcome labelling treats MATIC as unknown (RENAMED_OUTCOME_TICKERS) so this retired id is not a horizon price.
   'POL': 'polygon-ecosystem-token',
   'POLUSDT': 'polygon-ecosystem-token',
   'LTC': 'litecoin',
@@ -467,6 +468,8 @@ export const COINGECKO_ID_MAP: Record<string, string> = {
   'TWT': 'trust-wallet-token',
   'OGN': 'origin-protocol',
   'ALICE': 'my-neighbor-alice',
+  // FTM is the retired Fantom ticker. Sonic trades as S. Outcome labelling treats FTM as unknown
+  // (RENAMED_OUTCOME_TICKERS) so this fantom id is not used as a horizon price.
   'FTM': 'fantom',
   'SNT': 'status',
   'STG': 'stargate-finance',
