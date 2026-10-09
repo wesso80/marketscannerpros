@@ -35,3 +35,16 @@ Visual-only updates to Equity Research, Income, Costs, Usage Analytics and Subsc
 Browser: 14 remaining Crypto tabs at 390/1280 using unavailable-data responses (initial/error/empty layouts only), plus 5 admin pages at both widths. Income/Costs used synthetic summaries, Subscriptions an empty list, Equity Research its initial form, and Usage Analytics an error response. No page errors, document overflow or admin mutation requests. This does NOT validate populated model outputs or live provider data. Screenshots saved for Equity Research and Income.
 Validation: layoutFlowAudit and incomeRoute: 27 tests pass; project TypeScript clean. React checklist: scoped styles, no new effects or fetches, existing form labels and handlers retained. No public files, API/model/worker edits, merges or deployments.
 Next: populated research/model fixture review, login styling, and the combined admin release checklist. Keep the deployment hold.
+
+LOGIN / POPULATED MODEL REVIEW
+Admin login now matches the approved slate/mint card design. Email and passphrase have accessible names and browser autofill hints. Existing POST, credentials, redirects and authentication checks unchanged. AdminDirectLogin is referenced only by the private login page.
+Actual Next fixture checks at 390 and 1280: populated Shadow Model, Exit Selection and History Replay using the existing unit-test fixtures; no page errors or document overflow. Login submits fake credentials to an intercepted 401 response and displays the refusal. Tests wait for hydration before submission. No provider, database or real sign-in requests. Screenshots attached.
+Five focused login/model tests pass; project TypeScript check clean.
+
+RELEASE CHECKLIST REVIEW
+Reviewed Claude #570 at 68f7abb0864ca1b36d5a602e1709bb5e06cef756; integration tip d98ef088. It is not final validation for this visual branch.
+Hold: Symbol route still uses packet.createdAt as observation freshness. New packets can contain old inputs. Asked Claude to fix or explicitly defer this in the checklist.
+Public scope: checklist says #552/#556 were approved; this session has an admin-only/public-frozen boundary and does not independently establish that approval. Require explicit release scope before including them.
+Final exact-tip full suite, TypeScript and production build remain required after the candidate is agreed. Migration 130 and production checks must wait for rollout approval. Nothing merged, deployed or migrated here.
+Claude handoff: https://github.com/wesso80/marketscannerpros/pull/570#issuecomment-6074836306
+Next recommended task: resolve Symbol freshness, assemble the final candidate, then run the complete release validation.
