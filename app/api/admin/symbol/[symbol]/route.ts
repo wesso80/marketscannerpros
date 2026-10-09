@@ -69,7 +69,7 @@ export async function GET(
       },
       adminTruth: {
         ...storedTruth({
-          source: `admin research packet (${symbol}, ${timeframe})`,
+          source: `price bars used by admin research packet (${symbol}, ${timeframe})`,
           dataAsOf: symbolObservationAsOf(bars, timeframe, market, nowMs),
           staleAfterMinutes: staleSec && staleSec > 0 ? Math.round(staleSec / 60) : 60,
           now: nowMs,
