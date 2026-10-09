@@ -87,8 +87,15 @@ function withNoIndexHeaders(res: NextResponse) {
   return res;
 }
 
-function sessionMatchesAdminList(
-  session: { cid?: string; is_admin?: boolean } | null,
+/** Same UUID shape as lib/workspaceHash.ts hashWorkspaceId (sha256 of the email), computed with Web Crypto. */
+async function workspaceIdForEmail(email: string): Promise<string> {
+  const hex = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(email))))
+    .map((b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
+
+async function sessionMatchesAdminList(
+  session: { cid?: string; is_admin?: boolean; workspaceId?: string } | null,
   adminEmails: string[],
   adminCids: string[],
 ) {
@@ -96,7 +103,14 @@ function sessionMatchesAdminList(
   if (session?.is_admin === true) return true;
   // Fallback: CID-prefix check for sessions issued before is_admin was added
   const cid = session?.cid?.toLowerCase() || '';
-  return Boolean(cid && (adminCids.includes(cid) || adminEmails.includes(cid)));
+  if (cid && (adminCids.includes(cid) || adminEmails.includes(cid))) return true;
+  // Stripe-customer (cus_*) admin sessions: the workspace is the hash of a current admin email. This is the rule the
+  // route-level check (isOperator) already applies, so an admin keeps access after a token refresh that carries no
+  // is_admin claim, and removing an email from ADMIN_EMAILS still revokes it.
+  const workspaceId = session?.workspaceId;
+  if (!workspaceId) return false;
+  for (const email of adminEmails) if (await workspaceIdForEmail(email) === workspaceId) return true;
+  return false;
 }
 
 // ─── Global API rate limiter (Edge-compatible, in-memory) ───
@@ -169,7 +183,7 @@ export async function middleware(req: NextRequest) {
     let appIsAdmin = false;
 
     if (!adminSession && cookie) {
-      appIsAdmin = sessionMatchesAdminList(await verify(cookie), ADMIN_EMAILS_MW, ADMIN_CIDS);
+      appIsAdmin = await sessionMatchesAdminList(await verify(cookie), ADMIN_EMAILS_MW, ADMIN_CIDS);
     }
 
     if (!adminSession && !appIsAdmin) {
@@ -203,7 +217,7 @@ export async function middleware(req: NextRequest) {
     let appSessionIsAdmin = false;
 
     if (!adminSession && cookie) {
-      appSessionIsAdmin = sessionMatchesAdminList(await verify(cookie), ADMIN_EMAILS_MW, ADMIN_CIDS);
+      appSessionIsAdmin = await sessionMatchesAdminList(await verify(cookie), ADMIN_EMAILS_MW, ADMIN_CIDS);
     }
 
     if (!adminSession && !appSessionIsAdmin) {
@@ -228,7 +242,7 @@ export async function middleware(req: NextRequest) {
     let appSessionIsOperator = false;
 
     if (!adminSession && cookie) {
-      appSessionIsOperator = sessionMatchesAdminList(await verify(cookie), ADMIN_EMAILS_MW, ADMIN_CIDS);
+      appSessionIsOperator = await sessionMatchesAdminList(await verify(cookie), ADMIN_EMAILS_MW, ADMIN_CIDS);
     }
 
     if (!adminSession && !appSessionIsOperator) {
