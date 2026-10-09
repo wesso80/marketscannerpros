@@ -172,7 +172,8 @@ export interface AdminEdgePacket {
   crossAssetConfluence: CrossAssetConfluence | null;
 
   /* truth + score-trio (kept separate per ADMIN_RULES.md) */
-  evidenceQualityScore: number;       // 0..100 — copy of dataTruth.trustScore
+  /** 0..100: data trust (dataTruth.trustScore) reduced for each piece of missing context (see missingFields). */
+  evidenceQualityScore: number;
   personalExposureFlag: "none" | "low" | "elevated" | "high";
   doNothing: DoNothingVerdict | null;
 
@@ -236,7 +237,11 @@ export function projectEdgePacket(
       : 60
     : 25;
 
-  const evidenceQualityScore = clamp01to100(packet.dataTruth?.trustScore ?? 0);
+  // The rank keeps its data-trust cap (unchanged ranking). The reported Evidence Quality also reflects missing context:
+  // synthetic options, unknown catalyst / regime / news, no crypto derivatives context.
+  const dataTrustScore = clamp01to100(packet.dataTruth?.trustScore ?? 0);
+  const completeness = evidenceCompleteness(packet);
+  const evidenceQualityScore = clamp01to100(dataTrustScore * completeness.factor);
 
   const opportunityRankScore = computeRankScore({
     asymmetryScore,
@@ -247,7 +252,7 @@ export function projectEdgePacket(
     structureScore,
     trapRiskScore,
     invalidationClarityScore,
-    evidenceQualityScore,
+    evidenceQualityScore: dataTrustScore,
   });
 
   const doNothing = evaluateDoNothing(packet);
@@ -314,8 +319,48 @@ export function projectEdgePacket(
     sources: extractSources(packet),
     freshness: mapFreshness(packet.dataTruth?.status),
     simulated: false,
-    missingFields: [],
+    missingFields: completeness.missing,
   };
+}
+
+/** Evidence Quality deductions for missing context (fractions of the data-trust score). */
+export const MISSING_CONTEXT_PENALTY = {
+  options: 0.15,
+  catalyst: 0.1,
+  regime: 0.1,
+  news: 0.05,
+  cryptoDerivatives: 0.1,
+} as const;
+
+const UNKNOWN_LABEL = /^(|UNKNOWN|UNCLASSIFIED|N\/A|NONE)$/i;
+
+/**
+ * Which context is missing from a research packet, and the factor (0..1) applied to data trust for Evidence Quality.
+ * Missing is never replaced by a proxy: the synthetic options placeholder counts as missing, as does a crypto symbol's
+ * lack of an options chain (spot data only).
+ */
+export function evidenceCompleteness(packet: AdminResearchPacket): { factor: number; missing: string[] } {
+  const missing: string[] = [];
+  let penalty = 0;
+  const add = (field: string, weight: number) => { missing.push(field); penalty += weight; };
+
+  const oi = packet.optionsIntelligence as Partial<AdminResearchPacket["optionsIntelligence"]> | undefined;
+  const syntheticOptions = !oi || oi.fallbackScore !== undefined
+    || (oi.missingInputs ?? []).some((m) => /options chain/i.test(m))
+    || oi.dataTruth?.status === "MISSING" || !(Number(oi.dataTruth?.trustScore) > 0);
+  if (packet.assetClass === "crypto") add("options: no options chain for spot crypto", MISSING_CONTEXT_PENALTY.options);
+  else if (syntheticOptions) add("options: real chain data unavailable (synthetic placeholder ignored)", MISSING_CONTEXT_PENALTY.options);
+
+  if (packet.assetClass === "equity") {
+    const e = packet.earningsContext as Partial<AdminResearchPacket["earningsContext"]> | undefined;
+    if (!e || UNKNOWN_LABEL.test(String(e.classification ?? ""))) add("catalyst: earnings/event schedule unknown", MISSING_CONTEXT_PENALTY.catalyst);
+  }
+  if (UNKNOWN_LABEL.test(String(packet.snapshot?.regime ?? ""))) add("regime: unclassified", MISSING_CONTEXT_PENALTY.regime);
+  if (!packet.newsContext || UNKNOWN_LABEL.test(String(packet.newsContext.status ?? ""))) add("news: status unknown", MISSING_CONTEXT_PENALTY.news);
+  if (packet.assetClass === "crypto" && (!packet.cryptoContext || (packet.cryptoContext as { enabled?: boolean }).enabled === false)) {
+    add("crypto derivatives: funding/OI context unavailable", MISSING_CONTEXT_PENALTY.cryptoDerivatives);
+  }
+  return { factor: Math.max(0, 1 - penalty), missing };
 }
 
 /**

@@ -10,12 +10,15 @@
  *  - Zero new deps, fully auditable.
  *  - Operator can read the weights and see WHY a setup scored high.
  *
- * Caveat: with N < 30 resolved setups the model is unreliable —
- * the trainResult exposes `n` so the UI can warn.
+ * With fewer than MIN_TRAINING_SETUPS resolved setups the model is not used: the API returns no prediction and no
+ * weights (a handful of setups is memorised, not learned).
  */
 
 import { q } from '@/lib/db';
 import { extractFeatures, type FeatureVector, FEATURE_DIM } from './features';
+
+/** Resolved setups needed before predictions or feature weights are shown. */
+export const MIN_TRAINING_SETUPS = 30;
 
 export interface ModelWeights {
   weights: number[];       // length === FEATURE_DIM

@@ -7,7 +7,8 @@
  * Shows training-set size, log loss, accuracy, and the top weighted
  * features so the operator can audit WHY the model believes what it does.
  *
- * Boundary: research only. The model is a prior, not a recommendation.
+ * Boundary: research only. The model is a prior, not a recommendation. Below the minimum training set the API withholds
+ * the weights and fit figures, and this page shows only progress towards the minimum.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -15,16 +16,17 @@ import Link from 'next/link';
 
 interface ModelStats {
   n: number;
-  bias: number;
   trainedAt: string;
-  trainLogLoss: number;
-  trainAcc: number;
-  topFeatures: { name: string; weight: number }[];
+  bias?: number;
+  trainLogLoss?: number;
+  trainAcc?: number;
+  topFeatures?: { name: string; weight: number }[];
 }
 
 export default function MlScorerPage() {
   const [model, setModel] = useState<ModelStats | null>(null);
   const [reliable, setReliable] = useState(false);
+  const [minSetups, setMinSetups] = useState(30);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,6 +38,7 @@ export default function MlScorerPage() {
       if (!res.ok || !j.ok) throw new Error(j?.error ?? `HTTP ${res.status}`);
       setModel(j.model);
       setReliable(!!j.reliable);
+      if (Number.isFinite(j.minTrainingSetups)) setMinSetups(j.minTrainingSetups);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
     } finally { setLoading(false); }
@@ -64,19 +67,22 @@ export default function MlScorerPage() {
         </div>
       )}
 
-      {model && (
+      {model && !reliable && (
+        <div role="status" style={{ background: '#3F2D0A', border: '1px solid #92400E', color: '#FCD34D', padding: 12, borderRadius: 8, marginBottom: 16 }}>
+          Not enough data: {model.n} of {minSetups} resolved setups. With this few the model memorises its examples
+          (training accuracy is meaningless), so no predictions, weights or fit figures are shown until it reaches {minSetups}.
+          Checked {new Date(model.trainedAt).toLocaleString()}.
+        </div>
+      )}
+
+      {model && reliable && model.topFeatures && (
         <>
-          {!reliable && (
-            <div style={{ background: '#3F2D0A', border: '1px solid #92400E', color: '#FCD34D', padding: 12, borderRadius: 8, marginBottom: 16 }}>
-              Training set is small (n={model.n}). Predictions are unreliable below ~30 resolved setups — treat outputs as priors only.
-            </div>
-          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
             <Stat label="Training set" value={String(model.n)} />
-            <Stat label="Log loss" value={model.trainLogLoss.toFixed(3)} />
-            <Stat label="Train accuracy" value={(model.trainAcc * 100).toFixed(0) + '%'} />
-            <Stat label="Bias" value={model.bias.toFixed(3)} />
+            <Stat label="Log loss" value={(model.trainLogLoss ?? 0).toFixed(3)} />
+            <Stat label="Train accuracy" value={((model.trainAcc ?? 0) * 100).toFixed(0) + '%'} />
+            <Stat label="Bias" value={(model.bias ?? 0).toFixed(3)} />
           </div>
 
           <h2 style={{ fontSize: 16, color: '#F3F4F6', margin: '20px 0 8px' }}>Top weighted features</h2>
