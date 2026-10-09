@@ -11,10 +11,12 @@ const m = vi.hoisted(() => ({
   params: [] as unknown[][],
   signals: [] as { score: number; outcome: string | null; signedMove?: number | null; signal_at?: string }[],
   old: 0,
+  fail: false,
 }));
 vi.mock("@/lib/adminAuth", () => ({ requireAdmin: vi.fn(async () => ({ ok: true })) }));
 vi.mock("@/lib/db", () => ({
   q: vi.fn(async (sql: string, params: unknown[] = []) => {
+    if (m.fail) throw new Error('private database failure');
     m.sql.push(sql);
     m.params.push(params);
     if (/FROM admin_research_cases/.test(sql)) return [{ score: 70, outcome: null }];
@@ -28,7 +30,7 @@ import { GET } from "../../app/api/admin/model-diagnostics/route";
 import { ASSUMED_ROUND_TRIP_COST_PCT, MIN_LABELLED_FOR_COMPARISON, computeCalibration, isWinningOutcome } from "@/lib/admin/modelDiagnostics";
 import { LABELLER_FIX_AT } from "@/lib/admin/signalStats";
 
-beforeEach(() => { m.sql = []; m.params = []; m.signals = []; m.old = 0; });
+beforeEach(() => { m.sql = []; m.params = []; m.signals = []; m.old = 0; m.fail = false; });
 
 describe("isWinningOutcome", () => {
   it("maps ai_signal_log outcomes", () => {
@@ -43,6 +45,17 @@ describe("isWinningOutcome", () => {
 });
 
 describe("computeCalibration", () => {
+  it("accounts for every signal without treating unlabelled rows as losses", () => {
+    const b = computeCalibration(['correct','wrong','neutral','pending','expired',null,'unknown'].map(outcome => ({score: 80,outcome}))).buckets[4];
+    expect(b).toMatchObject({cases:7,labelled:2,wins:1,losses:1,neutral:1,pending:1,expired:1,excludedOrUnknown:2,hitRate:50});
+    expect(b.wins+b.losses+b.neutral+b.pending+b.expired+b.excludedOrUnknown).toBe(b.cases);
+  });
+  it("shows no hit rate for a sample containing only neutral and pending outcomes", () => {
+    const r = computeCalibration([{score:65,outcome:'neutral'},{score:65,outcome:'pending'}]);
+    expect(r.overallHitRate).toBeNull();
+    expect(r.drift).toEqual([]);
+    expect(r.buckets[3]).toMatchObject({labelled:0,neutral:1,pending:1});
+  });
   it("buckets by score and computes hit rate from labelled rows only", () => {
     const r = computeCalibration([
       { score: 80, outcome: "correct" }, { score: 85, outcome: "wrong" }, { score: 90, outcome: null }, { score: 10, outcome: "pending" },
@@ -89,6 +102,16 @@ describe("computeCalibration denominators, moves and drift", () => {
 });
 
 describe("GET /api/admin/model-diagnostics", () => {
+  it("reports a database failure as unavailable without counts or raw error text", async () => {
+    m.fail = true;
+    const response = await GET(new NextRequest('http://localhost/api/admin/model-diagnostics'));
+    expect(response.status).toBe(503);
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+    const body = await response.json();
+    expect(body.ok).toBe(false);
+    expect(body.totalSignals).toBeUndefined();
+    expect(JSON.stringify(body)).not.toContain('private database');
+  });
   it("returns the sample definition, labelling rule, cost basis and legacy score-0 note", async () => {
     m.signals = [
       { score: 0, outcome: "correct", signedMove: 2, signal_at: "2026-09-27T10:00:00Z" },
@@ -101,9 +124,9 @@ describe("GET /api/admin/model-diagnostics", () => {
       sampleFrom: "2026-09-27T10:00:00.000Z", sampleTo: "2026-10-08T10:00:00.000Z",
       labelledSince: LABELLER_FIX_AT, minLabelledForComparison: MIN_LABELLED_FOR_COMPARISON, zeroScoreSignals: 1,
     });
-    expect(body.definition.label).toMatch(/24h close vs price at signal.*correct >= \+1%.*wrong <= -1%/);
+    expect(body.definition.label).toMatch(/First completed close at or after 24h.*correct >= \+1%.*wrong <= -1%/);
     expect(body.definition.costs).toMatch(/before costs.*assumed 0.2% round trip/);
-    expect(body.definition.zeroScoreNote).toMatch(/legacy rows, not missing values/);
+    expect(body.definition.zeroScoreNote).toMatch(/recorded score of 0, not a missing value/);
     expect(body.buckets.find((b: { band: string }) => b.band === "60–74")).toMatchObject({ labelled: 1, losses: 1, avgSignedMove: -1.4 });
   });
 
@@ -125,6 +148,7 @@ describe("GET /api/admin/model-diagnostics", () => {
     expect(body.overallHitRate).toBe(50);
     expect(body.sources.oldMethodLabelled).toBe(4);
     expect(body.note).toMatch(/old labelling method/);
+    expect(body.note).toMatch(/across all workspace history, not just this sample/);
   });
 
   it("explains an empty hit rate when nothing is labelled by the fixed labeller yet", async () => {

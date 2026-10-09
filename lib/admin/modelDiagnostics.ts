@@ -14,6 +14,10 @@ export interface CalibrationBucket {
   losses: number;
   /** Moved less than the threshold either way; left out of the hit rate. */
   neutral: number;
+  pending: number;
+  expired: number;
+  /** Includes verdicts removed by the old-method filter and unrecognised/missing labels. */
+  excludedOrUnknown: number;
   hitRate: number | null;
   avgScore: number | null;
   /** Signals with a measured 24h move (correct, wrong or neutral; |move| <= 100%). */
@@ -71,6 +75,7 @@ export function isWinningOutcome(outcome: string | null | undefined): boolean | 
 export function computeCalibration(rows: OutcomeRow[]) {
   const buckets: CalibrationBucket[] = BANDS.map((b) => ({
     band: b.label, min: b.min, max: b.max, cases: 0, labelled: 0, wins: 0, losses: 0, neutral: 0,
+    pending: 0, expired: 0, excludedOrUnknown: 0,
     hitRate: null, avgScore: null, measured: 0, avgSignedMove: null, avgSignedMoveAfterCost: null, smallSample: true,
   }));
   const sumScore = new Array(BANDS.length).fill(0);
@@ -89,6 +94,9 @@ export function computeCalibration(rows: OutcomeRow[]) {
     if (win === true) { b.labelled += 1; b.wins += 1; }
     else if (win === false) { b.labelled += 1; b.losses += 1; }
     else if (String(row.outcome ?? "").toLowerCase() === "neutral") b.neutral += 1;
+    else if (String(row.outcome ?? "").toLowerCase() === "pending") b.pending += 1;
+    else if (String(row.outcome ?? "").toLowerCase() === "expired") b.expired += 1;
+    else b.excludedOrUnknown += 1;
     const move = row.signedMove === null || row.signedMove === undefined || row.signedMove === "" ? NaN : Number(row.signedMove);
     if (Number.isFinite(move) && Math.abs(move) <= 100) { b.measured += 1; sumMove[idx] += move; }
   }
