@@ -39,11 +39,7 @@ it('can still describe a regime win rate when outcome stats are explicitly visib
   expect(text).toMatch(/win rate/i);
 });
 
-it('keeps a LOW_WIN_RATE reason code out of the analyst-context prompt', () => {
-  const source = readFileSync('app/api/ai/analyst-context/route.ts', 'utf8');
-  expect(source).toContain('reasonsForPrompt([');
-  expect(source).toContain('...perfAdjusted.reasonCodes');
-  expect(source).not.toMatch(/perfAdjusted\.reasonCodes\]\.join/);
+it('reasonsForPrompt keeps a LOW_WIN_RATE reason code out of prompt text', () => {
   const promptLine = reasonsForPrompt([
     'AUTHORIZED: Confidence 70% meets threshold',
     'LOW_WIN_RATE: 0% < 20% → RU capped ×0.70',

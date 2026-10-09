@@ -74,15 +74,10 @@ describe('getVerifiedTier: expired subscription â€” static analysis', () =>
     expect(content).not.toContain('TIER_LIMITS');
   });
 
-  it('explain AI route enforces per-user quota before OpenAI cache-miss call', () => {
+  it('explain AI route is retired and never reaches OpenAI (2026-10-09 advice audit F4)', () => {
     const content = read('app/api/ai/explain/route.ts');
-    expect(content).toContain('getDailyAiLimit');
-    // Quota check must appear before the openai.chat.completions.create call
-    const quotaIdx = content.indexOf('getDailyAiLimit');
-    const openaiIdx = content.indexOf('openai.chat.completions.create');
-    expect(quotaIdx).toBeGreaterThan(-1);
-    expect(openaiIdx).toBeGreaterThan(-1);
-    expect(quotaIdx).toBeLessThan(openaiIdx);
+    expect(content).toContain('retiredRouteResponse');
+    expect(content).not.toMatch(/openai|chat\.completions/i);
   });
 });
 
