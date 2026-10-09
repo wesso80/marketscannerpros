@@ -1,25 +1,26 @@
 import {afterEach,beforeEach,it,expect,vi} from 'vitest';
-const m=vi.hoisted(()=>({auth:vi.fn(),get:vi.fn(),set:vi.fn(),enabled:vi.fn(),fetch:vi.fn()}));
-vi.mock('@/lib/adminAuth',()=>({requireAdmin:m.auth}));vi.mock('@/lib/redis',()=>({getRedis:()=>({get:m.get,set:m.set})}));vi.mock('@/lib/admin/adminCrypto',()=>({isAdminCryptoEnabled:m.enabled}));
+const m=vi.hoisted(()=>({auth:vi.fn(),get:vi.fn(),set:vi.fn(),eval:vi.fn(),enabled:vi.fn(),fetch:vi.fn()}));
+vi.mock('@/lib/adminAuth',()=>({requireAdmin:m.auth}));vi.mock('@/lib/redis',()=>({getRedis:()=>({get:m.get,set:m.set,eval:m.eval})}));vi.mock('@/lib/admin/adminCrypto',()=>({isAdminCryptoEnabled:m.enabled}));
 vi.mock('@/lib/admin/cryptoVolumeMomentum',async()=>({...await vi.importActual('@/lib/admin/cryptoVolumeMomentum'),fetchVolumeMomentum:m.fetch}));
 vi.mock('@/lib/admin/cryptoJev',()=>({attachJevShadow:vi.fn(async()=>{})}));
 import {GET,POST} from '@/app/api/admin/crypto-markets/momentum/route';
 const req=()=>new Request('https://test',{method:'POST'});
 const snapshot=()=>({startedAt:new Date().toISOString(),rows:Array.from({length:8},(_,i)=>({id:`coin-${i}`,symbol:`C${i}`,name:`Coin ${i}`,stage:'WATCH',venues:[{exchange:'binance',pair:`C${i}/USDT`,volumeUsd:1e6,spreadPct:.1,observedAt:new Date().toISOString()}]}))});
 afterEach(()=>{vi.useRealTimers();vi.unstubAllGlobals();});
-beforeEach(()=>{vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(new Date('2026-09-28T04:00:00Z'));vi.resetAllMocks();m.auth.mockResolvedValue({ok:true});m.enabled.mockReturnValue(true);m.set.mockResolvedValue('OK');m.get.mockImplementation(async(k:string)=>k==='admin:crypto-discovery:v1'?snapshot():null);m.fetch.mockResolvedValue({stage:'NO_SIGNAL',reason:'No expansion'});});
+beforeEach(()=>{vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(new Date('2026-09-28T04:00:00Z'));vi.resetAllMocks();m.auth.mockResolvedValue({ok:true});m.enabled.mockReturnValue(true);m.set.mockResolvedValue('OK');m.eval.mockResolvedValue(1);m.get.mockImplementation(async(k:string)=>k==='admin:crypto-discovery:v1'?snapshot():null);m.fetch.mockResolvedValue({stage:'NO_SIGNAL',reason:'No expansion'});});
 it('authenticates requests and obeys crypto pause',async()=>{m.auth.mockResolvedValue({ok:false});expect((await GET(req())).status).toBe(403);expect((await POST(req())).status).toBe(403);m.auth.mockResolvedValue({ok:true});m.enabled.mockReturnValue(false);expect((await POST(req())).status).toBe(409);expect(m.fetch).not.toHaveBeenCalled();});
 it('bounds requests without requiring a base and saves progress',async()=>{const b=await (await POST(req())).json();expect(b.requestAttempts).toBe(5);expect(b.scan.rows.filter((r:{stage:string})=>r.stage==='PENDING')).toHaveLength(3);expect(m.fetch).toHaveBeenCalledTimes(5);expect(m.fetch.mock.calls[0][0].exchange).toBe('binance');});
 it('returns shared saved results without duplicate provider calls',async()=>{const scan={version:1,rows:[]};m.set.mockResolvedValue(null);m.get.mockResolvedValue(scan);const r=await POST(req());expect(r.status).toBe(429);expect((await r.json()).scan).toEqual(scan);expect(m.fetch).not.toHaveBeenCalled();});
 it('requires fresh discovery and preserves failures as unavailable',async()=>{m.get.mockResolvedValue(null);expect((await POST(req())).status).toBe(409);m.get.mockImplementation(async(k:string)=>k==='admin:crypto-discovery:v1'?snapshot():null);m.fetch.mockRejectedValue(Error('provider'));const b=await (await POST(req())).json();expect(b.scan.rows.filter((r:{stage:string})=>r.stage==='UNAVAILABLE')).toHaveLength(5);});
-it('stamps a passed coin from the saved scan and a dead taker feed does not fail the scan',async()=>{
+it('GET preserves a missing stamp; POST records an unavailable stamp when the feed fails',async()=>{
  const scan={version:1,startedAt:new Date().toISOString(),updatedAt:new Date().toISOString(),discoveryAt:new Date().toISOString(),rows:[{id:'mon',symbol:'MON',stage:'MOMENTUM_VOLUME',pair:{product:'MON-USDT'},reason:'passed'},{id:'axs',symbol:'AXS',stage:'VOLUME_WATCH',pair:{product:'AXS-USDT'},reason:'watch'}]};
  m.get.mockImplementation(async(k:string)=>k.endsWith('batch-lock')?null:k==='admin:crypto-markets:momentum-volume:v1'?scan:null);
  vi.stubGlobal('fetch',vi.fn(async()=>{throw new Error('down');}));
  const saved=await GET(new Request('https://test'));
  expect(saved.status).toBe(200);
  const body=await saved.json();
- expect(body.scan.rows[0]).toMatchObject({stage:'MOMENTUM_VOLUME',flowStamp:{rule:'flow-stamp-v1',stamp:'unavailable'}});
+ expect(body.scan.rows[0].flowStamp).toBeUndefined();
+ expect(m.set).not.toHaveBeenCalled();expect(m.eval).not.toHaveBeenCalled();expect(fetch).not.toHaveBeenCalled();
  expect(body.scan.rows[1].stage).toBe('VOLUME_WATCH');
  expect(body.scan.rows[1].flowStamp).toBeUndefined();
  m.fetch.mockResolvedValue({stage:'MOMENTUM_VOLUME',reason:'passed',asOf:'2026-09-28T00:00:00.000Z',kind:'BREAKOUT'});
