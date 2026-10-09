@@ -9,7 +9,7 @@ import { NextRequest } from "next/server";
 const m = vi.hoisted(() => ({
   sql: [] as string[],
   params: [] as unknown[][],
-  signals: [] as { score: number; outcome: string | null }[],
+  signals: [] as { score: number; outcome: string | null; signedMove?: number | null; signal_at?: string }[],
   old: 0,
 }));
 vi.mock("@/lib/adminAuth", () => ({ requireAdmin: vi.fn(async () => ({ ok: true })) }));
@@ -25,7 +25,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 import { GET } from "../../app/api/admin/model-diagnostics/route";
-import { computeCalibration, isWinningOutcome } from "@/lib/admin/modelDiagnostics";
+import { ASSUMED_ROUND_TRIP_COST_PCT, MIN_LABELLED_FOR_COMPARISON, computeCalibration, isWinningOutcome } from "@/lib/admin/modelDiagnostics";
 import { LABELLER_FIX_AT } from "@/lib/admin/signalStats";
 
 beforeEach(() => { m.sql = []; m.params = []; m.signals = []; m.old = 0; });
@@ -55,7 +55,59 @@ describe("computeCalibration", () => {
   });
 });
 
+describe("computeCalibration denominators, moves and drift", () => {
+  const rows = (score: number, wins: number, losses: number, neutral = 0, pending = 0, move = 0) => [
+    ...Array.from({ length: wins }, () => ({ score, outcome: "correct", signedMove: move })),
+    ...Array.from({ length: losses }, () => ({ score, outcome: "wrong", signedMove: -move })),
+    ...Array.from({ length: neutral }, () => ({ score, outcome: "neutral", signedMove: 0.2 })),
+    ...Array.from({ length: pending }, () => ({ score, outcome: "pending", signedMove: null })),
+  ];
+
+  it("reports labelled, wins, losses and neutral separately from all signals", () => {
+    const top = computeCalibration(rows(80, 3, 2, 4, 16)).buckets.find((b) => b.band === "75–100")!;
+    expect(top).toMatchObject({ cases: 25, labelled: 5, wins: 3, losses: 2, neutral: 4, hitRate: 60, smallSample: true });
+  });
+
+  it("averages the signed 24h move over measured rows and subtracts the assumed cost", () => {
+    const b = computeCalibration([
+      { score: 65, outcome: "correct", signedMove: 3 }, { score: 65, outcome: "wrong", signedMove: -1.5 },
+      { score: 65, outcome: "neutral", signedMove: 0.3 }, { score: 65, outcome: "pending", signedMove: null },
+      { score: 65, outcome: "correct", signedMove: 500 },
+    ]).buckets.find((x) => x.band === "60–74")!;
+    expect(b.measured).toBe(3); // the 500% bad print is ignored
+    expect(b.avgSignedMove).toBe(0.6);
+    expect(b.avgSignedMoveAfterCost).toBe(Math.round((0.6 - ASSUMED_ROUND_TRIP_COST_PCT) * 100) / 100);
+  });
+
+  it("warns on drift only when both bands have enough labelled verdicts", () => {
+    const thin = computeCalibration([...rows(65, 40, 40), ...rows(80, 2, 9, 0, 14)]);
+    expect(thin.drift).toEqual([]); // 25 signals but only 11 labelled in the top band
+    const n = MIN_LABELLED_FOR_COMPARISON;
+    const thick = computeCalibration([...rows(65, n, n), ...rows(80, Math.floor(n / 2), n)]);
+    expect(thick.drift).toEqual([{ from: "60–74", to: "75–100", delta: -16.7, fromLabelled: 2 * n, toLabelled: n + Math.floor(n / 2) }]);
+  });
+});
+
 describe("GET /api/admin/model-diagnostics", () => {
+  it("returns the sample definition, labelling rule, cost basis and legacy score-0 note", async () => {
+    m.signals = [
+      { score: 0, outcome: "correct", signedMove: 2, signal_at: "2026-09-27T10:00:00Z" },
+      { score: 70, outcome: "wrong", signedMove: -1.4, signal_at: "2026-10-08T10:00:00Z" },
+    ];
+    const body = await (await GET(new NextRequest("http://localhost/api/admin/model-diagnostics"))).json();
+    const sigSql = m.sql.find((x) => /FROM ai_signal_log/.test(x) && /AS score/.test(x))!;
+    expect(sigSql).toMatch(/outcome_measured_at >= \$2::timestamptz\s+THEN \(CASE WHEN UPPER\(trade_bias\) = 'SHORT' THEN -pct_move_24h ELSE pct_move_24h END\) ELSE NULL END AS "signedMove"/);
+    expect(body.definition).toMatchObject({
+      sampleFrom: "2026-09-27T10:00:00.000Z", sampleTo: "2026-10-08T10:00:00.000Z",
+      labelledSince: LABELLER_FIX_AT, minLabelledForComparison: MIN_LABELLED_FOR_COMPARISON, zeroScoreSignals: 1,
+    });
+    expect(body.definition.label).toMatch(/24h close vs price at signal.*correct >= \+1%.*wrong <= -1%/);
+    expect(body.definition.costs).toMatch(/before costs.*assumed 0.2% round trip/);
+    expect(body.definition.zeroScoreNote).toMatch(/legacy rows, not missing values/);
+    expect(body.buckets.find((b: { band: string }) => b.band === "60–74")).toMatchObject({ labelled: 1, losses: 1, avgSignedMove: -1.4 });
+  });
+
+
   it("queries ai_signal_log for the operator workspace, gated by the labeller fix date", async () => {
     m.signals = [{ score: 80, outcome: "correct" }, { score: 65, outcome: "wrong" }, { score: 50, outcome: "pending" }];
     m.old = 4;

@@ -8,15 +8,41 @@ interface CalibrationBucket {
   min: number;
   max: number;
   cases: number;
+  labelled?: number;
+  wins?: number;
+  losses?: number;
+  neutral?: number;
   hitRate: number | null;
   avgScore: number | null;
+  measured?: number;
+  avgSignedMove?: number | null;
+  avgSignedMoveAfterCost?: number | null;
+  smallSample?: boolean;
 }
 
 interface DriftRow {
   from: string;
   to: string;
   delta: number;
+  fromLabelled?: number;
+  toLabelled?: number;
 }
+
+interface Definition {
+  sample: string;
+  sampleFrom: string | null;
+  sampleTo: string | null;
+  label: string;
+  hitRateDenominator: string;
+  labelledSince: string;
+  costs: string;
+  minLabelledForComparison: number;
+  zeroScoreSignals: number;
+  zeroScoreNote: string | null;
+  overlap: string;
+}
+
+const pct = (n: number | null | undefined) => (n === null || n === undefined ? "—" : `${n > 0 ? "+" : ""}${n}%`);
 
 interface ModelDiagnosticsResponse {
   ok: boolean;
@@ -29,6 +55,7 @@ interface ModelDiagnosticsResponse {
   buckets?: CalibrationBucket[];
   drift?: DriftRow[];
   note?: string | null;
+  definition?: Definition;
   error?: string;
 }
 
@@ -179,8 +206,19 @@ export default function ModelDiagnosticsPage() {
                     <span style={{ color: "#E5E7EB", fontWeight: 700 }}>Band {b.band}</span>
                     <span style={{ color: "#64748B", fontSize: 11 }}>{b.cases} signals</span>
                   </div>
-                  <div style={{ color: "#10B981", fontSize: 22, fontWeight: 800, marginTop: 6 }}>
+                  <div style={{ color: b.smallSample ? "#94A3B8" : "#10B981", fontSize: 22, fontWeight: 800, marginTop: 6 }}>
                     {b.hitRate !== null ? `${b.hitRate}%` : "—"}
+                  </div>
+                  <div data-band-labelled style={{ color: "#CBD5E1", fontSize: 11 }}>
+                    of {b.labelled ?? 0} labelled ({b.wins ?? 0} correct / {b.losses ?? 0} wrong) · {b.neutral ?? 0} neutral
+                  </div>
+                  {b.smallSample && (
+                    <div data-band-small style={{ color: "#FBBF24", fontSize: 11 }}>
+                      Too few labelled to compare (under {data.definition?.minLabelledForComparison ?? 20})
+                    </div>
+                  )}
+                  <div style={{ color: "#94A3B8", fontSize: 11 }}>
+                    avg 24h move {pct(b.avgSignedMove)} · after assumed cost {pct(b.avgSignedMoveAfterCost)} ({b.measured ?? 0} measured)
                   </div>
                   <div style={{ color: "#94A3B8", fontSize: 11 }}>
                     avg score {b.avgScore !== null ? b.avgScore : "—"}
@@ -208,9 +246,43 @@ export default function ModelDiagnosticsPage() {
                       color: "#FCD34D",
                     }}
                   >
-                    Hit rate dropped {d.delta}pp moving from band {d.from} to {d.to}.
+                    Hit rate dropped {d.delta}pp moving from band {d.from} to {d.to}
+                    {d.fromLabelled !== undefined && d.toLabelled !== undefined ? ` (${d.fromLabelled} vs ${d.toLabelled} labelled)` : ""}.
                   </li>
                 ))}
+              </ul>
+            </section>
+          )}
+
+          {data.definition && (
+            <section
+              data-calibration-definition
+              style={{
+                marginBottom: "1rem",
+                padding: "0.85rem 1rem",
+                background: "rgba(13,22,38,0.7)",
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderRadius: 10,
+                fontSize: 12,
+                color: "#94A3B8",
+              }}
+            >
+              <div style={{ color: "#E5E7EB", fontWeight: 700, marginBottom: 4 }}>What these numbers mean</div>
+              <ul style={{ margin: 0, paddingLeft: "1rem", display: "grid", gap: 2 }}>
+                <li>
+                  Sample: {data.definition.sample}
+                  {data.definition.sampleFrom && data.definition.sampleTo
+                    ? `, ${new Date(data.definition.sampleFrom).toLocaleDateString()} to ${new Date(data.definition.sampleTo).toLocaleDateString()}`
+                    : ""}.
+                </li>
+                <li>Outcome: {data.definition.label}. Labelled since {new Date(data.definition.labelledSince).toLocaleString()}.</li>
+                <li>Hit rate = {data.definition.hitRateDenominator}.</li>
+                <li>{data.definition.costs}</li>
+                <li>{data.definition.overlap}</li>
+                {data.definition.zeroScoreNote && (
+                  <li>{data.definition.zeroScoreSignals} signals have score 0: {data.definition.zeroScoreNote}</li>
+                )}
+                <li>A hit rate is not profitability: it ignores the size of wins and losses beyond the threshold.</li>
               </ul>
             </section>
           )}
