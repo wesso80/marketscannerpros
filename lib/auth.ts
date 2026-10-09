@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { cookies } from "next/headers";
 import { q } from './db';
 import { effectiveTierFromSubscription, isFreeForAllMode } from './entitlements';
+import { chooseAccessSubscription, emailFromSessionCid } from './subscriptionRow';
 import { hashWorkspaceId } from './workspaceHash';
 
 const isProductionRuntime = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
@@ -86,13 +87,23 @@ export async function getSessionFromCookie(): Promise<SessionPayload | null> {
   // Do not call getVerifiedTier: apiMiddleware imports this module.
   if (session.cid.startsWith('trial_') && session.workspaceId) {
     try {
-      const rows = await q<{ tier: string; status: string; current_period_end: Date | string | null }>(
-        'SELECT tier, status, current_period_end FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1',
-        [session.workspaceId],
+      const columns = 'workspace_id, tier, status, current_period_end, stripe_customer_id, stripe_subscription_id, updated_at, created_at, id';
+      const email = emailFromSessionCid(session.cid);
+      const rows = await q<{ workspace_id?: string | null; tier: string; status: string; current_period_end: Date | string | null; stripe_customer_id?: string | null; stripe_subscription_id?: string | null; updated_at?: Date | string | null; created_at?: Date | string | null; id?: number | null }>(
+        email
+          ? `SELECT ${columns} FROM user_subscriptions WHERE workspace_id = $1 OR LOWER(email) = LOWER($2)`
+          : `SELECT ${columns} FROM user_subscriptions WHERE workspace_id = $1`,
+        email ? [session.workspaceId, email] : [session.workspaceId],
       );
-      const row = rows[0];
+      const workspaceRows = rows.filter((row) => row.workspace_id === session.workspaceId);
+      const otherRows = rows.filter((row) => row.workspace_id !== session.workspaceId);
+      const row = chooseAccessSubscription(
+        workspaceRows.length > 0 ? workspaceRows : rows,
+        workspaceRows.length > 0 ? otherRows : [],
+      );
       // Same period rule as the entitlement helper. Only a lapsed trial is
       // downgraded here; the cookie tier is left as signed otherwise.
+      // A duplicate active paid row wins over an expired trial on this workspace.
       if (row?.status === 'trialing' && effectiveTierFromSubscription(row) === 'free') session.tier = 'free';
     } catch (err) {
       console.error('[auth] trial subscription read failed:', err);

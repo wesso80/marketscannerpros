@@ -40,6 +40,7 @@ export default function ResearchPricing({cycle,onCycle,onChoose,loading,error,ti
         <p>{cycle==='yearly'?`Billed annually. Equivalent to US$${(PLAN_PRICES.pro.yearlyRaw/12).toFixed(2)} a month.`:'Billed monthly. Review the total before subscribing.'}</p>
         {paid?<Link className={styles.primary} href="/account">Manage your Pro plan</Link>:<button className={styles.primary} disabled={!!loading} onClick={()=>onChoose('pro')}>{loading==='pro'?'Opening checkout…':'Continue to Pro checkout'}</button>}
         <p className={styles.fine}>Subscription details are shown at checkout.</p>
+        <p className={styles.fine}>Pro includes a 7-day free trial, matching the <Link href="/terms">Terms</Link>.</p>
         <ul>
           {quotasEnabled===true && <li>Unlimited Symbol reports</li>}
           <li>Options research</li>

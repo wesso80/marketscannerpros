@@ -5,6 +5,7 @@ import type { SessionPayload } from '@/lib/auth';
 import { q } from '@/lib/db';
 import { isOperator } from '@/lib/quant/operatorAuth';
 import { effectiveTierFromSubscription } from '@/lib/entitlements';
+import { chooseAccessSubscription, emailFromSessionCid } from '@/lib/subscriptionRow';
 import { createPublicDailyQuota } from './publicDailyQuota';
 import { COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { symbolQuotaKey } from './publicPlans';
@@ -14,9 +15,17 @@ export async function resolvePublicQuotaAccess(session: SessionPayload) {
   if (!session.workspaceId) throw Error('Authenticated workspace required');
   if (session.is_admin === true || isOperator(session.cid,session.workspaceId)) return { bypass: true as const };
   // A stale cookie or a subscription lookup failure must not grant paid access.
-  const rows = await q<{tier: string; status: string; current_period_end: Date | null}>(
-    'SELECT tier,status,current_period_end FROM user_subscriptions WHERE workspace_id=$1 LIMIT 1',[session.workspaceId]);
-  const tier = rows[0] ? effectiveTierFromSubscription(rows[0]) : 'free';
+  const columns = 'tier, status, current_period_end, stripe_customer_id, stripe_subscription_id, updated_at, created_at, id, email';
+  const workspaceRows = await q<{tier: string; status: string; current_period_end: Date | null; stripe_customer_id?: string | null; stripe_subscription_id?: string | null; updated_at?: Date | string | null; created_at?: Date | string | null; id?: number | null; email?: string | null}>(
+    `SELECT ${columns} FROM user_subscriptions WHERE workspace_id=$1`,[session.workspaceId]);
+  const email = emailFromSessionCid(session.cid) ?? workspaceRows.find((row) => row.email)?.email ?? null;
+  const otherRows = email
+    ? await q<typeof workspaceRows[number]>(`SELECT ${columns} FROM user_subscriptions WHERE LOWER(email) = LOWER($1)`,[email])
+    : session.cid.startsWith('cus_')
+      ? await q<typeof workspaceRows[number]>(`SELECT ${columns} FROM user_subscriptions WHERE stripe_customer_id = $1`,[session.cid])
+      : [];
+  const chosen = chooseAccessSubscription(workspaceRows, otherRows);
+  const tier = chosen ? effectiveTierFromSubscription(chosen) : 'free';
   return { bypass: false as const, subject: `account:${session.workspaceId}`, plan: tier === 'pro' || tier === 'pro_trader' ? 'pro' as const : 'free' as const };
 }
 export function publicInstrumentKey(symbol: string, asset: string) {

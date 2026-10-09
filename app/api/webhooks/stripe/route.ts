@@ -5,6 +5,7 @@ import { hashWorkspaceId } from '@/lib/auth';
 import { sendWelcomeEmail } from '@/lib/email';
 import { checkContestEntry } from '@/lib/referralContest';
 import { invoiceSubscriptionId, subscriptionPeriodDate } from '@/lib/stripe/subscriptionPeriod';
+import { tierForUnmappedLiveSubscription } from '@/lib/subscriptionRow';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-09-30.clover',
@@ -63,6 +64,18 @@ function tierFromSubscriptionItems(
   return { tier: 'free', priceIds };
 }
 
+/** Active or trialing with an unmapped price stays paid. Canceled stays free. */
+async function tierToStore(email: string, mappedTier: string, status: string): Promise<string> {
+  if (mappedTier === 'pro' || mappedTier === 'pro_trader') return mappedTier;
+  if (status !== 'active' && status !== 'trialing') return mappedTier;
+  if (!email.trim()) return 'pro';
+  const rows = await q<{ tier: string | null }>(
+    `SELECT tier FROM user_subscriptions WHERE LOWER(email) = LOWER($1)`,
+    [email],
+  );
+  return tierForUnmappedLiveSubscription(rows.map((row) => row.tier));
+}
+
 function logUnknownLivePrice(
   eventType: string,
   subscriptionId: string,
@@ -73,7 +86,7 @@ function logUnknownLivePrice(
   if (tier !== 'free') return;
   if (status !== 'active' && status !== 'trialing' && status !== 'past_due') return;
   console.error(
-    `[Webhook] ${eventType} subscription ${subscriptionId}: unknown price id(s) [${priceIds.join(', ') || 'none'}] with status ${status}; keeping the existing tier`,
+    `[Webhook] ${eventType} subscription ${subscriptionId}: unknown price id(s) [${priceIds.join(', ') || 'none'}] with status ${status}; keeping an existing pro tier or storing pro`,
   );
 }
 
@@ -417,6 +430,9 @@ async function upsertSubscription(
     console.error('[Webhook] Refusing subscription write with an empty email');
     return false;
   }
+  // Conflict target is this email hash, which is also the free-signup row.
+  // A second row whose workspace_id was hashed from a Stripe customer id,
+  // an admin_ prefix, or a differently cased email is not updated.
   const workspaceId = hashWorkspaceId(normalizedEmail.toLowerCase());
   const periodEndValue = safePeriodEnd(periodEnd);
 
@@ -439,7 +455,13 @@ async function upsertSubscription(
       DO UPDATE SET 
         email = EXCLUDED.email,
         tier = CASE
-          WHEN EXCLUDED.tier = 'free' AND EXCLUDED.status IN ('active', 'trialing', 'past_due')
+          WHEN EXCLUDED.tier = 'free' AND EXCLUDED.status IN ('active', 'trialing')
+            AND user_subscriptions.tier IN ('pro', 'pro_trader')
+          THEN user_subscriptions.tier
+          WHEN EXCLUDED.tier = 'free' AND EXCLUDED.status IN ('active', 'trialing')
+          THEN 'pro'
+          WHEN EXCLUDED.tier = 'free' AND EXCLUDED.status = 'past_due'
+            AND user_subscriptions.tier IN ('pro', 'pro_trader')
           THEN user_subscriptions.tier
           ELSE EXCLUDED.tier
         END,
@@ -526,8 +548,8 @@ export async function POST(req: NextRequest) {
             break;
           }
           const mapped = tierFromSubscriptionItems(subscription.items?.data);
-          const tier = mapped.tier;
-          logUnknownLivePrice(event.type, subscription.id, subscription.status, mapped.priceIds, tier);
+          const tier = await tierToStore(loaded.email, mapped.tier, subscription.status);
+          logUnknownLivePrice(event.type, subscription.id, subscription.status, mapped.priceIds, mapped.tier);
           const workspaceId = hashWorkspaceId(loaded.email.toLowerCase());
           const periodEnd = subscriptionPeriodDate(subscription, 'current_period_end');
           if (!periodEnd) {
@@ -602,8 +624,8 @@ export async function POST(req: NextRequest) {
           break;
         }
         const mapped = tierFromSubscriptionItems(subscription.items?.data);
-        const tier = mapped.tier;
-        logUnknownLivePrice(event.type, subscription.id, subscription.status, mapped.priceIds, tier);
+        const tier = await tierToStore(loaded.email, mapped.tier, subscription.status);
+        logUnknownLivePrice(event.type, subscription.id, subscription.status, mapped.priceIds, mapped.tier);
         const workspaceId = hashWorkspaceId(loaded.email.toLowerCase());
         const periodEnd = subscriptionPeriodDate(subscription, 'current_period_end');
         if (!periodEnd) {
@@ -677,10 +699,11 @@ export async function POST(req: NextRequest) {
           const periodEnd = subscriptionPeriodDate(replacement, 'current_period_end');
           const mapped = tierFromSubscriptionItems(replacement.items?.data);
           if (loaded && loaded !== 'deleted' && loaded !== 'no-email') {
+            const replacementTier = await tierToStore(loaded.email, mapped.tier, replacement.status);
             await upsertSubscription(
               loaded.id,
               loaded.email,
-              mapped.tier,
+              replacementTier,
               replacement.status,
               replacement.id,
               periodEnd,
