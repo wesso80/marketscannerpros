@@ -163,7 +163,7 @@ export async function sendAlertEmail(params: SendEmailParams | SendAlertEmailPar
 // Two access levels only (Free / Pro). Legacy `pro_trader` subscribers get the same Pro email.
 const PRO_FEATURES = [
   ['SCAN', 'Unlimited Scanner', 'Run unlimited technical scans across the full market'],
-  ['AI', 'AI Analyst (50/day)', 'GPT-4.1 powered market analysis and research tools'],
+  ['AI', 'AI Analyst (20/day)', 'GPT-4.1 powered market analysis and research tools'],
   ['OPT', 'Options Terminal & Confluence', 'Options chain, Greeks, IV and multi-signal options flow analysis'],
   ['BT', 'Strategy Backtester', 'Test strategies against historical data'],
   ['JRNL', 'Trade Journal', 'Log, review, and analyze every trade'],

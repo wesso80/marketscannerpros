@@ -36,6 +36,11 @@ export default function DailyPickView({ data }: { data: DayData }) {
           {data.picks.length} symbols stored by the daily scan for the {session} US session. Crypto rows use the latest completed daily candle.
           Each row is a measured snapshot, not a rating or recommendation.
         </p>
+        {data.pricesAsOfNote ? (
+          <p data-prices-as-of style={{ color: 'var(--msp-text)', fontSize: 15, lineHeight: 1.5, marginTop: 8, maxWidth: 760 }}>
+            {data.pricesAsOfNote}
+          </p>
+        ) : null}
         <p data-selection-note style={{ color: 'var(--msp-text-muted)', fontSize: 13, lineHeight: 1.6, marginTop: 4, maxWidth: 760 }}>
           {SELECTION_NOTE} {SORT_NOTE}
         </p>

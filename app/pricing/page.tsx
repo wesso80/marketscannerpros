@@ -33,11 +33,8 @@ type Plan = {
   benefits: { group: string; lines: string[] }[];
 };
 
-type FAQ = { q: string; a: string };
-
 export default function PricingPage() {
   const [cycle, setCycle] = React.useState<BillingCycle>("monthly");
-  const [openFaq, setOpenFaq] = React.useState<number | null>(0);
   const [loadingPlan, setLoadingPlan] = React.useState<PlanId | null>(null);
   const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
   const [referralCode, setReferralCode] = React.useState<string | null>(null);
@@ -197,16 +194,16 @@ export default function PricingPage() {
         {
           group: "Scan",
           lines: [
-            "Unlimited Market Scanner with full filters, and up to 100 active alerts",
-            "Golden Egg symbol validation workflow",
+            "Unlimited Symbol reports",
+            "20 AI questions a day",
           ],
         },
         {
           group: "Validate",
           lines: [
             "Live with Pro: Global M2, Liquidity Transmission and Market Fragility",
-            "Deep Analysis, Options Terminal, Options Confluence",
-            "Time Confluence Scanner and Volatility Engine",
+            "Options research and the options terminal",
+            "Volatility readings",
           ],
         },
         {
@@ -214,7 +211,7 @@ export default function PricingPage() {
           lines: [
             "Every research and intelligence dashboard, unrestricted",
             "Crypto Command Centre + derivatives tools",
-            "Priority MSP AI",
+            "MSP Copilot: 20 questions a day",
           ],
         },
         {
@@ -226,33 +223,10 @@ export default function PricingPage() {
           lines: [
             "Unlimited portfolio and trade journal with advanced analytics",
             "Alerts, exports and workspace premium features",
-            "Priority support",
+            "Alerts and exports",
           ],
         },
       ],
-    },
-  ];
-
-  const faqs: FAQ[] = [
-    {
-      q: "What does Free include?",
-      a: Object.values(FREE_COPY.pricing).join(" · "),
-    },
-    {
-      q: "What does Pro include?",
-      a: "Pro unlocks the full platform: unlimited scanning, Golden Egg, the live Intelligence modules (Global M2, Liquidity Transmission and Market Fragility), research and workspace premium features, portfolio/journal advanced analytics, backtesting, options and derivatives tools, alerts, exports and priority support.",
-    },
-    {
-      q: "Can I cancel anytime?",
-      a: "Yes. You can cancel from your account settings. Access remains until the end of your billing period.",
-    },
-    {
-      q: "Do you offer refunds?",
-      a: "We offer a 7-day money-back guarantee. If you're unhappy, contact support within 7 days of purchase for a full refund.",
-    },
-    {
-      q: "Do you provide financial advice?",
-      a: "No. MarketScannerPros is an educational and informational tool. Nothing here is investment advice. Always manage risk and consult a licensed professional if needed.",
     },
   ];
 
@@ -346,14 +320,18 @@ export default function PricingPage() {
         <section className="mt-14">
           <h2 className="text-center text-lg font-semibold">Frequently asked questions</h2>
           <div className="mx-auto mt-6 max-w-3xl space-y-3">
-            {faqs.map((f, idx) => (
-              <FaqItem
-                key={idx}
-                faq={f}
-                open={openFaq === idx}
-                onToggle={() => setOpenFaq((v) => (v === idx ? null : idx))}
-              />
-            ))}
+            <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-4">
+              <div className="text-sm font-semibold">Can I cancel anytime?</div>
+              <p className="mt-2 text-sm text-white/70">Yes. Access lasts until the end of the current billing period. Cancel from Account &gt; Manage Billing.</p>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-4">
+              <div className="text-sm font-semibold">Do you offer refunds?</div>
+              <p className="mt-2 text-sm text-white/70">If you are not satisfied with your subscription, you may request a full refund within 7 days of your first payment. This guarantee applies to first-time subscribers only.</p>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-4">
+              <div className="text-sm font-semibold">Do you provide financial advice?</div>
+              <p className="mt-2 text-sm text-white/70">No. General information only, not financial advice.</p>
+            </div>
           </div>
         </section>
 
@@ -496,24 +474,5 @@ function BillingSwitch({ cycle, onToggle }: { cycle: BillingCycle; onToggle: () 
         ].join(" ")}
       />
     </button>
-  );
-}
-
-function FaqItem({ faq, open, onToggle }: { faq: FAQ; open: boolean; onToggle: () => void }) {
-  return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.04]">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left"
-      >
-        <div className="text-sm font-semibold">{faq.q}</div>
-        <span className="text-xs text-white/60" aria-hidden="true">{open ? "—" : "+"}</span>
-      </button>
-      {open ? (
-        <div className="border-t border-white/10 px-4 py-4 text-sm text-white/70">{faq.a}</div>
-      ) : null}
-    </div>
   );
 }

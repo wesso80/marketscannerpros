@@ -5,7 +5,7 @@ const GUIDE = [
   {
     title: "Plans & Upgrades",
     bullets: ["Choose a plan", "Unlock tools", "Confirm access"],
-    tip: "Pro tip: Start free. Upgrade to Pro when you need unlimited scanning, backtesting, or derivatives + alerts.",
+    tip: "Pro tip: Start free. Upgrade to Pro for unlimited Symbol reports, 20 AI questions a day, backtesting, or derivatives and alerts.",
     cta: { label: "Open Pricing", href: "/pricing" },
   },
   {

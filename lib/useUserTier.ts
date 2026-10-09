@@ -52,4 +52,4 @@ export const canAccessVolatilityEngine = (tier: UserTier) => isPaid(tier);
 export const canAccessScalper = (tier: UserTier) => isPaid(tier);
 export const canAccessSuggestions = (tier: UserTier) => isPaid(tier);
 export const getPortfolioLimit = (tier: UserTier) => tier === "anonymous" || tier === "free" ? 3 : Infinity;
-export const getAILimit = (tier: UserTier) => (isPaid(tier) ? 50 : 10);
+export const getAILimit = (tier: UserTier) => (isPaid(tier) ? 20 : 10);

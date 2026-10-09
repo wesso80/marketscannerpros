@@ -24,10 +24,10 @@ function GateCard({ eyebrow, title, body, primary, secondary }: { eyebrow: strin
         <h2 className="mt-1 text-lg font-bold text-white">{title}</h2>
         <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">{body}</p>
         <div className="mt-5 grid gap-2 text-left text-xs text-slate-300 sm:grid-cols-2">
-          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Market in 30 seconds — regime, leadership, breadth</div>
-          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Ranked research candidates with data-quality flags</div>
-          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">What may move next — pre-move setups and triggers</div>
-          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Lifecycle changes, rotation themes, rejected noise</div>
+          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Session observations: regime, leadership, and breadth</div>
+          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Stored research candidates with data-quality flags</div>
+          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Observations recorded before a large move, with the dates shown</div>
+          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Lifecycle notes, rotation themes, and items left out of the list</div>
         </div>
         <div className="mt-6 flex flex-col items-center justify-center gap-2 sm:flex-row">
           <Link href={primary.href} className="inline-flex rounded-lg bg-emerald-500/20 px-4 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">{primary.label}</Link>

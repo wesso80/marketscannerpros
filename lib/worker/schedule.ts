@@ -23,7 +23,12 @@ export const SCHEDULE:ScheduledJob[]=[
  {name:'alerts-strategy-check',schedule:'4,19,34,49 * * * *',kind:'http',path:'/api/alerts/strategy-check',timeoutMs:120_000,retries:3,retryDelayMs:15_000},
  {name:'public-oi-hourly',schedule:'17 * * * *',kind:'http',path:'/api/jobs/snapshot-open-interest',timeoutMs:120_000,retries:1,retryDelayMs:15_000},
  // Daily jobs
+ // 21:30 UTC is 17:30 ET in summer (90 minutes after the 16:00 cash close). Alpha Vantage's official daily bar
+ // is often still the previous session then. The 01:30 UTC catch-up is after the worker's 4-hour settle window.
+ // scan-daily skips symbols whose stored scan_date is already the last completed US session, so the catch-up
+ // makes no Alpha Vantage calls when the 21:30 run already stored that close.
  {name:'daily-scan',schedule:'30 21 * * *',kind:'http',path:'/api/jobs/scan-daily?assets=equity',timeoutMs:290_000,retries:3,retryDelayMs:15_000},
+ {name:'daily-scan-equity-catchup',schedule:'30 1 * * *',kind:'http',path:'/api/jobs/scan-daily?assets=equity',timeoutMs:290_000,retries:3,retryDelayMs:15_000},
  {name:'daily-scan-crypto',schedule:'40 0 * * *',kind:'http',path:'/api/jobs/scan-daily?assets=crypto',timeoutMs:290_000,retries:3,retryDelayMs:15_000},
  {name:'prewake-universe-scan',schedule:'35 19 * * *',kind:'http',path:'/api/jobs/scan-universe',timeoutMs:290_000,retries:2,retryDelayMs:15_000},
  {name:'opportunity-scan',schedule:'7,37 * * * *',kind:'http',path:'/api/jobs/opportunity-scan',timeoutMs:120_000,retries:3,retryDelayMs:15_000},

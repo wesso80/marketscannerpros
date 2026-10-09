@@ -54,7 +54,7 @@ export async function legacyJournalAnalysis(req: NextRequest) {
       const currentUsage = parseInt(usageResult[0]?.count || "0");
       if (currentUsage >= dailyLimit) {
         return NextResponse.json({
-          error: `Daily AI limit reached (${dailyLimit} questions). ${tier === 'free' ? 'Upgrade to Pro for 50 questions/day.' : 'Limit resets at midnight UTC.'}`,
+          error: `Daily AI limit reached (${dailyLimit} questions). ${tier === 'free' ? 'Upgrade to Pro for 20 questions/day.' : 'Limit resets at midnight UTC.'}`,
           limitReached: true
         }, { status: 429 });
       }
@@ -133,7 +133,7 @@ function buildJournalSummary(entries: any[]): string {
 
   summary += `### OVERALL PERFORMANCE\n`;
   summary += `Total Closed Trades: ${totalTrades}\n`;
-  summary += `Win Rate: ${winRate.toFixed(1)}% (${wins.length} wins, ${losses.length} losses)\n`;
+  summary += `Your own journal record (your own trades) win rate: ${winRate.toFixed(1)}% (${wins.length} wins, ${losses.length} losses)\n`;
   summary += `Total P&L: ${totalPL >= 0 ? '+' : ''}$${totalPL.toFixed(2)}\n`;
   summary += `Average Win: $${avgWin.toFixed(2)}\n`;
   summary += `Average Loss: $${avgLoss.toFixed(2)}\n`;
@@ -264,7 +264,7 @@ function buildJournalSummary(entries: any[]): string {
       .slice(0, 8)
       .forEach(([tag, stats]) => {
         const tagWinRate = stats.trades > 0 ? ((stats.wins / stats.trades) * 100).toFixed(0) : '0';
-        summary += `- **${tag}**: ${stats.trades} trades, ${tagWinRate}% win rate, ${stats.pl >= 0 ? '+' : ''}$${stats.pl.toFixed(2)}\n`;
+        summary += `- **${tag}**: ${stats.trades} trades, your own journal record (your own trades) ${tagWinRate}% win rate, ${stats.pl >= 0 ? '+' : ''}$${stats.pl.toFixed(2)}\n`;
       });
     summary += "\n";
   }

@@ -1,0 +1,62 @@
+Admin mutation-boundary audit — 9 October 2026
+
+READ-ONLY AUDIT. No route/helper/model edits, production calls, merges or deployments.
+Audited source: admin-integration 88785fa7e2fa5f30f4ad6c7b99a50fa44efb81e9, with the previously checked #547/#549/#551/#550/#553 combination used for fake-data validation. Those drafts do not change the mutation paths discussed here. Current remote main was observed at 7d560349; this report does not establish deployed behavior or runtime flag values.
+
+Inventory and scope
+90 explicit write-method exports across 84 admin route files, including the growth POST re-export. The CSV records source location and route-file markers for authentication, workspace, origin and idempotency. Markers are triage aids, NOT proof of a vulnerability or absence of controls in a helper. Five route files contain an origin-check marker. Manual review prioritized paper actions, global automation, manual simulated orders, account status/reset/settings, risk acknowledgements, scanner refreshes, setup emails, deletion-request administration and the shared workspace kill switch. GET-side effects are separately noted below. This is not an exhaustive security certification of every helper.
+
+Confirmed findings and proposed work
+
+M1 — High priority before re-enabling manual orders: request replay creates another simulated order.
+Evidence: app/api/admin/portfolio-lab/create-sim-order/route.ts:47; lib/admin/portfolio-lab/simulatedOrderEngine.ts:50; lib/admin/portfolio-lab/portfolioStore.ts:340; lib/admin/portfolio-lab/riskEngine.ts:24.
+The route dispatches createSimulatedOrder again for identical submissions, including the same Idempotency-Key. The helper issues a new INSERT; no matching request-key constraint was found. The risk check reads current open positions; the route does not serialize risk admission with creation or reserve pending-order risk. Concurrent budget over-admission is a code-derived risk, not a measured PostgreSQL outcome in this audit.
+Existing protection: authenticated workspace selects the portfolio; sizing/risk checks run; orders are SIMULATED. Discovery-only mode pauses this route by default, so this is a release/re-enable issue rather than proof it is currently exposed in production.
+Acceptance: workspace+operation+key uniqueness; same key/body replays one receipt, mismatched body returns conflict; two simultaneous requests create one order; crash after commit can retrieve the receipt; atomic risk admission accounts for pending reservations. Test in isolated PostgreSQL before enabling.
+
+M2 — High priority: saved-momentum GET performs provider work and rewrites shared data.
+Evidence: app/api/admin/crypto-markets/momentum/route.ts:10; lib/admin/cryptoFlow.ts:97.
+A saved row without a flow stamp causes GET to call stampMomentumVolume, which fetches OKX taker volume, then replaces the shared scan cache. Merely reading the batch-lock key does not acquire ownership: two concurrent GETs both reach stamping/writing in the fake-data reproduction. A write can race with a newer scan. This route is allowed in discovery-only mode, though CRYPTO_MARKETS_PAUSED suppresses the stamping branch.
+Acceptance: GET returns stored data only, including explicit missing stamps; enrichment runs in a protected writer with ownership/version checking; concurrent reads never call providers or Redis SET; a stale writer cannot overwrite a newer scan.
+
+M3 — Medium priority: explicit browser-origin protection is inconsistent.
+Evidence: app/api/admin/crypto-markets/paper/route.ts:21; app/api/admin/portfolio-lab/create-sim-order/route.ts:47; compare app/api/admin/portfolio-lab/status/route.ts:7 and lib/admin/mutationOrigin.ts:5.
+A successfully authenticated request with a foreign Origin reaches paper auto_enable and the manual-order handler in the fixture. This establishes missing route-origin rejection, NOT a demonstrated cross-site browser exploit. Existing session signatures, admin checks, SameSite=Lax and middleware restrictions remain material protections. The common helper also deliberately accepts missing Origin; any policy change must distinguish cookie-authenticated browsers from intended header clients.
+Acceptance: consistent cookie-mutation origin policy, denial before effects, tests for foreign/same/missing Origin and genuine header clients; retain workspace checks and pause gates. Do not silently break scheduled callers.
+
+M4 — Medium priority: global automation is presented alongside workspace-local paper controls.
+Evidence: app/api/admin/crypto-markets/paper/route.ts:27; lib/admin/cryptoAutomation.ts:9; components/admin/CryptoPaperAccount.tsx:77.
+The authenticated workspace is required, but auto_enable/auto_pause call a global setter without a workspace argument. Both workspaces reach the same Redis key. This appears intentional shared infrastructure, not a proven unauthorized cross-tenant write; however the page's controls should make the global scope explicit. Turning off background scans does not pause exits or necessarily stop work already underway. Existing automation uses a token-owned NX lock; paper cycles separately coordinate by workspace.
+Acceptance: distinct global-control presentation and permission decision; actor/old/new state audit; explain affected jobs/provider spend and in-flight work; verify a workspace-only action cannot toggle the shared scheduler. Preserve existing shared behavior until the owner decides otherwise.
+
+M5 — Medium priority: action success can be obscured by a later response read failure.
+Evidence: app/api/admin/crypto-markets/paper/route.ts:27-41.
+The global setter runs before automation/account snapshots. If a later read fails, the route returns 503 although the change was applied. The fixture confirms this ordering. Current error text correctly tells the operator to reload before retrying, and the boolean setter itself is repeatable; do not characterize every retry as a duplicate financial effect. Enable/cycle paths likewise have multiple phases rather than one durable action receipt.
+Acceptance: persist an operation outcome independent of snapshot refresh; return the accepted result plus explicit snapshot-unavailable status; distinguish failed-before-effect, completed and outcome-unknown. Test failure after each step and safe replay.
+
+M6 — Public boundary requiring a decision: the admin kill switch also gates public Journal writes.
+Evidence: app/api/admin/kill-switch/route.ts:48; lib/universe/personalUniverse.ts:172; app/api/journal/add-trade/route.ts:41.
+Admin toggles write workspace_settings.kill_switch_enabled. Public journal/add-trade reads that same workspace setting and returns 409 unless killSwitchAck is true. Thus an admin operation has a concrete public behavior effect for that workspace. The setter also logs and sends an admin notification. Current discovery-only mode pauses the admin toggle route by default. This audit did NOT toggle it or change public Journal behavior.
+The isKillSwitchOn helper has no direct callers in the searched app/lib TypeScript; notification copy claiming all alerts are suppressed should not be treated as proof every sender honors this flag. Separate operator risk controls also exist.
+Acceptance: document each switch and consumer; explicitly decide whether the Journal coupling is intentional. Preserve public behavior until that decision; if separation is approved later, test public Journal and every intended suppression consumer. Do not claim a global emergency stop without proving coverage.
+
+Existing protections retained
+- Portfolio reset/status: require verified workspace, explicit current portfolio ID, SIMULATED mode, row locks and transactional writes. Reset archives rather than deletes; a stale account ID returns conflict. Repeating the same status avoids another journal mutation.
+- Paper creation uses a workspace advisory lock; cycle paths use per-workspace Redis NX cooldown and row locks. These are coordination controls, not universal request idempotency.
+- Risk acknowledgement scopes SQL by workspace_id and event ID. Portfolio settings first resolve the authenticated workspace's portfolio; subsequent ID-only helper SQL is not by itself evidence of an IDOR. Settings update and journal insertion are separate, so partial failure/lost-update behavior merits follow-up.
+- Shared admin scans coordinate by market/timeframe. Shared keys are not assumed tenant-isolated.
+- Setup email test helpers have hourly reservation/delivery controls; no email was sent in this audit.
+- Deletion-request administration is explicitly global-admin scope and updates request status/notes; this route does not itself delete user records. Discovery-only permits its GET, not PATCH.
+
+Validation and limits
+Six synthetic reproduction tests plus twelve existing protection tests passed (18 total). Real route handlers were exercised with fake authentication and fake effects. No genuine provider, database, email or Redis operation ran. The fixture documents current behavior; passing reproductions mean the reported behavior exists, not that it is safe. Full suite/typecheck were not rerun for this documentation-only audit.
+Companion: adminMutationAudit.test.ts.txt; copy to test/adminMutationAudit.test.ts on the audited tree and run Vitest with @ mapped to repository root. Earlier combined-test runtime was used; relevant mutation source matches the base.
+
+Prioritized backlog
+1. Move momentum enrichment out of GET, with stored-state and concurrent-version acceptance checks (admin-only, lowest overlap with Claude auth).
+2. Add manual simulated-order idempotency and atomic risk admission before re-enabling that route; isolated PostgreSQL concurrency tests required.
+3. Standardize admin browser-origin checks without breaking cron/header callers.
+4. Separate global scheduler controls from workspace controls; add actor/outcome receipts.
+5. Review partial-success responses, settings concurrency and setup/bootstrap journal failures.
+6. Decide the shared kill-switch/Journal contract before any public-affecting edits.
+All remain proposed. Deployment hold continues.

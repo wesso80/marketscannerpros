@@ -39,6 +39,7 @@ import { pipelineToScannerHit } from "@/lib/admin/serializer";
 import { recordSignals } from "@/lib/admin/signal-recorder";
 import { opsAlert } from "@/lib/opsAlerting";
 import { COINGECKO_ID_MAP, getMarketData } from "@/lib/coingecko";
+import { guardScanChangePercent } from "@/lib/admin/scanMoveGuard";
 import * as store from "@/lib/admin/sharedScanStore";
 import { ADMIN_CRYPTO_DISABLED_MESSAGE, isAdminCryptoEnabled } from "@/lib/admin/adminCrypto";
 import { closedUsSession, isCurrentForClosedMarket } from "@/lib/admin/closedMarket";
@@ -107,6 +108,27 @@ export interface SharedScanSummary {
 export type StartSharedScanResult =
   | { started: true; runId: string; symbolsRequested: number; done: Promise<SharedScanSummary> }
   | { started: false; reason: "already_running" | "table_missing" | "no_symbols" | "paused" | "error"; message: string };
+
+/** Null when the day change must not be stored as a real move. */
+function storedScanChange(symbol: string, market: string, changePercent: number | null | undefined): number | null {
+  const guarded = guardScanChangePercent(symbol, market, changePercent);
+  if (guarded.withheld) {
+    console.warn(`[sharedScan] ${symbol} day change not stored (${guarded.withheld}${changePercent != null && Number.isFinite(changePercent) ? `, ${changePercent.toFixed(2)}%` : ''})`);
+    return null;
+  }
+  return guarded.changePercent;
+}
+
+/** A packet read back from storage does not keep a withheld crypto move on the quote or the snapshot. */
+function scrubSavedChange<T extends { symbol: string; quote: { changePercent: number }; snapshot: { changePercent: number; moveWithheld?: 'suspect' | 'ambiguous' } }>(packet: T, market: string): T {
+  const guarded = guardScanChangePercent(packet.symbol, market, packet.quote?.changePercent);
+  if (!guarded.withheld) return packet;
+  return {
+    ...packet,
+    quote: { ...packet.quote, changePercent: 0 },
+    snapshot: { ...packet.snapshot, changePercent: 0, moveWithheld: guarded.withheld },
+  };
+}
 
 function normalizeSymbols(symbols: string[]): string[] {
   const seen = new Set<string>();
@@ -307,7 +329,7 @@ async function executeRun(input: {
               dataAsOf: barTimestampToIso(scan.bars[scan.bars.length - 1]?.timestamp),
               price: quote?.price ?? (scan.packet.quote.price > 0 ? scan.packet.quote.price : null),
               // A "no setup" packet now carries a real price/change built from its bars.
-              changePct: quote?.changePercent ?? (failedReason ? null : scan.packet.quote.changePercent),
+              changePct: storedScanChange(symbol, market, quote?.changePercent ?? (failedReason ? null : scan.packet.quote.changePercent)),
               quoteAt: quote?.quoteAt ?? null,
               packet: scan.packet,
               hits,
@@ -404,7 +426,7 @@ export function toSavedPacket(row: store.SavedScanRow, staleAfterSec = savedScan
   // it keeps ranking (labelled "as of <session> close") instead of going stale 2.5 h after it ran.
   const closedCurrent = row.market === "EQUITIES" && isCurrentForClosedMarket(row.scannedAt, nowMs);
   const stale = !closedCurrent && (row.ageSec == null || row.ageSec > staleAfterSec);
-  const packet = { ...row.packet } as SavedPacket;
+  const packet = scrubSavedChange({ ...row.packet } as SavedPacket, row.market);
   const ageLabel = formatScanAge(row.ageSec);
   packet.savedScan = {
     status: row.status,
@@ -415,7 +437,7 @@ export function toSavedPacket(row: store.SavedScanRow, staleAfterSec = savedScan
     checkedAt: row.checkedAt,
     dataAsOf: row.dataAsOf,
     error: row.error,
-    quote: { price: row.price, changePct: row.changePct, quoteAt: row.quoteAt },
+    quote: { price: row.price, changePct: storedScanChange(packet.symbol, row.market, row.changePct), quoteAt: row.quoteAt },
     noSetup: row.status === "ok" && row.hits.length === 0,
     asOfLabel: closedCurrent ? closedUsSession(nowMs)?.label ?? null : null,
   };
@@ -438,12 +460,13 @@ export function withFreshQuote(p: SavedPacket): SavedPacket {
   const scannedMs = p.savedScan.scannedAt ? Date.parse(p.savedScan.scannedAt) : NaN;
   const quoteMs = quote.quoteAt ? Date.parse(quote.quoteAt) : NaN;
   if (!(quote.price != null && quote.price > 0) || !Number.isFinite(quoteMs) || !(quoteMs > scannedMs)) return p;
-  const changePercent = quote.changePct ?? p.quote.changePercent;
+  const guarded = guardScanChangePercent(p.symbol, p.market, quote.changePct ?? p.quote.changePercent);
+  const changePercent = guarded.withheld ? 0 : (guarded.changePercent ?? p.quote.changePercent);
   return {
     ...p,
     packetId: `${p.packetId}:q${quoteMs}`,
     quote: { ...p.quote, price: quote.price, changePercent },
-    snapshot: { ...p.snapshot, price: quote.price, changePercent },
+    snapshot: { ...p.snapshot, price: quote.price, changePercent, ...(guarded.withheld ? { moveWithheld: guarded.withheld } : {}) },
   };
 }
 

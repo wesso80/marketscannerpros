@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
       const currentUsage = parseInt(usageResult[0]?.count || "0");
       if (currentUsage >= dailyLimit) {
         return NextResponse.json({
-          error: `Daily AI limit reached (${dailyLimit} questions). ${tier === 'free' ? 'Upgrade to Pro for 50 questions/day.' : 'Limit resets at midnight UTC.'}`,
+          error: `Daily AI limit reached (${dailyLimit} questions). ${tier === 'free' ? 'Upgrade to Pro for 20 questions/day.' : 'Limit resets at midnight UTC.'}`,
           limitReached: true
         }, { status: 429 });
       }
@@ -276,7 +276,7 @@ function buildPortfolioSummary(
 
     summary += `### TRADE HISTORY (${closedPositions.length} closed trades)\n`;
     summary += `Total Realized P&L: ${totalRealizedPL >= 0 ? '+' : ''}$${totalRealizedPL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
-    summary += `Win Rate: ${winRate.toFixed(1)}% (${winners.length} wins, ${losers.length} losses)\n`;
+    summary += `Your own journal record (your own trades) win rate: ${winRate.toFixed(1)}% (${winners.length} wins, ${losers.length} losses)\n`;
     summary += `Average Win: $${avgWin.toFixed(2)} | Average Loss: $${avgLoss.toFixed(2)}\n`;
     
     if (avgLoss > 0) {

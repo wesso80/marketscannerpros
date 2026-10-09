@@ -21,6 +21,7 @@ import { renderTruth } from "./truth-layer";
 import { computeEliteSignalScore } from "@/lib/operator/elite-score";
 import { nyDateTime, usSessionCloseMinutes } from "@/lib/time/usSession";
 import { computeBbwpPercentile, relativeVolumeRatio } from "@/lib/operator/feature-engine";
+import { guardScanChangePercent } from "@/lib/admin/scanMoveGuard";
 
 /* ── Compute raw indicator values from bars ── */
 function computeRawIndicators(bars: Bar[]) {
@@ -93,6 +94,16 @@ export function dayChangePercentFromBars(bars: Bar[], market?: string): number |
     if (minutes < usSessionCloseMinutes(ymd)) return pct(bars[i].close);
   }
   return null;
+}
+
+/** Round a publishable day change. A withheld crypto move is 0 and flagged, never the raw percent. */
+function settleChange(symbol: string, market: string | undefined, raw: number | null): { changePercent: number; moveWithheld?: 'suspect' | 'ambiguous' } {
+  const guarded = guardScanChangePercent(symbol, market || 'EQUITIES', raw);
+  if (guarded.withheld) {
+    console.warn(`[admin-scan] ${symbol} day change not published (${guarded.withheld}${raw != null && Number.isFinite(raw) ? `, ${raw.toFixed(2)}%` : ''})`);
+    return { changePercent: 0, moveWithheld: guarded.withheld };
+  }
+  return { changePercent: guarded.changePercent == null ? 0 : Math.round(guarded.changePercent * 100) / 100 };
 }
 
 /* ── Map KeyLevel[] → flat levels object for admin UI ── */
@@ -176,7 +187,8 @@ export function pipelineToSymbolIntelligence(
   const lastBar = bars[bars.length - 1];
   const price = lastBar?.close ?? 0;
   const quoted = opts.dayChangePercent;
-  const changePercent = (quoted != null && Number.isFinite(quoted) ? quoted : dayChangePercentFromBars(bars, opts.market ?? v.market)) ?? 0;
+  const rawChange = quoted != null && Number.isFinite(quoted) ? quoted : dayChangePercentFromBars(bars, opts.market ?? v.market);
+  const settled = settleChange(v.symbol, opts.market ?? v.market, rawChange);
 
   // Extract indicator values from feature vector if available
   // These get populated by the feature engine
@@ -191,7 +203,8 @@ export function pipelineToSymbolIntelligence(
     timeframe: v.timeframe,
     session: lastBar?.session ?? "UNKNOWN",
     price,
-    changePercent: Math.round(changePercent * 100) / 100,
+    changePercent: settled.changePercent,
+    ...(settled.moveWithheld ? { moveWithheld: settled.moveWithheld } : {}),
     bias: toBiasState(v.direction),
     regime: v.regime,
     // Governance-final permission (portfolio-aware). Risk-desk only.
@@ -275,14 +288,16 @@ export function barsToNoSetupIntelligence(input: {
   const last = bars[bars.length - 1];
   const raw = computeRawIndicators(bars);
   const quoted = input.dayChangePercent;
-  const change = (quoted != null && Number.isFinite(quoted) ? quoted : dayChangePercentFromBars(bars, input.market)) ?? 0;
+  const rawChange = quoted != null && Number.isFinite(quoted) ? quoted : dayChangePercentFromBars(bars, input.market);
+  const settled = settleChange(input.symbol, input.market, rawChange);
   const levels = extractLevels(input.keyLevels ?? []);
   return {
     symbol: input.symbol,
     timeframe: input.timeframe,
     session: last?.session ?? "UNKNOWN",
     price: last?.close ?? 0,
-    changePercent: Math.round(change * 100) / 100,
+    changePercent: settled.changePercent,
+    ...(settled.moveWithheld ? { moveWithheld: settled.moveWithheld } : {}),
     bias: "NEUTRAL",
     regime: "UNCLASSIFIED",
     permission: "WAIT",

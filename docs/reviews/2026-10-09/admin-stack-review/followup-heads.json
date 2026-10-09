@@ -1,0 +1,26 @@
+{
+  "from": "d5ca11604cdf4690945db09fe7834de344027437",
+  "updates": [
+    {
+      "number": 560,
+      "head": "f6d1a4b25452c75844de96992394c80472343be4",
+      "clean": true
+    },
+    {
+      "number": 562,
+      "head": "889e53bd621c89feb39969458935191a93c963b3",
+      "clean": true
+    },
+    {
+      "number": 567,
+      "head": "a5960d7fea1f7f77e61f405e72eb9e2f6ed1987c",
+      "clean": true
+    }
+  ],
+  "combinedCommit": "9819e6106797c2834ef32c302a4047f3dde8dd3f",
+  "originAlignment": {
+    "pr": 563,
+    "head": "addbcdf28120c8b02ba2d6d1aff3db47e15c3e5f"
+  },
+  "reconciledCommit": "e80ab7d591f00aa97ba93d565c0e309566d4e219"
+}

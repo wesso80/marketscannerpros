@@ -359,17 +359,17 @@ Once direction (higher TF) and momentum (medium TF) align:
 - Medium: 1H
 - Lower: 15m or 5m
 
-## How to Automate Confluence Checking
+## How to compare timeframes in bulk
 
-Manually checking 3+ timeframes for dozens of symbols is brutal. This is where scanning tools shine.
+Manually checking 3+ timeframes for dozens of symbols is slow. Scanning tools record those readings together.
 
-[MarketScanner Pros](/) automates multi-timeframe confluence:
-- **Instant EMA stack analysis** across all timeframes
-- **Confluence scoring** (how many TFs agree?)
-- **Squeeze detection** on multiple TFs simultaneously
-- **Ranked results** by indicator agreement
+[MarketScanner Pros](/) records multi-timeframe indicator readings:
+- **EMA stack readings** across the timeframes on the page
+- **How many of those timeframes agree**, with the dates shown
+- **Squeeze readings** on multiple timeframes at once
+- **The symbols where those readings agree**, listed with the dates shown
 
-Reduce manual chart flipping by letting automation surface aligned research candidates.
+Fewer charts to flip through: the page lists the symbols whose recorded readings agree.
 
 ## Red Flags: When to Stay Out
 

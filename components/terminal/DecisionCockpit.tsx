@@ -14,10 +14,10 @@ export default function DecisionCockpit({ left, center, right, className = '' }:
       <SectionCard className="lg:col-span-4" kicker="Context" title="Bias & Regime">
         {left}
       </SectionCard>
-      <SectionCard className="lg:col-span-4" kicker="Analysis" title="Setup Status">
+      <SectionCard className="lg:col-span-4" kicker="Analysis" title="Observed readings">
         {center}
       </SectionCard>
-      <SectionCard className="lg:col-span-4" kicker="Levels" title="Risk & Trigger">
+      <SectionCard className="lg:col-span-4" kicker="Levels" title="Risk & reference levels">
         {right}
       </SectionCard>
     </section>

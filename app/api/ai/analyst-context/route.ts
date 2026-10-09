@@ -19,6 +19,7 @@ import { AI_DAILY_LIMITS, isFreeForAllMode, normalizeTier } from '@/lib/entitlem
 import { computeACLFromScoring } from '@/lib/ai/adaptiveConfidenceLens';
 import { computePerformanceThrottle, applyPerformanceDampener } from '@/lib/ai/performanceThrottle';
 import { computeSessionPhaseOverlay } from '@/lib/ai/sessionPhase';
+import { reasonsForPrompt } from '@/lib/signals/outcomeStatsVisibility';
 import { mapToScoringRegime, computeRegimeScore, estimateComponentsWithAvailability, deriveRegimeConfidence } from '@/lib/ai/regimeScoring';
 
 export const runtime = 'nodejs';
@@ -257,7 +258,7 @@ Volatility State: ${ctx.volatilityState || 'normal'}
 Authorization: ${aclResult.authorization}
 ACL Confidence: ${aclResult.confidence.toFixed(1)}%
 ACL Throttle (final): ${(finalThrottle * 100).toFixed(0)}%
-ACL Reason Codes: ${[...aclResult.reasonCodes, sessionPhase.reason, ...perfAdjusted.reasonCodes].join(' | ') || 'None'}
+ACL Reason Codes: ${reasonsForPrompt([...aclResult.reasonCodes, sessionPhase.reason, ...perfAdjusted.reasonCodes]).join(' | ') || 'None'}
 
 Session Phase: ${sessionPhase.phase} — ${sessionPhase.reason}
 Session Favorable: ${sessionPhase.favorable ? 'YES' : 'NO'}
