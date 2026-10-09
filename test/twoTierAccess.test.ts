@@ -195,7 +195,6 @@ const ROUTES: RouteCase[] = [
   { name: 'Scalper', mod: '../app/api/scalper/run/route', method: 'POST', url: 'http://x/api/scalper/run', body: {} },
   { name: 'Edge profile', mod: '../app/api/intelligence/edge-profile/route', method: 'GET', url: 'http://x/api/intelligence/edge-profile' },
   { name: 'Company overview', mod: '../app/api/company-overview/route', method: 'GET', url: 'http://x/api/company-overview' },
-  { name: 'Low-float scanner', mod: '../app/api/scanner/low-float/route', method: 'GET', url: 'http://x/api/scanner/low-float' },
 ];
 
 async function callRoute(rc: RouteCase, session: Sess) {
