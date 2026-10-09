@@ -73,7 +73,7 @@ export default function DisclaimerPage() {
           </p>
           <p style={{ fontSize: 14, color: '#9ca3af', lineHeight: 1.6, marginTop: 12 }}>
             <strong style={{ color: 'var(--msp-warn)' }}>MarketScannerPros does not hold an Australian Financial Services Licence (AFSL)</strong> and is not authorised to provide personal or general financial product advice under the Corporations Act 2001 (Cth). 
-            All scanner outputs, scores, signals, AI-generated insights, and analytics are general information only and do not take into account your personal objectives, financial situation, or needs. 
+            All scanner outputs, readings and measurements, AI-generated insights, and analytics are general information only and do not take into account your personal objectives, financial situation, or needs. 
             You should obtain independent financial advice from a licensed adviser before making any investment decisions.
           </p>
         </section>

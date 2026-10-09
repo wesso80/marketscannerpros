@@ -169,7 +169,7 @@ describe('GET /api/me', () => {
     qMock.mockResolvedValue([{ email: 'trial@example.com', tier: 'pro_trader', status: 'trialing', current_period_end: PAST }]);
     const { GET } = await import('../app/api/me/route');
     const expired = await GET();
-    expect(await expired.json()).toMatchObject({ authenticated: true, tier: 'free', has_billing: false, is_manual_grant: false });
+    expect(await expired.json()).toMatchObject({ authenticated: true, tier: 'free', has_billing: false, is_manual_grant: false, trial_ends_at: '2026-03-26' });
 
     qMock.mockResolvedValue([{ email: 'grant@example.com', tier: 'pro_trader', status: 'active', current_period_end: null }]);
     sessionMock.mockResolvedValue({
@@ -179,7 +179,7 @@ describe('GET /api/me', () => {
       exp: NOW / 1000 + 3600,
     });
     const granted = await GET();
-    expect(await granted.json()).toMatchObject({ authenticated: true, tier: 'pro_trader', has_billing: false, is_manual_grant: true });
+    expect(await granted.json()).toMatchObject({ authenticated: true, tier: 'pro_trader', has_billing: false, is_manual_grant: true, trial_ends_at: null });
   });
 
   it('reports Pro for a trial that has not ended', async () => {
@@ -192,7 +192,7 @@ describe('GET /api/me', () => {
     qMock.mockResolvedValue([{ email: 'trial@example.com', tier: 'pro', status: 'trialing', current_period_end: FUTURE }]);
     const { GET } = await import('../app/api/me/route');
     const res = await GET();
-    expect(await res.json()).toMatchObject({ tier: 'pro', has_billing: false, is_manual_grant: false });
+    expect(await res.json()).toMatchObject({ tier: 'pro', has_billing: false, is_manual_grant: false, trial_ends_at: '2026-12-01' });
   });
 
   it('counts a real manual grant and excludes no-card trials', async () => {

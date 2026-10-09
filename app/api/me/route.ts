@@ -61,6 +61,16 @@ function isTrialAccess(sessionCid: string | undefined, row: SubRow | null): bool
   return row.status === 'trialing' || isTrialId(row.stripe_subscription_id) || isTrialId(row.stripe_customer_id);
 }
 
+/** Calendar date only. No time, and nothing when the row has no readable end. */
+function trialEndDate(sessionCid: string | undefined, row: SubRow | null): string | null {
+  if (!isTrialAccess(sessionCid, row) || !row?.current_period_end) return null;
+  const parsed = row.current_period_end instanceof Date
+    ? row.current_period_end
+    : new Date(String(row.current_period_end));
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString().slice(0, 10);
+}
+
 // Extract email from cid (formats: "trial_email@example.com", "free_email@example.com", or "email@example.com")
 function extractEmailFromCid(cid: string): string | null {
   if (cid.startsWith('trial_')) {
@@ -88,6 +98,7 @@ export async function GET() {
       email: null,
       has_billing: false,
       is_manual_grant: false,
+      trial_ends_at: null,
     });
   }
 
@@ -121,6 +132,7 @@ export async function GET() {
   const has_billing = rows.some((row) => isStripeCustomerId(typeof row.stripe_customer_id === 'string' ? row.stripe_customer_id.trim() : ''));
   const paid = effectiveTier === 'pro' || effectiveTier === 'pro_trader';
   const is_manual_grant = paid && !has_billing && !isFreeForAllMode() && !isTrialAccess(session.cid, dbSub);
+  const trial_ends_at = trialEndDate(session.cid, dbSub);
 
   return NextResponse.json({ 
     tier: effectiveTier, 
@@ -130,5 +142,6 @@ export async function GET() {
     email: email || null,
     has_billing,
     is_manual_grant,
+    trial_ends_at,
   });
 }

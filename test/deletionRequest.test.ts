@@ -31,6 +31,7 @@ describe('POST /api/auth/delete-request', () => {
       message: 'Deletion request submitted. You will receive confirmation within 48 hours.',
     });
     expect(String(qMock.mock.calls[0][0])).toContain('INSERT INTO deletion_requests');
+    expect(String(qMock.mock.calls[0][0])).toContain('ON CONFLICT (workspace_id) DO UPDATE');
     expect(qMock.mock.calls[0][1]).toEqual(['ws_1', 'free_reader@example.test']);
     expect(emailMock).toHaveBeenCalledWith(expect.objectContaining({
       workspaceId: 'ws_1',

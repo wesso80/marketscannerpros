@@ -50,6 +50,8 @@ it.each([
   ["/tools/backtest", "/tools/workspace?tab=Backtest"],
   ["/tools/settings", "/tools/workspace?tab=Settings"],
   ["/tools/scanner/backtest", "/tools/workspace?tab=Backtest"],
+  ["/partners", "/pricing"],
+  ["/partners/:path*", "/pricing"],
 ])(
   "retired implementation %s retains its existing redirect to %s",
   async (source, destination) => {
@@ -118,7 +120,7 @@ it('accounts for every current public static content route in the seven-group ma
   const paths = new Set([...Object.values(areaLinks).flat(), ...PUBLIC_DESTINATIONS].map(link => link.href.split('?')[0]));
   const redirects = new Set((await config.redirects()).map(rule => rule.source));
   // /tools/signal-accuracy stays reachable by URL and off the menus until labelled results exist.
-  const intentionallyUnlisted = new Set(['/reviews', '/partners/demo', '/after-checkout', '/auth/verify', '/intelligence/lead-lag', '/intelligence/nq-pressure', '/intelligence/auction', '/intelligence/master', '/intelligence/history', '/tools/signal-accuracy']);
+  const intentionallyUnlisted = new Set(['/reviews', '/after-checkout', '/auth/verify', '/intelligence/lead-lag', '/intelligence/nq-pressure', '/intelligence/auction', '/intelligence/master', '/intelligence/history', '/tools/signal-accuracy']);
   const pages: string[] = [];
   const walk = (dir: string) => { for (const item of readdirSync(dir, {withFileTypes:true})) { const file=path.join(dir,item.name);if(item.isDirectory()) walk(file);else if(item.name==='page.tsx') pages.push(file); } };
   walk('app');

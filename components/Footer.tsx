@@ -5,7 +5,6 @@ import Link from 'next/link';
 const footerLinks = [
   { href: '/refund-policy', label: 'Refund policy' },
   { href: '/compliance-hub', label: 'Compliance Hub' },
-  { href: '/partners', label: 'Partners' },
   { href: '/blog', label: 'Blog' },
   { href: '/about', label: 'About' },
   { href: '/guide', label: 'Guide' },

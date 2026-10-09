@@ -55,7 +55,7 @@ export default function PrivacyPage() {
       <h2>Sharing &amp; processors</h2>
       <ul>
         <li><strong>Stripe</strong> (payments &amp; portal).</li>
-        <li><strong>OpenAI</strong> (MSP AI chatbot powered by GPT-4 - does not train on your data).</li>
+        <li><strong>OpenAI</strong> (MSP AI chatbot produced by third-party large language models (currently from OpenAI) - does not train on your data).</li>
         <li><strong>Alpha Vantage</strong> (real-time and historical market data provider).</li>
         <li><strong>Render</strong> (application hosting and web services).</li>
         <li><strong>Neon</strong> (PostgreSQL database hosting).</li>

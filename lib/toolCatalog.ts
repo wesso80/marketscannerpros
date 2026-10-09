@@ -237,9 +237,6 @@ const metadata: Record<string, Partial<ToolPage>> = {
   "/contact": {
     description: "Get in touch",
   },
-  "/partners": {
-    description: "Partner information",
-  },
   "/": {
     description: "Platform introduction",
   },

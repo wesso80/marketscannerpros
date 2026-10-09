@@ -37,6 +37,8 @@ export default function AccountPage() {
   const [billingLoading, setBillingLoading] = useState(false);
   const [billingNote, setBillingNote] = useState<string | null>(null);
   const [manualGrant, setManualGrant] = useState(false);
+  const [hasBilling, setHasBilling] = useState(false);
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>({
     inAppEnabled: true,
     emailEnabled: false,
@@ -60,6 +62,8 @@ export default function AccountPage() {
       .then((data) => {
         if (data?.email) setEmail(data.email);
         setManualGrant(data?.is_manual_grant === true);
+        setHasBilling(data?.has_billing === true);
+        setTrialEndsAt(typeof data?.trial_ends_at === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.trial_ends_at) ? data.trial_ends_at : null);
       })
       .catch(() => {});
   }, []);
@@ -284,7 +288,7 @@ export default function AccountPage() {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            {normalizedTier !== "free" ? (
+            {isPaid && hasBilling ? (
               <button
                 type="button"
                 onClick={() => void openBillingPortal()}
@@ -331,9 +335,11 @@ export default function AccountPage() {
                   <div className="text-xs text-white/60">
                     {normalizedTier === "free"
                       ? "Free tier · Upgrade any time"
-                      : manualGrant || billingNote === NO_BILLING_ACCOUNT_MESSAGE
-                        ? "Pro access granted manually"
-                        : "Active · Renewal date in billing portal"}
+                      : trialEndsAt
+                        ? `Pro trial · ends ${trialEndsAt}`
+                        : manualGrant
+                          ? "Pro access granted manually"
+                          : "Active · Renewal date in billing portal"}
                   </div>
                 </div>
 
