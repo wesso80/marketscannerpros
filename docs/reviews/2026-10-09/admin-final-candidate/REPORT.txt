@@ -1,0 +1,36 @@
+ADMIN FINAL CANDIDATE REVIEW - 9 OCTOBER 2026
+
+Local candidate: a1c047c225b14aa320e4996e4a2a88a6e183f311 (local commit object only; no branch merged remotely).
+Core: admin-integration d98ef088, Claude #574 589daf33, Codex #575 353ad814.
+Additional heads in heads.json: #568 bf407cf4, main fdba3c45, #569 333a5809, #570 bd943eef.
+All merge-tree combinations were conflict-free. This is validation, not approval to ship the entire candidate.
+
+SYMBOL FRESHNESS
+#574 separates packet build time from observations. #575 fixes remaining gaps:
+- forming/future bars do not invent a previous completed observation;
+- choose newest completed bar actually supplied, regardless of order;
+- missing/unreadable observations or unknown timeframe remain unknown;
+- daily equity forming bars do not report midnight as the previous session close;
+- source explicitly identifies price bars, not all packet inputs.
+Shared barAge, scoring, model and provider logic unchanged.
+Five added cases fail against #574; all nine freshness tests pass with #575.
+
+VALIDATION RESULTS
+1. Standalone TypeScript: clean with project-local typeRoots.
+2. Full suite on the unnormalized archive: 798 files passed, 8 failed, 3 skipped; 6,784 tests passed, 8 failed, 31 skipped (6,823 total).
+3. All eight failing files rerun after LF normalization of the temporary checkout: 8 files / 39 tests passed. No assertions weakened or tests skipped. Original failures: workerEquityBulkWiring, cgHistory, cryptoExitSelectJob, cryptoMetaModelJob, cryptoPaperExcursion, cryptoReplayJob, cryptoSignalLedger, outcomeStatsPrompt. SQL/source text equality was sensitive to CRLF in archived files. This is a full run plus targeted rerun, not a claimed second green full-suite run.
+4. Production build NOT fully verified:
+   - Default local build imports unrelated C:/Users/brad/node_modules/@types/react-native, causing timer.unref type conflict.
+   - Temporary project-local typeRoots resolves the type error.
+   - Clean build without credentials stops at required environment validation; subsequent runs use fake build-only credentials and block external fetches.
+   - With those fixtures, compilation and TypeScript pass, but static export fails on Windows EPERM mkdir. Parallel workers: /after-checkout. Retrying with one worker: /resources/platform-guide.
+   - No source fix or public-page change made for a filesystem error. Temporary typeRoots/cpus overrides restored after each attempt. Complete build confirmation is still required in a suitable environment.
+
+RELEASE HOLDS
+- Confirm complete production build of this candidate.
+- Explicitly resolve public-facing #552/#556 scope before release; this task is admin-only and does not infer approval from another builder's checklist.
+- Migration 130, live credential setup and post-deploy checks remain rollout work, not performed here.
+- No merges, deployments, production data changes or live provider queries were performed for the freshness fix.
+
+NEXT
+Claude to reproduce final build using the listed heads. If clean, reconcile exact release scope and final tip; request deployment approval only after the concrete release candidate is ready.

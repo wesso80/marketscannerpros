@@ -1,0 +1,21 @@
+{
+  "commit": "a1c047c225b14aa320e4996e4a2a88a6e183f311",
+  "parts": [
+    {
+      "ref": "origin/codex/admin-mobile-shell",
+      "sha": "bf407cf4351cfc16b635311f2e340ed2361f7fa4"
+    },
+    {
+      "ref": "origin/main",
+      "sha": "fdba3c458f844d29d1081c65c2693debfe04102e"
+    },
+    {
+      "ref": "origin/claude/drop-health-guard-skip",
+      "sha": "333a5809acab5fd0ed4da7cd35de019bdd6afcb2"
+    },
+    {
+      "ref": "origin/claude/admin-release-checklist",
+      "sha": "bd943eefc3bfdbcf7f0a011ba5de577f93704578"
+    }
+  ]
+}
