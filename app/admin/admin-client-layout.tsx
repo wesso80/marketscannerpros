@@ -4,6 +4,7 @@ import { useState, useEffect, createContext, useContext } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import CollapsibleAdminGroup from "@/components/admin/CollapsibleAdminGroup";
+import AdminNavigationFrame from "@/components/admin/AdminNavigationFrame";
 import AdminBoundaryBanner from "@/components/admin/AdminBoundaryBanner";
 import AdminCommandPalette from "@/components/admin/AdminCommandPalette";
 import { AdminModeProvider, AdminModeSwitcher } from "@/components/admin/AdminModeSwitcher";
@@ -223,34 +224,20 @@ export default function AdminClientLayout({ children, discoveryPaused = false }:
   return (
     <AdminContext.Provider value={{ secret, setSecret, isAuthed, setIsAuthed, discoveryPaused }}>
       <AdminModeProvider>
-      <div style={{
-        minHeight: "100vh",
-        background: "var(--msp-bg)",
-        display: "flex",
-      }}>
-        {/* Sidebar */}
-        <aside style={{
-          width: "268px",
-          background: "rgba(17, 24, 39, 0.95)",
-          borderRight: "1px solid rgba(16, 185, 129, 0.2)",
-          padding: "1.25rem 0.85rem",
-          display: "flex",
-          flexDirection: "column",
-          overflowY: "auto",
-        }}>
+      <AdminNavigationFrame sidebar={<>
           <div style={{
             fontSize: "1.15rem",
             fontWeight: 700,
-            color: "#E5E7EB",
+            color: "var(--msp-text)",
             marginBottom: "1.5rem",
             padding: "0 0.5rem",
           }}>
-            <div style={{ color: "#10B981" }}>MSP Operator</div>
-            <div style={{ color: "#64748B", fontSize: "0.72rem", letterSpacing: "0.16em", textTransform: "uppercase", marginTop: "0.25rem" }}>
+            <div style={{ color: "var(--msp-accent)" }}>MSP Operator</div>
+            <div style={{ color: "var(--msp-text-muted)", fontSize: "0.72rem", letterSpacing: "0.16em", textTransform: "uppercase", marginTop: "0.25rem" }}>
               Private desk
             </div>
             {discoveryPaused && (
-              <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginTop: "0.45rem", lineHeight: 1.35 }}>
+              <div style={{ color: "var(--msp-text-muted)", fontSize: "0.75rem", marginTop: "0.45rem", lineHeight: 1.35 }}>
                 Read-only while admin is paused
               </div>
             )}
@@ -268,15 +255,16 @@ export default function AdminClientLayout({ children, discoveryPaused = false }:
                     <Link
                       key={item.href}
                       href={item.href}
+                      aria-current={active ? "page" : undefined}
                       style={{
                         display: "flex",
                         alignItems: "center",
                         gap: "0.65rem",
                         padding: "0.58rem 0.65rem",
                         borderRadius: "0.5rem",
-                        color: active ? "#10B981" : "#9CA3AF",
-                        background: active ? "rgba(16, 185, 129, 0.1)" : "transparent",
-                        border: active ? "1px solid rgba(16,185,129,0.22)" : "1px solid transparent",
+                        color: active ? "var(--msp-accent)" : "var(--msp-text-muted)",
+                        background: active ? "#1b302e" : "transparent",
+                        border: active ? "1px solid var(--msp-border-strong)" : "1px solid transparent",
                         textDecoration: "none",
                         marginBottom: "0.18rem",
                         transition: "all 0.2s",
@@ -286,8 +274,8 @@ export default function AdminClientLayout({ children, discoveryPaused = false }:
                       <span style={{
                         minWidth: 28,
                         textAlign: "center",
-                        color: active ? "#0F172A" : "#94A3B8",
-                        background: active ? "#10B981" : "rgba(148,163,184,0.12)",
+                        color: active ? "#0F172A" : "var(--msp-text-muted)",
+                        background: active ? "var(--msp-accent)" : "rgba(148,163,184,0.12)",
                         borderRadius: 6,
                         padding: "0.16rem 0.22rem",
                         fontSize: "0.62rem",
@@ -315,16 +303,12 @@ export default function AdminClientLayout({ children, discoveryPaused = false }:
           >
               Logout
           </button>
-        </aside>
-
-        {/* Main content */}
-        <main style={{ flex: 1, padding: "0", overflow: "auto", display: "flex", flexDirection: "column" }}>
+      </>}>
           <AdminBoundaryBanner />
-          <div style={{ padding: "1.5rem 2rem 2rem", flex: 1 }}>
+          <div className="admin-page-content">
             {children}
           </div>
-        </main>
-      </div>
+      </AdminNavigationFrame>
       <AdminCommandPalette discoveryPaused={discoveryPaused} />
       </AdminModeProvider>
     </AdminContext.Provider>

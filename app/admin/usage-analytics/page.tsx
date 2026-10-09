@@ -1,4 +1,5 @@
 "use client";
+import design from "@/components/admin/AdminResearchSurface.module.css";
 
 import { useState, useEffect } from "react";
 
@@ -56,7 +57,7 @@ export default function UsageAnalyticsPage() {
   };
 
   const card: React.CSSProperties = {
-    background: "rgba(17, 24, 39, 0.8)",
+    background: "var(--msp-panel)",
     border: "1px solid rgba(16, 185, 129, 0.2)",
     borderRadius: "1rem",
     padding: "1.5rem",
@@ -70,14 +71,14 @@ export default function UsageAnalyticsPage() {
 
   const statLabel: React.CSSProperties = {
     fontSize: "0.8rem",
-    color: "#9CA3AF",
+    color: "var(--msp-text-muted)",
     marginTop: "0.25rem",
   };
 
   const tierColor = (tier: string) => {
     if (tier === "pro_trader") return "#F59E0B";
     if (tier === "pro") return "#10B981";
-    return "#6B7280";
+    return "var(--msp-text-muted)";
   };
 
   const tierBadge = (tier: string) => (
@@ -93,7 +94,7 @@ export default function UsageAnalyticsPage() {
     </span>
   );
 
-  if (loading) return <div style={{ color: "#9CA3AF", padding: "2rem" }}>Loading usage analytics...</div>;
+  if (loading) return <div style={{ color: "var(--msp-text-muted)", padding: "2rem" }}>Loading usage analytics...</div>;
 
   // Compute funnel conversion rates
   const trialRate = funnel.signups_30d > 0 ? ((funnel.trials_30d / funnel.signups_30d) * 100).toFixed(1) : "0";
@@ -118,8 +119,8 @@ export default function UsageAnalyticsPage() {
   const maxRetUsers = Math.max(...retention.map(r => Number(r.active_users)), 1);
 
   return (
-    <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "1.5rem 1rem" }}>
-      <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB", marginBottom: "1.5rem" }}>
+    <div className={design.surface}>
+      <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--msp-text)", marginBottom: "1.5rem" }}>
         Usage Analytics
       </h1>
 
@@ -169,13 +170,13 @@ export default function UsageAnalyticsPage() {
 
       {/* ─── Conversion Funnel ──────────────────────────────── */}
       <div style={{ ...card, marginBottom: "1.5rem" }}>
-        <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
+        <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--msp-text)", marginBottom: "1rem" }}>
           Conversion Funnel (Last 30 Days)
         </h2>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
           {/* Funnel stages */}
           {[
-            { label: "Signups", value: funnel.signups_30d, color: "#6B7280" },
+            { label: "Signups", value: funnel.signups_30d, color: "var(--msp-text-muted)" },
             { label: "Trials", value: funnel.trials_30d, color: "#3B82F6", rate: `${trialRate}%` },
             { label: "Paid", value: funnel.paid_30d, color: "#10B981", rate: `${paidRate}%` },
           ].map((stage, i) => (
@@ -191,12 +192,12 @@ export default function UsageAnalyticsPage() {
                 <div style={{ fontSize: "1.5rem", fontWeight: 700, color: stage.color }}>
                   {Number(stage.value)}
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "#9CA3AF" }}>{stage.label}</div>
+                <div style={{ fontSize: "0.75rem", color: "var(--msp-text-muted)" }}>{stage.label}</div>
               </div>
               {i < 2 && (
                 <div style={{ color: "#4B5563", fontSize: "1.25rem" }}>
                   →
-                  {stage.rate && <div style={{ fontSize: "0.65rem", color: "#6B7280", textAlign: "center" }}>{stage.rate}</div>}
+                  {stage.rate && <div style={{ fontSize: "0.65rem", color: "var(--msp-text-muted)", textAlign: "center" }}>{stage.rate}</div>}
                 </div>
               )}
             </div>
@@ -206,15 +207,15 @@ export default function UsageAnalyticsPage() {
           <div style={{ marginLeft: "auto", display: "flex", gap: "1rem" }}>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#10B981" }}>{Number(funnel.active_pro)}</div>
-              <div style={{ fontSize: "0.7rem", color: "#9CA3AF" }}>Active Pro</div>
+              <div style={{ fontSize: "0.7rem", color: "var(--msp-text-muted)" }}>Active Pro</div>
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#F59E0B" }}>{Number(funnel.active_pro_trader)}</div>
-              <div style={{ fontSize: "0.7rem", color: "#9CA3AF" }}>Active Pro Trader</div>
+              <div style={{ fontSize: "0.7rem", color: "var(--msp-text-muted)" }}>Active Pro Trader</div>
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "#EF4444" }}>{Number(funnel.churned_total)}</div>
-              <div style={{ fontSize: "0.7rem", color: "#9CA3AF" }}>Churned</div>
+              <div style={{ fontSize: "0.7rem", color: "var(--msp-text-muted)" }}>Churned</div>
             </div>
           </div>
         </div>
@@ -225,7 +226,7 @@ export default function UsageAnalyticsPage() {
 
         {/* Feature Adoption */}
         <div style={card}>
-          <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
+          <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--msp-text)", marginBottom: "1rem" }}>
             Feature Adoption (30d)
           </h2>
           {[
@@ -240,7 +241,7 @@ export default function UsageAnalyticsPage() {
               <div key={f.label} style={{ marginBottom: "0.75rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.25rem" }}>
                   <span style={{ fontSize: "0.85rem", color: "#D1D5DB" }}>{f.code} · {f.label}</span>
-                  <span style={{ fontSize: "0.8rem", color: "#9CA3AF" }}>
+                  <span style={{ fontSize: "0.8rem", color: "var(--msp-text-muted)" }}>
                     {f.users} users ({pct.toFixed(0)}%)
                   </span>
                 </div>
@@ -260,7 +261,7 @@ export default function UsageAnalyticsPage() {
 
         {/* Trade Activity */}
         <div style={card}>
-          <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
+          <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--msp-text)", marginBottom: "1rem" }}>
             Trade Activity
           </h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
@@ -284,7 +285,7 @@ export default function UsageAnalyticsPage() {
             </div>
           </div>
           <div style={{ marginTop: "1rem", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "1rem" }}>
-            <span style={{ fontSize: "0.85rem", color: "#9CA3AF" }}>Avg R-Multiple: </span>
+            <span style={{ fontSize: "0.85rem", color: "var(--msp-text-muted)" }}>Avg R-Multiple: </span>
             <span style={{ fontSize: "1.1rem", fontWeight: 600, color: Number(tradeActivity.avg_r_multiple) >= 0 ? "#10B981" : "#EF4444" }}>
               {tradeActivity.avg_r_multiple ? `${tradeActivity.avg_r_multiple}R` : "—"}
             </span>
@@ -297,7 +298,7 @@ export default function UsageAnalyticsPage() {
 
         {/* Scan Volume */}
         <div style={card}>
-          <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "0.5rem" }}>
+          <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--msp-text)", marginBottom: "0.5rem" }}>
             Scan Volume (30d)
           </h2>
           <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
@@ -331,14 +332,14 @@ export default function UsageAnalyticsPage() {
             })}
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.25rem" }}>
-            <span style={{ fontSize: "0.6rem", color: "#6B7280" }}>14d ago</span>
-            <span style={{ fontSize: "0.6rem", color: "#6B7280" }}>today</span>
+            <span style={{ fontSize: "0.6rem", color: "var(--msp-text-muted)" }}>14d ago</span>
+            <span style={{ fontSize: "0.6rem", color: "var(--msp-text-muted)" }}>today</span>
           </div>
         </div>
 
         {/* Retention */}
         <div style={card}>
-          <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "0.5rem" }}>
+          <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--msp-text)", marginBottom: "0.5rem" }}>
             Weekly Active Users (8 weeks)
           </h2>
           {retention.map((w) => {
@@ -346,7 +347,7 @@ export default function UsageAnalyticsPage() {
             return (
               <div key={w.week} style={{ marginBottom: "0.5rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.125rem" }}>
-                  <span style={{ fontSize: "0.75rem", color: "#9CA3AF" }}>{w.week}</span>
+                  <span style={{ fontSize: "0.75rem", color: "var(--msp-text-muted)" }}>{w.week}</span>
                   <span style={{ fontSize: "0.75rem", color: "#D1D5DB", fontWeight: 600 }}>{Number(w.active_users)}</span>
                 </div>
                 <div style={{ background: "rgba(255,255,255,0.05)", borderRadius: "0.25rem", height: "6px", overflow: "hidden" }}>
@@ -365,7 +366,7 @@ export default function UsageAnalyticsPage() {
 
       {/* ─── Tier Distribution ──────────────────────────────── */}
       <div style={{ ...card, marginBottom: "1.5rem" }}>
-        <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
+        <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--msp-text)", marginBottom: "1rem" }}>
           Tier Distribution
         </h2>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
@@ -379,8 +380,8 @@ export default function UsageAnalyticsPage() {
               minWidth: "100px",
             }}>
               <div style={{ fontSize: "1.25rem", fontWeight: 700, color: tierColor(t.tier) }}>{Number(t.count)}</div>
-              <div style={{ fontSize: "0.7rem", color: "#9CA3AF" }}>{t.tier}</div>
-              <div style={{ fontSize: "0.6rem", color: "#6B7280" }}>{t.status}</div>
+              <div style={{ fontSize: "0.7rem", color: "var(--msp-text-muted)" }}>{t.tier}</div>
+              <div style={{ fontSize: "0.6rem", color: "var(--msp-text-muted)" }}>{t.status}</div>
             </div>
           ))}
         </div>
@@ -388,15 +389,15 @@ export default function UsageAnalyticsPage() {
 
       {/* ─── Top Active Workspaces ──────────────────────────── */}
       <div style={card}>
-        <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
+        <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--msp-text)", marginBottom: "1rem" }}>
           Top Active Users (7d)
         </h2>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
             <thead>
-              <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+              <tr style={{ borderBottom: "1px solid var(--msp-border)" }}>
                 {["Email", "Tier", "Scans", "Trades", "AI Q's", "Journal", "Score"].map((h) => (
-                  <th key={h} style={{ padding: "0.5rem", textAlign: "left", color: "#9CA3AF", fontWeight: 500 }}>{h}</th>
+                  <th key={h} style={{ padding: "0.5rem", textAlign: "left", color: "var(--msp-text-muted)", fontWeight: 500 }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -415,7 +416,7 @@ export default function UsageAnalyticsPage() {
                 </tr>
               ))}
               {topWorkspaces.length === 0 && (
-                <tr><td colSpan={7} style={{ padding: "1rem", color: "#6B7280", textAlign: "center" }}>No activity data yet</td></tr>
+                <tr><td colSpan={7} style={{ padding: "1rem", color: "var(--msp-text-muted)", textAlign: "center" }}>No activity data yet</td></tr>
               )}
             </tbody>
           </table>

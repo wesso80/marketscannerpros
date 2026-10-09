@@ -61,6 +61,8 @@ export default function AdminDirectLogin() {
       >
         <input
           type="email"
+          aria-label="Admin email"
+          autoComplete="username"
           placeholder="Admin email"
           value={adminEmail}
           onChange={(e) => setAdminEmail(e.target.value)}
@@ -68,6 +70,8 @@ export default function AdminDirectLogin() {
         />
         <input
           type="password"
+          aria-label="Passphrase"
+          autoComplete="current-password"
           placeholder="Passphrase"
           value={passphrase}
           onChange={(e) => setPassphrase(e.target.value)}
