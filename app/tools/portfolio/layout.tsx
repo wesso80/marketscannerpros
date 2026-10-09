@@ -6,17 +6,17 @@ export const metadata: Metadata = {
   description:
     'Track open positions, performance, risk, and hypothetical exposure with an educational portfolio workflow in real-time.',
   openGraph: {
-    title: 'Portfolio Tracker | MarketScanner Pros',
+    title: 'Portfolio Tracker | MarketScannerPros',
     description:
       'Track open positions, performance, risk, and hypothetical exposure with an educational portfolio workflow.',
     url: 'https://marketscannerpros.app/tools/workspace?tab=portfolio',
-    siteName: 'MarketScanner Pros',
+    siteName: 'MarketScannerPros',
     images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScanner Pros — Portfolio Tracker' }],
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Portfolio Tracker | MarketScanner Pros',
+    title: 'Portfolio Tracker | MarketScannerPros',
     description:
       'Track open positions, performance, risk, and hypothetical exposure with an educational portfolio workflow.',
     images: ['/scan-banner.png'],

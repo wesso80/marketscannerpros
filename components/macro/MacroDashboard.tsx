@@ -14,6 +14,7 @@ import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import StatTile from '@/components/visual/StatTile';
 import { openMacroAnchor } from '@/lib/overview/macroAnchor';
+import { macroResponseAccess } from '@/lib/macro/accessState';
 
 function followMacroAnchor(event: { preventDefault(): void; currentTarget: { getAttribute(name: string): string | null } }) {
   event.preventDefault();
@@ -234,6 +235,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
   const [data, setData] = useState<MacroData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<string>('');
   const [commodities, setCommodities] = useState<any[] | null>(null);
@@ -252,7 +254,14 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
     try {
       setError(null);
       const res = await fetch('/api/economic-indicators?all=true');
-      if (!res.ok) throw new Error('Failed to fetch economic data');
+      const access = macroResponseAccess(res.status);
+      if (access === 'locked') {
+        setAccessDenied(true);
+        setData(null);
+        return;
+      }
+      setAccessDenied(false);
+      if (access === 'unavailable') throw new Error('Failed to fetch economic data');
       const result = await res.json();
 
       if (result.error) {
@@ -325,8 +334,10 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
     })();
   }, []);
 
-  // Auto-refresh hourly (pauses when tab hidden)
-  usePolling(fetchData, autoRefresh && (isAdmin || tier === 'pro' || tier === 'pro_trader') ? 60 * 60 * 1000 : null, { immediate: true });
+  // The first read runs for every visitor. Hourly refresh stays on paid sessions.
+  // usePolling skips its immediate tick when the interval is null, which left signed-out visitors on the spinner.
+  useEffect(() => { void fetchData(); }, [fetchData]);
+  usePolling(fetchData, autoRefresh && (isAdmin || tier === 'pro' || tier === 'pro_trader') ? 60 * 60 * 1000 : null);
 
   const gate = useMemo(() => computeMacroGate(data), [data]);
 
@@ -369,7 +380,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
   const assessment = !completeAssessment ? 'Macro assessment not collected' : gate?.permission === 'yes' ? 'Aligned' : gate?.permission === 'conditional' ? 'Mixed' : 'Not aligned';
   const incompleteFeeds = [!completeAssessment && 'Required macro observations', commoditiesError && 'Commodities', correlationError && 'Cross-asset context', spyPCRError && 'Options positioning'].filter(Boolean);
 
-  if (publicDesignEnabled() && !embeddedInDashboard) return <MacroResearch data={data} loading={loading || tierLoading} error={Boolean(error)} retry={fetchData} paid={isAdmin || tier === 'pro' || tier === 'pro_trader'}/>;
+  if (publicDesignEnabled() && !embeddedInDashboard) return <MacroResearch data={data} loading={(loading || tierLoading) && !accessDenied} error={Boolean(error) && !accessDenied} locked={accessDenied} retry={fetchData} paid={isAdmin || tier === 'pro' || tier === 'pro_trader'}/>;
 
   if (!isAdmin && tier !== 'pro' && tier !== 'pro_trader') return <main id="macro-summary" className="space-y-4 p-4">
     <h1 className="text-2xl font-semibold">{FREE_COPY.macro}</h1>
