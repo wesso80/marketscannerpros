@@ -10,18 +10,16 @@
 -- and a fixed coin-ticker list (the app coin map is not a table).
 --
 -- Real columns used:
---   signal_outcomes.id, outcome, labeled_at, pct_move, price_later, horizon_minutes, signal_id
---   signals_fired.id, symbol, signal_at
+--   signal_outcomes.id, outcome, labeled_at, pct_move, price_later, signal_id
+--   signals_fired.id, symbol
 --   symbol_universe.symbol, asset_type
---   ohlcv_bars.symbol, timeframe, ts
--- Horizon tolerances match worker/label-outcomes.ts and lib/signals/outcomeGuard.ts:
---   60 → 120 min, 240 → 240 min, 1440 → 1440 min, 10080 → 2880 min, else 240 min.
 --
 -- Each part is its own transaction and can run alone. Part A is the over-50% cleanup.
+-- The labelled-after-window rule is not in this file.
 -- The undo block at the bottom is commented so running this file does not restore
 -- the rows it just changed. Uncomment that block and run it alone to undo.
 
--- Step 0. Backup table. Safe to re-run. Parts A–C also create it so each can run alone.
+-- Step 0. Backup table. Safe to re-run. Parts A and C also create it so each can run alone.
 BEGIN;
 CREATE TABLE IF NOT EXISTS signal_outcomes_backup_20261009 (
   id BIGINT PRIMARY KEY,
@@ -63,116 +61,6 @@ UPDATE signal_outcomes so
        labeled_at = NOW()
  WHERE so.outcome IN ('correct', 'wrong', 'neutral')
    AND ABS(so.pct_move) > 50;
-
-SELECT refresh_signal_accuracy(90);
-COMMIT;
-
--- Part B. Labelled after the horizon window closed, and no ohlcv_bars row sits inside that window.
--- Replaces the earlier "price_later equals the live quote" rule.
-BEGIN;
-CREATE TABLE IF NOT EXISTS signal_outcomes_backup_20261009 (
-  id BIGINT PRIMARY KEY,
-  outcome VARCHAR(20) NOT NULL,
-  labeled_at TIMESTAMPTZ,
-  pct_move NUMERIC(10,4),
-  price_later NUMERIC(18,8),
-  reason TEXT NOT NULL,
-  backed_up_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-SELECT COUNT(*) AS part_b_labelled_after_window_without_bar
-  FROM signal_outcomes so
-  JOIN signals_fired sf ON sf.id = so.signal_id
- WHERE so.outcome IN ('correct', 'wrong', 'neutral')
-   AND so.labeled_at > sf.signal_at
-       + (so.horizon_minutes || ' minutes')::interval
-       + CASE so.horizon_minutes
-           WHEN 60 THEN INTERVAL '120 minutes'
-           WHEN 240 THEN INTERVAL '240 minutes'
-           WHEN 1440 THEN INTERVAL '1440 minutes'
-           WHEN 10080 THEN INTERVAL '2880 minutes'
-           ELSE INTERVAL '240 minutes'
-         END
-   AND NOT EXISTS (
-     SELECT 1
-       FROM ohlcv_bars b
-      WHERE b.symbol = UPPER(sf.symbol)
-        AND b.timeframe IN ('daily', '1h', '60min')
-        AND b.ts >= sf.signal_at + (so.horizon_minutes || ' minutes')::interval
-        AND b.ts <= sf.signal_at
-            + (so.horizon_minutes || ' minutes')::interval
-            + CASE so.horizon_minutes
-                WHEN 60 THEN INTERVAL '120 minutes'
-                WHEN 240 THEN INTERVAL '240 minutes'
-                WHEN 1440 THEN INTERVAL '1440 minutes'
-                WHEN 10080 THEN INTERVAL '2880 minutes'
-                ELSE INTERVAL '240 minutes'
-              END
-   );
-
-INSERT INTO signal_outcomes_backup_20261009 (id, outcome, labeled_at, pct_move, price_later, reason)
-SELECT so.id, so.outcome, so.labeled_at, so.pct_move, so.price_later, 'labelled_after_window_without_bar'
-  FROM signal_outcomes so
-  JOIN signals_fired sf ON sf.id = so.signal_id
- WHERE so.outcome IN ('correct', 'wrong', 'neutral')
-   AND so.labeled_at > sf.signal_at
-       + (so.horizon_minutes || ' minutes')::interval
-       + CASE so.horizon_minutes
-           WHEN 60 THEN INTERVAL '120 minutes'
-           WHEN 240 THEN INTERVAL '240 minutes'
-           WHEN 1440 THEN INTERVAL '1440 minutes'
-           WHEN 10080 THEN INTERVAL '2880 minutes'
-           ELSE INTERVAL '240 minutes'
-         END
-   AND NOT EXISTS (
-     SELECT 1
-       FROM ohlcv_bars b
-      WHERE b.symbol = UPPER(sf.symbol)
-        AND b.timeframe IN ('daily', '1h', '60min')
-        AND b.ts >= sf.signal_at + (so.horizon_minutes || ' minutes')::interval
-        AND b.ts <= sf.signal_at
-            + (so.horizon_minutes || ' minutes')::interval
-            + CASE so.horizon_minutes
-                WHEN 60 THEN INTERVAL '120 minutes'
-                WHEN 240 THEN INTERVAL '240 minutes'
-                WHEN 1440 THEN INTERVAL '1440 minutes'
-                WHEN 10080 THEN INTERVAL '2880 minutes'
-                ELSE INTERVAL '240 minutes'
-              END
-   )
-ON CONFLICT (id) DO NOTHING;
-
-UPDATE signal_outcomes so
-   SET outcome = 'unknown',
-       labeled_at = NOW()
-  FROM signals_fired sf
- WHERE so.signal_id = sf.id
-   AND so.outcome IN ('correct', 'wrong', 'neutral')
-   AND so.labeled_at > sf.signal_at
-       + (so.horizon_minutes || ' minutes')::interval
-       + CASE so.horizon_minutes
-           WHEN 60 THEN INTERVAL '120 minutes'
-           WHEN 240 THEN INTERVAL '240 minutes'
-           WHEN 1440 THEN INTERVAL '1440 minutes'
-           WHEN 10080 THEN INTERVAL '2880 minutes'
-           ELSE INTERVAL '240 minutes'
-         END
-   AND NOT EXISTS (
-     SELECT 1
-       FROM ohlcv_bars b
-      WHERE b.symbol = UPPER(sf.symbol)
-        AND b.timeframe IN ('daily', '1h', '60min')
-        AND b.ts >= sf.signal_at + (so.horizon_minutes || ' minutes')::interval
-        AND b.ts <= sf.signal_at
-            + (so.horizon_minutes || ' minutes')::interval
-            + CASE so.horizon_minutes
-                WHEN 60 THEN INTERVAL '120 minutes'
-                WHEN 240 THEN INTERVAL '240 minutes'
-                WHEN 1440 THEN INTERVAL '1440 minutes'
-                WHEN 10080 THEN INTERVAL '2880 minutes'
-                ELSE INTERVAL '240 minutes'
-              END
-   );
 
 SELECT refresh_signal_accuracy(90);
 COMMIT;
@@ -285,6 +173,7 @@ COMMIT;
 
 -- Undo. Do not run this with the cleanup above. Run this block alone to restore
 -- outcome, labeled_at, pct_move, and price_later from the backup.
+-- Only rows that are still unknown are restored, then accuracy stats are rebuilt.
 -- BEGIN;
 -- UPDATE signal_outcomes so
 --    SET outcome = b.outcome,
@@ -292,5 +181,7 @@ COMMIT;
 --        pct_move = b.pct_move,
 --        price_later = b.price_later
 --   FROM signal_outcomes_backup_20261009 b
---  WHERE so.id = b.id;
+--  WHERE so.id = b.id
+--    AND so.outcome = 'unknown';
+-- SELECT refresh_signal_accuracy(90);
 -- COMMIT;

@@ -56,6 +56,19 @@ export const RENAMED_OUTCOME_TICKERS: Readonly<Record<string, { successor: strin
   MATIC: { successor: 'POL', retiredCoinId: 'matic-network' },
 };
 
+/**
+ * An ohlcv bar with no symbol_universe row may label an equity signal when nothing
+ * identifies the symbol as crypto. A coin-map hit or a crypto universe row blocks that.
+ */
+export function allowUnclassifiedEquityBars(input: {
+  inCryptoMap: boolean;
+  universeTypes: readonly string[];
+}): boolean {
+  if (input.inCryptoMap) return false;
+  const types = input.universeTypes.map((type) => type.trim().toLowerCase());
+  return !types.some((type) => type === 'crypto' || type === 'cryptocurrency');
+}
+
 export function renamedOutcomeTicker(symbol: string): { ticker: string; successor: string; retiredCoinId: string } | null {
   const base = symbolBase(symbol);
   const row = RENAMED_OUTCOME_TICKERS[base];

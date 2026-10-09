@@ -276,7 +276,7 @@ function buildPortfolioSummary(
 
     summary += `### TRADE HISTORY (${closedPositions.length} closed trades)\n`;
     summary += `Total Realized P&L: ${totalRealizedPL >= 0 ? '+' : ''}$${totalRealizedPL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
-    summary += `Win Rate: ${winRate.toFixed(1)}% (${winners.length} wins, ${losers.length} losses)\n`;
+    summary += `Your own journal record (your own trades) win rate: ${winRate.toFixed(1)}% (${winners.length} wins, ${losers.length} losses)\n`;
     summary += `Average Win: $${avgWin.toFixed(2)} | Average Loss: $${avgLoss.toFixed(2)}\n`;
     
     if (avgLoss > 0) {

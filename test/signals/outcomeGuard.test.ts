@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { COINGECKO_ID_MAP } from '@/lib/coingecko';
 import {
+  allowUnclassifiedEquityBars,
   labelHorizonMove,
   publishScanChange,
   resolveOutcomeAsset,
@@ -134,6 +135,20 @@ describe('outcome horizon guard', () => {
       nowMs: signalAt + 3 * 24 * HOUR, signalAtMs: signalAt, horizonMinutes,
       asset: cryptoAsset('JUP'),
       observation: { price: 108, observedAtMs: signalAt + 30 * HOUR, live: false, barClass: 'crypto' },
+    });
+    expect(decision).toMatchObject({ action: 'write', outcome: 'correct', reason: 'labelled' });
+  });
+
+  it('treats an unclassified equity bar as equity only when nothing says crypto', () => {
+    expect(allowUnclassifiedEquityBars({ inCryptoMap: false, universeTypes: [] })).toBe(true);
+    expect(allowUnclassifiedEquityBars({ inCryptoMap: false, universeTypes: ['equity'] })).toBe(true);
+    expect(allowUnclassifiedEquityBars({ inCryptoMap: true, universeTypes: [] })).toBe(false);
+    expect(allowUnclassifiedEquityBars({ inCryptoMap: false, universeTypes: ['crypto'] })).toBe(false);
+    const decision = labelHorizonMove({
+      direction: 'bullish', bandPct: 2, priceAtSignal: 100,
+      nowMs: signalAt + 3 * 24 * HOUR, signalAtMs: signalAt, horizonMinutes,
+      asset: resolveOutcomeAsset({ symbol: 'AAPL', declared: null, universeTypes: [], inCryptoMap: false }),
+      observation: { price: 103, observedAtMs: signalAt + 30 * HOUR, live: false, barClass: 'equity' },
     });
     expect(decision).toMatchObject({ action: 'write', outcome: 'correct', reason: 'labelled' });
   });

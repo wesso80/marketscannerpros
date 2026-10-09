@@ -24,7 +24,7 @@ import { alertWorkerError } from '../lib/opsAlerting';
 import { COINGECKO_ID_MAP } from '../lib/coingecko';
 import { bandForHorizon, bandsFromRows, horizonsWithFallback } from '../lib/signals/outcomeRule';
 import {
-  declaredAssetClass, inCryptoSymbolMap, labelHorizonMove, resolveOutcomeLabelAsset, symbolBase,
+  allowUnclassifiedEquityBars, declaredAssetClass, inCryptoSymbolMap, labelHorizonMove, resolveOutcomeLabelAsset, symbolBase,
 } from '../lib/signals/outcomeGuard';
 
 // Lazy database connection
@@ -76,31 +76,53 @@ interface ScopedBar {
 /**
  * Bars for one symbol in a time window, tagged by asset class.
  *
- * Equity rows are ohlcv_bars joined to symbol_universe.asset_type equity/stock/etf.
- * Crypto rows are cg_hist_daily (via cg_hist_coins.symbol or the coin id) or
- * ohlcv_bars joined to a crypto universe row. ohlcv_bars has no class column of
- * its own, so an unjoined bar is not used. quotes_latest is never used.
+ * Equity rows are ohlcv_bars joined to an equity symbol_universe row, plus
+ * ohlcv_bars with no universe row when $5 is true (no coin-map hit and no
+ * crypto universe row). A crypto universe row excludes the bar.
+ * Crypto history is cg_hist_daily matched on coin_id ($4) only. A mapped id
+ * does not match cg_hist_coins.symbol. Crypto ohlcv rows still require a
+ * crypto universe row. quotes_latest is never used.
  *
  * Symbols are stored uppercased, so compare to UPPER($1) and leave the symbol index usable.
  */
-async function getScopedBars(symbol: string, from: Date, to: Date, coinId: string): Promise<ScopedBar[]> {
+async function getScopedBars(
+  symbol: string,
+  from: Date,
+  to: Date,
+  coinId: string,
+  allowUnclassifiedEquity: boolean,
+): Promise<ScopedBar[]> {
   return q<ScopedBar>(
     `SELECT close, ts, bar_class FROM (
        SELECT b.close::text AS close, b.ts, 'equity'::text AS bar_class
          FROM ohlcv_bars b
-         JOIN symbol_universe u ON u.symbol = b.symbol
         WHERE b.symbol = UPPER($1)
-          AND lower(u.asset_type) IN ('equity', 'equities', 'stock', 'etf')
           AND b.timeframe IN ('daily', '1h', '60min')
           AND b.ts >= $2
           AND b.ts <= $3
+          AND NOT EXISTS (
+            SELECT 1 FROM symbol_universe c
+             WHERE c.symbol = b.symbol
+               AND lower(c.asset_type) IN ('crypto', 'cryptocurrency')
+          )
+          AND (
+            EXISTS (
+              SELECT 1 FROM symbol_universe u
+               WHERE u.symbol = b.symbol
+                 AND lower(u.asset_type) IN ('equity', 'equities', 'stock', 'etf')
+            )
+            OR (
+              NOT EXISTS (SELECT 1 FROM symbol_universe u WHERE u.symbol = b.symbol)
+              AND $5::boolean
+            )
+          )
        UNION ALL
        SELECT COALESCE(d.close, d.price)::text AS close,
               ((d.day + 1)::timestamp AT TIME ZONE 'UTC') - INTERVAL '1 millisecond' AS ts,
               'crypto'::text AS bar_class
          FROM cg_hist_daily d
-         JOIN cg_hist_coins c ON c.id = d.coin_id
-        WHERE (upper(c.symbol) = UPPER($1) OR d.coin_id = $4)
+        WHERE d.coin_id = $4
+          AND $4 <> ''
           AND COALESCE(d.close, d.price) IS NOT NULL
           AND ((d.day + 1)::timestamp AT TIME ZONE 'UTC') - INTERVAL '1 millisecond' >= $2
           AND ((d.day + 1)::timestamp AT TIME ZONE 'UTC') - INTERVAL '1 millisecond' <= $3
@@ -114,7 +136,7 @@ async function getScopedBars(symbol: string, from: Date, to: Date, coinId: strin
           AND b.ts >= $2
           AND b.ts <= $3
      ) class_bars`,
-    [symbol, from, to, coinId],
+    [symbol, from, to, coinId, allowUnclassifiedEquity],
   );
 }
 
@@ -234,9 +256,14 @@ async function labelOutcomes() {
         const tolerance = TOLERANCE_WINDOWS[horizon_minutes] || { bars: 2, minutes: 240 };
         const windowEnd = new Date(targetTime.getTime() + tolerance.minutes * 60 * 1000);
         const entryFrom = new Date(signalTime.getTime() - 2 * 24 * 60 * 60 * 1000);
+        const universeTypes = universeBySymbol.get(String(symbol).toUpperCase()) ?? [];
         const coinId = COINGECKO_ID_MAP[symbolBase(symbol)] ?? '';
-        const entryRows = await getScopedBars(symbol, entryFrom, signalTime, coinId);
-        const horizonRows = await getScopedBars(symbol, targetTime, windowEnd, coinId);
+        const allowUnclassifiedEquity = allowUnclassifiedEquityBars({
+          inCryptoMap: inCryptoSymbolMap(symbolBase(symbol), COINGECKO_ID_MAP),
+          universeTypes,
+        });
+        const entryRows = await getScopedBars(symbol, entryFrom, signalTime, coinId, allowUnclassifiedEquity);
+        const horizonRows = await getScopedBars(symbol, targetTime, windowEnd, coinId, allowUnclassifiedEquity);
         const entryBar = pickClassBar(entryRows, asset.assetClass, 'desc');
         const horizonBar = pickClassBar(horizonRows, asset.assetClass, 'asc');
         otherClassOnly = (!!entryBar && 'otherClassOnly' in entryBar) || (!!horizonBar && 'otherClassOnly' in horizonBar);

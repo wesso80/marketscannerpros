@@ -39,6 +39,34 @@ it('can still describe a regime win rate when outcome stats are explicitly visib
   expect(text).toMatch(/win rate/i);
 });
 
+it('keeps a LOW_WIN_RATE reason code out of the analyst-context prompt', () => {
+  const source = readFileSync('app/api/ai/analyst-context/route.ts', 'utf8');
+  expect(source).toContain('reasonsForPrompt([');
+  expect(source).toContain('...perfAdjusted.reasonCodes');
+  expect(source).not.toMatch(/perfAdjusted\.reasonCodes\]\.join/);
+  const promptLine = reasonsForPrompt([
+    'AUTHORIZED: Confidence 70% meets threshold',
+    'LOW_WIN_RATE: 0% < 20% → RU capped ×0.70',
+    'SESSION_NEUTRAL: RTH (×1.00)',
+  ]).join(' | ');
+  expect(promptLine).not.toMatch(/win[\s_-]*rate/i);
+  expect(promptLine).not.toMatch(/accuracy/i);
+  expect(promptLine).toContain('AUTHORIZED');
+  expect(promptLine).toContain('SESSION_NEUTRAL');
+});
+
+it('labels journal and portfolio prompt win rates as the member\'s own record', () => {
+  for (const file of [
+    'lib/intelligence/edgeContextBuilder.ts',
+    'app/api/portfolio/analyze/route.ts',
+    'lib/ai/legacyJournalAnalysis.ts',
+  ]) {
+    const source = readFileSync(file, 'utf8').toLowerCase();
+    expect(source).toContain('your own journal record');
+    expect(source).toContain('your own trades');
+  }
+});
+
 it('gates both AI routes on the shared outcome-stats flag', () => {
   for (const file of ['app/api/ai/copilot/route.ts', 'app/api/msp-analyst/route.ts']) {
     const source = readFileSync(file, 'utf8');
