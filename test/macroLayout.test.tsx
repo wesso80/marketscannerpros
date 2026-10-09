@@ -28,9 +28,25 @@ it('absent macro observations do not display synthetic zeroes or an assessed sco
 });
 it('Free view finishes with an honest state without enabling macro polling',async()=>{
  state.tier='free';const {container}=render(<Macro embeddedInDashboard/>);
- await screen.findByText('Macro observations not collected for this view.');
- expect(container.querySelectorAll('[data-verdict-box]')).toHaveLength(1);expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);
- expect(vi.mocked(fetch).mock.calls.some(([url])=>String(url).includes('economic-indicators'))).toBe(false);
+ await screen.findByText('4.20%');
+ expect(screen.getByRole('heading',{name:'US Treasury · 10 year'})).toBeTruthy();
+ const indicatorCalls=()=>vi.mocked(fetch).mock.calls.filter(([url])=>String(url).includes('economic-indicators'));
+ expect(indicatorCalls()).toHaveLength(1);
+ await new Promise((resolve)=>setTimeout(resolve,30));
+ expect(indicatorCalls()).toHaveLength(1);
+ expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);
+});
+it('public macro shows the sign-in lock when the feed returns 401',async()=>{
+ vi.stubGlobal('fetch',vi.fn(async(url:string)=>{
+  const path=new URL(String(url),'https://fixture.invalid').pathname;
+  if(path.includes('economic-indicators'))return {ok:false,status:401,json:async()=>({error:'Please log in to access market data'})};
+  return {ok:true,status:200,json:async()=>structuredClone(fixtures[path]||{})};
+ }));
+ render(<Macro/>);
+ expect(await screen.findByText('Sign in required')).toBeTruthy();
+ expect(screen.getByRole('link',{name:'Sign In'}).getAttribute('href')).toBe('/auth?next=%2Ftools%2Fmacro');
+ expect(screen.queryByText('Loading macro observations…')).toBeNull();
+ expect(screen.queryByText('4.20%')).toBeNull();
 });
 it('failed macro feed exposes one plain error and a retry action',async()=>{
  state.failed=true;const {container}=render(<Macro embeddedInDashboard/>);await screen.findByText('Macro observations could not be loaded.');

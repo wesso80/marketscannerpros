@@ -1,7 +1,7 @@
 export default function Head() {
   return (
     <>
-      <title>Market Scanner Tool | MarketScanner Pros</title>
+      <title>Market Scanner Tool | MarketScannerPros</title>
       <meta
         name="description"
         content="Scan stocks and crypto with multi-timeframe confluence, technical indicators, and ranked opportunity scoring."

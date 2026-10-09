@@ -19,7 +19,9 @@ const baseline = JSON.parse(
 baseline.terms.text = baseline.terms.text
  .replace('MSP AI chatbot (powered by OpenAI GPT-4) provides educational insights only, not financial advice.', 'MSP Copilot uses OpenAI to explain the available page evidence for education, not to provide financial advice.')
  .replace('AI usage is subject to daily limits based on your subscription tier (5/50/unlimited questions per day).', 'MSP Copilot is available on eligible paid plans. The current daily question allowance is shown on the pricing page and in the app.')
- .replace('MSP AI (powered by OpenAI GPT-4) generates educational insights only.', 'MSP Copilot generates educational explanations of the available page evidence only.');
+ .replace('MSP AI (powered by OpenAI GPT-4) generates educational insights only.', 'MSP Copilot generates educational explanations of the available page evidence only.')
+ .replace('The App is an educational paper trade simulation system.', 'The App is an educational research workspace.')
+ .replace('Pro Trader is a legacy plan identifier mapped to Pro.', 'A stored Pro Trader identifier is the earlier name for Pro and keeps Pro access.');
 
 const TERMS_HEADING_IDS = [
   "eligibility",

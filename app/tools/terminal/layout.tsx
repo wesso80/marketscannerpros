@@ -5,14 +5,14 @@ export const metadata: Metadata = {
   description: 'Educational terminal for equity, crypto, and futures timing workflows including close-calendar context, session maps, flow, and time-confluence review.',
   robots: { index: false, follow: false },
   openGraph: {
-    title: 'Terminal | MarketScanner Pros',
+    title: 'Terminal | MarketScannerPros',
     description: 'Educational terminal for equity, crypto, and futures market-structure timing workflows.',
     type: 'website',
     images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScanner Pros — Terminal' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Terminal | MarketScanner Pros',
+    title: 'Terminal | MarketScannerPros',
     description: 'Educational terminal for equity, crypto, and futures timing research.',
     images: ['/scan-banner.png'],
   },

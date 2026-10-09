@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: 'Command workspace for watchlists, journal notes, portfolio research, alerts, and educational workflow organization.',
   robots: { index: false, follow: false },
   openGraph: {
-    title: 'Workspace | MarketScanner Pros',
+    title: 'Workspace | MarketScannerPros',
     description: 'Organize watchlists, journal notes, portfolio research, alerts, and workflow context.',
     url: 'https://marketscannerpros.app/tools/workspace',
     type: 'website',
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Workspace | MarketScanner Pros',
+    title: 'Workspace | MarketScannerPros',
     description: 'Command workspace for educational market research workflows.',
     images: ['/scan-banner.png'],
   },
