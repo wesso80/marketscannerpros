@@ -1,0 +1,12 @@
+.surface { width: 100%; min-width: 0; max-width: 1440px; margin: 0 auto; color: var(--msp-text); }
+.surface h1 { font-size: clamp(26px, 3vw, 34px) !important; font-weight: 500 !important; letter-spacing: -.7px; line-height: 1.2; }
+.surface > header, .surface > div:first-child:has(h1) { flex-wrap: wrap; gap: 16px; }
+.surface h2 { font-weight: 500; }
+.surface :is(button, input, select) { min-height: 44px; max-width: 100%; }
+.surface table { font-variant-numeric: tabular-nums; }
+.surface th { text-align: left; color: var(--msp-text-muted); font-weight: 500; background: var(--msp-panel-2); }
+.surface :is(th, td) { padding: 12px; }
+.surface :global(.overflow-auto), .surface :global(.overflow-x-auto) { max-width: 100%; scrollbar-width: thin; }
+@media (max-width: 767px) {
+  .surface { overflow-wrap: anywhere; }
+}

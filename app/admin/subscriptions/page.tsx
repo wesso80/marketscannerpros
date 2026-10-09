@@ -1,4 +1,5 @@
 "use client";
+import design from "@/components/admin/AdminResearchSurface.module.css";
 
 import { useState, useEffect } from "react";
 import { useAdmin } from "../admin-client-layout";
@@ -82,7 +83,7 @@ export default function AdminSubscriptionsPage() {
     const colors: Record<string, { bg: string; text: string }> = {
       pro_trader: { bg: "rgba(245, 158, 11, 0.2)", text: "#F59E0B" },
       pro: { bg: "var(--msp-accent-glow)", text: "var(--msp-accent)" },
-      free: { bg: "rgba(107, 114, 128, 0.2)", text: "#9CA3AF" },
+      free: { bg: "rgba(107, 114, 128, 0.2)", text: "var(--msp-text-muted)" },
     };
     const color = colors[tier] || colors.free;
     return (
@@ -118,13 +119,13 @@ export default function AdminSubscriptionsPage() {
   };
 
   if (loading) {
-    return <div style={{ color: "#9CA3AF" }}>Loading subscriptions...</div>;
+    return <div style={{ color: "var(--msp-text-muted)" }}>Loading subscriptions...</div>;
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
+    <div className={design.surface}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB" }}>
+        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--msp-text)" }}>
           💳 Subscriptions
         </h1>
         {discoveryPaused ? <ReadOnlyPauseNote /> : (
@@ -136,7 +137,7 @@ export default function AdminSubscriptionsPage() {
             background: syncing ? "rgba(107,114,128,0.2)" : "rgba(16,185,129,0.15)",
             border: "1px solid rgba(16,185,129,0.3)",
             borderRadius: "0.5rem",
-            color: syncing ? "#6B7280" : "#10B981",
+            color: syncing ? "var(--msp-text-muted)" : "#10B981",
             fontSize: "0.8rem",
             fontWeight: 600,
             cursor: syncing ? "default" : "pointer",
@@ -183,9 +184,9 @@ export default function AdminSubscriptionsPage() {
             style={{
               padding: "0.5rem 1rem",
               background: filter === f ? "rgba(16, 185, 129, 0.2)" : "rgba(0,0,0,0.3)",
-              border: filter === f ? "1px solid rgba(16, 185, 129, 0.5)" : "1px solid rgba(255,255,255,0.1)",
+              border: filter === f ? "1px solid rgba(16, 185, 129, 0.5)" : "1px solid var(--msp-border)",
               borderRadius: "0.5rem",
-              color: filter === f ? "#10B981" : "#9CA3AF",
+              color: filter === f ? "#10B981" : "var(--msp-text-muted)",
               cursor: "pointer",
               textTransform: "capitalize",
             }}
@@ -197,7 +198,7 @@ export default function AdminSubscriptionsPage() {
 
       {/* Table */}
       <div style={{
-        background: "rgba(17, 24, 39, 0.8)",
+        background: "var(--msp-panel)",
         border: "1px solid rgba(16, 185, 129, 0.2)",
         borderRadius: "1rem",
         overflow: "auto",
@@ -205,38 +206,38 @@ export default function AdminSubscriptionsPage() {
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
           <thead>
             <tr style={{ background: "rgba(0,0,0,0.3)" }}>
-              <th style={{ padding: "1rem", textAlign: "left", color: "#9CA3AF", fontWeight: 500 }}>Email</th>
-              <th style={{ padding: "1rem", textAlign: "left", color: "#9CA3AF", fontWeight: 500 }}>Tier</th>
-              <th style={{ padding: "1rem", textAlign: "left", color: "#9CA3AF", fontWeight: 500 }}>Status</th>
-              <th style={{ padding: "1rem", textAlign: "left", color: "#9CA3AF", fontWeight: 500 }}>Period End</th>
-              <th style={{ padding: "1rem", textAlign: "left", color: "#9CA3AF", fontWeight: 500 }}>Created</th>
+              <th style={{ padding: "1rem", textAlign: "left", color: "var(--msp-text-muted)", fontWeight: 500 }}>Email</th>
+              <th style={{ padding: "1rem", textAlign: "left", color: "var(--msp-text-muted)", fontWeight: 500 }}>Tier</th>
+              <th style={{ padding: "1rem", textAlign: "left", color: "var(--msp-text-muted)", fontWeight: 500 }}>Status</th>
+              <th style={{ padding: "1rem", textAlign: "left", color: "var(--msp-text-muted)", fontWeight: 500 }}>Period End</th>
+              <th style={{ padding: "1rem", textAlign: "left", color: "var(--msp-text-muted)", fontWeight: 500 }}>Created</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ padding: "2rem", textAlign: "center", color: "#6B7280" }}>
+                <td colSpan={5} style={{ padding: "2rem", textAlign: "center", color: "var(--msp-text-muted)" }}>
                   No subscriptions found
                 </td>
               </tr>
             ) : (
               filtered.map((sub) => (
                 <tr key={sub.id} style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-                  <td style={{ padding: "1rem", color: "#E5E7EB" }}>
+                  <td style={{ padding: "1rem", color: "var(--msp-text)" }}>
                     {sub.email || (
-                      <span style={{ color: "#6B7280", fontSize: "0.875rem" }}>
+                      <span style={{ color: "var(--msp-text-muted)", fontSize: "0.875rem" }}>
                         {sub.workspace_id.slice(0, 8)}...
                       </span>
                     )}
                   </td>
                   <td style={{ padding: "1rem" }}>{tierBadge(sub.tier)}</td>
                   <td style={{ padding: "1rem" }}>{statusBadge(sub.status)}</td>
-                  <td style={{ padding: "1rem", color: "#9CA3AF", fontSize: "0.875rem" }}>
+                  <td style={{ padding: "1rem", color: "var(--msp-text-muted)", fontSize: "0.875rem" }}>
                     {sub.current_period_end 
                       ? new Date(sub.current_period_end).toLocaleDateString()
                       : "—"}
                   </td>
-                  <td style={{ padding: "1rem", color: "#9CA3AF", fontSize: "0.875rem" }}>
+                  <td style={{ padding: "1rem", color: "var(--msp-text-muted)", fontSize: "0.875rem" }}>
                     {new Date(sub.created_at).toLocaleDateString()}
                   </td>
                 </tr>
@@ -246,7 +247,7 @@ export default function AdminSubscriptionsPage() {
         </table>
       </div>
 
-      <p style={{ color: "#6B7280", fontSize: "0.875rem", marginTop: "1rem" }}>
+      <p style={{ color: "var(--msp-text-muted)", fontSize: "0.875rem", marginTop: "1rem" }}>
         Showing {filtered.length} of {subscriptions.length} subscriptions
       </p>
     </div>
