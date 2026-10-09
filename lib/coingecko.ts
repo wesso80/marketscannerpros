@@ -24,6 +24,11 @@ export function resolveCoinGeckoApiKey(env: Record<string, string | undefined> =
   }
   return key;
 }
+
+/** True when a Pro key is configured. Does not warn. Callers outside this file use this instead of reading the env. */
+export function hasCoinGeckoApiKey(env: Record<string, string | undefined> = process.env): boolean {
+  return Boolean((env.COINGECKO_API_KEY || env.COINGECKO_PRO_API_KEY || '').trim());
+}
 const getApiKey = () => resolveCoinGeckoApiKey();
 const BASE_URL = 'https://pro-api.coingecko.com/api/v3';
 const FREE_URL = 'https://api.coingecko.com/api/v3';
@@ -33,8 +38,11 @@ const getBaseUrl = () => getApiKey() ? BASE_URL : FREE_URL;
 const getWebSocketUrl = () => process.env.COINGECKO_WS_URL || '';
 
 // Circuit breaker — trips after repeated non-429 failures (500s, timeouts)
+import { createHash } from 'node:crypto';
 import { coinGeckoCircuit } from '@/lib/circuitBreaker';
 import { recordCgCall } from '@/lib/admin/cgCredits';
+import { isCgMonthlyCap, reserveCgCall } from '@/lib/admin/cgDailyCap';
+import { getRedis } from '@/lib/redis';
 import {
   recordProviderFailure,
   recordProviderSuccess,
@@ -60,7 +68,7 @@ const SYMBOL_RESOLUTION_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const ERROR_COOLDOWN_TTL_MS = 5 * 60 * 1000;
 const RATE_LIMIT_COOLDOWN_TTL_MS = 60 * 1000;
 
-// CoinGecko daily budget tracking removed — usage is monitored via CoinGecko dashboard directly.
+// Hard monthly cap: lib/admin/cgDailyCap.ts reserves one credit before every HTTP attempt.
 
 let derivativesCache: { value: DerivativeTicker[]; fetchedAt: number } | null = null;
 let derivativesInFlight: Promise<DerivativeTicker[] | null> | null = null;
@@ -220,6 +228,59 @@ function isNonRetryableCoinGeckoError(code?: CoinGeckoErrorCode): boolean {
   return code === 10002 || code === 10005 || code === 10010 || code === 10011;
 }
 
+function logCg(label: string, error: unknown): void {
+  if (isCgMonthlyCap(error)) {
+    console.error('CG_MONTHLY_CAP');
+    return;
+  }
+  console.error(label, error);
+}
+
+type CachedCgBody<T> = { body: T; freshUntil: number };
+const cgResponseCache = new Map<string, CachedCgBody<unknown>>();
+const CG_RESPONSE_CACHE_MAX = 100;
+
+export function resetCgResponseCacheForTests(): void {
+  cgResponseCache.clear();
+}
+
+function revalidateSeconds(init?: RequestInit): number | null {
+  const next = (init as { next?: { revalidate?: number | false } } | undefined)?.next;
+  if (!next || typeof next.revalidate !== 'number' || !(next.revalidate > 0)) return null;
+  return next.revalidate;
+}
+
+function responseCacheKey(url: string): string {
+  return `admin:cg-credits:v1:body:${createHash('sha256').update(url).digest('hex')}`;
+}
+
+function rememberResponse<T>(url: string, body: T, ttlSeconds: number, now = Date.now()): void {
+  if (cgResponseCache.size >= CG_RESPONSE_CACHE_MAX) {
+    const oldest = cgResponseCache.keys().next().value;
+    if (oldest) cgResponseCache.delete(oldest);
+  }
+  cgResponseCache.set(url, { body, freshUntil: now + ttlSeconds * 1000 });
+  const encoded = JSON.stringify(body);
+  if (encoded.length > 200_000) return;
+  void getRedis()?.set(responseCacheKey(url), { body, freshUntil: now + ttlSeconds * 1000 }, { ex: ttlSeconds }).catch(() => undefined);
+}
+
+async function readFreshResponse<T>(url: string, now = Date.now()): Promise<T | undefined> {
+  const local = cgResponseCache.get(url) as CachedCgBody<T> | undefined;
+  if (local && local.freshUntil > now) return local.body;
+  try {
+    const cached = await getRedis()?.get<CachedCgBody<T>>(responseCacheKey(url));
+    if (cached && typeof cached === 'object' && cached.freshUntil > now) return cached.body;
+  } catch { /* cap fallback must not throw if Redis cannot be read */ }
+  return undefined;
+}
+
+function coinGeckoCircuitIsBlocking(now = Date.now()): boolean {
+  const snap = coinGeckoCircuit.getSnapshot?.();
+  if (!snap) return false;
+  return snap.state === 'OPEN' && now - snap.lastFailureTime < snap.effectiveResetMs;
+}
+
 function describeCoinGeckoError(code?: CoinGeckoErrorCode): string {
   switch (code) {
     case 10002:
@@ -257,6 +318,22 @@ async function cgFetch<T>(
   if (cooledDown) providerErrorCooldown.delete(cooldownKey);
 
   const execute = async (remainingRetries: number): Promise<T> => {
+    const cacheTtl = revalidateSeconds(options?.init);
+    if (!coinGeckoCircuitIsBlocking()) {
+      try {
+        await reserveCgCall();
+      } catch (error) {
+        if (isCgMonthlyCap(error) && cacheTtl) {
+          const cached = await readFreshResponse<T>(url);
+          if (cached !== undefined) {
+            console.error('CG_MONTHLY_CAP');
+            return cached;
+          }
+        }
+        throw error;
+      }
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     const startedAt = Date.now();
@@ -326,8 +403,11 @@ async function cgFetch<T>(
       }
 
       recordProviderSuccess('COINGECKO', endpointFamily, Date.now() - startedAt);
-      return (await response.json()) as T;
+      const body = (await response.json()) as T;
+      if (cacheTtl) rememberResponse(url, body, cacheTtl);
+      return body;
     } catch (error) {
+      if (isCgMonthlyCap(error)) throw error;
       if (remainingRetries > 0) {
         const message = error instanceof Error ? error.message : String(error);
         const retryable =
@@ -651,7 +731,7 @@ export async function getSimplePrices(
       init: options?.noStore ? { cache: 'no-store' } : { next: { revalidate: 30 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Price fetch error:', error);
+    logCg('[CoinGecko] Price fetch error:', error);
     return null;
   }
 }
@@ -671,6 +751,8 @@ export async function getMarketData(
     price_change_percentage?: Array<'1h' | '24h' | '7d' | '14d' | '30d' | '200d' | '1y'>;
     /** 'full' returns un-rounded prices (same as /simple/price precision=full), needed for sub-cent coins. */
     precision?: 'full';
+    /** CoinGecko category id. Used by the overnight radar; still goes through cgFetch. */
+    category?: string;
   },
   requestOptions?: { retries?: number; timeoutMs?: number; noStore?: boolean },
 ): Promise<CoinGeckoMarketData[] | null> {
@@ -691,6 +773,10 @@ export async function getMarketData(
       params.set('ids', options.ids.join(','));
     }
 
+    if (options?.category) {
+      params.set('category', options.category);
+    }
+
     if (options?.precision) {
       params.set('precision', options.precision);
     }
@@ -702,7 +788,7 @@ export async function getMarketData(
       init: requestOptions?.noStore ? { cache: 'no-store' } : { next: { revalidate: 90 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Markets fetch error:', error);
+    logCg('[CoinGecko] Markets fetch error:', error);
     return null;
   }
 }
@@ -736,7 +822,7 @@ export async function getOHLC(
       timeoutMs: requestOptions?.timeoutMs,
     });
   } catch (error) {
-    console.error('[CoinGecko] OHLC fetch error:', error);
+    logCg('[CoinGecko] OHLC fetch error:', error);
     return null;
   }
 }
@@ -797,7 +883,7 @@ export async function getOHLCRange(
       timeoutMs: requestOptions?.timeoutMs,
     });
   } catch (error) {
-    console.error('[CoinGecko] OHLC range fetch error:', error);
+    logCg('[CoinGecko] OHLC range fetch error:', error);
     return null;
   }
 }
@@ -824,7 +910,7 @@ export async function getMarketChartHistory(
       timeoutMs: requestOptions?.timeoutMs,
     });
   } catch (error) {
-    console.error('[CoinGecko] Market chart history fetch error:', error);
+    logCg('[CoinGecko] Market chart history fetch error:', error);
     return null;
   }
 }
@@ -848,7 +934,7 @@ export async function getCoinDetail(coinId: string): Promise<any | null> {
       init: { next: { revalidate: 300 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Coin detail error:', error);
+    logCg('[CoinGecko] Coin detail error:', error);
     return null;
   }
 }
@@ -877,7 +963,7 @@ export async function getGlobalData(): Promise<{
     });
     return data.data;
   } catch (error) {
-    console.error('[CoinGecko] Global data error:', error);
+    logCg('[CoinGecko] Global data error:', error);
     return null;
   }
 }
@@ -896,7 +982,7 @@ export async function searchCoins(query: string): Promise<{
       init: { next: { revalidate: 600 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Search error:', error);
+    logCg('[CoinGecko] Search error:', error);
     return null;
   }
 }
@@ -1222,7 +1308,7 @@ export async function getDerivativesTickers(): Promise<DerivativeTicker[] | null
 
       return data;
     } catch (error) {
-      console.error('[CoinGecko] Major-exchange derivatives fetch error:', error);
+      logCg('[CoinGecko] Major-exchange derivatives fetch error:', error);
       derivativesRetryAt = Date.now() + DERIVATIVES_FAILURE_COOLDOWN_MS;
       return usableDerivativesCache(Date.now());
     } finally {
@@ -1233,7 +1319,7 @@ export async function getDerivativesTickers(): Promise<DerivativeTicker[] | null
   try {
     return await derivativesInFlight;
   } catch (error) {
-    console.error('[CoinGecko] Derivatives fetch error:', error);
+    logCg('[CoinGecko] Derivatives fetch error:', error);
     return null;
   }
 }
@@ -1343,7 +1429,7 @@ export async function getDerivativesExchanges(): Promise<{ id: string; name: str
       init: { next: { revalidate: 300 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Derivatives exchanges error:', error);
+    logCg('[CoinGecko] Derivatives exchanges error:', error);
     return null;
   }
 }
@@ -1390,7 +1476,7 @@ export async function getTrendingCoins(): Promise<TrendingResponse | null> {
       init: { next: { revalidate: 300 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Trending fetch error:', error);
+    logCg('[CoinGecko] Trending fetch error:', error);
     return null;
   }
 }
@@ -1434,7 +1520,7 @@ export async function getTopGainersLosers(
       init: { next: { revalidate: 300 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Top gainers/losers fetch error:', error);
+    logCg('[CoinGecko] Top gainers/losers fetch error:', error);
     return null;
   }
 }
@@ -1457,7 +1543,7 @@ export async function getNewListings(): Promise<NewListing[] | null> {
       init: { next: { revalidate: 600 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] New listings fetch error:', error);
+    logCg('[CoinGecko] New listings fetch error:', error);
     return null;
   }
 }
@@ -1489,7 +1575,7 @@ export async function getCoinCategories(): Promise<CoinCategory[] | null> {
       init: { next: { revalidate: 300 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Categories fetch error:', error);
+    logCg('[CoinGecko] Categories fetch error:', error);
     return null;
   }
 }
@@ -1520,7 +1606,7 @@ export async function getDefiData(): Promise<DefiData | null> {
     });
     return data.data;
   } catch (error) {
-    console.error('[CoinGecko] DeFi data fetch error:', error);
+    logCg('[CoinGecko] DeFi data fetch error:', error);
     return null;
   }
 }
@@ -1544,7 +1630,7 @@ export async function getGlobalMarketCapChart(
       init: { next: { revalidate: 600 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Global market cap chart fetch error:', error);
+    logCg('[CoinGecko] Global market cap chart fetch error:', error);
     return null;
   }
 }
@@ -1627,7 +1713,7 @@ export async function getTrendingPools(): Promise<{ data: TrendingPool[] } | nul
       init: { next: { revalidate: 300 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Trending pools fetch error:', error);
+    logCg('[CoinGecko] Trending pools fetch error:', error);
     return null;
   }
 }
@@ -1656,7 +1742,7 @@ export async function getNewPools(options?: {
       }
     );
   } catch (error) {
-    console.error('[CoinGecko] New pools fetch error:', error);
+    logCg('[CoinGecko] New pools fetch error:', error);
     return null;
   }
 }
@@ -1706,7 +1792,7 @@ export async function getCoinTickers(
       init: { next: { revalidate: 120 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Coin tickers error:', error);
+    logCg('[CoinGecko] Coin tickers error:', error);
     return null;
   }
 }
@@ -1745,7 +1831,7 @@ export async function getPublicTreasury(
       init: { next: { revalidate: 600 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Public treasury error:', error);
+    logCg('[CoinGecko] Public treasury error:', error);
     return null;
   }
 }
@@ -1769,7 +1855,7 @@ export async function getExchangeRates(): Promise<ExchangeRates | null> {
       init: { next: { revalidate: 120 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Exchange rates error:', error);
+    logCg('[CoinGecko] Exchange rates error:', error);
     return null;
   }
 }
@@ -1811,7 +1897,7 @@ export async function getExchanges(
       init: { next: { revalidate: 300 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Exchanges list error:', error);
+    logCg('[CoinGecko] Exchanges list error:', error);
     return null;
   }
 }
@@ -1827,7 +1913,7 @@ export async function getExchangeDetail(exchangeId: string): Promise<any | null>
       init: { next: { revalidate: 300 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Exchange detail error:', error);
+    logCg('[CoinGecko] Exchange detail error:', error);
     return null;
   }
 }
@@ -1865,7 +1951,7 @@ export async function getCoinHistory(
       init: { next: { revalidate: 3600 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Coin history error:', error);
+    logCg('[CoinGecko] Coin history error:', error);
     return null;
   }
 }
@@ -1906,7 +1992,7 @@ export async function getMarketChartRange(
       timeoutMs: requestOptions?.timeoutMs,
     });
   } catch (error) {
-    console.error('[CoinGecko] Market chart range error:', error);
+    logCg('[CoinGecko] Market chart range error:', error);
     return null;
   }
 }
@@ -1935,7 +2021,7 @@ export async function getCoinDetailFull(coinId: string): Promise<any | null> {
       init: { next: { revalidate: 300 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Coin detail full error:', error);
+    logCg('[CoinGecko] Coin detail full error:', error);
     return null;
   }
 }
@@ -1971,7 +2057,7 @@ export async function getMarketChartFull(
       init: { next: { revalidate: 60 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Market chart full error:', error);
+    logCg('[CoinGecko] Market chart full error:', error);
     return null;
   }
 }
@@ -1991,7 +2077,7 @@ export async function getApiUsage(): Promise<any | null> {
       init: { next: { revalidate: 60 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] API usage error:', error);
+    logCg('[CoinGecko] API usage error:', error);
     return null;
   }
 }
@@ -2033,7 +2119,7 @@ export async function getDerivativesExchangesData(
       init: { next: { revalidate: 300 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Derivatives exchanges data error:', error);
+    logCg('[CoinGecko] Derivatives exchanges data error:', error);
     return null;
   }
 }
@@ -2079,7 +2165,7 @@ export async function getCryptoNews(options?: {
       init: { next: { revalidate: 300 } },
     });
   } catch (error) {
-    console.error('[CoinGecko] Crypto news error:', error);
+    logCg('[CoinGecko] Crypto news error:', error);
     if (options?.throwOnError) throw error;
     return null;
   }
@@ -2153,7 +2239,7 @@ export async function getTokenInfo(
     );
     return data.data ?? null;
   } catch (error) {
-    console.error('[CoinGecko] Token info error:', error);
+    logCg('[CoinGecko] Token info error:', error);
     return null;
   }
 }
@@ -2201,7 +2287,7 @@ export async function getTopTraders(
     });
     return data.data?.attributes?.traders ?? null;
   } catch (error) {
-    console.error('[CoinGecko] Top traders error:', error);
+    logCg('[CoinGecko] Top traders error:', error);
     return null;
   }
 }
@@ -2251,7 +2337,7 @@ export async function getPoolWithVolumeBreakdown(
     });
     return data.data ?? null;
   } catch (error) {
-    console.error('[CoinGecko] Pool volume breakdown error:', error);
+    logCg('[CoinGecko] Pool volume breakdown error:', error);
     return null;
   }
 }
@@ -2277,7 +2363,7 @@ export async function getOnchainNetworksPage(page: number): Promise<OnchainNetwo
     });
     return Array.isArray(data?.data) ? data.data : null;
   } catch (error) {
-    console.error('[CoinGecko] Onchain networks error:', error);
+    logCg('[CoinGecko] Onchain networks error:', error);
     return null;
   }
 }
@@ -2296,7 +2382,7 @@ export async function getTopTokenHolders(network: string, address: string, holde
     const a = data?.data?.attributes;
     return a && Array.isArray(a.holders) ? { lastUpdatedAt: a.last_updated_at ?? null, holders: a.holders } : null;
   } catch (error) {
-    console.error('[CoinGecko] Top holders error:', error);
+    logCg('[CoinGecko] Top holders error:', error);
     return null;
   }
 }
@@ -2313,7 +2399,7 @@ export async function getCoinsList(status: 'active' | 'inactive' = 'active'): Pr
     const data = await cgFetch<CoinListEntry[]>('/coins/list', { params, init: { cache: 'no-store' }, timeoutMs: 30_000 });
     return Array.isArray(data) ? data : null;
   } catch (error) {
-    console.error('[CoinGecko] Coins list error:', error);
+    logCg('[CoinGecko] Coins list error:', error);
     return null;
   }
 }
@@ -2329,7 +2415,7 @@ export async function getGlobalMarketCapHistory(days: number): Promise<{ market_
     const c = data?.market_cap_chart;
     return c && Array.isArray(c.market_cap) ? { market_cap: c.market_cap, volume: Array.isArray(c.volume) ? c.volume : [] } : null;
   } catch (error) {
-    console.error('[CoinGecko] Global market cap history error:', error);
+    logCg('[CoinGecko] Global market cap history error:', error);
     return null;
   }
 }
