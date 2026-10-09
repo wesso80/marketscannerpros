@@ -21,7 +21,11 @@ dotenv.config({ path: '.env.local' });
 
 import { Pool } from 'pg';
 import { alertWorkerError } from '../lib/opsAlerting';
-import { bandForHorizon, bandsFromRows, classifyMove, horizonsWithFallback } from '../lib/signals/outcomeRule';
+import { COINGECKO_ID_MAP } from '../lib/coingecko';
+import { bandForHorizon, bandsFromRows, horizonsWithFallback } from '../lib/signals/outcomeRule';
+import {
+  declaredAssetClass, inCryptoSymbolMap, labelHorizonMove, resolveOutcomeAsset, symbolBase,
+} from '../lib/signals/outcomeGuard';
 
 // Lazy database connection
 let pool: Pool | null = null;
@@ -69,9 +73,9 @@ const TOLERANCE_WINDOWS: Record<number, { bars: number; minutes: number }> = {
  * The ingest worker writes timeframe 'daily' (stamped 00:00 UTC of the session
  * date). It fetches 60min bars for midpoints but does not insert them here, so
  * '1h' / '60min' rows are rare. A 1d or 1w window is long enough to include the
- * next daily bar. A 1h or 4h window usually is not, and then quotes_latest is
- * used only while the tolerance window is still open. After that the row is
- * 'unknown', not wrong.
+ * next daily bar. A 1h or 4h window usually is not. quotes_latest is never used:
+ * a missing bar inside the window is skipped, and a missing bar after the window
+ * is unknown. A live price is not a horizon price.
  *
  * CRITICAL: To avoid label leakage, we must use the FIRST bar's CLOSE
  * that is >= target time. Not the high/low during the window,
@@ -79,16 +83,17 @@ const TOLERANCE_WINDOWS: Record<number, { bars: number; minutes: number }> = {
  *
  * @param horizonMinutes - Used to determine tolerance window
  */
-async function getPriceAtTime(
-  symbol: string, 
+async function getHorizonBar(
+  symbol: string,
   targetTime: Date,
   horizonMinutes: number = 1440
-): Promise<{ price: number | null; withinTolerance: boolean }> {
+): Promise<{ price: number; observedAtMs: number } | null> {
   const tolerance = TOLERANCE_WINDOWS[horizonMinutes] || { bars: 2, minutes: 240 };
   const maxTime = new Date(targetTime.getTime() + tolerance.minutes * 60 * 1000);
-  
-  // STRICT: First bar AFTER target time (avoids label leakage). Symbols are
-  // stored uppercased, so compare to UPPER($1) and leave the symbol index usable.
+
+  // First bar at or after the target, and still inside the tolerance window.
+  // Symbols are stored uppercased, so compare to UPPER($1) and leave the symbol index usable.
+  // No quotes_latest fallback: a current price is not the price at the horizon.
   const firstBarAfter = await q<{ close: string, ts: string }>(
     `SELECT close, ts FROM ohlcv_bars 
      WHERE symbol = UPPER($1)
@@ -99,28 +104,12 @@ async function getPriceAtTime(
      LIMIT 1`,
     [symbol, targetTime, maxTime]
   );
-  
-  if (firstBarAfter.length > 0) {
-    return { price: parseFloat(firstBarAfter[0].close), withinTolerance: true };
-  }
-  
-  // If no bar within tolerance window, check if signal is recent enough to use current quote
-  const now = new Date();
-  const hoursSinceTarget = (now.getTime() - targetTime.getTime()) / (1000 * 60 * 60);
-  
-  // Only use current quote if we're within tolerance window of target
-  if (hoursSinceTarget >= 0 && hoursSinceTarget * 60 < tolerance.minutes) {
-    const quote = await q<{ price: string }>(
-      'SELECT price FROM quotes_latest WHERE symbol = UPPER($1)',
-      [symbol]
-    );
-    if (quote.length > 0) {
-      return { price: parseFloat(quote[0].price), withinTolerance: true };
-    }
-  }
-  
-  // No price found within tolerance
-  return { price: null, withinTolerance: false };
+
+  if (firstBarAfter.length === 0) return null;
+  const price = parseFloat(firstBarAfter[0].close);
+  const observedAtMs = new Date(firstBarAfter[0].ts).getTime();
+  if (!Number.isFinite(price) || !(price > 0) || !Number.isFinite(observedAtMs)) return null;
+  return { price, observedAtMs };
 }
 
 async function labelOutcomes() {
@@ -169,6 +158,27 @@ async function labelOutcomes() {
     }
     
     console.log(`   Found ${unlabeled.length} signals to label`);
+
+    const featureById = new Map<number, unknown>();
+    const universeBySymbol = new Map<string, string[]>();
+    try {
+      const metas = await q<{ id: string; features_json: unknown }>(
+        `SELECT id, features_json FROM signals_fired WHERE id = ANY($1::bigint[])`,
+        [unlabeled.map((row) => row.signal_id)],
+      );
+      for (const row of metas) featureById.set(Number(row.id), row.features_json);
+      const symbols = [...new Set(unlabeled.map((row) => String(row.symbol).toUpperCase()))];
+      const universe = await q<{ symbol: string; asset_type: string }>(
+        `SELECT symbol, asset_type FROM symbol_universe WHERE symbol = ANY($1::text[])`,
+        [symbols],
+      );
+      for (const row of universe) {
+        const key = String(row.symbol).toUpperCase();
+        universeBySymbol.set(key, [...(universeBySymbol.get(key) ?? []), row.asset_type]);
+      }
+    } catch (err) {
+      console.warn('[outcomes] symbol class read failed; collisions are judged from the coin map only', err instanceof Error ? err.message : err);
+    }
     
     let labeled = 0;
     let skipped = 0;
@@ -182,63 +192,50 @@ async function labelOutcomes() {
         continue;
       }
       
-      // Calculate target time
       const signalTime = new Date(signal_at);
       const targetTime = new Date(signalTime.getTime() + horizon_minutes * 60 * 1000);
-      
-      // Get price at target time with tolerance
-      const { price: priceLater, withinTolerance } = await getPriceAtTime(symbol, targetTime, horizon_minutes);
-      
-      // If no price found within tolerance, mark as unknown (not wrong!)
-      if (priceLater === null) {
-        // Only mark as unknown if the signal is old enough that we SHOULD have data
-        const now = new Date();
-        const tolerance = TOLERANCE_WINDOWS[horizon_minutes] || { bars: 2, minutes: 240 };
-        const shouldHaveData = now.getTime() > targetTime.getTime() + tolerance.minutes * 60 * 1000;
-        
-        if (shouldHaveData) {
-          // Record as unknown - data should exist but doesn't
-          try {
-            await q(
-              `INSERT INTO signal_outcomes (signal_id, horizon_minutes, price_later, pct_move, outcome)
-               VALUES ($1, $2, NULL, NULL, 'unknown')
-               ON CONFLICT (signal_id, horizon_minutes) 
-               DO UPDATE SET outcome = 'unknown', labeled_at = NOW()`,
-              [signal_id, horizon_minutes]
-            );
-            unknown++;
-          } catch (err) {
-            console.error(`   ⚠️ Error marking ${symbol} as unknown:`, err instanceof Error ? err.message : err);
-          }
-        } else {
-          // Not old enough yet, skip and try again later
-          skipped++;
-        }
+      const bar = await getHorizonBar(symbol, targetTime, horizon_minutes);
+      const asset = resolveOutcomeAsset({
+        symbol,
+        declared: declaredAssetClass(featureById.get(Number(signal_id))),
+        universeTypes: universeBySymbol.get(String(symbol).toUpperCase()) ?? [],
+        inCryptoMap: inCryptoSymbolMap(symbolBase(symbol), COINGECKO_ID_MAP),
+      });
+      const decision = labelHorizonMove({
+        direction,
+        bandPct: bandForHorizon(horizon_minutes, bandMap),
+        priceAtSignal,
+        nowMs: Date.now(),
+        signalAtMs: signalTime.getTime(),
+        horizonMinutes: horizon_minutes,
+        asset,
+        observation: bar ? { price: bar.price, observedAtMs: bar.observedAtMs, live: false } : null,
+      });
+
+      if (decision.action === 'skip') {
+        skipped++;
         continue;
       }
+
+      if (decision.reason === 'suspect' || decision.reason === 'ambiguous' || decision.reason === 'expired') {
+        console.warn(`[outcomes] ${symbol} ${decision.reason}${decision.pctMove != null ? ` ${decision.pctMove.toFixed(2)}%` : ''} → unknown`);
+      }
       
-      // Calculate % move
-      const pctMove = ((priceLater - priceAtSignal) / priceAtSignal) * 100;
-      
-      // Shared per-horizon band from this run's table map (default map if that was empty).
-      const outcome = classifyMove(direction, pctMove, bandForHorizon(horizon_minutes, bandMap));
-      
-      // Insert outcome
       try {
         await q(
           `INSERT INTO signal_outcomes (signal_id, horizon_minutes, price_later, pct_move, outcome)
            VALUES ($1, $2, $3, $4, $5)
            ON CONFLICT (signal_id, horizon_minutes) 
            DO UPDATE SET price_later = $3, pct_move = $4, outcome = $5, labeled_at = NOW()`,
-          [signal_id, horizon_minutes, priceLater, pctMove, outcome]
+          [signal_id, horizon_minutes, decision.priceLater, decision.pctMove, decision.outcome]
         );
-        labeled++;
+        if (decision.outcome === 'unknown') unknown++;
+        else labeled++;
         
-        // Log interesting results
-        if (outcome === 'correct' || outcome === 'wrong') {
-          const icon = outcome === 'correct' ? '✅' : '❌';
-          const sign = pctMove >= 0 ? '+' : '';
-          console.log(`   ${icon} ${symbol} (${direction}): ${sign}${pctMove.toFixed(2)}% → ${outcome}`);
+        if (decision.outcome === 'correct' || decision.outcome === 'wrong') {
+          const icon = decision.outcome === 'correct' ? '✅' : '❌';
+          const sign = (decision.pctMove ?? 0) >= 0 ? '+' : '';
+          console.log(`   ${icon} ${symbol} (${direction}): ${sign}${(decision.pctMove ?? 0).toFixed(2)}% → ${decision.outcome}`);
         }
       } catch (err) {
         console.error(`   ❌ Error labeling ${symbol}:`, err instanceof Error ? err.message : err);

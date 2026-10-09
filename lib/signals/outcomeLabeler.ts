@@ -9,15 +9,20 @@
  *   2. For each, look for a journal_entries row or portfolio_closed row
  *      with the same symbol AND entry_date within ±60 min of signal_at.
  *   3. If a match is found, compute pct_move = (exit_price - signal_price) / signal_price
- *      and label outcome as 'correct', 'wrong', or 'neutral' based on direction.
- *   4. If signal is older than 7 days with no match, label from market price (mark-to-market).
+ *      and label outcome as 'correct', 'wrong', or 'neutral' based on direction,
+ *      only when that exit falls inside the horizon window. A live price is never used
+ *      after the window. An ambiguous crypto/equity ticker, or a move past 50%, is unknown.
  *
  * Run this from a cron job or on-demand API endpoint.
  */
 
 import { q, tx } from '@/lib/db';
 import type { PoolClient } from 'pg';
+import { COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { bandForHorizon, bandsFromRows, classifyMove, DEFAULT_OUTCOME_BANDS } from './outcomeRule';
+import {
+  declaredAssetClass, inCryptoSymbolMap, labelHorizonMove, observationInstantMs, resolveOutcomeAsset, symbolBase,
+} from './outcomeGuard';
 
 export interface OutcomeLabel {
   signalId: number;
@@ -72,8 +77,9 @@ export async function labelSignalOutcomes(workspaceId: string): Promise<{ labele
       price_at_signal: number;
       signal_at: string;
       timeframe: string;
+      features_json?: unknown;
     }>(`
-      SELECT sf.id, sf.symbol, sf.direction, sf.price_at_signal, sf.signal_at, sf.timeframe
+      SELECT sf.id, sf.symbol, sf.direction, sf.price_at_signal, sf.signal_at, sf.timeframe, sf.features_json
       FROM signals_fired sf
       WHERE NOT EXISTS (
         SELECT 1 FROM signal_outcomes so WHERE so.signal_id = sf.id
@@ -138,10 +144,35 @@ export async function labelSignalOutcomes(workspaceId: string): Promise<{ labele
         }
 
         if (exitPrice !== null && signal.price_at_signal > 0) {
-          const pctMove = ((exitPrice - signal.price_at_signal) / signal.price_at_signal) * 100;
-          // Horizon stored on the row, then the band for that horizon.
           const horizonMinutes = timeframeToHorizonMinutes(signal.timeframe);
-          const outcome = labelOutcome(signal.direction, pctMove, horizonMinutes, bands);
+          const signalMs = new Date(signal.signal_at).getTime();
+          const universe = await q<{ asset_type: string }>(
+            `SELECT asset_type FROM symbol_universe WHERE symbol = UPPER($1)`,
+            [signal.symbol],
+          );
+          const asset = resolveOutcomeAsset({
+            symbol: signal.symbol,
+            declared: declaredAssetClass(signal.features_json),
+            universeTypes: universe.map((row) => row.asset_type),
+            inCryptoMap: inCryptoSymbolMap(symbolBase(signal.symbol), COINGECKO_ID_MAP),
+          });
+          const closedAt = journalMatch[0]?.close_date ?? portfolioMatch[0]?.closed_at ?? null;
+          const decision = labelHorizonMove({
+            direction: signal.direction,
+            bandPct: bandForHorizon(horizonMinutes, bands),
+            priceAtSignal: signal.price_at_signal,
+            nowMs: Date.now(),
+            signalAtMs: signalMs,
+            horizonMinutes,
+            asset,
+            observation: closedAt == null || !Number.isFinite(observationInstantMs(closedAt))
+              ? null
+              : { price: exitPrice, observedAtMs: observationInstantMs(closedAt), live: false },
+          });
+          if (decision.action === 'skip') continue;
+          if (decision.reason === 'suspect' || decision.reason === 'ambiguous') {
+            console.warn(`[outcomeLabeler] ${signal.symbol} ${decision.reason}${decision.pctMove != null ? ` ${decision.pctMove.toFixed(2)}%` : ''}`);
+          }
 
           await q(`
             INSERT INTO signal_outcomes (signal_id, horizon_minutes, pct_move, outcome)
@@ -149,7 +180,7 @@ export async function labelSignalOutcomes(workspaceId: string): Promise<{ labele
             ON CONFLICT (signal_id, horizon_minutes) DO UPDATE SET
               pct_move = EXCLUDED.pct_move,
               outcome = EXCLUDED.outcome
-          `, [signal.id, horizonMinutes, Number(pctMove.toFixed(4)), outcome]);
+          `, [signal.id, horizonMinutes, decision.pctMove == null ? null : Number(decision.pctMove.toFixed(4)), decision.outcome]);
 
           labeled++;
         }

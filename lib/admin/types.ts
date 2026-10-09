@@ -103,6 +103,8 @@ export type AdminSymbolIntelligence = {
   session: string;
   price: number;
   changePercent: number;
+  /** Set when the day change was withheld and must not be read as a real move. */
+  moveWithheld?: 'suspect' | 'ambiguous';
   bias: BiasState;
   regime: Regime | string;
   /** Final permission AFTER governance/portfolio overlay. Risk-desk only for filtering. */

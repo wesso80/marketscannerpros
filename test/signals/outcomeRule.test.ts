@@ -79,7 +79,8 @@ it('the session labeler uses the same boundary as classifyMove, including an unm
  expect(labeler).toContain('classifyMove');
  expect(labeler).toContain('bandForHorizon');
  const worker=readFileSync('worker/label-outcomes.ts','utf8');
- expect(worker).toContain('classifyMove');
+ expect(worker).toContain('labelHorizonMove');
+ expect(readFileSync('lib/signals/outcomeGuard.ts','utf8')).toContain('classifyMove');
  expect(worker).toContain('horizonsWithFallback');
  expect(worker).not.toContain('function computeOutcome');
  expect(worker).toContain('refresh_signal_accuracy');
@@ -93,6 +94,7 @@ it('the session labeler uses the same boundary as classifyMove, including an unm
  expect(worker).toContain('bandsFromRows');
  expect(worker).toContain('symbol = UPPER($1)');
  expect(worker).not.toContain('UPPER(symbol)');
+ expect(worker).not.toMatch(/FROM quotes_latest/i);
 });
 
 const signalRow={id:1,symbol:'AAPL',direction:'bullish' as const,price_at_signal:100,signal_at:'2026-10-01T14:00:00Z',timeframe:'1d'};

@@ -1,5 +1,6 @@
 import { evaluateDailyPickTrust } from '@/lib/scanner/dailyPickTrust';
 import { dailyPickPriceBasis } from '@/lib/scanner/dailyPickPriceBasis';
+import { dailyPickHeader } from '@/lib/scanner/dailyPickSession';
 /**
  * Latest daily-scan observations, shared by the public /daily-pick page and the /api/og/scan DAILY card so the card
  * always shows the same symbols as the page.
@@ -28,7 +29,10 @@ export interface DailyPickRow {
 }
 
 export interface DayData {
+  /** Newest equity bar date on this page, or the newest row date when there are no equities. Not the wall clock. */
   scan_date: string;
+  /** Set when an equity price is older than the last completed US session. */
+  pricesAsOfNote?: string | null;
   picks: DailyPickRow[];
 }
 
@@ -51,15 +55,9 @@ type Row = {
   indicators?: Record<string, any>; scan_date?: string; created_at?: string;
 };
 
-export async function loadLatestDailyPicks(): Promise<DayData | null> {
-  const latest = await q<{ scan_date: unknown }>(
-    `SELECT scan_date FROM daily_picks ORDER BY scan_date DESC LIMIT 1`,
-  );
-  if (latest.length === 0) return null;
-  const scan_date = toDateString(latest[0].scan_date);
-
-  // Enriched query needs migration 097 (shares_float / short_pct_float); fall back to picks only. Symbol order, no score.
-  const LATEST = `dp.scan_date = (SELECT MAX(d.scan_date) FROM daily_picks d WHERE d.asset_class = dp.asset_class) AND $1::date IS NOT NULL`;
+export async function loadLatestDailyPicks(nowMs: number = Date.now()): Promise<DayData | null> {
+  // Each asset class keeps its own latest scan. A later crypto candle must not become the equity header date.
+  const LATEST = `dp.scan_date = (SELECT MAX(d.scan_date) FROM daily_picks d WHERE d.asset_class = dp.asset_class)`;
   let rows: Row[];
   try {
     rows = await q<Row>(
@@ -70,7 +68,6 @@ export async function loadLatestDailyPicks(): Promise<DayData | null> {
         WHERE ${LATEST}
         ORDER BY dp.symbol, dp.asset_class
         LIMIT 120`,
-      [scan_date],
     );
   } catch (err) {
     console.warn('[daily-pick] enriched query failed, falling back:', err);
@@ -80,29 +77,41 @@ export async function loadLatestDailyPicks(): Promise<DayData | null> {
         WHERE ${LATEST}
         ORDER BY dp.symbol, dp.asset_class
         LIMIT 120`,
-      [scan_date],
     );
     rows = fallback.map((r) => ({ ...r, sector: null, shares_float: null, short_pct_float: null }));
   }
+  if (rows.length === 0) return null;
 
   const visible = rows.filter((r) => r.asset_class === 'equity' || r.asset_class === 'crypto');
   visible.sort((a, b) => a.symbol.localeCompare(b.symbol) || a.asset_class.localeCompare(b.asset_class));
+  const picks = visible.map((r) => {
+    const trust = evaluateDailyPickTrust(r, nowMs);
+    const basis = dailyPickPriceBasis(r.price, readStoredCanonical(r.indicators), r.asset_class);
+    return {
+      dataAsOf: trust.dataAsOf,
+      stale: trust.freshness !== 'fresh',
+      priceLabel: basis.priceBasisLabel,
+      barDate: basis.canonicalBarDate ?? trust.dataTimestamp,
+      scanDate: toDateString(r.scan_date),
+      asset_class: r.asset_class,
+      symbol: r.symbol,
+      price: r.price ? Number(r.price) : null,
+      change_percent: r.change_percent ? Number(r.change_percent) : null,
+      sector: r.sector,
+      shares_float: r.shares_float ? Number(r.shares_float) : null,
+      short_pct_float: r.short_pct_float ? Number(r.short_pct_float) : null,
+    };
+  });
+  const header = dailyPickHeader(picks.map((pick) => ({
+    asset_class: pick.asset_class,
+    barDate: pick.barDate,
+    dataAsOf: pick.dataAsOf,
+    scan_date: pick.scanDate,
+  })), nowMs);
+  const scan_date = header?.sessionDate || toDateString(rows[0]?.scan_date);
   return {
     scan_date,
-    picks: visible.map((r) => {
-      const trust = evaluateDailyPickTrust(r);
-      return {
-        dataAsOf: trust.dataAsOf,
-        stale: trust.freshness !== 'fresh',
-        priceLabel: dailyPickPriceBasis(r.price, readStoredCanonical(r.indicators), r.asset_class).priceBasisLabel,
-        asset_class: r.asset_class,
-        symbol: r.symbol,
-        price: r.price ? Number(r.price) : null,
-        change_percent: r.change_percent ? Number(r.change_percent) : null,
-        sector: r.sector,
-        shares_float: r.shares_float ? Number(r.shares_float) : null,
-        short_pct_float: r.short_pct_float ? Number(r.short_pct_float) : null,
-      };
-    }),
+    pricesAsOfNote: header?.pricesAsOfNote ?? null,
+    picks: picks.map(({ barDate: _barDate, scanDate: _scanDate, ...pick }) => pick),
   };
 }
