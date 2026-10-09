@@ -1,5 +1,7 @@
 "use client";
 
+import OutcomeCohortAnalysis from "@/components/admin/OutcomeCohortAnalysis";
+
 import { useEffect, useState } from "react";
 import SectionTitle from "@/components/admin/shared/SectionTitle";
 import AdminCard from "@/components/admin/shared/AdminCard";
@@ -55,12 +57,15 @@ export default function OutcomesScorecardPage() {
 
   return (
     <div className="space-y-4 p-4">
-      <SectionTitle title="Playbook Scorecard" subtitle={error || "Playbook × direction × regime, last 90 days — shared-scan LONG/SHORT signals, fixed-labeller outcomes only, min 10 per cell. Win rate = W ÷ (W + L); avg move is the 24h move in the call's direction."} />
+      <SectionTitle title="Playbook Scorecard" subtitle={error || "Playbook × direction × regime, last 90 days — shared-scan LONG/SHORT signals, outcomes after the legacy date cutoff, min 10 per cell. Win rate = W ÷ (W + L); avg move is the 24h move in the call's direction."} />
       <div className="flex justify-end">
         <button onClick={load} disabled={loading} className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/15 disabled:opacity-50">
           {loading ? "Loading..." : "Refresh"}
         </button>
       </div>
+
+      <OutcomeCohortAnalysis scope="scorecard" />
+      <p className="my-3 text-sm text-slate-400">Historical analysis below: mixed or unknown method attribution. Date cutoffs alone do not verify the measurement method. The cohort selector above applies only to its own 24-hour panel.</p>
 
       <AdminCard title="Outcome Matrix">
         <div className="overflow-x-auto">
@@ -96,7 +101,7 @@ export default function OutcomesScorecardPage() {
                 );
               })}
               {!rows.length && !loading && (
-                <tr><td colSpan={9} className="px-3 py-8 text-center text-white/40">No cell has 10+ fixed-labeller outcomes yet. The labeller runs every 6 hours; cells appear as shared-scan signals are measured.</td></tr>
+                <tr><td colSpan={9} className="px-3 py-8 text-center text-white/40">No cell has 10+ outcomes after the legacy date cutoff yet. The labeller runs every 6 hours; cells appear as shared-scan signals are measured.</td></tr>
               )}
             </tbody>
           </table>
