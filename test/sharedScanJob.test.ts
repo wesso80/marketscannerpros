@@ -164,13 +164,18 @@ describe('startSharedScan — equities run', () => {
     expect(m.store.finishRun).toHaveBeenCalledWith(expect.objectContaining({ status: 'done', symbolsScanned: 1, symbolsQuoted: 1, symbolsFailed: 1, avCalls: 1 }));
   });
 
-  it('does not post the new-names Discord alert unless ADMIN_RADAR_DISCORD_ENABLED is true or 1', async () => {
+  it('equities, flag unset: does not post the new-names Discord alert', async () => {
     m.avFetch.mockResolvedValue({ data: [{ symbol: 'AAA', close: '50', previous_close: '49' }] });
     m.buildScan.mockResolvedValue(scanOk('AAA'));
-    await run({ market: 'EQUITIES', trigger: 'radar', symbols: ['AAA'] });
+    const summary = await run({ market: 'EQUITIES', trigger: 'radar', symbols: ['AAA'] });
+    expect(summary.radarChanges.map((c) => c.action)).toContain('appeared');
     expect(m.opsAlert).not.toHaveBeenCalled();
-    m.opsAlert.mockClear();
-    process.env.ADMIN_RADAR_DISCORD_ENABLED = '1';
+  });
+
+  it('equities, flag true: posts the new-names Discord alert', async () => {
+    process.env.ADMIN_RADAR_DISCORD_ENABLED = 'true';
+    m.avFetch.mockResolvedValue({ data: [{ symbol: 'AAA', close: '50', previous_close: '49' }] });
+    m.buildScan.mockResolvedValue(scanOk('AAA'));
     await run({ market: 'EQUITIES', trigger: 'radar', symbols: ['AAA'] });
     expect(m.opsAlert).toHaveBeenCalledTimes(1);
   });
@@ -240,6 +245,14 @@ describe('startSharedScan — equities run', () => {
 });
 
 describe('startSharedScan — crypto and locking', () => {
+  it('crypto, flag unset: still posts the new-names Discord alert', async () => {
+    m.buildScan.mockResolvedValue(scanOk('BTC'));
+    const summary = await run({ market: 'CRYPTO', trigger: 'radar', symbols: ['BTC'] });
+    expect(summary.radarChanges.map((c) => `${c.symbol}:${c.action}`)).toEqual(['BTC:appeared']);
+    expect(m.opsAlert).toHaveBeenCalledTimes(1);
+    expect(m.opsAlert.mock.calls[0][0]).toMatchObject({ source: 'auto-scan', metadata: { market: 'CRYPTO' } });
+  });
+
   it('crypto switched off (ADMIN_CRYPTO_ENABLED=false): rows marked skipped, no market-data calls', async () => {
     process.env.ADMIN_CRYPTO_ENABLED = 'false';
     m.cgEnabled.mockReturnValue(true); // CoinGecko on does not override the admin crypto kill switch

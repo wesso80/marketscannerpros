@@ -2,8 +2,9 @@
  * Outbound switches.
  * Existing equity desk email and Jev keep today's behaviour. ADMIN_EQUITY_EMAILS_DISABLED
  * is an opt-out: unset means those emails still send. Only "true" or "1" turns it on.
- * ADMIN_RADAR_DISCORD_ENABLED defaults off. Unpausing equities would newly post the
- * shared-scan "new names" Discord alert, so that post stays silent until the flag is true or 1.
+ * ADMIN_RADAR_DISCORD_ENABLED defaults off and applies to equities only. Unpausing
+ * equities would newly post the shared-scan "new names" Discord alert, so that post
+ * stays silent until the flag is true or 1. Crypto posts are unchanged.
  */
 
 function flagOn(name: string): boolean {
@@ -16,7 +17,7 @@ export function adminEquityEmailsDisabled(): boolean {
   return flagOn("ADMIN_EQUITY_EMAILS_DISABLED");
 }
 
-/** Shared-scan Discord post when new radar names appear. Unset is off. */
+/** Equity shared-scan Discord post when new radar names appear. Unset is off. Crypto is not gated. */
 export function adminRadarDiscordEnabled(): boolean {
   return flagOn("ADMIN_RADAR_DISCORD_ENABLED");
 }
