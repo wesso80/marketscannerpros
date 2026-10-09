@@ -1,0 +1,40 @@
+// Local isolated schema, real migrations and production write statements. No provider calls.
+const {Client}=require('pg');const fs=require('node:fs');const assert=require('node:assert/strict');
+const url=process.env.OUTCOME_OWNERSHIP_TEST_URL;
+if(!url||!['127.0.0.1','localhost'].includes(new URL(url).hostname))throw new Error('Loopback fixture database required');
+const db=new Client({connectionString:url});const schema='outcome_ownership_fixture_'+process.pid;
+(async()=>{await db.connect();try{
+ await db.query('CREATE SCHEMA '+schema);await db.query('SET search_path TO '+schema);
+ for(const file of ['048_ai_signal_log.sql','103_ai_signal_outcome_horizons.sql'])await db.query(fs.readFileSync('migrations/'+file,'utf8'));
+ await db.query(`ALTER TABLE ai_signal_log ADD COLUMN lifecycle_state text DEFAULT 'DISCOVERED', ADD COLUMN triggered_at timestamptz, ADD COLUMN target_1_hit_at timestamptz, ADD COLUMN stop_hit_at timestamptz, ADD COLUMN invalidated_at timestamptz`);
+ const insert=async(outcome='pending')=>(await db.query(`INSERT INTO ai_signal_log(workspace_id,symbol,regime,confluence_score,confidence,verdict,trade_bias,price_at_signal,outcome) VALUES ('fixture','AAPL','RANGE',50,50,'fixture','LONG',100,$1) RETURNING id`,[outcome])).rows[0].id;
+ const historical=await insert('correct');
+ const migration=fs.readFileSync('migrations/133_ai_outcome_ownership.sql','utf8');await db.query(migration);await db.query(migration);
+ assert.equal((await db.query('SELECT outcome_provenance FROM ai_signal_log WHERE id=$1',[historical])).rows[0].outcome_provenance,null);
+ const source=fs.readFileSync('app/api/cron/label-ai-outcomes/route.ts','utf8');
+ const extract=(re)=>source.match(re)[0].slice(1,-1);
+ const label24=extract(/`UPDATE ai_signal_log\s+SET outcome = \$1,[\s\S]*?RETURNING id`/);
+ const label4=extract(/`UPDATE ai_signal_log\s+SET outcome_4h = \$1,[\s\S]*?RETURNING id`/);
+ const expiry=extract(/`UPDATE ai_signal_log SET outcome = 'expired',[\s\S]*?RETURNING id`/);
+ const lifecycle=fs.readFileSync('app/api/jobs/signal-lifecycle/route.ts','utf8').match(/`UPDATE ai_signal_log\s+SET lifecycle_state = \$2,[\s\S]*?RETURNING id`/)[0].slice(1,-1);
+ const at='2026-10-08T12:00:00Z';const provenance=(h)=>JSON.stringify({writer:'label-ai-outcomes',method:'first-completed-close-v1',horizon:h,observedAt:at,barSource:'intraday'});
+ const id=await insert();
+ await db.query(lifecycle,[id,'EXPIRED','expired','DISCOVERED','{}']);
+ assert.equal((await db.query('SELECT outcome FROM ai_signal_log WHERE id=$1',[id])).rows[0].outcome,'pending');
+ assert.equal((await db.query(label24,['neutral',100.5,0.5,id,at,provenance('24h')])).rowCount,1);
+ assert.equal((await db.query(label24,['correct',102,2,id,at,provenance('24h')])).rowCount,0);
+ let r=(await db.query('SELECT * FROM ai_signal_log WHERE id=$1',[id])).rows[0];
+ assert.equal(r.outcome,'neutral');assert.equal(r.lifecycle_outcome,'expired');assert.equal(r.outcome_provenance.horizon,'24h');assert.equal(Date.parse(r.outcome_provenance.processedAt),r.outcome_measured_at.getTime());
+ await assert.rejects(db.query("UPDATE ai_signal_log SET outcome='correct',outcome_measured_at=NOW() WHERE id=$1",[id]),/immutable/);
+ assert.equal((await db.query(lifecycle,[id,'TARGET_1_HIT','correct','DISCOVERED','{}'])).rowCount,0); // stale state
+ assert.equal((await db.query(label4,['correct',102,2,id,at,provenance('4h')])).rowCount,1);
+ await assert.rejects(db.query('UPDATE ai_signal_log SET pct_move_4h=99 WHERE id=$1',[id]),/immutable/);
+ await assert.rejects(db.query("UPDATE ai_signal_log SET trade_bias='SHORT' WHERE id=$1",[id]),/immutable/);
+ const reverse=await insert();await db.query(label24,['neutral',100.5,0.5,reverse,at,provenance('24h')]);await db.query(lifecycle,[reverse,'TARGET_1_HIT','correct','DISCOVERED','{}']);
+ r=(await db.query('SELECT * FROM ai_signal_log WHERE id=$1',[reverse])).rows[0];assert.equal(r.outcome,'neutral');assert.equal(r.lifecycle_outcome,'correct');
+ const failed=await insert();await assert.rejects(db.query(label24,['correct','not-a-number',2,failed,at,provenance('24h')]));
+ r=(await db.query('SELECT * FROM ai_signal_log WHERE id=$1',[failed])).rows[0];assert.equal(r.outcome,'pending');assert.equal(r.outcome_provenance,null);
+ const old=await insert();await db.query("UPDATE ai_signal_log SET signal_at=NOW()-INTERVAL '8 days' WHERE id=$1",[old]);await db.query(expiry);
+ r=(await db.query('SELECT * FROM ai_signal_log WHERE id=$1',[old])).rows[0];assert.equal(r.outcome,'expired');assert.equal(r.outcome_provenance.method,'pending-expiry-v1');assert.equal(r.lifecycle_state,'DISCOVERED');
+ console.log('PASS: real migrations (twice), unknown history, both writer orders, stale CAS, atomic provenance/failure, idempotency, 4h/24h immutability and expiry provenance.');
+}finally{await db.query('ROLLBACK');await db.query('DROP SCHEMA IF EXISTS '+schema+' CASCADE');await db.end();}})().catch(e=>{console.error(e);process.exitCode=1;});

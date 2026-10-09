@@ -14,6 +14,7 @@ type SignalRow = {
   stop_loss: string | number | null;
   target_1: string | number | null;
   price_after_24h: string | number | null;
+  price_after_24h_at?: string | Date | null;
   lifecycle_state: string;
 };
 
@@ -84,7 +85,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     await ensureLifecycleColumns();
 
     const rows = await q<SignalRow>(
-      `SELECT id, symbol, trade_bias, signal_at, price_at_signal, entry_price, stop_loss, target_1, price_after_24h, lifecycle_state
+      `SELECT id, symbol, trade_bias, signal_at, price_at_signal, entry_price, stop_loss, target_1, price_after_24h, price_after_24h_at, lifecycle_state
        FROM ai_signal_log
        WHERE lifecycle_state IN ('DISCOVERED', 'WATCHING', 'TRIGGERED')
          AND signal_at >= NOW() - INTERVAL '7 days'
@@ -99,18 +100,27 @@ export async function POST(req: NextRequest): Promise<Response> {
       const next = classify(row);
       if (!next || next.state === row.lifecycle_state) continue;
 
-      await q(
+      const updated = await q<{id:number}>(
         `UPDATE ai_signal_log
          SET lifecycle_state = $2,
-             outcome = CASE WHEN $3::text IS NULL THEN outcome ELSE $3 END,
+             lifecycle_outcome = $3,
+             lifecycle_method = 'target-stop-close-v1',
+             lifecycle_provenance = $5::jsonb || jsonb_build_object('processedAt',NOW()),
              triggered_at = CASE WHEN $2 = 'TRIGGERED' AND triggered_at IS NULL THEN NOW() ELSE triggered_at END,
              target_1_hit_at = CASE WHEN $2 = 'TARGET_1_HIT' AND target_1_hit_at IS NULL THEN NOW() ELSE target_1_hit_at END,
              stop_hit_at = CASE WHEN $2 = 'STOPPED' AND stop_hit_at IS NULL THEN NOW() ELSE stop_hit_at END,
              invalidated_at = CASE WHEN $2 IN ('STOPPED', 'EXPIRED') AND invalidated_at IS NULL THEN NOW() ELSE invalidated_at END,
-             outcome_measured_at = CASE WHEN $2 IN ('TARGET_1_HIT', 'STOPPED', 'EXPIRED') THEN NOW() ELSE outcome_measured_at END
-         WHERE id = $1`,
-        [row.id, next.state, next.outcome],
+             lifecycle_outcome_measured_at = NOW()
+         WHERE id = $1 AND lifecycle_state = $4
+         RETURNING id`,
+        [row.id, next.state, next.outcome, row.lifecycle_state, JSON.stringify({
+          writer: 'signal-lifecycle', method: 'target-stop-close-v1', previousState: row.lifecycle_state,
+          signalAt: row.signal_at, direction: row.trade_bias, observedPrice: num(row.price_after_24h),
+          observedAt: row.price_after_24h_at ?? null, entryPrice: num(row.entry_price) ?? num(row.price_at_signal),
+          stop: num(row.stop_loss), target: num(row.target_1), state: next.state, outcome: next.outcome,
+        })],
       );
+      if (!updated.length) continue;
       processed += 1;
       transitions[next.state] = (transitions[next.state] || 0) + 1;
     }
