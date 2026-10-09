@@ -5,11 +5,16 @@ It happens only when the owner explicitly approves. Nothing here has been run ag
 
 Validated tip: `admin-integration` @ `d98ef088` (contains `main` @ `63da1d34`):
 full suite 6,730 passed / 0 failed / 31 skipped, `tsc --noEmit` 0 errors, `next build` passes.
-Re-run all three on the final tip if anything lands after this (mobile shell, #569).
+These results are for `d98ef088` only. Re-run all three on the final tip, which must include the final head of
+Codex's #568 (mobile navigation plus visual work), #569, and any fix for the hold item below.
 
 ## 1. What ships
 
-### Public-facing changes (owner-approved — call these out in release notes)
+### Public-facing changes (call these out in release notes)
+
+Both were approved by the owner in the Claude session (low-float gate: "yes"; Journal: "it should not stop public
+from using journal"). Codex's admin tasks keep public frozen and cannot see that approval, so the owner should
+re-confirm both when approving the release.
 
 | PR | Change | Who notices |
 |----|--------|-------------|
@@ -42,12 +47,22 @@ plus the two routes above.
 ### Admin-only fixes
 
 Error text no longer leaks internals — responses carry `Request failed (ref xxxx)` and the ref is in the logs (#555);
-freshness/source stamps on 8 admin pages (#566); read-only Settings reference and dead nav removed (#560);
+freshness/source stamps on 8 admin pages (#566; Symbol page is a hold item, below); read-only Settings reference and dead nav removed (#560);
 Health overview (#550); paper reads without DDL (#553); momentum GET read-only (#557); paper-action outcomes (#565).
 
-## 2. Before merging to `main`
+## 2. Hold items (unresolved — release waits on these or an explicit owner deferral)
 
-- [ ] Codex's mobile admin shell PR merged into `admin-integration` (or explicitly deferred).
+- [ ] **Symbol page freshness (from Codex's #566 review).** `app/api/admin/symbol/[symbol]/route.ts` passes
+      `packet.createdAt` to `storedTruth`, but `getAdminResearchPacket` sets `createdAt` to the build time on every
+      request. A freshly built packet over old input observations is therefore stamped as current. Fix: stamp from
+      the input observation times and show packet build time separately, with a route test (Claude, own PR).
+      Not all freshness stamps are complete until this lands.
+
+## 3. Before merging to `main`
+
+- [ ] Codex's #568 (mobile navigation and visual work) merged into `admin-integration` (or explicitly deferred).
+- [ ] Hold items in section 2 resolved or explicitly deferred by the owner.
+- [ ] Owner re-confirms the two public changes (#552, #556).
 - [ ] #569 (Health guard skip removal) merged or closed.
 - [ ] Final tip re-validated: full vitest, `tsc --noEmit`, `next build`.
 - [ ] **Apply `migrations/130_admin_manual_order_requests.sql`** to the production Neon database (owner runs it;
@@ -61,11 +76,11 @@ Health overview (#550); paper reads without DDL (#553); momentum GET read-only (
 
 No new environment variables are required.
 
-## 3. Deploy
+## 4. Deploy
 
 - [ ] Owner merges `admin-integration` into `main` (merge commit, no squash) and watches the Render build.
 
-## 4. After deploy (owner, in a browser — never paste tokens into chat)
+## 5. After deploy (owner, in a browser — never paste tokens into chat)
 
 - [ ] Signed out: `/admin` redirects to sign-in; `/api/admin/health` returns 401.
 - [ ] Sign in at `/admin/login`; Health, Settings and one stamped page (e.g. Outcomes) load with source/freshness lines.
@@ -75,11 +90,11 @@ No new environment variables are required.
 - [ ] A write from another site is refused (e.g. from devtools on another origin: `fetch('https://marketscannerpros.app/api/admin/verify', {method:'DELETE', credentials:'include'})` → 403).
 - [ ] Render logs show no new 5xx bursts; any admin error has an `[admin-error ref]` line.
 
-## 5. Rollback
+## 6. Rollback
 
 Revert the merge commit on `main` (Render redeploys). Migration 130 is additive and can stay.
 Rolling back restores the old secret login and the old low-float/Journal behaviour.
 
-## 6. Owner follow-ups (outside the code)
+## 7. Owner follow-ups (outside the code)
 
 Rotate credentials flagged earlier: Neon, Alpha Vantage, and any secrets ever passed as `?key=`.
