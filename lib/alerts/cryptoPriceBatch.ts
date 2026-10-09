@@ -3,6 +3,7 @@
  *
  * Symbols are stripped the way the old client did (BTC-USD → BTC) before the
  * coin map. FTM and MATIC use their current ids for alerts only.
+ * Equity collisions use PR #554's resolveScanAsset. Outcome labelling is unchanged.
  * A ticker that is not in the map is searched once and cached (Redis, 7 days,
  * or the in-process map when Redis is absent). An equity ticker is never searched.
  * An exact symbol match with the best market-cap rank wins. A tie stays unresolved.
@@ -12,7 +13,7 @@
  * per coin that is not cached yet.
  */
 import { COINGECKO_ID_MAP, getSimplePrices, searchCoins, type CoinGeckoPrice } from '@/lib/coingecko';
-import { resolveScanAsset } from '@/lib/symbols/assetResolution';
+import { resolveScanAsset } from '@/lib/signals/outcomeGuard';
 import { equityTickerList, equityTickerSet } from '@/lib/symbols/equityTickers';
 import { getRedis } from '@/lib/redis';
 

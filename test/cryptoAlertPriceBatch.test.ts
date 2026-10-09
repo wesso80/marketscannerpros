@@ -9,7 +9,7 @@ import {
   pickAlertSearchId,
   type SearchCoin,
 } from '@/lib/alerts/cryptoPriceBatch';
-import { resolveScanAsset } from '@/lib/symbols/assetResolution';
+import { RENAMED_OUTCOME_TICKERS, resolveOutcomeLabelAsset, resolveScanAsset } from '@/lib/signals/outcomeGuard';
 
 function memoryCache() {
   const rows = new Map<string, string | null>();
@@ -145,9 +145,16 @@ describe('alert crypto prices', () => {
     expect(mapAlertCoinId('MATIC', [], COINGECKO_ID_MAP)).toMatchObject({ action: 'price', coinId: 'polygon-ecosystem-token' });
     expect(COINGECKO_ID_MAP.FTM).toBe('fantom');
     expect(COINGECKO_ID_MAP.MATIC).toBe('matic-network');
-    const outcome = readFileSync('lib/symbols/assetResolution.ts', 'utf8');
+    const outcome = readFileSync('lib/signals/outcomeGuard.ts', 'utf8');
     expect(outcome).not.toContain('sonic');
     expect(outcome).not.toContain('polygon-ecosystem-token');
+    expect(RENAMED_OUTCOME_TICKERS.FTM).toEqual({ successor: 'S', retiredCoinId: 'fantom' });
+    expect(RENAMED_OUTCOME_TICKERS.MATIC).toEqual({ successor: 'POL', retiredCoinId: 'matic-network' });
+    expect(resolveOutcomeLabelAsset({ symbol: 'FTM', declared: 'crypto', universeTypes: ['crypto'], inCryptoMap: true }).status).toBe('ambiguous');
+    expect(resolveOutcomeLabelAsset({ symbol: 'MATIC', declared: 'crypto', universeTypes: ['crypto'], inCryptoMap: true }).status).toBe('ambiguous');
+    const shim = readFileSync('lib/symbols/assetResolution.ts', 'utf8');
+    expect(shim).toContain("from '@/lib/signals/outcomeGuard'");
+    expect(shim).not.toContain('function resolveScanAsset');
     expect(pickAlertSearchId('SNX', [
       { id: 'a', name: 'A', symbol: 'SNX', market_cap_rank: 4 },
       { id: 'b', name: 'B', symbol: 'SNX', market_cap_rank: 4 },
