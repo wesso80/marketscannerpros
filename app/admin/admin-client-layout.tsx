@@ -67,6 +67,11 @@ export default function AdminClientLayout({ children, discoveryPaused = false }:
     sessionStorage.removeItem("admin_secret");
   };
 
+  // Passphrase login cannot sit behind the operator-secret wall.
+  if (pathname === '/admin/login') {
+    return children;
+  }
+
   const navSections = [
     { label: "Crypto Markets", items: [{href:"/admin/crypto-markets", label:"Explorer & Charts", code:"CR"},{href:"/admin/crypto-markets#crypto-paper", label:"Paper Account", code:"CP"}] },
     {

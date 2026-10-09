@@ -2,6 +2,8 @@
 import Stripe from "stripe";
 import { apiLimiter, getClientIP } from '@/lib/rateLimit';
 import { q } from '@/lib/db';
+import { getSessionFromCookie } from '@/lib/auth';
+import { checkoutCustomerFromSession } from '@/lib/checkoutSignIn';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-09-30.clover",
@@ -66,8 +68,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
   }
 
+  // Anonymous FREE_FOR_ALL sessions are not a sign-in. Checkout needs a real account.
+  const session = await getSessionFromCookie();
+  if (!session || session.cid.startsWith('anon-')) {
+    return NextResponse.json({ error: 'Sign in required' }, { status: 401 });
+  }
+  const customerFields = checkoutCustomerFromSession(session.cid);
+  if (!customerFields) {
+    return NextResponse.json({ error: 'This account has no email for checkout' }, { status: 400 });
+  }
+
   try {
-    const { plan, billing, email, referralCode } = await req.json();
+    const { plan, billing, referralCode } = await req.json();
 
     // Only the Pro plan is sold. Anything else is rejected (legacy sub renewals
     // do not go through this endpoint).
@@ -116,7 +128,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Build checkout session params
+    // Name and description are the Stripe Product on this price id, not inline product_data.
+    // trial_period_days is intentionally not set: there is no checkout helper that
+    // enforces one trial per email. Admin user_trials grants are a separate path.
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
       payment_method_types: ["card"],
@@ -126,7 +140,7 @@ export async function POST(req: NextRequest) {
           quantity: 1,
         },
       ],
-      customer_email: email || undefined,
+      ...customerFields,
       success_url: `${baseUrl}/after-checkout?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/pricing`,
       metadata: {
