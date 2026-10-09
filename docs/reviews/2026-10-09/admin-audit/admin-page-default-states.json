@@ -1,0 +1,407 @@
+[
+  {
+    "file": "app/admin/ai-usage/page.tsx",
+    "route": "/admin/ai-usage",
+    "defaultState": "allow"
+  },
+  {
+    "file": "app/admin/alerts/page.tsx",
+    "route": "/admin/alerts",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/analogues/page.tsx",
+    "route": "/admin/analogues",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/backtest-lab/page.tsx",
+    "route": "/admin/backtest-lab",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/behavioral-drift/page.tsx",
+    "route": "/admin/behavioral-drift",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/command/page.tsx",
+    "route": "/admin/command",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/commander/page.tsx",
+    "route": "/admin/commander",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/costs/page.tsx",
+    "route": "/admin/costs",
+    "defaultState": "allow"
+  },
+  {
+    "file": "app/admin/cross-asset/page.tsx",
+    "route": "/admin/cross-asset",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/crypto-discovery/page.tsx",
+    "route": "/admin/crypto-discovery",
+    "defaultState": "allow"
+  },
+  {
+    "file": "app/admin/crypto-markets/page.tsx",
+    "route": "/admin/crypto-markets",
+    "defaultState": "allow"
+  },
+  {
+    "file": "app/admin/daily-brief/page.tsx",
+    "route": "/admin/daily-brief",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/daily-packet/page.tsx",
+    "route": "/admin/daily-packet",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/data-health/page.tsx",
+    "route": "/admin/data-health",
+    "defaultState": "allow"
+  },
+  {
+    "file": "app/admin/delete-requests/page.tsx",
+    "route": "/admin/delete-requests",
+    "defaultState": "allow"
+  },
+  {
+    "file": "app/admin/diagnostics/page.tsx",
+    "route": "/admin/diagnostics",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/discord-bridge/page.tsx",
+    "route": "/admin/discord-bridge",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/doctrine/page.tsx",
+    "route": "/admin/doctrine",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/earnings-analyzer/page.tsx",
+    "route": "/admin/earnings-analyzer",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/edge-ledger/page.tsx",
+    "route": "/admin/edge-ledger",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/engine-health/page.tsx",
+    "route": "/admin/engine-health",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/equity-research/page.tsx",
+    "route": "/admin/equity-research",
+    "defaultState": "allow"
+  },
+  {
+    "file": "app/admin/evening-packet/page.tsx",
+    "route": "/admin/evening-packet",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/growth-command-centre/page.tsx",
+    "route": "/admin/growth-command-centre",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/growth-commander/page.tsx",
+    "route": "/admin/growth-commander",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/health/page.tsx",
+    "route": "/admin/health",
+    "defaultState": "allow"
+  },
+  {
+    "file": "app/admin/income/page.tsx",
+    "route": "/admin/income",
+    "defaultState": "allow"
+  },
+  {
+    "file": "app/admin/insider/page.tsx",
+    "route": "/admin/insider",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/jarvis/daily/page.tsx",
+    "route": "/admin/jarvis/daily",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/journal-learning/page.tsx",
+    "route": "/admin/journal-learning",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/learning-engine/page.tsx",
+    "route": "/admin/learning-engine",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/live-scanner/page.tsx",
+    "route": "/admin/live-scanner",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/logs/page.tsx",
+    "route": "/admin/logs",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/macro-outlook/page.tsx",
+    "route": "/admin/macro-outlook",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/macro-pulse/page.tsx",
+    "route": "/admin/macro-pulse",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/marketing-queue/page.tsx",
+    "route": "/admin/marketing-queue",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/ml-scorer/page.tsx",
+    "route": "/admin/ml-scorer",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/model-diagnostics/page.tsx",
+    "route": "/admin/model-diagnostics",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/morning-brief/page.tsx",
+    "route": "/admin/morning-brief",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/operator-health/page.tsx",
+    "route": "/admin/operator-health",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/operator-terminal/page.tsx",
+    "route": "/admin/operator-terminal",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/opportunity-board/page.tsx",
+    "route": "/admin/opportunity-board",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/options-architect/page.tsx",
+    "route": "/admin/options-architect",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/outcomes/page.tsx",
+    "route": "/admin/outcomes",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/outcomes/scorecard/page.tsx",
+    "route": "/admin/outcomes/scorecard",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/overview/page.tsx",
+    "route": "/admin/overview",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/packet-replay/page.tsx",
+    "route": "/admin/packet-replay",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/page.tsx",
+    "route": "/admin",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/paused/page.tsx",
+    "route": "/admin/paused",
+    "defaultState": "allow"
+  },
+  {
+    "file": "app/admin/playbooks/page.tsx",
+    "route": "/admin/playbooks",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/portfolio-lab/analytics/page.tsx",
+    "route": "/admin/portfolio-lab/analytics",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/portfolio-lab/edge-packets/page.tsx",
+    "route": "/admin/portfolio-lab/edge-packets",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/portfolio-lab/holdings/page.tsx",
+    "route": "/admin/portfolio-lab/holdings",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/portfolio-lab/journal/page.tsx",
+    "route": "/admin/portfolio-lab/journal",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/portfolio-lab/orders/page.tsx",
+    "route": "/admin/portfolio-lab/orders",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/portfolio-lab/page.tsx",
+    "route": "/admin/portfolio-lab",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/portfolio-lab/performance/page.tsx",
+    "route": "/admin/portfolio-lab/performance",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/portfolio-lab/playbooks/page.tsx",
+    "route": "/admin/portfolio-lab/playbooks",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/portfolio-lab/positions/page.tsx",
+    "route": "/admin/portfolio-lab/positions",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/portfolio-lab/reports/page.tsx",
+    "route": "/admin/portfolio-lab/reports",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/portfolio-lab/risk/page.tsx",
+    "route": "/admin/portfolio-lab/risk",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/portfolio-lab/settings/page.tsx",
+    "route": "/admin/portfolio-lab/settings",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/portfolio-lab/trades/page.tsx",
+    "route": "/admin/portfolio-lab/trades",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/pre-trade-checklist/page.tsx",
+    "route": "/admin/pre-trade-checklist",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/priority-desk/page.tsx",
+    "route": "/admin/priority-desk",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/quant-screener/page.tsx",
+    "route": "/admin/quant-screener",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/quant/page.tsx",
+    "route": "/admin/quant",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/research-scheduler/page.tsx",
+    "route": "/admin/research-scheduler",
+    "defaultState": "allow"
+  },
+  {
+    "file": "app/admin/risk-assessment/page.tsx",
+    "route": "/admin/risk-assessment",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/risk/page.tsx",
+    "route": "/admin/risk",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/scalper/page.tsx",
+    "route": "/admin/scalper",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/sector-rotation/page.tsx",
+    "route": "/admin/sector-rotation",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/settings/page.tsx",
+    "route": "/admin/settings",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/subscriptions/page.tsx",
+    "route": "/admin/subscriptions",
+    "defaultState": "allow"
+  },
+  {
+    "file": "app/admin/symbol/[symbol]/page.tsx",
+    "route": "/admin/symbol/[symbol]",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/system/page.tsx",
+    "route": "/admin/system",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/terminal/[symbol]/page.tsx",
+    "route": "/admin/terminal/[symbol]",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/transcripts/page.tsx",
+    "route": "/admin/transcripts",
+    "defaultState": "allow"
+  },
+  {
+    "file": "app/admin/trials/page.tsx",
+    "route": "/admin/trials",
+    "defaultState": "allow"
+  },
+  {
+    "file": "app/admin/universe/page.tsx",
+    "route": "/admin/universe",
+    "defaultState": "pause_page"
+  },
+  {
+    "file": "app/admin/usage-analytics/page.tsx",
+    "route": "/admin/usage-analytics",
+    "defaultState": "allow"
+  }
+]

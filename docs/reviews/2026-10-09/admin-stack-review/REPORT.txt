@@ -1,0 +1,115 @@
+FOLLOW-UP — supersedes the initial release findings where marked below
+
+Claude pushed fixes during this review. They were combined cleanly on top of the initial reviewed tree:
+#560 f6d1a4b25452c75844de96992394c80472343be4 (Settings copy)
+#562 889e53bd621c89feb39969458935191a93c963b3 (exact scheme/host/port comparison)
+#567 a5960d7fea1f7f77e61f405e72eb9e2f6ed1987c (admin-cookie revocation and logout)
+Codex then updated #563 to addbcdf2 (explicit HTTPS www in the shared admin origin helper), aligning its handler layer with #562. This is the only application change made during the review; it is admin-scoped and remains an unmerged draft. No public routes/pages changed.
+
+Reconciled local test commit: e80ab7d591f00aa97ba93d565c0e309566d4e219. Followup-heads.json records its inputs. The final follow-up passed 121 focused tests in 12 files, including real middleware -> handler cases, both admin cookie types, logout, public Copilot/auth boundaries, and Settings; typecheck passed. The 6,462-test full-suite result below applies to the initial tree, not this later revision. No new full-suite claim is made for the follow-up.
+
+R1 RESOLVED in the reconciled candidate: HTTPS apex and HTTPS www both work across the middleware/handler boundary; HTTP downgrade is rejected before either effect. Non-default ports and lookalikes remain denied. The earlier apex-only proposed-origin-policy.patch.txt is historical review evidence and SHOULD NOT be applied. The remaining missing-Origin distinction is deliberate: authenticated admin cookies require Origin; eligible header-only clients retain their supported behavior; middleware additionally rejects explicit cross-site fetch metadata.
+R2 RESOLVED in the reconciled candidate: unlisted ms_admin identities are refused; logout clears ms_admin and ms_auth. Applying those deletions removes admin access. Admin logout now also ends that administrator's app sign-in, as documented in #567; this is not a public-user authentication change. Settings' revocation/logout statements depend on #567 and must travel with it.
+R4 RESOLVED by the Settings link/description for saved research notifications.
+R3 STILL OPEN: fixed mobile sidebar leaves 122px main content at 390px. The later revisions do not change that layout.
+R5 STILL OPEN: #556 public Journal and #552 low-float access require separate scope treatment before an admin-only release.
+
+#566 (freshness labels) arrived after the initial review and was not added to either tested candidate. It still needs review/integration checks. The newer main branch was not incorporated. Nothing merged or deployed.
+
+Next work: repair the mobile admin shell (without touching public layout), review #566, then recompute final heads and validate the final combined release candidate. Preserve #549 -> #562 and #551 -> #567 dependencies; include #563's latest alignment. Deployment hold remains.
+
+INITIAL SNAPSHOT / HISTORICAL EVIDENCE FOLLOWS
+
+Combined admin draft review — 9 October 2026
+
+OUTCOME: clean textual combination and green automated suite, but NOT ready to release as-is. Origin-policy differences, session guarantees, mobile layout and public-boundary decisions remain. No application code was edited in this review. No branch was merged, deployed, or used to change production data.
+
+Reviewed base: 88785fa7e2fa5f30f4ad6c7b99a50fa44efb81e9 (admin-integration).
+Computed local combined commit: d5ca11604cdf4690945db09fe7834de344027437
+Computed tree: fee877c8c0ae7fa583372e3f14088f3525e3c5ed
+These are unreferenced local test objects, not commits on admin-integration or main. reviewed-heads.json records the exact remote commits and merge-tree outputs needed to reconstruct the test state. All 15 combinations were clean.
+
+#547  ac4d209bb69b1bf32d5fdb5a95403619e82aabbd  claude/admin-operator-gate
+#549  d9e75ec267a4711e5322bed590dd7da7668a4952  claude/admin-auth-lifecycle
+#550  ca0051b5d23be8d07f6acebb584b173eb1c92e07  codex/admin-health-overview
+#551  a54be83a48ceb2b50af5014b303932f10a83fc96  claude/retire-admin-secret-login
+#552  622e0b84ccdaa6e7c92a49e65aa9eb2262a7a453  claude/admin-gate-low-float
+#553  0c849fbe519475437c292b43b5ad3969de1109cb  codex/admin-paper-read-only
+#555  04a0388e5a8c9cb5ef7d3141a38577b23d2eba9e  claude/admin-error-hygiene
+#556  f9835eba8298e2203bf0cbcd33754fc65e05ae88  claude/journal-killswitch-decouple
+#557  b29fe9f13c319e70ce4ab32f57cbcf72a709b49e  codex/admin-momentum-read-only
+#559  ecfe82943e5f0648f50bf2540943164bfeec8763  claude/order-export-research-note
+#560  8f32108707837ff24f408f47eb287fb4a4dece2d  claude/admin-nav-settings
+#561  ce20b9525ba75424e3722bb7f1f482af6971e2e4  codex/admin-manual-order-idempotency
+#562  c1e4c327ecc8550d2ee5c98350caddf2770da1d3  claude/admin-origin-check
+#563  8fa6d9616f617ab8c1d37ac97d71ea376ede7c76  codex/admin-mutation-origins
+#565  42902be248043fbc0ba82a8faab9915732bc1f46  codex/admin-paper-action-outcomes
+
+Scope caveat: #556 changes public Journal; #552 changes access to the low-float API. They were included for review, not approved for an admin-only release. main was fetched at 63da1d34 (the #554 merge); this review does not combine these admin drafts onto that newer main or establish deployment status. #558/#564 and older public redesign drafts are excluded.
+
+VERIFIED FINDINGS / OWNERS / ACCEPTANCE
+
+R1 — P1: reconcile #562 and #563 before integration.
+Sources in the computed tree: middleware.ts:155–164; lib/admin/adminWriteOrigin.ts:5–11; lib/admin/mutationOrigin.ts:5–8.
+#562 compares URL.host, accepting an HTTP Origin for an HTTPS site and the www host. #563 requires exact admin origins. Real middleware -> real authentication -> real handlers, with fake effects, gives:
+  HTTPS apex Origin -> admin 200 with effect; operator 200 with effect.
+  HTTPS www Origin to apex URL -> middleware passes; admin 401/no effect; operator 200/effect.
+  HTTP apex Origin to HTTPS apex URL -> middleware passes; admin 401/no effect; operator 200/effect.
+  Missing Origin with cookie -> middleware passes; admin 401/no effect; operator 200/effect.
+  Foreign Origin -> middleware 403 before either effect.
+  Missing Origin + Sec-Fetch-Site: cross-site -> middleware 403 before either effect.
+This proves a policy mismatch, not an exploited production vulnerability. Existing signed authentication, SameSite cookies and permission checks still matter.
+Recommendation: Claude updates #562 to use the same exact-origin helper as handlers, preserving its early Sec-Fetch-Site check. Keep #563's stricter admin cookie rule and authenticated header distinction. Do not delete one layer as a duplicate: middleware covers operator paths; #563 covers handler entry and fallback authorization. Neither changes ordinary public routes.
+A concrete proposal is saved in proposed-origin-policy.patch.txt. It keeps current handler trust: exact request origin or https://marketscannerpros.app. Thus www-to-apex is rejected consistently; www remains valid when it is the actual request origin. If cross-origin www-to-apex support is intended, explicitly add HTTPS www to the shared helper and test both layers instead. Do not accept host-only HTTP downgrades.
+Acceptance: same matrix through middleware AND handlers, HTTP downgrade refused, foreign/null/lookalike refused, trusted Render apex and localhost preserved, cron/header callers evaluated with their actual cookie/header combinations, public routes unchanged. The proposal's 14-case fixture passes separately; it is NOT applied to a PR.
+
+R2 — P1: existing admin-session behavior contradicts Settings revocation and logout expectations.
+Sources: lib/adminAuth.ts:89–104; middleware.ts:79–82; app/api/admin/verify/route.ts:20–26; app/admin/settings/page.tsx:21.
+A valid ms_admin token for an identity absent from ADMIN_EMAILS still passes both middleware and the real admin write handler. Those paths check signature/expiry/kind, not current membership. This behavior predates the drafts; the blanket revocation claim in #560 is newly misleading.
+DELETE /api/admin/verify clears only ms_admin. An existing admin ms_auth cookie remains accepted after that response, reproduced with the real authentication helper. #551 retires secret login but does not change this existing logout behavior.
+Owner: Claude's session work and #560 wording. Correct the copy now; define/implement the intended revocation and logout contract before presenting it as complete. If preserving public sign-in during admin logout is required, explicitly design that distinction; do not silently change the shared public session under this review's public-freeze scope.
+Acceptance: issued credentials for a removed admin are checked in both layers under the selected revocation policy; logout demonstrably ends the intended admin authority; valid admins still work; public-session behavior is explicitly stated and tested. The review fixtures document current behavior and are not acceptance tests that bless it.
+
+R3 — P2: mobile admin shell is still clipped, despite zero document overflow.
+Source: app/admin/admin-client-layout.tsx (fixed 268px aside and flex main with overflow:auto).
+Actual combined Next app with signed fixture session, Health route and unavailable local fixture DB:
+  1280px viewport -> main width 1012px, x=268.
+  390px viewport -> main width 122px, x=268.
+The inner content is clipped/narrow at 390px. A document.scrollWidth check alone passed but did not establish usable layout. Screenshots admin-health-1280.png and admin-health-390.png show this. The cookie banner is also present in the fixture; it does not cause the measured sidebar/main split.
+This is inherited shell behavior, not a regression introduced by #560's deletion of the duplicate sidebar components.
+Owner: admin layout work, coordinated with Claude. Acceptance: collapse the admin sidebar into a drawer/menu on narrow screens; main content uses the mobile viewport; Health and Settings can be read without horizontal scrolling except deliberate data tables; desktop navigation remains available. Public layout remains untouched.
+
+R4 — P2: Settings incorrectly says notification preferences have no saved settings.
+Sources: app/admin/settings/page.tsx:39; lib/admin/researchNotificationSettings.ts:29; app/admin/alerts/page.tsx (ResearchNotificationControls).
+Workspace research-notification pause state is persisted and is editable through the Alerts controls. Replace the blanket statement with an accurate link/description, keeping genuinely unavailable preferences labelled as unavailable. Owner: #560. No new settings backend is needed for this correction.
+
+R5 — Scope hold: the full candidate is not public-unchanged.
+#556 edits app/api/journal/add-trade/route.ts, deliberately changing the public Journal kill-switch behavior. #552 edits app/api/scanner/low-float/route.ts, refusing non-admin callers. Operator/action boundaries in #547 and middleware in #549/#562 are shared-path edits and must keep their public non-regression checks.
+Acceptance: explicitly separate the Journal/low-float decisions from an admin-only release, or obtain the appropriate scope decision before integration. This review makes no public edits and authorizes none.
+
+VALIDATION
+
+Full repository suite on the materialized combined source: 787 files passed, 3 skipped; 6,462 tests passed, 31 skipped, zero failures. Existing skips were not changed. They cover optional network/database/parity/model cases: fragilityParity (1), globalM2Parity (1), modelVersions (5), arcaBrainBridge (1), publicDailyQuota.integration (11), publicCopilotLedger.integration (7), globalM2Network.integration (1), liquidityTransmissionNetwork.integration (4). A green suite does not cover the policy guarantees and visual issues above.
+Project typecheck passed using the isolated locked dependencies and local @types roots.
+Real isolated PostgreSQL 18.4: manual-order suite 10/10, applying fixture migrations 095 and 130. No production migration, broker, provider, OpenAI or real business effect ran.
+Additional current-behavior reproduction: 14/14. Real middleware, signature verification and handlers; cookie access and business effects are fixtures. Proposed middleware policy: 14/14 on a separate module, including unchanged reproduction of the session issues; no production source was patched. Navigation tests rechecked after deleting the four removed legacy shell files from the runtime: 2/2.
+Actual-app Health browser check: /api/admin/verify 200 at 1280 and 390; unavailable fixture database (127.0.0.1:1) produces expected Health errors, not fabricated healthy data. External browser requests blocked. Document overflow false at both widths; measured main widths and screenshot inspection found R3. This is local fixture evidence, not production health evidence.
+
+RECOMMENDED INTEGRATION ORDER — ONLY AFTER FIXES / APPROVAL
+
+1. Resolve R1 with #562/#563 jointly; resolve session guarantees/copy R2 with #549/#551/#560. #562 is stacked on #549, so preserve that dependency.
+2. Fix R3/R4 in admin layout/Settings; validate actual app at 390 and 1280.
+3. Keep #556 and #552 outside a public-unchanged release until their boundary decision is explicit.
+4. Recompute the combined tree with revised heads; run focused regressions plus full suite/typecheck. Account for newer main before any eventual main integration.
+5. Keep deployment hold. Migration 130 must be applied only during an approved rollout before #561's route is enabled. No migration is run in this audit.
+
+Other outstanding audit work: the global automation permission/actor/outcome scope (M4) remains a separate design decision. #565 fixes action-vs-snapshot reporting but is not a durable cross-store receipt ledger; lost HTTP responses remain unknown and the panel requires a saved-state read. #561 provides durable receipts for the separate manual simulated-order route.
+Correction to the earlier M1 audit: existing sizeForPortfolio already counted pending reservations; the manual route's gap was serialized/atomic admission. #561 fixes that and fails closed above the shared reader's 200-order bound. The older wording should not be read as proof that pending risk was entirely absent.
+
+REPRODUCTION FILES
+
+adminStackOriginReproduction.test.ts.txt: copy to test/adminStackOriginReproduction.test.ts on the recorded combined tree and run Vitest with @ resolving to repository root.
+proposed-origin-policy.patch.txt: review-only diff against the combined middleware. For its isolated test, put the proposed middleware at root/adminOriginProposal.ts and copy adminStackOriginProposal.test.ts.txt to test/adminStackOriginProposal.test.ts.
+reviewed-heads.json: exact branch/commit inputs and computed tree identifiers.
+changed-paths.txt: all changed repository paths in the reviewed combination.
+No fixes in this report have been merged or deployed. Claude received the findings on #562 and #560.
