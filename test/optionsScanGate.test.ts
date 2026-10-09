@@ -11,7 +11,10 @@ const gate = vi.hoisted(() => ({ admin: false, effectiveTier: 'free' }));
 vi.mock('@/lib/adminAuth', () => ({
   requireAdmin: vi.fn(async () => (gate.admin ? { ok: true, source: 'app_session', cid: 'admin', workspaceId: 'ws-admin' } : { ok: false })),
 }));
-vi.mock('@/lib/db', () => ({ q: vi.fn(async () => []) }));
+vi.mock('@/lib/db', () => ({
+  q: vi.fn(async () => []),
+  tx: vi.fn(async () => { throw new Error('Unexpected database transaction in access-gate test'); }),
+}));
 vi.mock('@/lib/entitlements', async (orig) => {
   const real = await orig<typeof import('@/lib/entitlements')>();
   return { ...real, getEffectiveTier: vi.fn(async () => gate.effectiveTier) };
