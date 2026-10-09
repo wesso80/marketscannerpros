@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { OverlapInterval } from '@/lib/admin/overlapUncertainty';
+import PendingMaturity from '@/components/admin/PendingMaturity';
+import type {PendingMaturity as Maturity} from '@/lib/admin/pendingMaturity';
 import OutcomeCompleteness from '@/components/admin/OutcomeCompleteness';
 import type { OutcomeCompleteness as Completeness } from '@/lib/admin/outcomeCompleteness';
 import TruthStampLine from "@/components/admin/shared/TruthStampLine";
@@ -20,6 +22,7 @@ interface Response {
   overall?: Group; groups?: Group[];
   definition?: { outcome: string; costs: string; intervals: string; split: string; minSample: number; minHalfSample: number; caveats: string[]; labelledSince: string };
   completeness?: Completeness;
+  pendingMaturity?: Maturity;
   truth?: Record<string, unknown>;
 }
 
@@ -134,6 +137,7 @@ export default function EdgeCheckPage() {
               </tbody>
             </table>
           </div>
+          {data.pendingMaturity && <PendingMaturity data={data.pendingMaturity}/>}
           {data.completeness && <OutcomeCompleteness data={data.completeness}/>}
           {data.definition && (
             <section data-edge-definition style={{ marginTop: "1rem", fontSize: 12, color: "#94A3B8", maxWidth: 900 }}>

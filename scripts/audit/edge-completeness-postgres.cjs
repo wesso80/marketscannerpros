@@ -7,7 +7,7 @@ if(!url || !['127.0.0.1','localhost'].includes(new URL(url).hostname)) throw new
 const db=new Client({connectionString:url});
 (async()=>{await db.connect();try {
  await db.query('BEGIN');
- await db.query(`CREATE TEMP TABLE ai_signal_log (id int, workspace_id text, trade_bias text, regime text, outcome text, signal_at timestamptz, outcome_measured_at timestamptz, pct_move_24h numeric)`);
+ await db.query(`CREATE TEMP TABLE ai_signal_log (id int, workspace_id text, trade_bias text, regime text, outcome text, signal_at timestamptz, outcome_measured_at timestamptz, pct_move_24h numeric, asset_type text DEFAULT 'equity', price_at_signal numeric DEFAULT 100)`);
  const fix='2026-09-26T13:52:24Z';
  const fixtures=[
   ['correct',fix,2,'measured'],['wrong',fix,-2,'measured'],['neutral',fix,0,'measured'],
@@ -16,8 +16,8 @@ const db=new Client({connectionString:url});
   ['correct',fix,null,'invalid_move'],['correct',fix,101,'invalid_move'],
   [null,fix,2,'unknown'],['unrecognised',fix,2,'unknown'],['correct',fix,'NaN','invalid_move'],['correct',fix,100,'measured']
  ];
- for(let i=0;i<fixtures.length;i++){const [outcome,at,move]=fixtures[i];await db.query(`INSERT INTO ai_signal_log VALUES ($1,'operator-terminal','LONG','RANGE',$2,NOW()-INTERVAL '2 days',$3,$4)`,[i,outcome,at,move]);}
- await db.query(`INSERT INTO ai_signal_log VALUES (90,'private-user','LONG','RANGE','pending',NOW(),NULL,NULL),(91,'operator-terminal','NONE','RANGE','pending',NOW(),NULL,NULL),(92,'operator-terminal','LONG','RANGE','pending',NOW()-INTERVAL '400 days',NULL,NULL)`);
+ for(let i=0;i<fixtures.length;i++){const [outcome,at,move]=fixtures[i];await db.query(`INSERT INTO ai_signal_log (id,workspace_id,trade_bias,regime,outcome,signal_at,outcome_measured_at,pct_move_24h) VALUES ($1,'operator-terminal','LONG','RANGE',$2,NOW()-INTERVAL '2 days',$3,$4)`,[i,outcome,at,move]);}
+ await db.query(`INSERT INTO ai_signal_log (id,workspace_id,trade_bias,regime,outcome,signal_at,outcome_measured_at,pct_move_24h) VALUES (90,'private-user','LONG','RANGE','pending',NOW(),NULL,NULL),(91,'operator-terminal','NONE','RANGE','pending',NOW(),NULL,NULL),(92,'operator-terminal','LONG','RANGE','pending',NOW()-INTERVAL '400 days',NULL,NULL)`);
  const source=fs.readFileSync('app/api/admin/edge-check/route.ts','utf8');
  const template=source.match(/`SELECT ([\s\S]*?)ORDER BY signal_at ASC`/)[0].slice(1,-1);
  const sql=template.replace('${GROUP_SQL[by]}',"COALESCE(regime, 'unknown')").replace("${signedMoveSql('pct_move_24h')}","(CASE WHEN UPPER(trade_bias) = 'SHORT' THEN -pct_move_24h ELSE pct_move_24h END)");

@@ -90,6 +90,12 @@ describe('GET /api/admin/edge-check', () => {
     expect(where).not.toMatch(/outcome IN|outcome_measured_at|pct_move_24h/);
     expect(m.sql[0]).toMatch(/END AS inclusion_status/);
   });
+  it('uses the database observation time for pending maturity', async () => {
+    m.rows=[{grp:'A',signal_at:'2026-10-01T12:00:00Z',observed_at:'2026-10-02T12:00:00Z',asset_type:'equity',price_at_signal:'100',outcome:'pending',signed_move:null,inclusion_status:'pending'}];
+    const body=await (await GET(new NextRequest('http://localhost/api/admin/edge-check'))).json();
+    expect(body.pendingMaturity).toMatchObject({total:1,eligibleWindow:1,asOf:'2026-10-02T12:00:00.000Z'});
+    expect(body.overall.n).toBe(0);
+  });
   it('refuses non-admin requests before reading the expanded population', async () => {
     m.auth=false;
     expect((await GET(new NextRequest('http://localhost/api/admin/edge-check'))).status).toBe(403);
