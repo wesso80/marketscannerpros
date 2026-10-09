@@ -1,4 +1,5 @@
 import { adminEquitiesPaused, ADMIN_EQUITIES_PAUSED_MESSAGE } from '@/lib/admin/adminEquities';
+import { discoveryOnlyAction, discoveryOnlySkipBody } from '@/lib/admin/discoveryOnly';
 /**
  * POST /api/operator/engine/auto-scan — trigger the shared saved admin scan
  * GET  /api/operator/engine/auto-scan — saved radar for a watchlist
@@ -122,6 +123,11 @@ export async function POST(req: NextRequest) {
         error: 'Unknown watchlist',
         availableWatchlists: Object.keys(DEFAULT_WATCHLISTS),
       }, { status: 400 });
+    }
+
+    // Crypto and forex watchlists stay discovery-only no-ops. The nine equity radar jobs use equity lists.
+    if (discoveryOnlyAction('/api/operator/engine/auto-scan', 'POST', { watchlist: watchlistKey }) === 'skip_job') {
+      return NextResponse.json(discoveryOnlySkipBody(), { status: 200, headers: { 'Cache-Control': 'no-store' } });
     }
 
     if (wl.market === 'EQUITIES' && adminEquitiesPaused()) return NextResponse.json({

@@ -25,6 +25,8 @@ const req = (body: unknown) => new Request('http://x/api/operator/engine/auto-sc
 beforeEach(() => {
   vi.clearAllMocks();
   m.cron.mockReturnValue(false);
+  delete process.env.ADMIN_DISCOVERY_ONLY;
+  delete process.env.ADMIN_EQUITIES_PAUSED;
   m.start.mockResolvedValue({ started: true, runId: 'r1', symbolsRequested: 10, done: Promise.resolve() });
 });
 
@@ -49,5 +51,26 @@ describe('auto-scan POST: only 15m runs from the page loop', () => {
     m.cron.mockReturnValue(true);
     await POST(req({ watchlist: 'us-mega-cap', timeframe: '1H' }));
     expect(m.start).toHaveBeenCalledWith(expect.objectContaining({ timeframe: '1H', trigger: 'radar' }));
+  });
+
+  it('equity watchlists pass discovery-only and start the shared scan', async () => {
+    const res = await POST(req({ watchlist: 'us-defensive-cashflow', timeframe: '15m' }));
+    expect(res.status).toBe(200);
+    expect(m.start).toHaveBeenCalledWith(expect.objectContaining({ market: 'EQUITIES', trigger: 'page' }));
+  });
+
+  it('a crypto watchlist stays a discovery-only no-op', async () => {
+    const res = await POST(req({ watchlist: 'crypto-majors', timeframe: '15m' }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ skipped: true, reason: 'admin_discovery_only', started: false });
+    expect(m.start).not.toHaveBeenCalled();
+  });
+
+  it('ADMIN_EQUITIES_PAUSED still skips an equity watchlist', async () => {
+    process.env.ADMIN_EQUITIES_PAUSED = 'true';
+    const res = await POST(req({ watchlist: 'us-mega-cap', timeframe: '15m' }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ skipped: true, reason: 'admin_equities_paused', started: false });
+    expect(m.start).not.toHaveBeenCalled();
   });
 });
