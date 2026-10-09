@@ -3,6 +3,8 @@
 //               Trade Construction, Multi-TF Structure, Time Confluence,
 //               Confluence Gate, and "No Edge" honesty
 
+import { SHOW_SIGNAL_OUTCOME_STATS } from '@/lib/signals/outcomeStatsVisibility';
+
 // =====================================================================
 // 1. DECISION TRACE ENGINE
 // =====================================================================
@@ -291,13 +293,18 @@ You are an ANALYTICAL ENGINE, not a financial adviser. You MUST:
 // =====================================================================
 export function buildSignalMemoryContext(stats: {
   totalSignals: number;
-  regimeStats: Array<{ regime: string; count: number; winRate: number }>;
+  regimeStats: Array<{ regime: string; count: number; winRate?: number }>;
   recentSignals: Array<{ symbol: string; verdict: string; confidence: number; outcome?: string }>;
-} | null): string {
+} | null, showOutcomeStats = SHOW_SIGNAL_OUTCOME_STATS): string {
   if (!stats || stats.totalSignals === 0) {
-    return `
+    return showOutcomeStats
+      ? `
 AI SIGNAL MEMORY: No historical signals logged yet.
 This is a fresh session. Signal accuracy tracking will improve over time.
+    `.trim()
+      : `
+AI SIGNAL MEMORY: No historical signals logged yet.
+This is a fresh session.
     `.trim();
   }
 
@@ -310,8 +317,12 @@ This is a fresh session. Signal accuracy tracking will improve over time.
   ];
 
   for (const rs of stats.regimeStats) {
-    const emoji = rs.winRate >= 60 ? '🟢' : rs.winRate >= 45 ? '🟡' : '🔴';
-    lines.push(`  ${emoji} ${rs.regime}: ${rs.count} signals → ${rs.winRate.toFixed(1)}% historical win rate`);
+    if (showOutcomeStats && typeof rs.winRate === 'number' && Number.isFinite(rs.winRate)) {
+      const emoji = rs.winRate >= 60 ? '🟢' : rs.winRate >= 45 ? '🟡' : '🔴';
+      lines.push(`  ${emoji} ${rs.regime}: ${rs.count} signals → ${rs.winRate.toFixed(1)}% historical win rate`);
+    } else {
+      lines.push(`  ${rs.regime}: ${rs.count} signals`);
+    }
   }
 
   if (stats.recentSignals.length > 0) {
@@ -322,10 +333,12 @@ This is a fresh session. Signal accuracy tracking will improve over time.
     }
   }
 
-  lines.push('', 'Use this data to calibrate confidence:');
-  lines.push('- Lean INTO regimes with >60% historical win rate');
-  lines.push('- Be MORE cautious in regimes with <45% historical win rate');
-  lines.push('- Reference past accuracy when stating confidence levels');
+  if (showOutcomeStats) {
+    lines.push('', 'Use this data to calibrate confidence:');
+    lines.push('- Lean INTO regimes with >60% historical win rate');
+    lines.push('- Be MORE cautious in regimes with <45% historical win rate');
+    lines.push('- Reference past accuracy when stating confidence levels');
+  }
 
   return lines.join('\n');
 }
@@ -333,7 +346,10 @@ This is a fresh session. Signal accuracy tracking will improve over time.
 // =====================================================================
 // COMBINED V3 ENGINE INJECTION
 // =====================================================================
-export function buildV3EnginePrompt(signalMemory: Parameters<typeof buildSignalMemoryContext>[0]): string {
+export function buildV3EnginePrompt(
+  signalMemory: Parameters<typeof buildSignalMemoryContext>[0],
+  showOutcomeStats = SHOW_SIGNAL_OUTCOME_STATS,
+): string {
   return [
     MARKET_NARRATIVE_PROMPT,
     DECISION_TRACE_PROMPT,
@@ -342,6 +358,6 @@ export function buildV3EnginePrompt(signalMemory: Parameters<typeof buildSignalM
     TRADE_CONSTRUCTION_PROMPT,
     TIME_CONFLUENCE_PROMPT,
     CONFLUENCE_GATE_PROMPT,
-    buildSignalMemoryContext(signalMemory),
+    buildSignalMemoryContext(signalMemory, showOutcomeStats),
   ].join('\n\n');
 }

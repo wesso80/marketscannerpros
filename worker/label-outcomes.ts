@@ -24,7 +24,7 @@ import { alertWorkerError } from '../lib/opsAlerting';
 import { COINGECKO_ID_MAP } from '../lib/coingecko';
 import { bandForHorizon, bandsFromRows, horizonsWithFallback } from '../lib/signals/outcomeRule';
 import {
-  declaredAssetClass, inCryptoSymbolMap, labelHorizonMove, resolveOutcomeAsset, symbolBase,
+  declaredAssetClass, inCryptoSymbolMap, labelHorizonMove, resolveOutcomeLabelAsset, symbolBase,
 } from '../lib/signals/outcomeGuard';
 
 // Lazy database connection
@@ -67,49 +67,77 @@ const TOLERANCE_WINDOWS: Record<number, { bars: number; minutes: number }> = {
   10080: { bars: 2, minutes: 2880 },   // 1w: allow +2 days
 };
 
+interface ScopedBar {
+  close: string;
+  ts: string;
+  bar_class: string;
+}
+
 /**
- * Get price at a specific time from ohlcv_bars.
+ * Bars for one symbol in a time window, tagged by asset class.
  *
- * The ingest worker writes timeframe 'daily' (stamped 00:00 UTC of the session
- * date). It fetches 60min bars for midpoints but does not insert them here, so
- * '1h' / '60min' rows are rare. A 1d or 1w window is long enough to include the
- * next daily bar. A 1h or 4h window usually is not. quotes_latest is never used:
- * a missing bar inside the window is skipped, and a missing bar after the window
- * is unknown. A live price is not a horizon price.
+ * Equity rows are ohlcv_bars joined to symbol_universe.asset_type equity/stock/etf.
+ * Crypto rows are cg_hist_daily (via cg_hist_coins.symbol or the coin id) or
+ * ohlcv_bars joined to a crypto universe row. ohlcv_bars has no class column of
+ * its own, so an unjoined bar is not used. quotes_latest is never used.
  *
- * CRITICAL: To avoid label leakage, we must use the FIRST bar's CLOSE
- * that is >= target time. Not the high/low during the window,
- * not the closest bar, but strictly the first bar AFTER horizon.
- *
- * @param horizonMinutes - Used to determine tolerance window
+ * Symbols are stored uppercased, so compare to UPPER($1) and leave the symbol index usable.
  */
-async function getHorizonBar(
-  symbol: string,
-  targetTime: Date,
-  horizonMinutes: number = 1440
-): Promise<{ price: number; observedAtMs: number } | null> {
-  const tolerance = TOLERANCE_WINDOWS[horizonMinutes] || { bars: 2, minutes: 240 };
-  const maxTime = new Date(targetTime.getTime() + tolerance.minutes * 60 * 1000);
-
-  // First bar at or after the target, and still inside the tolerance window.
-  // Symbols are stored uppercased, so compare to UPPER($1) and leave the symbol index usable.
-  // No quotes_latest fallback: a current price is not the price at the horizon.
-  const firstBarAfter = await q<{ close: string, ts: string }>(
-    `SELECT close, ts FROM ohlcv_bars 
-     WHERE symbol = UPPER($1)
-       AND timeframe IN ('daily', '1h', '60min')
-       AND ts >= $2
-       AND ts <= $3
-     ORDER BY ts ASC
-     LIMIT 1`,
-    [symbol, targetTime, maxTime]
+async function getScopedBars(symbol: string, from: Date, to: Date, coinId: string): Promise<ScopedBar[]> {
+  return q<ScopedBar>(
+    `SELECT close, ts, bar_class FROM (
+       SELECT b.close::text AS close, b.ts, 'equity'::text AS bar_class
+         FROM ohlcv_bars b
+         JOIN symbol_universe u ON u.symbol = b.symbol
+        WHERE b.symbol = UPPER($1)
+          AND lower(u.asset_type) IN ('equity', 'equities', 'stock', 'etf')
+          AND b.timeframe IN ('daily', '1h', '60min')
+          AND b.ts >= $2
+          AND b.ts <= $3
+       UNION ALL
+       SELECT COALESCE(d.close, d.price)::text AS close,
+              ((d.day + 1)::timestamp AT TIME ZONE 'UTC') - INTERVAL '1 millisecond' AS ts,
+              'crypto'::text AS bar_class
+         FROM cg_hist_daily d
+         JOIN cg_hist_coins c ON c.id = d.coin_id
+        WHERE (upper(c.symbol) = UPPER($1) OR d.coin_id = $4)
+          AND COALESCE(d.close, d.price) IS NOT NULL
+          AND ((d.day + 1)::timestamp AT TIME ZONE 'UTC') - INTERVAL '1 millisecond' >= $2
+          AND ((d.day + 1)::timestamp AT TIME ZONE 'UTC') - INTERVAL '1 millisecond' <= $3
+       UNION ALL
+       SELECT b.close::text AS close, b.ts, 'crypto'::text AS bar_class
+         FROM ohlcv_bars b
+         JOIN symbol_universe u ON u.symbol = b.symbol
+        WHERE b.symbol = UPPER($1)
+          AND lower(u.asset_type) IN ('crypto', 'cryptocurrency')
+          AND b.timeframe IN ('daily', '1h', '60min')
+          AND b.ts >= $2
+          AND b.ts <= $3
+     ) class_bars`,
+    [symbol, from, to, coinId],
   );
+}
 
-  if (firstBarAfter.length === 0) return null;
-  const price = parseFloat(firstBarAfter[0].close);
-  const observedAtMs = new Date(firstBarAfter[0].ts).getTime();
-  if (!Number.isFinite(price) || !(price > 0) || !Number.isFinite(observedAtMs)) return null;
-  return { price, observedAtMs };
+function pickClassBar(
+  rows: ScopedBar[],
+  assetClass: 'equity' | 'crypto',
+  order: 'asc' | 'desc',
+): { price: number; observedAtMs: number; barClass: 'equity' | 'crypto' } | { otherClassOnly: true } | null {
+  const sorted = [...rows].sort((a, b) => {
+    const delta = new Date(a.ts).getTime() - new Date(b.ts).getTime();
+    return order === 'asc' ? delta : -delta;
+  });
+  const same = sorted.find((row) => row.bar_class === assetClass);
+  if (same) {
+    const price = parseFloat(same.close);
+    const observedAtMs = new Date(same.ts).getTime();
+    if (!Number.isFinite(price) || !(price > 0) || !Number.isFinite(observedAtMs)) {
+      return sorted.some((row) => row.bar_class !== assetClass) ? { otherClassOnly: true } : null;
+    }
+    return { price, observedAtMs, barClass: assetClass };
+  }
+  if (sorted.some((row) => row.bar_class !== assetClass)) return { otherClassOnly: true };
+  return null;
 }
 
 async function labelOutcomes() {
@@ -194,13 +222,28 @@ async function labelOutcomes() {
       
       const signalTime = new Date(signal_at);
       const targetTime = new Date(signalTime.getTime() + horizon_minutes * 60 * 1000);
-      const bar = await getHorizonBar(symbol, targetTime, horizon_minutes);
-      const asset = resolveOutcomeAsset({
+      const asset = resolveOutcomeLabelAsset({
         symbol,
         declared: declaredAssetClass(featureById.get(Number(signal_id))),
         universeTypes: universeBySymbol.get(String(symbol).toUpperCase()) ?? [],
         inCryptoMap: inCryptoSymbolMap(symbolBase(symbol), COINGECKO_ID_MAP),
       });
+      let observation: { price: number; observedAtMs: number; live: false; barClass: 'equity' | 'crypto' } | null = null;
+      let otherClassOnly = false;
+      if (asset.status === 'ok') {
+        const tolerance = TOLERANCE_WINDOWS[horizon_minutes] || { bars: 2, minutes: 240 };
+        const windowEnd = new Date(targetTime.getTime() + tolerance.minutes * 60 * 1000);
+        const entryFrom = new Date(signalTime.getTime() - 2 * 24 * 60 * 60 * 1000);
+        const coinId = COINGECKO_ID_MAP[symbolBase(symbol)] ?? '';
+        const entryRows = await getScopedBars(symbol, entryFrom, signalTime, coinId);
+        const horizonRows = await getScopedBars(symbol, targetTime, windowEnd, coinId);
+        const entryBar = pickClassBar(entryRows, asset.assetClass, 'desc');
+        const horizonBar = pickClassBar(horizonRows, asset.assetClass, 'asc');
+        otherClassOnly = (!!entryBar && 'otherClassOnly' in entryBar) || (!!horizonBar && 'otherClassOnly' in horizonBar);
+        if (!otherClassOnly && horizonBar && 'price' in horizonBar) {
+          observation = { price: horizonBar.price, observedAtMs: horizonBar.observedAtMs, live: false, barClass: horizonBar.barClass };
+        }
+      }
       const decision = labelHorizonMove({
         direction,
         bandPct: bandForHorizon(horizon_minutes, bandMap),
@@ -209,7 +252,8 @@ async function labelOutcomes() {
         signalAtMs: signalTime.getTime(),
         horizonMinutes: horizon_minutes,
         asset,
-        observation: bar ? { price: bar.price, observedAtMs: bar.observedAtMs, live: false } : null,
+        observation,
+        otherClassOnly,
       });
 
       if (decision.action === 'skip') {
@@ -217,7 +261,7 @@ async function labelOutcomes() {
         continue;
       }
 
-      if (decision.reason === 'suspect' || decision.reason === 'ambiguous' || decision.reason === 'expired') {
+      if (decision.reason === 'suspect' || decision.reason === 'ambiguous' || decision.reason === 'expired' || decision.reason === 'wrong_asset') {
         console.warn(`[outcomes] ${symbol} ${decision.reason}${decision.pctMove != null ? ` ${decision.pctMove.toFixed(2)}%` : ''} → unknown`);
       }
       

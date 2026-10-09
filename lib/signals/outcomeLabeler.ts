@@ -21,7 +21,7 @@ import type { PoolClient } from 'pg';
 import { COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { bandForHorizon, bandsFromRows, classifyMove, DEFAULT_OUTCOME_BANDS } from './outcomeRule';
 import {
-  declaredAssetClass, inCryptoSymbolMap, labelHorizonMove, observationInstantMs, resolveOutcomeAsset, symbolBase,
+  declaredAssetClass, inCryptoSymbolMap, labelHorizonMove, observationInstantMs, resolveOutcomeLabelAsset, symbolBase,
 } from './outcomeGuard';
 
 export interface OutcomeLabel {
@@ -150,7 +150,7 @@ export async function labelSignalOutcomes(workspaceId: string): Promise<{ labele
             `SELECT asset_type FROM symbol_universe WHERE symbol = UPPER($1)`,
             [signal.symbol],
           );
-          const asset = resolveOutcomeAsset({
+          const asset = resolveOutcomeLabelAsset({
             symbol: signal.symbol,
             declared: declaredAssetClass(signal.features_json),
             universeTypes: universe.map((row) => row.asset_type),

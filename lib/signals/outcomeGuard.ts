@@ -44,6 +44,24 @@ export function inCryptoSymbolMap(symbol: string, map: Readonly<Record<string, s
   return Boolean(map[upper] || map[base]);
 }
 
+/**
+ * Tickers whose CoinGecko id is a retired asset.
+ * FTM still maps to fantom; the live asset is Sonic (S).
+ * MATIC still maps to matic-network; the live asset is POL.
+ * Outcome labelling stores unknown for these so the retired id cannot score the row.
+ * RNDR is not here: it shares the current render-token id with RENDER.
+ */
+export const RENAMED_OUTCOME_TICKERS: Readonly<Record<string, { successor: string; retiredCoinId: string }>> = {
+  FTM: { successor: 'S', retiredCoinId: 'fantom' },
+  MATIC: { successor: 'POL', retiredCoinId: 'matic-network' },
+};
+
+export function renamedOutcomeTicker(symbol: string): { ticker: string; successor: string; retiredCoinId: string } | null {
+  const base = symbolBase(symbol);
+  const row = RENAMED_OUTCOME_TICKERS[base];
+  return row ? { ticker: base, successor: row.successor, retiredCoinId: row.retiredCoinId } : null;
+}
+
 export function declaredAssetClass(features: unknown): 'equity' | 'crypto' | null {
   if (!features || typeof features !== 'object') return null;
   const bag = features as Record<string, unknown>;
@@ -70,8 +88,8 @@ export function resolveOutcomeAsset(input: {
   inCryptoMap: boolean;
 }): AssetResolution {
   const types = new Set(input.universeTypes.map((type) => type.trim().toLowerCase()).filter(Boolean));
-  const universeCrypto = types.has('crypto');
-  const universeEquity = types.has('equity') || types.has('etf');
+  const universeCrypto = types.has('crypto') || types.has('cryptocurrency');
+  const universeEquity = types.has('equity') || types.has('equities') || types.has('stock') || types.has('etf');
   const cryptoEvidence = universeCrypto || input.inCryptoMap;
   const equityEvidence = universeEquity;
 
@@ -93,15 +111,37 @@ export function resolveOutcomeAsset(input: {
   return { status: 'ok', assetClass: 'equity' };
 }
 
+/**
+ * Same resolver as the scan, plus known renames.
+ * A renamed ticker is ambiguous for labelling: the stored coin id is the retired asset.
+ */
+export function resolveOutcomeLabelAsset(input: {
+  symbol: string;
+  declared: 'equity' | 'crypto' | null;
+  universeTypes: readonly string[];
+  inCryptoMap: boolean;
+}): AssetResolution {
+  const renamed = renamedOutcomeTicker(input.symbol);
+  if (renamed) {
+    return {
+      status: 'ambiguous',
+      reason: `${renamed.ticker} was renamed to ${renamed.successor}; the stored coin id ${renamed.retiredCoinId} is the retired asset`,
+    };
+  }
+  return resolveOutcomeAsset(input);
+}
+
 export interface HorizonObservation {
   price: number;
   /** When this price was observed. A date-only value is the end of that UTC day. */
   observedAtMs: number;
   /** True for quotes_latest / "the price right now". Never used once the window has closed. */
   live: boolean;
+  /** Class of the table or universe row this bar came from. A mismatch is not a horizon price. */
+  barClass?: 'equity' | 'crypto';
 }
 
-export type HorizonWriteReason = 'labelled' | 'expired' | 'ambiguous' | 'suspect';
+export type HorizonWriteReason = 'labelled' | 'expired' | 'ambiguous' | 'suspect' | 'wrong_asset';
 
 export type HorizonDecision =
   | { action: 'skip' }
@@ -146,9 +186,16 @@ export function labelHorizonMove(input: {
   horizonMinutes: number;
   asset: AssetResolution;
   observation: HorizonObservation | null;
+  /** True when the only bars in the entry or horizon window belong to the other class. */
+  otherClassOnly?: boolean;
 }): HorizonDecision {
   if (input.asset.status === 'ambiguous') {
     return { action: 'write', outcome: 'unknown', priceLater: null, pctMove: null, reason: 'ambiguous' };
+  }
+  const resolvedClass = input.asset.assetClass;
+  const barClass = input.observation?.barClass;
+  if (input.otherClassOnly || (barClass != null && barClass !== resolvedClass)) {
+    return { action: 'write', outcome: 'unknown', priceLater: null, pctMove: null, reason: 'wrong_asset' };
   }
   const { targetMs, windowEndMs } = horizonWindow(input.signalAtMs, input.horizonMinutes);
   const usable = input.observation && observationUsable(input.observation, targetMs, windowEndMs, input.nowMs)

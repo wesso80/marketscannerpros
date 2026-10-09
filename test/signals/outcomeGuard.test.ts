@@ -4,6 +4,7 @@ import {
   labelHorizonMove,
   publishScanChange,
   resolveOutcomeAsset,
+  resolveOutcomeLabelAsset,
   resolveScanAsset,
   SUSPECT_MOVE_PCT,
 } from '@/lib/signals/outcomeGuard';
@@ -89,6 +90,74 @@ describe('outcome horizon guard', () => {
     });
     expect(decision).toMatchObject({ action: 'write', outcome: 'unknown', reason: 'suspect' });
     if (decision.action === 'write') expect(decision.pctMove).toBeCloseTo(1000, 0);
+  });
+
+  it('does not label a coin from the other asset class when the move is under 50%', () => {
+    const nowMs = signalAt + 3 * 24 * HOUR;
+    const observedAtMs = signalAt + 30 * HOUR;
+    const yfi = resolveOutcomeAsset({ symbol: 'YFI', declared: null, universeTypes: [], inCryptoMap: true });
+    expect(yfi).toEqual({ status: 'ok', assetClass: 'crypto' });
+    const yfiDecision = labelHorizonMove({
+      direction: 'bullish', bandPct: 2, priceAtSignal: 100, nowMs, signalAtMs: signalAt, horizonMinutes,
+      asset: yfi, otherClassOnly: true,
+      observation: { price: 112, observedAtMs, live: false, barClass: 'equity' },
+    });
+    expect(yfiDecision).toMatchObject({ action: 'write', outcome: 'unknown', reason: 'wrong_asset' });
+
+    const jup = resolveOutcomeAsset({ symbol: 'JUP', declared: null, universeTypes: [], inCryptoMap: Boolean(COINGECKO_ID_MAP.JUP) });
+    expect(jup).toEqual({ status: 'ok', assetClass: 'crypto' });
+    const jupDecision = labelHorizonMove({
+      direction: 'bullish', bandPct: 2, priceAtSignal: 1, nowMs, signalAtMs: signalAt, horizonMinutes,
+      asset: jup, otherClassOnly: true,
+      observation: { price: 1.04, observedAtMs, live: false, barClass: 'equity' },
+    });
+    expect(jupDecision).toMatchObject({ action: 'write', outcome: 'unknown', reason: 'wrong_asset' });
+
+    const beam = resolveOutcomeAsset({ symbol: 'BEAM', declared: null, universeTypes: ['equity'], inCryptoMap: true });
+    expect(beam.status).toBe('ambiguous');
+    const beamDecision = labelHorizonMove({
+      direction: 'bullish', bandPct: 2, priceAtSignal: 100, nowMs, signalAtMs: signalAt, horizonMinutes,
+      asset: beam,
+      observation: { price: 108, observedAtMs, live: false, barClass: 'equity' },
+    });
+    expect(beamDecision).toMatchObject({ action: 'write', outcome: 'unknown', reason: 'ambiguous' });
+
+    for (const decision of [yfiDecision, jupDecision, beamDecision]) {
+      expect(decision.action === 'write' && decision.outcome).not.toBe('correct');
+      expect(decision.action === 'write' && decision.outcome).not.toBe('wrong');
+    }
+  });
+
+  it('still labels a same-class bar under 50%', () => {
+    const decision = labelHorizonMove({
+      direction: 'bullish', bandPct: 2, priceAtSignal: 100,
+      nowMs: signalAt + 3 * 24 * HOUR, signalAtMs: signalAt, horizonMinutes,
+      asset: cryptoAsset('JUP'),
+      observation: { price: 108, observedAtMs: signalAt + 30 * HOUR, live: false, barClass: 'crypto' },
+    });
+    expect(decision).toMatchObject({ action: 'write', outcome: 'correct', reason: 'labelled' });
+  });
+
+  it('stores unknown for renamed tickers FTM and MATIC', () => {
+    expect(COINGECKO_ID_MAP.FTM).toBe('fantom');
+    expect(COINGECKO_ID_MAP.MATIC).toBe('matic-network');
+    expect(COINGECKO_ID_MAP.POL).toBe('polygon-ecosystem-token');
+    const nowMs = signalAt + 3 * 24 * HOUR;
+    const observedAtMs = signalAt + 30 * HOUR;
+    for (const symbol of ['FTM', 'MATIC']) {
+      const asset = resolveOutcomeLabelAsset({
+        symbol, declared: 'crypto', universeTypes: ['crypto'], inCryptoMap: true,
+      });
+      expect(asset.status).toBe('ambiguous');
+      const decision = labelHorizonMove({
+        direction: 'bullish', bandPct: 2, priceAtSignal: 100, nowMs, signalAtMs: signalAt, horizonMinutes,
+        asset,
+        observation: { price: 110, observedAtMs, live: false, barClass: 'crypto' },
+      });
+      expect(decision).toMatchObject({ action: 'write', outcome: 'unknown', reason: 'ambiguous' });
+      expect(decision.action === 'write' && decision.outcome).not.toBe('correct');
+      expect(decision.action === 'write' && decision.outcome).not.toBe('wrong');
+    }
   });
 });
 

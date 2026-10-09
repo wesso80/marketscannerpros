@@ -20,6 +20,7 @@ import { mapToScoringRegime, computeRegimeScore, estimateComponentsWithAvailabil
 import { computeACLFromScoring } from '@/lib/ai/adaptiveConfidenceLens';
 import { fetchIntelligenceContext } from '@/lib/ai/intelligenceContext';
 import { buildV3EnginePrompt } from '@/lib/prompts/arcaV3Engine';
+import { regimeStatsForPrompt, regimeStatsSql } from '@/lib/signals/outcomeStatsVisibility';
 import { PUBLIC_AI_SAFETY_GUARDRAILS, appendPublicAISafetyCorrection, buildPublicAIDataBindingGuardrail } from '@/lib/prompts/publicAiSafety';
 import { getEdgeContext } from '@/lib/intelligence/edgeContextBuilder';
 import { computePerformanceThrottle, applyPerformanceDampener } from '@/lib/ai/performanceThrottle';
@@ -163,13 +164,7 @@ async function handleLegacyPost(req: NextRequest) {
     let signalMemory: Parameters<typeof buildV3EnginePrompt>[0] = null;
     try {
       const [regimeStats, recentSignals, totalResult] = await Promise.all([
-        q(
-          `SELECT regime, COUNT(*) as count,
-                  ROUND(100.0 * COUNT(*) FILTER (WHERE outcome = 'correct') / NULLIF(COUNT(*) FILTER (WHERE outcome != 'pending'), 0), 1) as win_rate
-           FROM ai_signal_log WHERE workspace_id = $1 AND signal_at > NOW() - INTERVAL '90 days'
-           GROUP BY regime ORDER BY count DESC`,
-          [session.workspaceId]
-        ),
+        q(regimeStatsSql(), [session.workspaceId]),
         q(
           `SELECT symbol, verdict, confidence, outcome FROM ai_signal_log
            WHERE workspace_id = $1 ORDER BY signal_at DESC LIMIT 5`,
@@ -182,7 +177,7 @@ async function handleLegacyPost(req: NextRequest) {
       ]);
       signalMemory = {
         totalSignals: parseInt(totalResult?.[0]?.total || '0'),
-        regimeStats: (regimeStats || []).map((r: any) => ({ regime: r.regime, count: parseInt(r.count), winRate: parseFloat(r.win_rate || '0') })),
+        regimeStats: regimeStatsForPrompt(regimeStats),
         recentSignals: (recentSignals || []).map((s: any) => ({ symbol: s.symbol, verdict: s.verdict, confidence: parseInt(s.confidence), outcome: s.outcome })),
       };
     } catch {

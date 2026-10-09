@@ -95,6 +95,9 @@ it('the session labeler uses the same boundary as classifyMove, including an unm
  expect(worker).toContain('symbol = UPPER($1)');
  expect(worker).not.toContain('UPPER(symbol)');
  expect(worker).not.toMatch(/FROM quotes_latest/i);
+ expect(worker).toContain('cg_hist_daily');
+ expect(worker).toContain('symbol_universe');
+ expect(worker).toContain('resolveOutcomeLabelAsset');
 });
 
 const signalRow={id:1,symbol:'AAPL',direction:'bullish' as const,price_at_signal:100,signal_at:'2026-10-01T14:00:00Z',timeframe:'1d'};
