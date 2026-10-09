@@ -37,7 +37,7 @@ import {
   type AssetReturnSeries,
 } from './data/leadLag5mConfirmedBars';
 import { avFetchIntradayBars } from '@/lib/marketData/client';
-import { getMarketChartFull } from '@/lib/coingecko';
+import { getMarketChartFull, hasCoinGeckoApiKey } from '@/lib/coingecko';
 
 export type LeadLagServiceStatus =
   | 'OK' | 'PARTIAL' | 'DATA_UNAVAILABLE' | 'CREDENTIAL_REQUIRED' | 'ENGINE_ERROR';
@@ -253,7 +253,7 @@ export function resetLeadLagCache(): void { liveCache = null; }
 function liveDataGate(): { ok: boolean; reason?: string } {
   if (process.env.INTELLIGENCE_LIVE_DATA !== 'true') return { ok: false, reason: 'live-data-disabled' };
   if (!process.env.ALPHA_VANTAGE_API_KEY) return { ok: false, reason: 'missing-ALPHA_VANTAGE_API_KEY' };
-  if (!process.env.COINGECKO_API_KEY && !process.env.COINGECKO_PRO_API_KEY) {
+  if (!hasCoinGeckoApiKey()) {
     return { ok: false, reason: 'missing-COINGECKO_API_KEY' };
   }
   return { ok: true };

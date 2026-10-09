@@ -8,7 +8,7 @@
  */
 import { q } from '../db';
 import { avFetch } from '../avRateGovernor';
-import { getAggregatedOpenInterest, getCoinCategories, getDerivativesForSymbols, getGlobalData, getMarketData } from '../coingecko';
+import { getAggregatedOpenInterest, getCoinCategories, getDerivativesForSymbols, getGlobalData, getMarketData, hasCoinGeckoApiKey } from '../coingecko';
 import { buildCalendarFeed, type CalendarFeed } from '../macro/calendar/feed';
 import { ALL_COUNTRIES } from '../macro/calendar/countries';
 import { ALL_FOCUS_ASSETS } from '../macro/calendar/relevance';
@@ -227,7 +227,7 @@ export async function collectCrcs(nowMs: number): Promise<Dataset<{ latest: Crcs
 // ───────────────────────────── Crypto (CoinGecko lib — same client as production routes) ─────────────────────────────
 
 export async function collectCrypto(nowMs: number): Promise<Dataset<CryptoSnapshot>> {
-  if (!process.env.COINGECKO_API_KEY && !process.env.COINGECKO_PRO_API_KEY) return missing('crypto', 'Crypto market structure', 'CoinGecko', true, 'COINGECKO_API_KEY not set');
+  if (!hasCoinGeckoApiKey()) return missing('crypto', 'Crypto market structure', 'CoinGecko', true, 'COINGECKO_API_KEY not set');
   return safe(async () => {
     const [global, markets, perps, oi, categories] = await Promise.all([
       getGlobalData(), getMarketData({ per_page: 100, price_change_percentage: ['24h', '7d'] }),

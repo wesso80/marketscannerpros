@@ -24,6 +24,7 @@ import { adminEquitiesPaused, ADMIN_EQUITIES_PAUSED_MESSAGE } from './adminEquit
 import { randomUUID } from "crypto";
 import type { CandidatePipeline } from "@/lib/operator/orchestrator";
 import { avFetch } from "@/lib/avRateGovernor";
+import { runWithAvBudget } from "@/lib/avLimiter";
 import { buildAdminScanContext } from "@/lib/admin/scan-context";
 import { buildAdminResearchScan, type AdminResearchPacket } from "@/lib/admin/getAdminResearchPacket";
 import {
@@ -38,6 +39,7 @@ import {
 import { pipelineToScannerHit } from "@/lib/admin/serializer";
 import { recordSignals } from "@/lib/admin/signal-recorder";
 import { opsAlert } from "@/lib/opsAlerting";
+import { adminRadarDiscordEnabled } from "@/lib/admin/equityOutbound";
 import { COINGECKO_ID_MAP, getMarketData } from "@/lib/coingecko";
 import { guardScanChangePercent } from "@/lib/admin/scanMoveGuard";
 import * as store from "@/lib/admin/sharedScanStore";
@@ -168,7 +170,10 @@ export async function startSharedScan(req: SharedScanRequest): Promise<StartShar
     return { started: false, reason: "error", message: err instanceof Error ? err.message : String(err) };
   }
 
-  const done = executeRun({ runId, market, timeframe, symbols, req });
+  const done = runWithAvBudget(
+    { lane: 'scheduled', feature: market === 'CRYPTO' ? 'admin-crypto-scan' : 'admin-equity-scan' },
+    () => executeRun({ runId, market, timeframe, symbols, req }),
+  );
   return { started: true, runId, symbolsRequested: symbols.length, done };
 }
 
@@ -356,7 +361,7 @@ async function executeRun(input: {
             .catch((err) => console.error("[sharedScan] signal recording failed:", err));
         }
         const appeared = summary.radarChanges.filter((c) => c.action === "appeared");
-        if (appeared.length > 0) {
+        if (appeared.length > 0 && adminRadarDiscordEnabled()) {
           opsAlert({
             title: `Shared admin scan — ${appeared.length} new radar signal(s)`,
             message: appeared.map((a) => `${a.symbol} (${a.permission} @ ${(a.confidence * 100).toFixed(1)}%)`).join("\n"),

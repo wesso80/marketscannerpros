@@ -1,3 +1,4 @@
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { adminEquitiesPaused, ADMIN_EQUITIES_PAUSED_MESSAGE } from '@/lib/admin/adminEquities';
 /**
  * POST /api/cron/admin-scan — run the shared saved admin scan (lib/admin/sharedScan.ts).
@@ -15,7 +16,8 @@ import { detachRun, startSharedScan } from "@/lib/admin/sharedScan";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'cron-admin-scan' }, () => POST(req));
   if (!verifyCronAuth(req)) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const market = String(body?.market || "EQUITIES").toUpperCase();

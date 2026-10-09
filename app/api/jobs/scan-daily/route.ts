@@ -12,6 +12,7 @@ import { randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
 import { avTakeToken } from "@/lib/avRateGovernor";
+import { runWithAvBudget } from "@/lib/avLimiter";
 import { verifyCronAuth, verifyAdminAuth } from "@/lib/adminAuth";
 import { alertCronFailure } from "@/lib/opsAlerting";
 import { computeDailyIndicators, ema200SanityFailure, scanCryptoDailyIndicators } from "@/lib/scanner/dailyCryptoIndicators";
@@ -349,11 +350,11 @@ async function equitySymbolsDue(symbols: string[], nowMs: number): Promise<strin
 
 // Accept both GET (for cron-job.org) and POST
 export async function GET(req: NextRequest) {
-  return runDailyScan(req);
+  return runWithAvBudget({ lane: 'scheduled', feature: 'daily-scan' }, () => runDailyScan(req));
 }
 
 export async function POST(req: NextRequest) {
-  return runDailyScan(req);
+  return runWithAvBudget({ lane: 'scheduled', feature: 'daily-scan' }, () => runDailyScan(req));
 }
 
 async function runDailyScan(req: NextRequest) {

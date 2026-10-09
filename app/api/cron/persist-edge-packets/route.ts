@@ -1,4 +1,6 @@
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { adminEquitiesPaused, ADMIN_EQUITIES_PAUSED_MESSAGE } from '@/lib/admin/adminEquities';
+import { discoveryOnlyAction, discoveryOnlySkipBody, persistEdgeMarket } from '@/lib/admin/discoveryOnly';
 /**
  * POST /api/cron/persist-edge-packets
  *
@@ -59,16 +61,21 @@ function authorise(req: NextRequest): boolean {
   return !!cronSecret && timingSafeCompare(headerCron, cronSecret);
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'cron-persist-edge-packets' }, () => POST(req));
   if (!authorise(req)) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
   const started = Date.now();
   try {
     const body = await req.json().catch(() => ({}));
-    const marketRaw = typeof body.market === "string" ? body.market.toUpperCase() : "CRYPTO";
-    if (marketRaw !== "CRYPTO" && marketRaw !== "EQUITIES") {
+    const marketRaw = persistEdgeMarket(body);
+    if (marketRaw === 'invalid') {
       return NextResponse.json({ ok: false, error: "market must be CRYPTO or EQUITIES" }, { status: 400 });
+    }
+    // Crypto persist stays a discovery-only no-op. Only the equity branch runs.
+    if (discoveryOnlyAction('/api/cron/persist-edge-packets', 'POST', body) === 'skip_job') {
+      return NextResponse.json(discoveryOnlySkipBody(), { status: 200, headers: { 'Cache-Control': 'no-store' } });
     }
     if (marketRaw === 'EQUITIES' && adminEquitiesPaused()) return NextResponse.json({
       ok: true, started: false, skipped: true, reason: 'admin_equities_paused', message: ADMIN_EQUITIES_PAUSED_MESSAGE,

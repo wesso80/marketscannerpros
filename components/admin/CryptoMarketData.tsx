@@ -1,11 +1,11 @@
 'use client';
 import {useEffect,useState} from 'react';
 import type {DerivRow,CategoryRow,MoverRow,TrendingRow,GlobalPoint} from '@/lib/admin/cryptoMarketData';
-import type {CgBudget} from '@/lib/admin/cgCredits';
+import type {CgBudgetStatus} from '@/lib/admin/cgCredits';
 import {COMPRESSION_STRONG_SCORE,sortCompressionRows,type CompressionRow,type CompressionWindow} from '@/lib/admin/cryptoCompression';
 import CryptoNewListings from './CryptoNewListings';
 type Status={ok:boolean;at:string;skipped?:string;error?:string;calls:number};
-type View={error?:string;config:Record<string,number>;status:{status:Record<string,Status>;lastRunAt:string|null};budget:CgBudget|null;
+type View={error?:string;config:Record<string,number>;status:{status:Record<string,Status>;lastRunAt:string|null};budget:CgBudgetStatus|null;
  derivatives:{at:string;source:string;exchanges:number;tickers:number;dayAgoAt:string|null;flagged:DerivRow[];topFunding:DerivRow[];topOiChange:DerivRow[]}|null;
  global:{latest:GlobalPoint;btcDomChange24h:number|null;btcDomChange7d:number|null;mcapChange24hPct:number|null;mcapChange7dPct:number|null;altsNote:string}|null;
  categories:{at:string;rows:CategoryRow[];historyDays:number}|null;
@@ -79,6 +79,7 @@ export default function CryptoMarketData({refreshVersion=0}:{refreshVersion?:num
      <p>{b.remaining.toLocaleString()} of {b.allowance.toLocaleString()} credits remaining this month ({b.remainingPct.toFixed(1)}%) · used {b.used.toLocaleString()} · plan {b.plan??'unknown'} · source {b.source}{b.keyCheckedAt?` · checked ${new Date(b.keyCheckedAt).toLocaleString()}`:''}</p>
      <p className={b.pauseNonEssential?'text-red-300':'text-slate-400'}>{b.pauseNonEssential?`PAUSED: non-essential CoinGecko jobs stop below ${b.pauseBelowPct}% remaining (paper exits are unaffected).`:`Non-essential jobs pause automatically below ${b.pauseBelowPct}% remaining.`}</p>
      <p className="text-xs text-slate-400">This app's own count (every request attempt through the shared client, retries included; requests served from the Next.js cache are also counted, so this over-counts): today {b.local.today.toLocaleString()} · this month {b.local.month.toLocaleString()} · today by endpoint: {Object.entries(b.local.todayByFamily).map(([k,v])=>`${k} ${v}`).join(', ')||'none'}</p>
+     <p className="text-xs text-slate-300">Hard cap: {b.targetPct}% of quota {b.quota.toLocaleString()} ({b.targetCredits.toLocaleString()} credits). Today {b.callsToday.toLocaleString()} calls, cap {b.todayCap.toLocaleString()}, refused {b.refusedToday.toLocaleString()}{b.capMode==='process'?' · Redis is down, so this cap is this process share of the flat daily cap':''}.</p>
     </>}
     <p className="text-xs text-slate-400">Last job run: {data.status.lastRunAt?new Date(data.status.lastRunAt).toLocaleString():'never'} · {Object.entries(st).map(([k,s])=><span key={k} className={s.ok?'':'text-amber-300'}>{k}: {s.skipped??(s.ok?'OK':`FAILED ${s.error??''}`)} ({s.calls} calls) · </span>)}</p>
    </section>

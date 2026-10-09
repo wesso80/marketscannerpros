@@ -7,7 +7,7 @@ import { q } from '../../db';
 import { avFetch } from '../../avRateGovernor';
 import { avFetchDailyBars, avFetchOverview } from '../../marketData/client';
 import { STOCK_SECTOR_MAP } from '../../sectorMap';
-import { getCoinCategories, getDerivativesForSymbols, getMarketChartRange, getMarketData } from '../../coingecko';
+import { getCoinCategories, getDerivativesForSymbols, getMarketChartRange, getMarketData, hasCoinGeckoApiKey } from '../../coingecko';
 import type { CoinGeckoMarketData } from '../../coingecko';
 import { fetchOptionsSnapshot } from '../../goldenEggFetchers';
 import { findUniverseViolations } from '../../universe/assetClass';
@@ -157,20 +157,15 @@ export async function loadCategoryMembers(cats: CategoryRow[], max = 14): Promis
   await pool(pick, 4, async (c) => {
     try {
       budget.cg++;
-      const params = new URLSearchParams({ vs_currency: 'usd', category: c.id, per_page: '100', page: '1', order: 'market_cap_desc' });
-      const rows = await cgRaw<CoinGeckoMarketData[]>('/coins/markets', params);
+      if (!hasCoinGeckoApiKey()) return;
+      const rows = await getMarketData(
+        { category: c.id, per_page: 100, page: 1, order: 'market_cap_desc' },
+        { retries: 0, timeoutMs: 15_000 },
+      );
       for (const r of rows ?? []) (out[r.symbol.toUpperCase()] ??= []).push(c.name);
     } catch { /* skip */ }
   });
   return out;
-}
-
-async function cgRaw<T>(path: string, params: URLSearchParams): Promise<T | null> {
-  const key = process.env.COINGECKO_API_KEY || process.env.COINGECKO_PRO_API_KEY;
-  if (!key) return null;
-  const res = await fetch(`https://pro-api.coingecko.com/api/v3${path}?${params}`, { headers: { 'x-cg-pro-api-key': key }, signal: AbortSignal.timeout(15000) });
-  if (!res.ok) return null;
-  return (await res.json()) as T;
 }
 
 // ───────────────────────────── Catalysts / earnings / CRCS / indicators (DB) ─────────────────────────────

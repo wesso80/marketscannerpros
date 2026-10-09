@@ -100,6 +100,7 @@ beforeEach(() => {
   delete process.env.ADMIN_RESCAN_DAILY_CAP;
   delete process.env.ADMIN_CRYPTO_ENABLED;
   delete process.env.ADMIN_EQUITIES_PAUSED;
+  delete process.env.ADMIN_RADAR_DISCORD_ENABLED;
   m.entitlement.downgraded = false;
   for (const fn of Object.values(m.store)) if (typeof fn === 'function' && 'mockClear' in fn) (fn as ReturnType<typeof vi.fn>).mockClear();
   m.store.acquireRunLock.mockReset().mockResolvedValue(true);
@@ -137,6 +138,7 @@ describe('startSharedScan — equities run', () => {
     });
     m.buildScan.mockImplementation(async ({ symbol }: { symbol: string }) => (symbol === 'CCC' ? scanNoBars(symbol) : scanOk(symbol)));
 
+    process.env.ADMIN_RADAR_DISCORD_ENABLED = 'true';
     const summary = await run({ market: 'EQUITIES', trigger: 'radar', symbols: ['AAA', 'BBB', 'CCC', 'DDD'] });
 
     expect(m.avFetch).toHaveBeenCalledTimes(1);
@@ -160,6 +162,17 @@ describe('startSharedScan — equities run', () => {
     expect(m.recordSignals).toHaveBeenCalledTimes(1);
     expect(m.recordSignals.mock.calls[0][4]).toEqual({ trigger: 'radar', runId: expect.stringMatching(/^scan_equities_/) });
     expect(m.store.finishRun).toHaveBeenCalledWith(expect.objectContaining({ status: 'done', symbolsScanned: 1, symbolsQuoted: 1, symbolsFailed: 1, avCalls: 1 }));
+  });
+
+  it('does not post the new-names Discord alert unless ADMIN_RADAR_DISCORD_ENABLED is true or 1', async () => {
+    m.avFetch.mockResolvedValue({ data: [{ symbol: 'AAA', close: '50', previous_close: '49' }] });
+    m.buildScan.mockResolvedValue(scanOk('AAA'));
+    await run({ market: 'EQUITIES', trigger: 'radar', symbols: ['AAA'] });
+    expect(m.opsAlert).not.toHaveBeenCalled();
+    m.opsAlert.mockClear();
+    process.env.ADMIN_RADAR_DISCORD_ENABLED = '1';
+    await run({ market: 'EQUITIES', trigger: 'radar', symbols: ['AAA'] });
+    expect(m.opsAlert).toHaveBeenCalledTimes(1);
   });
 
   it('recordSignals: false opts a run out of signal logging', async () => {

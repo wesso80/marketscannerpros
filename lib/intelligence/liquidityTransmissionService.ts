@@ -33,7 +33,7 @@ import {
 import {
   parseAlphaVantageDaily, parseFredObservations,
 } from './fragilityService';
-import { getMarketChartHistory, getGlobalMarketCapChart, getMarketChartFull } from '@/lib/coingecko';
+import { getMarketChartHistory, getGlobalMarketCapChart, getMarketChartFull, hasCoinGeckoApiKey } from '@/lib/coingecko';
 
 export type LiquidityTransmissionServiceStatus =
   | 'OK' | 'PARTIAL' | 'DATA_UNAVAILABLE' | 'CREDENTIAL_REQUIRED' | 'ENGINE_ERROR';
@@ -194,7 +194,7 @@ function liveDataGate(): { ok: boolean; reason?: string } {
   if (!process.env.FRED_API_KEY) return { ok: false, reason: 'missing-FRED_API_KEY' };
   // CoinGecko Pro is required for BTC/ETH/TOTAL2 history — fail closed rather
   // than silently omit crypto downstream stages.
-  if (!process.env.COINGECKO_API_KEY && !process.env.COINGECKO_PRO_API_KEY) {
+  if (!hasCoinGeckoApiKey()) {
     return { ok: false, reason: 'missing-COINGECKO_API_KEY' };
   }
   return { ok: true };

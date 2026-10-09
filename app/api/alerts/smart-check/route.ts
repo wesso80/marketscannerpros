@@ -10,6 +10,7 @@ import { sendPushToUser } from '@/lib/pushServer';
 import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
 import { fetchMPE } from '@/lib/goldenEggFetchers';
 import { historyPriceInsert } from '@/lib/alerts/historyPrice';
+import { runWithAvBudget } from '@/lib/avLimiter';
 
 /**
  * Smart Alerts Checker
@@ -72,11 +73,11 @@ interface DerivativesData {
 }
 
 export async function GET(req: NextRequest) {
-  return checkSmartAlerts(req);
+  return runWithAvBudget({ lane: 'alerts', feature: 'alerts-smart-check' }, () => checkSmartAlerts(req));
 }
 
 export async function POST(req: NextRequest) {
-  return checkSmartAlerts(req);
+  return runWithAvBudget({ lane: 'alerts', feature: 'alerts-smart-check' }, () => checkSmartAlerts(req));
 }
 
 async function checkSmartAlerts(req: NextRequest) {

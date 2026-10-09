@@ -20,7 +20,7 @@ it('allows the crypto summary bot route and still pauses unlisted admin APIs', (
 it.each(['/api/admin/live-scanner', '/api/admin/portfolio-lab/cycle', '/api/admin/macro-pulse', '/api/admin/crypto-discovery/other', '/api/operator/engine/scan'])('blocks other admin APIs before handler work: %s', path => {
   expect(discoveryOnlyAction(path)).toBe('pause_api');
 });
-it.each(['/api/cron/admin-scan', '/api/cron/persist-edge-packets', '/api/cron/arca-daily-report', '/api/cron/edge-label-outcomes', '/api/cron/edge-rebuild-matrix', '/api/cron/evening-packet', '/api/jobs/email-morning-brief', '/api/jobs/email-daily-review', '/api/jobs/email-best-opportunities', '/api/operator/engine/auto-scan/'])('makes private jobs explicit no-ops: %s', path => {
+it.each(['/api/cron/admin-scan', '/api/cron/persist-edge-packets', '/api/cron/arca-daily-report', '/api/cron/edge-label-outcomes', '/api/cron/edge-rebuild-matrix', '/api/cron/evening-packet', '/api/jobs/email-morning-brief', '/api/jobs/email-daily-review', '/api/jobs/email-best-opportunities'])('makes private jobs explicit no-ops: %s', path => {
   expect(discoveryOnlyAction(path)).toBe('skip_job');
 });
 it.each(['/api/cron/macro-ingest', '/api/cron/global-m2-ingest', '/api/cron/refresh-fundamentals', '/api/cron/label-ai-outcomes', '/api/jobs/scan-universe', '/api/jobs/scan-daily', '/api/scanner/run', '/api/alerts/check', '/tools/scanner', '/api/stripe/webhook'])('preserves public/shared workloads: %s', path => {
@@ -60,7 +60,10 @@ it.each(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const)('crypto, jev, and ba
   expect(discoveryOnlyAction('/api/cron/evening-packet', method)).toBe('skip_job');
   expect(discoveryOnlyAction('/api/cron/admin-scan', method)).toBe('skip_job');
   expect(discoveryOnlyAction('/api/jobs/email-morning-brief', method)).toBe('skip_job');
-  expect(discoveryOnlyAction('/api/operator/engine/auto-scan', method)).toBe('skip_job');
+  expect(discoveryOnlyAction('/api/operator/engine/auto-scan', method)).toBe('allow');
+  expect(discoveryOnlyAction('/api/operator/engine/auto-scan', method, { watchlist: 'crypto-majors' })).toBe('skip_job');
+  expect(discoveryOnlyAction('/api/cron/persist-edge-packets', method)).toBe('skip_job');
+  expect(discoveryOnlyAction('/api/cron/persist-edge-packets', method, { market: 'EQUITIES' })).toBe('allow');
   expect(discoveryOnlyAction('/api/admin/live-scanner', method)).toBe('pause_api');
   expect(discoveryOnlyAction('/api/admin/sync-stripe', method)).toBe('pause_api');
   expect(discoveryOnlyAction('/api/admin/portfolio-lab/cycle', method)).toBe('pause_api');

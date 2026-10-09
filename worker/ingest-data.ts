@@ -19,7 +19,11 @@ import { captureMarkUsable } from '../lib/portfolio/captureValues';
 import { isUsRegularSessionOpen } from '../lib/time/usSession';
 import { ensureCaptureSchema, captureDueAccounts, dueCaptureSymbols } from '../lib/portfolio/serverCapture';
 import { Redis } from '@upstash/redis';
-import { TokenBucket, sleep, retryWithBackoff } from '../lib/rateLimiter';
+import { sleep, TokenBucket } from '../lib/rateLimiter';
+import { avTakeToken } from '../lib/avRateGovernor';
+import { runWithAvBudget } from '../lib/avLimiter';
+// The entrypoint sets the role, so Render does not need AV_PROCESS_ROLE.
+process.env.AV_PROCESS_ROLE ??= 'worker';
 import { calculateAllIndicators, detectSqueeze, getIndicatorWarmupStatus, OHLCVBar } from '../lib/indicators';
 import { CACHE_KEYS, CACHE_TTL } from '../lib/redis';
 import { recordSignalsBatch } from '../lib/signalService';
@@ -260,18 +264,25 @@ function isDueForFetch(lastFetchedAt: Date | string | null | undefined, interval
   return Date.now() - parsed.getTime() >= intervalSeconds * 1000;
 }
 
-// Rate limiter: Alpha Vantage 600 RPM commercial license (uncapped monthly)
-// Budget split: worker gets ALPHA_VANTAGE_RPM env (default 200, clamped to <= 200), web gets remainder via avRateGovernor
-// Total across all instances must not exceed 600 RPM contract limit
-let rateLimiter: TokenBucket | null = null;
-function getRateLimiter(): TokenBucket {
-  if (!rateLimiter) {
-    const rpm = workerAvRpm(getEnv('ALPHA_VANTAGE_RPM'));
-    const burstPerSecond = parseInt(getEnv('ALPHA_VANTAGE_BURST_PER_SECOND') || '4', 10);
-    const burstCapacity = Math.max(1, Math.min(rpm, burstPerSecond));
-    rateLimiter = new TokenBucket(burstCapacity, rpm / 60);
+// Burst stays at 4 requests/second so a cycle cannot dump the shared minute budget at once.
+const WORKER_AV_BURST_PER_SECOND = 4;
+let workerBurst: TokenBucket | null = null;
+function workerBurstBucket(): TokenBucket {
+  if (!workerBurst) workerBurst = new TokenBucket(WORKER_AV_BURST_PER_SECOND, WORKER_AV_BURST_PER_SECOND);
+  return workerBurst;
+}
+
+// Shared Alpha Vantage budget (lib/avLimiter.ts), lane scheduled, feature worker-ingest.
+// A denial skips this fetch. It does not throw into the caller loop.
+async function takeWorkerAvToken(): Promise<boolean> {
+  try {
+    await workerBurstBucket().take(1, 5_000);
+    await avTakeToken({ lane: 'scheduled', feature: 'worker-ingest' });
+    return true;
+  } catch (err) {
+    console.warn(`[worker] AV budget skipped a fetch: ${err instanceof Error ? err.message : err}`);
+    return false;
   }
-  return rateLimiter;
 }
 
 // ============================================================================
@@ -467,7 +478,7 @@ async function fetchAVTimeSeries(
   interval: string = 'daily',
   outputsize: string = 'compact'
 ): Promise<AVBar[]> {
-  await getRateLimiter().take(1);
+  if (!(await takeWorkerAvToken())) return [];
 
   const functionName = interval === 'daily' 
     ? 'TIME_SERIES_DAILY_ADJUSTED' 
@@ -533,7 +544,7 @@ async function fetchAVGlobalQuote(symbol: string): Promise<{
   changePct: number;
   latestDay: string;
 } | null> {
-  await getRateLimiter().take(1);
+  if (!(await takeWorkerAvToken())) return null;
 
   const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&entitlement=realtime&apikey=${getEnv('ALPHA_VANTAGE_API_KEY')}`;
   
@@ -568,7 +579,7 @@ async function fetchAVGlobalQuote(symbol: string): Promise<{
  */
 async function fetchAVBulkQuotes(symbols: string[]): Promise<Map<string, WorkerEquityQuote>> {
   if (symbols.length === 0) return new Map();
-  await getRateLimiter().take(1);
+  if (!(await takeWorkerAvToken())) return new Map();
 
   const symbolList = symbols.join(',');
   const url = `https://www.alphavantage.co/query?function=REALTIME_BULK_QUOTES&symbol=${encodeURIComponent(symbolList)}&entitlement=realtime&apikey=${getEnv('ALPHA_VANTAGE_API_KEY')}`;
@@ -1731,16 +1742,26 @@ async function refreshAndCaptureAccounts() {
   }
   const equities = missing.filter(row => row.asset_type === 'equity').map(row => row.symbol);
   if (isUsRegularSessionOpen(now.getTime())) {
-    for (const batch of chunkSymbols(equities)) await upsertEquityQuotesBatch(await fetchAVBulkQuotes(batch));
+    for (const batch of chunkSymbols(equities)) {
+      try {
+        await upsertEquityQuotesBatch(await fetchAVBulkQuotes(batch));
+      } catch (err) {
+        console.warn(`[worker] quote repair skipped a bulk batch: ${err instanceof Error ? err.message : err}`);
+      }
+    }
   } else {
     for (const symbol of equities) {
-      const mark = completedEquityMark(await fetchAVTimeSeries(symbol, 'daily', 'compact'), Date.now(), getEquityBarSchedule().dailySettleMin);
-      if (mark) await getPool().query(`
-        INSERT INTO quotes_latest (symbol, price, observed_price, observed_at)
-        VALUES ($1, $2, $2, $3::timestamptz)
-        ON CONFLICT (symbol) DO UPDATE SET observed_price = EXCLUDED.observed_price, observed_at = EXCLUDED.observed_at
-        WHERE quotes_latest.observed_at IS NULL OR quotes_latest.observed_at < EXCLUDED.observed_at
-      `, [symbol, mark.price, mark.updatedAt]);
+      try {
+        const mark = completedEquityMark(await fetchAVTimeSeries(symbol, 'daily', 'compact'), Date.now(), getEquityBarSchedule().dailySettleMin);
+        if (mark) await getPool().query(`
+          INSERT INTO quotes_latest (symbol, price, observed_price, observed_at)
+          VALUES ($1, $2, $2, $3::timestamptz)
+          ON CONFLICT (symbol) DO UPDATE SET observed_price = EXCLUDED.observed_price, observed_at = EXCLUDED.observed_at
+          WHERE quotes_latest.observed_at IS NULL OR quotes_latest.observed_at < EXCLUDED.observed_at
+        `, [symbol, mark.price, mark.updatedAt]);
+      } catch (err) {
+        console.warn(`[worker] quote repair skipped ${symbol}: ${err instanceof Error ? err.message : err}`);
+      }
     }
   }
   const captures = await captureDueAccounts();
@@ -1962,12 +1983,10 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const rpm = workerAvRpm(getEnv('ALPHA_VANTAGE_RPM'));
-  const burstPerSecond = parseInt(getEnv('ALPHA_VANTAGE_BURST_PER_SECOND') || '4', 10);
-  console.log(`[worker] Rate limit: ${rpm} requests/minute (worker cap 200; ALPHA_VANTAGE_RPM=${getEnv('ALPHA_VANTAGE_RPM') || 'unset'})`);
+  const legacyRpm = workerAvRpm(getEnv('ALPHA_VANTAGE_RPM'));
+  console.log(`[worker] Rate limit: shared Redis ceiling lane=scheduled feature=worker-ingest, burst ${WORKER_AV_BURST_PER_SECOND}/s (legacy ALPHA_VANTAGE_RPM ${getEnv('ALPHA_VANTAGE_RPM') || 'unset'} would have been ${legacyRpm}; it is not a separate budget)`);
   const barSchedule = getEquityBarSchedule();
   console.log(`[worker] Equity AV: REALTIME_BULK_QUOTES per cycle (100/call); DAILY_ADJUSTED after close +${barSchedule.dailySettleMin}m and pre-open; 60min after each hourly close +${barSchedule.hourlySettleMin}m`);
-  console.log(`[worker] Burst cap: ${burstPerSecond} requests/second`);
   console.log(`[worker] Redis: ${getEnv('UPSTASH_REDIS_REST_URL') ? 'enabled' : 'disabled'}`);
   console.log(`[worker] Mode: ${runOnce ? 'one-cycle' : 'continuous'}`);
   console.log(`[worker] Forex ingest: ${includeForex ? 'enabled (manual override)' : 'disabled (equities + crypto only)'}`);
@@ -2088,10 +2107,12 @@ async function main(): Promise<void> {
   }
 }
 
-// Run if executed directly
-main().catch(async (err) => {
-  console.error('[worker] Fatal error:', err);
-  const { alertWorkerError } = await import('../lib/opsAlerting');
-  await alertWorkerError('ingest-data', err?.message || String(err));
-  process.exit(1);
+// Run if executed directly. The lane is scheduled for every call in this process.
+runWithAvBudget({ lane: 'scheduled', feature: 'worker-ingest' }, () => {
+  main().catch(async (err) => {
+    console.error('[worker] Fatal error:', err);
+    const { alertWorkerError } = await import('../lib/opsAlerting');
+    await alertWorkerError('ingest-data', err?.message || String(err));
+    process.exit(1);
+  });
 });

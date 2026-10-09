@@ -1,3 +1,4 @@
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, verifyCronAuth } from "@/lib/adminAuth";
 import { sendAlertEmail } from "@/lib/email";
@@ -9,6 +10,7 @@ import {
   saveMorningBriefSnapshot,
 } from "@/lib/admin/morning-brief";
 import { resolveAdminMarket } from "@/lib/admin/defaultAdminMarket";
+import { adminEquityEmailsDisabled, ADMIN_EQUITY_EMAILS_DISABLED_REASON } from "@/lib/admin/equityOutbound";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -26,12 +28,17 @@ export const maxDuration = 120;
  */
 const cronRunsInFlight = new Set<string>();
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'job-email-morning-brief' }, () => POST(req));
   const isCron = verifyCronAuth(req);
   const isAdmin = isCron ? false : (await requireAdmin(req)).ok;
 
   if (!isCron && !isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  if (adminEquityEmailsDisabled()) {
+    return NextResponse.json({ ok: true, skipped: true, reason: ADMIN_EQUITY_EMAILS_DISABLED_REASON });
   }
 
   const body = await req.json().catch(() => ({}));

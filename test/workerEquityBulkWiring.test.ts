@@ -29,7 +29,8 @@ describe('worker equities wiring (source guard)', () => {
     const fetcher = between('async function fetchAVBulkQuotes(', '\n}\n');
     expect(fetcher).toContain('function=REALTIME_BULK_QUOTES');
     expect(fetcher).toContain('entitlement=realtime');
-    expect(fetcher).toContain('getRateLimiter().take(1)');
+    expect(fetcher).toContain('takeWorkerAvToken()');
+    expect(fetcher).not.toContain('getRateLimiter()');
   });
 
   it('GLOBAL_QUOTE is only a fallback for symbols the bulk call did not return', () => {
@@ -49,9 +50,12 @@ describe('worker equities wiring (source guard)', () => {
     expect(processEquity).toContain('mergeLiveDailyBar(heldBars, liveBar)');
   });
 
-  it('keeps the worker AV limiter at or below 200 rpm (limiter and startup log)', () => {
-    const limiter = between('function getRateLimiter(): TokenBucket {', 'return rateLimiter;');
-    expect(limiter).toContain("workerAvRpm(getEnv('ALPHA_VANTAGE_RPM'))");
+  it('takes worker AV calls from the shared scheduled budget', () => {
+    expect(src).toContain("avTakeToken({ lane: 'scheduled', feature: 'worker-ingest' })");
+    expect(src).toContain('WORKER_AV_BURST_PER_SECOND = 4');
+    expect(src).toContain('new TokenBucket(WORKER_AV_BURST_PER_SECOND, WORKER_AV_BURST_PER_SECOND)');
+    expect(src).toContain('[worker] quote repair skipped');
+    expect(src).not.toContain('function getRateLimiter');
     expect(src).not.toMatch(/ALPHA_VANTAGE_RPM'\) \|\| '500'/);
     expect(src).not.toMatch(/ALPHA_VANTAGE_RPM'\) \|\| '200'/);
   });

@@ -7,6 +7,7 @@
  * Returns counts of ingested/skipped/errored events.
  */
 
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { verifyCronAuth } from '@/lib/adminAuth';
@@ -23,7 +24,8 @@ export const maxDuration = 120;
 // Wall-clock budget: bail out before maxDuration / curl timeout
 const TIME_BUDGET_MS = 90_000; // 90s
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'catalyst-news-ingest' }, () => POST(req));
   const t0 = Date.now();
   const hasTime = () => Date.now() - t0 < TIME_BUDGET_MS;
 

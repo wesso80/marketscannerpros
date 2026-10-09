@@ -10,11 +10,12 @@
  */
 import { describe, it, expect } from 'vitest';
 import { resolveLiquidityTransmission } from '@/lib/intelligence/liquidityTransmissionService';
+import { hasCoinGeckoApiKey, resolveCoinGeckoApiKey } from '@/lib/coingecko';
 
 const RUN = process.env.INTELLIGENCE_LIVE_DATA === 'true'
   && Boolean(process.env.ALPHA_VANTAGE_API_KEY)
   && Boolean(process.env.FRED_API_KEY)
-  && Boolean(process.env.COINGECKO_API_KEY || process.env.COINGECKO_PRO_API_KEY);
+  && hasCoinGeckoApiKey();
 
 describe.skipIf(!RUN)('LIVE NETWORK INTEGRATION — Liquidity Transmission', () => {
   it('resolves against real providers and produces finite headline outputs', async () => {
@@ -70,7 +71,7 @@ describe.skipIf(!RUN)('LIVE NETWORK INTEGRATION — Liquidity Transmission', () 
     const json = JSON.stringify(r);
     for (const secret of [
       process.env.ALPHA_VANTAGE_API_KEY, process.env.FRED_API_KEY,
-      process.env.COINGECKO_API_KEY, process.env.COINGECKO_PRO_API_KEY,
+      resolveCoinGeckoApiKey(),
     ].filter(Boolean) as string[]) {
       expect(json.includes(secret), 'no API key must leak into the result body').toBe(false);
     }

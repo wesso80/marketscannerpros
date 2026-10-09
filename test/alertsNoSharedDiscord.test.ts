@@ -5,7 +5,16 @@ import { resolve } from 'node:path';
 
 const mocks = vi.hoisted(() => ({ q: vi.fn(), crypto: vi.fn(), push: vi.fn(), email: vi.fn(), discord: vi.fn(), discordDetailed: vi.fn() }));
 vi.mock('@/lib/db', () => ({ q: mocks.q }));
-vi.mock('@/lib/coingecko', () => ({ getPriceBySymbol: mocks.crypto }));
+vi.mock('@/lib/coingecko', () => ({
+  getPriceBySymbol: mocks.crypto,
+  searchCoins: async () => { throw new Error('alerts must not search CoinGecko'); },
+  COINGECKO_ID_MAP: { BTC: 'bitcoin', QNT: 'quant-network' },
+  getSimplePrices: async (ids: string[]) => {
+    const point = await mocks.crypto();
+    if (!point) return null;
+    return Object.fromEntries(ids.map((id) => [id, { usd: point.price, usd_24h_change: point.change24h }]));
+  },
+}));
 vi.mock('@/lib/avRateGovernor', () => ({ avTakeToken: async () => undefined }));
 vi.mock('@/lib/email', () => ({ sendAlertEmail: mocks.email }));
 vi.mock('@/lib/alerts/emailControls', () => ({ deliverUserAlertEmail: (input: unknown) => mocks.email(input) }));

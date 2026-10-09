@@ -9,8 +9,12 @@
 
 import { Redis } from '@upstash/redis';
 
+/** Limiter calls only. A slow Upstash response must not hold a page load. */
+export const LIMITER_REDIS_TIMEOUT_MS = 400;
+
 // Singleton pattern for Redis client
 let redis: Redis | null = null;
+let limiterRedis: Redis | null = null;
 let redisDisabled = false;
 let consecutiveErrors = 0;
 const MAX_CONSECUTIVE_ERRORS = 5;
@@ -30,6 +34,34 @@ export function getRedis(): Redis | null {
 
   redis = new Redis({ url, token });
   return redis;
+}
+
+/**
+ * Redis client for the Alpha Vantage limiter only.
+ * Each command aborts after LIMITER_REDIS_TIMEOUT_MS and is not retried.
+ * Cache reads keep using getRedis() so a short limiter timeout does not cut them off.
+ */
+export function getLimiterRedis(): Redis | null {
+  if (redisDisabled) return null;
+  if (limiterRedis) return limiterRedis;
+
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) {
+    if (!redisDisabled) {
+      console.warn('[redis] Missing UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN - caching disabled');
+      redisDisabled = true;
+    }
+    return null;
+  }
+
+  limiterRedis = new Redis({
+    url,
+    token,
+    retry: { retries: 0 },
+    signal: () => AbortSignal.timeout(LIMITER_REDIS_TIMEOUT_MS),
+  });
+  return limiterRedis;
 }
 
 /** Reset client after repeated failures so next call re-initialises */

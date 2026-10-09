@@ -15,6 +15,7 @@
  *  4. Return full audit log
  */
 
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyCronAuth, verifyAdminAuth } from '@/lib/adminAuth';
 import { runPipeline, persistScanResult } from '@/lib/quant/orchestrator';
@@ -24,8 +25,14 @@ import { DEFAULT_QUANT_CONFIG } from '@/lib/quant/types';
 export const runtime = 'nodejs';
 export const maxDuration = 120; // 2 min budget
 
-export async function GET(req: NextRequest) { return runQuantScan(req); }
-export async function POST(req: NextRequest) { return runQuantScan(req); }
+export async function GET(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'job-quant-scan' }, () => GET(req));
+  return runQuantScan(req);
+}
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'job-quant-scan' }, () => POST(req));
+  return runQuantScan(req);
+}
 
 async function runQuantScan(req: NextRequest) {
   if (!verifyCronAuth(req) && !verifyAdminAuth(req)) {

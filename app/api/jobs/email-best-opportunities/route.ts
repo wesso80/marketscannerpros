@@ -12,9 +12,11 @@
  * @internal PRIVATE — admin/cron auth required
  */
 
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, verifyCronAuth } from '@/lib/adminAuth';
 import { sendAlertEmail } from '@/lib/email';
+import { adminEquityEmailsDisabled, ADMIN_EQUITY_EMAILS_DISABLED_REASON } from '@/lib/admin/equityOutbound';
 import { runScan, type CandidatePipeline } from '@/lib/operator/orchestrator';
 import { alphaVantageProvider } from '@/lib/operator/market-data';
 import { DEFAULT_WATCHLISTS } from '@/lib/operator/watchlists';
@@ -29,7 +31,8 @@ export const maxDuration = 300;
  * GET — friendly status response so opening the URL in a browser does not
  * show a confusing 405. The actual digest is POST-only and requires cron/admin auth.
  */
-export async function GET() {
+export async function GET(): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'job-email-best-opportunities' }, () => GET());
   return NextResponse.json({
     ok: true,
     endpoint: '/api/jobs/email-best-opportunities',
@@ -67,12 +70,17 @@ interface PickReasoning {
   notes?: string[];
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'job-email-best-opportunities' }, () => POST(req));
   const isCron = verifyCronAuth(req);
   const isAdmin = isCron ? false : (await requireAdmin(req)).ok;
 
   if (!isCron && !isAdmin) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  if (adminEquityEmailsDisabled()) {
+    return NextResponse.json({ ok: true, skipped: true, reason: ADMIN_EQUITY_EMAILS_DISABLED_REASON });
   }
 
   try {

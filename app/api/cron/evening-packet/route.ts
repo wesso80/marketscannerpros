@@ -12,6 +12,7 @@
  * Auth: x-cron-secret header (CRON_SECRET env), or admin session.
  * Boundary: read-only aggregation + single insert. No execution.
  */
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { requireAdmin } from '@/lib/adminAuth';
@@ -20,6 +21,7 @@ import { buildEveningPacket } from '@/lib/eveningPacket/builder';
 import { pruneEdgePackets } from '@/lib/admin/edgePacketSnapshots';
 import { runNewsJevDaily } from '@/lib/admin/equityNewsJev';
 import { notifyAdmin } from '@/lib/admin/notifyAdmin';
+import { adminEquityEmailsDisabled } from '@/lib/admin/equityOutbound';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -91,7 +93,8 @@ async function persistPacket(workspaceId: string, dateISO: string, packetJson: u
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'cron-evening-packet' }, () => POST(req));
   if (!(await authorise(req))) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
@@ -170,21 +173,23 @@ export async function POST(req: NextRequest) {
       bodyLines.push(`  - ${f.workspaceId}: ${f.error}`);
     }
   }
-  await notifyAdmin({
-    subject: `Evening Packet ${dateISO} · ${summaries.length} workspaces`,
-    body: bodyLines.join("\n"),
-    severity,
-    link: { label: "Open Evening Packet", url: "https://app.marketscannerpros.app/admin/evening-packet" },
-    context: {
-      date: dateISO,
-      workspaces: summaries.length,
-      ok,
-      failed: failed.length,
-      reconciled: totalReconciled,
-      warnings: warningCount,
-      edgePacketsPruned,
-    },
-  }).catch((e) => console.error("[evening-packet] notify failed:", e));
+  if (!adminEquityEmailsDisabled()) {
+    await notifyAdmin({
+      subject: `Evening Packet ${dateISO} · ${summaries.length} workspaces`,
+      body: bodyLines.join("\n"),
+      severity,
+      link: { label: "Open Evening Packet", url: "https://app.marketscannerpros.app/admin/evening-packet" },
+      context: {
+        date: dateISO,
+        workspaces: summaries.length,
+        ok,
+        failed: failed.length,
+        reconciled: totalReconciled,
+        warnings: warningCount,
+        edgePacketsPruned,
+      },
+    }).catch((e) => console.error("[evening-packet] notify failed:", e));
+  }
 
   return NextResponse.json({
     ok: true,

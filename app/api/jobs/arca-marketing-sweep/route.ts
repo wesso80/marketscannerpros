@@ -13,6 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
 import { verifyAdminAuth, verifyCronAuth } from '@/lib/adminAuth';
 import { insertDraft, MARKETING_CHANNELS, type MarketingChannel } from '@/lib/arcaMarketing';
 
@@ -35,7 +36,8 @@ async function fetchInternal(req: NextRequest, path: string): Promise<any> {
   }
 }
 
-async function handler(req: NextRequest) {
+async function handler(req: NextRequest): Promise<Response> {
+  if (!currentAvBudget()) return runWithAvBudget({ lane: 'scheduled', feature: 'job-arca-marketing-sweep' }, () => handler(req));
   if (!verifyCronAuth(req) && !verifyAdminAuth(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
