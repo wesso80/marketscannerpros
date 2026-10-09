@@ -156,7 +156,7 @@ describe('scanner missing options and derivatives evidence', () => {
 describe('scanner UI metadata wiring', () => {
   const root = process.cwd();
 
-  it('surfaces provider truth and rank explanation fields in the scanner UI', () => {
+  it('retains internal provider metadata and a dated Scanner source line', () => {
     const page = readFileSync(join(root, 'app/tools/scanner/page.tsx'), 'utf8');
     const apiTypes = readFileSync(join(root, 'app/v2/_lib/api.ts'), 'utf8');
     const marketStatusStrip = readFileSync(join(root, 'components/market/MarketStatusStrip.tsx'), 'utf8');
@@ -165,8 +165,8 @@ describe('scanner UI metadata wiring', () => {
     expect(apiTypes).toContain('scoreQuality?:');
     expect(apiTypes).toContain('providerStatus?:');
     expect(marketStatusStrip).toContain('Data Truth');
-    expect(page).toContain('MarketStatusStrip');
-    expect(page).toContain('DataFreshnessBadge');
-    expect(page).toContain('r.rankExplanation?.summary');
+    expect(page).toContain('<SourceLine source=');
+    expect(page).toContain('rankedScanAsOf');
+    expect(page).toContain('basis="Last completed bar"');
   });
 });

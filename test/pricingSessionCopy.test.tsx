@@ -1,103 +1,43 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
-import { readFileSync } from 'node:fs';
-import { PLAN_PRICES } from '@/lib/planPrices';
-
-const me = vi.hoisted(() => ({ ok: false, body: null as { email?: string; tier?: string } | null }));
-
-vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams() }));
-
+import {afterEach,beforeEach,expect,it,vi} from 'vitest';
+import {cleanup,render,screen,fireEvent} from '@testing-library/react';
+import {PLAN_PRICES} from '@/lib/planPrices';
+const me=vi.hoisted(()=>({authenticated:false,tier:null as string|null}));
+vi.mock('next/navigation',()=>({useSearchParams:()=>new URLSearchParams()}));
 import PricingPage from '@/app/pricing/page';
-
-const yearlyLine = `or ${PLAN_PRICES.pro.yearly}/year (about 2 months free)`;
-const moduleNames = /Lead\/Lag|NQ Pressure|\bAuction\b|\bMaster\b/;
-
-beforeEach(() => {
-  vi.stubGlobal('React', React);
-  me.ok = false;
-  me.body = null;
-  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
-    if (String(url).includes('/api/me')) {
-      return { ok: me.ok, status: me.ok ? 200 : 401, json: async () => me.body };
-    }
-    return { ok: true, status: 200, json: async () => ({}) };
-  }));
+beforeEach(()=>{vi.stubGlobal('React',React);me.authenticated=false;me.tier=null;vi.stubGlobal('fetch',vi.fn(async(url:string)=>({ok:true,status:200,json:async()=>String(url).includes('/api/me')?{...me,email:'fixture@example.test'}:{enabled:true}})));});
+afterEach(()=>{cleanup();vi.unstubAllGlobals();});
+it('a verified Pro session gets plan management instead of another checkout',async()=>{
+ me.authenticated=true;me.tier='pro';render(<PricingPage/>);
+ expect((await screen.findByRole('link',{name:'Manage your Pro plan'})).getAttribute('href')).toBe('/account');
+ expect(screen.queryByRole('button',{name:'Continue to Pro checkout'})).toBeNull();
+ expect(screen.getByRole('button',{name:'Open Overview'})).toBeTruthy();
+ expect(screen.queryByRole('button',{name:'Create a free account'})).toBeNull();
 });
-
-afterEach(() => {
-  cleanup();
-  vi.unstubAllGlobals();
+it('verified Free users can open Overview or choose Pro',async()=>{
+ me.authenticated=true;me.tier='free';render(<PricingPage/>);
+ expect(await screen.findByRole('button',{name:'Open Overview'})).toBeTruthy();
+ expect(screen.getByRole('button',{name:'Continue to Pro checkout'})).toBeTruthy();
+ expect(screen.queryByRole('link',{name:'Manage your Pro plan'})).toBeNull();
 });
-
-function renderPricing() {
-  return render(<PricingPage />);
-}
-
-it('a Pro session shows Current plan and drops Start Free and the no-card line', async () => {
-  me.ok = true;
-  me.body = { email: 'pro@example.test', tier: 'pro' };
-  renderPricing();
-  expect(await screen.findByRole('button', { name: 'Current plan' })).toBeTruthy();
-  expect(screen.queryByRole('button', { name: 'Start Free' })).toBeNull();
-  expect(screen.queryByText('No credit card required')).toBeNull();
-  expect(screen.getByText('Included in your plan')).toBeTruthy();
-  expect(document.body.textContent).toContain('Your current plan is marked below.');
-  expect(document.body.textContent).not.toContain('Start free. Upgrade to Pro for the full platform.');
-  expect(document.body.textContent).toContain(yearlyLine);
-  expect(document.body.textContent).not.toMatch(moduleNames);
-  expect(document.body.textContent).toContain(PLAN_PRICES.pro.monthly);
+it('an unknown tier does not claim Pro membership',async()=>{
+ me.authenticated=true;me.tier='admin';render(<PricingPage/>);
+ await screen.findByRole('button',{name:'Open Overview'});
+ expect(screen.queryByRole('link',{name:'Manage your Pro plan'})).toBeNull();
 });
-
-it('a signed-in Free session marks Free as the current plan without the no-card line', async () => {
-  me.ok = true;
-  me.body = { email: 'free@example.test', tier: 'free' };
-  renderPricing();
-  expect(await screen.findByRole('button', { name: 'Current plan' })).toBeTruthy();
-  expect(screen.queryByText('No credit card required')).toBeNull();
-  expect(screen.queryByRole('button', { name: 'Start Free' })).toBeNull();
-  expect(screen.getByRole('button', { name: 'Go Pro' })).toBeTruthy();
-  expect(screen.queryByText('Included in your plan')).toBeNull();
-  expect(document.body.textContent).toContain('Your current plan is marked below.');
-  expect(document.body.textContent).toContain(yearlyLine);
-  expect(document.body.textContent).not.toMatch(moduleNames);
+it('an unauthenticated tier claim does not grant plan management',async()=>{
+ me.tier='pro';render(<PricingPage/>);
+ await screen.findByText('3 Symbol reports per day');
+ expect(screen.getByRole('button',{name:'Create a free account'})).toBeTruthy();
+ expect(screen.queryByRole('link',{name:'Manage your Pro plan'})).toBeNull();
+ expect(screen.getByText('No card needed for Free.')).toBeTruthy();
 });
-
-it('an unknown tier such as admin does not say a plan is marked', async () => {
-  me.ok = true;
-  me.body = { email: 'admin@example.test', tier: 'admin' };
-  renderPricing();
-  expect(await screen.findByRole('button', { name: 'Start Free' })).toBeTruthy();
-  expect(screen.queryByRole('button', { name: 'Current plan' })).toBeNull();
-  expect(document.body.textContent).not.toContain('Your current plan is marked below.');
-  expect(document.body.textContent).toContain('Start free. Upgrade to Pro for the full platform.');
-});
-
-it('a signed-out visitor still sees Start Free and the original hero', async () => {
-  renderPricing();
-  expect(await screen.findByRole('button', { name: 'Start Free' })).toBeTruthy();
-  expect(screen.getByText('No credit card required')).toBeTruthy();
-  expect(screen.getByRole('button', { name: 'Go Pro' })).toBeTruthy();
-  expect(screen.queryByRole('button', { name: 'Current plan' })).toBeNull();
-  expect(screen.queryByText('Included in your plan')).toBeNull();
-  expect(document.body.textContent).toContain('Start free. Upgrade to Pro for the full platform.');
-  expect(document.body.textContent).toContain(yearlyLine);
-  expect(document.body.textContent).not.toMatch(moduleNames);
-});
-
-it('monthly view takes the yearly price from PLAN_PRICES and the page has no roadmap module names', () => {
-  const page = readFileSync('app/pricing/page.tsx', 'utf8');
-  const layout = readFileSync('app/pricing/layout.tsx', 'utf8');
-  expect(page).toContain('PLAN_PRICES.pro.yearly');
-  expect(page).not.toContain("'$249'");
-  expect(page).not.toContain('"$249"');
-  expect(page).not.toMatch(moduleNames);
-  expect(layout).not.toMatch(moduleNames);
-  expect(page).toContain('7-day money-back guarantee');
-  expect(page).toContain('Unlimited Market Scanner with full filters, and up to 100 active alerts');
-  expect(page).not.toContain('Unlimited Market Scanner with full filters and alerts');
-  expect(page).toContain('PLAN_PRICES.pro.monthly');
-  expect(page).not.toContain('Number.isInteger(monthsFree) ? String(monthsFree) : String(monthsFree)');
-  expect(page).toContain('const shown = String(monthsFree)');
+it('approved pricing uses configured prices, states the AI cap and does not promise an unbuilt trial',async()=>{
+ render(<PricingPage/>);await screen.findByText('Educational MSP Copilot: 20 questions per day');
+ expect(document.body.textContent).toContain('US'+PLAN_PRICES.pro.monthly);
+ fireEvent.click(screen.getByRole('button',{name:'Annual'}));
+ expect(document.body.textContent).toContain('US'+PLAN_PRICES.pro.yearly);
+ expect(document.body.textContent).not.toMatch(/Lead\/Lag|NQ Pressure|\bAuction\b|\bMaster\b|100 questions|unlimited AI|7-day trial/i);
+ expect(screen.getByText('Subscription details are shown at checkout.')).toBeTruthy();
 });

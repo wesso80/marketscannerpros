@@ -73,6 +73,7 @@ function sweepCalls() {
 beforeEach(() => {
   sessionStorage.clear();
   tierState.tier = 'pro';
+  tierState.isAdmin = false;
   tierState.isLoading = false;
   tierState.isLoggedIn = true;
   fetchMock.mockClear();
@@ -90,7 +91,16 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it('keeps Run Educational Scan outside Advanced filters after a preset', () => {
+it.each(['free','pro'] as const)('sends public %s users to Find symbols without rendering the admin scan controls', tier => {
+  tierState.tier = tier;
+  render(<ScannerPage />);
+  expect(screen.getByRole('link', {name:'Continue to Find symbols'}).getAttribute('href')).toBe('/tools/golden-egg?view=find');
+  expect(screen.queryByTestId('run-educational-scan')).toBeNull();
+  expect(fetchMock.mock.calls.some(call=>String(call[0]).includes('/api/scanner'))).toBe(false);
+});
+
+it('keeps the admin Run Educational Scan outside Advanced filters after a preset', () => {
+  tierState.isAdmin = true;
   render(<ScannerPage />);
   const run = screen.getByTestId('run-educational-scan');
   expect(run.textContent).toMatch(/Run Educational Scan/);

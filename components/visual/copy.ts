@@ -15,7 +15,7 @@ export const COPY = {
   },
   radarCard: {
     title: "Today's report", source: 'Daily Radar', session: 'US session', candidates: 'candidates',
-    older: 'Older report', open: 'Open Daily Radar', empty: 'No report stored yet.', unavailable: 'Report unavailable',
+    older: 'Older report', open: 'Open Daily Radar', empty: 'No report stored yet.', unavailable: 'Report not collected',
     teaser: 'A dated report each US session with ranked research candidates.', paid: 'Paid plan', plans: 'See plans', signIn: 'Sign in',
     loading: 'Loading report', timeUnknown: 'time unknown', healthUnknown: 'Health unknown',
     networkError: 'Network request failed.', invalidResponse: 'Invalid report response.', httpError: 'HTTP', generated: 'generated',

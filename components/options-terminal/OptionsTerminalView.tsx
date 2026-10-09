@@ -11,11 +11,8 @@ import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import {noQuoteLabel} from '@/lib/market/priceStamp';
 import {isMarketOpenForSession} from '@/lib/time/sessionCloseEngine';
-import PriceStamp from '@/components/market/PriceStamp';
 import {trustBadgeState} from '@/components/market/TrustBadge';
-import EvidenceStack from '@/components/market/EvidenceStack';
-import MarketStatusStrip from '@/components/market/MarketStatusStrip';
-import RiskFlagPanel, { type RiskFlag } from '@/components/market/RiskFlagPanel';
+import type { RiskFlag } from '@/components/market/RiskFlagPanel';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
 import { selectOptionsExpiry, withOptionsExpiry } from '@/lib/options/expiry';
 import { atmStrike } from '@/lib/options/atmStrike';

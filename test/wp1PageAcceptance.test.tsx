@@ -21,7 +21,7 @@ it.each(['AAPL','NVDA'])('%s closed page keeps legacy verdict out and Fundamenta
  const {container}=render(<GoldenEggPage/>);await waitFor(()=>expect(container.querySelector('[data-symbol-summary]')).toBeTruthy());
  const body=container.textContent!;expect(body).not.toMatch(/WATCH.*LONG|Grade B|WATCHING|Assessment: Watch|Trend continuation \(long\)/);
  expect(screen.getByText('Fundamentals')).toBeTruthy();expect(screen.getByText('Company overview and ownership')).toBeTruthy();
- const summary=container.querySelector('[data-symbol-summary]')!;const firstFold=container.querySelector('details')!;expect(summary.compareDocumentPosition(firstFold)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+ const summary=container.querySelector('[data-symbol-summary]')!;const firstFold=screen.getByText('Fundamentals').closest('details')!;expect(summary.compareDocumentPosition(firstFold)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 it('expanded legacy packet renders plain research labels while preserving compliance text',async()=>{
  ctx.symbol='AAPL';ctx.payload=buildPayload('AAPL','equity',price,ind,null,null,'1D',null,null,null,{nowMs:now});ctx.payload.layer1.primaryBlocker='NO_STRUCTURAL_STOP';

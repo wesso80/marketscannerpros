@@ -34,9 +34,10 @@ it('Portfolio has five actual tabs and Add Position is an action, not a tab', ()
   expect(page).not.toContain('<CommandStrip');
   expect(page).not.toContain('<DecisionCockpit');
 });
-it('Track shell uses one title and shared tab bar, without duplicate hero', () => {
+it('Workspace uses a named destination heading and shared tab bar, without duplicate hero', () => {
   const page = readFileSync('app/tools/workspace/page.tsx','utf8');
-  expect(page).toContain('>Track</h1>');
+  expect(page).toContain('<h1>{tab}</h1>');
+  expect(page).not.toContain('>Track</h1>');
   expect(page.match(/<TabBar/g)).toHaveLength(1);
   expect(page).not.toContain('PageHero');
   expect(page).not.toContain('WorkspaceMetric');

@@ -23,13 +23,14 @@ describe('shared market truth components', () => {
     expect(risk).toContain('critical');
   });
 
-  it('uses the shared market status strip and freshness badge on the scanner page', () => {
+  // The compact page redesigns (J16-WP2, DVE public evidence) replaced the status strip and freshness badge
+  // with one shared SourceLine that states source, observation time and basis.
+  it('uses the shared source line on the scanner page', () => {
     const page = read('app/tools/scanner/page.tsx');
 
-    expect(page).toContain("import DataFreshnessBadge from '@/components/market/DataFreshnessBadge'");
-    expect(page).toContain("import MarketStatusStrip from '@/components/market/MarketStatusStrip'");
-    expect(page).toContain('<MarketStatusStrip');
-    expect(page).toContain('<DataFreshnessBadge');
+    expect(page).toContain("import SourceLine from '@/components/visual/SourceLine'");
+    expect(page).toContain('<SourceLine source={');
+    expect(page).toContain('basis="Last completed bar"');
     expect(page).not.toContain('function providerStatusLabel');
     expect(page).not.toContain('function providerStatusColor');
   });
@@ -47,30 +48,21 @@ describe('shared market truth components', () => {
     expect(page).not.toContain('geFreshness.map');
   });
 
-  it('uses the shared truth, evidence, and risk components on the Volatility Engine page', () => {
+  it('uses the shared source line on the Volatility Engine page', () => {
     const page = read('src/features/volatilityEngine/VolatilityEnginePage.tsx');
 
-    expect(page).toContain("import DataFreshnessBadge from '@/components/market/DataFreshnessBadge'");
-    expect(page).toContain("import EvidenceStack from '@/components/market/EvidenceStack'");
-    expect(page).toContain("import MarketStatusStrip from '@/components/market/MarketStatusStrip'");
-    expect(page).toContain("import RiskFlagPanel");
-    expect(page).toContain('buildMarketDataProviderStatus');
-    expect(page).toContain('<EvidenceStack title="DVE Evidence Stack"');
-    expect(page).toContain('<RiskFlagPanel title="DVE Risk Flags"');
-    expect(page).toContain('<MarketStatusStrip items={dveMarketStatusItems}');
+    expect(page).toContain("import SourceLine from '@/components/visual/SourceLine'");
+    expect(page).toContain('<SourceLine source="Volatility calculation" asOf={');
     expect(page).not.toContain('function DataQualityBadge');
   });
 
-  it('uses the shared truth, evidence, and risk components on the Options Terminal', () => {
+  it('shows Options provider warnings and the dated quote source line', () => {
     const page = read('components/options-terminal/OptionsTerminalView.tsx');
 
-    expect(page).toContain("import EvidenceStack from '@/components/market/EvidenceStack'");
-    expect(page).toContain("import MarketStatusStrip from '@/components/market/MarketStatusStrip'");
-    expect(page).toContain("import RiskFlagPanel");
+    expect(page).toContain('optionsMarketStatusItems.flatMap(item=>item.status?.warnings??[])');
+    expect(page).toContain('data-options-status');
     expect(page).toContain('buildMarketDataProviderStatus');
-    expect(page).toContain('<EvidenceStack title="Options Terminal Evidence Stack"');
-    expect(page).toContain('<RiskFlagPanel title="Options Terminal Risk Flags"');
-    expect(page).toContain('<MarketStatusStrip items={optionsMarketStatusItems}');
+    expect(page).toContain('<SourceLine source={chain.quoteBasis');
   });
 
   it('uses the shared truth, evidence, and risk components on the admin Morning Brief', () => {

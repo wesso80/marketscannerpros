@@ -36,7 +36,7 @@ vi.mock('@/app/v2/_lib/api', () => ({
   useDailyPicksBundle: () => ({ data: null, loading: false, error: null, isAuthError: false, isUpgradeRequired: false, refetch: () => {} }),
 }));
 
-import CommandCenterPage from '@/app/tools/command-center/page';
+import ResearchOverview from '@/components/public-design/ResearchOverview';
 import DashboardPage from '@/app/tools/dashboard/page';
 import MacroDashboardPage from '@/components/macro/MacroDashboard';
 import MarketMoversPage from '@/app/tools/market-movers/page';
@@ -92,15 +92,13 @@ afterEach(() => { window.history.replaceState(null, '', '/'); act(() => root.unm
 const render = async (element: React.ReactNode) => { await act(async () => { root.render(element); }); await act(async () => { await Promise.resolve(); }); };
 
 describe('Phase 2B today pages', () => {
-  it('Overview has one regime box, folded blocks closed, and three headlines', async () => {
-    await render(<CommandCenterPage />);
-    expect(container.querySelectorAll('[data-regime-box]')).toHaveLength(1);
-    const folds = [...container.querySelectorAll('[data-desk-folds] details')];
-    expect(folds.length).toBeGreaterThan(0);
-    expect(folds.every((node) => !(node as HTMLDetailsElement).open)).toBe(true);
-    expect(container.textContent).toContain('Headline 0');
-    expect(container.textContent).toContain('Headline 2');
-    expect(container.textContent).not.toContain('Headline 3');
+  it('Overview shows dated benchmarks and factual Radar instead of a composite regime box',async()=>{
+    await render(<ResearchOverview/>);
+    expect(container.querySelector('[aria-label="Benchmark observations"]')?.querySelectorAll('a')).toHaveLength(3);
+    expect(container.textContent).toContain('Daily Radar');
+    expect(container.textContent).toContain('7 benchmark symbols · fixed coverage');
+    expect(container.querySelector('[data-regime-box]')).toBeNull();
+    expect(container.textContent).toContain('Not available');
     expect(container.textContent).not.toMatch(BANNED);
   });
 

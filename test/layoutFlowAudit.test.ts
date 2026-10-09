@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { areaLinks, primaryNavTools, toolWorkflows } from '@/lib/toolWorkflows';
+import { publicDesignScope } from '@/lib/publicDesign';
 import { derivativesOiSourceLine } from '@/lib/crypto/openInterestTotal';
 
 const root = process.cwd();
@@ -24,9 +25,10 @@ describe('layout and flow audit regressions', () => {
     const adminOutcomes = read('app/admin/outcomes/page.tsx');
     const adminScalper = read('app/admin/scalper/page.tsx');
 
-    expect(routeChrome).toContain("pathname.startsWith('/admin')");
-    expect(routeChrome).toContain('!isAdminRoute && !isOperatorRoute && !isV2Route && <Header />');
-    expect(routeChrome).toContain("pathname.startsWith('/tools') || isAdminRoute || isOperatorRoute");
+    for (const path of ['/admin','/admin/usage-analytics','/operator','/operator/research','/v2','/v2/scanner']) expect(publicDesignScope(path)).toBeNull();
+    expect(routeChrome).toContain('const designScope = publicDesignScope(pathname)');
+    expect(routeChrome).toContain('if (designScope) return');
+    expect(routeChrome).not.toContain('<Header');
     expect(middleware).toContain("if (pathname === '/operator' || pathname.startsWith('/operator/'))");
     expect(middleware).toContain("url.pathname = '/auth';");
     expect(middleware).toContain('return withNoIndexHeaders(NextResponse.redirect(url));');
@@ -557,7 +559,6 @@ describe('layout and flow audit regressions', () => {
     expect(dashboardPage).toContain('aria-label="Dashboard command header"');
     expect(dashboardPage).toContain("Research dashboard");
     expect(dashboardPage).toContain('Open the research queue, then validate one symbol.');
-    expect(dashboardPage).toContain("Scanner’s ranked queue, movers, calendar risk, and headlines compressed into a morning review path.");
     expect(dashboardPage).toContain("Start scanner");
     expect(dashboardPage).toContain("Validate symbol");
     expect(dashboardPage).toContain("Open journal");
