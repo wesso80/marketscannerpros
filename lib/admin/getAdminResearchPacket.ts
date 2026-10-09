@@ -417,11 +417,12 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
   // degraded), so no ranking, alert gate or bot treats indicator-only axes as a research score.
   const internalResearchScore = noSetup ? noSetupScore(scored) : scored;
 
-  const optionsScore = Math.max(0, Math.min(100, Math.round((snapshot.evidence?.crossMarketConfirmation ?? 0.5) * 100)));
+  // No real options-chain data exists (computeOptionsIntelligence is a synthetic placeholder), so options crowding is
+  // unknown: null, never the cross-market confirmation proxy (which flagged strong confirmation as CROWDED_OPTIONS).
   const trap = detectTrapRisk({
     snapshot,
     dataTruth,
-    optionsCrowdingScore: optionsScore,
+    optionsCrowdingScore: null,
     hasNewsShock: (snapshot.indicators.bbwpPercentile ?? 0) > 90,
     earningsWindowHours: null,
     higherTimeframeConflict: snapshot.bias === "LONG" ? snapshot.indicators.ema50 > snapshot.indicators.ema20 : snapshot.indicators.ema50 < snapshot.indicators.ema20,
