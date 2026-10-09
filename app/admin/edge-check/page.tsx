@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { OverlapInterval } from '@/lib/admin/overlapUncertainty';
+import OutcomeCompleteness from '@/components/admin/OutcomeCompleteness';
+import type { OutcomeCompleteness as Completeness } from '@/lib/admin/outcomeCompleteness';
 import TruthStampLine from "@/components/admin/shared/TruthStampLine";
 
 type Verdict = "insufficient_sample" | "no_edge_after_costs" | "inconsistent" | "positive_after_costs";
@@ -17,6 +19,7 @@ interface Response {
   ok: boolean; error?: string; by?: string; days?: number;
   overall?: Group; groups?: Group[];
   definition?: { outcome: string; costs: string; intervals: string; split: string; minSample: number; minHalfSample: number; caveats: string[]; labelledSince: string };
+  completeness?: Completeness;
   truth?: Record<string, unknown>;
 }
 
@@ -131,6 +134,7 @@ export default function EdgeCheckPage() {
               </tbody>
             </table>
           </div>
+          {data.completeness && <OutcomeCompleteness data={data.completeness}/>}
           {data.definition && (
             <section data-edge-definition style={{ marginTop: "1rem", fontSize: 12, color: "#94A3B8", maxWidth: 900 }}>
               <div style={{ color: "#E5E7EB", fontWeight: 700 }}>How to read this</div>

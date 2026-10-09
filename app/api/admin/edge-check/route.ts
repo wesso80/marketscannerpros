@@ -16,6 +16,7 @@ import { storedTruth } from '@/lib/admin/truthLayer';
 import { LABELLER_FIX_AT, signedMoveSql } from '@/lib/admin/signalStats';
 import { ASSUMED_COST_PCT, MIN_HALF_SAMPLE, MIN_SAMPLE, edgeCheck } from '@/lib/admin/edgeCheck';
 import { OUTCOME_MOVE_THRESHOLD_PCT } from '@/lib/outcomes/aiOutcomeLabel';
+import { outcomeCompleteness, type CompletenessStatus } from '@/lib/admin/outcomeCompleteness';
 import { adminErrorText } from '@/lib/admin/errorResponse';
 
 export const runtime = 'nodejs';
@@ -42,26 +43,37 @@ export async function GET(req: NextRequest) {
   const days = Number.isFinite(daysRaw) ? Math.min(365, Math.max(1, Math.round(daysRaw))) : 90;
 
   try {
-    const rows = await q<{ grp: string; signal_at: string; outcome: string; signed_move: string | number }>(
-      `SELECT ${GROUP_SQL[by]} AS grp, signal_at, outcome, ${signedMoveSql('pct_move_24h')} AS signed_move
+    const rows = await q<{ grp: string; signal_at: string; outcome: string; signed_move: string | number | null; inclusion_status: CompletenessStatus }>(
+      `SELECT ${GROUP_SQL[by]} AS grp, signal_at, outcome, ${signedMoveSql('pct_move_24h')} AS signed_move,
+              CASE
+                WHEN outcome IN ('correct', 'wrong', 'neutral')
+                  AND outcome_measured_at >= $1::timestamptz
+                  AND pct_move_24h IS NOT NULL AND ABS(pct_move_24h) <= 100 THEN 'measured'
+                WHEN outcome = 'pending' THEN 'pending'
+                WHEN outcome = 'expired' THEN 'expired'
+                WHEN outcome IN ('correct', 'wrong', 'neutral')
+                  AND (outcome_measured_at IS NULL OR outcome_measured_at < $1::timestamptz) THEN 'old_method'
+                WHEN outcome IN ('correct', 'wrong', 'neutral') THEN 'invalid_move'
+                ELSE 'unknown'
+              END AS inclusion_status
          FROM ai_signal_log
         WHERE workspace_id = 'operator-terminal'
           AND UPPER(trade_bias) IN ('LONG', 'SHORT')
-          AND outcome IN ('correct', 'wrong', 'neutral')
-          AND outcome_measured_at >= $1::timestamptz
-          AND pct_move_24h IS NOT NULL AND ABS(pct_move_24h) <= 100
           AND signal_at > NOW() - ($2::int * INTERVAL '1 day')
         ORDER BY signal_at ASC`,
       [LABELLER_FIX_AT, days],
     );
-    const result = edgeCheck(rows.map((r) => ({ group: r.grp, signalAt: r.signal_at, outcome: r.outcome, signedMove: Number(r.signed_move) })));
-    const latest = rows.length ? rows[rows.length - 1].signal_at : null;
+    const measured = rows.filter(r => r.inclusion_status === 'measured');
+    const result = edgeCheck(measured.map((r) => ({ group: r.grp, signalAt: r.signal_at, outcome: r.outcome, signedMove: Number(r.signed_move) })));
+    const latest = measured.length ? measured[measured.length - 1].signal_at : null;
     return NextResponse.json({
       ok: true,
       by,
       days,
       ...result,
+      completeness: outcomeCompleteness(rows),
       definition: {
+        completeness: 'All recorded LONG/SHORT shared-scan signals in the requested window, counted once by UTC signal date. Only measured rows enter Edge Check statistics. Pending is a recorded status, not a claim that a measurement is overdue. UTC days are calendar periods, not the group-specific earlier/later split. Empty dates are not shown.',
         source: "ai_signal_log, shared-scan signals (workspace operator-terminal), LONG/SHORT calls",
         outcome: `24h close vs price at signal in the call's direction; correct >= +${OUTCOME_MOVE_THRESHOLD_PCT}%, wrong <= -${OUTCOME_MOVE_THRESHOLD_PCT}%, else neutral`,
         labelledSince: LABELLER_FIX_AT,
