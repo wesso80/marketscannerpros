@@ -18,3 +18,8 @@ No edits made to Claude's files. #566 needs follow-up before approval.
 
 NEXT
 Review Claude's #566 correction, then verify the agreed combined admin candidate against current main. Keep #552/#556 public-affecting scope decisions separate. No deployment until final approval.
+
+VISUAL FOUNDATION FOLLOW-UP
+Matches the approved PublicDesign.module.css palette, Arial typography, quiet panel borders, mint navigation and heading hierarchy. Tokens and card/title selectors are scoped beneath AdminNavigationFrame; public CSS is unchanged. AdminCard and SectionTitle only receive class hooks, preserving their existing public-consumer appearance outside the admin wrapper. Boundary notice wording and all auth/data logic are unchanged.
+Validation: 8 focused navigation/boundary/settings tests pass; TypeScript clean; actual Next Health/Settings at 390 and 1280 pass drawer checks with no horizontal overflow. Screenshots updated. React checklist reviewed: stable component definitions, effect cleanup, scoped styles, focus management, no added requests.
+Remaining visual work: custom per-page charts/tables/panels, starting with Crypto Markets and paper accounts, then research/business pages and login. This foundation does not mean every legacy admin page is fully redesigned.

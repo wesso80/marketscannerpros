@@ -4,13 +4,46 @@
 .main { min-width: 0; display: flex; flex-direction: column; overflow: auto; }
 .main :global(.admin-page-content) { padding: 1.5rem 2rem 2rem; flex: 1; min-width: 0; }
 .mobileHeader, .close { display: none; }
+/* Match the approved research design, scoped to private admin only. */
+.frame {
+  --msp-bg: #0b141a;
+  --msp-card: #111e26;
+  --msp-panel: #111e26;
+  --msp-panel-2: #15262d;
+  --msp-card-2: #15262d;
+  --msp-border: #293a42;
+  --msp-border-strong: #38534d;
+  --msp-accent: #a5e8cf;
+  --msp-accent-dim: #8bcbb3;
+  --msp-text: #edf1ed;
+  --msp-text-muted: #a8b9bf;
+  --msp-text-faint: #91a5ae;
+  color: var(--msp-text);
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+}
+.sidebar { background: #0d181f; border-color: var(--msp-border); }
+.sidebar a { min-height: 44px; }
+.frame :global(.admin-design-card) {
+  background: var(--msp-panel);
+  border: 1px solid var(--msp-border);
+  border-radius: 12px;
+  padding: clamp(16px, 2vw, 24px);
+  box-shadow: none;
+}
+.frame :global(.admin-design-card-heading) { gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.frame :global(.admin-design-card-heading) > div { color: var(--msp-text); font-size: 16px; font-weight: 500; }
+.frame :global(.admin-design-title) { margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--msp-border); }
+.frame :global(.admin-design-title) > div:first-child { color: var(--msp-text); font-size: clamp(24px, 3vw, 32px); font-weight: 500; letter-spacing: -.6px; line-height: 1.2; }
+.frame :global(.admin-design-title) > div + div { color: var(--msp-text-muted); font-size: 13px; line-height: 1.7; margin-top: 10px; }
+.frame :is(a, button, input, select, textarea):focus-visible { outline: 2px solid var(--msp-accent); outline-offset: 4px; }
 @media (max-width: 767px) {
   .sidebar { display: none; position: fixed; inset: 0 auto 0 0; width: min(320px, calc(100vw - 48px)); z-index: 1001; overscroll-behavior: contain; }
   .sidebar.open { display: flex; }
   .backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 1000; }
   .mobileHeader { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 1rem; border-bottom: 1px solid rgba(16,185,129,.2); color: #e5e7eb; }
   .mobileHeader small { display: block; color: #94a3b8; font-size: .7rem; }
-  .mobileHeader button, .close { min-height: 44px; padding: .5rem .8rem; border: 1px solid #475569; border-radius: .5rem; color: #e5e7eb; background: #1e293b; }
+  .mobileHeader button, .close { min-height: 44px; padding: .5rem .8rem; border: 1px solid var(--msp-border-strong); border-radius: 6px; color: var(--msp-text); background: var(--msp-panel); }
   .close { display: block; align-self: flex-end; margin-bottom: 1rem; }
   .main :global(.admin-page-content) { padding: 1rem; }
 }
