@@ -1,3 +1,5 @@
+import { DEFAULT_WATCHLISTS } from '@/lib/operator/watchlists';
+
 /** Temporary owner-requested admin scope. Public/shared ingestion is deliberately excluded. */
 export function adminDiscoveryOnly(): boolean {
   return !['false', '0', 'off', 'no'].includes((process.env.ADMIN_DISCOVERY_ONLY ?? 'true').trim().toLowerCase());
@@ -75,9 +77,60 @@ function readMethod(method: string | undefined): boolean {
   return (method ?? 'GET').trim().toUpperCase() === 'GET';
 }
 
-export function discoveryOnlyAction(path: string, method?: string): 'allow' | 'pause_api' | 'skip_job' | 'pause_page' {
+/** Body or query fields the equity-scan exemption reads. */
+export type DiscoveryJobHint = { market?: unknown; asset?: unknown; watchlist?: unknown };
+
+/**
+ * Market persist-edge-packets will scan. `market` wins. `EQUITY` / `equity` / `equities`
+ * are the equity branch. A missing market stays CRYPTO, the route default, so an empty body
+ * cannot open the equity branch. An unrecognised market or asset string is invalid.
+ */
+export function persistEdgeMarket(input: DiscoveryJobHint | null | undefined): 'CRYPTO' | 'EQUITIES' | 'invalid' {
+  if (typeof input?.market === 'string') {
+    const market = input.market.trim().toUpperCase();
+    if (market === 'EQUITY') return 'EQUITIES';
+    if (market === 'CRYPTO' || market === 'EQUITIES') return market;
+    return 'invalid';
+  }
+  if (typeof input?.asset === 'string' && input.asset.trim()) {
+    const asset = input.asset.trim().toLowerCase();
+    if (asset === 'equity' || asset === 'equities') return 'EQUITIES';
+    if (asset === 'crypto') return 'CRYPTO';
+    return 'invalid';
+  }
+  return 'CRYPTO';
+}
+
+/**
+ * Equity admin radar and the equity edge-packet persist stay live while discovery-only is on.
+ * Crypto persist, crypto/forex watchlists, and every other background job stay skipped.
+ * Auto-scan with no watchlist follows the route default (us-mega-cap, equities).
+ */
+export function equityDiscoveryExempt(path: string, hint?: DiscoveryJobHint): boolean {
+  if (path === '/api/operator/engine/auto-scan') {
+    const key = typeof hint?.watchlist === 'string' ? hint.watchlist.trim() : '';
+    if (!key) return true;
+    return DEFAULT_WATCHLISTS[key]?.market === 'EQUITIES';
+  }
+  if (path === '/api/cron/persist-edge-packets') return persistEdgeMarket(hint) === 'EQUITIES';
+  return false;
+}
+
+export function discoveryOnlySkipBody(asJob = true) {
+  return {
+    ok: asJob,
+    paused: true as const,
+    skipped: true as const,
+    started: false as const,
+    reason: 'admin_discovery_only' as const,
+    error: ADMIN_DISCOVERY_ONLY_MESSAGE,
+  };
+}
+
+export function discoveryOnlyAction(path: string, method?: string, hint?: DiscoveryJobHint): 'allow' | 'pause_api' | 'skip_job' | 'pause_page' {
   if (!adminDiscoveryOnly()) return 'allow';
   path = path.replace(/\/+$/, '') || '/';
+  if (equityDiscoveryExempt(path, hint)) return 'allow';
   if (background.has(path)) return 'skip_job';
   if (cryptoScope.has(path) || jevEquityScope.has(path)) return 'allow';
   if (businessPages.has(path)) return 'allow';

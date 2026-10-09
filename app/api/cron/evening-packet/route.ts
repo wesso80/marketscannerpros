@@ -20,6 +20,7 @@ import { buildEveningPacket } from '@/lib/eveningPacket/builder';
 import { pruneEdgePackets } from '@/lib/admin/edgePacketSnapshots';
 import { runNewsJevDaily } from '@/lib/admin/equityNewsJev';
 import { notifyAdmin } from '@/lib/admin/notifyAdmin';
+import { adminEquityEmailsDisabled } from '@/lib/admin/equityOutbound';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -170,21 +171,23 @@ export async function POST(req: NextRequest) {
       bodyLines.push(`  - ${f.workspaceId}: ${f.error}`);
     }
   }
-  await notifyAdmin({
-    subject: `Evening Packet ${dateISO} · ${summaries.length} workspaces`,
-    body: bodyLines.join("\n"),
-    severity,
-    link: { label: "Open Evening Packet", url: "https://app.marketscannerpros.app/admin/evening-packet" },
-    context: {
-      date: dateISO,
-      workspaces: summaries.length,
-      ok,
-      failed: failed.length,
-      reconciled: totalReconciled,
-      warnings: warningCount,
-      edgePacketsPruned,
-    },
-  }).catch((e) => console.error("[evening-packet] notify failed:", e));
+  if (!adminEquityEmailsDisabled()) {
+    await notifyAdmin({
+      subject: `Evening Packet ${dateISO} · ${summaries.length} workspaces`,
+      body: bodyLines.join("\n"),
+      severity,
+      link: { label: "Open Evening Packet", url: "https://app.marketscannerpros.app/admin/evening-packet" },
+      context: {
+        date: dateISO,
+        workspaces: summaries.length,
+        ok,
+        failed: failed.length,
+        reconciled: totalReconciled,
+        warnings: warningCount,
+        edgePacketsPruned,
+      },
+    }).catch((e) => console.error("[evening-packet] notify failed:", e));
+  }
 
   return NextResponse.json({
     ok: true,

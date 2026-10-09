@@ -15,6 +15,7 @@ import {
 import type { ScannerHit } from "@/lib/admin/types";
 
 import { adminErrorText } from '@/lib/admin/errorResponse';
+import { adminEquityEmailsDisabled, ADMIN_EQUITY_EMAILS_DISABLED_REASON } from '@/lib/admin/equityOutbound';
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
@@ -87,6 +88,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "review_email") {
+      if (adminEquityEmailsDisabled()) {
+        return NextResponse.json({ ok: true, action, skipped: true, reason: ADMIN_EQUITY_EMAILS_DISABLED_REASON });
+      }
       const review = await buildDailyReview();
       const html = renderDailyReviewEmail(review);
       const recipients = resolveRecipients(body.to);

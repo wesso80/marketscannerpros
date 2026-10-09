@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, verifyCronAuth } from "@/lib/adminAuth";
 import { sendAlertEmail } from "@/lib/email";
 import { buildDailyReview, renderDailyReviewEmail } from "@/lib/admin/morning-brief";
+import { adminEquityEmailsDisabled, ADMIN_EQUITY_EMAILS_DISABLED_REASON } from "@/lib/admin/equityOutbound";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -11,6 +12,10 @@ export async function POST(req: NextRequest) {
   if (!isCron) {
     const admin = await requireAdmin(req);
     if (!admin.ok) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (adminEquityEmailsDisabled()) {
+    return NextResponse.json({ ok: true, skipped: true, reason: ADMIN_EQUITY_EMAILS_DISABLED_REASON });
   }
 
   try {

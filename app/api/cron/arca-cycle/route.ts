@@ -3,6 +3,7 @@ import {runCryptoAutomation} from '@/lib/admin/cryptoAutomation';
 import {cryptoMarketsExitsPaused,cryptoMarketsPaused,pausedCryptoMarketsBody} from '@/lib/admin/cryptoMarketsPause';
 import {adminDiscoveryOnly,discoveryOnlyAction} from '@/lib/admin/discoveryOnly';
 import {runNewsJevDailyOnce} from '@/lib/admin/equityNewsJev';
+import {equityNewsJevFallback} from '@/lib/admin/equityOutbound';
 import {runCryptoPaperAll} from '@/lib/admin/cryptoPaper';
 import {runCryptoBaseSleeveAll} from '@/lib/admin/cryptoPaperBase';
 import {runCryptoMarketData} from '@/lib/admin/cryptoMarketDataJob';
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
       const skipped=pausedCryptoMarketsBody();
       const calibrationRedis=getRedis();
       // Equity news verification piggybacks on this cron while the evening job is discovery-skipped. It is not a Crypto Markets scan.
-      const newsJev=calibrationRedis&&discoveryOnlyAction('/api/cron/evening-packet')==='skip_job'?await runNewsJevDailyOnce(calibrationRedis).catch(()=>({ok:false,error:'News verification failed'})):{ok:true,skipped:true,reason:'Evening cron handles it'};
+      const newsJev=await equityNewsJevFallback(calibrationRedis,discoveryOnlyAction('/api/cron/evening-packet')==='skip_job',(redis)=>runNewsJevDailyOnce(redis).catch(()=>({ok:false,error:'News verification failed'})));
       return NextResponse.json({...skipped,exitsPaused,monitoring,scanning:skipped,paper:skipped,operationalAlerts:{ok:true,paused:true,skipped:true,reason:'crypto_markets_paused'},calibration:skipped,newsJev,marketData:skipped,newListings:skipped,history:{...skipped,note:'Scheduled history batch was not called. Stored history rows are unchanged.'},breakoutVerdicts:skipped,baseSleeve:{monitoring:baseMonitoring,paper:skipped}},{status:200});
     }
     // Exit-only work runs before any potentially slow/failed discovery request.
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
     const calibrationRedis=getRedis();
     const calibration=calibrationRedis?await runDailyCalibration(calibrationRedis).catch(()=>({ok:false,error:'Calibration failed'})):{ok:false,error:'Redis unavailable'};
     // The two Jev equity pages are open while the evening cron is skipped, so their daily scoring step runs here, once per UTC day. Evidence only.
-    const newsJev=calibrationRedis&&discoveryOnlyAction('/api/cron/evening-packet')==='skip_job'?await runNewsJevDailyOnce(calibrationRedis).catch(()=>({ok:false,error:'News verification failed'})):{ok:true,skipped:true,reason:'Evening cron handles it'};
+    const newsJev=await equityNewsJevFallback(calibrationRedis,discoveryOnlyAction('/api/cron/evening-packet')==='skip_job',(redis)=>runNewsJevDailyOnce(redis).catch(()=>({ok:false,error:'News verification failed'})));
     // Non-essential CoinGecko market context runs last and never affects this run's health status.
     const marketData=await runCryptoMarketData().catch(()=>({ok:false,error:'CoinGecko market data failed'}));
     const newListings=await runNewListings().catch(()=>({ok:false,error:'CoinGecko new listings failed'}));
