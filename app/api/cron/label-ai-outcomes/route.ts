@@ -11,6 +11,7 @@ import {
   normalizeAssetClass,
   normalizeDirection,
   pctMove,
+  OUTCOME_MOVE_THRESHOLD_PCT,
   type OutcomeHorizon,
 } from '@/lib/outcomes/aiOutcomeLabel';
 import { createHorizonPriceResolver } from '@/lib/outcomes/aiOutcomePrices';
@@ -21,6 +22,7 @@ export const dynamic = 'force-dynamic';
 
 const SUPPORTED_ASSET_SQL = `LOWER(TRIM(asset_type)) IN ('equity','equities','stock','stocks','etf','crypto')`;
 const DIRECTIONAL_SQL = `UPPER(TRIM(COALESCE(trade_bias, ''))) IN ('LONG','SHORT')`;
+const PROVENANCE_COLUMNS = ['outcome_provenance', 'outcome_4h_provenance', 'price_after_24h_at'];
 const HORIZON_4H_COLUMNS = ['outcome_4h', 'price_after_4h', 'pct_move_4h', 'price_after_4h_at', 'outcome_4h_measured_at'];
 
 type PendingRow = {
@@ -46,9 +48,9 @@ async function detectOutcomeColumns(): Promise<Set<string>> {
   try {
     const rows = await q<{ column_name: string }>(
       `SELECT column_name FROM information_schema.columns
-       WHERE table_name = 'ai_signal_log'
+       WHERE table_schema = current_schema() AND table_name = 'ai_signal_log'
          AND column_name = ANY($1::text[])`,
-      [[...HORIZON_4H_COLUMNS, 'price_after_24h_at']],
+      [[...HORIZON_4H_COLUMNS, ...PROVENANCE_COLUMNS]],
     );
     return new Set(rows.map((r) => r.column_name));
   } catch {
@@ -104,15 +106,19 @@ export async function POST(req: NextRequest) {
     const nowMs = Date.now();
     const columns = await detectOutcomeColumns();
     const has4h = HORIZON_4H_COLUMNS.every((c) => columns.has(c));
-    const has24hAt = columns.has('price_after_24h_at');
+    if (!PROVENANCE_COLUMNS.every(c => columns.has(c))) {
+      return NextResponse.json({ success: false, error: 'Outcome provenance migration required before labelling.' },
+        { status: 503, headers: { 'Cache-Control': 'private, no-store' } });
+    }
 
     // 1. Give up on rows that could not be labelled within 7 days (terminal state for the public stats).
     const expiredRows = await q<{ id: number }>(
-      `UPDATE ai_signal_log SET outcome = 'expired', outcome_measured_at = NOW()
+      `UPDATE ai_signal_log SET outcome = 'expired', outcome_measured_at = NOW(),
+         outcome_provenance = jsonb_build_object('writer','label-ai-outcomes','method','pending-expiry-v1',
+           'horizon','24h','reason','pending_older_than_seven_days','processedAt',NOW())
        WHERE outcome = 'pending' AND signal_at < NOW() - INTERVAL '7 days'
        RETURNING id`,
     );
-    if (expiredRows.length) await markExpiredLifecycle(expiredRows.map((r) => r.id));
 
     // 2. Rows the labeller can never score (no LONG/SHORT direction) are skipped, not defaulted to LONG. Log them.
     const undirected = await q<{ n: number }>(
@@ -160,34 +166,31 @@ export async function POST(req: NextRequest) {
         const move = pctMove(entry, px.price);
         const outcome = classifyOutcome(direction, move);
         const pxAt = new Date(px.at).toISOString();
+        const provenance = JSON.stringify({ writer: 'label-ai-outcomes', method: 'first-completed-close-v1',
+          horizon, thresholdPct: OUTCOME_MOVE_THRESHOLD_PCT, direction, signalAt: new Date(signalAtMs).toISOString(),
+          entryPrice: entry, observedPrice: px.price, observedAt: pxAt, barSource: px.source, outcome, pctMove: move });
 
         const updated = horizon === '24h'
           ? await q<{ id: number }>(
-              has24hAt
-                ? `UPDATE ai_signal_log
-                   SET outcome = $1, price_after_24h = $2, pct_move_24h = $3, price_after_24h_at = $5, outcome_measured_at = NOW()
-                   WHERE id = $4 AND outcome = 'pending'
-                   RETURNING id`
-                : `UPDATE ai_signal_log
-                   SET outcome = $1, price_after_24h = $2, pct_move_24h = $3, outcome_measured_at = NOW()
-                   WHERE id = $4 AND outcome = 'pending'
-                   RETURNING id`,
-              has24hAt ? [outcome, px.price, move, row.id, pxAt] : [outcome, px.price, move, row.id],
+              `UPDATE ai_signal_log
+               SET outcome = $1, price_after_24h = $2, pct_move_24h = $3, price_after_24h_at = $5, outcome_measured_at = NOW(),
+                   outcome_provenance = $6::jsonb || jsonb_build_object('processedAt',NOW())
+               WHERE id = $4 AND outcome = 'pending'
+               RETURNING id`,
+              [outcome, px.price, move, row.id, pxAt, provenance],
             )
           : await q<{ id: number }>(
               `UPDATE ai_signal_log
-               SET outcome_4h = $1, price_after_4h = $2, pct_move_4h = $3, price_after_4h_at = $5, outcome_4h_measured_at = NOW()
+               SET outcome_4h = $1, price_after_4h = $2, pct_move_4h = $3, price_after_4h_at = $5, outcome_4h_measured_at = NOW(),
+                   outcome_4h_provenance = $6::jsonb || jsonb_build_object('processedAt',NOW())
                WHERE id = $4 AND outcome_4h IS NULL
                RETURNING id`,
-              [outcome, px.price, move, row.id, pxAt],
+              [outcome, px.price, move, row.id, pxAt, provenance],
             );
 
         if (!updated.length) { t.alreadyLabeled++; continue; }
         t.labeled++;
         t[outcome]++;
-        if (horizon === '24h') {
-          await updateLifecycleState(row.id, outcome === 'correct' ? 'TARGET_1_HIT' : outcome === 'wrong' ? 'STOPPED' : 'EXPIRED', move);
-        }
       }
     }
 
@@ -226,39 +229,6 @@ export async function POST(req: NextRequest) {
       context: { source: 'label-ai-outcomes' },
     }).catch(() => {});
     return NextResponse.json({ success: false, error: message }, { status: 500 });
-  }
-}
-
-async function markExpiredLifecycle(ids: number[]) {
-  try {
-    await q(
-      `UPDATE ai_signal_log SET lifecycle_state = 'EXPIRED', expectancy_r = 0 WHERE id = ANY($1::bigint[])`,
-      [ids],
-    );
-  } catch {
-    // Lifecycle columns are optional until migration 068 is applied.
-  }
-}
-
-async function updateLifecycleState(id: number, state: string, pctMove?: number) {
-  try {
-    await q(
-      `UPDATE ai_signal_log
-       SET lifecycle_state = $1,
-           target_1_hit_at = CASE WHEN $1 = 'TARGET_1_HIT' THEN NOW() ELSE target_1_hit_at END,
-           stop_hit_at = CASE WHEN $1 = 'STOPPED' THEN NOW() ELSE stop_hit_at END,
-           max_favorable_pct = CASE WHEN $2::numeric IS NOT NULL AND $2::numeric > 0 THEN GREATEST(COALESCE(max_favorable_pct, 0), $2::numeric) ELSE max_favorable_pct END,
-           max_adverse_pct = CASE WHEN $2::numeric IS NOT NULL AND $2::numeric < 0 THEN LEAST(COALESCE(max_adverse_pct, 0), $2::numeric) ELSE max_adverse_pct END,
-           expectancy_r = CASE
-             WHEN $1 = 'TARGET_1_HIT' THEN 1
-             WHEN $1 = 'STOPPED' THEN -1
-             ELSE 0
-           END
-       WHERE id = $3`,
-      [state, pctMove ?? null, id],
-    );
-  } catch {
-    // Lifecycle columns are optional until migration 068 is applied.
   }
 }
 
