@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { storedTruth } from '@/lib/admin/truthLayer';
+import { symbolObservationAsOf } from '@/lib/admin/symbolObservation';
 import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
 import { isOperator } from "@/lib/quant/operatorAuth";
@@ -44,6 +45,10 @@ export async function GET(
     const session = await getSessionFromCookie();
     const scan = await buildAdminResearchScan({ symbol, market, timeframe, workspaceId: session?.workspaceId });
     const packet = scan.packet;
+    const bars = packet.snapshot.bars?.length ? packet.snapshot.bars : scan.bars;
+    // Freshness comes from the newest bar the packet was built on, never from packet.createdAt (the build time).
+    const nowMs = Date.now();
+    const staleSec = packet.dataTruth?.thresholds?.staleSec;
 
     return NextResponse.json({
       ...packet.snapshot,
@@ -54,7 +59,7 @@ export async function GET(
       },
       researchPacket: packet,
       // The bars the engine scanned (packets don't embed bars); the chart used to get [] and say "No bar data".
-      bars: (packet.snapshot.bars?.length ? packet.snapshot.bars : scan.bars).slice(-300).map((b) => ({
+      bars: bars.slice(-300).map((b) => ({
         timestamp: b.timestamp, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume,
       })),
       meta: {
@@ -63,8 +68,13 @@ export async function GET(
         alertEligibility: packet.alertEligibility,
       },
       adminTruth: {
-        ...storedTruth({ source: `admin research packet (${symbol}, ${timeframe})`, dataAsOf: packet.createdAt ?? null, staleAfterMinutes: 60 }),
-        data: { source: 'admin:symbol', symbol, packetId: packet.packetId },
+        ...storedTruth({
+          source: `price bars used by admin research packet (${symbol}, ${timeframe})`,
+          dataAsOf: symbolObservationAsOf(bars, timeframe, market, nowMs),
+          staleAfterMinutes: staleSec && staleSec > 0 ? Math.round(staleSec / 60) : 60,
+          now: nowMs,
+        }),
+        data: { source: 'admin:symbol', symbol, packetId: packet.packetId, packetBuiltAt: packet.createdAt },
       },
     });
   } catch (err: unknown) {
