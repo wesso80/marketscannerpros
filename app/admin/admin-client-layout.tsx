@@ -29,43 +29,32 @@ export const useAdmin = () => useContext(AdminContext);
 export default function AdminClientLayout({ children, discoveryPaused = false }: { children: React.ReactNode; discoveryPaused?: boolean }) {
   const [secret, setSecret] = useState("");
   const [isAuthed, setIsAuthed] = useState(false);
-  const [inputSecret, setInputSecret] = useState("");
+  const [checked, setChecked] = useState(false);
   const pathname = usePathname();
 
-  // The passphrase page does not use the operator-secret check.
+  // Session check only. The legacy admin-secret form is retired: middleware refused cookie-free /api/admin calls,
+  // so it never worked without a session. Admins sign in at /admin/login. `secret` stays "" for older consumers.
   useEffect(() => {
     if (pathname === '/admin/login') return;
-    const stored = sessionStorage.getItem("admin_secret") || "";
-    verifyAuth(stored);
+    try { sessionStorage.removeItem("admin_secret"); } catch { /* storage unavailable */ }
+    verifyAuth();
   }, [pathname]);
 
-  const verifyAuth = async (key = "") => {
+  const verifyAuth = async () => {
     try {
-      const headers = key ? { Authorization: `Bearer ${key}` } : undefined;
-      const res = await fetch("/api/admin/verify", { headers });
-      if (res.ok) {
-        setIsAuthed(true);
-        setSecret(key);
-        sessionStorage.removeItem("admin_secret");
-      } else {
-        setIsAuthed(false);
-        sessionStorage.removeItem("admin_secret");
-      }
+      const res = await fetch("/api/admin/verify");
+      setIsAuthed(res.ok);
     } catch {
       setIsAuthed(false);
+    } finally {
+      setChecked(true);
     }
-  };
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    verifyAuth(inputSecret.trim());
   };
 
   const handleLogout = async () => {
     await fetch("/api/admin/verify", { method: "DELETE" }).catch(() => null);
     setSecret("");
     setIsAuthed(false);
-    sessionStorage.removeItem("admin_secret");
   };
 
   // Passphrase login cannot sit behind the operator-secret wall.
@@ -211,49 +200,22 @@ export default function AdminClientLayout({ children, discoveryPaused = false }:
         justifyContent: "center",
         padding: "2rem",
       }}>
-        <form onSubmit={handleLogin} style={{
+        <div data-admin-signin-required style={{
           background: "rgba(17, 24, 39, 0.8)",
           border: "1px solid rgba(16, 185, 129, 0.3)",
           borderRadius: "1rem",
           padding: "2rem",
           maxWidth: "400px",
           width: "100%",
+          textAlign: "center",
+          color: "#E5E7EB",
         }}>
-          <h1 style={{
-            fontSize: "1.5rem",
-            fontWeight: 700,
-            color: "#10B981",
-            marginBottom: "1.5rem",
-            textAlign: "center",
-          }}>Private Operator Login</h1>
-          <input
-            type="password"
-            placeholder="Enter admin secret"
-            value={inputSecret}
-            onChange={(e) => setInputSecret(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "0.75rem 1rem",
-              background: "rgba(0,0,0,0.3)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              borderRadius: "0.5rem",
-              color: "#E5E7EB",
-              marginBottom: "1rem",
-            }}
-          />
-          <button type="submit" style={{
-            width: "100%",
-            padding: "0.75rem",
-            background: "var(--msp-accent)",
-            border: "none",
-            borderRadius: "0.5rem",
-            color: "white",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}>
-            Login
-          </button>
-        </form>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#10B981", marginBottom: "1rem" }}>Private Operator Area</h1>
+          <p style={{ marginBottom: "1.25rem" }}>{checked ? "Admin sign-in required." : "Checking admin session…"}</p>
+          {checked && (
+            <Link href="/admin/login" style={{ color: "var(--msp-accent)", fontWeight: 600 }}>Go to admin sign-in</Link>
+          )}
+        </div>
       </main>
     );
   }
