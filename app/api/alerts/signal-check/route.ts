@@ -101,7 +101,7 @@ async function checkSignalAlerts(req: NextRequest) {
     `);
 
     if (alerts.length === 0) {
-      return NextResponse.json({ checked: 0, triggered: 0, message: 'No active signal alerts' });
+      return NextResponse.json({ checked: 0, triggered: 0, message: 'No active reading alerts' });
     }
 
     // Group alerts by symbol to minimize API calls
@@ -251,7 +251,7 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
           triggered: true,
           value: scan.score,
           threshold: minScore,
-          message: `🟢 BULLISH READING: ${scan.symbol} score ${scan.score}/100 (${scan.signals.bullish} bullish indicators)`,
+          message: `🟢 BULLISH READING: ${scan.symbol} reading ${scan.score}/100 (${scan.signals.bullish} bullish indicators)`,
           context: { 
             direction: scan.direction, 
             signals: scan.signals,
@@ -270,7 +270,7 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
           triggered: true,
           value: scan.score,
           threshold: maxScore,
-          message: `🔴 BEARISH READING: ${scan.symbol} score ${scan.score}/100 (${scan.signals.bearish} bearish indicators)`,
+          message: `🔴 BEARISH READING: ${scan.symbol} reading ${scan.score}/100 (${scan.signals.bearish} bearish indicators)`,
           context: { 
             direction: scan.direction, 
             signals: scan.signals,
@@ -287,7 +287,7 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
           triggered: true,
           value: scan.score,
           threshold: condition_value,
-          message: `📈 ${scan.symbol} score reached ${scan.score}/100 (threshold: ${condition_value})`,
+          message: `📈 ${scan.symbol} reading reached ${scan.score}/100 (threshold: ${condition_value})`,
           context: { direction: scan.direction, signals: scan.signals },
         };
       }
@@ -300,7 +300,7 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
           triggered: true,
           value: scan.score,
           threshold: condition_value,
-          message: `📉 ${scan.symbol} score dropped to ${scan.score}/100 (threshold: ${condition_value})`,
+          message: `📉 ${scan.symbol} reading dropped to ${scan.score}/100 (threshold: ${condition_value})`,
           context: { direction: scan.direction, signals: scan.signals },
         };
       }
@@ -313,7 +313,7 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
         return {
           triggered: true,
           value: scan.score,
-          message: `🐂 DIRECTION CHANGE: ${scan.symbol} shifted to bullish reading. Score: ${scan.score}/100 (was ${prevDirection})`,
+          message: `🐂 DIRECTION CHANGE: ${scan.symbol} shifted to bullish reading. Reading: ${scan.score}/100 (was ${prevDirection})`,
           context: { 
             prevDirection, 
             newDirection: scan.direction,
@@ -330,7 +330,7 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
         return {
           triggered: true,
           value: scan.score,
-          message: `🐻 DIRECTION CHANGE: ${scan.symbol} shifted to bearish reading. Score: ${scan.score}/100 (was ${prevDirection})`,
+          message: `🐻 DIRECTION CHANGE: ${scan.symbol} shifted to bearish reading. Reading: ${scan.score}/100 (was ${prevDirection})`,
           context: { 
             prevDirection, 
             newDirection: scan.direction,

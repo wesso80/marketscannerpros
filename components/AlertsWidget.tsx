@@ -835,7 +835,7 @@ export default function AlertsWidget({
                         <optgroup label="📊 Strategy Alerts (Pick Any Ticker!)">
                           <option value="custom_strategy">🎯 Custom Strategy Alert (Any Ticker + Strategy)</option>
                         </optgroup>
-                        <optgroup label="🎯 Scanner Signals">
+                        <optgroup label="🎯 Scanner Readings">
                           <option value="btc_buy_signal">BTC Scanner upside condition</option>
                           <option value="btc_sell_signal">BTC Scanner downside condition</option>
                         </optgroup>
@@ -869,12 +869,12 @@ export default function AlertsWidget({
                             <option value="strategy_exit">🚪 Strategy Exit</option>
                           </optgroup>
                           <optgroup label="🎯 Scanner Setups">
-                            <option value="scanner_buy_signal">Scanner upside condition (Score Above)</option>
-                            <option value="scanner_sell_signal">Scanner downside condition (Score Below)</option>
+                            <option value="scanner_buy_signal">Scanner upside condition (Reading Above)</option>
+                            <option value="scanner_sell_signal">Scanner downside condition (Reading Below)</option>
                             <option value="scanner_bullish_flip">Scanner upside change (Direction Change)</option>
                             <option value="scanner_bearish_flip">Scanner downside change (Direction Change)</option>
-                            <option value="scanner_score_above">📈 Score Above Threshold</option>
-                            <option value="scanner_score_below">📉 Score Below Threshold</option>
+                            <option value="scanner_score_above">📈 Reading Above Threshold</option>
+                            <option value="scanner_score_below">📉 Reading Below Threshold</option>
                           </optgroup>
                           <optgroup label="Open Interest">
                             <option value="oi_surge">📈 OI Surge</option>
@@ -1000,7 +1000,7 @@ export default function AlertsWidget({
                                 <option value="multi_ema_rsi">EMA + RSI</option>
                                 <option value="multi_macd_adx">MACD + ADX</option>
                                 <option value="multi_bb_stoch">BB + Stochastic</option>
-                                <option value="multi_confluence_5">5-Indicator Confluence</option>
+                                <option value="multi_confluence_5">5-Indicator Agreement</option>
                               </optgroup>
                             </select>
                           </div>

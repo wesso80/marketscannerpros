@@ -47,7 +47,7 @@ export default function RegimeBanner() {
       {data.signals.some(s => s.stale) && (
         <>
           <span className="text-slate-600">|</span>
-          <span className="text-amber-500 font-medium">Stale signals</span>
+          <span className="text-amber-500 font-medium">Stale readings</span>
         </>
       )}
     </div>

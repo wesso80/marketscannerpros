@@ -31,7 +31,7 @@ export default function Why() {
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
           <h2 style={{ fontSize: 28, fontWeight: 650, marginBottom: 10 }}>Built for Serious Traders</h2>
           <p style={{ fontSize: 15, color: '#9ca3af', maxWidth: 500, margin: '0 auto' }}>
-            Stop guessing. Start analysing with data-driven clarity and confluence.
+            Stop guessing. Start analysing with data-driven clarity and agreement.
           </p>
         </div>
 

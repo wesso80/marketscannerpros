@@ -304,7 +304,7 @@ function CandidatesTable({ rows }: { rows: CandidateRow[] }) {
   return (
     <div className="min-w-0 max-w-full" style={{ overflowX: "auto" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
-        <thead><tr><th style={th}>#</th><th style={th}>Symbol</th><th style={th}>Setup</th><th style={th}>Score</th><th style={th}>Extension</th><th style={th}>1d / 5d</th><th style={th}>Why surfaced · caveat</th></tr></thead>
+        <thead><tr><th style={th}>#</th><th style={th}>Symbol</th><th style={th}>Setup</th><th style={th}>Reading</th><th style={th}>Extension</th><th style={th}>1d / 5d</th><th style={th}>Why surfaced · caveat</th></tr></thead>
         <tbody>{rows.map((c) => {
           const cv = c.caveat ? classifyCaveat(c.caveat) : null;
           return (
@@ -327,7 +327,7 @@ function NextTable({ rows }: { rows: NextMoveRow[] }) {
   return (
     <div className="min-w-0 max-w-full" style={{ overflowX: "auto" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
-        <thead><tr><th style={th}>Symbol</th><th style={th}>Stage</th><th style={th}>Score</th><th style={th}>Trigger</th><th style={th}>Why</th><th style={th}>Confirms / invalidates</th></tr></thead>
+        <thead><tr><th style={th}>Symbol</th><th style={th}>Stage</th><th style={th}>Reading</th><th style={th}>Trigger</th><th style={th}>Why</th><th style={th}>Confirms / invalidates</th></tr></thead>
         <tbody>{rows.map((n) => (
           <tr key={n.symbol}>
             <td style={{ ...td, fontWeight: 700 }}><SymbolLink symbol={n.symbol} assetClass={n.assetClass} from="what-may-move-next" /><div style={{ ...muted, fontWeight: 400 }}>{n.assetClass}{n.lifecycle ? ` · ${radarReaderLabel(n.lifecycle)}` : ""}</div>{n.lifecycle === "CONFIRMED_MOVE" && <div style={{ marginTop: 3 }}><StatusPill label="Already confirmed — not pre-move" tone="yellow" /></div>}</td>
@@ -355,7 +355,7 @@ function ThemesTable({ title, rows }: { title: string; rows: ThemeRow[] }) {
     <div className="min-w-0 max-w-full" style={{ marginTop: "0.75rem", overflowX: "auto" }}>
       <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#94A3B8", marginBottom: "0.3rem" }}>{title}</div>
       <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
-        <thead><tr><th style={th}>Theme</th><th style={th}>Members up</th><th style={th}>Median 1d move</th><th style={th}>Verdict</th><th style={th}>Early</th><th style={th}>Extended</th></tr></thead>
+        <thead><tr><th style={th}>Theme</th><th style={th}>Members up</th><th style={th}>Median 1d move</th><th style={th}>Summary</th><th style={th}>Early</th><th style={th}>Extended</th></tr></thead>
         <tbody>{rows.map((g) => <tr key={g.name}><td style={{ ...td, fontWeight: 600 }}>{g.name}</td><td style={td}>{g.up}/{g.members} ({Math.round(g.pctUp)}%)</td><td style={td}>{g.medianMove}</td><td style={td}><StatusPill label={radarReaderLabel(g.verdict)} tone={g.verdict === "GENUINE_GROUP_MOVE" ? "green" : g.verdict === "MIXED" ? "yellow" : "neutral"} /><div style={muted}>{radarReaderText(g.confirmation)}</div></td><td style={{ ...td, color: "#6EE7B7" }}>{g.early.join(", ") || "No reading"}</td><td style={{ ...td, color: "#FCD34D" }}>{g.extended.join(", ") || "No reading"}</td></tr>)}</tbody>
       </table>
     </div>);

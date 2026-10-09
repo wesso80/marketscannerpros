@@ -142,7 +142,7 @@ function RadarCard({ opp }: { opp: RadarOpportunity }) {
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
         <span style={{ color: 'var(--msp-flat)' }}>
-          Confidence: <strong style={{ color: 'var(--msp-text)' }}>{(opp.confidenceScore * 100).toFixed(1)}%</strong>
+          Coverage: <strong style={{ color: 'var(--msp-text)' }}>{(opp.confidenceScore * 100).toFixed(1)}%</strong>
         </span>
         <span style={{ color: 'var(--msp-flat)' }}>
           Size: <strong style={{ color: 'var(--msp-text)' }}>{opp.sizeMultiplier.toFixed(1)}x</strong>
@@ -437,7 +437,7 @@ export default function OperatorEnginePage() {
           </h3>
           <div style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--msp-flat)' }}>
             <p style={{ margin: '0 0 8px' }}>
-              Each symbol goes through an <strong style={{ color: 'var(--msp-text)' }}>8-engine pipeline</strong>. A weighted confidence score is computed from 10 evidence dimensions:
+              Each symbol goes through an <strong style={{ color: 'var(--msp-text)' }}>8-engine pipeline</strong>. A weighted coverage reading is computed from 10 evidence dimensions:
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 6, marginBottom: 12, fontSize: 12 }}>
               {[
@@ -460,7 +460,7 @@ export default function OperatorEnginePage() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
               <div style={{ background: '#10B98115', padding: '8px 12px', borderRadius: 6, borderLeft: '3px solid #10B981' }}>
-                <strong style={{ color: 'var(--msp-bull)' }}>ALLOW</strong> — Confidence ≥ 80%<br />Full position size (1.0x)
+                <strong style={{ color: 'var(--msp-bull)' }}>ALLOW</strong> — Coverage ≥ 80%<br />Full position size (1.0x)
               </div>
               <div style={{ background: '#F59E0B15', padding: '8px 12px', borderRadius: 6, borderLeft: '3px solid #F59E0B' }}>
                 <strong style={{ color: 'var(--msp-warn)' }}>ALLOW_REDUCED</strong> — 68–79%<br />Half position size (0.5x)
@@ -618,10 +618,10 @@ export default function OperatorEnginePage() {
                 textAlign: 'center', border: '1px solid #334155',
               }}>
                 <div style={{ color: 'var(--msp-text-muted)', marginBottom: 8 }}>
-                  {autoScan?.totalScans ? 'No opportunities found meeting confidence thresholds.' : 'Start auto-scan to begin monitoring.'}
+                  {autoScan?.totalScans ? 'No opportunities found meeting coverage thresholds.' : 'Start auto-scan to begin monitoring.'}
                 </div>
                 <div style={{ color: 'var(--msp-text-muted)', fontSize: 12 }}>
-                  Symbols need ≥55% confidence across 10 weighted evidence dimensions to appear on radar.
+                  Symbols need ≥55% coverage across 10 weighted evidence dimensions to appear on radar.
                 </div>
               </div>
             ) : (
@@ -829,7 +829,7 @@ export default function OperatorEnginePage() {
             {[
               { label: 'Composite Health', value: health.metaHealth.compositeHealth, good: true },
               { label: 'Throttle', value: health.metaHealth.throttleMultiplier, good: true },
-              { label: 'Confidence Inflation', value: health.metaHealth.confidenceInflation, good: false },
+              { label: 'Coverage Inflation', value: health.metaHealth.confidenceInflation, good: false },
               { label: 'Expectancy', value: health.metaHealth.expectancyTrend, good: true },
               { label: 'Over-Permission', value: health.metaHealth.overPermissionRate, good: false },
               { label: 'Playbook Drift', value: health.metaHealth.playbookDrift, good: false },

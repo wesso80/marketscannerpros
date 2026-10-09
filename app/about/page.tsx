@@ -53,7 +53,7 @@ export default function AboutPage() {
                 review analytics to improve decision-making over time.
               </li>
               <li>
-                <strong>Time Confluence</strong> — proprietary timing
+                <strong>Close timing</strong> — proprietary timing
                 analysis that identifies technically aligned trade windows using
                 multi-timeframe data.
               </li>

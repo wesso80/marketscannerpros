@@ -26,8 +26,8 @@ import type {
 const STAGE_COLUMNS: IntelColumn[] = [
   { key: 'stage', label: 'Stage', align: 'left' },
   { key: 'driver', label: 'Driver', align: 'left' },
-  { key: 'grade', label: 'Grade', tooltip: 'Grade A/B from the M2 walk-forward research.' },
-  { key: 'score', label: 'Score', align: 'right' },
+  { key: 'grade', label: 'Check', tooltip: 'Group A/B from the M2 walk-forward research.' },
+  { key: 'score', label: 'Reading', align: 'right' },
   { key: 'state', label: 'State' },
   { key: 'gate', label: 'Gate' },
   { key: 'active', label: 'Clock position' },
@@ -76,7 +76,7 @@ function PageBody({ data, updatedAt }: { data: LiquidityTransmissionPageDto; upd
         { label: 'Downstream', value: h.downstream },
         { label: 'Evidence quality', value: h.confidence },
       ]} />
-      <EvidenceBars title="Eight-stage rotation · score / 100" rows={data.stages.map(s => ({ label: `${s.stage}. ${shortStageName(s.name, s.stage)}`, value: s.score }))} maximum={100} />
+      <EvidenceBars title="Eight-stage rotation · reading / 100" rows={data.stages.map(s => ({ label: `${s.stage}. ${shortStageName(s.name, s.stage)}`, value: s.score }))} maximum={100} />
     </>}
     <EvidenceWarning>{data.quality.missingInputCount ? `${data.quality.missingInputCount} daily inputs not collected · ` : ''}{notCollectedText('M2 blocs', data.m2Upstream.missingBlocs.map(b => m2BlocName(b, evidenceLabel)))} · {evidenceLabel(data.parityStatus)}{data.quality.staleInputCount ? ` · ${data.quality.staleInputCount} inputs use older observations` : ''}{data.reason ? ` · ${evidenceLabel(data.reason)}` : ''}</EvidenceWarning>
     <CollapsibleSection title="Transmission evidence" summary={`${data.stages.length} stages · ${data.quality.coveragePercent.toFixed(1)}% input coverage`}>
@@ -125,7 +125,7 @@ function HeadlinePanel({ data, updatedAt }: { data: LiquidityTransmissionPageDto
             label: 'Validated',
             value: h.validated.toFixed(1),
             semantic: orientationToSemantic(h.validated),
-            tooltip: 'Cross-asset confirmation from Grade A + Grade B validated drivers.',
+            tooltip: 'Cross-asset confirmation from Group A and Group B validated drivers.',
           },
           {
             label: 'Downstream',
@@ -250,7 +250,7 @@ function Stage8Panel({ data }: { data: LiquidityTransmissionPageDto }) {
             </div>
           ))}
         </div>
-        <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--msp-text-muted)' }}>{s8.active ? 'Late-cycle/divergence risk elevated. Research signal only; a reset or new cycle has not been confirmed.' : evidenceLabel(s8.guidance)}</p>
+        <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--msp-text-muted)' }}>{s8.active ? 'Late-cycle/divergence risk elevated. Research reading only; a reset or new cycle has not been confirmed.' : evidenceLabel(s8.guidance)}</p>
       </div>
     </>
   );
@@ -265,7 +265,7 @@ function StageClockPanel({ data }: { data: LiquidityTransmissionPageDto }) {
       <MetricCell key="st" align="left" strong>{s.stage}. {shortStageName(s.name, s.stage)}</MetricCell>,
       <MetricCell key="dr" align="left" muted>{evidenceLabel(s.driver)}</MetricCell>,
       <MetricCell key="gr" align="left">{evidenceLabel(s.grade)}</MetricCell>,
-      <ScoreCell key="sc" value={s.score.toFixed(1)} semantic={stageSemantic(s)} suffix="/100" />,
+      <MetricCell key="sc" align="left">{evidenceLabel(s.state)}</MetricCell>,
       <StateCell key="sta" label={evidenceLabel(s.state)} semantic={stageSemantic(s)} />,
       <StateCell key="ga" label={evidenceLabel(s.gate)} semantic={gateSemantic(s.gate)} />,
       <MetricCell key="ac" align="center" muted>{s.active ? 'Current' : '—'}</MetricCell>,
@@ -275,7 +275,7 @@ function StageClockPanel({ data }: { data: LiquidityTransmissionPageDto }) {
     <>
       <SectionHeader
         title="Eight-Stage Rotation Clock"
-        subtitle="The clock sits at the furthest stage whose gate passes, so only one stage is current. An earlier stage can score higher without being current; Stage 8 overrides when its four conditions hold."
+        subtitle="The clock sits at the furthest stage whose gate passes, so only one stage is current. An earlier stage can reading higher without being current; Stage 8 overrides when its four conditions hold."
       />
       <IntelligenceTable columns={STAGE_COLUMNS} rows={rows} stickyFirst minWidth={840} />
     </>

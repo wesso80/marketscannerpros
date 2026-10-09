@@ -70,7 +70,7 @@ export default function ConfluencePanel({ result }: { result: GoldenEggConfluenc
       </div>
       <p className="text-[11px] leading-5 text-slate-500">
         {composite.note}{' '}
-        <a href="/methodology" className="text-emerald-400/80 no-underline hover:underline">How scores work →</a>
+        <a href="/methodology" className="text-emerald-400/80 no-underline hover:underline">How readings work →</a>
       </p>
 
       {/* Analytical confluence summary */}
@@ -98,7 +98,7 @@ export default function ConfluencePanel({ result }: { result: GoldenEggConfluenc
           })}
         </ul>
       ) : (
-        <p className="text-sm text-slate-500">Insufficient independent factors to assess confluence.</p>
+        <p className="text-sm text-slate-500">Insufficient independent factors to assess agreement.</p>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">

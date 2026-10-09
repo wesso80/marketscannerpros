@@ -8,21 +8,20 @@ export default function CapitalPressureView({ symbol, data, loading, error, onRe
   const fd = data?.data;
   const perm = fd?.flow_trade_permission;
   const pm = fd?.probability_matrix;
-  const brain = fd?.brain_decision_v1;
   const rg = fd?.institutional_risk_governor;
   const verdict = loading ? `Loading pressure evidence for ${symbol}` : error ? 'Capital pressure feed failed' : !fd ? `No pressure observation for ${symbol}` : rg?.hardBlocked ? 'A risk limit blocks this observation' : !perm ? 'Alignment evidence is incomplete' : perm.blocked ? 'Pressure conditions are not aligned' : 'Pressure conditions are aligned';
   return <section data-capital-view className="space-y-3 text-slate-200">
     <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3"><p data-research-verdict className="text-lg font-semibold">{verdict}</p><button type="button" disabled={loading} onClick={onRefresh} className="rounded border border-slate-600 px-3 py-1.5 text-xs disabled:opacity-50">Refresh</button></div>
       {error && <p role="alert" className="mt-2 break-words text-sm text-amber-300">{researchReason(error)}</p>}
-      {fd && !loading && !error && <><p className="mt-2 text-xs text-slate-400">Directional scores and scenario weights are indicator summaries, not calibrated outcome probabilities.</p><dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {fd && !loading && !error && <><p className="mt-2 text-xs text-slate-400">What to check: price direction, gamma, risk mode, and session phase. Scenario weights are heuristic mixes, not outcome probabilities.</p><dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <ResearchMetric label="Market mode" value={researchLabel(fd.market_mode)} /><ResearchMetric label="Spot" value={researchPrice(fd.spot)} />
       </dl></>}
     </div>
     {fd && !loading && !error && <>
       {pm && <div className="rounded-lg border border-slate-700 p-3"><h3 className="text-sm font-semibold">Scenario weights · heuristic</h3><div data-capital-chart className="mt-2 space-y-2" aria-label="Scenario weight chart">{[['Continuation',pm.continuation],['Pin / reversion',pm.pinReversion],['Expansion',pm.expansion]].map(([label,value]) => <div key={label} className="grid grid-cols-[7rem_1fr_3rem] items-center gap-2 text-xs"><span>{label}</span><span className="h-2 rounded bg-slate-800" aria-hidden="true"><span className="block h-2 rounded bg-slate-400" style={{width:`${typeof value === 'number' ? Math.max(0,Math.min(100,value)) : 0}%`}} /></span><span className="text-right">{researchNumber(value)}</span></div>)}</div><p className="mt-2 text-xs text-slate-400">Each weight is out of 100. {researchLabel(pm.regime)}.</p></div>}
       <ResearchFold title="Pressure and risk evidence"><dl className="grid grid-cols-2 gap-2">
-        <ResearchMetric label="Price direction" value={fd.bias === 'bullish' ? 'Upward' : fd.bias === 'bearish' ? 'Downward' : researchLabel(fd.bias)} /><ResearchMetric label="Directional score" value={researchNumber(fd.conviction)} /><ResearchMetric label="Gamma" value={researchLabel(fd.gamma_state)} /><ResearchMetric label="Combined score" value={researchNumber(brain?.brain_score?.score ?? fd.brain_decision?.score)} /><ResearchMetric label="Alignment score" value={researchNumber(perm?.tps)} /><ResearchMetric label="Risk score" value={researchNumber(rg?.irs)} /><ResearchMetric label="Risk mode" value={researchLabel(rg?.riskMode)} /><ResearchMetric label="Session phase" value={researchLabel(fd.session_overlay?.phase)} />
+        <ResearchMetric label="Price direction" value={fd.bias === 'bullish' ? 'Upward' : fd.bias === 'bearish' ? 'Downward' : researchLabel(fd.bias)} /><ResearchMetric label="Gamma" value={researchLabel(fd.gamma_state)} /><ResearchMetric label="Risk mode" value={researchLabel(rg?.riskMode)} /><ResearchMetric label="Session phase" value={researchLabel(fd.session_overlay?.phase)} />
       </dl>{fd.gamma_input && <p className="text-xs">{describeGammaInput(fd.gamma_input)}</p>}
       {perm?.blocked && <p className="text-amber-300">{researchReason(perm.noTradeMode?.reason)}</p>}
       {rg?.hardBlocked && <div className="text-amber-300"><p>A risk limit blocks this observation.</p>{rg.hardBlockReasons?.length > 0 && <ul className="mt-1 space-y-1">{rg.hardBlockReasons.map((reason:string,i:number)=><li key={i}>{researchReason(reason)}</li>)}</ul>}</div>}

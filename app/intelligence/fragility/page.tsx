@@ -20,7 +20,7 @@ const INTERNAL_COLUMNS: IntelColumn[] = [
 
 const RADAR_COLUMNS: IntelColumn[] = [
   { key: 'sector', label: 'Rotation', align: 'left' },
-  { key: 'score', label: 'Score', align: 'right' },
+  { key: 'score', label: 'Reading', align: 'right' },
   { key: 'state', label: 'State' },
   { key: 'rep', label: 'Representative', align: 'left' },
   { key: 'm20', label: '20D', align: 'right' },
@@ -58,7 +58,7 @@ export default function FragilityPage() {
             { label: 'Transition', value: data.transition },
             { label: 'Divergence', value: data.divergence },
           ]} />
-          <EvidenceBars title="Market health components · score" rows={data.components} maximum={100} />
+          <EvidenceBars title="Market health components · reading" rows={data.components} maximum={100} />
           <DataQualityRow meta={data.meta} />
           <CollapsibleSection title="Market evidence" summary={`${data.internals.length} internal measures · ${data.radar.length} sectors`}>
           <SectionHeader title="Warnings" />

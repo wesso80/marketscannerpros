@@ -30,7 +30,7 @@ export function SymbolSnapshotHeader({symbol,asset,timeframe,stamp,pick,rankLoad
   {quiet?null:rankLoading?<p>Loading daily scan…</p>:rankError?<p className="text-amber-300">Daily scan unavailable: {rankError}</p>:pick?<div>
    <p>Daily scan: {pick.scan_date?.slice(0,10)??'date unknown'} · data as of {formatMarketTime(pick.data_as_of??pick.dataTimestamp)??'time unknown'}</p>
    <TrustBadge compact status={pickTrust(pick)} reason={pick.trust?.reasons?.join(' · ')}/>
-  </div>:<p>Not in today's picks.</p>}
+  </div>:<p>Not in today's scan.</p>}
   <p className="text-xs text-slate-500">Research snapshot only — not a trade instruction.</p>
  </section>;
 }

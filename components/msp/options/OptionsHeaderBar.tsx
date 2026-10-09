@@ -8,7 +8,7 @@ export default function OptionsHeaderBar() {
           <h1 className="text-2xl font-bold text-[var(--msp-text)]">Options Scanner</h1>
           <p className="text-sm text-[var(--msp-muted)]">Institutional 3-layer flow: Context → Setup → Timing → Review</p>
         </div>
-        <Badge tone="neutral">msp.score.v2.1</Badge>
+        <Badge tone="neutral">msp.reading.v2.1</Badge>
       </div>
     </header>
   );

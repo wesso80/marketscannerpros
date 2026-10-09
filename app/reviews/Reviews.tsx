@@ -16,7 +16,7 @@ export default function Reviews() {
         <div className="grid md:grid-cols-3 gap-6">
           {testimonials.map((t, i) => (
             <div key={i} className="p-6 rounded-2xl bg-neutral-800 shadow">
-              <div className="mb-2 text-lg" aria-label={`${t.rating} star rating`}>
+              <div className="mb-2 text-lg" aria-label={`${t.rating} stars`}>
                 {"★".repeat(t.rating)}
               </div>
               <p className="italic mb-4">“{t.quote}”</p>

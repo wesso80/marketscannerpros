@@ -76,7 +76,7 @@ export default function RiskManagerMode({ onExit }: { onExit?: () => void } = {}
         <div className="mb-6 flex items-center justify-between">
           <div>
             <div className="text-[0.6rem] font-extrabold uppercase tracking-[0.15em] text-red-400/60">
-              Risk Manager Mode — Signal Generation Disabled
+              Risk Manager Mode — Reading Generation Disabled
             </div>
             {onExit && (
               <div className="mt-1 text-xl font-black text-slate-100">

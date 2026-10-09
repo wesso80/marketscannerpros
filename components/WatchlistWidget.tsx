@@ -690,7 +690,7 @@ export default function WatchlistWidget() {
                           </div>
                           {(item.confluenceScore ?? 0) > 0 && (
                             <p className="text-xs text-slate-400">
-                              {item.confluenceScore} signal{(item.confluenceScore ?? 0) > 1 ? 's' : ''}: {marketText((item.confluenceSignals || []).join(', '))}
+                              {item.confluenceScore} reading{(item.confluenceScore ?? 0) > 1 ? 's' : ''}: {marketText((item.confluenceSignals || []).join(', '))}
                             </p>
                           )}
                           <div className="grid grid-cols-2 gap-2">

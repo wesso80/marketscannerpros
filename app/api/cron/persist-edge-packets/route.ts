@@ -185,7 +185,7 @@ export async function POST(req: NextRequest) {
         const msg = err instanceof Error ? err.message : String(err);
         results.push({ workspaceId: w.workspace_id, written: 0, packetsBuilt: 0, error: msg });
         notifyAdmin({
-          subject: "persist-edge-packets workspace failed",
+          subject: "persist-record-packets workspace failed",
           body: `Workspace ${w.workspace_id} (${market}): ${msg}`,
           severity: "warn",
           context: { workspaceId: w.workspace_id, market, durationMs: Date.now() - started },
@@ -208,7 +208,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     notifyAdmin({
-      subject: "persist-edge-packets cron failed",
+      subject: "persist-record-packets cron failed",
       body: `persist-edge-packets crashed: ${msg}`,
       severity: "error",
       context: { durationMs: Date.now() - started },

@@ -114,7 +114,7 @@ export default function StructureTab({ ctx }: { ctx: TickerContext }) {
 
       {/* Compression detection placeholder */}
       <div className="rounded-md border border-dashed border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 text-center text-[11px] text-[var(--msp-text-faint)]">
-        Compression zone detection uses ATR contraction + Bollinger squeeze. Active when scanner includes volatility contraction signals.
+        Compression zone detection uses ATR contraction + Bollinger squeeze. Active when scanner includes volatility contraction readings.
         {scanner?.indicators?.bollingerSqueeze && (
           <p className="mt-1 text-amber-400 font-semibold">⚡ Bollinger Squeeze detected — breakout imminent</p>
         )}

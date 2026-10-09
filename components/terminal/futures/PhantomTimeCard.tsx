@@ -26,8 +26,8 @@ export default function PhantomTimeCard({ phantomTime }: PhantomTimeCardProps) {
       </div>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded border border-white/10 bg-slate-900/60 p-2">
-          <div className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Charge Score</div>
-          <div className="mt-1 text-sm font-black text-fuchsia-200">{phantomTime.phantomChargeScore}/100</div>
+          <div className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Charge Reading</div>
+          <div className="mt-1 text-sm font-black text-fuchsia-200">{zoneLabel(phantomTime.phantomZone)}</div>
         </div>
         <div className="rounded border border-white/10 bg-slate-900/60 p-2">
           <div className="text-[10px] uppercase tracking-[0.12em] text-slate-500">Cash Gap Risk</div>

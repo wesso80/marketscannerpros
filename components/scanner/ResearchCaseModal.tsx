@@ -180,7 +180,7 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
       if (total > 0) {
         const pctBull = ((pick.signals.bullish / total) * 100).toFixed(0);
         const pctBear = ((pick.signals.bearish / total) * 100).toFixed(0);
-        items.push({ label: 'Signal Split', value: `↑${pctBull}% ↓${pctBear}%`, verdict: pick.signals.bullish > pick.signals.bearish ? 'bull' : pick.signals.bearish > pick.signals.bullish ? 'bear' : 'neutral' });
+        items.push({ label: 'Reading Split', value: `↑${pctBull}% ↓${pctBear}%`, verdict: pick.signals.bullish > pick.signals.bearish ? 'bull' : pick.signals.bearish > pick.signals.bullish ? 'bear' : 'neutral' });
       }
     }
     if (pick.derivatives?.fundingRate != null) {
@@ -214,8 +214,8 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
     },
     truthLayer: {
       whatWeKnow: [
-        `${pick.symbol} has scanner confluence data available.`,
-        `Scanner score is ${pick.score}.`,
+        `${pick.symbol} has scanner measurements available.`,
+        `Price ${fmtPrice(price)} · 24h ${changePct.toFixed(2)}%.`,
         `Observed scenario direction is ${dirLabel(dir)}.`,
       ],
       whatWeDoNotKnow: truth.missing,
@@ -267,8 +267,8 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
       ['SETUP'],
       ['Type', setup],
       ['Direction', dirLabel(dir)],
-      ['Score', String(pick.score)],
-      ['Quality', quality],
+      ['Price', fmtPrice(price)],
+      ['24h change', `${changePct.toFixed(2)}%`],
       ['Timeframe', timeframe],
       ['Asset Type', assetType],
       [],
@@ -292,7 +292,7 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
       ...evidence.map(e => [e.label, e.value, e.verdict]),
       [],
       ['CONFLUENCE SUMMARY'],
-      ['Verdict', confluenceVerdict],
+      ['Summary', confluenceVerdict],
       ['Bullish Factors', String(bullCount)],
       ['Bearish Factors', String(bearCount)],
       [],
@@ -401,21 +401,15 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
           <div style={{
             display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '20px',
             padding: '14px 16px', borderRadius: '12px',
-            background: pick.score >= 70 ? 'rgba(16,185,129,0.08)' : pick.score >= 55 ? 'rgba(245,158,11,0.08)' : 'rgba(239,68,68,0.08)',
-            border: `1px solid ${pick.score >= 70 ? 'var(--msp-bull)' : pick.score >= 55 ? 'var(--msp-warn)' : 'var(--msp-bear)'}`,
+            background: 'rgba(148,163,184,0.08)',
+            border: '1px solid var(--msp-border)',
           }}>
-            <div style={{
-              fontSize: '28px', fontWeight: '800',
-              color: pick.score >= 70 ? 'var(--msp-bull)' : pick.score >= 55 ? 'var(--msp-warn)' : 'var(--msp-bear)',
-            }}>
-              {pick.score}
-            </div>
             <div>
               <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--msp-text)' }}>
-                {dirLabel(dir)} — {quality} Alignment — {setup}
+                {fmtPrice(price)} · 24h {changePct.toFixed(2)}% · {setup}
               </div>
               <div style={{ fontSize: '12px', color: 'var(--msp-text-muted)', marginTop: '2px' }}>
-                {pick.score >= 70 ? 'ALIGNED — conditions support analysis' : pick.score >= 55 ? 'WATCH — monitor for strengthening' : 'NOT ALIGNED — insufficient confluence'}
+                What to check: price, RSI, ADX, and volume on the {timeframe} timeframe.
               </div>
             </div>
           </div>
@@ -449,7 +443,7 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
           </Section>
 
           {/* ── Confluence Evidence ── */}
-          <Section title={`Confluence Evidence — ${confluenceVerdict}`}>
+          <Section title={`Agreement Evidence — ${confluenceVerdict}`}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {evidence.map((e, i) => (
                 <div key={i} style={{

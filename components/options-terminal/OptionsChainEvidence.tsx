@@ -40,7 +40,7 @@ export default function OptionsChainEvidence({ symbol, expiry, embeddedInTermina
     <section data-options-evidence className={`min-w-0 space-y-3 text-slate-200 ${embeddedInTerminal ? '' : 'p-1'}`}>
       <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
         <p data-research-verdict className="break-words text-lg font-semibold">{status}</p>
-        <p className="mt-2 text-xs text-slate-400">Measured chain evidence only: no grade, direction, strategy or trade levels. Chains can be thin or delayed; each figure states its basis.</p>
+        <p className="mt-2 text-xs text-slate-400">Measured chain evidence only: no check, direction, strategy or trade levels. Chains can be thin or delayed; each figure states its basis.</p>
         {error && <p role="alert" className="mt-2 break-words text-sm text-amber-300">{researchReason(error)}</p>}
         {d && (
           <dl className="mt-3 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:grid-cols-4">

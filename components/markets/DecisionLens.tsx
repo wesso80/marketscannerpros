@@ -42,7 +42,7 @@ export default function DecisionLens({ ctx }: DecisionLensProps) {
   const verdictStyles: Record<DecisionVerdict, { bg: string; border: string; text: string; label: string }> = {
     tradable: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/40', text: 'text-emerald-400', label: 'ALIGNED' },
     conditional: { bg: 'bg-amber-500/10', border: 'border-amber-500/40', text: 'text-amber-400', label: 'CONDITIONAL' },
-    noise: { bg: 'bg-slate-500/10', border: 'border-slate-500/40', text: 'text-slate-400', label: 'LOW CONFLUENCE' },
+    noise: { bg: 'bg-slate-500/10', border: 'border-slate-500/40', text: 'text-slate-400', label: 'LOW AGREEMENT' },
     blocked: { bg: 'bg-red-500/10', border: 'border-red-500/40', text: 'text-red-400', label: 'NOT ALIGNED' },
   };
   const vs = verdictStyles[lens.verdict];
@@ -55,8 +55,8 @@ export default function DecisionLens({ ctx }: DecisionLensProps) {
           <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--msp-text-faint)]">Market Analysis Lens</p>
           <h3 className="text-sm font-bold text-[var(--msp-text)]">{ctx.symbol}</h3>
         </div>
-        <div className={`rounded-md border ${vs.border} px-3 py-1 text-xs font-black tracking-wider ${vs.text}`}>
-          {vs.label}
+        <div className="rounded-md border border-[var(--msp-border)] px-3 py-1 text-xs font-black tracking-wider text-slate-300">
+          What to check
         </div>
       </div>
 
@@ -64,15 +64,6 @@ export default function DecisionLens({ ctx }: DecisionLensProps) {
       <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
         {/* LEFT — Pattern status */}
         <div className="space-y-2 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2">
-          <LensMetric label="Alignment" value={`${lens.alignment}%`} color={lens.alignment >= 70 ? 'text-emerald-400' : lens.alignment >= 50 ? 'text-amber-400' : 'text-red-400'} />
-          <LensBar value={lens.alignment} />
-          <LensMetric label="Confidence" value={`${lens.confidence}%`} color={lens.confidence >= 60 ? 'text-emerald-400' : lens.confidence >= 40 ? 'text-amber-400' : 'text-red-400'} />
-          <LensBar value={lens.confidence} />
-          <LensMetric
-            label="Pattern Status"
-            value={lens.authorization === 'ALLOW' ? 'ALIGNED' : lens.authorization === 'ALLOW_REDUCED' ? 'CONDITIONAL' : 'NOT ALIGNED'}
-            color={lens.authorization === 'ALLOW' ? 'text-emerald-400' : lens.authorization === 'ALLOW_REDUCED' ? 'text-amber-400' : 'text-red-400'}
-          />
           <LensMetric label="R Budget" value={lens.ruBudget} color="text-slate-300" />
         </div>
 

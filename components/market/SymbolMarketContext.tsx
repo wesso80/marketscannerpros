@@ -36,7 +36,7 @@ export function SymbolOptionsContext({symbol,expiry,compact=false}:{symbol:strin
    {selected&&<p>Expiry {selected}</p>}
    {metrics.avgIV>0&&<p>ATM IV (2% band): {(metrics.avgIV*100).toFixed(1)}%</p>}
    {metrics.atmStraddleMid!=null&&<p>ATM straddle mid: ${metrics.atmStraddleMid.toFixed(2)}</p>}
-   {metrics.expectedMoveAbs>0&&<p>1-sigma move to expiry: ±${metrics.expectedMoveAbs.toFixed(2)} (±{metrics.expectedMovePct.toFixed(1)}%) · model estimate, not a guaranteed range.</p>}
+   {metrics.expectedMoveAbs>0&&<p>1-sigma move to expiry: ±${metrics.expectedMoveAbs.toFixed(2)} (±{metrics.expectedMovePct.toFixed(1)}%) · model estimate, not a promised range.</p>}
   </>}
   <Link className="inline-flex min-h-10 items-center underline" href={optionsHref(symbol,selected)}>Open options</Link>
  </section>;
@@ -45,7 +45,7 @@ export function SymbolOptionsContext({symbol,expiry,compact=false}:{symbol:strin
   {chain.loading?<p>Loading chain…</p>:chain.error?<p className="text-amber-300">{chain.error}</p>:<>
    <TrustBadge status={quality.stale?'Stale':quality.degraded?'Degraded':chain.quoteBasis==='realtime'?'Live':'Last close'} reason={`${quoteDateLabel(chain.quoteBasis,chain.asOfDate)} · near-the-money coverage ${quality.coverage}%`}/>
    <p>ATM IV (2% band): {metrics.avgIV>0?`${(metrics.avgIV*100).toFixed(1)}%`:'unavailable'} · ATM straddle mid: {metrics.atmStraddleMid!=null?`$${metrics.atmStraddleMid.toFixed(2)}`:'unavailable'}</p>
-   <p>1-sigma move to expiry: {metrics.expectedMoveAbs>0?`±$${metrics.expectedMoveAbs.toFixed(2)} (±${metrics.expectedMovePct.toFixed(1)}%)`:'unavailable'} · Market basis: {chain.asOfDate||'unavailable'} · model estimate, not a guaranteed range.</p>
+   <p>1-sigma move to expiry: {metrics.expectedMoveAbs>0?`±$${metrics.expectedMoveAbs.toFixed(2)} (±${metrics.expectedMovePct.toFixed(1)}%)`:'unavailable'} · Market basis: {chain.asOfDate||'unavailable'} · model estimate, not a promised range.</p>
    <PriceStamp symbol={`${symbol} underlying`} assetType="equity" price={chain.spotObservation?.price??chain.underlyingPrice} latestDay={chain.spotObservation?.asOf} priceBasis={chain.spotObservation?.asOf?'last_close':'unknown'} source={chain.provider}/>
    <p className="text-xs">Chain: {quoteDateLabel(chain.quoteBasis,chain.asOfDate)} · {chain.provider||'source unknown'}</p>
   </>}

@@ -497,7 +497,7 @@ function CryptoDetailPageContent({ embedded = false }: { embedded?: boolean }) {
             { label: `Bias ${decision.structureBias}` },
           ]}
           title="Crypto Asset Explorer"
-          subtitle="Decision-grade asset view: status, permission, context, then details."
+          subtitle="Detailed asset view: status, permission, context, then details."
           actions={[
             { label: 'Open Markets', variant: 'primary', href: '/tools/markets' },
             { label: 'Open Scanner', variant: 'secondary', href: '/tools/scanner?asset=crypto' },
@@ -589,7 +589,7 @@ function CryptoDetailPageContent({ embedded = false }: { embedded?: boolean }) {
               {label:'Price',value:formatPrice(coinData.market.price_usd)},
               {label:'24h change',value:coinData.price_changes['24h'] == null ? null : `${coinData.price_changes['24h'].toFixed(1)}%`},
               {label:'Market cap',value:formatNumber(coinData.market.market_cap)},
-              {label:'Structure score',value:decision.alignmentScore},
+              {label:'24h range',value:coinData.market.high_24h != null && coinData.market.low_24h != null ? `${formatPrice(coinData.market.low_24h)}–${formatPrice(coinData.market.high_24h)}` : null},
             ]}/>
             <MarketSparkline values={coinData.ohlc?.map(point=>point[4]) || coinData.sparkline || []} title={`${coinData.coin.symbol.toUpperCase()} recorded closing prices`}/>
             <CollapsibleSection title="Asset evidence" summary={`${coinData.coin.name} · ${coinData.tickers.length} venues`}>
@@ -600,7 +600,7 @@ function CryptoDetailPageContent({ embedded = false }: { embedded?: boolean }) {
                 ['Price', formatPrice(coinData.market.price_usd)],
                 ['24h', typeof coinData.price_changes['24h'] === 'number' && Number.isFinite(coinData.price_changes['24h']) ? `${coinData.price_changes['24h'] >= 0 ? '+' : ''}${coinData.price_changes['24h'].toFixed(2)}%` : 'Not collected'],
                 ['Bias', decision.structureBias],
-                ['Structure score', `${decision.alignmentScore}/100`],
+                ['Volume', formatNumber(coinData.market.total_volume_24h)],
                 // Scopes are named (OV-19): the coin's own 24h range vs the market-wide regime in the gate breakdown,
                 // and the crypto risk state comes from the same gate as the breakdown, so the two never disagree.
                 [`${coinData.coin.symbol.toUpperCase()} 24h range`, decision.volatilityState],
@@ -680,7 +680,7 @@ function CryptoDetailPageContent({ embedded = false }: { embedded?: boolean }) {
                     <p className="text-[11px] uppercase text-slate-500">Indicator Status</p>
                     <div className="mt-1 flex items-center justify-between">
                       <p className="text-sm font-bold text-slate-100">{permissionLabel}</p>
-                      <p className="text-xs text-slate-400">Structure score {decision.alignmentScore}/100</p>
+                      <p className="text-xs text-slate-400">Price {formatPrice(coinData.market.price_usd)}</p>
                     </div>
                     <p className="mt-1 text-xs text-slate-300">
                       {permissionLabel === 'Aligned' && 'Structure and liquidity conditions support analysis workflow.'}

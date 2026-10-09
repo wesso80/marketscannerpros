@@ -85,9 +85,7 @@ function logUnknownLivePrice(
 ): void {
   if (tier !== 'free') return;
   if (status !== 'active' && status !== 'trialing' && status !== 'past_due') return;
-  console.error(
-    `[Webhook] ${eventType} subscription ${subscriptionId}: unknown price id(s) [${priceIds.join(', ') || 'none'}] with status ${status}; keeping an existing pro tier or storing pro`,
-  );
+  console.error('[Webhook] unknown price id; keeping an existing pro tier or storing pro');
 }
 
 // Referral credit — a single Pro plan is sold, but legacy Pro Trader
@@ -125,7 +123,7 @@ function loadCustomer(customer: unknown): LoadedCustomer | 'deleted' | 'no-email
 
 function skipCustomerWrite(eventType: string, reason: 'deleted' | 'no-email', detail: string): void {
   const why = reason === 'deleted' ? 'Stripe customer is deleted' : 'customer email is empty';
-  console.error(`[Webhook] ${eventType}: ${why}; not writing (${detail})`);
+  console.error(`[Webhook] ${eventType}: ${why}; not writing`);
 }
 
 const PROTECTED_STATUSES = ['active', 'trialing', 'past_due', 'unpaid'];

@@ -104,12 +104,6 @@ function dataQualityColor(q: string | undefined): string {
   return 'var(--msp-text-muted)';
 }
 
-function confColor(c: number): string {
-  if (c >= 75) return 'var(--msp-bull)';
-  if (c >= 60) return 'var(--msp-warn)';
-  return 'var(--msp-flat)';
-}
-
 /* ─── Column definitions ─── */
 interface Column {
   key: SortKey;
@@ -122,7 +116,6 @@ interface Column {
 }
 
 const COLUMNS: Column[] = [
-  { key: 'rank', label: '#', width: '40px', align: 'center' },
   {
     key: 'symbol', label: 'Symbol', width: '110px',
     render: (r) => (
@@ -142,15 +135,6 @@ const COLUMNS: Column[] = [
         background: `${dirColor(r.direction)}18`, borderRadius: 4, padding: '2px 6px',
       }}>
         {dirLabel(r.direction)}
-      </span>
-    ),
-  },
-  {
-    key: 'confidence', label: 'MSP', width: '70px', align: 'center',
-    title: 'MSP composite (0–100): the legacy factor blend, capped by data trust. It does not set the Grade; the Setup score under Research does.',
-    render: (r) => (
-      <span title={'MSP composite — does not set the Grade. ' + (r.scoreExplanation ?? `Condition match ${r.matchConfidence ?? r.confidence}/100${r.matchConfidence != null && r.matchConfidence !== r.confidence ? ` — capped to ${r.confidence} by data trust` : ''}. Strength of match to the selected conditions; not a probability.`)} style={{ fontWeight: 700, color: confColor(r.confidence) }}>
-        <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--msp-text-muted)', marginRight: 2 }}>MSP</span>{r.confidence}<span style={{ fontSize: 10, color: 'var(--msp-text-muted)' }}>/100</span>
       </span>
     ),
   },
@@ -240,7 +224,7 @@ const COLUMNS: Column[] = [
 
 /* ─── Component ─── */
 export default function ScreenerTable({ rows, onRowClick, selectedSymbol, emptyMessage = 'No scan results yet. Run a scan to see candidates.' }: ScreenerTableProps) {
-  const [sortKey, setSortKey] = useState<SortKey>('rank');
+  const [sortKey, setSortKey] = useState<SortKey>('symbol');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   const sorted = useMemo(() => {

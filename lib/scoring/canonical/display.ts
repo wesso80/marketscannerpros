@@ -14,7 +14,7 @@ export { ordinal };
 
 type C = Pick<CanonicalResult, 'score' | 'permission'> & Partial<Pick<CanonicalResult, 'scoreBasis' | 'calibration' | 'factorScore'>>;
 
-export const NO_EDGE_BANNER = 'Factors only — no validated edge. Research context, not a trade signal.';
+export const NO_EDGE_BANNER = 'Factors only. Research context, not a trade instruction.';
 
 export function isCalibrated(c: C | null | undefined): boolean {
   return !!c && c.scoreBasis === 'calibrated_expectancy_percentile' && !!c.calibration;

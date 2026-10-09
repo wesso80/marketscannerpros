@@ -80,7 +80,7 @@ export default function AdaptiveTraderPersonalityBar({ skill }: { skill: PageSki
           MSP Adaptive Trader Personality Layer
         </div>
         <div style={{ color: data.match.noTradeBias ? 'var(--msp-bear)' : toneColor, fontSize: '0.74rem', fontWeight: 800 }}>
-          {data.match.noTradeBias ? 'CAUTION FILTER ACTIVE' : `${data.match.adaptiveScore}% ADAPTIVE CONFLUENCE`}
+          {data.match.noTradeBias ? 'CAUTION FILTER ACTIVE' : `${data.match.adaptiveScore}% ADAPTIVE AGREEMENT`}
         </div>
       </div>
 

@@ -1236,8 +1236,8 @@ function OperatorDashboard() {
         strategy: 'operator_flow',
       },
       drivers: [
-        { category: 'trend', name: 'edge_score', value: edgeScore, weight: 0.42, note: 'Operator edge' },
-        { category: 'sentiment', name: 'adaptive_confidence', value: adaptiveScore, weight: 0.22, note: 'AI confidence' },
+        { category: 'trend', name: 'edge_score', value: edgeScore, weight: 0.42, note: 'Operator record' },
+        { category: 'sentiment', name: 'adaptive_confidence', value: adaptiveScore, weight: 0.22, note: 'AI coverage' },
         { category: 'volatility', name: 'atr_ratio', value: Number(Number(atrRatio).toFixed(2)), weight: 0.12, note: 'Risk expansion proxy' },
         { category: 'risk', name: 'drawdown_state', value: drawdownState, weight: 0.1, note: 'Portfolio stress state' },
       ],
@@ -1259,7 +1259,7 @@ function OperatorDashboard() {
         operator_context_id: `ctx_${new Date().toISOString().slice(0, 13)}`,
       },
       recommended_actions: [
-        { action: 'evaluate', label: 'Run confluence check' },
+        { action: 'evaluate', label: 'Run agreement check' },
         { action: 'auto_plan', label: 'Build entry/SL/TP + sizing' },
         { action: 'create_alert', label: 'Set trigger alert' },
       ],
@@ -1403,7 +1403,7 @@ function OperatorDashboard() {
       <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Today's Workflow</div>
       <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12">
         <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
-          <div className="text-slate-400 uppercase tracking-wide">Signals</div>
+          <div className="text-slate-400 uppercase tracking-wide">Readings</div>
           <div className="font-bold text-emerald-300">{workflowToday?.signals ?? 0}</div>
         </div>
         <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
@@ -1470,7 +1470,7 @@ function OperatorDashboard() {
         <div className="text-cyan-200 uppercase tracking-wide">Loop Conversion Rates</div>
         <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
-            Signal→Candidate: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.signalToCandidatePct ?? 0)}%</span>
+            Reading→Candidate: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.signalToCandidatePct ?? 0)}%</span>
           </div>
           <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
             Candidate→Plan: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.candidateToPlanPct ?? 0)}%</span>
@@ -1627,7 +1627,7 @@ function OperatorDashboard() {
         <div className="font-bold text-emerald-300">{adaptiveScore > 0 ? (adaptiveScore >= 75 ? 'HIGH' : adaptiveScore >= 55 ? 'MODERATE' : 'LOW') : '—'}</div>
       </div>
       <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-2 text-xs">
-        <div className="text-indigo-300 uppercase tracking-wide">Setup Score</div>
+        <div className="text-indigo-300 uppercase tracking-wide">Setup Reading</div>
         <div className="font-bold text-indigo-200">{focusSignal || adaptiveScore > 0 ? (operatorScore >= 75 ? 'HIGH' : operatorScore >= 55 ? 'MODERATE' : 'LOW') : '—'}</div>
       </div>
     </div>
@@ -1883,7 +1883,7 @@ function OperatorDashboard() {
                 <h1 className="mt-1 text-[1.05rem] font-bold uppercase tracking-[0.03em] text-[var(--msp-text)]">Operator Dashboard</h1>
                 <div className="mt-3 grid gap-2 text-[0.76rem]">
                   <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">MARKET REGIME</span><span className="font-semibold truncate text-right">{!focusSignal && !presence ? 'AWAITING DATA' : regimeADX >= 25 ? 'TRENDING' : 'TRANSITIONAL'}</span></div>
-                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">DIRECTIONAL BIAS</span><span className="font-semibold truncate text-right">{bias === 'neutral' && !focusSignal ? 'AWAITING SIGNAL' : `${bias.toUpperCase()} CONTINUATION`}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">DIRECTIONAL BIAS</span><span className="font-semibold truncate text-right">{bias === 'neutral' && !focusSignal ? 'AWAITING READING' : `${bias.toUpperCase()} CONTINUATION`}</span></div>
                   <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">STRATEGY MODE</span><span className="font-semibold truncate text-right">{!focusSignal ? 'AWAITING SCAN' : strategyModeLabel}</span></div>
                 </div>
               </div>
@@ -2020,7 +2020,7 @@ function OperatorDashboard() {
               <div className="msp-elite-panel">
                 <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Trade Journal Snapshot</div>
                 <div className="grid gap-1 text-[0.74rem] text-[var(--msp-text-muted)]">
-                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Win Rate</span><span className="font-semibold text-[var(--msp-text)] truncate">{closedTrades.length ? `${formatNumber((wins / closedTrades.length) * 100)}%` : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Winning closes</span><span className="font-semibold text-[var(--msp-text)] truncate">{closedTrades.length ? `${formatNumber((wins / closedTrades.length) * 100)}%` : '—'}</span></div>
                   <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Avg Win</span><span className="font-semibold text-[var(--msp-text)] truncate">{wins > 0 ? formatRiskPairFromAmount(avgWin) : '—'}</span></div>
                   <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Avg Loss</span><span className="font-semibold text-[var(--msp-text)] truncate">{losses.length > 0 ? formatRiskPairFromAmount(-avgLoss) : '—'}</span></div>
                   <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Expectancy</span><span className="font-semibold text-[var(--msp-text)] truncate">{closedTrades.length > 0 ? formatRiskPairFromAmount(avgWin - avgLoss) : '—'}</span></div>

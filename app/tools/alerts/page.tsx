@@ -383,7 +383,7 @@ export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorks
         </div>
       )}
       <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-100">
-        Alerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.
+        Alerts are user-defined notifications only. Triggered alerts are not trade instructions, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.
       </div>
       {!embeddedInWorkspace && <ComplianceDisclaimer compact />}
 

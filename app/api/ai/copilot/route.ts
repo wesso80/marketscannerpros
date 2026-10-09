@@ -319,7 +319,7 @@ async function handleLegacyPost(req: NextRequest) {
     messages.push({
       role: 'system',
       content: `Session Phase: ${sessionPhase.phase} (${sessionPhase.favorable ? 'favorable' : 'unfavorable'}) — ${sessionPhase.reason}
-Regime Confidence: ${regimeAgreement.confidence}% (${regimeAgreement.agreementCount}/${regimeAgreement.totalChecks} indicators agree)
+Regime Coverage: ${regimeAgreement.confidence}% (${regimeAgreement.agreementCount}/${regimeAgreement.totalChecks} indicators agree)
 Performance Throttle: ${perfThrottle.level} — ${perfThrottle.governorRecommendation}
 Effective Throttle: ${perfAdjusted.throttle.toFixed(3)}`,
     });

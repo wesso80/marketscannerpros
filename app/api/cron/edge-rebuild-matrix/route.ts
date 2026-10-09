@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     notifyAdmin({
-      subject: 'edge-rebuild-matrix failed',
+      subject: 'record-rebuild-matrix failed',
       body: `Edge matrix rebuild failed: ${message}`,
       severity: 'error',
       context: { durationMs: Date.now() - started },

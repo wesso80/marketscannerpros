@@ -8,7 +8,7 @@
  * target-before-invalidation and expected R (daily equity/crypto) or an "uncalibrated" label (other contexts).
  */
 import type { CanonicalResult } from '@/lib/scoring/canonical/types';
-import { NO_EDGE_BANNER, calibrationSummary, cautionTags, gradeRelativeNote, scoreLabel, targetBasisLabel } from '@/lib/scoring/canonical/display';
+import { NO_EDGE_BANNER, cautionTags, targetBasisLabel } from '@/lib/scoring/canonical/display';
 import { canonicalRowStatus } from '@/lib/scoring/canonical/scannerAdapter';
 
 const SETUP_LABEL: Record<string, string> = {
@@ -31,16 +31,15 @@ function fmt(v: number | string | null | undefined): string {
 
 export function canonicalHeadline(c: CanonicalResult): string {
   const side = c.direction === 'long' ? 'Long' : c.direction === 'short' ? 'Short' : 'No side';
-  return `${c.permission} · ${SETUP_LABEL[c.setupType] ?? c.setupType} · ${side} · Grade ${c.grade} · ${scoreLabel(c)}`;
+  return `${SETUP_LABEL[c.setupType] ?? c.setupType} · ${side}`;
 }
 
-export default function CanonicalVerdict({ c, compact = false, legacyScore }: { c: CanonicalResult; compact?: boolean; legacyScore?: number | null }) {
+export default function CanonicalVerdict({ c, compact = false }: { c: CanonicalResult; compact?: boolean; legacyScore?: number | null }) {
   // "No setup" is the engine finding nothing tradeable on this bar, not a data block — label it as such.
   const noSetup = canonicalRowStatus(c) === 'NO_SETUP';
   const badge = noSetup ? 'NO SETUP' : c.permission;
   const color = noSetup ? '#94a3b8' : PERMISSION_COLOR[c.permission] ?? '#94a3b8';
   const reasons = [...c.blockReasons, ...c.watchReasons];
-  const calib = calibrationSummary(c);
   const noEdge = !!c.scoreBasis && c.permission !== 'PASS' && c.permission !== 'BLOCK';
   return (
     <div className="mt-2 rounded-lg border border-slate-700/60 bg-slate-950/40 p-2 text-[11px] text-slate-300" data-testid="canonical-verdict">
@@ -49,15 +48,12 @@ export default function CanonicalVerdict({ c, compact = false, legacyScore }: { 
         <span className="font-bold text-white">{SETUP_LABEL[c.setupType] ?? c.setupType}</span>
         <span>{c.direction === 'long' ? 'Long' : c.direction === 'short' ? 'Short' : 'No side'}</span>
         {/* No setup: grade F and score 0 are engine placeholders, not a grade and a score. */}
-        {noSetup ? null : <span className="font-black text-white">Grade {c.grade}</span>}
-        {noSetup ? null : <span title={c.scoreBasis === 'calibrated_expectancy_percentile' ? 'Percentile of calibrated expected R among same-direction setups (display only)' : 'Factor alignment, not a probability'}>{scoreLabel(c)}</span>}
+        <span className="text-slate-400">What to check: factor readings and levels</span>
         {(c.permission === 'BLOCK' ? [] : cautionTags(c)).map((t) => <span key={t} className="rounded border border-amber-400/40 px-1 text-amber-300" data-testid="canonical-caution">{t}</span>)}
         {c.sizeMultiplier < 1 && c.permission !== 'BLOCK' ? <span className="text-amber-300">size ×{c.sizeMultiplier}</span> : null}
         <span className="text-slate-500">bar {c.barDate ? c.barDate.slice(0, 10) : 'unknown'} · coverage {Math.round(c.coverage * 100)}%</span>
       </div>
       {noEdge ? <div className="mt-1 font-semibold text-amber-300/90" data-testid="canonical-no-edge">{NO_EDGE_BANNER}</div> : null}
-      {calib ? <div className="mt-0.5 text-slate-400" data-testid="canonical-calibration">{calib}</div> : null}
-      {gradeRelativeNote(c) ? <div className="mt-0.5 text-slate-400" data-testid="canonical-grade-relative">{gradeRelativeNote(c)}</div> : null}
       {reasons.length ? (
         <ul className="mt-1 list-disc pl-4 text-slate-400">
           {reasons.slice(0, compact ? 2 : 6).map((r) => <li key={r.code + r.message}><span className="font-mono text-slate-500">{r.code}</span> {r.message}</li>)}
@@ -81,7 +77,6 @@ export default function CanonicalVerdict({ c, compact = false, legacyScore }: { 
           </tbody>
         </table>
       ) : null}
-      {legacyScore != null ? <div className="mt-1 text-[10px] text-slate-500">Legacy composite (secondary): {legacyScore}</div> : null}
     </div>
   );
 }

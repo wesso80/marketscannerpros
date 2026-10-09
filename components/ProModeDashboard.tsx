@@ -5,7 +5,6 @@ import {
   ProbabilityResult,
   getProbabilityColor,
   getConfidenceBadgeStyle,
-  formatKellySize,
 } from '@/lib/signals/probability-engine';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -40,7 +39,7 @@ export function ProModeDashboard({
   
   // Circular progress for probability
   const circumference = 2 * Math.PI * 45;
-  const progress = (probability.winProbability / 100) * circumference;
+  const progress = probability.totalSignals > 0 ? (probability.signalCount / probability.totalSignals) * circumference : 0;
   
   if (compact) {
     return (
@@ -70,7 +69,7 @@ export function ProModeDashboard({
                 stroke={probColor}
                 strokeWidth="4"
                 strokeDasharray={2 * Math.PI * 25}
-                strokeDashoffset={2 * Math.PI * 25 - (probability.winProbability / 100) * 2 * Math.PI * 25}
+                strokeDashoffset={2 * Math.PI * 25 - (probability.totalSignals > 0 ? probability.signalCount / probability.totalSignals : 0) * 2 * Math.PI * 25}
                 strokeLinecap="round"
               />
             </svg>
@@ -82,9 +81,9 @@ export function ProModeDashboard({
               justifyContent: 'center',
               fontSize: '14px',
               fontWeight: 'bold',
-              color: probColor,
+              color: 'var(--msp-text)',
             }}>
-              {probability.winProbability}%
+              {probability.signalCount}/{probability.totalSignals}
             </div>
           </div>
           
@@ -101,13 +100,13 @@ export function ProModeDashboard({
               color: badgeStyle.text,
               marginBottom: '4px',
             }}>
-              {probability.confidenceLabel}
+              Indicators agreeing
             </div>
             <div style={{ color: 'var(--msp-flat)', fontSize: '12px' }}>
-              {probability.signalCount}/{probability.totalSignals} signals aligned
+              {probability.signalCount}/{probability.totalSignals} readings aligned
             </div>
             <div style={{ color: 'var(--msp-text-muted)', fontSize: '11px' }}>
-              Kelly: {formatKellySize(probability.kellySizePercent)}
+              Readings aligned
             </div>
           </div>
           
@@ -211,10 +210,10 @@ export function ProModeDashboard({
                 fontWeight: 'bold',
                 color: probColor,
               }}>
-                {probability.winProbability}%
+                {probability.signalCount}/{probability.totalSignals}
               </span>
               <span style={{ fontSize: '10px', color: 'var(--msp-text-muted)', textTransform: 'uppercase' }}>
-                Win Prob
+                Agreeing
               </span>
             </div>
           </div>
@@ -227,9 +226,9 @@ export function ProModeDashboard({
             borderRadius: '20px',
             fontSize: '12px',
             fontWeight: '600',
-            color: badgeStyle.text,
+            color: 'var(--msp-text)',
           }}>
-            {probability.confidenceLabel}
+            Indicators agreeing
           </div>
         </div>
         
@@ -243,13 +242,13 @@ export function ProModeDashboard({
             border: '1px solid rgba(255,255,255,0.05)',
           }}>
             <div style={{ fontSize: '10px', color: 'var(--msp-text-muted)', marginBottom: '4px' }}>
-              KELLY SIZE
+              AGREEING
             </div>
             <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--msp-text)' }}>
-              {probability.kellySizePercent.toFixed(1)}%
+              {probability.signalCount}/{probability.totalSignals}
             </div>
             <div style={{ fontSize: '10px', color: 'var(--msp-flat)' }}>
-              of Capital
+              readings
             </div>
           </div>
           
@@ -279,13 +278,13 @@ export function ProModeDashboard({
             border: '1px solid rgba(255,255,255,0.05)',
           }}>
             <div style={{ fontSize: '10px', color: 'var(--msp-text-muted)', marginBottom: '4px' }}>
-              CONFLUENCE
+              AGREEMENT
             </div>
             <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--msp-text)' }}>
               {probability.signalCount}/{probability.totalSignals}
             </div>
             <div style={{ fontSize: '10px', color: 'var(--msp-flat)' }}>
-              Signals Aligned
+              Readings Aligned
             </div>
           </div>
           
@@ -418,7 +417,7 @@ export function ProModeDashboard({
           alignItems: 'center',
           gap: '0.5rem',
         }}>
-          <span>📊</span> SIGNAL BREAKDOWN
+          <span>📊</span> READING BREAKDOWN
         </div>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>

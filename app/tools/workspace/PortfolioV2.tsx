@@ -61,7 +61,7 @@ const STRATEGIES = [
   { value: 'longterm', label: 'Long Term Hold' },
   { value: 'breakout', label: 'Breakout' },
   { value: 'daytrade', label: 'Day Trade' },
-  { value: 'ai_signal', label: 'AI Signal' },
+  { value: 'ai_signal', label: 'AI Reading' },
   { value: 'options', label: 'Options' },
   { value: 'dividend', label: 'Dividend' },
 ];
@@ -574,7 +574,7 @@ export default function PortfolioV2() {
           {closedPositions.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="rounded-xl border border-white/5 bg-[#0D1321]/80 px-4 py-3 text-center">
-                <div className="text-[11px] uppercase text-slate-500 tracking-wider mb-1">Win Rate</div>
+                <div className="text-[11px] uppercase text-slate-500 tracking-wider mb-1">Winning closes</div>
                 <div className={`text-sm font-bold font-mono ${winRate >= 50 ? 'text-emerald-400' : 'text-red-400'}`}>{winRate.toFixed(0)}%</div>
               </div>
               <div className="rounded-xl border border-white/5 bg-[#0D1321]/80 px-4 py-3 text-center">

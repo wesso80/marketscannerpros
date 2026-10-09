@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Terminal',
-  description: 'Educational terminal for equity, crypto, and futures timing workflows including close-calendar context, session maps, flow, and time-confluence review.',
+  description: 'Educational terminal for equity, crypto, and futures timing workflows including close-calendar context, session maps, flow, and close-timing review.',
   robots: { index: false, follow: false },
   openGraph: {
     title: 'Terminal | MarketScannerPros',

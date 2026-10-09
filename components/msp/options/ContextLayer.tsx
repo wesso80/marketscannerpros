@@ -9,10 +9,8 @@ import MacroFlowCard from '@/components/msp/options/blocks/MacroFlowCard';
 type ContextLayerProps = { payload: any };
 
 export default function ContextLayer({ payload }: ContextLayerProps) {
-  const score = payload?.scores?.context ?? 72;
-
   return (
-    <LayerSection tone="context" title="Context" subtitle="Should we trade this symbol right now?" score={score}>
+    <LayerSection tone="context" title="Context" subtitle="What is the market environment right now?">
       <TwoColGrid
         left={
           <Card className="space-y-3">

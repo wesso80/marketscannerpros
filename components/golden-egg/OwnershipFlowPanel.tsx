@@ -38,7 +38,7 @@ export default function OwnershipFlowPanel({ symbol }: { symbol: string }) {
   return (
     <section className="mt-4 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-card)] p-4" aria-label="Ownership and insider activity">
       <h3 className="text-xs font-semibold text-emerald-400 mb-1">Ownership & insider activity — {symbol}</h3>
-      <p className="text-[11px] text-slate-500 mb-3">Reported filings from Alpha Vantage (insider transactions, congressional trade disclosures, quarterly 13F institutional holdings). Filings lag the trades they describe. Research context only — not a signal or advice.</p>
+      <p className="text-[11px] text-slate-500 mb-3">Reported filings from Alpha Vantage (insider transactions, congressional trade disclosures, quarterly 13F institutional holdings). Filings lag the trades they describe. Research context only — not a reading or advice.</p>
       {error && <div className="text-xs text-amber-300">Ownership feed failed ({error})</div>}
       {!error && !data && <div className="text-xs text-slate-500 animate-pulse">Loading ownership data…</div>}
       {data && (

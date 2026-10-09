@@ -54,7 +54,7 @@ export default function TimeScannerPage({ symbol: propSymbol, assetType, embedde
           </h1>
           <p className="text-lg text-gray-400 max-w-3xl mx-auto">
             Advanced Time Gravity Analysis - Track decompression windows, midpoint debt,
-            and multi-timeframe confluence zones with professional-level precision.
+            and multi-timeframe agreement zones with professional-level precision.
           </p>
         </div>}
 

@@ -278,7 +278,7 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
       <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-emerald-400" />
-          <h3 className="text-sm font-semibold text-white">Correlation Confluence</h3>
+          <h3 className="text-sm font-semibold text-white">Correlation Agreement</h3>
           <span className="text-[11px] text-zinc-500">({window}D)</span>
         </div>
 

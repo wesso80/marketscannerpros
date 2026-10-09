@@ -26,10 +26,10 @@ import { futuresScheduleRangeSummary, terminalHorizonLabel } from '@/lib/termina
 const OptionsTerminalView = dynamic(() => import('@/components/options-terminal/OptionsTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div> });
 const CryptoTerminalView = dynamic(() => import('@/components/crypto-terminal/CryptoTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div> });
 const FuturesTerminalPanel = dynamic(() => import('@/components/terminal/futures/FuturesTerminalPanel'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Futures Terminal…</div> });
-const OptionsConfluence = dynamic(() => import('@/components/options-terminal/OptionsChainEvidence'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Confluence…</div> });
+const OptionsConfluence = dynamic(() => import('@/components/options-terminal/OptionsChainEvidence'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options timing…</div> });
 const OptionsFlow = dynamic(() => import('@/components/options-terminal/OptionsFlowView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Flow…</div> });
 const TimeScanner = dynamic(() => import('@/app/tools/time-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Gravity…</div> });
-const ConfluenceScanner = dynamic(() => import('@/app/tools/confluence-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Confluence Scanner…</div> });
+const ConfluenceScanner = dynamic(() => import('@/app/tools/confluence-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Close timing Scanner…</div> });
 import {
   useCloseCalendar,
   useFlow,
@@ -144,7 +144,7 @@ const TERMINAL_TAB_META: Record<TerminalTab, { eyebrow: string; description: str
   },
   'Time Confluence': {
     eyebrow: '7. Final timing check',
-    description: 'Combine timing, pressure, close calendar, and macro/fib confluence.',
+    description: 'Combine timing, pressure, close calendar, and macro/fib agreement.',
   },
 };
 
@@ -186,7 +186,7 @@ function TerminalTabRail({
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div>
           <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Mechanics workbench</div>
-          <div className="text-[0.72rem] text-slate-500">Timing first, then positioning, flow, and final confluence before Backtest.</div>
+          <div className="text-[0.72rem] text-slate-500">Timing first, then positioning, flow, and final agreement before Backtest.</div>
         </div>
         <div className="rounded-md border border-slate-700/70 bg-slate-950/60 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-slate-500">
           {pathLabel}

@@ -53,7 +53,7 @@ export default async function ShareScanPage(
         </div>
         <h1 style={{ fontSize: 64, margin: '8px 0 4px', fontWeight: 800 }}>{data.symbol}</h1>
         <p style={{ fontSize: 22, color: 'var(--msp-text)', marginTop: 20, lineHeight: 1.4 }}>{data.headline}</p>
-        <p style={{ fontSize: 13, color: 'var(--msp-text-muted)', marginTop: 6 }}>Measured values only. Not a rating, ranking or recommendation.</p>
+        <p style={{ fontSize: 13, color: 'var(--msp-text-muted)', marginTop: 6 }}>Measured values only. not a recommendation.</p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14, marginTop: 28 }}>
           {data.price != null && <Stat label={data.scanDate ? `Price (scan ${data.scanDate})` : 'Price'} value={`$${data.price.toFixed(2)}`} />}

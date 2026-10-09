@@ -3,8 +3,8 @@ import React from 'react';
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
-import DailyPickView from '@/app/daily-pick/DailyPickView';
-import { engineRecord, foldedEngineDetail, readableObservedAt, readablePrice, readablePriceLabel, readableScore, readerVerdict } from '@/app/daily-pick/wording';
+import DailyPickView from '@/app/daily-scan/DailyPickView';
+import { engineRecord, foldedEngineDetail, readableObservedAt, readablePrice, readablePriceLabel, readableScore, readerVerdict } from '@/app/daily-scan/wording';
 import { canonicalLabel, rankDailyPicks } from '@/lib/scoring/canonical/dailyPick';
 import type { DailyPickRow } from '@/lib/og/dailyPicksLatest';
 import type { CanonicalResult } from '@/lib/scoring/canonical/types';
@@ -101,8 +101,8 @@ it('lists measured values in symbol order with the selection and sort disclosed;
 });
 
 it('does not rank stored rows in the page view or loader', () => {
-  const view = readFileSync('app/daily-pick/DailyPickView.tsx', 'utf8');
-  const page = readFileSync('app/daily-pick/page.tsx', 'utf8');
+  const view = readFileSync('app/daily-scan/DailyPickView.tsx', 'utf8');
+  const page = readFileSync('app/daily-scan/page.tsx', 'utf8');
   const loader = readFileSync('lib/og/dailyPicksLatest.ts', 'utf8');
   expect(`${view}\n${page}\n${loader}`).not.toMatch(/rankDailyPicks|selectDailyPicks|ORDER BY[^\n]*score/);
   expect(page).not.toContain('PASS / WATCH / BLOCK');

@@ -90,7 +90,7 @@ export function SetupConfidenceCard({
           {title}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <span style={{ color: "#E2E8F0", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Grade</span>
+          <span style={{ color: "#E2E8F0", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Check</span>
           <span
             style={{
               background: "rgba(20,184,166,0.14)",

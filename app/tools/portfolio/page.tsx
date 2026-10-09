@@ -413,7 +413,7 @@ function PositionSizerCalculator() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: '12px' }}>
             <div>
               <label style={{ display: 'block', color: 'var(--msp-flat)', fontSize: '12px', marginBottom: '4px' }}>
-                Win Rate (%)
+                Winning closes (%)
               </label>
               <input
                 type="number"
@@ -473,7 +473,7 @@ function PositionSizerCalculator() {
             </div>
           </div>
           <p style={{ color: 'var(--msp-flat)', fontSize: '11px', marginTop: '10px' }}>
-            Kelly % = Win Rate - [(1 - Win Rate) / (Avg Win / Avg Loss)]
+            Kelly % = Winning closes - [(1 - Winning closes) / (Avg Win / Avg Loss)]
           </p>
         </div>
       )}
@@ -2330,7 +2330,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   { label: 'Sharpe', value: sharpeApprox == null ? 'Not measured' : `${sharpeApprox.toFixed(2)}` },
                   { label: 'Profit Factor', value: profitFactor.label === 'N/A' ? 'No closed outcomes' : profitFactor.label, title: profitFactor.detail },
                   { label: 'Max DD', value: cleanRiskReady ? `${maxDrawdownFromSnapshots.toFixed(2)}%` : 'Not measured' },
-                  { label: 'Win Rate', value: `${winRatePct.toFixed(1)}%` },
+                  { label: 'Winning closes', value: `${winRatePct.toFixed(1)}%` },
                 ].map((metric) => (
                   <div key={metric.label} className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2" title={'title' in metric ? metric.title : undefined}>
                     <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">{metric.label}</div>

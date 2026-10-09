@@ -46,37 +46,17 @@ export default function CryptoTimeConfluenceWidget({
   if (isLoading || !confluence) {
     return (
       <div className={`bg-gray-900 border border-gray-800 rounded-lg p-6 ${className}`}>
-        <h3 className="text-lg font-semibold text-white mb-4">⏰ Crypto Time Confluence</h3>
+        <h3 className="text-lg font-semibold text-white mb-4">⏰ Crypto Close timing</h3>
         <div className="text-gray-400 text-sm">Loading...</div>
       </div>
     );
   }
 
-  const getConfluenceLevelColor = (level: string) => {
-    switch (level) {
-      case 'extreme':
-        return 'text-red-400 bg-red-900/20 border-red-500';
-      case 'high':
-        return 'text-orange-400 bg-orange-900/20 border-orange-500';
-      case 'medium':
-        return 'text-yellow-400 bg-yellow-900/20 border-yellow-500';
-      default:
-        return 'text-gray-400 bg-gray-800/20 border-gray-600';
-    }
-  };
-
-  const getScoreColor = (score: number) => {
-    if (score >= 10) return 'text-red-400';
-    if (score >= 6) return 'text-orange-400';
-    if (score >= 3) return 'text-yellow-400';
-    return 'text-gray-400';
-  };
-
   return (
     <div className={`bg-gray-900 border border-gray-800 rounded-lg p-6 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-white">⏰ Crypto Time Confluence</h3>
+        <h3 className="text-lg font-semibold text-white">⏰ Crypto Close timing</h3>
         <div className="text-xs text-gray-500">
           UTC: {new Date().toISOString().slice(11, 19)}
         </div>
@@ -92,13 +72,10 @@ export default function CryptoTimeConfluenceWidget({
       {/* Confluence Score */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-gray-400">Confluence Score</span>
-          <span className={`text-2xl font-bold ${getScoreColor(confluence.confluenceScore)}`}>
-            {confluence.confluenceScore}
+          <span className="text-sm text-gray-400">What to check</span>
+          <span className="text-sm font-semibold text-slate-200">
+            Next daily close
           </span>
-        </div>
-        <div className={`px-3 py-2 rounded-lg border text-center text-sm font-medium ${getConfluenceLevelColor(confluence.confluenceLevel)}`}>
-          {confluence.confluenceLevel.toUpperCase()} CONFLUENCE
         </div>
       </div>
 
@@ -157,13 +134,6 @@ export default function CryptoTimeConfluenceWidget({
 }
 
 function CycleRow({ cycle }: { cycle: CryptoTimeNode }) {
-  const getScoreBadgeColor = (score: number) => {
-    if (score >= 4) return 'bg-red-900/30 text-red-400 border-red-500/50';
-    if (score >= 2) return 'bg-orange-900/30 text-orange-400 border-orange-500/50';
-    if (score >= 1) return 'bg-yellow-900/30 text-yellow-400 border-yellow-500/50';
-    return 'bg-gray-800 text-gray-500 border-gray-700';
-  };
-
   return (
     <div className="flex items-center justify-between p-2 bg-gray-800/30 rounded-lg hover:bg-gray-800/50 transition-colors">
       <div className="flex items-center gap-3">
@@ -173,9 +143,6 @@ function CycleRow({ cycle }: { cycle: CryptoTimeNode }) {
         {cycle.isHighPriority && (
           <span className="text-xs">⭐</span>
         )}
-        <div className={`px-2 py-0.5 rounded border text-xs font-medium ${getScoreBadgeColor(cycle.score)}`}>
-          +{cycle.score}
-        </div>
       </div>
       <div className="text-sm text-gray-400">
         {formatTimeRemaining(cycle.hoursToClose)}
@@ -202,19 +169,12 @@ export function CryptoTimeConfluenceCompact({ className = '' }: { className?: st
 
   if (!confluence) return null;
 
-  const getScoreColor = (score: number) => {
-    if (score >= 10) return 'text-red-400';
-    if (score >= 6) return 'text-orange-400';
-    if (score >= 3) return 'text-yellow-400';
-    return 'text-gray-400';
-  };
-
   return (
     <div className={`bg-gray-900 border border-gray-800 rounded-lg p-4 ${className}`}>
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm text-gray-400">Time Confluence</span>
-        <span className={`text-xl font-bold ${getScoreColor(confluence.confluenceScore)}`}>
-          {confluence.confluenceScore}
+        <span className="text-sm text-gray-400">Close timing</span>
+        <span className="text-sm font-semibold text-slate-200">
+          {formatTimeRemaining(confluence.hoursToNextDaily)}
         </span>
       </div>
       <div className="text-xs text-gray-500 mb-2">
@@ -222,7 +182,7 @@ export function CryptoTimeConfluenceCompact({ className = '' }: { className?: st
       </div>
       {confluence.isHighConfluence && (
         <div className="text-xs text-orange-400 font-medium">
-          ⚠️ High confluence window
+          ⚠️ High agreement window
         </div>
       )}
     </div>

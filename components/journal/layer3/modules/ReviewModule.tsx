@@ -40,7 +40,7 @@ export default function ReviewModule({ data }: { data: ReviewModuleModel }) {
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Setup outcomes</div>
-            <div className="text-xs text-slate-400">Historical R expectancy with 95% confidence intervals and minimum-sample badges.</div>
+            <div className="text-xs text-slate-400">Historical R expectancy with 95% statistical ranges and minimum-sample badges.</div>
           </div>
           <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs text-slate-300">Min 30 closed R trades</span>
         </div>
@@ -67,7 +67,7 @@ export default function ReviewModule({ data }: { data: ReviewModuleModel }) {
                     <div className="text-slate-500">95% CI {rValue(item.expectancyCiLow)} to {rValue(item.expectancyCiHigh)}</div>
                   </div>
                   <div className="rounded-md bg-slate-950/50 p-2">
-                    <div className="text-slate-500">Win Rate</div>
+                    <div className="text-slate-500">Winning closes</div>
                     <div className="font-semibold text-slate-100">{percent(item.winRate)}</div>
                     <div className="text-slate-500">95% CI {percent(item.winRateCiLow)} to {percent(item.winRateCiHigh)}</div>
                   </div>

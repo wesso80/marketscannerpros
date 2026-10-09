@@ -379,13 +379,13 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
                 />
                 {data.analystRatings && (
                   <MetricCard
-                    label="Third-party rating distribution"
+                    label="Third-party view distribution"
                     value={`SB ${data.analystRatings.strongBuy} · B ${data.analystRatings.buy} · H ${data.analystRatings.hold} · S ${data.analystRatings.sell} · SS ${data.analystRatings.strongSell}`}
                   />
                 )}
               </div>
               <p style={{ color: "var(--msp-text-faint)", fontSize: "12px", marginTop: "10px" }}>
-                <span data-third-party>Analyst targets, ratings and EPS estimates are third-party consensus figures from Alpha Vantage's company overview{data.fetchedAt ? `, retrieved ${new Date(data.fetchedAt).toLocaleString()}` : ''}; the provider does not give their publication date. They are not this site's view, a signal or a forecast.</span> Earnings dates come from the provider calendar and can move.
+                <span data-third-party>Analyst targets, views and EPS estimates are third-party consensus figures from Alpha Vantage's company overview{data.fetchedAt ? `, retrieved ${new Date(data.fetchedAt).toLocaleString()}` : ''}; the provider does not give their publication date. They are not this site's view, a reading or a forecast.</span> Earnings dates come from the provider calendar and can move.
               </p>
             </div>
 

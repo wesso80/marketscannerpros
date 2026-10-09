@@ -426,7 +426,7 @@ export default function ExplorerPage() {
           {/* Market regime comes from stored market data. Account context is the separate card below. */}
           {!regime.data && !regime.loading && (
             <div className="mb-4 rounded-lg bg-[var(--msp-panel-2)] p-3 text-[12px] text-slate-400">
-              <div className="text-[11px] text-slate-500 uppercase mb-1">Market Regime Signals</div>
+              <div className="text-[11px] text-slate-500 uppercase mb-1">Market Regime Readings</div>
               Market context not collected · no stored VIX or SPY trend observation.
             </div>
           )}
@@ -435,7 +435,7 @@ export default function ExplorerPage() {
             return (
             <div className="mb-4">
               <div className="text-[11px] text-slate-500 uppercase mb-2">
-                Market Regime Signals
+                Market Regime Readings
 
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -469,7 +469,7 @@ export default function ExplorerPage() {
                         </div>
                         <span className="text-[11px] font-semibold" style={{ color }}>{counted ? (isHeadwind ? 'Headwind' : isTailwind ? 'Tailwind' : 'Neutral') : 'Context only'}</span>
                       </div>
-                      {sig.kind === 'workspace' ? <div className="mt-1 text-[10px] text-slate-500">Your account signal{counted ? '' : ' — not counted while market data is available'}</div> : null}
+                      {sig.kind === 'workspace' ? <div className="mt-1 text-[10px] text-slate-500">Your account reading{counted ? '' : ' — not counted while market data is available'}</div> : null}
                     </div>
                   );
                 })}
@@ -490,7 +490,7 @@ export default function ExplorerPage() {
                   Stored risk environment: {regime.data.operatorContext.riskEnvironment ?? 'not set'}
                   {regime.data.operatorContext.stale ? ' · stale' : ''}
                 </div>
-                <div className="mt-1 text-[10px] text-slate-500">Not a market regime and not a setup signal.</div>
+                <div className="mt-1 text-[10px] text-slate-500">Not a market regime and not a setup reading.</div>
               </div>
             </div>
           )}

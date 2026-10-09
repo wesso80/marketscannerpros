@@ -139,7 +139,7 @@ function TargetStatusBanner({ tgm }: { tgm: TimeGravityMap }) {
         </div>
         {tgm.targetPrice && status === 'ACTIVE' && (
           <span className="text-xs text-gray-400">
-            Alignment: {tgm.confidence}%
+            Measured points: {tgm.allPoints.length}
           </span>
         )}
       </div>
@@ -260,15 +260,15 @@ function AOITargetBox({ zones }: { zones: GravityZone[] }) {
             <div key={index} className={`${bgColor} border ${borderColor} rounded p-2`}>
               <div className="flex items-start justify-between mb-1">
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs font-bold ${isTop ? 'text-green-400' : 'text-gray-400'}`}>
-                    #{zone.rank}
+                  <span className="text-xs font-bold text-slate-300">
+                    Zone
                   </span>
                   <span className="text-sm font-mono text-white">
                     {zone.minPrice.toFixed(2)}–{zone.maxPrice.toFixed(2)}
                   </span>
                 </div>
-                <span className={`text-xs ${zone.confidence >= 80 ? 'text-green-400' : zone.confidence >= 60 ? 'text-yellow-400' : 'text-gray-400'}`}>
-                  {zone.confidence}%
+                <span className="text-xs text-slate-400">
+                  {zone.dominantTimeframes?.slice(0, 2).join(' · ')}
                 </span>
               </div>
               
@@ -583,7 +583,7 @@ function CloseConfluencePanel({ confluence }: { confluence: CloseConfluence }) {
   if (confluence.stacks.length === 0 && confluence.todayCloses.length === 0) {
     return (
       <div className="space-y-1">
-        <div className="text-xs text-gray-400">CLOSE CONFLUENCE</div>
+        <div className="text-xs text-gray-400">CLOSE AGREEMENT</div>
         <div className="bg-black/40 border border-gray-800 rounded p-2 text-[10px] text-gray-600">
           No close stacks detected
         </div>
@@ -593,7 +593,7 @@ function CloseConfluencePanel({ confluence }: { confluence: CloseConfluence }) {
 
   return (
     <div className="space-y-1">
-      <div className="text-xs text-gray-400">CLOSE CONFLUENCE</div>
+      <div className="text-xs text-gray-400">CLOSE AGREEMENT</div>
       <div className="bg-black/40 border border-gray-800 rounded p-2 space-y-2">
         {/* Today closes summary */}
         {confluence.todayCloses.length > 0 && (
@@ -1154,10 +1154,10 @@ export default function TimeGravityMapWidget({
              tgm.targetStatus === 'EXPANSION' ? '⚡' :
              null}
             </span>
-            {tgm.targetStatus === 'ACTIVE' || (tgm.targetStatus !== 'TARGET_HIT' && tgm.targetStatus !== 'OVERSHOT' && tgm.targetStatus !== 'EXPANSION') ? `${tgm.confidence}%` : null}
+            {tgm.targetPrice ? `$${tgm.targetPrice.toFixed(2)}` : null}
           </div>
           <div className="text-xs text-gray-400">
-            {tgm.targetStatus === 'ACTIVE' ? 'Confidence' : timeEngineLabel(tgm.targetStatus)}
+            {tgm.targetStatus === 'ACTIVE' ? 'Coverage' : timeEngineLabel(tgm.targetStatus)}
           </div>
         </div>
       </div>

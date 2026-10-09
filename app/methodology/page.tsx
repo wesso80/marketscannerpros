@@ -95,7 +95,7 @@ export default function MethodologyPage() {
 
             <CollapsibleSection title="Evidence quality">
               <p className="text-xs leading-5 text-slate-300">
-                Evidence quality grades the <em>inputs</em> behind a conclusion — how many independent factors are
+                Evidence quality checks the <em>inputs</em> behind a conclusion — how many independent factors are
                 available, how fresh the data is, and whether factors conflict. It{" "}
                 <strong className="text-slate-200">caps the composite</strong>: poor or stale evidence cannot produce a
                 high headline number.
@@ -148,10 +148,10 @@ export default function MethodologyPage() {
 
             <CollapsibleSection title="What we deliberately do not do">
               <ul className="text-sm leading-7 text-slate-300">
-                <li>We do not present composite scores as statistical probabilities.</li>
+                <li>We do not present composite readings as statistical probabilities.</li>
                 <li>We do not issue buy / sell / hold instructions or personalised financial advice.</li>
                 <li>We do not connect to brokers or route orders — portfolio and backtest features are simulation only.</li>
-                <li>We do not publish fake testimonials, invented usage statistics, or guaranteed returns.</li>
+                <li>We do not publish fake testimonials, invented usage statistics, or promised returns.</li>
                 <li>We do not present delayed, estimated, or simulated data as live, observed data.</li>
               </ul>
             </CollapsibleSection>

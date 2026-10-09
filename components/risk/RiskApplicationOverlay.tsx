@@ -182,7 +182,7 @@ export default function RiskApplicationOverlay({ trades, openTrades }: Props) {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <div className="text-[0.72rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Risk Application Overlay</div>
-          <div className="text-[0.76rem] text-[var(--msp-text-muted)]">Normalized Edge vs Live Capital Application</div>
+          <div className="text-[0.76rem] text-[var(--msp-text-muted)]">Normalized Record vs Live Capital Application</div>
         </div>
         <div className="flex items-center gap-1.5">
           {(['50', '100', 'YTD'] as const).map((mode) => (
@@ -250,7 +250,7 @@ export default function RiskApplicationOverlay({ trades, openTrades }: Props) {
           <div>Median: <span className="metric-r">{formatR(med)}</span></div>
           <div>Std Dev: <span className="metric-r">{stdev.toFixed(2)}R</span></div>
           <div>Skew: <span className={`metric-r ${Math.abs(skew) > 0.5 ? 'text-[var(--msp-warn)]' : ''}`}>{skew.toFixed(2)}</span></div>
-          <div>Win Rate: <span className="metric-r">{winRate.toFixed(1)}%</span></div>
+          <div>Winning closes: <span className="metric-r">{winRate.toFixed(1)}%</span></div>
         </div>
       </div>
     </section>

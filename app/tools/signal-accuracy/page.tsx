@@ -321,7 +321,7 @@ export default function SignalAccuracyPage() {
                       <th className="text-left px-4 py-2">Symbol</th>
                       <th className="text-left px-3 py-2">Context</th>
                       <th className="text-left px-3 py-2">Scanner</th>
-                      <th className="text-right px-3 py-2">Score</th>
+                      <th className="text-right px-3 py-2">Reading</th>
                       <th className="text-right px-3 py-2">Move</th>
                       <th className="text-center px-3 py-2">Outcome</th>
                       <th className="text-right px-3 py-2">Date</th>

@@ -173,7 +173,7 @@ export default function DisclosureGate({ children }: { children: React.ReactNode
           <p style={{ margin: '0 0 12px' }}>
             Nothing on this platform constitutes financial, investment, or trading advice, 
             nor a recommendation to acquire or dispose of any financial product. All scanner outputs, 
-            confluence scores, scenario analyses, AI-generated commentary, and analytical tools 
+            what to checks, scenario analyses, AI-generated commentary, and analytical tools 
             are for <strong>educational and informational purposes only</strong>.
           </p>
           <p style={{ margin: '0 0 12px' }}>

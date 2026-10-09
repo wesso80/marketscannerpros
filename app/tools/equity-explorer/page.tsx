@@ -488,7 +488,7 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
             <div className="h-8 w-8 flex-shrink-0 rounded-lg overflow-hidden"><img src="/assets/platform-tools/equity-explorer.png" alt="" className="h-full w-full object-contain p-0.5" /></div>
             <div>
               <h1 className="text-lg font-bold text-slate-300">Equity Explorer</h1>
-              <p className="text-xs text-slate-400">Decision-grade equity view: valuation, trend, risk, and catalyst context.</p>
+              <p className="text-xs text-slate-400">Detailed equity view: valuation, trend, risk, and catalyst context.</p>
             </div>
           </div>
         </header>}
@@ -601,7 +601,7 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
                     <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Global Regime</span><p className="font-semibold text-slate-100">{marketText(upeGlobal?.regime || 'Not collected')}</p></div>
                     <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Equities Micro Regime</span><p className="font-semibold text-slate-100">{marketText(upeMicroState || 'Not collected')}</p></div>
                     <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Liquidity</span><p className="font-semibold text-slate-100">{marketText(upeGlobal?.liquidityState || 'Not collected')}</p></div>
-                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Adaptive Confluence</span><p className="font-semibold text-slate-100">{upeGlobal?.adaptiveConfidence !== null && upeGlobal?.adaptiveConfidence !== undefined ? `${Math.round(upeGlobal.adaptiveConfidence)}%` : 'Not collected'}</p></div>
+                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Adaptive Agreement</span><p className="font-semibold text-slate-100">{upeGlobal?.adaptiveConfidence !== null && upeGlobal?.adaptiveConfidence !== undefined ? `${Math.round(upeGlobal.adaptiveConfidence)}%` : 'Not collected'}</p></div>
                   </div>
                 </div>
               </div>
@@ -740,7 +740,7 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
                             href={`/tools/terminal?tab=time-confluence&symbol=${data.company.symbol}&eligibility=${upeSignal.eligibilityUser}&crcs=${upeSignal.crcsUser.toFixed(1)}`}
                             className="rounded border border-emerald-500/50 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-200"
                           >
-                            Open Time Confluence
+                            Open Close timing
                           </Link>
                         )}
                       </div>
@@ -966,7 +966,7 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
                 {data.analysts.totalRatings > 0 ? (
                   <div className="space-y-4">
                     <AnalystRatingsBar analysts={data.analysts} />
-                    <p className="text-[11px] text-slate-600">Source: external analyst consensus. MSP does not endorse or recommend any rating.</p>
+                    <p className="text-[11px] text-slate-600">Source: external analyst consensus. MSP does not endorse or recommend any outside view.</p>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-400">Analyst consensus price</span>
                       <span className="text-xl font-bold text-emerald-400">
@@ -983,7 +983,7 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
                     )}
                   </div>
                 ) : (
-                  <p className="text-gray-500">No analyst ratings available</p>
+                  <p className="text-gray-500">No analyst notes available</p>
                 )}
               </div>
             </div>
@@ -1047,7 +1047,7 @@ function EquityExplorerContent({ embedded = false }: { embedded?: boolean }) {
                           aria-valuenow={sentiment.score}
                           aria-valuemin={0}
                           aria-valuemax={100}
-                          aria-label={`News sentiment score: ${sentiment.score}%`}
+                          aria-label={`News sentiment reading: ${sentiment.score}%`}
                           className="w-16 h-2 bg-slate-600 rounded-full overflow-hidden"
                         >
                           <div

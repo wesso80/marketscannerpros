@@ -25,14 +25,14 @@ const SCORE_TYPE_META: Record<ScoreType, {
 }> = {
   heuristic: {
     label: 'Heuristic',
-    title: 'Score is rule-based and has not been calibrated against outcome data. Do not treat as probability.',
+    title: 'Reading is rule-based and has not been calibrated against outcome data. Do not treat as probability.',
     bg: 'bg-blue-500/10',
     border: 'border-blue-500/30',
     text: 'text-blue-300',
   },
   historical: {
     label: 'Historical',
-    title: 'Score is back-calculated from historical data. Past patterns do not indicate future results.',
+    title: 'Reading is back-calculated from historical data. Past patterns do not indicate future results.',
     bg: 'bg-purple-500/10',
     border: 'border-purple-500/30',
     text: 'text-purple-300',
@@ -46,7 +46,7 @@ const SCORE_TYPE_META: Record<ScoreType, {
   },
   partial: {
     label: 'Partial',
-    title: 'One or more evidence layers are missing. Score may understate or overstate alignment.',
+    title: 'One or more evidence layers are missing. Reading may understate or overstate alignment.',
     bg: 'bg-amber-500/10',
     border: 'border-amber-500/30',
     text: 'text-amber-300',
@@ -74,7 +74,7 @@ const SCORE_TYPE_META: Record<ScoreType, {
   },
   'evidence-alignment': {
     label: 'Evidence Alignment',
-    title: 'Multi-factor confluence score. Reflects how many indicators agree, not a probability of any outcome.',
+    title: 'Multi-factor what to check. Reflects how many indicators agree, not a probability of any outcome.',
     bg: 'bg-teal-500/10',
     border: 'border-teal-500/30',
     text: 'text-teal-300',

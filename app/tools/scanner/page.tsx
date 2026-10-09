@@ -252,7 +252,7 @@ function lifecycleLabel(lifecycle: LifecycleState): string {
   return plain;
 }
 
-const TABS = ['All', 'Bullish', 'Bearish', 'High Score ≥70', 'DVE Signals', 'Squeeze', 'Regime Match'] as const;
+const TABS = ['All', 'Bullish', 'Bearish', 'Strong match', 'DVE Signals', 'Squeeze', 'Regime Match'] as const;
 const LEGACY_MULTI_FACTOR_STATUS = ['TRADE', 'READY'].join('_');
 const LEGACY_LOW_ALIGNMENT_STATUS = ['NO', 'TRADE'].join('_');
 type SortKey = 'symbol' | 'score' | 'direction' | 'confidence' | 'rsi' | 'price' | 'dveBbwp' | 'mspScore';
@@ -420,7 +420,7 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
               <span className="rounded-md border px-2 py-0.5 text-[10px] font-black uppercase" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
                 {lifecycleLabel(lifecycle)}
               </span>
-              <span className="inline-flex min-h-10 items-center text-xs font-bold text-emerald-300">Why This Rank / Review</span>
+              <span className="inline-flex min-h-10 items-center text-xs font-bold text-emerald-300">Review</span>
             </div>
           </button>
         );
@@ -430,7 +430,7 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
 }
 
 function RankedDesktopFallbackTable({rows,activeRegime,onRowClick}:{rows:ScanResult[];activeRegime:string;onRowClick:(row:ScanResult)=>void}) {
- return <table className="hidden w-full table-fixed text-sm md:table" aria-label="Ranked scanner results"><thead><tr className="text-left text-xs text-slate-400"><th className="w-24 py-2">Symbol</th><th className="w-24">Price</th><th className="w-20">Score</th><th>Evidence</th><th className="w-20">Review</th></tr></thead><tbody>{rows.map(row=><tr key={row.symbol} className="border-t border-slate-800"><td className="py-2 font-semibold">{row.symbol}</td><td><ScannerRowStamp row={row}/></td><td>{!isNoSetupRow(row)&&Math.round(computeMspScore(row,activeRegime))}</td><td className="break-words py-2 pr-3 text-xs text-slate-400">{scannerCopy(summarizeRankedReason(row,deriveLifecycleState(row,activeRegime),isRegimeCompatibleForRegime(row,activeRegime),activeRegime))}</td><td><button className="min-h-10 text-emerald-300" onClick={()=>onRowClick(row)}>Review</button></td></tr>)}</tbody></table>;
+ return <table className="hidden w-full table-fixed text-sm md:table" aria-label="Scanner results"><thead><tr className="text-left text-xs text-slate-400"><th className="w-24 py-2">Symbol</th><th className="w-24">Price</th><th className="w-20">RSI</th><th>Evidence</th><th className="w-20">Review</th></tr></thead><tbody>{rows.map(row=><tr key={row.symbol} className="border-t border-slate-800"><td className="py-2 font-semibold">{row.symbol}</td><td><ScannerRowStamp row={row}/></td><td>{row.rsi != null ? row.rsi.toFixed(0) : '—'}</td><td className="break-words py-2 pr-3 text-xs text-slate-400">{scannerCopy(summarizeRankedReason(row,deriveLifecycleState(row,activeRegime),isRegimeCompatibleForRegime(row,activeRegime),activeRegime))}</td><td><button className="min-h-10 text-emerald-300" onClick={()=>onRowClick(row)}>Review</button></td></tr>)}</tbody></table>;
 }
 
 
@@ -544,7 +544,7 @@ function ScannerContent() {
     switch (activeTab) {
       case 'Bullish': items = items.filter(r => rankedClaimedDirection(r) === 'bullish'); break;
       case 'Bearish': items = items.filter(r => rankedClaimedDirection(r) === 'bearish'); break;
-      case 'High Score ≥70': items = items.filter(r => computeMspScore(r, currentRegime) >= HIGH_MSP_SCORE); break;
+      case 'Strong match': items = items.filter(r => computeMspScore(r, currentRegime) >= HIGH_MSP_SCORE); break;
       case 'DVE Signals': items = items.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)); break;
       case 'Squeeze': items = items.filter(r => r.dveFlags?.includes('SQUEEZE_FIRE')); break;
       case 'Regime Match': items = items.filter(r => isRegimeCompatible(r)); break;
@@ -581,7 +581,7 @@ function ScannerContent() {
     Crypto: allResults.filter(r => (r as any)._assetClass === 'crypto').length,
     Bullish: allResults.filter(r => rankedClaimedDirection(r) === 'bullish').length,
     Bearish: allResults.filter(r => rankedClaimedDirection(r) === 'bearish').length,
-    'High Score ≥70': allResults.filter(r => computeMspScore(r, currentRegime) >= HIGH_MSP_SCORE).length,
+    'Strong match': allResults.filter(r => computeMspScore(r, currentRegime) >= HIGH_MSP_SCORE).length,
     'DVE Signals': allResults.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)).length,
     Squeeze: allResults.filter(r => r.dveFlags?.includes('SQUEEZE_FIRE')).length,
     'Regime Match': allResults.filter(r => isRegimeCompatible(r)).length,
@@ -916,10 +916,10 @@ function ScannerContent() {
           <div className="flex flex-wrap gap-3 text-xs">
           <label>Timeframe<select value={v2Timeframe} onChange={e=>setV2Timeframe(e.target.value as ScanTimeframe)} className="ml-2 rounded bg-slate-900 p-2">{SCAN_TIMEFRAMES.map(tf=><option key={tf.value} value={tf.value}>{tf.label}</option>)}</select></label>
           <label>Evidence<select value={activeTab} onChange={e=>setActiveTab(e.target.value as typeof activeTab)} className="ml-2 rounded bg-slate-900 p-2">{TABS.map(tab=><option key={tab} value={tab}>{scannerCopy(tab)} ({tabCounts[tab]})</option>)}</select></label>
-          <label>Sort<select value={sortKey} onChange={e=>setSortKey(e.target.value as SortKey)} className="ml-2 rounded bg-slate-900 p-2"><option value="mspScore">Score (unvalidated)</option><option value="symbol">Symbol</option><option value="price">Price</option></select></label>
+          <label>Sort<select value={sortKey} onChange={e=>setSortKey(e.target.value as SortKey)} className="ml-2 rounded bg-slate-900 p-2"><option value="mspScore">Reading (unvalidated)</option><option value="symbol">Symbol</option><option value="price">Price</option></select></label>
           <button onClick={()=>setSortDir(sortDir==='asc'?'desc':'asc')}>{sortDir==='asc'?'Ascending':'Descending'}</button>
           </div></CollapsibleSection>
-          <p data-scanner-ordering-note className="text-xs text-slate-400">Ordering uses the scanner&apos;s indicator and setup scores. They describe how strongly current conditions line up; they are not probabilities or forecasts, and historical validation on unseen data is not established. Educational research only.</p>
+          <p data-scanner-ordering-note className="text-xs text-slate-400">Ordering uses the scanner&apos;s indicator and setup readings. They describe how strongly current conditions line up; they are not probabilities or forecasts, and historical validation on unseen data is not established. Educational research only.</p>
           {rankedLocalDemo && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-200">
               <strong>Local demo scanner rows:</strong> live market data keys/cache are unavailable in this local environment, so these rows are sample data for workflow testing only. Do not treat them as live scanner output.
@@ -996,7 +996,7 @@ function ScannerContent() {
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="pro-min-confidence" className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Min Evidence Score</label>
+                    <label htmlFor="pro-min-confidence" className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Min Evidence Reading</label>
                     <select id="pro-min-confidence" value={proMinConfidence} onChange={e => setProMinConfidence(Number(e.target.value))}
                       className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
                       <option value={0}>Any</option><option value={30}>30</option><option value={40}>40</option><option value={50}>50</option><option value={60}>60</option><option value={70}>70</option><option value={80}>80</option>

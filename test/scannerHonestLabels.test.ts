@@ -8,8 +8,14 @@ describe('scanner labels describe, they do not forecast',()=>{
   expect(page).toContain('historical validation on unseen data is not established');
   expect(page).not.toContain("'Strong confluence'");
   expect(page).not.toContain('>Confluence<');
-  expect(page).toContain('Score (unvalidated)');
-  expect(read('components/scanner/ScanTemplatesBar.tsx')).not.toMatch(/\d+%\+ confidence/);
+  expect(page).toContain('Reading (unvalidated)');
+  expect(page).not.toContain('Score (unvalidated)');
+  const templates = read('components/scanner/ScanTemplatesBar.tsx');
+  expect(templates).toContain("label: 'Indicators agreeing'");
+  expect(templates).toContain('Rows where at least 3 timeframes agree and data quality is high');
+  expect(templates).not.toContain('High Alignment');
+  expect(templates).not.toContain('Indicator agreement 70+');
+  expect(templates).not.toMatch(/\d+%\+ confidence/);
  });
  it('missing reference levels never render as $0.00 and the level ratio is not coloured as a result',()=>{
   for(const f of ['components/markets/RightRail.tsx','components/markets/tabs/OverviewTab.tsx']){

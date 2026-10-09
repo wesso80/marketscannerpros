@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     notifyAdmin({
-      subject: 'edge-label-outcomes failed',
+      subject: 'record-label-outcomes failed',
       body: `Outcome labeller failed: ${message}`,
       severity: 'error',
       context: { limit, durationMs: Date.now() - started },

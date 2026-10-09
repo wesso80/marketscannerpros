@@ -53,13 +53,13 @@ export default function CompositeBreakdown({ v2, compact = false, expanded = fal
         </span>
         <span
           className="rounded border border-slate-600/40 bg-slate-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-300"
-          title="Market regime whose factor-weight mix was applied to this score"
+          title="Market regime whose factor-weight mix was applied to this reading"
         >
           {REGIME_LABEL[v2.regime] ?? v2.regime}
         </span>
         <span
           className="rounded border border-slate-600/40 bg-slate-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400"
-          title="Percentile of the composite score across the scanned universe"
+          title="Percentile of the composite reading across the scanned universe"
         >
           {ordinal(v2.percentileRank)} pct
         </span>
@@ -86,7 +86,7 @@ export default function CompositeBreakdown({ v2, compact = false, expanded = fal
             aria-expanded={open}
             className="rounded border border-white/10 px-1.5 py-0.5 text-[10px] font-bold text-slate-400 hover:text-slate-200"
           >
-            {open ? 'Hide factors' : 'Score factors'}
+            {open ? 'Hide factors' : 'Reading factors'}
           </button>
         ) : null}
       </div>
@@ -119,11 +119,11 @@ export default function CompositeBreakdown({ v2, compact = false, expanded = fal
             );
           })}
           <p className="pt-1 text-[10px] italic text-slate-500">
-            Factor votes use the current regime weights. These research scores are not probabilities; the factor groups can still be correlated.
+            Factor votes use the current regime weights. These research readings are not probabilities; the factor groups can still be correlated.
           </p>
           {v2.version ? <div className="text-[11px] text-slate-400 space-y-1">
             <p>Observed magnitude {v2.observedMagnitude?.toFixed(2)} × {Math.round((v2.coverage ?? 0) * 100)}% coverage → {(v2.coverageAdjustedMagnitude ?? v2.conservativeMagnitude)?.toFixed(2)} (missing factors count as neutral{v2.missingFactors?.length ? `: ${v2.missingFactors.join(', ')}` : ''}).</p>
-            <p>Round(magnitude × {v2.appliedMultiplier?.toFixed(4)} freshness/liquidity) × {v2.gateMultiplier} gate; cap {v2.trustCap} → {v2.composite}/100.</p>
+            <p>Freshness {v2.freshness} · evidence {v2.evidenceQuality} · missing factors count as neutral.</p>
             <p>{v2.freshness} data · {v2.evidenceQuality} evidence · {v2.version}</p>
           </div> : null}
         </div>

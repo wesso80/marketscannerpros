@@ -362,7 +362,7 @@ function checkSmartCondition(alert: SmartAlert, data: DerivativesData): CheckRes
           triggered: true,
           value: rate,
           threshold: condition_value,
-          message: `🔴 EXTREME FUNDING: ${rate.toFixed(4)}% (overleveraged longs - bearish signal)`,
+          message: `🔴 EXTREME FUNDING: ${rate.toFixed(4)}% (overleveraged longs - bearish reading)`,
           context: { avgFunding: data.funding?.average?.fundingRatePercent },
         };
       }
@@ -378,7 +378,7 @@ function checkSmartCondition(alert: SmartAlert, data: DerivativesData): CheckRes
           triggered: true,
           value: rate,
           threshold: -condition_value,
-          message: `🟢 EXTREME NEGATIVE FUNDING: ${rate.toFixed(4)}% (overleveraged shorts - bullish signal)`,
+          message: `🟢 EXTREME NEGATIVE FUNDING: ${rate.toFixed(4)}% (overleveraged shorts - bullish reading)`,
           context: { avgFunding: data.funding?.average?.fundingRatePercent },
         };
       }

@@ -43,7 +43,7 @@ export default function EngineStatus({ rows }: { rows: EngineStatusRow[] }) {
         <thead>
           <tr>
             <th style={th}>Engine</th>
-            <th style={{ ...th, textAlign: 'right' }}>Score</th>
+            <th style={{ ...th, textAlign: 'right' }}>Reading</th>
             <th style={th}>State</th>
             <th style={th}>Trend</th>
             <th style={{ ...th, textAlign: 'right' }}>Last Update</th>

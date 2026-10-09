@@ -411,7 +411,7 @@ export default function OptionsTerminalView({ symbol: propSymbol, expiry: propEx
               <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
                 <div className="text-xs text-zinc-400">Desk Read</div>
                 <div className="mt-1 text-sm font-semibold">
-                  IV history not collected yet. This is a 1-sigma model estimate, not a guaranteed range. Market basis: {chain.asOfDate || 'not collected'}.
+                  IV history not collected yet. This is a 1-sigma model estimate, not a promised range. Market basis: {chain.asOfDate || 'not collected'}.
 
                 </div>
               </div>

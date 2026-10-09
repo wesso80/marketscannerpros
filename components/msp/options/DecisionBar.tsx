@@ -14,11 +14,6 @@ function toDecisionState(state?: string): DecisionState {
 
 export default function DecisionBar({ payload }: DecisionBarProps) {
   const state = toDecisionState(payload?.permission?.state ?? 'wait');
-  const confidence = payload?.scores?.confidence ?? 67;
-  const quality = payload?.scores?.quality ?? 'medium';
-  const context = payload?.scores?.context ?? 74;
-  const setup = payload?.scores?.setup ?? 83;
-  const execution = payload?.scores?.execution ?? 64;
   const reasons: string[] = payload?.permission?.blockers?.length
     ? payload.permission.blockers
     : payload?.permission?.warnings?.length
@@ -36,9 +31,7 @@ export default function DecisionBar({ payload }: DecisionBarProps) {
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-12 lg:col-span-8 space-y-2">
           <div className="text-xs font-bold uppercase tracking-wide text-[var(--msp-muted)]">Analysis Status</div>
-          <div className="text-sm text-[var(--msp-text)]">Review State: <span className="font-bold uppercase">{state}</span></div>
-          <div className="text-sm text-[var(--msp-text)]">Confidence: <span className="font-bold">{confidence}%</span> • Quality: <span className="font-bold uppercase">{quality}</span></div>
-          <div className="text-sm text-[var(--msp-text)]">Context/Setup/Timing: <span className="font-bold">{context}/{setup}/{execution}</span></div>
+          <div className="text-sm text-[var(--msp-text)]">What to check: price, structure, and timing evidence.</div>
           <div className="space-y-1 pt-1 text-sm text-[var(--msp-muted)]">
             {reasons.slice(0, 3).map((reason, index) => (
               <div key={index}>• {String(reason).replaceAll('_', ' ')}</div>

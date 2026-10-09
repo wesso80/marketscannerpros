@@ -146,7 +146,7 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
         avgR30d: kpis?.avgR30d,
         recentTrades,
       },
-      summary: `Personal journal records: ${personalTrades.length} (${openTrades.length} open, ${closedTrades.length} closed). 30d win rate ${kpis.winRate30d == null ? 'not collected' : `${(kpis.winRate30d * 100).toFixed(1)}%`}, PF ${kpis.profitFactor30d == null ? kpis.profitFactorLabel : kpis.profitFactor30d.toFixed(2)}. Account equity not collected; open P&L is estimated before fees.`,
+      summary: `Personal journal records: ${personalTrades.length} (${openTrades.length} open, ${closedTrades.length} closed). 30d winning closes ${kpis.winRate30d == null ? 'not collected' : `${(kpis.winRate30d * 100).toFixed(1)}%`}, PF ${kpis.profitFactor30d == null ? kpis.profitFactorLabel : kpis.profitFactor30d.toFixed(2)}. Account equity not collected; open P&L is estimated before fees.`,
     });
   }, [enrichedTrades, enrichedKpis, payload, setPageData]);
 

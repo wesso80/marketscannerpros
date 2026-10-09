@@ -13,7 +13,7 @@ export default function HowSimple() {
     {
       icon: ChartBarIcon,
       title: "Run the Scan",
-      text: "Instant multi-timeframe squeeze & confluence detection in seconds.",
+      text: "Instant multi-timeframe squeeze & agreement detection in seconds.",
     },
     {
       icon: BellAlertIcon,

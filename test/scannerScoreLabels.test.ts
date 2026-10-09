@@ -68,10 +68,10 @@ describe('page and Pro table wiring', () => {
     expect(page).toContain("case 'Bullish': items = items.filter(r => rankedClaimedDirection(r) === 'bullish')");
     expect(page).toContain("Bearish: allResults.filter(r => rankedClaimedDirection(r) === 'bearish').length");
     expect(page).toContain('const noSetup = noSetupRankedReason(r);');
-    expect(page).toContain('!isNoSetupRow(row)&&Math.round(computeMspScore(row,activeRegime))');
+    expect(page).toContain("row.rsi != null ? row.rsi.toFixed(0) : '—'");
   });
   it('legacy MSP table stays behind the admin scanner boundary', () => {
-    expect(table).toContain('>MSP</span>{r.confidence}');
+    expect(table).not.toContain('>MSP</span>{r.confidence}');
     expect(page).toContain('if (!isAdmin) return <PublicScannerRedirect />');
     expect(table).not.toContain('Setup {r.canonical.score} · sets grade');
   });

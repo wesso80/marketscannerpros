@@ -295,7 +295,7 @@ export function PriceChart({
                 },
                 {
                   type: 'line' as const,
-                  label: 'Signal',
+                  label: 'Reading',
                   data: signalLine,
                   borderColor: '#F97316',
                   borderWidth: 1.5,

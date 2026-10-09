@@ -168,7 +168,7 @@ export default function LiquiditySweepPage() {
                 <details><summary className="cursor-pointer py-1">Level details</summary>
                   <div className="space-y-1 py-2">{r.levels.map((lev, i) => <p key={i}>{levelName(lev.label)} · {sweepPrice(lev.level)}</p>)}
                     {Number.isFinite(r.atrPct) && <p>Measured range: {r.atrPct.toFixed(1)}%</p>}
-                    {Number.isFinite(r.confidence) && <p>Pattern score: {r.confidence}</p>}
+                    {Number.isFinite(r.confidence) && <p>Pattern reading: {r.confidence}</p>}
                     <p>{r.levelCount} recorded levels</p>
                   </div>
                 </details>
@@ -180,7 +180,7 @@ export default function LiquiditySweepPage() {
         {!loading && data && filtered.length === 0 && <p className="rounded-lg border border-slate-700 p-3 text-sm text-slate-400">No observations match this filter.</p>}
       </div>}
       footer={<div style={{fontSize:'11px',color:'var(--msp-text-faint)',textAlign:'center',padding:'12px 0'}}>
-        Liquidity sweep detection is for educational purposes only. Sweeps are technical price-pattern observations and do not predict future direction or provide buy/sell signals. Not financial advice.
+        Liquidity sweep detection is for educational purposes only. Sweeps are technical price-pattern observations and do not predict future direction or provide buy or sell instructions. Not financial advice.
         Sweep observations describe possible stop-hunt behavior but do not guarantee reversal.
       </div>}
     />

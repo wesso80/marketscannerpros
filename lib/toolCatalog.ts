@@ -199,7 +199,7 @@ const metadata: Record<string, Partial<ToolPage>> = {
     description: "Saved market summary",
     tier: "free",
   },
-  "/daily-pick": {
+  "/daily-scan": {
     description: "Dated daily research",
     tier: "free",
   },

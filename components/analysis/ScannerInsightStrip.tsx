@@ -57,7 +57,7 @@ export default function ScannerInsightStrip({ insight, compact = false }: { insi
             RS {relativeStrength.label}
           </Chip>
         ) : null}
-        <Chip className={EQ_CLASS[evidenceQuality.level]} title="Evidence quality — caps the composite; poor/stale evidence cannot yield a high score">EV {evidenceQuality.level}</Chip>
+        <Chip className={EQ_CLASS[evidenceQuality.level]} title="Evidence quality — caps the composite; poor/stale evidence cannot yield a high reading">EV {evidenceQuality.level}</Chip>
         <Chip className="bg-slate-500/10 text-slate-400 border-slate-600/30" title="Independent factor groups that agree">
           {confluence.supportive}/{confluence.independentFactors} factors
         </Chip>

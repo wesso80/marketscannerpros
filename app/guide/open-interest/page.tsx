@@ -374,7 +374,7 @@ export default function OpenInterestGuidePage() {
             <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-5 mt-6">
               <h4 className="font-semibold text-red-400 mb-2">Important Caveat</h4>
               <p className="text-slate-300 text-sm">
-                L/S ratio alone is NOT a trading signal. Extreme readings can persist during strong trends. 
+                L/S ratio alone is NOT a trade instruction. Extreme readings can persist during strong trends. 
                       Use it to <strong>review scenario risk</strong> and <strong>stress-test invalidation levels</strong>
                   when the crowd is heavily positioned in one direction.
               </p>
