@@ -35,7 +35,7 @@ export default function TermsPage() {
         <li>You are solely responsible for your trading and investment decisions.</li>
       </ul>
 
-      <h2 id="paper">2A. Paper Trade &amp; Simulation System</h2>
+      <h2 id="paper">2A. Practice Records</h2>
       <ul>
         <li><strong className="text-amber-500">MarketScannerPros is an educational research workspace.</strong> The portfolio tracker, trade journal, risk analysis engine, scenario plans, and all analysis outputs are for education and practice records only. Nothing on this platform executes a real trade, connects to a live brokerage account, or places an order on any exchange.</li>
         <li>Readings, measurements, and scenario analyses describe recorded indicator agreement and technical patterns. They are not a probability of profit, not a promised result, and not trading instructions. Each person is solely responsible for decisions they make with their own capital outside this platform.</li>

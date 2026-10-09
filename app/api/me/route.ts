@@ -50,6 +50,17 @@ async function getSubscriptionFromDB(workspaceId: string, cid: string | undefine
   }
 }
 
+function isTrialId(value: unknown): boolean {
+  return typeof value === 'string' && value.startsWith('trial_');
+}
+
+/** No-card trials stay Pro while they run, and they are not manual grants. */
+function isTrialAccess(sessionCid: string | undefined, row: SubRow | null): boolean {
+  if (isTrialId(sessionCid)) return true;
+  if (!row) return false;
+  return row.status === 'trialing' || isTrialId(row.stripe_subscription_id) || isTrialId(row.stripe_customer_id);
+}
+
 // Extract email from cid (formats: "trial_email@example.com", "free_email@example.com", or "email@example.com")
 function extractEmailFromCid(cid: string): string | null {
   if (cid.startsWith('trial_')) {
@@ -109,7 +120,7 @@ export async function GET() {
 
   const has_billing = rows.some((row) => isStripeCustomerId(typeof row.stripe_customer_id === 'string' ? row.stripe_customer_id.trim() : ''));
   const paid = effectiveTier === 'pro' || effectiveTier === 'pro_trader';
-  const is_manual_grant = paid && !has_billing && !isFreeForAllMode();
+  const is_manual_grant = paid && !has_billing && !isFreeForAllMode() && !isTrialAccess(session.cid, dbSub);
 
   return NextResponse.json({ 
     tier: effectiveTier, 

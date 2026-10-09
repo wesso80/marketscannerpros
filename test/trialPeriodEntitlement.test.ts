@@ -192,7 +192,61 @@ describe('GET /api/me', () => {
     qMock.mockResolvedValue([{ email: 'trial@example.com', tier: 'pro', status: 'trialing', current_period_end: FUTURE }]);
     const { GET } = await import('../app/api/me/route');
     const res = await GET();
-    expect(await res.json()).toMatchObject({ tier: 'pro' });
+    expect(await res.json()).toMatchObject({ tier: 'pro', has_billing: false, is_manual_grant: false });
+  });
+
+  it('counts a real manual grant and excludes no-card trials', async () => {
+    const { GET } = await import('../app/api/me/route');
+    const session = (cid: string, workspaceId: string) => ({
+      cid,
+      tier: 'free',
+      workspaceId,
+      exp: NOW / 1000 + 3600,
+    });
+
+    sessionMock.mockResolvedValue(session('free_open@example.com', 'ws-open-trial'));
+    qMock.mockResolvedValue([{
+      email: 'open@example.com',
+      tier: 'pro',
+      status: 'trialing',
+      current_period_end: FUTURE,
+      stripe_customer_id: null,
+      stripe_subscription_id: null,
+    }]);
+    expect(await (await GET()).json()).toMatchObject({ tier: 'pro', has_billing: false, is_manual_grant: false });
+
+    sessionMock.mockResolvedValue(session('free_marked@example.com', 'ws-trial-sub'));
+    qMock.mockResolvedValue([{
+      email: 'marked@example.com',
+      tier: 'pro_trader',
+      status: 'active',
+      current_period_end: null,
+      stripe_customer_id: null,
+      stripe_subscription_id: 'trial_local',
+    }]);
+    expect(await (await GET()).json()).toMatchObject({ tier: 'pro_trader', has_billing: false, is_manual_grant: false });
+
+    sessionMock.mockResolvedValue(session('trial_person@example.com', 'ws-trial-session'));
+    qMock.mockResolvedValue([{
+      email: 'person@example.com',
+      tier: 'pro',
+      status: 'active',
+      current_period_end: null,
+      stripe_customer_id: null,
+      stripe_subscription_id: null,
+    }]);
+    expect(await (await GET()).json()).toMatchObject({ tier: 'pro', has_billing: false, is_manual_grant: false });
+
+    sessionMock.mockResolvedValue(session('free_grant@example.com', 'ws-real-grant'));
+    qMock.mockResolvedValue([{
+      email: 'grant@example.com',
+      tier: 'pro_trader',
+      status: 'active',
+      current_period_end: null,
+      stripe_customer_id: null,
+      stripe_subscription_id: null,
+    }]);
+    expect(await (await GET()).json()).toMatchObject({ tier: 'pro_trader', has_billing: false, is_manual_grant: true });
   });
 });
 
