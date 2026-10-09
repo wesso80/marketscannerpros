@@ -31,6 +31,7 @@ function request(path = '/api/admin/verify', init: RequestInit = {}) {
     ...init,
     headers: {
       host: 'localhost:3000',
+      origin: 'http://localhost',
       ...(init.headers || {}),
     },
   });

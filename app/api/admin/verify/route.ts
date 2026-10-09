@@ -31,6 +31,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const { validAdminWriteOrigin } = await import("@/lib/admin/adminWriteOrigin");
+  if (!validAdminWriteOrigin(req, "cookie")) return NextResponse.json({ error: "Origin rejected" }, { status: 403, headers: { "Cache-Control": "private, no-store" } });
   const res = NextResponse.json({ ok: true });
   const options = getAdminSessionCookieOptions(req);
   res.cookies.set(ADMIN_SESSION_COOKIE, '', { ...options, maxAge: 0 });
