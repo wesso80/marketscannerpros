@@ -1,6 +1,7 @@
 import { createHmac } from 'crypto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import { analyticsReadScope } from '@/lib/admin/discoveryOnly';
 
 vi.mock('@/lib/entitlements', () => ({ isFreeForAllMode: () => false }));
 
@@ -47,6 +48,33 @@ describe('admin pause is answered only after the admin session check', () => {
     const inn = await middleware(new NextRequest('http://localhost/api/admin/live-scanner', { headers: { cookie: adminCookie() } }));
     expect(inn.status).toBe(503);
     expect((await inn.json()).reason).toBe('admin_discovery_only');
+  });
+
+  it.each(analyticsReadScope.getApis)('keeps admin authentication and write pause on %s', async path => {
+    const { middleware } = await import('../middleware');
+    const signedOut = await middleware(new NextRequest(`http://localhost${path}`));
+    expect(signedOut.status).toBe(401);
+    const regularCookie = `ms_auth=${sign({ cid: 'customer@example.com', tier: 'pro_trader', workspaceId: 'customer', exp: Math.floor(Date.now()/1000)+3600 })}`;
+    const regular = await middleware(new NextRequest(`http://localhost${path}`, { headers: { cookie: regularCookie } }));
+    expect(regular.status).toBe(401);
+    const allowed = await middleware(new NextRequest(`http://localhost${path}`, { headers: { cookie: adminCookie() } }));
+    expect(allowed.status).toBe(200);
+    expect(allowed.headers.get('x-middleware-next')).toBe('1');
+    for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
+      const write = await middleware(new NextRequest(`http://localhost${path}`, { method, headers: { cookie: adminCookie() } }));
+      expect(write.status).toBe(503);
+      expect((await write.json()).reason).toBe('admin_discovery_only');
+    }
+  });
+
+  it.each(analyticsReadScope.pages)('opens %s for admin sessions only', async path => {
+    const { middleware } = await import('../middleware');
+    const signedOut = await middleware(new NextRequest(`http://localhost${path}`));
+    expect(signedOut.status).toBe(307);
+    const allowed = await middleware(new NextRequest(`http://localhost${path}`, { headers: { cookie: adminCookie() } }));
+    expect(allowed.status).toBe(200);
+    expect(allowed.headers.get('x-middleware-rewrite')).toBeNull();
+    expect(allowed.headers.get('x-robots-tag')).toContain('noindex');
   });
 
   it('cron jobs keep the early skipped answer (they authenticate with secrets, not sessions)', async () => {

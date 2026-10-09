@@ -164,7 +164,7 @@ describe('wiring (source checks)', () => {
   });
 
   it('GET serves the saved brief (load, not build+save on every request); POST is the rebuild', () => {
-    expect(route).toContain('loadLatestMorningBrief(market, timeframe, Date.now(), admin.workspaceId)');
+    expect(route).toContain('loadLatestMorningBrief(market, timeframe, Date.now(), admin.workspaceId, { readOnly: adminDiscoveryOnly() })');
     expect(route).toContain('requestMorningBriefRebuild(');
     expect(route).not.toContain('(searchParams.get("market") || "CRYPTO")');
     expect(route).toContain('resolveAdminMarket(');
@@ -229,4 +229,24 @@ it('builds risk and journal statistics from the explicit workspace rather than t
   expect(journalQueries.length).toBeGreaterThan(2);
   expect(journalQueries.every(([, params]) => params?.[0] === 'workspace-a')).toBe(true);
   expect(m.q.mock.calls.some(([sql]) => sql.includes('ORDER BY last_activity'))).toBe(false);
+});
+
+
+it('read-only saved brief loading never creates tables or indexes, including on database failure', async () => {
+  await loadLatestMorningBrief('EQUITIES', '15m', Date.now(), 'workspace-a', { readOnly: true });
+  expect(m.q).toHaveBeenCalledTimes(1);
+  expect(m.q.mock.calls[0][0].trim()).toMatch(/^SELECT /);
+  m.q.mockReset().mockRejectedValue(new Error('missing table'));
+  await expect(loadLatestMorningBrief('EQUITIES', '15m', Date.now(), 'workspace-a', { readOnly: true })).rejects.toThrow('missing table');
+  expect(m.q).toHaveBeenCalledTimes(1);
+  expect(m.q.mock.calls[0][0].trim()).toMatch(/^SELECT /);
+});
+
+it('read-only loading treats a never-created brief table (42P01) as no saved brief, without creating it', async () => {
+  m.q.mockReset().mockRejectedValue(Object.assign(new Error('relation "admin_morning_briefs" does not exist'), { code: '42P01' }));
+  await expect(loadLatestMorningBrief('EQUITIES', '15m', Date.now(), 'workspace-a', { readOnly: true })).resolves.toBeNull();
+  expect(m.q).toHaveBeenCalledTimes(1);
+  expect(m.q.mock.calls[0][0].trim()).toMatch(/^SELECT /);
+  m.q.mockReset().mockRejectedValue(Object.assign(new Error('permission denied'), { code: '42501' }));
+  await expect(loadLatestMorningBrief('EQUITIES', '15m', Date.now(), 'workspace-a', { readOnly: true })).rejects.toThrow('permission denied');
 });

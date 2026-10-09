@@ -20,9 +20,11 @@ vi.mock('@/lib/outcomes/aiOutcomePrices', () => ({
 
 import {
   labelPositionHorizons,
+  loadCryptoDailyOhlc,
   loadEquityDailyOhlc,
   positionCandidateSql,
   positionHorizonColumns,
+  positionProvenanceColumn,
   type DailyBarLoaders,
 } from '@/lib/outcomes/positionHorizonLabeller';
 import { loadPositionHorizonStats, summarizeHorizon, horizonStatsSql, MIN_HORIZON_SAMPLE } from '@/lib/admin/positionHorizonStats';
@@ -33,6 +35,7 @@ import { positionBudgetMs } from '@/lib/outcomes/labelBudget';
 const DAY = 86_400_000;
 const NOW = Date.parse('2026-09-27T04:00:00Z');
 const ALL_POSITION_COLUMNS = [...positionHorizonColumns('6w'), ...positionHorizonColumns('12w')];
+const PROVENANCE_COLUMNS = [positionProvenanceColumn('6w'), positionProvenanceColumn('12w')];
 
 /** UTC daily bars from `startMs`, flat at `p` except the bar at index `spikeAt`. */
 function series(startMs: number, n: number, p = 100, spike?: { at: number; high?: number; low?: number }): DailyOhlcBar[] {
@@ -56,10 +59,13 @@ const calls = (re: RegExp) => m.q.mock.calls.filter(([sql]) => re.test(String(sq
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(NOW);
-  state = { columns: ALL_POSITION_COLUMNS, rows: { '6w': [], '12w': [] }, labeled: new Set() };
+  state = { columns: [...ALL_POSITION_COLUMNS, ...PROVENANCE_COLUMNS], rows: { '6w': [], '12w': [] }, labeled: new Set() };
   m.q.mockReset();
   m.q.mockImplementation(async (sql: string, params: unknown[] = []) => {
-    if (/information_schema\.columns/.test(sql)) return state.columns.map((column_name) => ({ column_name }));
+    if (/information_schema\.columns/.test(sql)) {
+      const wanted = Array.isArray(params[0]) ? new Set(params[0] as string[]) : null;
+      return state.columns.filter((c) => !wanted || wanted.has(c)).map((column_name) => ({ column_name }));
+    }
     const sel = /^\s*SELECT[\s\S]*WHERE outcome_(6w|12w) IS NULL/.exec(sql);
     if (sel) return state.rows[sel[1]];
     const upd = /UPDATE ai_signal_log\s+SET outcome_(6w|12w) =/.exec(sql);
@@ -131,7 +137,7 @@ describe('6w/12w labeller', () => {
 
     const noData = calls(/SET outcome_6w = 'no_data'/);
     expect(noData).toHaveLength(1);
-    expect(noData[0][1]).toEqual([2, 'daily history starts after the signal']);
+    expect((noData[0][1] as unknown[]).slice(0, 2)).toEqual([2, 'daily history starts after the signal']);
     expect(String(noData[0][0])).toContain('AND outcome_6w IS NULL');
     // Pending ETH: nothing written.
     expect(m.q.mock.calls.some(([, params]) => Array.isArray(params) && params[0] === 3)).toBe(false);
@@ -147,6 +153,59 @@ describe('6w/12w labeller', () => {
     const bars = series(Date.parse('2026-09-27T00:00:00Z') - 120 * DAY, 120);
     const r = await labelPositionHorizons({ nowMs: NOW, budgetMs: 10_000, loaders: { equity: async () => bars, crypto: async () => null } });
     expect(r.horizons['6w']).toMatchObject({ labeled: 0, alreadyLabeled: 1 });
+  });
+
+  it('writes provenance atomically with every 6w/12w result (measured and no_data)', async () => {
+    const start = (daysAgo: number) => Date.parse('2026-09-27T00:00:00Z') - daysAgo * DAY;
+    const aapl = series(start(120), 120, 100, { at: 80, high: 111 });
+    const btc = series(start(45), 45, 100);
+    state.rows['6w'] = [cand(1, 50), cand(2, 50, { symbol: 'BTC', asset_type: 'crypto', trade_bias: 'SHORT', stop_loss: 105, target_1: 90 })];
+    await labelPositionHorizons({ nowMs: NOW, budgetMs: 10_000, loaders: { equity: async () => aapl, crypto: async () => btc } });
+
+    const [measuredSql, measuredParams] = calls(/SET outcome_6w = \$2/)[0] as [string, unknown[]];
+    expect(measuredSql).toMatch(/outcome_6w_provenance = \$14::jsonb \|\| jsonb_build_object\('processedAt', NOW\(\)\)/);
+    expect(measuredSql).toContain('WHERE id = $1 AND outcome_6w IS NULL');
+    const prov = JSON.parse(String(measuredParams[13]));
+    expect(prov).toMatchObject({
+      writer: 'label-ai-outcomes', method: 'daily-bar-horizon-v1', horizon: '6w', horizonDays: 42, direction: 'LONG',
+      entryPrice: 100, stopLoss: 95, target: 110, barSource: 'equity-daily', barLoadComplete: true, outcome: measuredParams[1],
+      exitPrice: measuredParams[2], exitAt: measuredParams[3], pctMove: measuredParams[4], firstHit: 'target', rMultiple: 2, bars: 42,
+    });
+    expect(prov.signalAt).toBe(cand(1, 50).signal_at);
+
+    const [noDataSql, noDataParams] = calls(/SET outcome_6w = 'no_data'/)[0] as [string, unknown[]];
+    expect(noDataSql).toMatch(/outcome_6w_provenance = \$3::jsonb/);
+    expect(JSON.parse(String(noDataParams[2]))).toMatchObject({
+      writer: 'label-ai-outcomes', horizon: '6w', direction: 'SHORT', barSource: 'alpha-vantage-digital-currency-daily', barLoadComplete: true,
+      outcome: 'no_data', reason: 'daily history starts after the signal', barCount: 45,
+    });
+  });
+
+  it('skips (no candidate query, no update) until migration 134 adds the provenance columns', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    state.columns = ALL_POSITION_COLUMNS;
+    state.rows['6w'] = [cand(1, 50)];
+    const loaders: DailyBarLoaders = { equity: vi.fn(), crypto: vi.fn() };
+    const r = await labelPositionHorizons({ nowMs: NOW, budgetMs: 10_000, loaders });
+    expect(r.enabled).toBe(false);
+    expect(r.note).toMatch(/migrations\/134_ai_outcome_long_horizon_provenance\.sql/);
+    expect(calls(/outcome_6w IS NULL|outcome_12w IS NULL|UPDATE/)).toHaveLength(0);
+    expect(loaders.equity).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('labels only the horizons whose provenance column exists', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    state.columns = [...ALL_POSITION_COLUMNS, positionProvenanceColumn('6w')];
+    state.rows['6w'] = [cand(1, 50)];
+    state.rows['12w'] = [cand(4, 90)];
+    const bars = series(Date.parse('2026-09-27T00:00:00Z') - 120 * DAY, 120);
+    const r = await labelPositionHorizons({ nowMs: NOW, budgetMs: 10_000, loaders: { equity: async () => bars, crypto: async () => null } });
+    expect(r.enabled).toBe(true);
+    expect(Object.keys(r.horizons)).toEqual(['6w']);
+    expect(r.note).toMatch(/12w provenance column missing/);
+    expect(calls(/outcome_12w/)).toHaveLength(0);
+    warn.mockRestore();
   });
 
   it('past the budget, cached symbols also wait for the next run', async () => {
@@ -165,11 +224,55 @@ describe('6w/12w labeller', () => {
       { date: '2026-09-24', ts: 0, open: 9, high: 10, low: 8, close: 9.5, volume: 1 },
       { date: '2026-09-25', ts: 0, open: 1, high: 1, low: 1, close: 1, volume: 1 },
     ], fetchedAt: '' });
-    const bars = await loadEquityDailyOhlc('AAPL');
+    const load = await loadEquityDailyOhlc('AAPL');
     expect(m.getBars).toHaveBeenCalledWith('AAPL', 'daily');
     expect(m.pgReadBars).toHaveBeenCalledWith('AAPL', 'daily', expect.any(Number));
-    expect(bars?.map((b) => [b.day, b.close])).toEqual([['2026-09-24', 9.5], ['2026-09-25', 10.5]]);
+    expect(load.bars.map((b) => [b.day, b.close])).toEqual([['2026-09-24', 9.5], ['2026-09-25', 10.5]]);
+    expect(load).toMatchObject({ complete: true, source: 'daily-cache+ohlcv_bars' });
     expect(m.avFetch).not.toHaveBeenCalled();
+  });
+
+  it('equity bars: a failed cache or ohlcv_bars read marks the load incomplete (and names what was used)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    m.getBars.mockResolvedValue({ data: [{ date: '2026-09-25', ts: 0, open: 10, high: 11, low: 9, close: 10.5, volume: 1 }] });
+    m.pgReadBars.mockRejectedValue(new Error('connection reset'));
+    expect(await loadEquityDailyOhlc('AAPL')).toMatchObject({ complete: false, source: 'daily-cache' });
+    m.getBars.mockResolvedValue({ data: null, error: 'AV quota exceeded' });
+    m.pgReadBars.mockResolvedValue(null);
+    expect(await loadEquityDailyOhlc('AAPL')).toMatchObject({ bars: [], complete: false, source: 'none' });
+    m.getBars.mockResolvedValue({ data: null });
+    expect(await loadEquityDailyOhlc('AAPL')).toMatchObject({ bars: [], complete: true });
+    warn.mockRestore();
+  });
+
+  it('crypto bars: quota / timeout / missing key are incomplete; a "no data" answer is a complete empty load', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    vi.stubEnv('ALPHA_VANTAGE_API_KEY', '');
+    expect(await loadCryptoDailyOhlc('BTC')).toMatchObject({ bars: [], complete: false });
+    vi.stubEnv('ALPHA_VANTAGE_API_KEY', 'k');
+    m.avFetch.mockRejectedValueOnce(new Error('AV quota exceeded: Note'));
+    expect(await loadCryptoDailyOhlc('BTC')).toMatchObject({ bars: [], complete: false });
+    m.avFetch.mockResolvedValueOnce(null);
+    expect(await loadCryptoDailyOhlc('NOPE')).toMatchObject({ bars: [], complete: true, source: 'alpha-vantage-digital-currency-daily' });
+    vi.unstubAllEnvs();
+    warn.mockRestore();
+  });
+
+  it('never freezes a failed load as no_data: the row waits; a complete empty load is no_data', async () => {
+    // 80 days old: past the 6w horizon + 30-day give-up, so an empty series would be final.
+    state.rows['6w'] = [cand(1, 80, { symbol: 'BTC', asset_type: 'crypto' }), cand(2, 80, { symbol: 'ETH', asset_type: 'crypto' }), cand(3, 80)];
+    const r = await labelPositionHorizons({
+      nowMs: NOW, budgetMs: 10_000,
+      loaders: {
+        crypto: async (s: string) => (s === 'BTC' ? { bars: [], complete: false, source: 'x' } : { bars: [], complete: true, source: 'x' }),
+        equity: async () => { throw new Error('boom'); },
+      },
+    });
+    expect(r.horizons['6w']).toMatchObject({ deferredLoadFailure: 2, noData: 1, labeled: 0 });
+    const writes = calls(/UPDATE ai_signal_log/);
+    expect(writes).toHaveLength(1);
+    expect((writes[0][1] as unknown[])[0]).toBe(2);
+    expect(JSON.parse(String((writes[0][1] as unknown[])[2]))).toMatchObject({ outcome: 'no_data', reason: 'no daily bars', barLoadComplete: true, barCount: 0 });
   });
 });
 

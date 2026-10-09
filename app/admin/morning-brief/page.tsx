@@ -1,5 +1,7 @@
 "use client";
 
+import { useAdmin } from "@/app/admin/admin-client-layout";
+import { staleBriefWarning } from "@/lib/admin/morningBriefFreshness";
 import { accountDisplaySize } from "@/lib/admin/accountPresentation";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -420,6 +422,7 @@ function briefFetchError(err: unknown, what: string): string {
 }
 
 export default function MorningBriefPage() {
+  const { discoveryPaused } = useAdmin();
   const [brief, setBrief] = useState<MorningBrief | null>(null);
   const [loading, setLoading] = useState(true);
   const [rebuilding, setRebuilding] = useState(false);
@@ -455,6 +458,7 @@ export default function MorningBriefPage() {
   };
 
   const rebuild = async () => {
+    if (discoveryPaused) return;
     setRebuilding(true);
     setError(null);
     try {
@@ -479,6 +483,7 @@ export default function MorningBriefPage() {
   };
 
   const sendNow = async (preview = false) => {
+    if (discoveryPaused) return;
     setSending(true);
     setEmailStatus(null);
     try {
@@ -499,6 +504,7 @@ export default function MorningBriefPage() {
   };
 
   const markFeedback = async (play: ScannerHit, action: FeedbackAction, note?: string) => {
+    if (discoveryPaused) return;
     if (!brief) return;
     const key = `${play.symbol}:${action}`;
     setSavingFeedback(key);
@@ -542,6 +548,7 @@ export default function MorningBriefPage() {
   };
 
   const runMorningAction = async (action: string, payload: Record<string, unknown> = {}) => {
+    if (discoveryPaused) return;
     setActionBusy(action);
     setActionStatus(null);
     try {
@@ -588,12 +595,16 @@ export default function MorningBriefPage() {
     return new Date(brief.generatedAt).toLocaleString();
   }, [brief?.generatedAt]);
 
+  const staleWarning = staleBriefWarning(savedMeta, discoveryPaused);
+
   if (loading && !brief) {
     return <main className="min-h-screen bg-[#0F172A] p-6 text-white">Loading saved morning brief...</main>;
   }
 
   return (
     <main className="min-h-screen bg-[#0F172A] p-6 text-white">
+      {discoveryPaused && <p role="status" className="mb-4 rounded-md border border-sky-400/20 bg-sky-400/5 p-3 text-sm text-sky-100">Saved brief only. Rebuilds, emails, plans and feedback are paused; reloading reads the saved snapshot.</p>}
+      {staleWarning && <p role="alert" className="mb-4 rounded-md border border-amber-400/40 bg-amber-400/10 p-3 text-sm font-semibold text-amber-100">{staleWarning}</p>}
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -609,25 +620,25 @@ export default function MorningBriefPage() {
           <button onClick={refresh} disabled={loading || rebuilding} className="rounded-md border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-emerald-400/40 disabled:opacity-60">
             {loading ? "Loading..." : "Reload Saved"}
           </button>
-          <button onClick={rebuild} disabled={loading || rebuilding} title="Build a new brief from the shared saved scan (admin copy; the cron's emailed brief is kept)" className="rounded-md border border-emerald-400/30 px-4 py-2 text-sm font-black text-emerald-200 disabled:opacity-60">
+          <button onClick={rebuild} disabled={discoveryPaused || loading || rebuilding} title="Build a new brief from the shared saved scan (admin copy; the cron's emailed brief is kept)" className="rounded-md border border-emerald-400/30 px-4 py-2 text-sm font-black text-emerald-200 disabled:opacity-60">
             {rebuilding ? "Rebuilding..." : "Rebuild"}
           </button>
-          <button onClick={() => runMorningAction("run_prewake")} disabled={Boolean(actionBusy)} className="rounded-md border border-purple-400/30 px-4 py-2 text-sm font-black text-purple-200 disabled:opacity-60">
+          <button onClick={() => runMorningAction("run_prewake")} disabled={discoveryPaused || Boolean(actionBusy)} className="rounded-md border border-purple-400/30 px-4 py-2 text-sm font-black text-purple-200 disabled:opacity-60">
             {actionBusy === "run_prewake" ? "Scanning..." : "Run Prewake"}
           </button>
-          <button onClick={() => brief && runMorningAction("open_rescore", { brief })} disabled={!brief || Boolean(actionBusy)} className="rounded-md border border-amber-400/30 px-4 py-2 text-sm font-black text-amber-200 disabled:opacity-60">
+          <button onClick={() => brief && runMorningAction("open_rescore", { brief })} disabled={discoveryPaused || !brief || Boolean(actionBusy)} className="rounded-md border border-amber-400/30 px-4 py-2 text-sm font-black text-amber-200 disabled:opacity-60">
             {actionBusy === "open_rescore" ? "Re-scoring..." : "At Open Re-score"}
           </button>
-          <button onClick={() => runMorningAction("journal_tag_sync")} disabled={Boolean(actionBusy)} className="rounded-md border border-white/10 px-4 py-2 text-sm font-black text-slate-200 disabled:opacity-60">
+          <button onClick={() => runMorningAction("journal_tag_sync")} disabled={discoveryPaused || Boolean(actionBusy)} className="rounded-md border border-white/10 px-4 py-2 text-sm font-black text-slate-200 disabled:opacity-60">
             {actionBusy === "journal_tag_sync" ? "Reconciling..." : "Reconcile Tags"}
           </button>
-          <button onClick={() => runMorningAction("review_email")} disabled={Boolean(actionBusy)} className="rounded-md border border-red-400/30 px-4 py-2 text-sm font-black text-red-200 disabled:opacity-60">
+          <button onClick={() => runMorningAction("review_email")} disabled={discoveryPaused || Boolean(actionBusy)} className="rounded-md border border-red-400/30 px-4 py-2 text-sm font-black text-red-200 disabled:opacity-60">
             {actionBusy === "review_email" ? "Sending..." : "Review Email"}
           </button>
-          <button onClick={() => sendNow(true)} disabled={sending} className="rounded-md border border-sky-400/30 px-4 py-2 text-sm font-black text-sky-200 disabled:opacity-60">
+          <button onClick={() => sendNow(true)} disabled={discoveryPaused || sending} className="rounded-md border border-sky-400/30 px-4 py-2 text-sm font-black text-sky-200 disabled:opacity-60">
             {sending ? "Sending..." : "Preview Email"}
           </button>
-          <button onClick={() => sendNow(false)} disabled={sending} className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-black text-slate-950 disabled:opacity-60">
+          <button onClick={() => sendNow(false)} disabled={discoveryPaused || sending} className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-black text-slate-950 disabled:opacity-60">
             {sending ? "Sending..." : "Email Now"}
           </button>
         </div>
@@ -1240,6 +1251,7 @@ function PlayCard({
   onFeedback: (play: ScannerHit, action: FeedbackAction) => void;
   onPlan: (play: ScannerHit) => void;
 }) {
+  const { discoveryPaused } = useAdmin();
   return (
     <div className="rounded-lg border border-white/10 bg-slate-950/40 p-4 transition hover:border-emerald-400/40">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1264,14 +1276,14 @@ function PlayCard({
         <Link href={`/admin/terminal/${encodeURIComponent(play.symbol)}`} className="rounded-md border border-sky-400/30 px-3 py-1.5 text-xs font-bold text-sky-200 hover:bg-sky-400/10">
           Open Terminal
         </Link>
-        <button onClick={() => onPlan(play)} className="rounded-md border border-emerald-400/30 px-3 py-1.5 text-xs font-bold text-emerald-200 hover:bg-emerald-400/10">
+        <button disabled={discoveryPaused} onClick={() => onPlan(play)} className="rounded-md border border-emerald-400/30 px-3 py-1.5 text-xs font-bold text-emerald-200 hover:bg-emerald-400/10">
           Generate Plan
         </button>
         {feedbackActions.map((item) => (
           <button
             key={item.action}
             onClick={() => onFeedback(play, item.action)}
-            disabled={savingFeedback === `${play.symbol}:${item.action}`}
+            disabled={discoveryPaused || savingFeedback === `${play.symbol}:${item.action}`}
             className={`rounded-md border px-3 py-1.5 text-xs font-bold ${feedback === item.action ? "border-emerald-400 bg-emerald-400/15 text-emerald-200" : "border-white/10 text-slate-300 hover:border-emerald-400/30"}`}
           >
             {savingFeedback === `${play.symbol}:${item.action}` ? "Saving" : item.label}
@@ -1301,6 +1313,7 @@ function PlayCard({
 }
 
 function CompactPlay({ play, feedback, onFeedback }: { play: ScannerHit; feedback?: string; onFeedback: (play: ScannerHit, action: FeedbackAction) => void }) {
+  const { discoveryPaused } = useAdmin();
   return (
     <div className="rounded-md border border-white/10 bg-slate-950/40 p-3 hover:border-sky-400/30">
       <div className="flex items-center justify-between gap-3">
@@ -1314,6 +1327,7 @@ function CompactPlay({ play, feedback, onFeedback }: { play: ScannerHit; feedbac
         {(["ignored", "missed", "worked", "failed"] as FeedbackAction[]).map((action) => (
           <button
             key={action}
+            disabled={discoveryPaused}
             onClick={() => onFeedback(play, action)}
             className={`rounded border px-2 py-1 text-[11px] font-bold capitalize ${feedback === action ? "border-emerald-400 bg-emerald-400/15 text-emerald-200" : "border-white/10 text-slate-400 hover:border-emerald-400/30"}`}
           >
@@ -1340,6 +1354,7 @@ function ReviewPlay({
   onNote: (value: string) => void;
   onFeedback: (action: FeedbackAction) => void;
 }) {
+  const { discoveryPaused } = useAdmin();
   return (
     <div className="rounded-md border border-white/10 bg-slate-950/40 p-3">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -1350,6 +1365,7 @@ function ReviewPlay({
         {feedback ? <StatusPill label={feedback.replace("_", " ")} tone={feedback === "worked" || feedback === "taken" ? "green" : feedback === "rule_broken" || feedback === "failed" ? "red" : "yellow"} /> : null}
       </div>
       <textarea
+        disabled={discoveryPaused}
         value={note}
         onChange={(event) => onNote(event.target.value)}
         placeholder="Review note: entry late, skipped because BTC weak, worked but liquidity poor, broke rule, etc."
@@ -1360,7 +1376,7 @@ function ReviewPlay({
           <button
             key={item.action}
             onClick={() => onFeedback(item.action)}
-            disabled={savingFeedback === `${play.symbol}:${item.action}`}
+            disabled={discoveryPaused || savingFeedback === `${play.symbol}:${item.action}`}
             className={`rounded-md border px-3 py-1.5 text-xs font-bold ${feedback === item.action ? "border-emerald-400 bg-emerald-400/15 text-emerald-200" : "border-white/10 text-slate-300 hover:border-emerald-400/30"}`}
           >
             {savingFeedback === `${play.symbol}:${item.action}` ? "Saving" : item.label}
