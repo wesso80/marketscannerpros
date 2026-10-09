@@ -31,7 +31,7 @@ export default function PrivacyPage() {
         <li><strong>Trial Usage Tracking:</strong> Email address, plan type, workspace ID, and Stripe customer ID stored to prevent trial abuse (one trial per email per plan).</li>
         <li><strong>Usage &amp; Logs:</strong> Diagnostics, error tracking (via Sentry), and server logs for reliability and abuse prevention.</li>
         <li><strong>AI Interactions:</strong> Questions asked to MSP AI (AI chatbot) are tracked by workspace ID for tier limit enforcement. We store question count, tier level, and timestamps. Question content may be logged for debugging but is not used for training.</li>
-        <li><strong>Edge Profile &amp; Personalisation Data:</strong> If you use the trade journal, we analyse your closed trade history to generate Edge Profile insights (win rates, patterns, strategy performance). This data is derived from your own journal entries and is processed only within your workspace.</li>
+        <li><strong>Your own trades &amp; Personalisation Data:</strong> If you use the trade journal, we analyse your closed trade history to generate Your own trades insights (winning closess, patterns, strategy performance). This data is derived from your own journal entries and is processed only within your workspace.</li>
         <li><strong>Adaptive Personality Data:</strong> Your interaction patterns, scan preferences, and tool usage may be used to personalise the dashboard experience. This data remains within your workspace and is not shared with third parties.</li>
         <li><strong>Portfolio &amp; Journal Data:</strong> Paper trade positions, closed trade history, and journal entries are stored in our database for cross-device sync. This is simulation data for educational purposes only &mdash; we do not connect to or access any live brokerage accounts.</li>
         <li><strong>Cookies/Storage:</strong> Session cookies for authentication, workspace ID tracking, and user preferences.</li>
@@ -45,7 +45,7 @@ export default function PrivacyPage() {
         <li>Process subscriptions and let you manage billing in Stripe&rsquo;s Customer Portal or Apple&rsquo;s App Store.</li>
         <li>Send transactional emails (receipts, subscription confirmations, trial reminders).</li>
         <li>Detect and prevent fraud, abuse, and unauthorized access.</li>
-        <li>Generate Edge Profile insights from your journal data to surface historical trading patterns (educational analysis only).</li>
+        <li>Generate Your own trades insights from your journal data to surface historical trading patterns (educational analysis only).</li>
         <li>Process AI chatbot queries through OpenAI to provide educational market insights (OpenAI does not train on your data).</li>
         <li>Sync paper trade portfolio and journal data across your devices.</li>
         <li>Monitor performance, track errors, and improve service reliability.</li>

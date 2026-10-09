@@ -17,7 +17,7 @@ export const FREE_COPY = {
   disclosure: 'Research and education only. Not financial advice.', readDisclosure: 'Read the disclosure',
   exampleSymbol: 'AAPL · example research', exampleEvidence: 'Price history · volume · market context',
   exampleBasis: 'Illustrative layout · no live market values', lockedDescription: 'Explore the complete research view and its supporting evidence.',
-  optionsDescription: 'Options chain, flow and confluence for each researched symbol.', journalDescription: 'Unlimited journal entries with AI review.',
+  optionsDescription: 'Options chain, flow and agreement for each researched symbol.', journalDescription: 'Unlimited journal entries with AI review.',
   goldenEgg: 'Regime, indicators, volatility and scenario context for one symbol.',
   today: 'Today', overview: 'Open full Overview', radar: 'Daily Radar', session: 'US market session', reportReady: 'Report ready',
   unlockReport: 'Unlock today’s full report', fromReport: (date: string) => `From ${date} report`,

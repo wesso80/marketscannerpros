@@ -3,10 +3,10 @@
 import { useEndpoint } from '@/components/intelligence/useEndpoint';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
-import { EvidenceBars, EvidenceMetrics as CommandStrip, EvidenceVerdict, EvidenceWarning, evidenceLabel } from '@/components/intelligence/CompactEvidence';
+import { EvidenceMetrics as CommandStrip, EvidenceVerdict, EvidenceWarning, evidenceLabel } from '@/components/intelligence/CompactEvidence';
 
 import IntelligenceTable, { type IntelColumn } from '@/components/intelligence/IntelligenceTable';
-import { StateCell, ScoreCell, MetricCell, SectionHeader } from '@/components/intelligence/primitives';
+import { StateCell, MetricCell, SectionHeader } from '@/components/intelligence/primitives';
 import type { FragilityResult } from '@/lib/intelligence/types';
 
 const INTERNAL_COLUMNS: IntelColumn[] = [
@@ -20,7 +20,6 @@ const INTERNAL_COLUMNS: IntelColumn[] = [
 
 const RADAR_COLUMNS: IntelColumn[] = [
   { key: 'sector', label: 'Rotation', align: 'left' },
-  { key: 'score', label: 'Score', align: 'right' },
   { key: 'state', label: 'State' },
   { key: 'rep', label: 'Representative', align: 'left' },
   { key: 'm20', label: '20D', align: 'right' },
@@ -58,7 +57,12 @@ export default function FragilityPage() {
             { label: 'Transition', value: data.transition },
             { label: 'Divergence', value: data.divergence },
           ]} />
-          <EvidenceBars title="Market health components · score" rows={data.components} maximum={100} />
+          <figure data-evidence-chart className="my-3 min-w-0 rounded-lg border border-[var(--msp-border)] p-3">
+            <figcaption className="mb-2 text-sm font-semibold">Market health components</figcaption>
+            <div className="space-y-1 text-xs text-slate-300">
+              {data.components.map((row) => <p key={row.label}>{evidenceLabel(row.label)} · {evidenceLabel(row.semantic)}</p>)}
+            </div>
+          </figure>
           <DataQualityRow meta={data.meta} />
           <CollapsibleSection title="Market evidence" summary={`${data.internals.length} internal measures · ${data.radar.length} sectors`}>
           <SectionHeader title="Warnings" />
@@ -103,7 +107,6 @@ export default function FragilityPage() {
               id: r.sector,
               cells: [
                 <MetricCell key="s" align="left" strong>{evidenceLabel(r.sector)}</MetricCell>,
-                <ScoreCell key="sc" value={r.score.toFixed(2)} semantic={r.semantic} />,
                 <StateCell key="st" label={evidenceLabel(r.state)} semantic={r.semantic} />,
                 <MetricCell key="rp" align="left" muted>{evidenceLabel(r.representative)}</MetricCell>,
                 <MetricCell key="m" align="right">{evidenceLabel(r.m20)}</MetricCell>,
@@ -112,7 +115,7 @@ export default function FragilityPage() {
             }))}
           />
           </CollapsibleSection>
-          <SourceLine source={evidenceLabel(data.meta?.providersUsed?.join(', ') || 'Source not collected')} asOf={data.meta?.dataAsOf || data.timestamp} basis="Underlying daily observations · composite component scores" />
+          <SourceLine source={evidenceLabel(data.meta?.providersUsed?.join(', ') || 'Source not collected')} asOf={data.meta?.dataAsOf || data.timestamp} basis="Underlying daily observations" />
         </>
       )}
     </div>

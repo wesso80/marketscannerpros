@@ -68,7 +68,7 @@ const LIVE_SIGNALS = [
 ];
 
 const STATS = [
-  { value: '—', label: 'Signals Today', icon: '📡' },
+  { value: '—', label: 'Readings Today', icon: '📡' },
   { value: '—', label: 'AI Accuracy', icon: '🎯' },
   { value: '—', label: 'Scans Run', icon: '🔍' },
 ];
@@ -256,14 +256,14 @@ export default function LiveMarketPulse() {
                 marginBottom: 6
               }}>
                 <div style={{ color: '#9ca3af', fontSize: 11, textTransform: 'uppercase', marginBottom: 2 }}>
-                  Confidence
+                  What to check
                 </div>
                 <div style={{
-                  fontSize: 28,
-                  fontWeight: 800,
-                  color: 'var(--msp-bull)'
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: 'var(--msp-text)'
                 }}>
-                  {signal.confidence}%
+                  Price and session change
                 </div>
               </div>
               <span style={{ color: '#6b7280', fontSize: 12 }}>{signal.timeAgo}</span>
@@ -395,7 +395,7 @@ export default function LiveMarketPulse() {
             }}
           >
             <span>🚀</span>
-            <span>Start Finding Signals Now — It's Free</span>
+            <span>Start Finding Readings Now — It's Free</span>
           </Link>
           <p style={{ color: '#6b7280', fontSize: 13, marginTop: 12 }}>
             No credit card · Instant access · Cancel anytime

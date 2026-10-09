@@ -166,10 +166,6 @@ export default function CapitalFlowCard({
           <span style={{ color: biasColor, fontWeight: 800 }}>{flow.bias.toUpperCase()}</span>
         </div>
         <div style={{ color: 'var(--msp-text)', fontSize: '0.74rem' }}>
-          <span style={{ color: 'var(--msp-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Conviction:</span>{' '}
-          <span style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{flow.conviction}</span>
-        </div>
-        <div style={{ color: 'var(--msp-text)', fontSize: '0.74rem' }}>
           <span style={{ color: 'var(--msp-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Pin Strike:</span>{' '}
           <span style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{flow.pin_strike ?? 'n/a'}</span>
         </div>
@@ -186,19 +182,12 @@ export default function CapitalFlowCard({
           gap: '0.35rem',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-            <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Confluence Card</div>
+            <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Agreement Card</div>
             <div style={{ color: 'var(--msp-text)', fontSize: '0.72rem', fontWeight: 800 }}>
-              Confluence Score {Math.round(flow.brain_decision.score)}/100 • {flow.brain_decision.permission === 'ALLOW' ? 'ALIGNED' : flow.brain_decision.permission === 'ALLOW_SMALL' ? 'REDUCED' : 'NOT ALIGNED'}
+              What to check: mode, key level, and scenario
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.72rem', color: 'var(--msp-text)', fontSize: '0.71rem' }}>
-            <span><strong>Regime Fit:</strong> {Math.round(flow.brain_decision.regimeFit)}/100</span>
-            <span><strong>Flow Align:</strong> {Math.round(flow.brain_decision.flowAlignment)}/100</span>
-            <span><strong>Setup Quality:</strong> {Math.round(flow.brain_decision.setupQuality)}/100</span>
-            <span><strong>Risk Metric:</strong> {Math.round(flow.brain_decision.riskPermission)}/100</span>
-            <span><strong>Data Health:</strong> {Math.round(flow.brain_decision.dataHealth)}/100</span>
-          </div>
 
           <div style={{ color: 'var(--msp-text)', fontSize: '0.7rem' }}>
             <strong>Mode:</strong> {flow.brain_decision.mode.replace('_', ' ')} • <strong>State:</strong> {flow.brain_decision.stateSummary}
@@ -212,13 +201,13 @@ export default function CapitalFlowCard({
 
           <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: '0.5rem' }}>
             <div style={{ color: '#A7F3D0', fontSize: '0.7rem' }}>
-              <strong>✔ Favorable</strong>
+              <strong>Supports the read</strong>
               {brainAllowed.slice(0, 2).map((entry, index) => (
                 <div key={`brain-allow-${index}`} style={{ color: 'var(--msp-text)' }}>• {entry}</div>
               ))}
             </div>
             <div style={{ color: '#FCA5A5', fontSize: '0.7rem' }}>
-              <strong>✖ Unfavorable</strong>
+              <strong>Conflicts with the read</strong>
               {brainBlocked.slice(0, 2).map((entry, index) => (
                 <div key={`brain-block-${index}`} style={{ color: 'var(--msp-text)' }}>• {entry}</div>
               ))}
@@ -319,7 +308,7 @@ export default function CapitalFlowCard({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
             <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Flow Analysis Matrix</div>
             <div style={{ color: flow.flow_trade_permission.blocked ? 'var(--msp-bear)' : 'var(--msp-bull)', fontSize: '0.72rem', fontWeight: 800 }}>
-              TPS {toNum(flow.flow_trade_permission.tps).toFixed(0)} • {flow.flow_trade_permission.blocked ? (flow.flow_trade_permission.sessionLimited ? 'UNAVAILABLE THIS SESSION' : 'NOT ALIGNED') : 'ALIGNED'}
+              {flow.flow_trade_permission.blocked ? (flow.flow_trade_permission.sessionLimited ? 'Unavailable this session' : 'What to check: flow is blocked') : 'What to check: flow is open'}
             </div>
           </div>
 
@@ -341,13 +330,13 @@ export default function CapitalFlowCard({
 
           <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: '0.5rem' }}>
             <div style={{ color: '#A7F3D0', fontSize: '0.7rem' }}>
-              <strong>✔ Favorable</strong>
+              <strong>Supports the read</strong>
               {ftpAllowed.slice(0, 3).map((entry, index) => (
                 <div key={`allow-${index}`} style={{ color: 'var(--msp-text)' }}>• {entry}</div>
               ))}
             </div>
             <div style={{ color: '#FCA5A5', fontSize: '0.7rem' }}>
-              <strong>✖ Unfavorable</strong>
+              <strong>Conflicts with the read</strong>
               {ftpBlocked.slice(0, 3).map((entry, index) => (
                 <div key={`block-${index}`} style={{ color: 'var(--msp-text)' }}>• {entry}</div>
               ))}
@@ -398,13 +387,13 @@ export default function CapitalFlowCard({
 
           <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: '0.5rem' }}>
             <div style={{ color: '#A7F3D0', fontSize: '0.7rem' }}>
-              <strong>✔ Favorable</strong>
+              <strong>Supports the read</strong>
               {irgAllowed.slice(0, 3).map((entry, index) => (
                 <div key={`irg-allow-${index}`} style={{ color: 'var(--msp-text)' }}>• {entry}</div>
               ))}
             </div>
             <div style={{ color: '#FCA5A5', fontSize: '0.7rem' }}>
-              <strong>✖ Unfavorable</strong>
+              <strong>Conflicts with the read</strong>
               {irgBlocked.slice(0, 3).map((entry, index) => (
                 <div key={`irg-block-${index}`} style={{ color: 'var(--msp-text)' }}>• {entry}</div>
               ))}

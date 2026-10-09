@@ -1,14 +1,14 @@
 import { redirect } from 'next/navigation';
 import EnginePlaceholder from '@/components/intelligence/EnginePlaceholder';
 
-export const metadata = { title: 'Signal History' };
+export const metadata = { title: 'Reading History' };
 
 export default function HistoryPage() {
   redirect('/intelligence');
   return (
     <EnginePlaceholder
-      title="Signal History"
-      description="Historical snapshots of every engine and Master signal, captured over time."
+      title="Reading History"
+      description="Historical snapshots of every engine and Master reading, captured over time."
     />
   );
 }

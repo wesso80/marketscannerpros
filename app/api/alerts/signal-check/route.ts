@@ -61,6 +61,9 @@ interface ScanResult {
     neutral: number;
   };
   price?: number;
+  rsi?: number;
+  changePercent?: number;
+  volume?: number;
 }
 
 export async function GET(req: NextRequest) {
@@ -102,7 +105,7 @@ async function checkSignalAlerts(req: NextRequest) {
     `);
 
     if (alerts.length === 0) {
-      return NextResponse.json({ checked: 0, triggered: 0, message: 'No active signal alerts' });
+      return NextResponse.json({ checked: 0, triggered: 0, message: 'No active reading alerts' });
     }
 
     // Group alerts by symbol to minimize API calls
@@ -197,7 +200,7 @@ async function checkSignalAlerts(req: NextRequest) {
                     smart_alert_context = $2,
                     last_checked_at = NOW()
                 WHERE id = $3
-              `, [result.score, JSON.stringify({ direction: result.direction, signals: result.signals }), alert.id]);
+              `, [scanRsi(result) ?? null, JSON.stringify({ direction: result.direction, signals: result.signals, rsi: scanRsi(result) }), alert.id]);
             }
           } catch (err) {
             errors.push(`Error checking alert ${alert.id}: ${err}`);
@@ -224,7 +227,7 @@ async function checkSignalAlerts(req: NextRequest) {
       ok: false,
       checked: 0,
       triggered: 0,
-      error: 'Failed to check signal alerts',
+      error: 'Failed to check measurement alerts',
       timestamp: new Date().toISOString(),
     });
   }
@@ -238,25 +241,45 @@ interface CheckResult {
   context?: Record<string, any>;
 }
 
+function scanRsi(scan: ScanResult): number | null {
+  return typeof scan.rsi === 'number' && Number.isFinite(scan.rsi) ? scan.rsi : null;
+}
+
+/** Customer text for an alert: RSI, percent change, volume, and indicator counts. Never the 0–100 composite. */
+function measurementLine(scan: ScanResult): string {
+  const parts: string[] = [];
+  const rsi = scanRsi(scan);
+  if (rsi != null) parts.push(`RSI ${rsi.toFixed(1)}`);
+  if (typeof scan.changePercent === 'number' && Number.isFinite(scan.changePercent)) {
+    parts.push(`${scan.changePercent >= 0 ? '+' : ''}${scan.changePercent.toFixed(2)}%`);
+  }
+  if (typeof scan.volume === 'number' && Number.isFinite(scan.volume)) {
+    parts.push(`volume ${Math.round(scan.volume).toLocaleString('en-US')}`);
+  }
+  if (scan.signals) parts.push(`${scan.signals.bullish} upside and ${scan.signals.bearish} downside indicators`);
+  return parts.join(' · ') || 'RSI was not supplied';
+}
+
 function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult {
   const { condition_type, condition_value, smart_alert_context } = alert;
   const prevDirection = smart_alert_context?.direction;
-  const prevScore = alert.last_derivative_value;
+  const rsi = scanRsi(scan);
 
   switch (condition_type) {
     case 'scanner_buy_signal': {
-      // Trigger when score is above threshold AND direction is bullish
-      const minScore = condition_value || 65;
-      if (scan.score >= minScore && scan.direction === 'bullish') {
+      // Existing rows keep this condition type. The stored threshold is now an RSI level.
+      const minRsi = condition_value || 65;
+      if (rsi != null && rsi >= minRsi && scan.direction === 'bullish') {
         return {
           triggered: true,
-          value: scan.score,
-          threshold: minScore,
-          message: `🟢 BULLISH READING: ${scan.symbol} score ${scan.score}/100 (${scan.signals.bullish} bullish indicators)`,
+          value: rsi,
+          threshold: minRsi,
+          message: `${scan.symbol} RSI is ${rsi.toFixed(1)} (threshold ${minRsi}) with an upside direction. ${measurementLine(scan)}`,
           context: { 
             direction: scan.direction, 
             signals: scan.signals,
-            price: scan.price 
+            price: scan.price,
+            rsi,
           },
         };
       }
@@ -264,18 +287,18 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
     }
 
     case 'scanner_sell_signal': {
-      // Trigger when score is below threshold AND direction is bearish
-      const maxScore = condition_value || 35;
-      if (scan.score <= maxScore && scan.direction === 'bearish') {
+      const maxRsi = condition_value || 35;
+      if (rsi != null && rsi <= maxRsi && scan.direction === 'bearish') {
         return {
           triggered: true,
-          value: scan.score,
-          threshold: maxScore,
-          message: `🔴 BEARISH READING: ${scan.symbol} score ${scan.score}/100 (${scan.signals.bearish} bearish indicators)`,
+          value: rsi,
+          threshold: maxRsi,
+          message: `${scan.symbol} RSI is ${rsi.toFixed(1)} (threshold ${maxRsi}) with a downside direction. ${measurementLine(scan)}`,
           context: { 
             direction: scan.direction, 
             signals: scan.signals,
-            price: scan.price 
+            price: scan.price,
+            rsi,
           },
         };
       }
@@ -283,26 +306,26 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
     }
 
     case 'scanner_score_above': {
-      if (scan.score >= condition_value) {
+      if (rsi != null && rsi >= condition_value) {
         return {
           triggered: true,
-          value: scan.score,
+          value: rsi,
           threshold: condition_value,
-          message: `📈 ${scan.symbol} score reached ${scan.score}/100 (threshold: ${condition_value})`,
-          context: { direction: scan.direction, signals: scan.signals },
+          message: `${scan.symbol} RSI is ${rsi.toFixed(1)} (threshold ${condition_value}). ${measurementLine(scan)}`,
+          context: { direction: scan.direction, signals: scan.signals, rsi },
         };
       }
       break;
     }
 
     case 'scanner_score_below': {
-      if (scan.score <= condition_value) {
+      if (rsi != null && rsi <= condition_value) {
         return {
           triggered: true,
-          value: scan.score,
+          value: rsi,
           threshold: condition_value,
-          message: `📉 ${scan.symbol} score dropped to ${scan.score}/100 (threshold: ${condition_value})`,
-          context: { direction: scan.direction, signals: scan.signals },
+          message: `${scan.symbol} RSI is ${rsi.toFixed(1)} (threshold ${condition_value}). ${measurementLine(scan)}`,
+          context: { direction: scan.direction, signals: scan.signals, rsi },
         };
       }
       break;
@@ -313,8 +336,8 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
       if (scan.direction === 'bullish' && prevDirection && prevDirection !== 'bullish') {
         return {
           triggered: true,
-          value: scan.score,
-          message: `🐂 DIRECTION CHANGE: ${scan.symbol} shifted to bullish reading. Score: ${scan.score}/100 (was ${prevDirection})`,
+          value: rsi ?? undefined,
+          message: `${scan.symbol} direction changed to upside (was ${prevDirection}). ${measurementLine(scan)}`,
           context: { 
             prevDirection, 
             newDirection: scan.direction,
@@ -330,8 +353,8 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
       if (scan.direction === 'bearish' && prevDirection && prevDirection !== 'bearish') {
         return {
           triggered: true,
-          value: scan.score,
-          message: `🐻 DIRECTION CHANGE: ${scan.symbol} shifted to bearish reading. Score: ${scan.score}/100 (was ${prevDirection})`,
+          value: rsi ?? undefined,
+          message: `${scan.symbol} direction changed to downside (was ${prevDirection}). ${measurementLine(scan)}`,
           context: { 
             prevDirection, 
             newDirection: scan.direction,
@@ -386,7 +409,7 @@ async function triggerSignalAlert(alert: SignalAlert, result: CheckResult, scan:
            smart_alert_context = $2,
            last_checked_at = NOW()
        WHERE id = $3`,
-      [scan.score, JSON.stringify(result.context), alert.id]
+      [scanRsi(scan), JSON.stringify(result.context), alert.id]
     );
   } else {
     // One-time alert - deactivate
@@ -399,7 +422,7 @@ async function triggerSignalAlert(alert: SignalAlert, result: CheckResult, scan:
            smart_alert_context = $2,
            last_checked_at = NOW()
        WHERE id = $3`,
-      [scan.score, JSON.stringify(result.context), alert.id]
+      [scanRsi(scan), JSON.stringify(result.context), alert.id]
     );
   }
 
@@ -412,7 +435,7 @@ async function triggerSignalAlert(alert: SignalAlert, result: CheckResult, scan:
         symbol: alert.symbol,
         alertName: alert.name || 'Signal Alert',
         message: signalMessage,
-        value: result.value || scan.score,
+        value: result.value,
         threshold: result.threshold || Number(alert.condition_value),
         alertType: 'smart',
       });
@@ -435,7 +458,7 @@ async function triggerSignalAlert(alert: SignalAlert, result: CheckResult, scan:
       await sendPushToUser(alert.workspace_id, {
         title: `🎯 ${alert.name || 'Signal Alert'}`,
         body: result.message || `${alert.symbol}: ${alert.condition_type.replace(/_/g, ' ')}`,
-        tag: `signal-${alert.id}`,
+        tag: `alert-${alert.id}`,
         data: { url: '/tools/scanner', alertId: alert.id },
       });
       console.log(`🔔 Push sent for signal alert: ${alert.name || alert.condition_type}`);

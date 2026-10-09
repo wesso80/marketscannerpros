@@ -13,11 +13,11 @@ export default function HowSimple() {
     {
       icon: ChartBarIcon,
       title: "Run the Scan",
-      text: "Instant multi-timeframe squeeze & confluence detection in seconds.",
+      text: "Instant multi-timeframe squeeze & agreement detection in seconds.",
     },
     {
       icon: BellAlertIcon,
-      title: "Review Aligned Setups",
+      title: "Review Matching Setups",
       text: "Set alerts, export CSVs, and monitor breakouts early — without the noise.",
     },
   ];

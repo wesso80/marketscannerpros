@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Time Confluence',
+  title: 'Close timing',
   description:
-    'Track crypto market cycles from 1-365 days. Detect technically aligned volatility expansion windows with professional-level time confluence analysis.',
+    'Track crypto market cycles from 1-365 days. Compare volatility expansion windows with close timing analysis.',
   robots: { index: false, follow: true },
   alternates: { canonical: 'https://marketscannerpros.app/tools/terminal?tab=time-confluence' },
 };

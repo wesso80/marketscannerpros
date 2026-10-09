@@ -23,8 +23,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const count = data?.picks.length ?? 0;
   const title = unavailable ? 'Daily scan unavailable · MarketScannerPros' : `Daily scan observations ${dateStr} · MarketScannerPros`;
   const asOf = data?.pricesAsOfNote ? ` ${data.pricesAsOfNote}` : '';
-  const description = `${count ? `${count} stocks and crypto` : 'Symbols'} stored by the daily scan for the ${formatSessionDate(dateStr)} US session, listed A–Z with measured price, session change, float and short interest.${asOf} Educational snapshots, not ratings or recommendations.`;
-  const url = 'https://marketscannerpros.app/daily-pick';
+  const description = `${count ? `${count} stocks and crypto` : 'Symbols'} stored by the daily scan for the ${formatSessionDate(dateStr)} US session, listed A–Z with measured price, session change, float and short interest.${asOf} Educational snapshots, not recommendations.`;
+  const url = 'https://marketscannerpros.app/daily-scan';
   // The card's text is built server-side from the same snapshot; the date only makes the URL change daily.
   const og = scanOgImageUrl('DAILY', data?.scan_date ?? null);
   return {

@@ -264,10 +264,7 @@ export default function OperatorProposalRail({
               <div key={proposal.id} className="rounded border border-indigo-400/20 bg-slate-900/40 px-3 py-2 text-xs">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="font-semibold text-indigo-100">
-                    #{proposal.rank} · {(proposal.symbol || symbolFallback || '—').toUpperCase()} · {proposal.action.type.replaceAll('_', ' ')}
-                  </div>
-                  <div className="text-indigo-200/80">
-                    score {(Number(proposal.score) * 100).toFixed(1)} · conf {(Number(proposal.confidence) * 100).toFixed(1)}%
+                    {(proposal.symbol || symbolFallback || '—').toUpperCase()} · {proposal.action.type.replaceAll('_', ' ')}
                   </div>
                 </div>
 

@@ -54,7 +54,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 describe('Time Confluence tab', () => {
   it('requests only the hierarchical mode and shows measured timing evidence without trade advice', async () => {
     render(<TimeScannerPage embeddedInTerminal symbol="BTCUSD" assetType="crypto" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Run Time Confluence' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Run Close timing' }));
     await waitFor(() => expect(document.querySelector('[data-time-evidence]')).toBeTruthy());
     const modes = fetchMock.mock.calls.filter((c: any[]) => String(c[0]).startsWith('/api/confluence-scan')).map((c: any[]) => JSON.parse(c[1].body).mode);
     expect(modes).toContain('hierarchical');
@@ -78,7 +78,7 @@ describe('Time Confluence tab', () => {
   it('does not render a response that is not the public contract', async () => {
     fetchMock.mockImplementationOnce(async () => new Response(JSON.stringify({ success: true, data: { prediction: { direction: 'bullish' }, tradeSetup: { stopLoss: 1 } } }), { status: 200 }));
     render(<TimeScannerPage embeddedInTerminal symbol="BTCUSD" assetType="crypto" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Run Time Confluence' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Run Close timing' }));
     await waitFor(() => expect(screen.getByText('Time scan failed')).toBeTruthy());
     expect(document.querySelector('[data-time-evidence]')).toBeNull();
   });

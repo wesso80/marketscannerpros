@@ -22,7 +22,7 @@ export default function ToolIdentityHeader({
         </div>
         <div className="col-span-12 lg:col-span-4 flex flex-wrap items-center justify-start gap-2 lg:justify-end">
           <span className="msp-state-chip msp-state-chip--observe">Analysis Mode: {modeLabel}</span>
-          <span className="msp-state-chip msp-state-chip--observe">Confluence: {confidenceLabel}</span>
+          <span className="msp-state-chip msp-state-chip--observe">Agreement: {confidenceLabel}</span>
           <span className="msp-state-chip msp-state-chip--observe">Last Scan: {lastUpdatedLabel}</span>
         </div>
       </div>

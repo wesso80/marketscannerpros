@@ -124,18 +124,6 @@ function getDominanceValue(dominance: Array<{ symbol: string; dominance: number 
   return typeof row?.dominance === 'number' ? row.dominance : 0;
 }
 
-function reviewColor(verdict: ReviewVerdict): string {
-  if (verdict === 'ALIGNED') return 'text-emerald-300';
-  if (verdict === 'CONDITIONAL') return 'text-amber-300';
-  return 'text-red-300';
-}
-
-function reviewLabel(verdict: ReviewVerdict): string {
-  if (verdict === 'ALIGNED') return 'Aligned';
-  if (verdict === 'CONDITIONAL') return 'Mixed';
-  return 'Not aligned';
-}
-
 export default function CryptoCommandCenter({ embedded = false }: { embedded?: boolean }) { return <PaidPreviewGate tool="Crypto"><CryptoCommandCenterPaid embedded={embedded} /></PaidPreviewGate>; }
 
 function CryptoCommandCenterPaid({ embedded = false }: { embedded?: boolean }) {
@@ -314,31 +302,31 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
 
     if (verdict === 'ALIGNED' && (!longsAllowed || !shortsAllowed)) verdict = 'CONDITIONAL';
 
-    const riskContext = verdict === 'ALIGNED' ? 'Standard review' : verdict === 'CONDITIONAL' ? 'Reduced conviction' : 'Observation';
+    const riskContext = verdict === 'ALIGNED' ? 'Standard review' : verdict === 'CONDITIONAL' ? 'Mixed inputs' : 'Observation';
 
     const subClusters = [
       {
         name: 'Large Caps',
-        review: riskState === 'Risk-Off' ? 'Weak' : leadership === 'Defensive Rotation' ? 'Mixed' : 'Supportive',
+        review: riskState === 'Risk-Off' ? 'Thin' : leadership === 'Defensive Rotation' ? 'Mixed' : 'Same direction',
       },
       {
         name: 'Mid/Alts',
-        review: !longsAllowed || breadthScore < 45 ? 'Weak' : breadthScore >= 60 ? 'Supportive' : 'Mixed',
+        review: !longsAllowed || breadthScore < 45 ? 'Thin' : breadthScore >= 60 ? 'Same direction' : 'Mixed',
       },
       {
         name: 'Meme/High Beta',
-        review: verdict === 'ALIGNED' && liquidity === 'Expanding' && volatility !== 'Dislocation' ? 'Supportive' : 'Weak',
+        review: verdict === 'ALIGNED' && liquidity === 'Expanding' && volatility !== 'Dislocation' ? 'Same direction' : 'Thin',
       },
       {
         name: 'DeFi',
-        review: liquidity === 'Expanding' && breadthScore >= 50 ? 'Supportive' : liquidity === 'Contracting' ? 'Weak' : 'Mixed',
+        review: liquidity === 'Expanding' && breadthScore >= 50 ? 'Same direction' : liquidity === 'Contracting' ? 'Thin' : 'Mixed',
       },
     ];
 
     const explanation =
       `${riskState} bias with ${leadership.toLowerCase()}. ` +
       `Liquidity is ${liquidity.toLowerCase()} and volatility is ${volatility.toLowerCase()}. ` +
-      `${verdict === 'ALIGNED' ? 'Indicators are broadly aligned.' : verdict === 'CONDITIONAL' ? 'Partial alignment — review more evidence before relying on the scenario.' : 'Indicators suggest caution — prioritize observation.'}`;
+      `${verdict === 'ALIGNED' ? 'Several inputs point the same way.' : verdict === 'CONDITIONAL' ? 'Only some inputs agree — review more evidence before relying on the scenario.' : 'Indicators suggest caution — prioritize observation.'}`;
 
     return {
       dataComplete: true,
@@ -394,7 +382,7 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
         confidence: morningDecision.adaptiveConfidence,
         dataComplete: morningDecision.dataComplete,
       },
-      summary: `Crypto ${morningDecision.verdict} (${morningDecision.adaptiveConfidence == null ? "Unavailable" : `${morningDecision.adaptiveConfidence}/100`} confluence). Market: ${marketData.market?.totalMarketCapFormatted || 'N/A'} (${typeof marketData.market?.marketCapChange24h === 'number' ? `${marketData.market.marketCapChange24h.toFixed(2)}%` : 'n/a'} 24h)`,
+      summary: `Crypto market: ${marketData.market?.totalMarketCapFormatted || 'N/A'} (${typeof marketData.market?.marketCapChange24h === 'number' ? `${marketData.market.marketCapChange24h.toFixed(2)}%` : 'n/a'} 24h). What to check: breadth, liquidity, and volatility.`,
     });
   }, [marketData, morningDecision.adaptiveConfidence, morningDecision.verdict, setPageData]);
 
@@ -463,7 +451,7 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
   }
 
   if (embedded) return <div className="space-y-3 min-w-0">
-    <p data-layout-verdict className="font-semibold text-sm">{!marketData ? 'Loading crypto market observations…' : !morningDecision.dataComplete ? 'Crypto assessment is incomplete while required feeds are not collected.' : `Crypto market: ${reviewLabel(morningDecision.verdict)}`}</p>
+    <p data-layout-verdict className="font-semibold text-sm">{!marketData ? 'Loading crypto market observations…' : !morningDecision.dataComplete ? 'Crypto assessment is incomplete while required feeds are not collected.' : `Crypto market cap ${marketData.market?.totalMarketCapFormatted || 'not collected'} · 24h ${typeof marketData.market?.marketCapChange24h === 'number' ? `${marketData.market.marketCapChange24h.toFixed(1)}%` : 'not collected'}`}</p>
     <MarketMetrics items={[
       {label:'Market cap',value:marketData?.market?.totalMarketCapFormatted},
       {label:'24h change',value:typeof marketData?.market?.marketCapChange24h === 'number' ? `${marketData.market.marketCapChange24h.toFixed(1)}%` : null},
@@ -503,7 +491,7 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
           ariaLabel="Crypto Overview header"
           eyebrow="Crypto command"
           badges={[
-            { label: marketData ? `Verdict ${reviewLabel(morningDecision.verdict)}` : 'Verdict pending' },
+            { label: marketData ? `Breadth ${morningDecision.breadthScore == null ? 'pending' : `${morningDecision.breadthScore}%`}` : 'Breadth pending' },
             { label: marketData ? `Risk ${morningDecision.riskState}` : 'Risk pending' },
             { label: marketData ? `Vol ${morningDecision.volatility}` : 'Vol pending' },
             { label: morningDecision.dataComplete ? 'Feeds fresh' : marketData ? 'Data incomplete' : 'Loading' },
@@ -518,8 +506,8 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
           ]}
           metrics={[
             // Until the first CoinGecko payload lands, the decision engine only has defaults — show that honestly.
-            { label: 'Verdict', value: marketData ? reviewLabel(morningDecision.verdict) : 'Loading', tone: !marketData ? 'info' : morningDecision.verdict === 'ALIGNED' ? 'bull' : morningDecision.verdict === 'CONDITIONAL' ? 'warn' : 'bear', detail: marketData ? `Confluence ${morningDecision.adaptiveConfidence == null ? "Unavailable" : `${morningDecision.adaptiveConfidence}/100`}` : 'Awaiting market data' },
-            { label: 'Breadth', value: marketData ? morningDecision.breadthLabel : 'Loading', tone: 'info', detail: marketData ? `Score ${morningDecision.breadthScore == null ? "Unavailable" : `${morningDecision.breadthScore}%`}` : 'Awaiting market data' },
+            { label: 'What to check', value: marketData ? morningDecision.liquidity : 'Loading', tone: 'info', detail: marketData ? `${morningDecision.riskState} · ${morningDecision.volatility}` : 'Awaiting market data' },
+            { label: 'Breadth', value: marketData ? morningDecision.breadthLabel : 'Loading', tone: 'info', detail: marketData ? (morningDecision.breadthScore == null ? 'Unavailable' : `${morningDecision.breadthScore}% of the basket`) : 'Awaiting market data' },
             { label: 'Dominance', value: (() => { const v = getDominanceValue(marketData?.market?.dominance, 'BTC'); return v ? `${v.toFixed(1)}% BTC` : '—'; })(), tone: 'warn', detail: marketData?.market?.totalMarketCapFormatted || 'Mkt cap loading' },
             { label: 'Next check', value: currentSection?.label || 'Pick a section', tone: 'info', detail: lastUpdate ? `Refreshed ${lastUpdate.toLocaleTimeString()}` : 'Awaiting first refresh' },
           ]}
@@ -551,12 +539,12 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
             <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
               <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Crypto Analysis Gate</p>
               <div className="mt-1 flex items-center gap-2">
-                <h2 className={`text-base font-extrabold ${reviewColor(morningDecision.verdict)}`}>
-                  REVIEW: {reviewLabel(morningDecision.verdict)}
+                <h2 className="text-base font-extrabold text-slate-100">
+                  What to check
                 </h2>
               </div>
               <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
-                <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Adaptive Confluence: {morningDecision.adaptiveConfidence == null ? "Unavailable" : `${morningDecision.adaptiveConfidence}/100`}</span>
+                <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Breadth: {morningDecision.breadthScore == null ? "Unavailable" : `${morningDecision.breadthScore}%`}</span>
                 <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Risk Context: {morningDecision.riskContext}</span>
                 <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Long Evidence: {morningDecision.longsAllowed ? 'Clear' : 'Limited'}</span>
                 <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Short Evidence: {morningDecision.shortsAllowed ? 'Clear' : 'Limited'}</span>
@@ -566,7 +554,7 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
                 {morningDecision.subClusters.map((cluster) => (
                   <div key={cluster.name} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-[11px]">
                     <p className="text-slate-500">{cluster.name}</p>
-                    <p className={`font-semibold ${cluster.review === 'Supportive' ? 'text-emerald-300' : cluster.review === 'Mixed' ? 'text-amber-300' : 'text-red-300'}`}>{cluster.review}</p>
+                    <p className="font-semibold text-slate-200">{cluster.name === 'Large Caps' ? morningDecision.riskState : cluster.name === 'Mid/Alts' ? (morningDecision.breadthScore == null ? 'Breadth not collected' : `Breadth ${morningDecision.breadthScore}%`) : `${morningDecision.liquidity} liquidity`}</p>
                   </div>
                 ))}
               </div>
@@ -673,7 +661,7 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
                   {(marketData?.trending?.coins || []).slice(0, 5).map((coin: any, idx: number) => (
                     <div key={`${coin.symbol}-${idx}`} className="flex items-center justify-between rounded border border-slate-700 bg-slate-900/70 px-1.5 py-1">
                       <span className="text-slate-300">{coin.symbol}</span>
-                      <span className="text-emerald-300">Rank {idx + 1}</span>
+                      <span className="text-emerald-300">#{idx + 1}</span>
                     </div>
                   ))}
                 </div>
@@ -689,8 +677,8 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
               <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                 {morningDecision.verdict === 'NOT ALIGNED' ? (
                   <>
-                    <p className="text-[11px] uppercase text-red-300">Caution Mode</p>
-                    <p className="mt-1 text-[11px] text-slate-400">Indicators not aligned. Focus on volatility alerts and observation.</p>
+                    <p className="text-[11px] uppercase text-red-300">Caution</p>
+                    <p className="mt-1 text-[11px] text-slate-400">Inputs differ. Focus on volatility alerts and observation.</p>
                     <div className="mt-1.5 flex gap-1.5">
                       <Link href="/tools/workspace?tab=alerts" className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300">Volatility Alerts</Link>
                       <Link href="/tools/workspace?tab=journal" className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300">Journal Review</Link>

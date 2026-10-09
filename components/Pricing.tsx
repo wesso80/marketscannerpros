@@ -101,7 +101,7 @@ export default function Pricing({ loading, onLaunch, onCheckout }: Props) {
               <li className={featureItem}>• Full backtesting engine</li>
               <li className={featureItem}>• Symbol research</li>
               <li className={featureItem}>• Multi-timeframe indicator scan</li>
-              <li className={featureItem}>• Options Confluence Scanner</li>
+              <li className={featureItem}>• Options timing Scanner</li>
               <li className={featureItem}>• Premium support</li>
             </ul>
             <button

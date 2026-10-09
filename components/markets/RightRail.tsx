@@ -41,16 +41,9 @@ export default function RightRail({ ctx }: { ctx: TickerContext }) {
             {ctx.quote.volume !== undefined && (
               <QuickStat label="Volume" value={formatVolume(ctx.quote.volume)} />
             )}
-            {ctx.scanner && (
-              <QuickStat
-                label="Agreement"
-                value={`${ctx.scanner.score}/100`}
-                color={ctx.scanner.score >= 70 ? 'text-emerald-400' : ctx.scanner.score >= 40 ? 'text-amber-400' : 'text-slate-400'}
-              />
-            )}
             {ctx.options && (
               <>
-                <QuickStat label="IV Rank" value={ctx.options.ivRank != null ? `${ctx.options.ivRank.toFixed(0)}%` : 'n/a'} />
+                <QuickStat label="IV percentile" value={ctx.options.ivRank != null ? `${ctx.options.ivRank.toFixed(0)}%` : 'n/a'} />
                 <QuickStat label="Exp Move" value={`±${(ctx.options.expectedMove ?? 0).toFixed(1)}%`} />
               </>
             )}

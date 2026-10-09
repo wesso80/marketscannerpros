@@ -5,7 +5,7 @@ export function alertThreshold(value: unknown): number | null {
 }
 export function alertConditionLabel(type: string, value: unknown): string {
   const labels: Record<string,string> = {
-    scanner_buy_signal:'scanner score above',scanner_sell_signal:'scanner score below',
+    scanner_buy_signal:'RSI above',scanner_sell_signal:'RSI below',
     scanner_bullish_flip:'scanner upside change',scanner_bearish_flip:'scanner downside change',
     strategy_buy_signal:'strategy upside condition',strategy_sell_signal:'strategy downside condition',
     oi_divergence_bull:'open interest up · price down',oi_divergence_bear:'open interest down · price up',

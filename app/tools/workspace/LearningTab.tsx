@@ -47,17 +47,19 @@ export default function LearningTab() {
       <p className="text-xs text-slate-400">General information only, not financial advice.</p>
       {/* ── Edge Score Overview ─────────────────────────────────── */}
       {profile && profile.totalTrades > 0 ? (
+        <>
+        <p className="text-xs text-slate-400">Figures below are your own trades.</p>
         <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
-          <StatTile label="Edge Score" value={profile.edgeScore.toFixed(0)} />
-          <StatTile label="Win Rate" value={`${(profile.overallWinRate * 100).toFixed(0)}%`} />
+          <StatTile label="Win rate · your own trades" value={`${(profile.overallWinRate * 100).toFixed(0)}%`} />
           <StatTile label="Avg R:R" value={profile.overallAvgRR.toFixed(1)} />
           <StatTile label="Total Trades" value={String(profile.totalTrades)} />
         </div>
+        </>
       ) : !error ? (
         <EmptyState title="Add your first journal record" action="Open Journal" href="/tools/workspace?tab=journal" />
       ) : null}
       {profile && profile.doctrineStats.length > 0 && <figure className="rounded-lg border border-white/10 p-3">
-        <figcaption className="mb-2 text-sm font-semibold">Recorded win rate by framework</figcaption>
+        <figcaption className="mb-2 text-sm font-semibold">Recorded win rate by framework · your own trades</figcaption>
         {profile.doctrineStats.slice(0, 4).map(ds => <div key={ds.doctrineId} className="mb-2 text-xs">
           <div className="flex justify-between gap-2"><span>{learningText(ds.label || formatDoctrineLabel(ds.doctrineId))}</span><span>{(ds.winRate * 100).toFixed(0)}%</span></div>
           <div className="mt-1 h-1.5 rounded bg-white/10"><div className="h-full rounded bg-white/40" style={{ width: `${Math.max(0, Math.min(100, ds.winRate * 100))}%` }} /></div>
@@ -119,7 +121,7 @@ export default function LearningTab() {
                   <tr key={ds.doctrineId} className="border-b border-slate-800/30 hover:bg-slate-800/30">
                     <td className="py-1.5 font-medium text-white">{formatDoctrineLabel(ds.doctrineId)}</td>
                     <td className="text-right text-slate-300">{ds.totalTrades}</td>
-                    <td className={`text-right ${ds.winRate >= 0.5 ? 'text-emerald-400' : 'text-red-400'}`}>{(ds.winRate * 100).toFixed(0)}%</td>
+                    <td className="text-right text-slate-300">{(ds.winRate * 100).toFixed(0)}%</td>
                     <td className={`text-right ${ds.avgRMultiple >= 1 ? 'text-emerald-400' : 'text-red-400'}`}>{ds.avgRMultiple.toFixed(1)}</td>
                     <td className={`text-right ${ds.profitFactor >= 1 ? 'text-emerald-400' : 'text-red-400'}`}>{ds.profitFactor.toFixed(2)}</td>
                   </tr>
@@ -160,7 +162,7 @@ export default function LearningTab() {
                     <div className="text-[11px] text-slate-300">Key Level: {learningText(pb.riskModel.targetDescription)} ({pb.riskModel.defaultRR}R)</div>
                   </div>
                   <div>
-                    <div className="text-[11px] text-[var(--msp-text-muted)] font-semibold mb-1">FAILURE SIGNALS</div>
+                    <div className="text-[11px] text-[var(--msp-text-muted)] font-semibold mb-1">WHAT WOULD INVALIDATE</div>
                     <ul className="space-y-0.5">
                       {pb.failureSignals.map((s, i) => <li key={i} className="text-[11px] text-red-400/80">⚠ {learningText(s)}</li>)}
                     </ul>

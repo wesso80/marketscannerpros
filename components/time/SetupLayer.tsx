@@ -2,7 +2,7 @@ import ClusterStrengthCard from '@/components/time/ClusterStrengthCard';
 import DecompositionMatrix from '@/components/time/DecompositionMatrix';
 import LayerSection from '@/components/time/LayerSection';
 import WindowTimeline from '@/components/time/WindowTimeline';
-import { MiniScore, SectionCard } from '@/components/time/atoms';
+import { SectionCard } from '@/components/time/atoms';
 import { TimeConfluenceV2Output, TimeSetupInputs } from '@/components/time/types';
 
 function WarningsCard({ warnings }: { warnings: TimeSetupInputs['warnings'] }) {
@@ -48,7 +48,6 @@ export default function SetupLayer({ setup, out }: { setup: TimeSetupInputs; out
     <LayerSection
       title="Layer 2 — Time Structure (Decomposition + Window)"
       tone="setup"
-      right={<MiniScore label="Setup" value={out.setupScore} />}
     >
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <DecompositionMatrix rows={setup.decomposition} primaryDirection={setup.primaryDirection} />

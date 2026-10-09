@@ -283,7 +283,7 @@ function determineRegime(
   // Default regime
   let regime: { label: string; description: string; riskLevel: 'low' | 'medium' | 'high' } = {
     label: 'Neutral',
-    description: 'Mixed economic signals',
+    description: 'Mixed economic readings',
     riskLevel: 'medium',
   };
   

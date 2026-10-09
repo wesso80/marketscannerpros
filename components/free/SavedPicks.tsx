@@ -35,6 +35,6 @@ export default function SavedPicks() {
     </>}
     <SourceLine source={FREE_COPY.source} asOf={stamp(picks?.[0])} tradingDay={picks?.[0]?.scanDate ?? undefined} basis="Stored scan observations · radar has a separate session date" />
     {!!picks?.length && <CollapsibleSection title="Observation dates" summary={`${picks.length} stored symbols`}>{picks.map(row => <p key={`${row.assetClass}-${row.symbol}`}>{row.symbol} · {localStamp(stamp(row))}</p>)}</CollapsibleSection>}
-    <Link href="/daily-pick" className="mt-3 inline-flex min-h-10 items-center underline">{FREE_COPY.seeAll}</Link>
+    <Link href="/daily-scan" className="mt-3 inline-flex min-h-10 items-center underline">{FREE_COPY.seeAll}</Link>
   </section>;
 }

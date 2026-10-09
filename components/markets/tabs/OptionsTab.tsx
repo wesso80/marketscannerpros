@@ -147,7 +147,7 @@ export default function OptionsTab({ ctx }: { ctx: TickerContext }) {
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <MetricCard label="IV" value={`${(options.iv ?? 0).toFixed(1)}%`} sub="Implied Volatility" />
-        <MetricCard label="IV Rank" value={options.ivRank != null ? `${options.ivRank.toFixed(0)}%` : 'n/a'} sub={options.ivRank != null ? 'Percentile' : 'No IV history'} color={ivColor} />
+        <MetricCard label="IV percentile" value={options.ivRank != null ? `${options.ivRank.toFixed(0)}%` : 'n/a'} sub={options.ivRank != null ? 'Past-year position' : 'No IV history'} color={ivColor} />
         <MetricCard label="Expected Move" value={`±${(options.expectedMove ?? 0).toFixed(1)}%`} sub="Next expiry" />
         <MetricCard label="Put/Call" value={(options.putCallRatio ?? 0).toFixed(2)} sub="Volume ratio" color={pcrColor} />
       </div>

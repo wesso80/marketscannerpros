@@ -466,7 +466,7 @@ export default function SectorHeatmap() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {/* RS Ranking Table */}
             <div className="bg-slate-800/50 rounded-lg p-3">
-              <h5 className="text-xs font-semibold text-slate-300 mb-2">Relative Strength Ranking</h5>
+              <h5 className="text-xs font-semibold text-slate-300 mb-2">Relative strength order</h5>
               <div className="space-y-1">
                 {[...sectors].sort((a, b) => (a.rs_rank ?? 99) - (b.rs_rank ?? 99)).map(s => (
                   <div key={s.symbol} className="flex items-center justify-between text-xs">

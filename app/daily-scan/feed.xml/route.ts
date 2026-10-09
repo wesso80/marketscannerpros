@@ -64,7 +64,7 @@ export async function GET() {
       price ? `Price: $${price}` : null,
       chg ? `Session change: ${chg}%` : null,
       `Scan date: ${dateStr}`,
-      `Measured values only; not a rating, ranking or recommendation. Educational research only. Not investment advice.`,
+      `Measured values only; not a recommendation. Educational research only. Not investment advice.`,
     ].filter(Boolean) as string[];
     return `    <item>
       <title>${xmlEscape(title)}</title>
@@ -80,9 +80,9 @@ export async function GET() {
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>MarketScannerPros — Daily scan observations</title>
-    <link>${SITE}/daily-pick</link>
-    <atom:link href="${SITE}/daily-pick/feed.xml" rel="self" type="application/rss+xml" />
-    <description>Symbols stored by the MarketScannerPros daily scan, with measured price and session change, listed A–Z for each day. Not ratings, rankings or recommendations. Educational research only — not investment advice.</description>
+    <link>${SITE}/daily-scan</link>
+    <atom:link href="${SITE}/daily-scan/feed.xml" rel="self" type="application/rss+xml" />
+    <description>Symbols stored by the MarketScannerPros daily scan, with measured price and session change, listed A–Z for each day. Not recommendations. Educational research only — not investment advice.</description>
     <language>en-au</language>
     <lastBuildDate>${latestDate}</lastBuildDate>
     <ttl>60</ttl>

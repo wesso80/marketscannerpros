@@ -341,10 +341,10 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   return NextResponse.json({
-    message: 'Options Confluence Scanner API',
+    message: 'Options timing Scanner API',
     endpoints: {
       POST: {
-        description: 'Analyze a symbol for options trading using Time Confluence',
+        description: 'Analyze a symbol for options trading using Close timing',
         body: {
           symbol: 'string (required)',
           scanMode: 'scalping | intraday_30m | intraday_1h | intraday_4h | swing_1d | swing_3d | swing_1w | macro_monthly | macro_yearly',

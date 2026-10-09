@@ -20,22 +20,22 @@ const noSetup = (direction: string) => ({
 describe('grade basis tooltip', () => {
   it('SUI-USD case: Setup score 10 is the 10th percentile, and C covers everything below 60', () => {
     const t = gradeBasis(c({}));
-    expect(t).toContain('Grade C from the Setup score 10 (10th percentile of calibrated expected R): A ≥ 85, B ≥ 60, C below.');
-    expect(t).toContain('The MSP composite does not set the grade.');
+    expect(t).toContain('Expected R is compared with other setups of the same direction.');
+    expect(t).toContain('The summary number is not shown.');
   });
   it('names the caps (caution, low reward:risk, snapshot)', () => {
     const capped = gradeBasis(c({ score: 72, calibration: { percentile: 72 } as any, direction: 'long', watchReasons: [{ code: 'AT_OPPOSING_LEVEL', message: 'x' }, { code: 'RR_BELOW_MIN', message: 'y' }] }));
-    expect(capped).toContain('Capped at C: at resistance.');
-    expect(capped).toContain('Capped at C: reward:risk below 1.');
+    expect(capped).toContain('Limited by: at resistance.');
+    expect(capped).toContain('Limited by reward:risk below 1.');
     const snap = gradeBasis(c({ grade: 'B', score: 90, calibration: null, scoreBasis: 'factor_alignment_uncalibrated', thresholds: { pass: 70, watch: 50, gradeA: 80, gradeB: 65 } as any, flags: [{ code: 'SNAPSHOT_GRADE_CAP', message: 'Capped at B: snapshot data, no swing structure' }] }));
-    expect(snap).toContain('raw factor alignment, uncalibrated): A ≥ 80, B ≥ 65, C below.');
-    expect(snap).toContain('Capped at B: snapshot data');
+    expect(snap).toContain('Factor readings only. They are not a calibrated expected R.');
+    expect(snap).toContain('Snapshot data has no swing structure, so the read stays limited.');
   });
   it('is the same text for long and short (apart from support/resistance wording)', () => {
     expect(gradeBasis(c({ direction: 'long' }))).toBe(gradeBasis(c({ direction: 'short' })));
   });
   it('F reads as not graded', () => {
-    expect(gradeBasis(noSetup('bullish').canonical)).toMatch(/^Grade F: no setup/);
+    expect(gradeBasis(noSetup('bullish').canonical)).toMatch(/^No setup or a data block/);
   });
 });
 
@@ -68,10 +68,10 @@ describe('page and Pro table wiring', () => {
     expect(page).toContain("case 'Bullish': items = items.filter(r => rankedClaimedDirection(r) === 'bullish')");
     expect(page).toContain("Bearish: allResults.filter(r => rankedClaimedDirection(r) === 'bearish').length");
     expect(page).toContain('const noSetup = noSetupRankedReason(r);');
-    expect(page).toContain('!isNoSetupRow(row)&&Math.round(computeMspScore(row,activeRegime))');
+    expect(page).toContain("row.rsi != null ? row.rsi.toFixed(0) : '—'");
   });
   it('legacy MSP table stays behind the admin scanner boundary', () => {
-    expect(table).toContain('>MSP</span>{r.confidence}');
+    expect(table).not.toContain('>MSP</span>{r.confidence}');
     expect(page).toContain('if (!isAdmin) return <PublicScannerRedirect />');
     expect(table).not.toContain('Setup {r.canonical.score} · sets grade');
   });

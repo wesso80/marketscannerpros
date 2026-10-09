@@ -50,7 +50,7 @@ export default function LeverageStatePanel({ assessment, symbol, price }: { asse
           ))}
         </div>
       ) : null}
-      <p className="mt-2 text-[11px] italic text-slate-500">Describes observable positioning structure. Not a prediction of a guaranteed outcome.</p>
+      <p className="mt-2 text-[11px] italic text-slate-500">Describes observable positioning structure. Not a prediction of a certain outcome.</p>
     </div>
   );
 }

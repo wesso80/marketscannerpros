@@ -27,7 +27,7 @@ export default function LayerSection({ tone, title, subtitle, score, children, r
           {subtitle && <p className="text-sm text-[var(--msp-muted)]">{subtitle}</p>}
         </div>
         <div className="flex items-center gap-2">
-          {typeof score === 'number' && <ScoreBadge label={`${title} Score`} score={score} tone={tone} />}
+          {typeof score === 'number' && <ScoreBadge label={`${title} Reading`} score={score} tone={tone} />}
           {rightSlot}
         </div>
       </div>

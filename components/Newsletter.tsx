@@ -23,7 +23,7 @@ export default function Newsletter() {
       <div className="mx-auto max-w-6xl px-4 py-12">
         <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5">
           <h3 className="text-xl font-semibold">Get the Daily Scanner Digest</h3>
-          <p className="mt-1 text-sm text-neutral-300">Top squeezes & confluence plays. No spam.</p>
+          <p className="mt-1 text-sm text-neutral-300">Top squeezes & agreement plays. No spam.</p>
           {status === 'done' ? (
             <p className="mt-4 text-emerald-400 text-sm">Thanks! We&apos;ll be in touch.</p>
           ) : (

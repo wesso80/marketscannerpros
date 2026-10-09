@@ -252,7 +252,7 @@ export default function CryptoSearchWidget() {
                     {coinData.name}
                   </div>
                   <div style={{ color: 'var(--msp-text-muted)', fontSize: '12px' }}>
-                    {coinData.symbol?.toUpperCase()} • Rank #{coinData.market_cap_rank}
+                    {coinData.symbol?.toUpperCase()} • List #{coinData.market_cap_rank}
                   </div>
                 </div>
                 <button

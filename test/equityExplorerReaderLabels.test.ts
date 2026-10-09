@@ -5,8 +5,8 @@ import { ASSET_EXPLORER_LABELS, assetExplorerLabel, equityExplorerLabel } from '
 const ENGINE_TOKEN = /^[A-Z0-9]+(?:[_\s,]+[A-Z0-9]+)*$/;
 
 const mapped: Array<[string, string]> = [
-  ['CRCS', 'Capital score'],
-  ['crcs', 'Capital score'],
+  ['CRCS', 'Capital reading'],
+  ['crcs', 'Capital reading'],
   ['ΔHr', 'Hourly adjustment'],
   ['ΔHR', 'Hourly adjustment'],
   ['Zone 1', 'Equity analysis gate'],
@@ -46,7 +46,7 @@ it('leaves prose and camelCase alone', () => {
 });
 
 it('exports the shared map for the crypto assets tab', () => {
-  expect(ASSET_EXPLORER_LABELS.CRCS).toBe('Capital score');
+  expect(ASSET_EXPLORER_LABELS.CRCS).toBe('Capital reading');
   expect(ASSET_EXPLORER_LABELS['ΔHR']).toBe('Hourly adjustment');
   expect(ASSET_EXPLORER_LABELS['ZONE 1']).toBe('Equity analysis gate');
   expect(equityExplorerLabel).toBe(assetExplorerLabel);

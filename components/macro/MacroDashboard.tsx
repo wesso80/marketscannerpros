@@ -188,10 +188,10 @@ function computeMacroGate(data: MacroData | null): MacroGate | null {
 
   const notes =
     permission === 'no'
-      ? 'Analysis: Unfavorable — indicators suggest caution; wait for regime clarity.'
+      ? 'Analysis: Caution — indicators suggest waiting for a clearer regime.'
       : permission === 'conditional'
-        ? 'Analysis: Mixed — indicators show partial alignment; review before acting.'
-        : 'Analysis: Favorable — indicators broadly aligned within current regime.';
+        ? 'Analysis: Mixed — only some indicators agree; review before acting.'
+        : 'Analysis: Several indicators point the same way within the current regime.';
 
   return {
     ts: data.timestamp,
@@ -354,7 +354,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
     setPageData({
       skill: 'macro',
       symbols: [],
-      summary: `Macro Gate: ${gate.permission.toUpperCase()} | ${gate.riskState.replace('_', '-')} | Score ${gate.score} | Sizing ${gate.sizing}`,
+      summary: `Macro Gate: ${gate.permission.toUpperCase()} | ${gate.riskState.replace('_', '-')} | Reading ${gate.score} | Sizing ${gate.sizing}`,
       data: {
         macroGate: {
           globalPermission: gate.permission,
@@ -377,7 +377,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
   }, [data, gate, setPageData]);
 
   const completeAssessment = !!data && [data.rates.fedFunds.value, data.rates.treasury10y.value, data.rates.yieldCurve.value, data.inflation.inflationRate.value, data.employment.unemployment.value, data.growth.realGDP.value].every(value => typeof value === 'number' && Number.isFinite(value));
-  const assessment = !completeAssessment ? 'Macro assessment not collected' : gate?.permission === 'yes' ? 'Aligned' : gate?.permission === 'conditional' ? 'Mixed' : 'Not aligned';
+  const assessment = !completeAssessment ? 'Macro assessment not collected' : gate?.permission === 'yes' ? 'Inputs agree' : gate?.permission === 'conditional' ? 'Mixed' : 'Inputs differ';
   const incompleteFeeds = [!completeAssessment && 'Required macro observations', commoditiesError && 'Commodities', correlationError && 'Cross-asset context', spyPCRError && 'Options positioning'].filter(Boolean);
 
   if (publicDesignEnabled() && !embeddedInDashboard) return <MacroResearch data={data} loading={(loading || tierLoading) && !accessDenied} error={Boolean(error) && !accessDenied} locked={accessDenied} retry={fetchData} paid={isAdmin || tier === 'pro' || tier === 'pro_trader'}/>;
@@ -421,7 +421,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                 </label>
               </div>
               <h2 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Global regime gate for liquidity, rates, growth, and cross-asset context.</h2>
-              <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Macro evidence compressed into a single permission gate. Educational only; not a trade signal.</p>
+              <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Macro evidence compressed into a single permission gate. Educational only; not a trade reading.</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <a href="#decision" onClick={followMacroAnchor} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Open Decision</a>
                 <a href="#commodities" onClick={followMacroAnchor} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">Commodities</a>
@@ -481,7 +481,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
               <h2 className="text-sm text-slate-400">Published macro observations</h2>
               <div data-verdict-box className="rounded-xl border border-white/10 p-3">
                 <p className="text-3xl font-semibold" style={{ color: gate.permission === 'yes' ? 'var(--msp-bull)' : gate.permission === 'conditional' ? 'var(--msp-warn)' : 'var(--msp-bear)' }}>{assessment}</p>
-                {completeAssessment && <p className="text-sm text-white/70">Score {gate.score >= 0 ? '+' : ''}{gate.score} · {macroLabel(gate.riskState)}</p>}
+                {completeAssessment && <p className="text-sm text-white/70">Reading {gate.score >= 0 ? '+' : ''}{gate.score} · {macroLabel(gate.riskState)}</p>}
                 <p className="mt-2 text-sm text-white/60">Rates, liquidity, growth and inflation observations.</p>
               </div>
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -581,7 +581,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
             </div>
           </div>
         </div>
-            {completeAssessment && <CollapsibleSection title="Assessment detail" summary={`Score ${gate.score}`}>
+            {completeAssessment && <CollapsibleSection title="Assessment detail" summary={`Reading ${gate.score}`}>
             <section id="decision" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_420px]">
                 <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
@@ -619,8 +619,8 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
 
                 <div className="rounded-xl border border-white/10 bg-black/10 p-3">
                   <div className="flex items-center justify-between">
-                    <div className="text-xs text-white/50">Score</div>
-                    <div className="text-xs text-white/50">Confidence</div>
+                    <div className="text-xs text-white/50">Reading</div>
+                    <div className="text-xs text-white/50">Coverage</div>
                   </div>
                   <div className="mt-1 flex items-center justify-between">
                     <div className="text-2xl font-semibold text-white">{gate.score >= 0 ? '+' : ''}{gate.score}</div>
@@ -694,7 +694,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
             <CollapsibleSection title="Commodities" summary="Top 4, then the rest">
             <section id="commodities" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
               <div className="text-sm font-semibold text-white">Commodities Monitor</div>
-              <div className="mt-1 text-xs text-white/50">Oil, metals, agriculture — growth proxy and inflation signals</div>
+              <div className="mt-1 text-xs text-white/50">Oil, metals, agriculture — growth proxy and inflation readings</div>
               <div className="mt-0.5 text-[11px] text-white/30">Market data · source dates shown per row · educational context only</div>
               {commodityHealth && (
                 <div className={`mt-2 rounded-md border px-2.5 py-2 text-[11px] ${commodityHealth.staleSymbols.length ? 'border-amber-500/25 bg-amber-500/5 text-amber-200' : 'border-emerald-500/20 bg-emerald-500/5 text-emerald-200'}`}>
@@ -751,7 +751,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
               <div className="text-sm font-semibold text-white">Cross-Asset Correlation Regime</div>
               <div className="mt-1 text-xs text-white/50">BTC↔SPY correlation, VIX regime, USD trend, sector rotation</div>
               <div className="mt-0.5 text-[11px] text-white/30">Heuristic model · educational context · live inputs, dated below</div>
-              <div className="mt-1 text-[11px] text-white/50">How this differs from Risk State: Risk State is a slow macro score (rates, liquidity, growth, inflation); this panel reads the current tape (BTC and SPY moves, VIX level, USD trend, BTC↔SPY correlation), so the two can disagree.</div>
+              <div className="mt-1 text-[11px] text-white/50">How this differs from Risk State: Risk State is a slow macro reading (rates, liquidity, growth, inflation); this panel reads the current tape (BTC and SPY moves, VIX level, USD trend, BTC↔SPY correlation), so the two can disagree.</div>
               {correlationRegime && correlationRegime.available === false ? (
                 <div className="mt-3 space-y-2">
                   <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">Cross-asset assessment not collected.</div>
@@ -763,7 +763,6 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                     const metrics = [
                       ['Regime', macroLabel(correlationRegime.regime)],
                       ['VIX regime', macroLabel(correlationRegime.vixRegime)],
-                      ['Risk score', typeof correlationRegime.riskScore === 'number' ? `${macroNumber(correlationRegime.riskScore, 0)}/100` : 'Not collected'],
                       ['Weighting factor', typeof correlationRegime.sizeMultiplier === 'number' && correlationRegime.sizeMultiplier !== 0 ? `${macroNumber(correlationRegime.sizeMultiplier)}x` : 'Not collected'],
                       ['USD trend', macroLabel(correlationRegime.dxyTrend)],
                       ['BTC–SPY correlation (20d)', macroNumber(correlationRegime.btcSpyCorrelation)],
@@ -804,7 +803,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                     }`}>{spyPCRatio.ratio}</div>
                   </div>
                   <div className="rounded-lg border border-white/10 bg-black/20 p-3">
-                    <div className="text-[11px] text-white/50">Signal</div>
+                    <div className="text-[11px] text-white/50">Reading</div>
                     <div className={`mt-1 text-sm font-semibold ${
                       spyPCRatio.signal.startsWith('Bearish') ? 'text-rose-400' : spyPCRatio.signal.startsWith('Bullish') ? 'text-emerald-400' : 'text-white'
                     }`}>{spyPCRatio.ratio > 1 ? 'More put than call open interest' : spyPCRatio.ratio < 0.7 ? 'Lower put than call open interest' : 'Comparable put and call open interest'}</div>
@@ -904,7 +903,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
               <details className="rounded-xl border border-emerald-500/30 bg-emerald-500/5" open={false}>
                 <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-emerald-300">Admin: Macro Gate Debug</summary>
                 <div className="border-t border-emerald-500/20 p-3 md:p-4 text-xs text-emerald-100/90">
-                  <div>Score: {gate.score} • Alignment: {gate.permission} • Sizing: {gate.sizing}</div>
+                  <div>Reading: {gate.score} • Alignment: {gate.permission} • Sizing: {gate.sizing}</div>
                   <div className="mt-2">Blockers: {gate.blockers.length ? gate.blockers.join(' | ') : 'None'}</div>
                   <div className="mt-2">Drivers: {gate.drivers.map((d) => `${d.label}:${d.impact}(${d.weight})`).join(' | ')}</div>
                 </div>

@@ -31,7 +31,7 @@ export default function JournalKpiRow({ kpis }: { kpis?: JournalKpisModel }) {
       value: metricMoney(kpis.unrealizedPnlOpen ?? 0),
     },
     {
-      label: "Win rate · 30 days",
+      label: "Win rate · your own trades",
       raw: kpis.winRate30d,
       value: `${((kpis.winRate30d ?? 0) * 100).toFixed(1)}%`,
     },

@@ -19,18 +19,6 @@ function getDominanceValue(dominance: Array<{ symbol: string; dominance: number 
   return typeof row?.dominance === 'number' ? row.dominance : 0;
 }
 
-function conditionColor(verdict: ConditionVerdict): string {
-  if (verdict === 'ALIGNED') return 'text-emerald-300';
-  if (verdict === 'CONDITIONAL') return 'text-amber-300';
-  return 'text-red-300';
-}
-
-function conditionBadge(verdict: ConditionVerdict): string {
-  if (verdict === 'ALIGNED') return '🟢';
-  if (verdict === 'CONDITIONAL') return '🟡';
-  return '🔴';
-}
-
 function freshnessClass(status: FreshnessStatus): string {
   if (status === 'fresh') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
   if (status === 'delayed') return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
@@ -186,24 +174,24 @@ export default function CryptoMorningDecisionCard({ onDecision, compact = false 
 
     if (verdict === 'ALIGNED' && (!longsAllowed || !shortsAllowed)) verdict = 'CONDITIONAL';
 
-    const riskContext = verdict === 'ALIGNED' ? 'Standard review' : verdict === 'CONDITIONAL' ? 'Reduced conviction' : 'Observation';
+    const riskContext = verdict === 'ALIGNED' ? 'Standard review' : verdict === 'CONDITIONAL' ? 'Mixed inputs' : 'Observation';
 
     const subClusters = [
       {
         name: 'Large Caps',
-        condition: riskState === 'Risk-Off' ? 'Unfavorable' : leadership === 'Defensive Rotation' ? 'Mixed' : 'Favorable',
+        condition: riskState === 'Risk-Off' ? 'Caution' : leadership === 'Defensive Rotation' ? 'Mixed' : 'Same direction',
       },
       {
         name: 'Mid/Alts',
-        condition: !longsAllowed || breadthScore < 45 ? 'Unfavorable' : breadthScore >= 60 ? 'Favorable' : 'Mixed',
+        condition: !longsAllowed || breadthScore < 45 ? 'Caution' : breadthScore >= 60 ? 'Same direction' : 'Mixed',
       },
       {
         name: 'Meme/High Beta',
-        condition: verdict === 'ALIGNED' && liquidity === 'Expanding' && volatility !== 'Dislocation' ? 'Favorable' : 'Unfavorable',
+        condition: verdict === 'ALIGNED' && liquidity === 'Expanding' && volatility !== 'Dislocation' ? 'Same direction' : 'Caution',
       },
       {
         name: 'DeFi',
-        condition: liquidity === 'Expanding' && breadthScore >= 50 ? 'Favorable' : liquidity === 'Contracting' ? 'Unfavorable' : 'Mixed',
+        condition: liquidity === 'Expanding' && breadthScore >= 50 ? 'Same direction' : liquidity === 'Contracting' ? 'Caution' : 'Mixed',
       },
     ];
 
@@ -262,20 +250,19 @@ export default function CryptoMorningDecisionCard({ onDecision, compact = false 
             ))}
           </div>
           <div className="mt-1 flex items-center gap-2">
-            <span className="text-xl">{conditionBadge(decision.verdict)}</span>
-            <h2 className={`text-base font-extrabold ${conditionColor(decision.verdict)}`}>REVIEW: {decision.verdict}</h2>
+            <h2 className="text-base font-extrabold text-slate-100">What to check</h2>
           </div>
           <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
-            <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Confluence Score: {decision.adaptiveConfidence == null ? "Unavailable" : `${decision.adaptiveConfidence}/100`}</span>
-            <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Risk Context: {decision.riskContext}</span>
-            <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Long Evidence: {decision.longsAllowed ? 'Clear' : 'Limited'}</span>
-            <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Short Evidence: {decision.shortsAllowed ? 'Clear' : 'Limited'}</span>
+            <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Breadth: {decision.breadthScore == null ? 'Not collected' : `${decision.breadthScore}%`}</span>
+            <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Risk state: {decision.riskState}</span>
+            <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Liquidity: {decision.liquidity}</span>
+            <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Volatility: {decision.volatility}</span>
           </div>
           <div className="mt-2 grid grid-cols-2 gap-1.5 md:grid-cols-4">
             {decision.subClusters.map((cluster) => (
               <div key={cluster.name} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-[11px]">
                 <p className="text-slate-500">{cluster.name}</p>
-                <p className={`font-semibold ${cluster.condition === 'Favorable' ? 'text-emerald-300' : cluster.condition === 'Mixed' ? 'text-amber-300' : 'text-red-300'}`}>{cluster.condition}</p>
+                <p className="font-semibold text-slate-200">{cluster.name === 'Large Caps' ? decision.riskState : cluster.name === 'Mid/Alts' ? (decision.breadthScore == null ? 'Breadth not collected' : `Breadth ${decision.breadthScore}%`) : `${decision.liquidity} liquidity`}</p>
               </div>
             ))}
           </div>

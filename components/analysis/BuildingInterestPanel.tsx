@@ -60,7 +60,6 @@ export default function BuildingInterestPanel({
                 {typeof a.changePct === 'number' ? (
                   <span className="font-bold" style={{ color: pctColor(a.changePct) }}>{a.changePct >= 0 ? '+' : ''}{a.changePct.toFixed(2)}%</span>
                 ) : null}
-                <span className="text-slate-400">Strength {a.score.value}</span>
                 <span className="text-slate-600">{isOpen ? '−' : '+'}</span>
               </span>
             </button>
@@ -70,7 +69,6 @@ export default function BuildingInterestPanel({
                 <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
                   <span className="rounded border border-white/10 px-1.5 py-0.5">Evidence: {a.evidence.level}</span>
                   <span>{Math.round(a.evidence.completeness * 100)}% of layers</span>
-                  <span className="text-slate-600">{a.score.label} {a.score.value}/100 — not a probability</span>
                 </div>
               </div>
             ) : null}

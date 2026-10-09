@@ -95,7 +95,7 @@ export default function EvolutionStatusCard({ compact = true }: { compact?: bool
 
       {openVsMidday !== null && (
         <div style={{ color: 'var(--msp-text)', fontSize: '0.7rem' }}>
-          ✔ Open session edge {openVsMidday >= 0 ? 'strengthening' : 'weakening'} ({Math.abs(openVsMidday * 100).toFixed(1)}%)
+          ✔ Open session record {openVsMidday >= 0 ? 'strengthening' : 'weakening'} ({Math.abs(openVsMidday * 100).toFixed(1)}%)
         </div>
       )}
     </div>

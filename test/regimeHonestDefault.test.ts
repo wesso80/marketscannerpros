@@ -161,7 +161,7 @@ describe('regime consumers (OV-1)', () => {
     for (const src of [explorer, egg]) {
       expect(src).toContain('operatorContext');
       expect(src).toContain('Context only');
-      expect(src).toContain('Not a market regime and not a setup signal.');
+      expect(src).toContain('Not a market regime and not a setup reading.');
     }
     const bar = readFileSync('app/v2/_components/RegimeBar.tsx', 'utf8');
     expect(bar).not.toContain("|| 'neutral'");

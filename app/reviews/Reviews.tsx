@@ -4,8 +4,8 @@ type Testimonial = { name: string; role: string; quote: string; rating: number }
 
 export default function Reviews() {
   const testimonials: Testimonial[] = [
-    { name: "Sarah M.", role: "Day Trader", quote: "MarketScannerPros changed how I find technically aligned setups.", rating: 5 },
-    { name: "James L.", role: "Swing Trader", quote: "The squeeze + confluence combo is my daily go-to.", rating: 5 },
+    { name: "Sarah M.", role: "Day Trader", quote: "MarketScannerPros changed how I compare setups across timeframes.", rating: 5 },
+    { name: "James L.", role: "Swing Trader", quote: "The squeeze plus timeframe agreement is my daily go-to.", rating: 5 },
     { name: "Emily R.", role: "Investor", quote: "Clean UI, real-time data, and super easy to use.", rating: 5 },
   ];
 
@@ -16,7 +16,7 @@ export default function Reviews() {
         <div className="grid md:grid-cols-3 gap-6">
           {testimonials.map((t, i) => (
             <div key={i} className="p-6 rounded-2xl bg-neutral-800 shadow">
-              <div className="mb-2 text-lg" aria-label={`${t.rating} star rating`}>
+              <div className="mb-2 text-lg" aria-label={`${t.rating} stars`}>
                 {"★".repeat(t.rating)}
               </div>
               <p className="italic mb-4">“{t.quote}”</p>

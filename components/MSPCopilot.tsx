@@ -71,30 +71,39 @@ export default function MSPCopilot({
         const picks = pageData.topPicks as Array<Record<string, unknown>>;
         const totalResults = (pageData.totalResults as number) || picks.length;
         const totalScanned = (pageData.totalScanned as number) || 0;
-        const avgConf = (pageData.averageConfidence as number) || 0;
         const bullish = (pageData.bullishCount as number) || 0;
         const bearish = (pageData.bearishCount as number) || 0;
         const scanType = (pageData.scanType as string) || 'equity';
         const tf = (pageData.timeframe as string) || 'Daily';
         const top3 = picks.slice(0, 3);
 
+        const neutral = 'var(--msp-text)';
+        const measurement = (p: Record<string, unknown>) => {
+          const parts: string[] = [];
+          const price = typeof p.price === 'number' ? p.price : typeof p.currentPrice === 'number' ? p.currentPrice : null;
+          if (price != null) parts.push(price < 1 ? `$${price.toPrecision(4)}` : `$${price.toFixed(2)}`);
+          const change = typeof p.changePercent === 'number' ? p.changePercent : typeof p.change_percent === 'number' ? p.change_percent : null;
+          if (change != null) parts.push(`${change >= 0 ? '+' : ''}${Number(change).toFixed(2)}%`);
+          const rsi = typeof p.rsi === 'number' ? p.rsi : typeof p.rsi14 === 'number' ? p.rsi14 : null;
+          if (rsi != null) parts.push(`RSI ${Number(rsi).toFixed(1)}`);
+          const volume = typeof p.volume === 'number' ? p.volume : typeof p.volume24h === 'number' ? p.volume24h : null;
+          if (volume != null) parts.push(`vol ${volume.toLocaleString('en-US')}`);
+          return parts.join(' · ') || 'Scanned';
+        };
         const explainContent = [
-          { label: 'Scan Type', value: `${scanType.toUpperCase()} · ${tf}`, highlight: true },
-          { label: 'Results', value: `${totalResults} setups from ${totalScanned} scanned` },
-          { label: 'Bias', value: `${bullish} Bullish / ${bearish} Bearish`, color: bullish > bearish ? 'var(--msp-bull)' : bearish > bullish ? 'var(--msp-bear)' : 'var(--msp-text-muted)' },
-          { label: 'Avg Confluence', value: `${avgConf}%`, color: 'var(--msp-text)' },
-          ...top3.map((p, i) => ({
-            label: `#${i + 1}`,
-            value: `${p.symbol} · ${String(p.direction).toUpperCase()} · ${p.confidence}%`,
-            color: p.direction === 'long' ? 'var(--msp-bull)' : 'var(--msp-bear)',
+          { label: 'Scan type', value: `${scanType.toUpperCase()} · ${tf}`, highlight: true },
+          { label: 'Scanned', value: `${totalScanned || totalResults} symbols · ${totalResults} returned` },
+          { label: 'Up / down counts', value: `${bullish} up · ${bearish} down`, color: neutral },
+          ...picks.slice(0, 12).map((p) => ({
+            label: String(p.symbol ?? 'Symbol'),
+            value: measurement(p),
+            color: neutral,
           })),
         ];
 
         const planContent = [
-          { label: 'Top Confluence Setup', value: top3[0] ? `${top3[0].symbol} (${top3[0].confidence}%)` : 'N/A', color: 'var(--msp-bull)' },
-          { label: 'Strategy', value: top3[0] ? String(top3[0].strategy || 'MOMENTUM_REVERSAL').replace(/_/g, ' ') : 'N/A' },
-          { label: 'Market Lean', value: bullish > bearish ? 'Bullish bias across scan' : bearish > bullish ? 'Bearish bias across scan' : 'Mixed / neutral', color: bullish > bearish ? 'var(--msp-bull)' : bearish > bullish ? 'var(--msp-bear)' : 'var(--msp-text-muted)' },
-          { label: 'Quality Filter', value: `${picks.filter((p: any) => p.quality === 'high').length} high quality setups` },
+          { label: 'Symbols', value: picks.map((p) => String(p.symbol ?? '')).filter(Boolean).slice(0, 12).join(', ') || 'None', color: neutral },
+          { label: 'What to check', value: 'Price, session change, RSI, and volume where the scan returned them', color: neutral },
         ];
 
         return {
@@ -135,12 +144,9 @@ export default function MSPCopilot({
       const symbol = pageData.symbol as string || 'N/A';
       const price = pageData.currentPrice as number || pageData.price as number;
       const direction = pageData.direction as string;
-      const confluence = pageData.confluenceStack as number;
 
       // Markets page IDL fields
       const verdict = pageData.verdict as string;
-      const alignment = pageData.alignment as number;
-      const confidence = pageData.confidence as number;
       const authorization = (pageData.researchStatus || pageData.authorization) as string;
       const ruBudget = pageData.ruBudget as string;
       const bullScenario = pageData.bullScenario as string;
@@ -148,30 +154,25 @@ export default function MSPCopilot({
       const rMultiple = pageData.rMultiple as number;
       const volState = pageData.volState as string;
       const eventRisk = pageData.eventRisk as string;
-      const liquidityGrade = pageData.liquidityGrade as string;
       const expectedMove = pageData.expectedMove as string;
 
       // Flow fields
       const marketMode = pageData.marketMode as string;
       const gammaState = pageData.gammaState as string;
-      const flowBias = pageData.flowBias as string;
-      const flowConviction = pageData.flowConviction as number;
 
       // Is this from the Markets page? (has verdict = IDL data present)
       const isMarketsPage = !!verdict;
       
+      const neutral = 'var(--msp-text)';
       const explainContent = isMarketsPage ? [
         { label: 'Symbol', value: symbol, highlight: true },
         { label: 'Price', value: price && typeof price === 'number' ? `$${price.toFixed(2)}` : 'N/A' },
-        { label: 'Alignment', value: alignment !== undefined ? `${alignment}%` : 'N/A', color: 'var(--msp-text)' },
-        { label: 'Confluence', value: confidence !== undefined ? `${confidence}%` : 'N/A', color: 'var(--msp-text)' },
-        { label: 'Vol State', value: volState || 'N/A' },
-        { label: 'Event Risk', value: (eventRisk || 'N/A').toUpperCase(), color: eventRisk === 'high' ? 'var(--msp-bear)' : eventRisk === 'medium' ? 'var(--msp-warn)' : 'var(--msp-bull)' },
+        { label: 'Vol state', value: volState || 'N/A', color: neutral },
+        { label: 'What to check', value: eventRisk ? `Event note: ${eventRisk}` : 'Price, volume, and the dated event note', color: neutral },
       ] : [
         { label: 'Symbol', value: symbol, highlight: true },
         { label: 'Price', value: price && typeof price === 'number' ? `$${price.toFixed(2)}` : 'N/A' },
-        { label: 'Direction', value: direction?.toUpperCase() || 'Neutral', color: direction === 'bullish' ? 'var(--msp-bull)' : direction === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-text-muted)' },
-        { label: 'Confluence', value: confluence !== undefined ? `${confluence}/8` : 'N/A', color: 'var(--msp-text)' },
+        { label: 'What to check', value: 'Price and the indicator readings on this symbol', color: neutral },
       ];
 
       const planContent = isMarketsPage ? [
@@ -180,10 +181,9 @@ export default function MSPCopilot({
         { label: 'R-Multiple', value: rMultiple !== undefined ? `${rMultiple.toFixed(1)}R` : 'N/A', color: 'var(--msp-text)' },
         { label: 'R Budget', value: ruBudget || 'N/A' },
         { label: 'Exp. Move', value: expectedMove || 'N/A' },
-        ...(marketMode ? [{ label: 'Flow Mode', value: `${marketMode.toUpperCase()} / ${gammaState || '?'} gamma`, color: flowBias === 'bullish' ? 'var(--msp-bull)' : flowBias === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-text-muted)' }] : []),
-        ...(flowConviction ? [{ label: 'Confluence', value: `${flowConviction}%`, color: 'var(--msp-text)' }] : []),
+        ...(marketMode ? [{ label: 'Flow mode', value: `${marketMode.toUpperCase()} / ${gammaState || 'not collected'} gamma`, color: 'var(--msp-text)' }] : []),
       ] : direction ? [
-        { label: 'Bias', value: direction.toUpperCase(), color: direction === 'bullish' ? 'var(--msp-bull)' : 'var(--msp-bear)' },
+        { label: 'What to check', value: 'Price and the levels shown on this symbol', color: 'var(--msp-text)' },
         { label: 'Reference', value: pageData.entryTiming ? (pageData.entryTiming as { idealEntryWindow?: string })?.idealEntryWindow || 'See timing' : 'Wait for confirmation' },
         { label: 'Strategy', value: pageData.strategyRecommendation ? (pageData.strategyRecommendation as { name?: string })?.name || 'Review options' : 'Ask for analysis' },
         { label: 'Invalidation', value: pageData.tradeLevels && typeof (pageData.tradeLevels as { stopLoss?: number })?.stopLoss === 'number' ? `Level: $${((pageData.tradeLevels as { stopLoss?: number }).stopLoss as number).toFixed(2)}` : 'Define your risk' },

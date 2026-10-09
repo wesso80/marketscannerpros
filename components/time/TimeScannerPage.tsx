@@ -167,16 +167,16 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
   if (embeddedInTerminal && !scanData) {
     return (
       <TimeScannerShell embedded>
-        <section aria-label="Time Confluence" className="rounded-2xl border border-slate-800 bg-slate-900/40 px-4 py-6">
+        <section aria-label="Close timing" className="rounded-2xl border border-slate-800 bg-slate-900/40 px-4 py-6">
           {error && <p className="mb-3 text-sm text-rose-200">{error}</p>}
-          <h2 className="text-base font-semibold text-slate-100">Run Time Confluence for {symbol}</h2>
+          <h2 className="text-base font-semibold text-slate-100">Run Close timing for {symbol}</h2>
           <button
             type="button"
             onClick={() => { void runScan(); }}
             disabled={loading}
             className="mt-4 inline-flex min-h-10 items-center rounded-lg border border-slate-700 px-4 text-sm font-semibold text-slate-100 disabled:opacity-40"
           >
-            {loading ? 'Running…' : 'Run Time Confluence'}
+            {loading ? 'Running…' : 'Run Close timing'}
           </button>
         </section>
       </TimeScannerShell>
@@ -469,7 +469,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
                       </tr>
                       <tr className="border-b border-slate-800/40 bg-amber-500/5">
                         <td className="py-1.5 pr-4 font-mono font-semibold text-amber-400">13:30</td>
-                        <td className="py-1.5 pr-4 font-semibold text-amber-300">Key Confluence</td>
+                        <td className="py-1.5 pr-4 font-semibold text-amber-300">Key Agreement</td>
                         <td className="py-1.5 text-slate-400">30M · <span className="text-emerald-400/80">1H · 2H (11:30–13:30) · 4H (9:30–13:30)</span></td>
                       </tr>
                       <tr className="border-b border-slate-800/40">

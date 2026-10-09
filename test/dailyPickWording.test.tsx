@@ -3,8 +3,8 @@ import React from 'react';
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
-import DailyPickView from '@/app/daily-pick/DailyPickView';
-import { engineRecord, foldedEngineDetail, readableObservedAt, readablePrice, readablePriceLabel, readableScore, readerVerdict } from '@/app/daily-pick/wording';
+import DailyPickView from '@/app/daily-scan/DailyPickView';
+import { engineRecord, foldedEngineDetail, readableObservedAt, readablePrice, readablePriceLabel, readableScore, readerVerdict } from '@/app/daily-scan/wording';
 import { canonicalLabel, rankDailyPicks } from '@/lib/scoring/canonical/dailyPick';
 import type { DailyPickRow } from '@/lib/og/dailyPicksLatest';
 import type { CanonicalResult } from '@/lib/scoring/canonical/types';
@@ -59,11 +59,11 @@ it('translates permission into reader labels and keeps the engine line for the f
   expect(readerVerdict(null)).toBe('Reading not available right now');
   expect(engineRecord(watch)).toBe('WATCH · A · Pullback · factors only');
   expect(engineRecord(watch)).toBe(canonicalLabel(watch));
-  expect(foldedEngineDetail(watch)).toBe('Engine code WATCH · grade A · setup category Pullback · factors only');
-  expect(foldedEngineDetail(fade)).toBe('Engine code WATCH · grade C · setup category Exhaustion fade · uncalibrated');
-  expect(foldedEngineDetail(passed)).toBe('Engine code PASS · grade B · setup category Squeeze');
-  expect(foldedEngineDetail(blocked)).toBe('Engine code BLOCK · grade F · setup category No setup');
-  expect(foldedEngineDetail(verdict({ ...watch, scoreBasis: undefined, watchReasons: [{ code: 'AT_OPPOSING_LEVEL', message: '' }] }))).toBe('Engine code WATCH · grade A · setup category Pullback · at resistance');
+  expect(foldedEngineDetail(watch)).toBe('Engine code WATCH · marker A · setup category Pullback · factors only');
+  expect(foldedEngineDetail(fade)).toBe('Engine code WATCH · marker C · setup category Exhaustion fade · uncalibrated');
+  expect(foldedEngineDetail(passed)).toBe('Engine code PASS · marker B · setup category Squeeze');
+  expect(foldedEngineDetail(blocked)).toBe('Engine code BLOCK · marker F · setup category No setup');
+  expect(foldedEngineDetail(verdict({ ...watch, scoreBasis: undefined, watchReasons: [{ code: 'AT_OPPOSING_LEVEL', message: '' }] }))).toBe('Engine code WATCH · marker A · setup category Pullback · at resistance');
   expect(readableScore(76.06)).toBe('76.1');
   expect(readableScore(55.5)).toBe('55.5');
   expect(readableScore(91)).toBe('91');
@@ -101,8 +101,8 @@ it('lists measured values in symbol order with the selection and sort disclosed;
 });
 
 it('does not rank stored rows in the page view or loader', () => {
-  const view = readFileSync('app/daily-pick/DailyPickView.tsx', 'utf8');
-  const page = readFileSync('app/daily-pick/page.tsx', 'utf8');
+  const view = readFileSync('app/daily-scan/DailyPickView.tsx', 'utf8');
+  const page = readFileSync('app/daily-scan/page.tsx', 'utf8');
   const loader = readFileSync('lib/og/dailyPicksLatest.ts', 'utf8');
   expect(`${view}\n${page}\n${loader}`).not.toMatch(/rankDailyPicks|selectDailyPicks|ORDER BY[^\n]*score/);
   expect(page).not.toContain('PASS / WATCH / BLOCK');

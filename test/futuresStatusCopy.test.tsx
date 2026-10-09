@@ -20,13 +20,14 @@ it('keeps absent data honest without claiming schedule modules are present',()=>
  expect(container.textContent).toContain('No market observations collected');
  expect(container.textContent).not.toMatch(/remain available|UNKNOWN|Data State/);
 });
-it('labels model estimates while preserving exactly the existing scores',()=>{
+it('labels model estimates while keeping the calculation snapshot unchanged',()=>{
  const estimate=estimateFuturesLiquidityParticipation('/ES',session);
  const snapshot=JSON.stringify(data);
  const {container}=render(<FuturesTerminalPanel data={data} loading={false} error={null} tab="Liquidity & Volume" symbol="/ES"/>);
  expect(container.textContent).toContain('Session-based estimates, not measured volume or order-book liquidity.');
- expect(container.textContent).toContain(`${Math.round(estimate.liquidityScore)}/100`);
- expect(container.textContent).toContain(`${Math.round(estimate.participationScore)}/100`);
+ expect(container.textContent).not.toContain('/100');
+ expect(Number.isFinite(estimate.liquidityScore)).toBe(true);
+ expect(Number.isFinite(estimate.participationScore)).toBe(true);
  expect(container.querySelectorAll('[data-futures-summary]')).toHaveLength(1);
  expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);
  expect(JSON.stringify(data)).toBe(snapshot);

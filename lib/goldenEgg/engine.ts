@@ -467,7 +467,7 @@ export function buildPayload(
     if (direction === 'NEUTRAL') flipConditions.push({ id: 'f10', text: `Direction is neutral (${bullish} bullish vs ${bearish} bearish layers of ${directionalLayers}) — a directional resolution is required`, severity: 'must' });
     if (setup.extended) flipConditions.push({ id: 'extension', text: `Extension must resolve: ${setup.note}`, severity: 'must' });
     if (earningsInWindow) flipConditions.push({ id: 'earnings', text: `Earnings ${extras.fundamentals?.nextEarningsDate} (in ${earningsDte}d) fall inside the ${earningsWindowDays}-day holding window — wait until after the report`, severity: 'must' });
-    if (flipConditions.length === 0) flipConditions.push({ id: 'f0', text: 'Overall score below threshold — waiting for improved confluence', severity: 'must' });
+    if (flipConditions.length === 0) flipConditions.push({ id: 'f0', text: 'Overall reading is below the threshold — waiting for indicator agreement to improve', severity: 'must' });
   }
 
   if (timing.warning) flipConditions.push({ id: 'f6', text: timing.warning, severity: 'nice' });
@@ -520,11 +520,11 @@ export function buildPayload(
   // Timeframe alignment (MPE time pressure)
   const tfScore = mpe ? Math.min(4, Math.round(mpe.time / 25)) : 2;
   const tfDetails: string[] = [];
-  if (ind?.sma50 != null && ind.sma20 != null) tfDetails.push((isLong && p > ind.sma50) || (!isLong && p < ind.sma50) ? 'Daily structure aligned' : 'Daily structure opposing');
+  if (ind?.sma50 != null && ind.sma20 != null) tfDetails.push((isLong && p > ind.sma50) || (!isLong && p < ind.sma50) ? 'Daily structure matches' : 'Daily structure opposing');
   if (ind?.macdHist != null) tfDetails.push(ind.macdHist > 0 ? 'MACD histogram positive' : 'MACD histogram negative');
   if (ind?.ema200 != null) tfDetails.push(p > ind.ema200 ? `Above EMA200 ${fmtLevel(ind.ema200)}` : `Below EMA200 ${fmtLevel(ind.ema200)}`);
   else tfDetails.push('EMA200 unavailable (insufficient history)');
-  if (mpe) { if (mpe.time >= 50) tfDetails.push('Time confluence active'); if (mpe.volatility >= 50) tfDetails.push('Volatility pressure building'); }
+  if (mpe) { if (mpe.time >= 50) tfDetails.push('Close timing active'); if (mpe.volatility >= 50) tfDetails.push('Volatility pressure building'); }
 
   // ── Layer 3 ─────────────────────────────────────────────────────────────────────────────────────────
   const structureVerdict: Verdict = structureScore >= 65 ? 'agree' : structureScore >= 45 ? 'neutral' : 'disagree';
@@ -551,7 +551,7 @@ export function buildPayload(
         { label: 'ATM IV (strikes within 2% of spot)', value: c.atmIv != null ? `${(c.atmIv * 100).toFixed(0)}%` : 'n/a' },
         { label: 'Mean IV, all strikes', value: c.avgIv != null ? `${(c.avgIv * 100).toFixed(0)}%` : 'n/a' },
         { label: 'Expected move (±1σ to expiry)', value: c.expectedMovePct != null ? `±${c.expectedMovePct.toFixed(1)}%` : 'n/a' },
-        { label: 'IV Rank', value: 'n/a (no IV history)' },
+        { label: 'IV percentile', value: 'n/a (no IV history)' },
         { label: 'Dealer Gamma', value: c.dealerGamma },
         { label: 'Volume vs open interest', value: c.unusualActivity },
         { label: 'Max Pain', value: c.maxPain != null ? fmtLevel(c.maxPain) : 'n/a' },
@@ -600,13 +600,13 @@ export function buildPayload(
 
   // ── Narrative ───────────────────────────────────────────────────────────────────────────────────────
   const narrativeBullets: string[] = [];
-  if (permission === 'TRADE') narrativeBullets.push('Multiple factors aligned — conditions support educational scenario analysis.');
+  if (permission === 'TRADE') narrativeBullets.push('Several factors match — conditions support educational scenario analysis.');
   if (structureScore >= 70) narrativeBullets.push('Price structure supports the directional thesis.');
   for (const n of structureQ.notes.slice(0, 2)) narrativeBullets.push(n.charAt(0).toUpperCase() + n.slice(1) + '.');
   if (opts && opts.unusualActivity !== 'Normal') narrativeBullets.push(`Options activity ${opts.unusualActivity.toLowerCase()} on ${opts.canonical.expiry} — watch for follow-through.`);
   if (mpe && mpe.composite >= 60) narrativeBullets.push('Market pressure engine confirms building pressure.');
   if (tcRaw && timing.valid) {
-    narrativeBullets.push(`Time confluence ${tcRaw.signalStrength} ${timing.effectiveDirection} — ${tcRaw.scoreBreakdown.activeTFs} TFs active${tcRaw.scoreBreakdown.hasHigherTF ? ' (higher TF confirmed)' : ''}; relation to setup: ${timing.relation}.`);
+    narrativeBullets.push(`Close timing ${tcRaw.signalStrength} ${timing.effectiveDirection} — ${tcRaw.scoreBreakdown.activeTFs} TFs active${tcRaw.scoreBreakdown.hasHigherTF ? ' (higher TF confirmed)' : ''}; relation to setup: ${timing.relation}.`);
   } else if (tcData?.displayNote) {
     narrativeBullets.push(tcData.displayNote);
   }
@@ -615,7 +615,7 @@ export function buildPayload(
     narrativeBullets.push(`Mid-50 decompression level ${fmtLevel(d.price)} (${d.direction === 'up' ? 'above' : d.direction === 'down' ? 'below' : 'near'} price) from ${d.contributingTFs.length} TFs — a mean-reversion pull, not a timing verdict.`);
   }
   if (dveReading) {
-    if (dveReading.signal.type !== 'none') narrativeBullets.push(`DVE ${dveReading.signal.type.replace(/_/g, ' ')} signal active — strength ${dveStrengthLabel(dveReading.signal.strength)}.`);
+    if (dveReading.signal.type !== 'none') narrativeBullets.push(`DVE ${dveReading.signal.type.replace(/_/g, ' ')} is active — strength ${dveStrengthLabel(dveReading.signal.strength)}.`);
     if (dveReading.volatility.regime === 'compression' && dveReading.volatility.bbwp < 20) narrativeBullets.push(`Volatility compressed (BBWP ${dveReading.volatility.bbwp.toFixed(1)}) — expansion risk is elevated.`);
   }
   if (extras.crossMarket && extras.crossMarket.alignment !== 'unknown') narrativeBullets.push(`Cross-market: ${extras.crossMarket.summary}`);
@@ -626,7 +626,7 @@ export function buildPayload(
   if (trust.level !== 'GOOD') narrativeRisks.push(`Data trust ${trust.level.replace('_', ' ')}: ${trust.reasons.join('; ')}.`);
   if (opts && opts.canonical.quality.level === 'DEGRADED') narrativeRisks.push(`Options chain degraded: ${opts.canonical.quality.reasons[0]}.`);
   if (mpe && mpe.composite < 40) narrativeRisks.push('Low market pressure — range-bound conditions likely.');
-  if (weakest.val < 40) narrativeRisks.push(`${weakest.key} score is weak — significant blocker to thesis.`);
+  if (weakest.val < 40) narrativeRisks.push(`${weakest.key} reading is weak — significant blocker to thesis.`);
   if (timing.warning) narrativeRisks.push(timing.warning);
   if (tcRaw?.candleCloseConfluence.isMonthEnd) narrativeRisks.push('Month-end rebalancing — expect irregular flows and positioning.');
   if (extras.fundamentals?.daysToEarnings != null && extras.fundamentals.daysToEarnings >= 0 && extras.fundamentals.daysToEarnings <= 14) narrativeRisks.push(`Earnings scheduled ${extras.fundamentals.nextEarningsDate} (${extras.fundamentals.daysToEarnings} days) — event risk.`);
@@ -766,7 +766,7 @@ export function buildPayload(
         referenceTrigger,
         referenceLevel: { type: permission === 'TRADE' ? 'reference' : 'confirmation', price: referencePrice != null ? roundPrice(referencePrice) : undefined },
         invalidationLevel: { price: hasAtr ? roundPrice(stopPrice) : null, logic: !hasAtr ? 'Unavailable — measured ATR missing' : stopAnchor ? `Beyond ${stopAnchor} (structure-anchored, ${(stopDistance / atr).toFixed(2)}x ATR buffer)` : `1.5x ATR model stop — no structural level within 1–2 ATR` },
-        reactionZones: zones.map((z, i) => ({ price: roundPrice(z.price), rMultiple: zoneR(z.price) ?? undefined, note: `${z.basis === 'structural' ? z.label : `Model zone (${z.label})`}${i === 1 && decompAligned ? ' · decompression-aligned' : ''}` })),
+        reactionZones: zones.map((z, i) => ({ price: roundPrice(z.price), rMultiple: zoneR(z.price) ?? undefined, note: `${z.basis === 'structural' ? z.label : `Model zone (${z.label})`}${i === 1 && decompAligned ? ' · same decompression window' : ''}` })),
         hypotheticalRr: { expectedR: illustrativeR ?? 0, minR: 1.5 },
         hypotheticalRisk: { riskPct: confidence >= 70 ? 1.0 : confidence >= 55 ? 0.75 : 0.5 },
       },
@@ -802,10 +802,10 @@ export function buildPayload(
       narrative: {
         enabled: true,
         summary: permission === 'TRADE'
-          ? `${symbol} shows ${direction.toLowerCase()} alignment with ${confidence}/100 confluence. Multiple factors support a ${setup.setupType.replace('_', ' ')} educational scenario.${timing.valid && timing.relation === 'supportive' ? ` Time confluence agrees (${timing.effectiveDirection}).` : ''}${dveReading && dveReading.signal.type !== 'none' ? ` DVE ${dveReading.signal.type.replace(/_/g, ' ')} signal active.` : ''}`
+          ? `${symbol} shows ${direction.toLowerCase()} structure. Several factors support a ${setup.setupType.replace('_', ' ')} educational scenario.${timing.valid && timing.relation === 'supportive' ? ` Close timing agrees (${timing.effectiveDirection}).` : ''}${dveReading && dveReading.signal.type !== 'none' ? ` DVE ${dveReading.signal.type.replace(/_/g, ' ')} is active.` : ''}`
           : permission === 'NO_TRADE'
-          ? `${symbol} is not aligned. ${primaryBlocker ?? 'Confluence is insufficient'} — monitor flip conditions.`
-          : `${symbol} is in watch mode. Alignment is gated by ${primaryBlocker ? primaryBlocker.charAt(0).toLowerCase() + primaryBlocker.slice(1) : 'unresolved confirmation'} — monitor flip conditions.${timing.valid && timing.effectiveDirection !== 'neutral' ? ` Time confluence reads ${timing.effectiveDirection} (${timing.relation}).` : ''}`,
+          ? `${symbol} does not match the setup checks. ${primaryBlocker ?? 'Indicator agreement is insufficient'} — monitor flip conditions.`
+          : `${symbol} is in watch mode. The read is gated by ${primaryBlocker ? primaryBlocker.charAt(0).toLowerCase() + primaryBlocker.slice(1) : 'unresolved confirmation'} — monitor flip conditions.${timing.valid && timing.effectiveDirection !== 'neutral' ? ` Close timing reads ${timing.effectiveDirection} (${timing.relation}).` : ''}`,
         bullets: narrativeBullets,
         risks: narrativeRisks,
       },
@@ -875,7 +875,7 @@ export function computeFlowScore(
 // ── Helpers ─────────────────────────────────────────────────────────────
 function describeScore(key: string, val: number, ind: Indicators | null, opts: OptionsSnapshot | null, cryptoDerivs: CryptoDerivatives | null, price: { changePct: number }, structureNotes: string[] = [], flowNotes: string[] = []): string {
   if (key === 'Structure') {
-    const core = ind?.sma50 ? (val >= 65 ? 'price aligned with the 20/50-bar means' : val >= 45 ? 'mixed alignment with the 20/50-bar means' : 'price against the 20/50-bar means') : 'trend structure evaluated';
+    const core = ind?.sma50 ? (val >= 65 ? 'price on the same side as the 20/50-bar means' : val >= 45 ? 'mixed versus the 20/50-bar means' : 'price against the 20/50-bar means') : 'trend structure evaluated';
     return structureNotes.length ? `${core}; ${structureNotes[0]}` : core;
   }
   if (key === 'Flow') return opts
@@ -926,9 +926,9 @@ function buildThesis(
   let thesis = `${symbol} shows a ${dirWord} ${setupWord} setup (${setup.note}).`;
   if (ind?.adx != null) thesis += ` ${adxStrength(ind.adx).label.replace(/^\d+(\.\d+)?/, `ADX ${ind.adx.toFixed(0)}`)}.`;
   if (opts && opts.sentiment !== 'Neutral') thesis += ` Options positioning is ${opts.sentiment.toLowerCase()} (P/C ${opts.putCallRatio.toFixed(2)} on ${opts.canonical.expiry}).`;
-  if (mpe && mpe.composite >= 60) thesis += ` Market pressure at ${mpe.composite.toFixed(0)}/100 supports the thesis.`;
-  if (tcData && timing.valid && timing.effectiveDirection !== 'neutral') thesis += ` Time confluence is ${timing.effectiveDirection} with ${tcData.signalStrength} signal strength (${timing.relation}).`;
-  if (dve && dve.signal.type !== 'none') thesis += ` DVE ${dve.signal.type.replace(/_/g, ' ')} signal — strength ${dveStrengthLabel(dve.signal.strength)}.`;
+  if (mpe && mpe.composite >= 60) thesis += ' Market pressure supports the thesis.';
+  if (tcData && timing.valid && timing.effectiveDirection !== 'neutral') thesis += ` Close timing is ${timing.effectiveDirection} with ${tcData.signalStrength} input strength (${timing.relation}).`;
+  if (dve && dve.signal.type !== 'none') thesis += ` DVE ${dve.signal.type.replace(/_/g, ' ')} is active — strength ${dveStrengthLabel(dve.signal.strength)}.`;
   return thesis;
 }
 

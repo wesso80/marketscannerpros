@@ -91,7 +91,7 @@ export default function MarketPressureWidget({ symbol, scanMode = 'intraday_1h' 
             <Row label="Expiry" value={data.options.values.expiry ?? NOT_COLLECTED} />
             <Row label="Put/call (open interest)" value={fmt(data.options.values.putCallRatio, 2)} />
             <Row label="Max pain" value={data.options.values.maxPainStrike == null ? NOT_COLLECTED : `${fmt(data.options.values.maxPainStrike, 2)}${data.options.values.maxPainReliable === false ? ' (thin coverage)' : ''}`} />
-            <Row label="IV rank" value={fmt(data.options.values.ivRank, 0)} />
+            <Row label="IV percentile" value={fmt(data.options.values.ivRank, 0)} />
             <Row label="Strikes with volume high vs open interest" value={fmt(data.options.values.strikesWithHighVolumeVsOpenInterest, 0)} />
             <Row label="Estimated net gamma" value={usd(data.options.values.estimatedNetGammaUsd)} />
             <Row label="Estimated gamma flip" value={fmt(data.options.values.estimatedGammaFlipPrice, 2)} />

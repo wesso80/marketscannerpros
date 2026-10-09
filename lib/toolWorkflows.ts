@@ -6,8 +6,8 @@ export type NavigationLink = { href: string; label: string; comingSoon?: boolean
 const link = (href: string, label: string): NavigationLink => ({href, label});
 /** One destination map for desktop, phone and the workflow sub-bar. Entitlements stay at the page/API. */
 export const areaLinks: Record<WorkflowArea, NavigationLink[]> = {
-  today: [link('/tools/command-center','Overview'), link('/tools/msp-radar','Daily Radar'), link('/daily-pick','Daily Picks'), link('/tools','All tools'), link('/tools/start','Free Today')],
-  scan: [link('/tools/scanner','Scanner'),link('/tools/golden-egg','Symbol'),link('/tools/options','Options'),link('/tools/terminal','Terminal'),link('/tools/liquidity-sweep','Liquidity Sweep'),{...link('/tools/scalper','Scalper'), comingSoon: true},link('/tools/volatility-engine','Volatility'),link('/tools/terminal?tab=time-confluence','Time Confluence'),link('/tools/terminal?tab=crypto-terminal','Crypto Terminal')],
+  today: [link('/tools/command-center','Overview'), link('/tools/msp-radar','Daily Radar'), link('/daily-scan','Daily scan'), link('/tools','All tools'), link('/tools/start','Free Today')],
+  scan: [link('/tools/scanner','Scanner'),link('/tools/golden-egg','Symbol'),link('/tools/options','Options'),link('/tools/terminal','Terminal'),link('/tools/liquidity-sweep','Liquidity Sweep'),{...link('/tools/scalper','Scalper'), comingSoon: true},link('/tools/volatility-engine','Volatility'),link('/tools/terminal?tab=time-confluence','Close timing'),link('/tools/terminal?tab=crypto-terminal','Crypto Terminal')],
   markets: [link('/tools/explorer','Explorer'),link('/tools/research','Research'),link('/tools/dashboard?tab=macro','Macro'),link('/tools/crypto-dashboard','Crypto Derivatives'),link('/tools/explorer?tab=movers','Market Movers'),link('/tools/explorer?tab=heatmap','Heatmap'),link('/tools/explorer?tab=commodities','Commodities'),link('/tools/explorer?tab=crypto-command','Crypto Overview'),link('/tools/explorer?tab=crypto-command&section=heatmap','Crypto Heatmap'),link('/tools/explorer?tab=crypto-intel','Crypto Intelligence'),link('/tools/research?tab=earnings','Earnings'),link('/tools/research?tab=calendar','Economic Calendar')],
   intelligence: [link('/intelligence','Overview'),link('/intelligence/global-m2','Global M2'),link('/intelligence/fragility','Fragility'),link('/intelligence/liquidity','Liquidity')],
   // Accuracy page stays off this menu until labelled results exist. The URL still opens it.
@@ -32,7 +32,7 @@ export function workflowArea(pathname: string, tab = ''): WorkflowArea | null {
   if (pathname === '/tools/workspace' || /\/(journal|portfolio|watchlists|alerts|backtest|learning|settings|signal-accuracy)(\/|$)/.test(pathname)) return 'track';
   if (/^\/(guide|methodology|blog|about|contact|resources)(\/|$)/.test(pathname)) return 'learn';
   if (/^\/(account|pricing|auth|compliance-hub|privacy|terms|cookie-policy|refund-policy|disclaimer|legal)(\/|$)/.test(pathname) || pathname === '/tools/referrals') return 'account';
-  if (pathname === '/tools' || /\/(command-center|msp-radar|daily-pick|start)(\/|$)/.test(pathname)) return 'today';
+  if (pathname === '/tools' || /\/(command-center|msp-radar|daily-scan|start)(\/|$)/.test(pathname)) return 'today';
   if (/\/(explorer|research|macro|crypto-dashboard|crypto-intel|markets|market-movers|gainers-losers|heatmap|commodities)(\/|$)/.test(pathname)) return 'markets';
   if (/\/(scanner|golden-egg|options|terminal|liquidity-sweep|scalper|volatility-engine)(\/|$)/.test(pathname)) return 'scan';
   return null;
@@ -61,8 +61,8 @@ export const toolWorkflows: ToolWorkflow[] = [
     tool('/tools/dashboard?tab=macro', 'Macro dashboard', 'Rates, commodities and economic context.'),
     tool('/intelligence', 'Macro intelligence', 'Global M2, liquidity and fragility with source limitations.'),
   ] },
-  { id: 'validate', title: '2. Scanner', subtitle: 'Build a shortlist for a defined universe and timeframe.', outcome: 'Ranked candidates with visible data limitations.', tools: [
-    tool('/tools/scanner', 'Ranked & custom scans', 'Rank, filter and inspect research candidates.', 'free', 'primary'),
+  { id: 'validate', title: '2. Scanner', subtitle: 'Build a shortlist for a defined universe and timeframe.', outcome: 'A shortlist with visible data limitations.', tools: [
+    tool('/tools/scanner', 'Scanner', 'Filter and inspect research candidates by RSI, volume, and percent change.', 'free', 'primary'),
     tool('/tools/liquidity-sweep', 'Liquidity sweeps', 'Sweep and reclaim research.', 'pro', 'specialist'),
     tool('/tools/scalper', 'Intraday scanner', 'Short-timeframe research with freshness checks.', 'pro', 'specialist'),
   ] },

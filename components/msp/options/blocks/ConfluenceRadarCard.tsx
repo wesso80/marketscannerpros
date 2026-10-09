@@ -15,7 +15,7 @@ export default function ConfluenceRadarCard({ payload }: Props) {
 
   return (
     <Card>
-      <CardHeader title="Confluence Radar" subtitle="Setup-weighted axes" />
+      <CardHeader title="Agreement Radar" subtitle="Setup-weighted axes" />
       <div className="space-y-2 text-xs text-[var(--msp-muted)]">
         {points.map((point) => (
           <div key={point.label} className="flex items-center gap-2">

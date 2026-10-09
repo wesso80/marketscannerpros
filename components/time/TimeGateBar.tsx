@@ -1,4 +1,3 @@
-import { MiniScore } from '@/components/time/atoms';
 import { TimePermission } from '@/components/time/types';
 
 type TimeGateBarProps = {
@@ -21,12 +20,10 @@ export default function TimeGateBar(props: TimeGateBarProps) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="text-xs text-slate-300">TIME ANALYSIS STATUS</div>
-          <div className="mt-1 text-lg font-semibold text-slate-100">Condition: {props.permission === 'ALLOW' ? 'ALIGNED' : props.permission === 'WAIT' ? 'CONDITIONAL' : 'NOT ALIGNED'}</div>
+          <div className="mt-1 text-lg font-semibold text-slate-100">What to check: close confirmation, risk state, and the notes below.</div>
         </div>
 
         <div className="flex items-center gap-3">
-          <MiniScore label="Gate" value={props.gateScore} />
-          <MiniScore label="Time" value={props.timeConfluenceScore} />
           <button className="h-9 rounded-lg bg-white/5 px-4 text-sm font-semibold text-slate-200 ring-1 ring-white/10 hover:bg-white/10">
             Set Alert on Close
           </button>

@@ -37,7 +37,7 @@ export default function CommandStrip({
       <div className="flex flex-wrap items-center gap-2">
         {symbol ? <Pill tone="accent">{symbol}</Pill> : null}
         {status ? <Pill tone="neutral">Status: {status}</Pill> : null}
-        {typeof confidence === 'number' ? <Pill tone={confidenceTone}>Confidence: {confidence.toFixed(0)}%</Pill> : null}
+        {typeof confidence === 'number' ? <Pill tone={confidenceTone}>Coverage: {confidence.toFixed(0)}%</Pill> : null}
         {dataHealth ? <Pill tone="neutral">Data: {dataHealth}</Pill> : null}
         {mode ? <Pill tone="accent">Mode: {mode}</Pill> : null}
 

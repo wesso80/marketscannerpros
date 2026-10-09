@@ -460,9 +460,9 @@ function GoldenEggReport() {
       statusLabel: ge?.layer3?.timeConfluence?.enabled ? 'COMPUTED' : 'Not collected',
       status: buildMarketDataProviderStatus({
         source: 'time-confluence',
-        provider: 'time confluence',
+        provider: 'close timing',
         degraded: !ge?.layer3?.timeConfluence?.enabled,
-        warnings: ge?.layer3?.timeConfluence?.enabled ? [] : ['Time confluence unavailable.'],
+        warnings: ge?.layer3?.timeConfluence?.enabled ? [] : ['Close timing unavailable.'],
       }),
     },
   ];
@@ -605,7 +605,7 @@ function GoldenEggReport() {
   const specialistLinks = [
     ...(quoteType === 'crypto' ? [] : [{ href: optionsHref(sym, requestedExpiry ?? undefined), label: 'Options' }]),
     { href: `/tools/volatility-engine?symbol=${q}`, label: 'Volatility' },
-    { href: `/tools/terminal?tab=time-confluence&symbol=${q}`, label: 'Time confluence' },
+    { href: `/tools/terminal?tab=time-confluence&symbol=${q}`, label: 'close timing' },
   ];
 
   const designEnabled = publicDesignEnabled();
@@ -711,13 +711,13 @@ function GoldenEggReport() {
             // Company fundamentals do not exist for crypto; reuse the derivatives/quote evidence Golden Egg already fetched.
             <Card>
               <h3 className="text-xs font-semibold text-emerald-400 mb-1">Network & derivatives context — {symbolText(sym.replace(/[-/]?(USDT|USD)$/, ''))}</h3>
-              <p className="text-[11px] text-slate-500 mb-3">Crypto assets have no company filings. Market structure below comes from CoinGecko coin data and the canonical daily series; derivatives are the same snapshot used in the verdict. No corporate-style fundamentals are inferred.</p>
+              <p className="text-[11px] text-slate-500 mb-3">Crypto assets have no company filings. Market structure below comes from CoinGecko coin data and the canonical daily series; derivatives are the same snapshot used in the summary. No corporate-style fundamentals are inferred.</p>
               {geCanonical?.network ? (() => {
                 const n = geCanonical.network;
                 const usd = (v: number | null) => (v != null ? formatUsdShort(v) : 'Not recorded');
                 const num = (v: number | null, d = 0) => (v != null ? v.toLocaleString(undefined, { maximumFractionDigits: d }) : 'Not recorded');
                 const tiles: Array<[string, string, string?]> = [
-                  ['Market cap', usd(n.marketCap), n.marketCapRank != null ? `rank #${n.marketCapRank}` : undefined],
+                  ['Market cap', usd(n.marketCap), n.marketCapRank != null ? `list #${n.marketCapRank}` : undefined],
                   ['FDV', usd(n.fdv), n.fdvBasis === 'derived_max_supply' ? 'price × max supply' : n.fdvBasis === 'provider' ? 'provider' : 'unavailable — uncapped/unknown supply'],
                   ['Circulating supply', num(n.circulatingSupply), n.supplyIssuedPct != null ? `${(n.supplyIssuedPct * 100).toFixed(0)}% of max` : 'max supply not recorded'],
                   ['Max supply', n.maxSupply != null ? num(n.maxSupply) : 'uncapped supply', n.totalSupply != null ? `total ${num(n.totalSupply)}` : undefined],
@@ -785,7 +785,7 @@ function GoldenEggReport() {
         <>
           {geLocalDemo && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-200">
-              <strong>Local demo Golden Egg payload:</strong> live data is unavailable in this local environment, so this verdict packet is sample data for workflow testing only. Do not treat it as live market output.
+              <strong>Local demo Golden Egg payload:</strong> live data is unavailable in this local environment, so this summary packet is sample data for workflow testing only. Do not treat it as live market output.
               {geWarnings.length > 0 && (
                 <ul className="mt-1 list-disc pl-4 text-[11px] text-amber-300/90">
                   {geWarnings.slice(0, 2).map((warning) => <li key={warning}>{symbolText(warning)}</li>)}
@@ -922,7 +922,7 @@ function GoldenEggReport() {
                     Stored risk environment: {regime.data.operatorContext.riskEnvironment ?? 'not set'}
                     {regime.data.operatorContext.stale ? ' · stale' : ''}
                   </div>
-                  <div className="mt-1 text-[10px] text-slate-500">Not a market regime and not a setup signal.</div>
+                  <div className="mt-1 text-[10px] text-slate-500">Not a market regime and not a setup reading.</div>
                 </div>
               </div>
             )}
@@ -1175,7 +1175,7 @@ function GoldenEggReport() {
                   </div>
                   {d.signal.active && d.signal.type !== 'none' && (
                     <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2">
-                      <div className="text-[11px] text-emerald-400 font-semibold">Signal recorded: {symbolText(d.signal.type.replace(/_/g, ' '))}</div>
+                      <div className="text-[11px] text-emerald-400 font-semibold">Reading recorded: {symbolText(d.signal.type.replace(/_/g, ' '))}</div>
                       <div className="text-[11px] text-slate-400">{symbolText(d.signal.triggerReason.join(' · '))}</div>
                     </div>
                   )}

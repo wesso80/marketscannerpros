@@ -61,7 +61,7 @@ export default function MoversView(props: MoversViewProps) {
         <div className="flex flex-wrap gap-2" role="group" aria-label="Asset filter">{([['all','All assets'],['equity','Stocks'],['crypto','Crypto']] as const).map(([id,label]) => <button key={id} type="button" className={control} aria-pressed={assetFilter === id} onClick={() => props.onAsset(id)}>{label}</button>)}</div>
         <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Research filter">{([['breakout','Breakout'],['reversal','Reversal'],['momentum','Momentum']] as const).map(([id,label]) => <button key={id} type="button" className={control} aria-pressed={setupMode === id} onClick={() => props.onSetup(id)}>{label}</button>)}</div>
       </CollapsibleSection>
-      <p className="text-xs text-slate-400">Showing {visible.length} of {rows.length} movers · {permissionedCount} aligned in the evaluated list</p>
+      <p className="text-xs text-slate-400">Showing {visible.length} of {rows.length} movers · {permissionedCount} matching in the evaluated list</p>
       <ul className="space-y-2" aria-label="Mover observations">{visible.map((row, i) => {
         const research = moverResearchLink(row, environment.deploymentMode);
         return <li key={`${row.asset_class}/${row.ticker}/${i}`} data-mover-row className="min-w-0 rounded-lg border border-slate-700 p-3">
@@ -69,22 +69,21 @@ export default function MoversView(props: MoversViewProps) {
           <details><summary className="min-h-10 cursor-pointer content-center text-xs text-slate-400">Evidence · {row.asset_class === 'equity' ? 'Stock' : 'Crypto'} · {number(row.relVolume,2)}× cohort volume</summary>
             <dl className="grid grid-cols-2 gap-2 py-3 text-xs">{[
               ['Price', Number.isFinite(row.price) ? `$${number(row.price, row.price < 1 ? 6 : 2)}` : 'Not collected'],
-              ['Structure',marketText(row.structureBias)], ['Alignment score',number(row.confluenceScore)],
-              ['Liquidity score',number(row.liquidityScore)], ['Group',marketText(row.cluster).replaceAll('_', ' ')],
+              ['Structure',marketText(row.structureBias)], ['Group',marketText(row.cluster).replaceAll('_', ' ')],
               ['RSI',row.inUniverse ? number(row.rsi14) : 'Not collected'],
               ['Distance from 200-day average',row.inUniverse && row.ema200_dist != null ? pct(row.ema200_dist) : 'Not collected'],
               ['Relative strength',row.rsLabel ? marketText(row.rsLabel) : 'Not collected'],
               ['Momentum',row.inUniverse && row.accelLabel ? marketText(row.accelLabel) : 'Not collected'],
-              ['Crypto score',row.asset_class === 'crypto' ? number(row.crcsUser) : 'Not applicable'],
+              ['What to check', row.asset_class === 'crypto' ? 'Price, session change, RSI, and volume versus this list' : 'Price, session change, RSI, and volume versus this list'],
             ].map(([label,value]) => <div key={label} className="min-w-0"><dt className="text-slate-500">{label}</dt><dd className="break-words">{value}</dd></div>)}</dl>
             {row.deployment === 'blocked' ? <p className="text-xs text-slate-400">{marketText(row.overlayReasons?.length ? row.overlayReasons.join(' · ') : row.blockReason || 'Outside the current research criteria')}</p> : <Link className={control} href={research.href}>{marketText(research.label)}</Link>}
           </details>
         </li>;
       })}</ul>
       {rows.length > 5 && <button type="button" className={control} onClick={() => setExpandedSelection(showAll ? null : selection)}>{showAll ? 'Show five' : `Show all ${rows.length}`}</button>}
-      <CollapsibleSection title="Market context" summary={`${number(environment.adaptiveConfidence)} /100 alignment`}>
+      <CollapsibleSection title="Market context" summary="What to check: breadth, liquidity, and volatility">
         <dl className="grid grid-cols-2 gap-3 text-sm">{[['Market',environment.marketMode],['Breadth',environment.breadthState],['Liquidity',environment.liquidityState],['Volatility',environment.volatilityState],['High-volatility assets',environment.highBetaPolicy],['Breakouts',environment.breakoutPolicy],['Reversals',environment.meanReversionPolicy],['Median cohort volume',number(environment.medianVol,0)]].map(([label,value])=><div key={label}><dt className="text-slate-400">{label}</dt><dd>{marketText(value)}</dd></div>)}</dl>
-        <p className="mt-3 text-xs text-slate-400">Cohort volume compares this observation with this list, not the symbol’s historical volume. Crypto scores apply only to crypto. Scores summarise research criteria.</p>
+        <p className="mt-3 text-xs text-slate-400">Cohort volume compares this observation with this list, not the symbol’s historical volume. What to check: price, session change, RSI, and volume.</p>
       </CollapsibleSection>
       <CollapsibleSection title="Change charts" summary="Recorded gainers and decliners"><div className="grid gap-5 md:grid-cols-2"><MoversChart title="Gainers" rows={data!.topGainers} medianVol={environment.medianVol}/><MoversChart title="Decliners" rows={data!.topLosers} medianVol={environment.medianVol}/></div></CollapsibleSection>
     </>}

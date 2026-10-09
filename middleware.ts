@@ -330,6 +330,21 @@ export async function middleware(req: NextRequest) {
     return withNoIndexHeaders(NextResponse.next());
   }
 
+  // Setup accuracy stays off customer nav and is admin-only even by direct URL.
+  if (pathname === '/tools/signal-accuracy' || pathname.startsWith('/tools/signal-accuracy/')) {
+    const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value, ADMIN_CIDS);
+    let appSessionIsAdmin = false;
+    if (!adminSession && cookie) {
+      appSessionIsAdmin = await sessionMatchesAdminList(await verify(cookie), ADMIN_EMAILS_MW, ADMIN_CIDS);
+    }
+    if (!adminSession && !appSessionIsAdmin) {
+      const url = req.nextUrl.clone();
+      url.pathname = '/auth';
+      url.searchParams.set('next', pathname);
+      return withNoIndexHeaders(NextResponse.redirect(url));
+    }
+  }
+
   // ── /quant → redirect to /admin/quant ──
   if (pathname.startsWith('/quant')) {
     const url = req.nextUrl.clone();

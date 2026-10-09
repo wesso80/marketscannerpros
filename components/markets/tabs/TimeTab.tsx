@@ -23,7 +23,7 @@ export default function TimeTab({ ctx }: { ctx: TickerContext }) {
     <div className="grid gap-3">
       <div>
         <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Time Analysis</p>
-        <h3 className="text-xs font-bold text-[var(--msp-text)]">{symbol} — Session Behavior, Confluence & Vol Windows</h3>
+        <h3 className="text-xs font-bold text-[var(--msp-text)]">{symbol} — Session Behavior, Agreement & Vol Windows</h3>
       </div>
 
       {/* Time Confluence Widget — full embed from existing component */}
@@ -59,11 +59,11 @@ export default function TimeTab({ ctx }: { ctx: TickerContext }) {
 
       {/* Explanation */}
       <div className="rounded-md border border-dashed border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 text-[11px] text-[var(--msp-text-faint)]">
-        <p className="font-semibold text-[var(--msp-text-muted)] mb-1">How Time Confluence Works</p>
+        <p className="font-semibold text-[var(--msp-text-muted)] mb-1">How Close timing Works</p>
         <p>
-          Multiple timeframe candle closes + Fibonacci time ratios + TWAP windows are scored together.
-          When several time factors align, the confluence score rises — historically correlated with higher directional hit rates.
-          Higher scores = stronger confluence windows for analysis.
+          Multiple timeframe candle closes, Fibonacci time ratios, and TWAP windows are checked together.
+          When several time factors agree, more of those checks line up. In past samples that has coincided with higher directional hit rates.
+          More agreeing timeframes mean a tighter window to review.
         </p>
       </div>
     </div>

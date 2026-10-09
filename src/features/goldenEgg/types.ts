@@ -321,7 +321,7 @@ export interface GoldenEggPayload {
   canonicalVerdict?: CanonicalResult;
   /** The v2 confluence read this packet had before the canonical verdict was applied (secondary, "legacy confluence"). */
   legacyConfluence?: {
-    label: 'legacy confluence (secondary)';
+    label: 'Earlier indicator blend (secondary)';
     assessment: PublicAssessment;
     direction: Direction;
     grade: string;

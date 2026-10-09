@@ -199,10 +199,10 @@ function FundingHeatmapInline({ cells, topExchanges }: { cells: FundingHeatmapCe
 
 function SignalsInline({ signals, unavailable = false }: { signals: DerivedSignal[]; unavailable?: boolean }) {
   if (unavailable) {
-    return <p className="text-sm text-amber-300 italic">Signals unavailable because the derivatives feed did not return a validated dataset.</p>;
+    return <p className="text-sm text-amber-300 italic">Readings unavailable because the derivatives feed did not return a validated dataset.</p>;
   }
   if (!signals.length) {
-    return <p className="text-sm text-zinc-500 italic">No significant signals detected in the loaded derivatives dataset.</p>;
+    return <p className="text-sm text-zinc-500 italic">No significant readings detected in the loaded derivatives dataset.</p>;
   }
   const icon = (s: DerivedSignal['severity']) => s === 'bullish' ? '🟢' : s === 'bearish' ? '🔴' : '🟡';
   return (
@@ -458,7 +458,7 @@ export default function CryptoTerminalView({
             {/* Quick stats */}
             {coin && (
               <div className="hidden lg:flex items-center gap-4 text-xs text-zinc-400">
-                <span>Rank #{coin.rank}</span>
+                <span>List #{coin.rank}</span>
                 <span>MCap {fmtUsd(coin.marketCap)}</span>
                 <span>Vol {fmtUsd(coin.volume24h)}</span>
                 <span>24h {fmtUsd(coin.low24h)} – {fmtUsd(coin.high24h)}</span>
@@ -669,7 +669,7 @@ export default function CryptoTerminalView({
             )}
 
             {/* Signals */}
-            <Card title="Positioning Signals" right={<Badge color={signals.length > 0 ? 'amber' : 'zinc'}>{signals.length}</Badge>}>
+            <Card title="Positioning Readings" right={<Badge color={signals.length > 0 ? 'amber' : 'zinc'}>{signals.length}</Badge>}>
               <SignalsInline signals={signals} unavailable={Boolean(single.error || !single.data)} />
             </Card>
           </div>
@@ -794,7 +794,7 @@ export default function CryptoTerminalView({
                   <MiniStat label="Total Stablecoin" value={fmtUsd(stablecoinData.total.marketCap)} />
                   <MiniStat label="24h Delta" value={fmtUsd(Math.abs(stablecoinData.total.delta24h))} sub={`${stablecoinData.total.delta24h >= 0 ? 'Inflow' : 'Outflow'}`} />
                   <MiniStat
-                    label="Signal"
+                    label="Reading"
                     value={stablecoinData.signals.significantMint ? '🟢 Major Mint' : stablecoinData.signals.significantRedemption ? '🔴 Major Redeem' : '⚪ Stable'}
                     sub={stablecoinData.signals.significantMint ? '>$100M minted — bullish liquidity' : stablecoinData.signals.significantRedemption ? '>$100M redeemed — watch for sell pressure' : 'No significant supply change'}
                   />

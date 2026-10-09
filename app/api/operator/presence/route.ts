@@ -648,7 +648,7 @@ export async function GET() {
     } else if (experienceModeKey === 'learning') {
       suggestedActions.push({ key: 'run_backtest', label: 'Review Coach Patterns', reason: 'Reinforce learning from recent trade outcomes before next cycle.' });
     } else if (experienceModeKey === 'hunt') {
-      suggestedActions.push({ key: 'scan_market', label: 'Scan for A+ Setups', reason: 'Environment supports active setup hunting with low friction.' });
+      suggestedActions.push({ key: 'scan_market', label: 'Scan for symbols to review', reason: 'Environment supports active setup hunting with low friction.' });
     }
 
     if (firstTask && suggestedActions.length < 2) {

@@ -20,7 +20,7 @@ export default function DecompositionMatrix({ rows, primaryDirection }: Decompos
           <div>State</div>
           <div>Bias</div>
           <div>Strength</div>
-          <div>Aligned</div>
+          <div>Same way</div>
         </div>
 
         {rows.map((row) => (

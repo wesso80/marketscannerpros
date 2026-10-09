@@ -288,7 +288,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
             {mode === 'strategy' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Edge Group</label>
+                  <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Record Group</label>
                   <select
                     value={edgeGroup}
                     onChange={e => handleEdgeGroupChange(e.target.value as EdgeGroupId)}
@@ -312,8 +312,8 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
 
             {mode === 'scanner' && (
               <p className="text-xs text-slate-400 mb-3">
-                Historical technical proxy v1. Upside cases require a score ≥ {minScore}; downside cases require ≤ {100 - minScore}.
-                This test excludes the full MSP composite’s historical access checks, relative ranks, options, funding and news.
+                Historical technical proxy v1. Upside cases require a reading ≥ {minScore}; downside cases require ≤ {100 - minScore}.
+                This test excludes the full MSP composite’s historical access checks, relative order, options, funding and news.
               </p>
             )}
             {/* Scanner-specific controls */}
@@ -461,7 +461,7 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                 {/* Key metrics grid */}
                 <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-3">
                   <MetricCard label="Total Return" value={fmtPct(n(result.totalReturn))} color={pctColor(n(result.totalReturn))} />
-                  <MetricCard label="Win Rate" value={sampledMetric(result.winRate, n(result.totalTrades), 1, '%')} color={n(result.totalTrades) === 0 ? 'text-slate-400' : n(result.winRate) >= 50 ? 'text-emerald-400' : 'text-red-400'} />
+                  <MetricCard label="Winning closes" value={sampledMetric(result.winRate, n(result.totalTrades), 1, '%')} color={n(result.totalTrades) === 0 ? 'text-slate-400' : n(result.winRate) >= 50 ? 'text-emerald-400' : 'text-red-400'} />
                   <MetricCard label="Profit Factor" value={sampledProfitFactor(result.profitFactor, n(result.totalTrades), n(result.winningTrades), n(result.losingTrades))} color={n(result.totalTrades) === 0 || result.profitFactor == null ? 'text-slate-400' : n(result.profitFactor) >= 1 ? 'text-emerald-400' : 'text-red-400'} />
                   <MetricCard label={markedEquity ? 'Bar-close Drawdown' : 'Realised Drawdown'} value={`${Math.abs(n(result.maxDrawdown)).toFixed(1)}%`} color="text-red-400" />
                   <MetricCard label="Sharpe" value={sampledMetric(result.sharpeRatio, n(result.totalTrades))} />
@@ -546,13 +546,8 @@ export default function BacktestPage({ embeddedInWorkspace = false }: { embedded
                 <div className="flex items-center gap-3 mb-3">
                   <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Strategy Diagnostics</h3>
                   <Badge
-                    label={`${result.diagnostics.score}/100`}
-                    color={result.diagnostics.score >= 70 ? 'var(--msp-bull)' : result.diagnostics.score >= 40 ? 'var(--msp-warn)' : 'var(--msp-bear)'}
-                    small
-                  />
-                  <Badge
-                    label={result.diagnostics.verdict}
-                    color={result.diagnostics.verdict === 'healthy' ? 'var(--msp-bull)' : result.diagnostics.verdict === 'watch' ? 'var(--msp-warn)' : 'var(--msp-bear)'}
+                    label={`${result.trades?.length || 0} trades`}
+                    color="var(--msp-text-muted)"
                     small
                   />
                 </div>

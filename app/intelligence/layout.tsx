@@ -33,8 +33,7 @@ export default function IntelligenceLayout({ children }: { children: ReactNode }
           paddingTop: 12,
         }}
       >
-        Educational and research use only. Scores are analytical composites summarising the current weight of
-        evidence — they are not probabilities, forecasts, or personal financial advice. Each page identifies its source, coverage, and freshness. Nothing here is an instruction to buy or sell any security.
+        Educational and research use only. The figures on each page are measurements with a source, coverage, and freshness. They are not probabilities, forecasts, or personal financial advice. Each page identifies its source, coverage, and freshness. Nothing here is an instruction to buy or sell any security.
       </p>
     </div>
   );

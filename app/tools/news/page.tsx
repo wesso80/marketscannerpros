@@ -415,7 +415,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
       permission === 'NO'
         ? `Earnings density high with heavy pre-market catalysts; expect whipsaw and failed breakouts.`
         : permission === 'CONDITIONAL'
-          ? `Catalyst cluster is tradable only with tighter selection and risk controls.`
+          ? `Catalyst cluster needs tighter selection and risk controls.`
           : `Catalyst load is manageable; normal analysis allowed with plan discipline.`;
 
     const watchlist24 = enhancedEarningsRows
@@ -921,7 +921,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
             metrics={[
               { label: 'Active lens', value: activeTab === 'news' ? 'News' : 'Earnings', tone: 'bull', detail: 'Current focus' },
               { label: 'Top narrative', value: newsGate.topNarrative, tone: 'info', detail: 'Lead story' },
-              { label: 'Confluence', value: newsGate.riskState === "Unavailable" ? "Unavailable" : `${newsGate.confidencePct}/100`, tone: 'warn', detail: 'Signal alignment' },
+              { label: 'Risk state', value: newsGate.riskState, tone: 'warn', detail: 'Current news lens' },
               { label: 'Mode', value: 'Intelligence', tone: 'bull', detail: 'Workspace mode' },
             ]}
           />
@@ -996,11 +996,8 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
                 <div className="text-xs text-white/60">Top Narrative</div>
                 <div className="mt-1 text-base font-semibold text-white/90">{newsGate.topNarrative}</div>
                 <div className="mt-3 flex items-center justify-between text-xs text-white/60">
-                  <span>Confluence</span>
-                  <span>{newsGate.riskState === "Unavailable" ? "Unavailable" : `${newsGate.confidencePct}/100`}</span>
-                </div>
-                <div className="mt-2 h-2 rounded-full bg-white/10">
-                  <div className="h-2 rounded-full bg-white/35" style={{ width: `${newsGate.confidencePct}%` }} />
+                  <span>Risk state</span>
+                  <span>{newsGate.riskState}</span>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {['Equities', 'Rates', 'USD', 'Crypto'].map((impact) => (
@@ -1191,7 +1188,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
 
               <article className="rounded-xl border border-white/10 bg-white/5 p-4">
                 <h2 className="mb-2 text-sm font-semibold text-white/90">My Watchlist Impact</h2>
-                <p className="mb-3 text-xs text-white/60">Watchlist events next 24h with timing and impact score.</p>
+                <p className="mb-3 text-xs text-white/60">Watchlist events next 24h with timing and impact reading.</p>
                 {myWatchlistSymbols.length === 0 ? (
                   <div className="rounded-md border border-white/10 bg-black/20 p-3 text-xs text-white/60">
                     Add watchlist symbols in the symbol input to unlock personal catalyst mapping.

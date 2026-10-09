@@ -1,11 +1,11 @@
 import LayerSection from '@/components/time/LayerSection';
-import { MetricCard, MiniScore } from '@/components/time/atoms';
+import { MetricCard } from '@/components/time/atoms';
 import { pct } from '@/components/time/scoring';
 import { TimeConfluenceV2Output, TimeContextInputs } from '@/components/time/types';
 
 export default function ContextLayer({ context, out }: { context: TimeContextInputs; out: TimeConfluenceV2Output }) {
   return (
-    <LayerSection title="Layer 1 — Context (Environment)" tone="context" right={<MiniScore label="Context" value={out.contextScore} />}>
+    <LayerSection title="Layer 1 — Context (Environment)" tone="context">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         <MetricCard label="Macro Bias" value={context.macroBias} />
         <MetricCard label="HTF Bias" value={context.htfBias} />

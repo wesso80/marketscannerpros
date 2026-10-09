@@ -342,7 +342,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
 
   return (
     <div className="space-y-4" data-desk-folds>
-      <CollapsibleSection title="Research context" summary="Queue, trend strength, time confluence, and research notes">
+      <CollapsibleSection title="Research context" summary="Queue, trend strength, close timing, and research notes">
       <section style={{ background: 'var(--msp-panel)', borderRadius: 'var(--msp-radius-card)', padding: 16 }} aria-label="Dashboard command header">
         {/* minmax(0,1fr) + min-w-0 keep the hero inside the viewport on phones (OV-11). */}
         <div className="grid grid-cols-[minmax(0,1fr)] gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
@@ -401,8 +401,8 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
         <DSCard>
           <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <SectionEyebrow>Today&apos;s research queue · Ranked queue (not yet validated)</SectionEyebrow>
-              <h2 style={{ fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>Top of today&apos;s daily picks.</h2>
+              <SectionEyebrow>Today&apos;s research queue · Scan list (not yet validated)</SectionEyebrow>
+              <h2 style={{ fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>Top of today&apos;s daily scan.</h2>
               <p className="mt-1" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', lineHeight: 1.5 }}>Click a symbol to open Symbol. Review context only; no trade instructions.</p>
             </div>
             <DSButton variant="ghost" size="sm" onClick={() => navigateTo('scanner')}>Open scanner</DSButton>
@@ -585,7 +585,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
         <DSCard>
           <div className="mb-2 flex items-center justify-between gap-2">
             <div>
-              <SectionEyebrow>Time confluence watch</SectionEyebrow>
+              <SectionEyebrow>close timing watch</SectionEyebrow>
               <div style={{ fontSize: 'var(--msp-text-body)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>Upcoming close clusters</div>
             </div>
             <DSButton variant="ghost" size="sm" onClick={() => { window.location.href = '/tools/time-scanner'; }} aria-label="Open Time Scanner">Time ›</DSButton>
@@ -634,7 +634,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
             </div>
             <div style={{ background: 'var(--msp-card-2)', borderRadius: 'var(--msp-radius-control)', padding: '8px 12px', color: 'var(--msp-text-muted)', fontSize: 'var(--msp-text-body-sm)' }}>
               <div style={{ fontWeight: 500, color: 'var(--msp-text)', marginBottom: 4 }}>Today&apos;s research questions</div>
-              <div>· Which symbols have the most aligned evidence?</div>
+              <div>· Which symbols have the most inputs in agreement?</div>
               <div>· What invalidates the top setup?</div>
               <div>· What does the volatility phase suggest?</div>
             </div>

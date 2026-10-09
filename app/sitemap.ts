@@ -12,7 +12,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/guide',
     '/guide/open-interest',
     '/methodology',
-    '/daily-pick',
+    '/daily-scan',
     '/compliance-hub',
     '/intelligence',
     '/intelligence/global-m2',

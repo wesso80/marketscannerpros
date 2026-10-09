@@ -28,7 +28,7 @@ const labels: Record<string, Label> = {
   'symbol.canonical.derivatives.openInterestUsd': {name:'Derivatives open interest',unit:'USD'},
   'dve.reading.volatility.bbwp': {name:'Bollinger band width percentile',unit:'percentile points'},
 };
-const indicatorNames: Record<string,string> = {rsi:'Relative strength index',adx:'Average directional index',atr:'Average true range',atrPct:'Average true range',ema20:'Exponential moving average (20 bars)',ema50:'Exponential moving average (50 bars)',ema200:'Exponential moving average (200 bars)',sma20:'Simple moving average (20 bars)',sma50:'Simple moving average (50 bars)',macd:'MACD',macdSignal:'MACD signal',macdHist:'MACD histogram',stochK:'Stochastic K'};
+const indicatorNames: Record<string,string> = {rsi:'Relative strength index',adx:'Average directional index',atr:'Average true range',atrPct:'Average true range',ema20:'Exponential moving average (20 bars)',ema50:'Exponential moving average (50 bars)',ema200:'Exponential moving average (200 bars)',sma20:'Simple moving average (20 bars)',sma50:'Simple moving average (50 bars)',macd:'MACD',macdSignal:'MACD line',macdHist:'MACD histogram',stochK:'Stochastic K'};
 for (const [key,name] of Object.entries(indicatorNames)) labels[`symbol.canonical.indicators.${key}`] = {
   name, unit:key==='atrPct'?'%':['rsi','adx','stochK'].includes(key)?'index points':'quote currency not supplied',
   date:'symbol.canonical.lastCompletedBarAt',dateLabel:'Last completed bar',

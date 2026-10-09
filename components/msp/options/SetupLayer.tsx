@@ -8,10 +8,8 @@ import ConfluenceRadarCard from '@/components/msp/options/blocks/ConfluenceRadar
 type SetupLayerProps = { payload: any };
 
 export default function SetupLayer({ payload }: SetupLayerProps) {
-  const score = payload?.scores?.setup ?? 81;
-
   return (
-    <LayerSection tone="setup" title="Setup" subtitle="Is there asymmetric opportunity?" score={score}>
+    <LayerSection tone="setup" title="Setup" subtitle="What does the structure show?">
       <QuadGrid>
         <div className="col-span-12 lg:col-span-6"><StructureAlignmentCard payload={payload} /></div>
         <div className="col-span-12 lg:col-span-6"><ExpectedMoveCard payload={payload} /></div>

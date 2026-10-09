@@ -8,10 +8,8 @@ import TimeWindowCard from '@/components/msp/options/blocks/TimeWindowCard';
 type ExecutionLayerProps = { payload: any };
 
 export default function ExecutionLayer({ payload }: ExecutionLayerProps) {
-  const score = payload?.scores?.execution ?? 64;
-
   return (
-    <LayerSection tone="execution" title="Timing" subtitle="Is the timing evidence clean?" score={score}>
+    <LayerSection tone="execution" title="Timing" subtitle="Is the timing evidence clean?">
       <QuadGrid>
         <div className="col-span-12 lg:col-span-6"><StrategyBuilderCard payload={payload} /></div>
         <div className="col-span-12 lg:col-span-6"><RiskGeometryCard payload={payload} /></div>

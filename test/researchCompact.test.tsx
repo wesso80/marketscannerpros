@@ -7,7 +7,7 @@ const fixtures=createRequire(import.meta.url)('../docs/qa/research-2026-10-05/fi
 const state=vi.hoisted(()=>({tab:'news',missing:false,news:null as any,calendar:null as any}));
 vi.mock('next/navigation',()=>({useSearchParams:()=>new URLSearchParams({tab:state.tab})}));
 vi.mock('next/dynamic',()=>({default:()=>()=>null}));
-vi.mock('@/lib/useUserTier',()=>({useUserTier:()=>({tier:'pro',isLoggedIn:true,isLoading:false,isAdmin:false})}));
+vi.mock('@/lib/useUserTier',()=>({useUserTier:()=>({tier:'pro',isLoggedIn:true,isLoading:false,isAdmin:true})}));
 vi.mock('@/lib/signals/outcomeStatsVisibility',()=>({SHOW_SIGNAL_OUTCOME_STATS:true}));
 vi.mock('@/app/v2/_lib/V2Context',()=>({useV2:()=>({navigateTo:vi.fn(),selectSymbol:vi.fn()})}));
 vi.mock('@/app/v2/_lib/api',()=>({useNews:()=>({data:state.news,loading:false}),useEconomicCalendar:()=>({data:state.calendar,loading:false}),useEarningsCalendar:()=>({data:{},loading:false})}));

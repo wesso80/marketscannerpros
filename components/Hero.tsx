@@ -46,7 +46,7 @@ export default function Hero() {
             </h1>
 
             <p className="mx-auto mb-2 max-w-lg text-base leading-relaxed text-slate-400 md:mx-0 md:text-lg">
-              Professional-level scanning, confluence detection,
+              Professional-level scanning, agreement detection,
               options flow and AI market intelligence —<br />
               all in one platform.
             </p>

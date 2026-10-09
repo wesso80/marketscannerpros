@@ -175,7 +175,7 @@ export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, 
   if (totalTrades === 0) return (
     <section className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-5">
       <h3 className="font-semibold text-amber-200">No completed trades</h3>
-      <p className="mt-2 text-sm text-slate-300">Win rate, profit factor, Sharpe, Sortino and trade-return statistics are unavailable because this run produced no completed trades. Review the strategy conditions and data coverage.</p>
+      <p className="mt-2 text-sm text-slate-300">Winning closes, profit factor, Sharpe, Sortino and trade-return statistics are unavailable because this run produced no completed trades. Review the strategy conditions and data coverage.</p>
       <BacktestAssumptionsPanel totalTrades={0} />
     </section>
   );
@@ -197,7 +197,7 @@ export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, 
           </div>
         </MetricCard>
 
-        <MetricCard label="Win Rate">
+        <MetricCard label="Winning closes">
           <div className="text-xl font-semibold text-slate-400 sm:text-[20px]">
             {safe(winRate)?.toFixed(1) ?? '—'}%
           </div>

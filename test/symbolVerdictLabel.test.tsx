@@ -92,5 +92,5 @@ it('stays out of the base-breakout rule and the daily-picks ranker', () => {
   const ranker = readFileSync('lib/scoring/canonical/dailyPick.ts', 'utf8');
   expect(rule).not.toContain('symbolVerdictLabel');
   expect(ranker).not.toContain('symbolVerdictLabel');
-  expect(readFileSync('app/daily-pick/wording.ts', 'utf8')).toContain('readerVerdict');
+  expect(readFileSync('app/daily-scan/wording.ts', 'utf8')).toContain('readerVerdict');
 });

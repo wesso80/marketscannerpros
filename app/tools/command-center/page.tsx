@@ -325,12 +325,12 @@ function LegacyCommandCenter() {
         ['Crypto overview', crypto.error ? 'Could not load' : cryptoData ? 'Collected' : 'Not collected'],
         ['Quotes', quotes.error ? 'Could not load' : Object.keys(quotes.data?.quotes ?? {}).length ? 'Collected' : 'Not collected'],
         ['Funding', funding.error ? 'Could not load' : funding.data?.coins.length ? 'Collected' : 'Not collected'],
-        ['Daily picks', picks.error ? 'Could not load' : rows.length ? 'Stored scan' : 'Not collected'],
+        ['Daily scan', picks.error ? 'Could not load' : rows.length ? 'Stored scan' : 'Not collected'],
         ['Movers', movers.error ? 'Could not load' : moverList.length ? 'Collected' : 'Not collected'],
         ['Event clock', calendarWarning ? 'Schedule needs a check' : 'Schedule only'],
       ].map(([label,status]) => <li key={label}>{label}: {status}</li>)}</ul>}]} />
       <SourceLine source="Stored market feeds" asOf={reg.asOf || crypto.data?.asOf || sectors.data?.asOf} basis="Independent observations · dates in research detail" />
-      <CollapsibleSection title="Market evidence" summary={`${strength.total} sectors · ${rows.length} stored picks`}>
+      <CollapsibleSection title="Market evidence" summary={`${strength.total} sectors · ${rows.length} stored symbols`}>
       <div className="space-y-3">
 
 
@@ -422,9 +422,9 @@ function LegacyCommandCenter() {
       <Card className="p-3">
         <h2 className="text-sm font-bold">Daily observations · {asset==='crypto'?'Crypto':'Stocks'}</h2>
         <p className="text-xs text-slate-400">Public observations are listed A–Z; scan inclusion is not a recommendation.</p>
-        {picks.loading?<p>Loading…</p>:picks.error?<p className="text-amber-300">Stored picks could not be loaded.</p>:rows.length?<OverviewPicks rows={rows.slice(0,5)} asset={asset}/>:<p>No picks in the latest stored scan.</p>}
+        {picks.loading?<p>Loading…</p>:picks.error?<p className="text-amber-300">Stored symbols could not be loaded.</p>:rows.length?<OverviewPicks rows={rows.slice(0,5)} asset={asset}/>:<p>No symbols in the latest stored scan.</p>}
         <div className="mt-2 flex flex-wrap gap-3 text-sm">
-          <Link className="inline-flex min-h-10 items-center text-emerald-300" href="/daily-pick">Open Daily Picks</Link>
+          <Link className="inline-flex min-h-10 items-center text-emerald-300" href="/daily-scan">Open Daily scan</Link>
           <Link className="inline-flex min-h-10 items-center text-emerald-300" href={`/tools/scanner?type=${asset}`}>See all in Scanner</Link>
         </div>
       </Card>
@@ -463,7 +463,7 @@ function LegacyCommandCenter() {
       {/* LAYER 3 — STRENGTH / WEAKNESS */}
       <div className="grid gap-3 md:grid-cols-2">
         <Card className="p-4">
-          <SectionTitle n="04" title="Relative Strength" hint="ranked by observed change" />
+          <SectionTitle n="04" title="Relative Strength" hint="sorted by observed change" />
           {strength.strongest.length ? (
             <ul className="space-y-1">
               {strength.strongest.map((s) => (
@@ -476,7 +476,7 @@ function LegacyCommandCenter() {
           ) : <p className="text-sm text-slate-500">Sector data is not in this snapshot.</p>}
         </Card>
         <Card className="p-4">
-          <SectionTitle n="05" title="Relative Weakness" hint="ranked by observed change" />
+          <SectionTitle n="05" title="Relative Weakness" hint="sorted by observed change" />
           {strength.weakest.length ? (
             <ul className="space-y-1">
               {strength.weakest.map((s) => (

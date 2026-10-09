@@ -83,7 +83,7 @@ export default function IntelligenceUnderConstruction({
         </p>
         <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--msp-text-muted)', lineHeight: 1.55 }}>
           Live output will return after data and parity validation are complete. We do not display
-          mock or placeholder scores in the meantime.
+          mock or placeholder readings in the meantime.
         </p>
         {detail && (
           <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--msp-text-muted)', lineHeight: 1.55 }}>

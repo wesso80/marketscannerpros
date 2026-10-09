@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 
-vi.mock('@/lib/useUserTier', () => ({ useUserTier: () => ({ tier: 'pro', isLoggedIn: true, isLoading: false, isAdmin: false }) }));
+vi.mock('@/lib/useUserTier', () => ({ useUserTier: () => ({ tier: 'pro', isLoggedIn: true, isLoading: false, isAdmin: true }) }));
 vi.mock('@/lib/signals/outcomeStatsVisibility', () => ({ SHOW_SIGNAL_OUTCOME_STATS: true }));
 
 import Accuracy from '@/app/tools/signal-accuracy/page';

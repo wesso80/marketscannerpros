@@ -228,7 +228,6 @@ export default function NewsIntelligenceCompact(props: NewsIntelligenceCompactPr
             ['Volatility', props.gate.volRegime],
             ['Catalyst density', props.gate.catalystDensity],
             ['Narrative strength', props.gate.narrativeStrength],
-            ['Overlap', props.gate.riskState === 'Unavailable' ? 'Not collected' : `${props.gate.confidencePct}/100`],
             ['Event', props.gate.eventRiskLabel],
             ['Event timing', props.gate.eventRiskCountdown],
           ].map(([label, value]) => (

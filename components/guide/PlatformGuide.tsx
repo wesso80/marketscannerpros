@@ -23,7 +23,7 @@ const GUIDE = [
   {
     title: "Crypto Derivatives",
     bullets: ["Funding + OI", "Account ratios", "Positioning pressure"],
-    tip: "Pro tip: Compare derivatives evidence before increasing confidence in a scenario.",
+    tip: "Pro tip: Compare derivatives evidence before treating a scenario as confirmed.",
     cta: { label: "Open Derivatives", href: "/tools/crypto-dashboard" },
   },
   {

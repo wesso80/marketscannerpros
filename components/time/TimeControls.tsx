@@ -46,7 +46,7 @@ export default function TimeControls({
             onClick={onRunScan}
             disabled={loading}
           >
-            {loading ? 'Scanning…' : 'Find Confluence Setup'}
+            {loading ? 'Scanning…' : 'Find Agreement Setup'}
           </button>
           <button className="h-9 rounded-lg bg-white/5 px-4 text-sm font-semibold text-slate-200 ring-1 ring-white/10 hover:bg-white/10">
             Set Alert

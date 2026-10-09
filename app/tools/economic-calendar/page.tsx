@@ -523,10 +523,10 @@ export default function EconomicCalendarPage({ embeddedInResearch = false }: { e
                       {gate.nextRelevantEvent.referencePeriod ? <span className="text-white/55"> ({gate.nextRelevantEvent.referencePeriod})</span> : null}
                     </p>
                     <p className="mt-1 text-xs text-white/65">{gate.nextRelevantEvent.country} • {displayTime(gate.nextRelevantEvent, 'local', userTz)} • {gate.relevantCountdown}</p>
-                    <p className="mt-1 text-[10px] text-white/45">Relevance {gate.nextRelevantScore?.score ?? '--'}/100 — catalyst attention only, not a directional view.</p>
+                    <p className="mt-1 text-[10px] text-white/45">Listed for catalyst attention only, not a directional view.</p>
                   </div>
                 ) : gate.nextMajorEvent && gate.nextRelevantScore ? (
-                  <p className="mt-3 border-t border-white/10 pt-2 text-[10px] text-white/45">Also the most relevant catalyst for {focusAssets.join(' / ')} (relevance {gate.nextRelevantScore.score}/100).</p>
+                  <p className="mt-3 border-t border-white/10 pt-2 text-[10px] text-white/45">Also a catalyst for {focusAssets.join(' / ')}.</p>
                 ) : null}
 
                 <div className="mt-3 flex flex-wrap items-center gap-1" role="group" aria-label="Focus assets">
@@ -591,7 +591,7 @@ export default function EconomicCalendarPage({ embeddedInResearch = false }: { e
                 </div>
                 <div className="grid grid-cols-1 gap-2 text-xs text-white/70 sm:grid-cols-2 lg:grid-cols-4">
                   {[
-                    { label: 'Tokyo CPI', point: japan.tokyoCpi, badge: 'LEADING INFLATION SIGNAL' },
+                    { label: 'Tokyo CPI', point: japan.tokyoCpi, badge: 'TOKYO CPI LEAD' },
                     { label: 'National CPI', point: japan.nationalCpi, badge: null },
                     { label: 'Wages', point: japan.wages, badge: null },
                   ].map((item) => (
@@ -828,7 +828,7 @@ export default function EconomicCalendarPage({ embeddedInResearch = false }: { e
                               {event.impact.toUpperCase()}
                             </span>
                             <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-semibold ${STATUS_TONE[event.dataStatus]}`} title={event.statusDetail}>{event.dataStatus}</span>
-                            <span className={`text-[9px] ${TIMING_TONE[event.timingStatus]}`} title={`Source authority: ${event.sourceAuthority} • confidence ${event.confidence}`}>{event.timingStatus} • {event.sourceAuthority}</span>
+                            <span className={`text-[9px] ${TIMING_TONE[event.timingStatus]}`} title={`Source authority: ${event.sourceAuthority} • coverage ${event.confidence}`}>{event.timingStatus} • {event.sourceAuthority}</span>
                             <span className={`text-[9px] ${RELEASE_TONE[event.releaseStatus]}`}>{event.releaseStatus}</span>
                           </div>
                           <div className="col-span-6 sm:col-span-1 flex flex-wrap justify-end gap-1">

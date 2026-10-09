@@ -28,7 +28,7 @@ export function ResearchMetric({ label, value }: {label:string;value:ReactNode})
 export function researchReason(value: unknown): string {
   if (typeof value !== 'string' || !value.trim()) return 'Required evidence is incomplete.';
   return value.replace(/^\s*(BLOCKED:|NO-TRADE MODE:|Unavailable:)\s*/i, '')
-    .replace(/Trade Permission Score/gi, 'Alignment score').replace(/Trade Permission/gi, 'Analysis status').replace(/playbooks?/gi, 'scenario').replace(/\bTPS\b/g, 'Alignment score')
+    .replace(/Trade Permission Score/gi, 'pressure').replace(/Trade Permission/gi, 'Analysis status').replace(/playbooks?/gi, 'scenario').replace(/\bTPS\b/g, 'pressure')
     .replace(/\b[A-Z]+(?:_[A-Z]+)+\b/g, code => researchLabel(code))
     .replace(/\bUNKNOWN\b/g, 'not measured');
 }

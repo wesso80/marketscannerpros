@@ -41,7 +41,7 @@ it('keeps M2 service rollout separate from presentation',()=>{
  vi.stubEnv('NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED','false');
  expect(publicDesignEnabled()).toBe(true);expect(m2ResearchEnabled()).toBe(false);
 });
-it.each(['/auth/verify','/account','/about','/daily-pick','/share/scan/AAPL','/legal/privacy','/new-public-page'])('covers secondary public route %s',path=>expect(publicDesignScope(path)).toBe('website'));
+it.each(['/auth/verify','/account','/about','/daily-scan','/share/scan/AAPL','/legal/privacy','/new-public-page'])('covers secondary public route %s',path=>expect(publicDesignScope(path)).toBe('website'));
 it.each(['/api/scanner/run','/_next/static/file.js',''])('does not wrap a non-page %s',path=>expect(publicDesignScope(path)).toBeNull());
 
 it('every public page resolves to the approved shell, while internal pages stay excluded',()=>{

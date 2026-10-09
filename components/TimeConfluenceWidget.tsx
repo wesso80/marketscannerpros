@@ -217,7 +217,7 @@ export default function TimeConfluenceWidget({
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span aria-hidden="true" style={{ fontSize: '1.3rem' }}>⏰</span>
           <h3 style={{ margin: 0, color: 'var(--msp-text)', fontSize: '1.1rem', fontWeight: 600 }}>
-            Time Confluence
+            Close timing
           </h3>
         </div>
         {sessionBadge()}
@@ -279,14 +279,14 @@ export default function TimeConfluenceWidget({
                 justifyContent: 'center',
                 gap: '0.5rem',
               }}>
-                CONFLUENCE SCORE
+                WHAT TO CHECK
                 <button
                   type="button"
                   onMouseEnter={() => setShowTooltip(true)}
                   onMouseLeave={() => setShowTooltip(false)}
                   onClick={() => setShowTooltip(!showTooltip)}
                   aria-expanded={showTooltip}
-                  aria-label="Score breakdown info"
+                  aria-label="Reading breakdown info"
                   style={{
                     cursor: 'pointer',
                     width: '18px',
@@ -324,7 +324,7 @@ export default function TimeConfluenceWidget({
                   boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
                 }}>
                   <div style={{ color: '#A855F7', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.5rem' }}>
-                    <span aria-hidden="true">📊 </span>Score Breakdown
+                    <span aria-hidden="true">📊 </span>Reading Breakdown
                   </div>
                   <div style={{ color: 'var(--msp-text)', fontSize: '0.8rem', lineHeight: 1.5 }}>
                     {getConfidenceExplanation(state)}
@@ -336,7 +336,7 @@ export default function TimeConfluenceWidget({
                     color: 'var(--msp-text-muted)',
                     fontSize: '0.75rem',
                   }}>
-                    Higher scores = more timeframes aligning = stronger reversal/continuation signals
+                    Higher readings = more timeframes aligning = stronger reversal/continuation readings
                   </div>
                 </div>
               )}
@@ -395,7 +395,7 @@ export default function TimeConfluenceWidget({
                 marginBottom: '1rem',
               }}>
                 <div style={{ color: '#A855F7', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
-                  <span aria-hidden="true">⏳ </span>Next scheduled confluence
+                  <span aria-hidden="true">⏳ </span>Next scheduled agreement
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
@@ -458,12 +458,12 @@ export default function TimeConfluenceWidget({
         {activeTab === 'today' && (
           <div>
             <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.8rem', marginBottom: '1rem' }}>
-              Medium+ impact confluences for today
+              Medium+ impact agreements for today
             </div>
             
             {state.todayConfluences.length === 0 ? (
               <div style={{ color: 'var(--msp-flat)', textAlign: 'center', padding: '2rem' }}>
-                No major confluences scheduled
+                No major agreements scheduled
               </div>
             ) : (
               <div style={{ display: 'grid', gap: '0.5rem', maxHeight: '300px', overflowY: 'auto' }}>
@@ -488,8 +488,8 @@ export default function TimeConfluenceWidget({
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ color: impactColor(conf.impactLevel), fontWeight: 'bold' }}>
-                        {conf.confluenceScore}
+                      <div style={{ color: 'var(--msp-text-muted)', fontWeight: 'bold' }}>
+                        {conf.closingCandles.length} timeframes
                       </div>
                       {impactBadge(conf.impactLevel)}
                     </div>
@@ -504,12 +504,12 @@ export default function TimeConfluenceWidget({
         {activeTab === 'fib' && (
           <div>
             <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.8rem', marginBottom: '1rem' }}>
-              Fibonacci time confluence — minutes where 2+ Fib intervals close simultaneously
+              Fibonacci close timing — minutes where 2+ Fib intervals close simultaneously
             </div>
 
             {state.fibConfluenceWindows.length === 0 ? (
               <div style={{ color: 'var(--msp-flat)', textAlign: 'center', padding: '2rem' }}>
-                {state.marketOpen ? 'No multi-Fib confluences remaining today' : 'Market closed — Fib windows available during RTH'}
+                {state.marketOpen ? 'No multi-Fib agreements remaining today' : 'Market closed — Fib windows available during RTH'}
               </div>
             ) : (
               <div style={{ display: 'grid', gap: '0.5rem', maxHeight: '340px', overflowY: 'auto' }}>
@@ -680,7 +680,7 @@ export default function TimeConfluenceWidget({
         {activeTab === 'calendar' && showCalendar && (
           <div>
             <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.8rem', marginBottom: '1rem' }}>
-              High-impact confluence dates
+              High-impact agreement dates
             </div>
             
             <div style={{ display: 'grid', gap: '0.5rem' }}>

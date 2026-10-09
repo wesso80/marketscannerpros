@@ -18,7 +18,7 @@ describe('Market dashboard labels (OV-5, OV-8, OV-10)', () => {
   it('OV-8: queue wording does not claim validation or evidence strength', () => {
     expect(page).not.toContain('Validated queue');
     expect(page).not.toContain('Highest-evidence symbols first');
-    expect(page).toContain('Ranked queue (not yet validated)');
+    expect(page).toContain('Scan list (not yet validated)');
   });
 
   it('OV-10: the ADX panel is titled as trend strength, not compression/expansion', () => {

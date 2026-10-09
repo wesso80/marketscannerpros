@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
     const actionable = result.radar.filter(r => r.permission === 'ALLOW' || r.permission === 'ALLOW_REDUCED');
     if (actionable.length > 0) {
       opsAlert({
-        title: 'Operator Scan — Actionable Signals',
+        title: 'Operator Scan — Actionable Readings',
         message: actionable.map(r => `${r.symbol} ${r.playbook} (${r.permission} @ ${(r.confidenceScore * 100).toFixed(1)}%)`).join('\n'),
         severity: 'info',
         source: 'operator-scan',

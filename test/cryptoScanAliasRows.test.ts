@@ -12,6 +12,7 @@ vi.mock('@/lib/auth', () => ({ getSessionFromCookie: async () => ({ workspaceId:
 vi.mock('@/lib/entitlements', () => ({ getEffectiveTier: async () => 'pro' }));
 vi.mock('@/lib/adaptiveTrader', () => ({ getAdaptiveLayer: async () => null }));
 vi.mock('@/lib/db', () => ({ q: mocks.query }));
+vi.mock('@/lib/scoring/canonical/regimeOverlayData', () => ({ loadRegimeOverlayInputs: async () => null }));
 // Simulates the old fuzzy resolution: the stray tickers resolve to the same coins as the real ones.
 const IDS: Record<string, string> = { BTC: 'bitcoin', UNI: 'uniswap', AP: 'uniswap', HBAR: 'hedera-hashgraph', HB: 'hedera-hashgraph', ETH: 'ethereum' };
 vi.mock('@/lib/coingecko', () => ({

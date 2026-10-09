@@ -3,11 +3,11 @@
 import { useEndpoint } from '@/components/intelligence/useEndpoint';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
-import { EvidenceBars, EvidenceMetrics as CommandStrip, EvidenceVerdict, EvidenceWarning, evidenceLabel } from '@/components/intelligence/CompactEvidence';
+import { EvidenceMetrics as CommandStrip, EvidenceVerdict, EvidenceWarning, evidenceLabel } from '@/components/intelligence/CompactEvidence';
 
 import IntelligenceTable, { type IntelColumn, type IntelRow } from '@/components/intelligence/IntelligenceTable';
 import {
-  StateCell, ScoreCell, MetricCell, SectionHeader,
+  StateCell, MetricCell, SectionHeader,
 } from '@/components/intelligence/primitives';
 import { orientationToSemantic, riskToSemantic } from '@/lib/intelligence/states';
 import type { SemanticState } from '@/lib/intelligence/types';
@@ -26,8 +26,8 @@ import type {
 const STAGE_COLUMNS: IntelColumn[] = [
   { key: 'stage', label: 'Stage', align: 'left' },
   { key: 'driver', label: 'Driver', align: 'left' },
-  { key: 'grade', label: 'Grade', tooltip: 'Grade A/B from the M2 walk-forward research.' },
-  { key: 'score', label: 'Score', align: 'right' },
+  { key: 'grade', label: 'Check', tooltip: 'Group A/B from the M2 walk-forward research.' },
+  { key: 'score', label: 'Reading', align: 'right' },
   { key: 'state', label: 'State' },
   { key: 'gate', label: 'Gate' },
   { key: 'active', label: 'Clock position' },
@@ -71,12 +71,19 @@ function PageBody({ data, updatedAt }: { data: LiquidityTransmissionPageDto; upd
     <EvidenceVerdict>{data.available && h ? evidenceLabel(h.clockContext) : 'Liquidity observations could not be collected.'}</EvidenceVerdict>
     {data.available && h && <>
       <CommandStrip items={[
-        { label: 'Transmission', value: h.masterLink },
-        { label: 'Validated', value: h.validated },
-        { label: 'Downstream', value: h.downstream },
-        { label: 'Evidence quality', value: h.confidence },
+        { label: 'Transmission', value: h.flow },
+        { label: 'Validated', value: h.liquidityCycle },
+        { label: 'Downstream', value: h.divergenceState },
+        { label: 'Evidence quality', value: h.confidenceLabel },
       ]} />
-      <EvidenceBars title="Eight-stage rotation · score / 100" rows={data.stages.map(s => ({ label: `${s.stage}. ${shortStageName(s.name, s.stage)}`, value: s.score }))} maximum={100} />
+      <figure data-evidence-chart className="my-3 min-w-0 rounded-lg border border-[var(--msp-border)] p-3">
+        <figcaption className="mb-2 text-sm font-semibold">Eight-stage rotation · gate and state</figcaption>
+        <div className="space-y-1 text-xs text-slate-300">
+          {data.stages.map((s) => (
+            <p key={s.stage}>{s.stage}. {shortStageName(s.name, s.stage)} · {evidenceLabel(s.state)} · gate {evidenceLabel(String(s.gate))}</p>
+          ))}
+        </div>
+      </figure>
     </>}
     <EvidenceWarning>{data.quality.missingInputCount ? `${data.quality.missingInputCount} daily inputs not collected · ` : ''}{notCollectedText('M2 blocs', data.m2Upstream.missingBlocs.map(b => m2BlocName(b, evidenceLabel)))} · {evidenceLabel(data.parityStatus)}{data.quality.staleInputCount ? ` · ${data.quality.staleInputCount} inputs use older observations` : ''}{data.reason ? ` · ${evidenceLabel(data.reason)}` : ''}</EvidenceWarning>
     <CollapsibleSection title="Transmission evidence" summary={`${data.stages.length} stages · ${data.quality.coveragePercent.toFixed(1)}% input coverage`}>
@@ -110,9 +117,9 @@ function HeadlinePanel({ data, updatedAt }: { data: LiquidityTransmissionPageDto
         items={[
           {
             label: 'Master Link',
-            value: h.masterLink.toFixed(1),
+            value: h.flow,
             semantic: orientationToSemantic(h.masterLink),
-            tooltip: 'Native transmissionRiskOn — 0.35·m2Bias + 0.65·validated.',
+            tooltip: 'Named flow from the transmission inputs.',
           },
           { label: 'Flow', value: h.flow, semantic: orientationToSemantic(h.masterLink) },
           {
@@ -123,20 +130,20 @@ function HeadlinePanel({ data, updatedAt }: { data: LiquidityTransmissionPageDto
           { label: 'Cycle', value: h.liquidityCycle, semantic: 'neutral' },
           {
             label: 'Validated',
-            value: h.validated.toFixed(1),
+            value: h.liquidityCycle,
             semantic: orientationToSemantic(h.validated),
-            tooltip: 'Cross-asset confirmation from Grade A + Grade B validated drivers.',
+            tooltip: 'Cross-asset confirmation from Group A and Group B validated drivers.',
           },
           {
             label: 'Downstream',
-            value: h.downstream.toFixed(1),
+            value: h.divergenceState,
             semantic: orientationToSemantic(h.downstream),
           },
           {
             label: 'Gap',
-            value: `${h.riskLiquidityGap >= 0 ? '+' : ''}${h.riskLiquidityGap.toFixed(1)}`,
+            value: h.riskLiquidityGap >= 0 ? 'Risk appetite ahead of transmission' : 'Transmission ahead of risk appetite',
             semantic: riskToSemantic(Math.abs(h.riskLiquidityGap) + 30),
-            tooltip: 'Downstream − Master Link (0.35 × M2 bias + 0.65 × validated). Positive = risk appetite ahead of transmission.',
+            tooltip: 'Compares downstream risk appetite with transmission. The composite number is not shown.',
           },
         ]}
       />
@@ -145,17 +152,17 @@ function HeadlinePanel({ data, updatedAt }: { data: LiquidityTransmissionPageDto
         items={[
           {
             label: 'Late-cycle',
-            value: `${h.lateCycleScore.toFixed(1)} ${h.lateCycleState}`,
+            value: h.lateCycleState,
             semantic: riskToSemantic(h.lateCycleScore),
           },
           {
             label: 'Early warning',
-            value: `${h.earlyWarningRisk.toFixed(1)} ${h.earlyWarningState}`,
+            value: h.earlyWarningState,
             semantic: riskToSemantic(h.earlyWarningRisk),
           },
           {
             label: 'Evidence quality',
-            value: `${h.confidence} ${h.confidenceLabel}`,
+            value: h.confidenceLabel,
             semantic:
               h.confidenceLabel === 'HIGH'
                 ? 'strong-positive'
@@ -165,7 +172,7 @@ function HeadlinePanel({ data, updatedAt }: { data: LiquidityTransmissionPageDto
           },
           {
             label: 'M2 bias',
-            value: h.m2BiasScore.toFixed(1),
+            value: h.m2BiasScore >= 0 ? 'Positive M2 input' : 'Negative M2 input',
             semantic: orientationToSemantic(h.m2BiasScore),
           },
           {
@@ -250,7 +257,7 @@ function Stage8Panel({ data }: { data: LiquidityTransmissionPageDto }) {
             </div>
           ))}
         </div>
-        <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--msp-text-muted)' }}>{s8.active ? 'Late-cycle/divergence risk elevated. Research signal only; a reset or new cycle has not been confirmed.' : evidenceLabel(s8.guidance)}</p>
+        <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--msp-text-muted)' }}>{s8.active ? 'Late-cycle/divergence risk elevated. Research reading only; a reset or new cycle has not been confirmed.' : evidenceLabel(s8.guidance)}</p>
       </div>
     </>
   );
@@ -265,7 +272,7 @@ function StageClockPanel({ data }: { data: LiquidityTransmissionPageDto }) {
       <MetricCell key="st" align="left" strong>{s.stage}. {shortStageName(s.name, s.stage)}</MetricCell>,
       <MetricCell key="dr" align="left" muted>{evidenceLabel(s.driver)}</MetricCell>,
       <MetricCell key="gr" align="left">{evidenceLabel(s.grade)}</MetricCell>,
-      <ScoreCell key="sc" value={s.score.toFixed(1)} semantic={stageSemantic(s)} suffix="/100" />,
+      <MetricCell key="sc" align="left">{evidenceLabel(s.state)}</MetricCell>,
       <StateCell key="sta" label={evidenceLabel(s.state)} semantic={stageSemantic(s)} />,
       <StateCell key="ga" label={evidenceLabel(s.gate)} semantic={gateSemantic(s.gate)} />,
       <MetricCell key="ac" align="center" muted>{s.active ? 'Current' : '—'}</MetricCell>,
@@ -275,7 +282,7 @@ function StageClockPanel({ data }: { data: LiquidityTransmissionPageDto }) {
     <>
       <SectionHeader
         title="Eight-Stage Rotation Clock"
-        subtitle="The clock sits at the furthest stage whose gate passes, so only one stage is current. An earlier stage can score higher without being current; Stage 8 overrides when its four conditions hold."
+        subtitle="The clock sits at the furthest stage whose gate passes, so only one stage is current. An earlier stage can still show stronger inputs without being current; Stage 8 overrides when its four conditions hold."
       />
       <IntelligenceTable columns={STAGE_COLUMNS} rows={rows} stickyFirst minWidth={840} />
     </>
@@ -298,11 +305,11 @@ function DownstreamVsValidatedPanel({ data }: { data: LiquidityTransmissionPageD
     <>
       <SectionHeader title="Downstream vs Master Link" subtitle="Gap = Downstream − Master Link; the validated component is shown separately in the headline." />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
-        <Metric label="Master Link" value={h.masterLink.toFixed(1)} tone={orientationToSemantic(h.masterLink)} />
-        <Metric label="Downstream" value={h.downstream.toFixed(1)} tone={orientationToSemantic(h.downstream)} />
+        <Metric label="Master Link" value={h.flow} tone={orientationToSemantic(h.masterLink)} />
+        <Metric label="Downstream" value={h.divergenceState} tone={orientationToSemantic(h.downstream)} />
         <Metric
           label="Risk–Liquidity Gap"
-          value={`${h.riskLiquidityGap >= 0 ? '+' : ''}${h.riskLiquidityGap.toFixed(1)}`}
+          value={h.riskLiquidityGap >= 0 ? 'Risk appetite ahead' : 'Transmission ahead'}
           tone={Math.abs(h.riskLiquidityGap) >= 15 ? 'warning' : 'neutral'}
         />
         <Metric
@@ -387,7 +394,7 @@ function PlaybookPanel({ data }: { data: LiquidityTransmissionPageDto }) {
 
 function HistoryPanel({ data }: { data: LiquidityTransmissionPageDto }) {
   const h = data.history;
-  const current = data.headline?.masterLink;
+  const headline = data.headline;
   return (
     <>
       <SectionHeader
@@ -397,12 +404,12 @@ function HistoryPanel({ data }: { data: LiquidityTransmissionPageDto }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
         <Metric
           label="Current Master Link"
-          value={current != null ? current.toFixed(1) : 'Not collected'}
+          value={headline?.flow ?? 'Not collected'}
           tone="neutral"
         />
         <Metric
           label="Previous Master Link"
-          value={h.previousMasterLink != null ? h.previousMasterLink.toFixed(1) : 'Not collected'}
+          value={h.previousMasterLink != null ? 'Prior bar recorded' : 'Not collected'}
           hint={h.previousObservedOn ? `Observed ${h.previousObservedOn}` : 'No prior observation'}
           tone="neutral"
         />
@@ -410,7 +417,7 @@ function HistoryPanel({ data }: { data: LiquidityTransmissionPageDto }) {
           label="Δ (5D)"
           value={
             h.masterLinkDelta != null
-              ? `${h.masterLinkDelta >= 0 ? '+' : ''}${h.masterLinkDelta.toFixed(1)}`
+              ? (h.masterLinkDelta >= 0 ? 'Up versus the prior bar' : 'Down versus the prior bar')
               : 'History building'
           }
           tone={

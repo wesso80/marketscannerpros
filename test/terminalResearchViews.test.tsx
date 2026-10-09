@@ -21,7 +21,7 @@ describe('Terminal research presentation',()=>{
  it('keeps capital blocks visible, folds evidence, and preserves numeric inputs',()=>{
   const before=JSON.stringify(capital),refresh=vi.fn();
   const {container}=render(<CapitalPressureView symbol="MU" data={capital} loading={false} error={null} onRefresh={refresh}/>);
-  assertCompact(container);expect(screen.getByText('Directional score').closest('details')).not.toBeNull();expect(container.textContent).not.toContain('Bullish');expect(screen.getByText('Pressure conditions are not aligned')).toBeTruthy();expect(screen.getByText('Prior day low')).toBeTruthy();expect(screen.getByText('71')).toBeTruthy();expect(screen.getByText('$249.35')).toBeTruthy();
+  assertCompact(container);expect(screen.getByText('Price direction').closest('details')).not.toBeNull();expect(container.textContent).not.toContain('Bullish');expect(screen.getByText('Pressure inputs differ')).toBeTruthy();expect(screen.getByText('Prior day low')).toBeTruthy();expect(screen.getByText('Upward')).toBeTruthy();expect(screen.getByText('$249.35')).toBeTruthy();
   fireEvent.click(screen.getByRole('button',{name:'Refresh'}));expect(refresh).toHaveBeenCalledOnce();expect(JSON.stringify(capital)).toBe(before);
  });
  it('keeps a hard risk block above folds even if other alignment conditions pass',()=>{
@@ -35,7 +35,7 @@ describe('Terminal research presentation',()=>{
  it('gives gravity one plain verdict and real rounded evidence without changing its calculation',()=>{
   const before=JSON.stringify(gravity);
   const {container}=render(<GravityResearchView symbol="MU" tgm={gravity} coverage={null} calendar={null} receivedAt={new Date('2026-10-05T00:00:00Z')} empty={false} localDemo={false} error={null} onRefresh={()=>{}} loading={false}/>);
-  assertCompact(container);expect(screen.getByText('Unreached midpoint levels remain')).toBeTruthy();expect(screen.getByText('74%')).toBeTruthy();expect(container.textContent).toContain('Receipt time is not a market observation timestamp');expect(JSON.stringify(gravity)).toBe(before);
+  assertCompact(container);expect(screen.getByText('Unreached midpoint levels remain')).toBeTruthy();expect(screen.getByText('$252.19')).toBeTruthy();expect(container.textContent).not.toContain('74%');expect(container.textContent).toContain('Receipt time is not a market observation timestamp');expect(JSON.stringify(gravity)).toBe(before);
  });
  it('does not dress empty or demonstration gravity up as a result',()=>{
   const {container}=render(<GravityResearchView symbol="MU" tgm={gravity} coverage={null} calendar={null} receivedAt={new Date()} empty={true} localDemo={true} error={null} onRefresh={()=>{}} loading={false}/>);
@@ -67,5 +67,5 @@ describe('Terminal research presentation',()=>{
 
 it('suppresses headline and zone alignment figures exceeding 57% measured coverage',()=>{
  const {container}=render(<GravityResearchView symbol="MU" tgm={gravity} coverage={{percent:57,available:['1D'],missing:['1W']} as any} calendar={null} receivedAt={new Date()} empty={false} localDemo={false} error={null} onRefresh={()=>{}} loading={false}/>);
- expect(screen.getAllByText('Low coverage').length).toBeGreaterThan(0);expect(container.textContent).not.toMatch(/74%|78%/);
+ expect(screen.getByText('57% timeframes')).toBeTruthy();expect(container.textContent).not.toMatch(/74%|78%/);
 });

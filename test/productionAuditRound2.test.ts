@@ -40,8 +40,8 @@ describe('post-remediation audit round 2 regressions', () => {
     const cryptoTerminal = read('components/crypto-terminal/CryptoTerminalView.tsx');
 
     expect(grid).toContain("fr.fundingRatePercent.toFixed(4) + '%' : 'Unavailable'");
-    expect(cryptoTerminal).toContain('Signals unavailable because the derivatives feed did not return a validated dataset.');
-    expect(cryptoTerminal).toContain('No significant signals detected in the loaded derivatives dataset.');
+    expect(cryptoTerminal).toContain('Readings unavailable because the derivatives feed did not return a validated dataset.');
+    expect(cryptoTerminal).toContain('No significant readings detected in the loaded derivatives dataset.');
   });
 
   it('propagates commodity freshness into Macro instead of reusing stale rows silently', () => {

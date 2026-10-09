@@ -40,11 +40,6 @@ export default function TradeSuggestionCard({ suggestion, onAccept, onReject }: 
   const isBull = s.direction === 'bullish';
   const dirColor = isBull ? 'var(--msp-bull)' : 'var(--msp-bear)';
   const dirLabel = isBull ? 'LONG' : 'SHORT';
-  const confidence = Math.round(s.confidence_score * 100);
-  const edgeMatch = Math.round(s.edge_match_score * 100);
-
-  const confColor = confidence >= 70 ? 'var(--msp-bull)' : confidence >= 50 ? 'var(--msp-warn)' : 'var(--msp-flat)';
-
   const expiresIn = getTimeRemaining(s.expires_at);
 
   async function handleAction(action: 'accept' | 'reject') {
@@ -103,8 +98,8 @@ export default function TradeSuggestionCard({ suggestion, onAccept, onReject }: 
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <span style={{ color: confColor, fontWeight: 800, fontSize: '0.78rem' }}>
-            {confidence}% confluence
+          <span style={{ color: 'var(--msp-text-muted)', fontWeight: 700, fontSize: '0.78rem' }}>
+            What to check
           </span>
           <span style={{ color: 'var(--msp-text-muted)', fontSize: '0.65rem' }}>{expiresIn}</span>
         </div>
@@ -147,8 +142,6 @@ export default function TradeSuggestionCard({ suggestion, onAccept, onReject }: 
         fontSize: '0.7rem',
         flexWrap: 'wrap',
       }}>
-        <span>Scanner: <strong style={{ color: 'var(--msp-text)' }}>{s.scanner_score}</strong>/100</span>
-        <span>Alignment Match: <strong style={{ color: 'var(--msp-text)' }}>{edgeMatch}%</strong></span>
         {s.strategy && <span>Strategy: <strong style={{ color: 'var(--msp-text)' }}>{s.strategy.replace(/_/g, ' ')}</strong></span>}
       </div>
 

@@ -73,7 +73,7 @@ export default function OperatorCommandStrip() {
       <div className="mb-1 flex flex-wrap items-center gap-1.5">
         <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-cyan-300">Mode {mode}</span>
         <span className="rounded-full border border-slate-700 bg-slate-800/70 px-2 py-0.5 text-[11px] font-semibold text-slate-300">Symbol {state.symbol}</span>
-        <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${toneClass(String(state.edge), 'edge')}`}>Edge {state.edge}%</span>
+        <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${toneClass(String(state.edge), 'edge')}`}>Record {state.edge}%</span>
         <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${toneClass(state.bias, 'bias')}`}>Bias {state.bias}</span>
         <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${toneClass(state.action, 'action')}`}>Review {displayAction(state.action)}</span>
         <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${toneClass(state.risk, 'risk')}`}>Risk {state.risk}</span>

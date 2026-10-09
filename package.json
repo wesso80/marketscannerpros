@@ -9,7 +9,7 @@
     "test:contracts": "vitest run test/contracts.v1.test.ts",
     "test:indicators": "vitest run test/indicators.test.ts",
     "test:dataQuality": "vitest run test/dataQuality.test.ts",
-    "test:compliance": "vitest run test/public-compliance-copy.test.ts",
+    "test:compliance": "vitest run test/public-compliance-copy.test.ts test/customer-rendered-copy.test.ts",
     "test:audit": "vitest run test/institutional-audit.test.ts",
     "audit:tenant": "npx tsx scripts/audit-tenant-isolation.ts",
     "jarvis:brief": "npx tsx scripts/jarvis-daily-brief.ts",

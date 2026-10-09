@@ -120,7 +120,7 @@ describe('callers', () => {
     expect(scanOgImageUrl('NVDA')).toBe('https://marketscannerpros.app/api/og/scan?symbol=NVDA');
     expect(scanOgImageUrl('DAILY', '2026-09-25')).toBe('https://marketscannerpros.app/api/og/scan?symbol=DAILY&date=2026-09-25');
     const sharePage = readFileSync('app/share/scan/[symbol]/page.tsx', 'utf8');
-    const dailyPage = readFileSync('app/daily-pick/page.tsx', 'utf8');
+    const dailyPage = readFileSync('app/daily-scan/page.tsx', 'utf8');
     expect(sharePage).toContain('scanOgImageUrl(data.symbol)');
     expect(dailyPage).toContain("scanOgImageUrl('DAILY', data?.scan_date ?? null)");
     for (const src of [sharePage, dailyPage]) expect(src).not.toMatch(/api\/og\/scan\?|headline=|sub=/);

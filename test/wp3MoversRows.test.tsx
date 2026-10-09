@@ -68,7 +68,7 @@ it('non-universe rows render no em dashes, missing fields say Not collected, and
   }));
   for (const row of rows) {
     expect(row.textContent).not.toContain('—');
-    expect(row.textContent).toContain('Crypto scoreNot applicable');
+    expect(row.textContent).toContain('What to checkPrice, session change, RSI, and volume versus this list');
   }
   // AMOD is outside the worker universe: its indicator fields are marked missing, never filled.
   expect(rows[0].textContent).toContain('RSINot collected');

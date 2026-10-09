@@ -137,7 +137,7 @@ export default function JournalLayout(props: JournalLayoutProps) {
               Intelligence Dock — Pro Feature
             </p>
             <p className="mt-1 text-xs text-slate-400">
-              {publicDesignEnabled() && props.embeddedInWorkspace ? 'Review historical records by setup and inspect saved evidence. See pricing for current access; this review does not provide trading recommendations.' : 'Upgrade to Pro for automated trade data analysis, risk scoring, labeling, evidence snapshots, and AI-powered summaries.'}
+              {publicDesignEnabled() && props.embeddedInWorkspace ? 'Review historical records by setup and inspect saved evidence. See pricing for current access; this review does not provide trading recommendations.' : 'Upgrade to Pro for automated trade data analysis, risk notes, labeling, evidence snapshots, and AI-powered summaries.'}
             </p>
             <a
               href="/pricing"

@@ -236,7 +236,7 @@ export default function CatalystDetailsDrawer({ study, open, onClose }: Props) {
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2 space-y-1">
                     <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">
-                      Max Favorable Excursion (MFE)
+                      Largest up move (MFE)
                     </p>
                     <StatRow label="Median" value={`+${study.intradayPath.mfePercent.median.toFixed(2)}`} unit="%" />
                     <StatRow label="P75" value={`+${study.intradayPath.mfePercent.p75.toFixed(2)}`} unit="%" />
@@ -346,7 +346,7 @@ export default function CatalystDetailsDrawer({ study, open, onClose }: Props) {
           <div className="space-y-3">
             <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-3 text-center">
               <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)] mb-1">
-                Data Quality Score
+                Data Quality Reading
               </p>
               <p className={`text-3xl font-black ${qualityColor(study.dataQuality.score)}`}>
                 {study.dataQuality.score.toFixed(1)}
@@ -360,7 +360,7 @@ export default function CatalystDetailsDrawer({ study, open, onClose }: Props) {
               </p>
               <StatRow label="Sample Size" value={study.dataQuality.sampleN} />
               <StatRow label="Missing Bars" value={`${(study.dataQuality.percentMissingBars * 100).toFixed(1)}`} unit="%" />
-              <StatRow label="Timestamp Confidence" value={`${(study.dataQuality.timestampConfidence * 100).toFixed(0)}`} unit="%" />
+              <StatRow label="Timestamp Coverage" value={`${(study.dataQuality.timestampConfidence * 100).toFixed(0)}`} unit="%" />
               <StatRow label="Confounded Events" value={study.dataQuality.confoundedCount} />
             </div>
 
@@ -379,7 +379,7 @@ export default function CatalystDetailsDrawer({ study, open, onClose }: Props) {
 
             <div className="text-center">
               <p className="text-[9px] text-[var(--msp-text-faint)]">
-                Score deductions: small sample (−2 if n&lt;10), missing bars (−1 per 10%), low confidence (−1 if avg&lt;0.7), confounded events (−0.5 each, max −2)
+                Reading deductions: small sample (−2 if n&lt;10), missing bars (−1 per 10%), low coverage (−1 if avg&lt;0.7), confounded events (−0.5 each, max −2)
               </p>
             </div>
           </div>

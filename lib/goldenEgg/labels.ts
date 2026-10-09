@@ -3,4 +3,4 @@ export const INDICATOR_COMPOSITE_TOOLTIP = 'Weighted blend of structure, flow, m
 export const CANONICAL_SETUP_TOOLTIP = 'Canonical setup: calibrated percentile of expected R (daily equity/crypto) or uncalibrated factor alignment. The indicator composite shown underneath is a secondary read.';
 export const TIMEFRAME_PULL_LABEL = 'Timeframe pull (display only)';
 export const CLOSE_CALENDAR_LABEL = 'Close calendar (clock only)';
-export const TIMING_TOOLTIP = 'Prior-candle midpoint pull and candle-close clock. No tested edge. Not used in the verdict, grade or gates.';
+export const TIMING_TOOLTIP = 'Prior-candle midpoint pull and candle-close clock. No tested outcome. Not used in the read, marker or gates.';

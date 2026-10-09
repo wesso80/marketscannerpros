@@ -31,10 +31,7 @@ const INSIGHT_COLORS: Record<string, { border: string; bg: string; text: string 
 
 function InsightCard({ insight }: { insight: EdgeInsight }) {
   const colors = INSIGHT_COLORS[insight.type] ?? INSIGHT_COLORS.pattern;
-  const code = INSIGHT_CODES[insight.type] ?? 'EDGE';
-  const edgeLabel = insight.confidence >= 0.7 ? 'Established pattern' : insight.confidence >= 0.4 ? 'Developing pattern' : 'Early observation';
-  const edgeLabelColor = insight.confidence >= 0.7 ? 'var(--msp-bull)' : insight.confidence >= 0.4 ? 'var(--msp-warn)' : '#6B7280';
-
+  const code = INSIGHT_CODES[insight.type] ?? 'NOTE';
   return (
     <div
       className="rounded-lg px-4 py-3 border"
@@ -47,9 +44,6 @@ function InsightCard({ insight }: { insight: EdgeInsight }) {
             <div className="text-xs font-semibold" style={{ color: colors.text }}>
               {insight.title}
             </div>
-            <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium" style={{ color: edgeLabelColor, backgroundColor: `${edgeLabelColor}15` }}>
-              {edgeLabel}
-            </span>
           </div>
           <div className="text-[11px] text-slate-400 mt-1 leading-relaxed">
             {insight.body}
@@ -58,7 +52,6 @@ function InsightCard({ insight }: { insight: EdgeInsight }) {
             <span className="text-[10px] text-slate-500">
               {insight.sampleSize} trades
             </span>
-            <ConfidenceBar value={insight.confidence} />
           </div>
         </div>
       </div>
@@ -66,26 +59,11 @@ function InsightCard({ insight }: { insight: EdgeInsight }) {
   );
 }
 
-function ConfidenceBar({ value }: { value: number }) {
-  const pct = Math.round(value * 100);
-  const color = pct >= 70 ? 'var(--msp-bull)' : pct >= 40 ? 'var(--msp-warn)' : '#6B7280';
-  return (
-    <div className="flex items-center gap-1.5">
-      <div className="w-12 h-1.5 rounded-full bg-slate-700 overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all"
-          style={{ width: `${pct}%`, backgroundColor: color }}
-        />
-      </div>
-      <span className="text-[9px] text-slate-500">{pct}%</span>
-    </div>
-  );
-}
 
 function OverallStats({ overall }: { overall: EdgeSlice }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <StatCell label="Win Rate" value={`${(overall.winRate * 100).toFixed(0)}%`} color={overall.winRate >= 0.5 ? 'var(--msp-bull)' : 'var(--msp-bear)'} />
+      <StatCell label="Win rate · your own trades" value={`${(overall.winRate * 100).toFixed(0)}%`} color="var(--msp-text)" />
       <StatCell label="Avg R" value={`${overall.avgR.toFixed(2)}R`} color={overall.avgR >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)'} />
       <StatCell label="Profit Factor" value={overall.profitFactor === Infinity ? '∞' : overall.profitFactor.toFixed(2)} color={overall.profitFactor >= 1 ? 'var(--msp-bull)' : 'var(--msp-bear)'} />
       <StatCell label="Expectancy" value={`${overall.expectancy.toFixed(2)}R`} color={overall.expectancy >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)'} />
@@ -106,7 +84,7 @@ function EmptyState({ compact = false, lock }: { compact?: boolean; lock: EdgePr
   return (
     <div className={`${compact ? 'py-2 text-left' : 'py-5 text-center'}`}>
       <div className="text-xs leading-5 text-slate-400">
-        Not enough closed trades yet ({lock.progressLabel}). Close at least {lock.unlockAt} trades in your journal to unlock edge insights.
+        Not enough closed trades yet ({lock.progressLabel}). Close at least {lock.unlockAt} trades in your journal to unlock notes from your own trades.
       </div>
     </div>
   );
@@ -118,7 +96,7 @@ function PremiumGate() {
   return (
     <div className="py-4 text-center">
       <div className="text-xs text-slate-400 mb-3">
-        Edge Profile insights require a Pro subscription.
+        Your own trades insights require a Pro subscription.
       </div>
       <a
         href="/pricing"
@@ -149,7 +127,7 @@ export default function EdgeInsightCards({ compact = false }: { compact?: boolea
     return (
       <div className="rounded-lg border border-slate-800/60 bg-[var(--msp-panel)] p-3">
         <h3 className="text-sm font-semibold text-white mb-2">
-          Edge Profile
+          Your own trades
         </h3>
         <PremiumGate />
       </div>
@@ -160,7 +138,7 @@ export default function EdgeInsightCards({ compact = false }: { compact?: boolea
   if (error && !profile) {
     return (
       <div className="rounded-md border border-slate-800/60 bg-[var(--msp-panel)] px-3 py-1.5 flex items-center justify-between gap-3 text-xs">
-        <span className="font-semibold text-slate-300">Edge Profile</span>
+        <span className="font-semibold text-slate-300">Your own trades</span>
         <span className="text-[11px] text-slate-500">Closed trades could not be loaded.</span>
       </div>
     );
@@ -171,7 +149,7 @@ export default function EdgeInsightCards({ compact = false }: { compact?: boolea
     if (compact) {
       return (
         <div className="rounded-md border border-slate-800/60 bg-[var(--msp-panel)] px-3 py-1.5 flex items-center justify-between gap-3 text-xs">
-          <span className="font-semibold text-slate-300">Edge Profile</span>
+          <span className="font-semibold text-slate-300">Your own trades</span>
           <span className="text-[11px] text-slate-500">{lock.progressLabel} — unlocks after {lock.unlockAt} journal closes</span>
         </div>
       );
@@ -179,7 +157,7 @@ export default function EdgeInsightCards({ compact = false }: { compact?: boolea
     return (
       <div className="rounded-lg border border-slate-800/60 bg-[var(--msp-panel)] p-3">
         <h3 className="text-sm font-semibold text-white mb-1">
-          Edge Profile
+          Your own trades
         </h3>
         <EmptyState compact={compact} lock={lock} />
       </div>
@@ -194,7 +172,7 @@ export default function EdgeInsightCards({ compact = false }: { compact?: boolea
     <div className="rounded-lg border border-slate-800/60 bg-[var(--msp-panel)] p-3 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-white">
-          Edge Profile
+          Your own trades
         </h3>
         <span className="text-[10px] text-slate-500">
           {profile.totalOutcomes} trades analyzed
@@ -208,7 +186,7 @@ export default function EdgeInsightCards({ compact = false }: { compact?: boolea
           <div className="text-[10px] uppercase tracking-wider text-indigo-400/80">AI Pattern Summary</div>
           <div className="text-[11px] text-slate-300 leading-relaxed">
             {summary.strongestStrategy && <span>Historically strongest: <strong className="text-white">{summary.strongestStrategy}</strong>. </span>}
-            {summary.strongestRegime && <span>Highest win-rate regime: <strong className="text-white">{summary.strongestRegime.replace(/_/g, ' ')}</strong>. </span>}
+            {summary.strongestRegime && <span>Highest winning-close regime: <strong className="text-white">{summary.strongestRegime.replace(/_/g, ' ')}</strong>. </span>}
             {summary.preferredSide && <span>Preferred: <strong className="text-white">{summary.preferredSide}</strong>. </span>}
             <span>Expectancy: <strong className="text-white">{summary.expectancy.toFixed(2)}R</strong>.</span>
           </div>
@@ -226,7 +204,7 @@ export default function EdgeInsightCards({ compact = false }: { compact?: boolea
 
       {profile.topEdges.length > 0 && (
         <div className="space-y-1">
-          <div className="text-[10px] uppercase tracking-wider text-slate-500">Top Edges</div>
+          <div className="text-[10px] uppercase tracking-wider text-slate-500">Stronger groups · your own trades</div>
           {profile.topEdges.slice(0, 3).map(edge => (
             <div key={`${edge.dimension}_${edge.value}`} className="flex items-center justify-between py-1.5 px-2 rounded bg-emerald-500/5 border border-emerald-500/10">
               <div className="flex flex-col">
@@ -265,7 +243,7 @@ export default function EdgeInsightCards({ compact = false }: { compact?: boolea
       )}
 
       <div className="text-[9px] text-slate-600 leading-tight pt-1 border-t border-slate-800/40">
-        Past performance does not guarantee future results. Edge insights are based on your journal history and are for educational analysis only.
+        Past performance does not guarantee future results. Notes from your own trades are based on your journal history and are for educational analysis only.
       </div>
     </div>
   );

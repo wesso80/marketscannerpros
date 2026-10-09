@@ -3,12 +3,12 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Symbol",
   description:
-    "Single-symbol educational confluence view: regime, bias, volatility, scenario levels, and data-quality context.",
+    "Single-symbol educational agreement view: regime, bias, volatility, scenario levels, and data-quality context.",
   robots: { index: false, follow: false },
   openGraph: {
     title: "Golden Egg | MarketScannerPros",
     description:
-      "Single-symbol educational confluence view with regime, volatility, scenario levels, and data-quality context.",
+      "Single-symbol educational agreement view with regime, volatility, scenario levels, and data-quality context.",
     url: "https://marketscannerpros.app/tools/golden-egg",
     type: "website",
     images: [
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Golden Egg | MarketScannerPros",
-    description: "Single-symbol educational confluence and scenario analysis.",
+    description: "Single-symbol educational agreement and scenario analysis.",
     images: ["/scan-banner.png"],
   },
 };

@@ -159,7 +159,7 @@ async function runOpportunityScan(req: NextRequest) {
 
     if (!picks.length) {
       push('No daily picks found for today — skipping');
-      return NextResponse.json({ success: true, message: 'No picks available', log });
+      return NextResponse.json({ success: true, message: 'No symbols available', log });
     }
 
     // Parse JSON indicators column

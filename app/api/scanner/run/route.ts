@@ -2971,7 +2971,7 @@ async function runScanner(req: NextRequest, capturePublicRows?: (rows: readonly 
     const isStale = results.some((result) => result.scoreQuality?.freshnessStatus === 'stale' || result.scoreQuality?.freshnessStatus === 'missing');
     return NextResponse.json({
       success: true,
-      message: results.length ? "OK" : "No symbols matched the minimum score (showing first for debug)",
+      message: results.length ? "OK" : "No symbols matched the minimum reading (showing first for debug)",
       redirect: null,
       results,
       errors,

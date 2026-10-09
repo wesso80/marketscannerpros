@@ -633,7 +633,6 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
         {derivedState && <details className="rounded-lg border border-white/10 px-3 py-2 text-sm">
           <summary className="cursor-pointer">Market context</summary>
           <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-white/65">
-            <dt>Assessment score</dt><dd>{derivedState.score}/100</dd>
             <dt>US dollar proxy</dt><dd>{plain(derivedState.usdTrend)} · {plain(derivedState.usdImpact)}</dd>
             <dt>Real rates</dt><dd>{plain(derivedState.realRatesTrend)} · {plain(derivedState.realRatesImpact)}</dd>
             <dt>Growth proxy</dt><dd data-growth-proxy>{derivedState.growthTrend == null || derivedState.growthSupport == null ? 'unavailable' : `${plain(derivedState.growthTrend)} · ${plain(derivedState.growthSupport)}`}</dd>

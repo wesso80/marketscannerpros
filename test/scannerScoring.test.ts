@@ -108,7 +108,8 @@ describe('scanner rank explanations', () => {
     });
 
     expect(explanation.scoreGapToLeader).toBe(16);
-    expect(explanation.summary).toContain('16 points behind the current leader');
+    expect(explanation.summary).toContain('listed after symbols with broader evidence coverage');
+    expect(explanation.summary).not.toContain('16 points behind');
     expect(explanation.strengths).toContain('DVE flags: COMPRESSED');
     expect(explanation.penalties).toContain('only 4 evidence layers contributed');
     expect(explanation.penalties).toContain('stale data penalty 8');

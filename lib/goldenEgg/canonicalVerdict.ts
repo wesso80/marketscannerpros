@@ -67,7 +67,7 @@ export function evaluateGoldenEggCanonical(bars: CanonicalBar[], ctx: GoldenEggC
   const dataWatchReasons: CanonicalReason[] = ctx.trustLevel === 'DEGRADED' || ctx.trustLevel === 'INSUFFICIENT_DATA'
     ? [{ code: 'DATA_TRUST_DEGRADED', message: `Golden Egg data trust is ${ctx.trustLevel}` }] : [];
   const flags: CanonicalReason[] = ctx.timeframe.toLowerCase() !== 'daily'
-    ? [{ code: 'UNCALIBRATED_TIMEFRAME', message: `Outcome calibration covers daily bars only; this ${ctx.timeframe} verdict is uncalibrated factor alignment (no probability or expected-R claim)` }] : [];
+    ? [{ code: 'UNCALIBRATED_TIMEFRAME', message: `Outcome calibration covers daily bars only; this ${ctx.timeframe} read is an uncalibrated factor comparison (no probability or expected-R claim)` }] : [];
   return evaluateCanonicalFromBars(bars.slice(-GOLDEN_EGG_CANONICAL_MAX_BARS), {
     symbol: ctx.symbol, assetClass: ctx.assetClass, timeframe: ctx.timeframe,
     hardBlocks, dataWatchReasons, flags, trust: ctx.trustLevel ?? null, dataTimestamp: ctx.dataTimestamp ?? bars[bars.length - 1]?.t ?? null,
@@ -93,7 +93,7 @@ export type GoldenEggLegacyConfluence = NonNullable<GoldenEggPayload['legacyConf
 export function applyCanonicalToGoldenEgg(payload: GoldenEggPayload, c: CanonicalResult): GoldenEggPayload {
   const l1 = payload.layer1;
   const legacy: GoldenEggLegacyConfluence = {
-    label: 'legacy confluence (secondary)',
+    label: 'Earlier indicator blend (secondary)',
     assessment: l1.assessment, direction: l1.direction, grade: l1.grade, confluenceScore: l1.confluenceScore,
     primaryBlocker: l1.primaryBlocker ?? null, flipConditions: l1.flipConditions,
     levels: payload.canonical?.levels ?? null,
@@ -111,7 +111,7 @@ export function applyCanonicalToGoldenEgg(payload: GoldenEggPayload, c: Canonica
     ...payload,
     layer1: {
       ...l1, assessment, direction, grade: c.grade, primaryBlocker, flipConditions,
-      primaryDriver: c.setupType === 'NONE' ? l1.primaryDriver : `${setup} ${c.direction} · canonical score ${c.score}`,
+      primaryDriver: c.setupType === 'NONE' ? l1.primaryDriver : `${setup} ${c.direction}`,
       cta: c.permission === 'PASS' ? l1.cta : { ...l1.cta, primary: 'SET_ALERT' },
     },
     canonicalVerdict: c,
@@ -137,7 +137,7 @@ export function applyCanonicalToGoldenEgg(payload: GoldenEggPayload, c: Canonica
 
   if (payload.canonical) {
     const packet = { ...payload.canonical };
-    packet.verdict = { ...packet.verdict, assessment, direction, grade: c.grade, primaryBlocker: primaryBlocker ?? null, setupType: c.setupType === 'NONE' ? packet.verdict.setupType : c.setupType, setupNote: c.setupType === 'NONE' ? packet.verdict.setupNote : `${setup} (canonical ${c.score}/100, ${c.permission})` };
+    packet.verdict = { ...packet.verdict, assessment, direction, grade: c.grade, primaryBlocker: primaryBlocker ?? null, setupType: c.setupType === 'NONE' ? packet.verdict.setupType : c.setupType, setupNote: c.setupType === 'NONE' ? packet.verdict.setupNote : `${setup} (${c.permission})` };
     if (lv) {
       const mech = lv.invalidationBasis === 'atr_fallback';
       const above = c.direction === 'long';
@@ -209,17 +209,17 @@ export function canonicalSetupThesis(symbol: string, c: CanonicalResult, legacyT
   const setup = (SETUP_LABEL[c.setupType] ?? c.setupType).toLowerCase();
   const status = c.permission === 'PASS' ? 'qualifies' : c.permission === 'WATCH' ? 'is on watch' : 'is blocked';
   const lead = hasSetup
-    ? `${symbol}: the canonical engine reads a ${c.direction} ${setup} setup (score ${c.score}/100, ${status}).`
+    ? `${symbol}: the canonical engine reads a ${c.direction} ${setup} setup (${status}).`
     : `${symbol}: no canonical setup qualifies right now, so there is no directional thesis.`;
   const m = LEGACY_THESIS_LEAD.exec(legacyThesis);
   const legacyLead = m ? `a ${m[1]} ${m[2]} (${m[3]})` : null;
   let rest = m ? legacyThesis.slice(m[0].length).trim() : '';
   rest = rest
-    .replace(/Market pressure at (\d+)\/100 supports the thesis\./, 'Market pressure is $1/100.')
+    .replace(/Market pressure at (\d+)\/100 supports the thesis\./, 'Market pressure is recorded.')
     .replace(/Time confluence is (bullish|bearish) with (.+?) signal strength \((?:supportive|conflict|neutral|unavailable)\)\./, (_all, dir: string, strength: string) => {
       const agrees = hasSetup && ((dir === 'bullish') === (c.direction === 'long'));
       const rel = !hasSetup ? '' : agrees ? `, in line with the canonical ${c.direction}` : `, against the canonical ${c.direction}`;
-      return `Time confluence is ${dir} with ${strength} signal strength${rel}.`;
+      return `Close timing is ${dir} with ${strength} input strength${rel}.`;
     });
   const secondary = legacyLead
     ? ` The indicator composite read ${legacyLead} (secondary context only).`
@@ -232,22 +232,31 @@ const trimStop = (s: string) => s.trim().replace(/[.\s]+$/, '');
 
 /** Plain-sentence Golden Egg narrative summary for the canonical verdict (no raw engine labels such as
  *  "canonical verdict BLOCK · grade F"). */
+function customerReason(message: string): string {
+  return message
+    .replace(/,?\s*score \d+(?:\.\d+)?/gi, '')
+    .replace(/\bscores?\b/gi, 'reading')
+    .replace(/\bgrades?\b/gi, 'reading')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 export function canonicalNarrativeSummary(symbol: string, c: CanonicalResult, l1: Pick<GoldenEggPayload['layer1'], 'confluenceScore' | 'direction'>): string {
-  const legacy = ` The indicator composite scores it ${l1.confluenceScore}/100 with ${LEGACY_LEAN[l1.direction] ?? 'no clear lean'} (secondary context only).`;
+  const legacy = ` Secondary context: ${LEGACY_LEAN[l1.direction] ?? 'no clear lean'}.`;
   const none = noSetupDisplay(c);
   if (none) {
-    if (none.kind === 'blocked') return `${symbol}: no trade setup is allowed right now — ${trimStop(none.detail ?? 'blocked')}.${legacy}`;
-    const closest = none.detail?.startsWith('Closest: ') ? ` The closest candidate was ${trimStop(none.detail.slice(9))}.` : none.detail ? ` ${trimStop(none.detail)}.` : '';
+    if (none.kind === 'blocked') return `${symbol}: no trade setup is allowed right now — ${customerReason(trimStop(none.detail ?? 'blocked'))}.${legacy}`;
+    const closestRaw = none.detail?.startsWith('Closest: ') ? trimStop(none.detail.slice(9)) : none.detail ? trimStop(none.detail) : '';
+    const closest = closestRaw ? ` The closest candidate was ${customerReason(closestRaw)}.` : '';
     return `${symbol}: there is no qualifying setup right now.${closest}${legacy}`;
   }
   const setup = `${c.direction === 'neutral' ? '' : `${c.direction} `}${(SETUP_LABEL[c.setupType] ?? c.setupType).toLowerCase()} setup`;
   const reasons = c.permission === 'BLOCK' ? c.blockReasons : c.permission === 'WATCH' ? c.watchReasons : [];
-  // Engine reasons lead with the raw code ("EXHAUSTION_FADE short: …"): say it in words ("exhaustion fade (short): …").
-  const why = reasons[0] ? trimStop(reasons[0].message).replace(/^([A-Z][A-Z_]+) (long|short)\b/, (_m, code: string, dir: string) => `${(SETUP_LABEL[code] ?? code.replace(/_/g, ' ')).toLowerCase()} (${dir})`) : '';
+  const why = reasons[0] ? customerReason(trimStop(reasons[0].message).replace(/^([A-Z][A-Z_]+) (long|short)\b/, (_m, code: string, dir: string) => `${(SETUP_LABEL[code] ?? code.replace(/_/g, ' ')).toLowerCase()} (${dir})`)) : '';
   const lead = c.permission === 'PASS'
-    ? `${symbol}: a ${setup} qualifies (grade ${c.grade}).`
+    ? `${symbol}: a ${setup} qualifies.`
     : c.permission === 'WATCH'
-      ? `${symbol}: a ${setup} is forming but is on watch (grade ${c.grade})${why ? ` because ${/^[A-Z][a-z]/.test(why) ? why.charAt(0).toLowerCase() + why.slice(1) : why}` : ''}.`
+      ? `${symbol}: a ${setup} is forming but is on watch${why ? ` because ${/^[A-Z][a-z]/.test(why) ? why.charAt(0).toLowerCase() + why.slice(1) : why}` : ''}.`
       : `${symbol}: a ${setup} was found but is blocked${why ? ` — ${why}` : ''}.`;
   return `${lead}${legacy}`;
 }

@@ -21,13 +21,13 @@ export default function Page({ embeddedInTerminal = false, symbol, assetType, ti
     if (embeddedInTerminal) {
       const label = (symbol || '').trim().toUpperCase();
       return (
-        <section aria-label="Time Confluence" className="rounded-2xl border border-slate-800 bg-slate-900/40 px-4 py-6">
-          <h2 className="text-base font-semibold text-slate-100">Time Confluence for {label || 'this symbol'}</h2>
+        <section aria-label="Close timing" className="rounded-2xl border border-slate-800 bg-slate-900/40 px-4 py-6">
+          <h2 className="text-base font-semibold text-slate-100">Close timing for {label || 'this symbol'}</h2>
           <p className="mt-2 text-sm text-slate-400">
-            {label ? `${label} is already loaded. ` : ''}Time Confluence is on the Pro plan. Opening this view does not use a free scan.
+            {label ? `${label} is already loaded. ` : ''}Close timing is on the Pro plan. Opening this view does not use a free scan.
           </p>
           <Link href="/pricing" className="mt-4 inline-flex min-h-10 items-center rounded-lg border border-slate-700 px-4 text-sm font-semibold text-slate-100">
-            Unlock Time Confluence
+            Unlock Close timing
           </Link>
         </section>
       );
