@@ -8,6 +8,7 @@ import { buildPermissionSnapshot, evaluateCandidate, type StrategyTag } from '@/
 import { computeEntryRiskMetrics, getLatestPortfolioEquity } from '@/lib/journal/riskAtEntry';
 import { getRuntimeRiskSnapshotInput } from '@/lib/risk/runtimeSnapshot';
 import { runExecutionPipeline } from '@/lib/execution/runPipeline';
+import { operatorAccessDenied } from '@/lib/operator/privateAccess';
 
 type CanonicalActionType =
   | 'alert.create'
@@ -860,6 +861,8 @@ export async function POST(req: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const operatorDenied = operatorAccessDenied(session);
+    if (operatorDenied) return operatorDenied;
     if (!hasPaidSessionAccess(session)) {
       return NextResponse.json({ error: 'Pro access required' }, { status: 403 });
     }

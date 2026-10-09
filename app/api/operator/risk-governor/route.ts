@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { operatorAccessDenied } from '@/lib/operator/privateAccess';
 import {
   evaluateAutoAlertPolicy,
   evaluateSystemExecutionPolicy,
@@ -30,6 +31,8 @@ export async function GET(req: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const operatorDenied = operatorAccessDenied(session);
+    if (operatorDenied) return operatorDenied;
 
     const url = new URL(req.url);
     const requestedPlanRiskScore = toFiniteNumber(url.searchParams.get('planRiskScore'));
