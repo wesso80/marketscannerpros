@@ -24,6 +24,11 @@ export function resolveCoinGeckoApiKey(env: Record<string, string | undefined> =
   }
   return key;
 }
+
+/** True when a Pro key is configured. Does not warn. Callers outside this file use this instead of reading the env. */
+export function hasCoinGeckoApiKey(env: Record<string, string | undefined> = process.env): boolean {
+  return Boolean((env.COINGECKO_API_KEY || env.COINGECKO_PRO_API_KEY || '').trim());
+}
 const getApiKey = () => resolveCoinGeckoApiKey();
 const BASE_URL = 'https://pro-api.coingecko.com/api/v3';
 const FREE_URL = 'https://api.coingecko.com/api/v3';

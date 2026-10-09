@@ -48,6 +48,7 @@ vi.mock('@/lib/redis', () => ({ getRedis: () => holder.redis }));
 
 import { getSimplePrices, resetCgResponseCacheForTests } from '@/lib/coingecko';
 import {
+  CG_LIMITER_REDIS_TIMEOUT_MS,
   cgQuota,
   cgTargetPct,
   flatDailyCap,
@@ -58,6 +59,7 @@ import {
   utcMonthParts,
 } from '@/lib/admin/cgDailyCap';
 import { cgBudgetStatus } from '@/lib/admin/cgCredits';
+import { CG_BYPASS_FIXTURES, evalRunsCapScript, isCgCapScript } from './helpers/cgEvalGuard';
 
 const OCT31 = Date.UTC(2026, 9, 31, 12, 0, 0);
 
@@ -236,19 +238,64 @@ describe('cgFetch gate', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('does not open a second in-process budget after Redis was already counting today', async () => {
+  it('uses the in-process fallback when Redis errors', async () => {
     const redis = makeRedis();
     holder.redis = redis;
-    vi.stubEnv('CG_MONTHLY_CREDITS', '100');
-    seedKey(redis, OCT31, 0, 100);
+    vi.stubEnv('CG_MONTHLY_CREDITS', '78');
+    vi.stubEnv('CG_ESTIMATED_PROCESSES', '1');
+    redis.incr = async () => { throw new Error('redis down'); };
     const fetchMock = vi.fn(async () => priceResponse());
     vi.stubGlobal('fetch', fetchMock);
     vi.spyOn(console, 'error').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     expect((await getSimplePrices(['bitcoin'], { noStore: true }))?.bitcoin.usd).toBe(42);
-    redis.incr = async () => { throw new Error('redis down'); };
-    expect(await getSimplePrices(['bitcoin'], { noStore: true })).toBeNull();
+    expect((await getSimplePrices(['ethereum'], { noStore: true }))?.bitcoin.usd).toBe(42);
+    expect(await getSimplePrices(['solana'], { noStore: true })).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(warn.mock.calls.map((call) => String(call[0])).some((line) => line.startsWith('[CoinGecko] fallback timeout=0 error='))).toBe(true);
+  });
+
+  it('aborts a Redis reservation after 400ms and uses the same in-process fallback', async () => {
+    expect(CG_LIMITER_REDIS_TIMEOUT_MS).toBe(400);
+    const redis = makeRedis();
+    holder.redis = redis;
+    vi.stubEnv('CG_MONTHLY_CREDITS', '78');
+    vi.stubEnv('CG_ESTIMATED_PROCESSES', '1');
+    redis.incr = () => new Promise(() => {});
+    const fetchMock = vi.fn(async () => priceResponse());
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect((await getSimplePrices(['bitcoin'], { noStore: true }))?.bitcoin.usd).toBe(42);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls.map((call) => String(call[0])).join('\n')).toMatch(/\[CoinGecko\] fallback timeout=1 error=0 absent=0 cap=/);
+  });
+
+  it('does not treat a foreign eval tuple as the cap decision', async () => {
+    const redis = makeRedis();
+    holder.redis = redis;
+    const foreign = async (_script: string, keys: string[], args: number[]) => {
+      const own = Number(redis.store.get(keys[0]) ?? 0);
+      const shadow = 0;
+      const n = args[0];
+      if (own + n > 1500 || shadow + n > 4500) return [0, own, 0];
+      return [1, own + n, 0];
+    };
+    expect(evalRunsCapScript(foreign)).toBe(false);
+    expect(isCgCapScript("redis.call('INCR', KEYS[1])\nreturn {'cg', 1, n, refused}")).toBe(true);
+    redis.eval = foreign as FakeRedis['eval'];
+    vi.stubEnv('CG_MONTHLY_CREDITS', '78');
+    vi.stubEnv('CG_ESTIMATED_PROCESSES', '1');
+    const fetchMock = vi.fn(async () => priceResponse());
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect((await getSimplePrices(['bitcoin'], { noStore: true }))?.bitcoin.usd).toBe(42);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(readFileSync('lib/admin/cgDailyCap.ts', 'utf8')).not.toContain('evalRunsCapScript');
   });
 
   it('reports plan, quota, used, remaining, the 80% target, and today on the admin readout', async () => {
@@ -282,17 +329,22 @@ describe('cgFetch gate', () => {
 });
 
 describe('no CoinGecko fetch outside cgFetch', () => {
-  it('fails if a CoinGecko API URL is fetched outside lib/coingecko.ts', () => {
-    const allow = new Set(['lib/coingecko.ts', 'next.config.mjs']);
-    const offenders: string[] = [];
-    const files = walk(process.cwd());
-    for (const file of files) {
+  it('fails if a CoinGecko API URL or COINGECKO env read is assembled outside lib/coingecko.ts', () => {
+    for (const [sample, hit] of CG_BYPASS_FIXTURES.hosts) expect(hostsIn(sample)).toBe(hit);
+    for (const [sample, hit] of CG_BYPASS_FIXTURES.env) expect(envReadIn(sample)).toBe(hit);
+
+    const hostAllow = new Set(['lib/coingecko.ts', 'next.config.mjs', 'test/helpers/cgEvalGuard.ts']);
+    const envAllow = new Set(['lib/coingecko.ts', 'test/coingeckoKeyAndCredit.test.ts', 'test/helpers/cgEvalGuard.ts']);
+    const hostOffenders: string[] = [];
+    const envOffenders: string[] = [];
+    for (const file of walk(process.cwd())) {
       const rel = relative(process.cwd(), file).split('\\').join('/');
-      if (allow.has(rel)) continue;
-      const stripped = stripComments(readFileSync(file, 'utf8'));
-      if (/pro-api\.coingecko\.com|api\.coingecko\.com/.test(stripped)) offenders.push(rel);
+      const source = readFileSync(file, 'utf8');
+      if (!hostAllow.has(rel) && hostsIn(source)) hostOffenders.push(rel);
+      if (!envAllow.has(rel) && envReadIn(source)) envOffenders.push(rel);
     }
-    expect(offenders).toEqual([]);
+    expect(hostOffenders).toEqual([]);
+    expect(envOffenders).toEqual([]);
     const wrapper = readFileSync('lib/coingecko.ts', 'utf8');
     expect(wrapper.match(/\bfetch\s*\(/g)).toHaveLength(1);
     expect(wrapper).toContain('await reserveCgCall()');
@@ -301,6 +353,26 @@ describe('no CoinGecko fetch outside cgFetch', () => {
 
 function stripComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+}
+
+/** Join string concat and template literal pieces so a split host is still visible. */
+function collapseAssemblies(source: string): string {
+  let text = stripComments(source);
+  let prev = '';
+  while (text !== prev) {
+    prev = text;
+    text = text.replace(/(['"`])([^'"`\\]*)\1\s*\+\s*(['"`])([^'"`\\]*)\3/g, '$1$2$4$1');
+    text = text.replace(/\$\{\s*(['"`])([^'"`\\]*)\1\s*\}/g, '$2');
+  }
+  return text;
+}
+
+function hostsIn(source: string): boolean {
+  return /pro-api\.coingecko\.com|(?<![\w-])api\.coingecko\.com/.test(collapseAssemblies(source));
+}
+
+function envReadIn(source: string): boolean {
+  return /process\.env\s*(?:\??\.\s*COINGECKO[A-Z0-9_]*|\[\s*['"`]COINGECKO[A-Z0-9_]*)/.test(collapseAssemblies(source));
 }
 
 function walk(dir: string, out: string[] = []): string[] {

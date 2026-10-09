@@ -17,6 +17,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
+import { hasCoinGeckoApiKey } from '@/lib/coingecko';
 import { q } from '@/lib/db';
 import { discoveryOnlyAction } from '@/lib/admin/discoveryOnly';
 import { readHealthOperations } from '@/lib/admin/healthOverview';
@@ -55,7 +56,7 @@ async function checkDatabase(): Promise<Section> {
 async function checkProviders(): Promise<Section> {
   return { status: 'unknown', note: 'Configuration only; provider reachability and quota are not tested.',
     data: { alphaVantageConfigured: Boolean(process.env.ALPHA_VANTAGE_API_KEY),
-      coinGeckoConfigured: Boolean(process.env.COINGECKO_API_KEY || process.env.COINGECKO_PRO_API_KEY) } };
+      coinGeckoConfigured: hasCoinGeckoApiKey() } };
 }
 
 async function checkEveningPacket(): Promise<Section> {

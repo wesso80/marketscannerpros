@@ -13,17 +13,20 @@ import { getRedis } from '@/lib/redis';
  * Enforcement is an atomic per-UTC-day Redis counter: INCR before the HTTP call, and
  * refuse with CG_MONTHLY_CAP when the result is over the cap. Nothing is queued.
  *
- * Redis-down fallback (conservative):
- * The web service, the data worker, and a Jarvis cron can call CoinGecko in-process,
- * and a second web instance may exist. CG_ESTIMATED_PROCESSES (default 4) overestimates
+ * Redis-down fallback (same rule as the Alpha Vantage limiter):
+ * The reservation aborts after 400ms. A timeout, a Redis error, or no Redis client
+ * uses this process's fallback. A cap denial does not: that call is refused.
+ * The web service, the data worker, and a Jarvis cron can call CoinGecko, and a
+ * second web instance may exist. CG_ESTIMATED_PROCESSES (default 4) overestimates
  * that set. Each process then counts alone, at floor(flat daily cap / N), remainder
- * dropped, so N processes together stay at or under the flat cap. The counter resets
- * at the UTC day boundary and does not survive a restart. If this process already
- * reserved through Redis today and Redis then fails, it refuses the rest of the day
- * instead of opening a second in-process budget on top of the shared one.
+ * dropped. The counter resets at the UTC day boundary and does not survive a restart.
+ * A timeout can still land on the server and on this process counter together.
+ * The fallback log is a count of codes (timeout, error, absent), once per 5 minutes.
  */
 export const CG_REDIS_PREFIX = 'admin:cg-credits:v1';
 export const CG_ESTIMATED_PROCESSES_DEFAULT = 4;
+/** Same 400ms bound the AV limiter uses for its Redis commands. */
+export const CG_LIMITER_REDIS_TIMEOUT_MS = 400;
 const KEY_FRESH_MS = 600_000;
 const COUNTER_TTL_SECONDS = 8 * 86400;
 const LOG_EVERY_MS = 5 * 60 * 1000;
@@ -37,10 +40,10 @@ if cap == nil or n > cap then
   redis.call('DECR', KEYS[1])
   local r = redis.call('INCR', KEYS[2])
   if r == 1 then redis.call('EXPIRE', KEYS[2], ttl) end
-  return {0, n - 1, r}
+  return {'cg', 0, n - 1, r}
 end
 local refused = tonumber(redis.call('GET', KEYS[2]) or '0')
-return {1, n, refused}
+return {'cg', 1, n, refused}
 `;
 
 export class CgMonthlyCapError extends Error {
@@ -135,15 +138,20 @@ export type CgCapFields = {
 };
 
 const memory = { day: '', allowed: 0, refused: 0 };
-let redisCountedDay = '';
 let lastBudgetLogAt = 0;
+type FallbackCode = 'timeout' | 'error' | 'absent';
+const fallbackCounts: Record<FallbackCode, number> = { timeout: 0, error: 0, absent: 0 };
+let lastFallbackLogAt = 0;
 
 export function resetCgCapStateForTests(): void {
   memory.day = '';
   memory.allowed = 0;
   memory.refused = 0;
-  redisCountedDay = '';
   lastBudgetLogAt = 0;
+  lastFallbackLogAt = 0;
+  fallbackCounts.timeout = 0;
+  fallbackCounts.error = 0;
+  fallbackCounts.absent = 0;
 }
 
 function finiteNumber(value: unknown): number | null {
@@ -184,33 +192,18 @@ function takeMemorySlot(cap: number, day: string): { ok: boolean; calls: number;
   return { ok: true, calls: memory.allowed, refused: memory.refused };
 }
 
-/**
- * Other suites stub redis.eval with a different budget (breakdown ceilings, lock
- * release). Those functions ignore the script. Upstash's client method does not
- * contain those sentinels, so production still uses the atomic Lua path.
- */
-function evalRunsCapScript(evalFn: (...args: never[]) => unknown): boolean {
-  try {
-    const src = Function.prototype.toString.call(evalFn);
-    if (src.includes('shadow') || src.includes('1500') || src.includes('4500')) return false;
-  } catch {
-    return true;
-  }
-  return true;
-}
-
 function capTuple(raw: unknown): { ok: boolean; calls: number; refused: number } | null {
-  if (!Array.isArray(raw) || raw.length < 3) return null;
-  const flag = Number(raw[0]);
+  if (!Array.isArray(raw) || raw.length < 4 || raw[0] !== 'cg') return null;
+  const flag = Number(raw[1]);
   if (flag !== 0 && flag !== 1) return null;
-  if (!Number.isFinite(Number(raw[1])) || !Number.isFinite(Number(raw[2]))) return null;
-  return { ok: flag === 1, calls: asCount(raw[1]), refused: asCount(raw[2]) };
+  if (!Number.isFinite(Number(raw[2])) || !Number.isFinite(Number(raw[3]))) return null;
+  return { ok: flag === 1, calls: asCount(raw[2]), refused: asCount(raw[3]) };
 }
 
 async function reserveShared(redis: NonNullable<ReturnType<typeof getRedis>>, cap: number, day: string): Promise<{ ok: boolean; calls: number; refused: number }> {
   const countKey = `${CG_REDIS_PREFIX}:cap-count:${day}`;
   const refusedKey = `${CG_REDIS_PREFIX}:cap-refused:${day}`;
-  if (typeof redis.eval === 'function' && evalRunsCapScript(redis.eval)) {
+  if (typeof redis.eval === 'function') {
     try {
       const parsed = capTuple(await redis.eval(RESERVE_LUA, [countKey, refusedKey], [cap, COUNTER_TTL_SECONDS]));
       if (parsed) return parsed;
@@ -319,9 +312,38 @@ export async function capFields(now = Date.now(), env: Record<string, string | u
   };
 }
 
+function redisFailureCode(err: unknown): FallbackCode {
+  const name = err instanceof Error ? `${err.name} ${err.message}` : String(err ?? '');
+  if (/timeout|aborted|abort/i.test(name)) return 'timeout';
+  return 'error';
+}
+
+function noteFallback(code: FallbackCode, now: number, cap: number): void {
+  fallbackCounts[code] += 1;
+  if (now - lastFallbackLogAt < LOG_EVERY_MS) return;
+  lastFallbackLogAt = now;
+  console.warn(
+    `[CoinGecko] fallback timeout=${fallbackCounts.timeout} error=${fallbackCounts.error} absent=${fallbackCounts.absent} cap=${cap}`,
+  );
+  fallbackCounts.timeout = 0;
+  fallbackCounts.error = 0;
+  fallbackCounts.absent = 0;
+}
+
+function limiterTimeout<T>(work: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('CG cap Redis timeout')), CG_LIMITER_REDIS_TIMEOUT_MS);
+  });
+  return Promise.race([work, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
 /**
  * Reserve one CoinGecko HTTP attempt. Throws CG_MONTHLY_CAP when today's cap is
- * already spent. Does not fetch, sleep, or queue.
+ * already spent. Does not fetch, sleep, or queue. Redis work aborts after 400ms;
+ * timeout or error uses the in-process fallback. A denial does not.
  */
 export async function reserveCgCall(now = Date.now(), env: Record<string, string | undefined> = process.env): Promise<void> {
   const quota = cgQuota(env);
@@ -336,26 +358,20 @@ export async function reserveCgCall(now = Date.now(), env: Record<string, string
   };
 
   if (!redis) {
-    // Already counted on the shared counter today: do not open a second budget.
-    if (redisCountedDay === day) {
-      finish(takeMemorySlot(0, day), 0);
-      return;
-    }
+    noteFallback('absent', now, processCap);
     finish(takeMemorySlot(processCap, day), processCap);
     return;
   }
 
   try {
-    const plan = await planDailyCap(now, env);
-    const slot = await reserveShared(redis, plan.cap, plan.day);
-    if (slot.ok) redisCountedDay = plan.day;
-    finish(slot, plan.cap);
+    const reserved = await limiterTimeout((async () => {
+      const plan = await planDailyCap(now, env);
+      return { cap: plan.cap, slot: await reserveShared(redis, plan.cap, plan.day) };
+    })());
+    finish(reserved.slot, reserved.cap);
   } catch (error) {
     if (isCgMonthlyCap(error)) throw error;
-    if (redisCountedDay === day) {
-      finish(takeMemorySlot(0, day), 0);
-      return;
-    }
+    noteFallback(redisFailureCode(error), now, processCap);
     finish(takeMemorySlot(processCap, day), processCap);
   }
 }

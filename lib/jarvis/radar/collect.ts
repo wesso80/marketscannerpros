@@ -7,7 +7,7 @@ import { q } from '../../db';
 import { avFetch } from '../../avRateGovernor';
 import { avFetchDailyBars, avFetchOverview } from '../../marketData/client';
 import { STOCK_SECTOR_MAP } from '../../sectorMap';
-import { getCoinCategories, getDerivativesForSymbols, getMarketChartRange, getMarketData } from '../../coingecko';
+import { getCoinCategories, getDerivativesForSymbols, getMarketChartRange, getMarketData, hasCoinGeckoApiKey } from '../../coingecko';
 import type { CoinGeckoMarketData } from '../../coingecko';
 import { fetchOptionsSnapshot } from '../../goldenEggFetchers';
 import { findUniverseViolations } from '../../universe/assetClass';
@@ -157,8 +157,7 @@ export async function loadCategoryMembers(cats: CategoryRow[], max = 14): Promis
   await pool(pick, 4, async (c) => {
     try {
       budget.cg++;
-      const key = process.env.COINGECKO_API_KEY || process.env.COINGECKO_PRO_API_KEY;
-      if (!key) return;
+      if (!hasCoinGeckoApiKey()) return;
       const rows = await getMarketData(
         { category: c.id, per_page: 100, page: 1, order: 'market_cap_desc' },
         { retries: 0, timeoutMs: 15_000 },
