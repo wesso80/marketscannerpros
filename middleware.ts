@@ -136,6 +136,34 @@ setInterval(() => {
   }
 }, 300_000);
 
+// ─── Admin/operator mutation origin check ───
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+// Exact origins (scheme, host and port), so http:// or another port never matches the HTTPS site. The public site is
+// trusted on apex and www; the request's own origin covers localhost and Render previews. No wildcard subdomains.
+const TRUSTED_SITE_ORIGINS = new Set(['https://marketscannerpros.app', 'https://www.marketscannerpros.app']);
+
+function isAdminMutationPath(pathname: string): boolean {
+  return pathname.startsWith('/api/admin/') || pathname.startsWith('/api/operator/') || pathname === '/api/actions/execute';
+}
+
+/**
+ * Browser requests that change admin/operator state must come from this site. A request with an Origin header must
+ * exactly match this request's origin or the public HTTPS site (apex or www); without Origin, a browser's
+ * Sec-Fetch-Site: cross-site is
+ * refused. Server-to-server callers (cron, worker, scripts) send neither header and are unaffected; their
+ * secret/session checks still apply in the route.
+ */
+function crossSiteAdminMutation(req: NextRequest): boolean {
+  if (!MUTATING_METHODS.has(req.method) || !isAdminMutationPath(req.nextUrl.pathname)) return false;
+  const origin = req.headers.get('origin');
+  if (origin !== null) {
+    let normalized: string;
+    try { normalized = new URL(origin).origin.toLowerCase(); } catch { return true; } // includes the literal "null"
+    return !(normalized === req.nextUrl.origin.toLowerCase() || TRUSTED_SITE_ORIGINS.has(normalized));
+  }
+  return req.headers.get('sec-fetch-site') === 'cross-site';
+}
+
 export async function middleware(req: NextRequest) {
   // ── Global rate limit on API routes ──
   const { pathname } = req.nextUrl;
@@ -148,6 +176,12 @@ export async function middleware(req: NextRequest) {
   // visitor never learns the pause state (no-public-leakage). Cron jobs and the operator engine authenticate
   // with secrets in their handlers, not sessions, so they keep this early skipped/paused answer.
   const adminSessionApi = pathname.startsWith('/api/admin/');
+  if (crossSiteAdminMutation(req)) {
+    return NextResponse.json(
+      { error: 'Cross-site request refused' },
+      { status: 403, headers: { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' } },
+    );
+  }
   if ((discoveryAction === 'pause_api' || discoveryAction === 'skip_job') && !adminSessionApi) return discoveryPausedJson();
   if (pathname.startsWith('/api/') && !pathname.startsWith('/api/webhooks') && !pathname.startsWith('/api/auth/') && !pathname.startsWith('/api/internal/') && !pathname.startsWith('/api/scanner/') && !pathname.startsWith('/api/jobs/') && !pathname.startsWith('/api/catalyst/') && !pathname.startsWith('/api/alerts/')) {
     const ip = getClientIP(req);
