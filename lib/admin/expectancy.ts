@@ -1,41 +1,71 @@
 import { q } from "@/lib/db";
 import type { ScannerHit } from "./types";
+import { LABELLER_FIX_AT, signedMoveSql } from "./signalStats";
 
+/**
+ * Track record per symbol / playbook from shared-scan signals, used to nudge a hit's elite score.
+ *
+ * Measured, not assumed: only fixed-labeller verdicts (outcome_measured_at >= LABELLER_FIX_AT) and the real 24h move
+ * in the call's direction (%), not a fake ±1R per verdict. Old-method labels are excluded. The score nudge applies
+ * only from MIN_SAMPLE_FOR_BOOST outcomes and is shrunk toward zero for small samples, after an assumed cost.
+ */
 export type ExpectancyProfile = {
   sample: number;
+  /** correct ÷ (correct + wrong); neutral excluded. */
   winRate: number | null;
-  avgR: number;
-  totalR: number;
+  /** Average 24h move in the call's direction, %, before costs. */
+  avgMovePct: number;
+  totalMovePct: number;
+  /** Sum of favourable moves ÷ |sum of adverse moves|. */
   profitFactor: number | null;
   note: string;
 };
 
+export const MIN_SAMPLE_FOR_BOOST = 30;
+const ASSUMED_COST_PCT = 0.2;
+
 const EMPTY_PROFILE: ExpectancyProfile = {
   sample: 0,
   winRate: null,
-  avgR: 0,
-  totalR: 0,
+  avgMovePct: 0,
+  totalMovePct: 0,
   profitFactor: null,
-  note: "No expectancy sample yet.",
+  note: "No measured outcomes yet.",
 };
 
-function profileFromRow(row: any): ExpectancyProfile {
+export function profileFromRow(row: any): ExpectancyProfile {
   if (!row) return EMPTY_PROFILE;
   const sample = Number(row.sample ?? 0);
   const wins = Number(row.wins ?? 0);
-  const totalR = Number(row.total_r ?? 0);
-  const grossWin = Number(row.gross_win_r ?? 0);
-  const grossLoss = Math.abs(Number(row.gross_loss_r ?? 0));
-  const winRate = sample > 0 ? wins / sample : null;
-  const avgR = sample > 0 ? totalR / sample : 0;
+  const losses = Number(row.losses ?? 0);
+  const total = Number(row.total_move ?? 0);
+  const grossWin = Number(row.gross_win ?? 0);
+  const grossLoss = Math.abs(Number(row.gross_loss ?? 0));
+  const winRate = wins + losses > 0 ? wins / (wins + losses) : null;
+  const avg = sample > 0 ? total / sample : 0;
   const profitFactor = grossLoss > 0 ? grossWin / grossLoss : grossWin > 0 ? null : 0;
-  const note = sample < 10
-    ? "Small sample; use scanner evidence first."
-    : avgR > 0
-      ? `Positive expectancy: ${avgR.toFixed(2)}R avg over ${sample} trades.`
-      : `Negative expectancy: ${avgR.toFixed(2)}R avg over ${sample} trades.`;
-  return { sample, winRate, avgR: Math.round(avgR * 100) / 100, totalR: Math.round(totalR * 100) / 100, profitFactor, note };
+  const note = sample < MIN_SAMPLE_FOR_BOOST
+    ? `Small sample (${sample} measured); no score adjustment.`
+    : `${avg >= 0 ? "+" : ""}${avg.toFixed(2)}% avg 24h move over ${sample} measured signals (before costs).`;
+  return { sample, winRate, avgMovePct: Math.round(avg * 100) / 100, totalMovePct: Math.round(total * 100) / 100, profitFactor, note };
 }
+
+/** Score nudge in points: 0 under MIN_SAMPLE_FOR_BOOST, otherwise the after-cost average shrunk by sample size, ±8 max. */
+export function expectancyScoreBoost(avgMovePct: number, sample: number): number {
+  if (sample < MIN_SAMPLE_FOR_BOOST) return 0;
+  const shrink = sample / (sample + MIN_SAMPLE_FOR_BOOST);
+  return Math.max(-8, Math.min(8, (avgMovePct - ASSUMED_COST_PCT) * 4 * shrink));
+}
+
+const MEASURED_SQL = `outcome IN ('correct', 'wrong', 'neutral')
+          AND outcome_measured_at >= $2::timestamptz
+          AND pct_move_24h IS NOT NULL AND ABS(pct_move_24h) <= 100`;
+const AGGREGATES_SQL = `COUNT(*)::int AS sample,
+          COUNT(*) FILTER (WHERE outcome = 'correct')::int AS wins,
+          COUNT(*) FILTER (WHERE outcome = 'wrong')::int AS losses,
+          COALESCE(SUM(${signedMoveSql("pct_move_24h")}), 0)::float AS total_move,
+          COALESCE(SUM(GREATEST(${signedMoveSql("pct_move_24h")}, 0)), 0)::float AS gross_win,
+          COALESCE(SUM(LEAST(${signedMoveSql("pct_move_24h")}, 0)), 0)::float AS gross_loss`;
 
 export async function loadExpectancyProfiles(symbols: string[], playbooks: string[] = []): Promise<{ bySymbol: Map<string, ExpectancyProfile>; byPlaybook: Map<string, ExpectancyProfile> }> {
   const bySymbol = new Map<string, ExpectancyProfile>();
@@ -47,47 +77,27 @@ export async function loadExpectancyProfiles(symbols: string[], playbooks: strin
   try {
     if (uniqueSymbols.length) {
       const rows = await q<any>(`
-        SELECT
-          symbol,
-          COUNT(*)::int AS sample,
-          COUNT(*) FILTER (WHERE outcome = 'correct')::int AS wins,
-          COALESCE(SUM(CASE
-            WHEN outcome = 'correct' THEN 1
-            WHEN outcome = 'wrong' THEN -1
-            ELSE 0
-          END), 0)::float AS total_r,
-          COALESCE(SUM(CASE WHEN outcome = 'correct' THEN 1 ELSE 0 END), 0)::float AS gross_win_r,
-          COALESCE(SUM(CASE WHEN outcome = 'wrong' THEN -1 ELSE 0 END), 0)::float AS gross_loss_r
+        SELECT symbol, ${AGGREGATES_SQL}
         FROM ai_signal_log
         WHERE workspace_id = 'operator-terminal'
           AND symbol = ANY($1::text[])
-          AND outcome != 'pending'
+          AND ${MEASURED_SQL}
           AND signal_at > NOW() - INTERVAL '120 days'
         GROUP BY symbol
-      `, [uniqueSymbols]);
+      `, [uniqueSymbols, LABELLER_FIX_AT]);
       rows.forEach((row) => bySymbol.set(String(row.symbol).toUpperCase(), profileFromRow(row)));
     }
 
     if (uniquePlaybooks.length) {
       const rows = await q<any>(`
-        SELECT
-          COALESCE(decision_trace->>'playbook', 'Unknown') AS playbook,
-          COUNT(*)::int AS sample,
-          COUNT(*) FILTER (WHERE outcome = 'correct')::int AS wins,
-          COALESCE(SUM(CASE
-            WHEN outcome = 'correct' THEN 1
-            WHEN outcome = 'wrong' THEN -1
-            ELSE 0
-          END), 0)::float AS total_r,
-          COALESCE(SUM(CASE WHEN outcome = 'correct' THEN 1 ELSE 0 END), 0)::float AS gross_win_r,
-          COALESCE(SUM(CASE WHEN outcome = 'wrong' THEN -1 ELSE 0 END), 0)::float AS gross_loss_r
+        SELECT COALESCE(decision_trace->>'playbook', 'Unknown') AS playbook, ${AGGREGATES_SQL}
         FROM ai_signal_log
         WHERE workspace_id = 'operator-terminal'
           AND COALESCE(decision_trace->>'playbook', 'Unknown') = ANY($1::text[])
-          AND outcome != 'pending'
+          AND ${MEASURED_SQL}
           AND signal_at > NOW() - INTERVAL '120 days'
         GROUP BY COALESCE(decision_trace->>'playbook', 'Unknown')
-      `, [uniquePlaybooks]);
+      `, [uniquePlaybooks, LABELLER_FIX_AT]);
       rows.forEach((row) => byPlaybook.set(String(row.playbook), profileFromRow(row)));
     }
   } catch (err) {
@@ -107,16 +117,17 @@ export async function enrichHitsWithExpectancy<T extends ScannerHit>(hits: T[]):
     const symbolProfile = profiles.bySymbol.get(hit.symbol.toUpperCase()) ?? EMPTY_PROFILE;
     const playbookProfile = profiles.byPlaybook.get(String(hit.playbook || hit.regime || "Unknown")) ?? EMPTY_PROFILE;
     const blendedSample = symbolProfile.sample + playbookProfile.sample;
-    const blendedAvgR = blendedSample > 0
-      ? ((symbolProfile.avgR * symbolProfile.sample) + (playbookProfile.avgR * playbookProfile.sample)) / blendedSample
+    const blendedAvgMovePct = blendedSample > 0
+      ? ((symbolProfile.avgMovePct * symbolProfile.sample) + (playbookProfile.avgMovePct * playbookProfile.sample)) / blendedSample
       : 0;
-    const expectancyBoost = Math.max(-8, Math.min(8, blendedAvgR * 8));
+    // Symbol and playbook samples overlap (same signals), so eligibility uses the larger one, never their sum.
+    const expectancyBoost = expectancyScoreBoost(blendedAvgMovePct, Math.max(symbolProfile.sample, playbookProfile.sample));
     return {
       ...hit,
       expectancy: {
         symbol: symbolProfile,
         playbook: playbookProfile,
-        blendedAvgR: Math.round(blendedAvgR * 100) / 100,
+        blendedAvgMovePct: Math.round(blendedAvgMovePct * 100) / 100,
         scoreBoost: Math.round(expectancyBoost * 10) / 10,
       },
       eliteScore: hit.eliteScore == null ? hit.eliteScore : Math.max(0, Math.min(100, Math.round((hit.eliteScore + expectancyBoost) * 10) / 10)),

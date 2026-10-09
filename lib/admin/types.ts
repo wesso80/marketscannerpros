@@ -75,23 +75,24 @@ export type ScannerHit = {
   /** True when the same symbol also has a row in the opposite direction. */
   twoSided?: boolean;
   expectancy?: {
+    /** Measured 24h moves (%, call direction) from fixed-labeller verdicts; see lib/admin/expectancy. */
     symbol: {
       sample: number;
       winRate: number | null;
-      avgR: number;
-      totalR: number;
+      avgMovePct: number;
+      totalMovePct: number;
       profitFactor: number | null;
       note: string;
     };
     playbook: {
       sample: number;
       winRate: number | null;
-      avgR: number;
-      totalR: number;
+      avgMovePct: number;
+      totalMovePct: number;
       profitFactor: number | null;
       note: string;
     };
-    blendedAvgR: number;
+    blendedAvgMovePct: number;
     scoreBoost: number;
   };
 };
