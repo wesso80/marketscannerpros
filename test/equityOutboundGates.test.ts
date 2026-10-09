@@ -64,9 +64,9 @@ import { POST as actionsPost } from '@/app/api/admin/morning-brief/actions/route
 import { POST as eveningPost } from '@/app/api/cron/evening-packet/route';
 import { POST as rebuildPost } from '@/app/api/cron/edge-rebuild-matrix/route';
 import { POST as labelPost } from '@/app/api/cron/edge-label-outcomes/route';
-import { equityNewsJevFallback, adminEquityAiEnabled, adminEquityEmailsEnabled, adminRadarDiscordEnabled } from '@/lib/admin/equityOutbound';
+import { equityNewsJevFallback, adminEquityEmailsDisabled, adminRadarDiscordEnabled } from '@/lib/admin/equityOutbound';
 
-const flags = ['ADMIN_EQUITY_EMAILS_ENABLED', 'ADMIN_RADAR_DISCORD_ENABLED', 'ADMIN_EQUITY_AI_ENABLED'] as const;
+const flags = ['ADMIN_EQUITY_EMAILS_DISABLED', 'ADMIN_RADAR_DISCORD_ENABLED', 'ADMIN_EQUITY_EMAILS_ENABLED', 'ADMIN_EQUITY_AI_ENABLED'] as const;
 const saved = Object.fromEntries(flags.map((name) => [name, process.env[name]]));
 
 function post(url: string, body?: unknown, admin = false) {
@@ -99,19 +99,16 @@ afterEach(() => {
 });
 
 describe('equity outbound flags', () => {
-  it('stay off unless the value is true or 1', () => {
-    expect(adminEquityEmailsEnabled()).toBe(false);
+  it('leaves desk emails on and the radar Discord post off unless true or 1', () => {
+    expect(adminEquityEmailsDisabled()).toBe(false);
     expect(adminRadarDiscordEnabled()).toBe(false);
-    expect(adminEquityAiEnabled()).toBe(false);
-    process.env.ADMIN_EQUITY_EMAILS_ENABLED = 'yes';
+    process.env.ADMIN_EQUITY_EMAILS_DISABLED = 'yes';
     process.env.ADMIN_RADAR_DISCORD_ENABLED = 'on';
-    process.env.ADMIN_EQUITY_AI_ENABLED = 'TRUE ';
-    expect(adminEquityEmailsEnabled()).toBe(false);
+    expect(adminEquityEmailsDisabled()).toBe(false);
     expect(adminRadarDiscordEnabled()).toBe(false);
-    expect(adminEquityAiEnabled()).toBe(true);
-    process.env.ADMIN_EQUITY_EMAILS_ENABLED = '1';
+    process.env.ADMIN_EQUITY_EMAILS_DISABLED = '1';
     process.env.ADMIN_RADAR_DISCORD_ENABLED = 'true';
-    expect(adminEquityEmailsEnabled()).toBe(true);
+    expect(adminEquityEmailsDisabled()).toBe(true);
     expect(adminRadarDiscordEnabled()).toBe(true);
   });
 });
@@ -119,52 +116,54 @@ describe('equity outbound flags', () => {
 describe('morning brief email', () => {
   const call = () => morningPost(post('http://x/api/jobs/email-morning-brief', { scanLimit: 80, market: 'EQUITIES' }));
 
-  it('sends nothing by default', async () => {
+  it('sends by default', async () => {
+    expect((await call()).status).toBe(200);
+    expect(morning.send).toHaveBeenCalled();
+    expect(morning.build).toHaveBeenCalled();
+  });
+
+  it('sends nothing when ADMIN_EQUITY_EMAILS_DISABLED is true', async () => {
+    process.env.ADMIN_EQUITY_EMAILS_DISABLED = 'true';
     const body = await (await call()).json();
     expect(body).toMatchObject({ ok: true, skipped: true, reason: 'admin_equity_emails_disabled' });
     expect(morning.send).not.toHaveBeenCalled();
     expect(morning.build).not.toHaveBeenCalled();
-  });
-
-  it('sends when ADMIN_EQUITY_EMAILS_ENABLED is true', async () => {
-    process.env.ADMIN_EQUITY_EMAILS_ENABLED = 'true';
-    expect((await call()).status).toBe(200);
-    expect(morning.send).toHaveBeenCalled();
   });
 });
 
 describe('best-opportunities email', () => {
   const call = () => picksPost(post('http://x/api/jobs/email-best-opportunities'));
 
-  it('sends nothing and does not scan by default', async () => {
+  it('scans and sends by default', async () => {
+    expect((await call()).status).toBe(200);
+    expect(morning.send).toHaveBeenCalled();
+    expect(picks.scan).toHaveBeenCalled();
+  });
+
+  it('sends nothing and does not scan when ADMIN_EQUITY_EMAILS_DISABLED is 1', async () => {
+    process.env.ADMIN_EQUITY_EMAILS_DISABLED = '1';
     const body = await (await call()).json();
     expect(body).toMatchObject({ ok: true, skipped: true, reason: 'admin_equity_emails_disabled' });
     expect(morning.send).not.toHaveBeenCalled();
     expect(picks.scan).not.toHaveBeenCalled();
-  });
-
-  it('sends when ADMIN_EQUITY_EMAILS_ENABLED is 1', async () => {
-    process.env.ADMIN_EQUITY_EMAILS_ENABLED = '1';
-    expect((await call()).status).toBe(200);
-    expect(morning.send).toHaveBeenCalled();
-    expect(picks.scan).toHaveBeenCalled();
   });
 });
 
 describe('daily review email', () => {
   const call = () => reviewPost(post('http://x/api/jobs/email-daily-review'));
 
-  it('sends nothing by default', async () => {
+  it('sends by default', async () => {
+    expect((await call()).status).toBe(200);
+    expect(morning.send).toHaveBeenCalled();
+    expect(review.build).toHaveBeenCalled();
+  });
+
+  it('sends nothing when ADMIN_EQUITY_EMAILS_DISABLED is true', async () => {
+    process.env.ADMIN_EQUITY_EMAILS_DISABLED = 'true';
     const body = await (await call()).json();
     expect(body).toMatchObject({ ok: true, skipped: true, reason: 'admin_equity_emails_disabled' });
     expect(morning.send).not.toHaveBeenCalled();
     expect(review.build).not.toHaveBeenCalled();
-  });
-
-  it('sends when ADMIN_EQUITY_EMAILS_ENABLED is true', async () => {
-    process.env.ADMIN_EQUITY_EMAILS_ENABLED = 'true';
-    expect((await call()).status).toBe(200);
-    expect(morning.send).toHaveBeenCalled();
   });
 });
 
@@ -175,77 +174,71 @@ describe('morning-brief review_email action', () => {
     return actionsPost(post('http://x/api/admin/morning-brief/actions', { action: 'review_email' }, true));
   };
 
-  it('sends nothing by default', async () => {
+  it('sends by default', async () => {
+    expect((await call()).status).toBe(200);
+    expect(morning.send).toHaveBeenCalled();
+  });
+
+  it('sends nothing when ADMIN_EQUITY_EMAILS_DISABLED is true', async () => {
+    process.env.ADMIN_EQUITY_EMAILS_DISABLED = 'true';
     const body = await (await call()).json();
     expect(body).toMatchObject({ ok: true, skipped: true, reason: 'admin_equity_emails_disabled' });
     expect(morning.send).not.toHaveBeenCalled();
-  });
-
-  it('sends when ADMIN_EQUITY_EMAILS_ENABLED is true', async () => {
-    process.env.ADMIN_EQUITY_EMAILS_ENABLED = 'true';
-    expect((await call()).status).toBe(200);
-    expect(morning.send).toHaveBeenCalled();
   });
 });
 
 describe('evening packet', () => {
   const call = () => eveningPost(post('http://x/api/cron/evening-packet'));
 
-  it('persists without the summary email or the Jev call by default', async () => {
+  it('sends the summary and calls Jev by default', async () => {
     const body = await (await call()).json();
     expect(body.processed).toBe(1);
-    expect(evening.notify).not.toHaveBeenCalled();
-    expect(evening.jev).not.toHaveBeenCalled();
-  });
-
-  it('sends the summary when emails are enabled and calls Jev when AI is enabled', async () => {
-    process.env.ADMIN_EQUITY_EMAILS_ENABLED = 'true';
-    process.env.ADMIN_EQUITY_AI_ENABLED = '1';
-    expect((await call()).status).toBe(200);
     expect(evening.notify).toHaveBeenCalledWith(expect.objectContaining({ subject: expect.stringContaining('Evening Packet') }));
     expect(evening.jev).toHaveBeenCalledTimes(1);
   });
 
-  it('can send the summary without calling Jev', async () => {
-    process.env.ADMIN_EQUITY_EMAILS_ENABLED = 'true';
-    await call();
-    expect(evening.notify).toHaveBeenCalled();
-    expect(evening.jev).not.toHaveBeenCalled();
+  it('keeps the Jev call when the summary email is opted out', async () => {
+    process.env.ADMIN_EQUITY_EMAILS_DISABLED = 'true';
+    expect((await call()).status).toBe(200);
+    expect(evening.notify).not.toHaveBeenCalled();
+    expect(evening.jev).toHaveBeenCalledTimes(1);
   });
 });
 
 describe('edge failure emails', () => {
-  it('edge rebuild stays quiet by default and emails when enabled', async () => {
+  it('edge rebuild emails by default and stays quiet when desk emails are opted out', async () => {
     evening.q.mockRejectedValue(new Error('db down'));
-    const off = await rebuildPost(post('http://x/api/cron/edge-rebuild-matrix'));
-    expect(off.status).toBe(500);
-    expect(evening.notify).not.toHaveBeenCalled();
-    process.env.ADMIN_EQUITY_EMAILS_ENABLED = 'true';
     const on = await rebuildPost(post('http://x/api/cron/edge-rebuild-matrix'));
     expect(on.status).toBe(500);
     expect(evening.notify).toHaveBeenCalledWith(expect.objectContaining({ subject: 'edge-rebuild-matrix failed' }));
-  });
-
-  it('edge label stays quiet by default and emails when enabled', async () => {
-    const off = await labelPost(post('http://x/api/cron/edge-label-outcomes'));
+    evening.notify.mockClear();
+    process.env.ADMIN_EQUITY_EMAILS_DISABLED = 'true';
+    const off = await rebuildPost(post('http://x/api/cron/edge-rebuild-matrix'));
     expect(off.status).toBe(500);
     expect(evening.notify).not.toHaveBeenCalled();
-    process.env.ADMIN_EQUITY_EMAILS_ENABLED = '1';
+  });
+
+  it('edge label emails by default and stays quiet when desk emails are opted out', async () => {
     const on = await labelPost(post('http://x/api/cron/edge-label-outcomes'));
     expect(on.status).toBe(500);
     expect(evening.notify).toHaveBeenCalledWith(expect.objectContaining({ subject: 'edge-label-outcomes failed' }));
+    evening.notify.mockClear();
+    process.env.ADMIN_EQUITY_EMAILS_DISABLED = '1';
+    const off = await labelPost(post('http://x/api/cron/edge-label-outcomes'));
+    expect(off.status).toBe(500);
+    expect(evening.notify).not.toHaveBeenCalled();
   });
 });
 
 describe('arca equity Jev fallback', () => {
-  it('does not call Jev by default and does when ADMIN_EQUITY_AI_ENABLED is true', async () => {
+  it('calls Jev while the evening cron is discovery-skipped, with no AI flag', async () => {
     const run = vi.fn(async () => ({ ok: true, scored: 1 }));
     const redis = { set: async () => 'OK' };
-    expect(await equityNewsJevFallback(redis, true, run)).toEqual({ ok: true, skipped: true, reason: 'admin_equity_ai_disabled' });
-    expect(run).not.toHaveBeenCalled();
-    process.env.ADMIN_EQUITY_AI_ENABLED = 'true';
     expect(await equityNewsJevFallback(redis, true, run)).toEqual({ ok: true, scored: 1 });
     expect(run).toHaveBeenCalledWith(redis);
+    expect(await equityNewsJevFallback(redis, false, run)).toEqual({ ok: true, skipped: true, reason: 'Evening cron handles it' });
     expect(readFileSync('app/api/cron/arca-cycle/route.ts', 'utf8')).toContain('equityNewsJevFallback');
+    expect(readFileSync('app/api/cron/evening-packet/route.ts', 'utf8')).toContain('runNewsJevDaily()');
+    expect(readFileSync('lib/admin/equityOutbound.ts', 'utf8')).not.toContain('ADMIN_EQUITY_AI_ENABLED');
   });
 });

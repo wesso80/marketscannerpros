@@ -13,7 +13,7 @@ import { POST } from '@/app/api/cron/persist-edge-packets/route';
 const savedDiscovery = process.env.ADMIN_DISCOVERY_ONLY;
 const savedEquities = process.env.ADMIN_EQUITIES_PAUSED;
 const req = (body: unknown = { market: 'CRYPTO' }) => new NextRequest('http://localhost/api/cron/persist-edge-packets', { method: 'POST', headers: { 'x-cron-secret': 'test', 'content-type': 'application/json' }, body: JSON.stringify(body) });
-beforeEach(() => { vi.clearAllMocks(); process.env.CRON_SECRET = 'test'; process.env.ADMIN_DISCOVERY_ONLY = 'false'; delete process.env.ADMIN_EQUITIES_PAUSED; m.read.mockResolvedValue({ available: true, packets: [], ageLabel: 'now' }); m.start.mockResolvedValue({ started: false, reason: 'already_running', message: 'running' }); m.q.mockResolvedValue([]); });
+beforeEach(() => { vi.clearAllMocks(); process.env.CRON_SECRET = 'test'; process.env.ADMIN_DISCOVERY_ONLY = 'false'; delete process.env.ADMIN_EQUITIES_PAUSED; delete process.env.ADMIN_EQUITY_EMAILS_DISABLED; m.read.mockResolvedValue({ available: true, packets: [], ageLabel: 'now' }); m.start.mockResolvedValue({ started: false, reason: 'already_running', message: 'running' }); m.q.mockResolvedValue([]); });
 afterEach(() => { if (savedDiscovery === undefined) delete process.env.ADMIN_DISCOVERY_ONLY; else process.env.ADMIN_DISCOVERY_ONLY = savedDiscovery; if (savedEquities === undefined) delete process.env.ADMIN_EQUITIES_PAUSED; else process.env.ADMIN_EQUITIES_PAUSED = savedEquities; });
 it('equity persist runs under discovery-only', async () => { delete process.env.ADMIN_DISCOVERY_ONLY; const r = await POST(req({ market: 'EQUITIES', timeframe: '15m' })); expect(r.status).toBe(200); expect(m.start).toHaveBeenCalledWith(expect.objectContaining({ market: 'EQUITIES', trigger: 'edge' })); });
 it('asset=equity is the equity branch', async () => { delete process.env.ADMIN_DISCOVERY_ONLY; const r = await POST(req({ asset: 'equity' })); expect(r.status).toBe(200); expect(m.start).toHaveBeenCalledWith(expect.objectContaining({ market: 'EQUITIES' })); });
@@ -24,8 +24,8 @@ it('returns a retryable failure when the saved scan cannot be read', async () =>
 it('does not disguise failure to start the refresh as success', async () => { m.start.mockResolvedValue({ started: false, reason: 'error', message: 'connection timeout' }); const r = await POST(req()); expect(r.status).toBe(503); expect(await r.json()).toMatchObject({ ok: false, reason: 'scan_start_failed' }); });
 it('keeps a healthy already-running scan and empty workspace a normal no-op', async () => { const r = await POST(req()); expect(r.status).toBe(200); expect(await r.json()).toMatchObject({ ok: true, reason: 'no_active_workspaces' }); });
 it('returns a retryable failure when portfolio lookup fails', async () => { m.q.mockRejectedValueOnce(new Error('database offline')); const r = await POST(req()); expect(r.status).toBe(503); expect(await r.json()).toMatchObject({ ok: false, reason: 'portfolio_lookup_failed' }); });
-it('still emails the admin when a workspace persist fails with equity emails off', async () => {
-  delete process.env.ADMIN_EQUITY_EMAILS_ENABLED;
+it('still emails the admin when a workspace persist fails while equity desk emails are opted out', async () => {
+  process.env.ADMIN_EQUITY_EMAILS_DISABLED = 'true';
   m.read.mockResolvedValue({ available: true, packets: [{ packetId: 'p' }], ageLabel: 'now' });
   m.start.mockResolvedValue({ started: false, reason: 'already_running', message: 'running' });
   m.q.mockResolvedValue([{ workspace_id: 'w' }]);
