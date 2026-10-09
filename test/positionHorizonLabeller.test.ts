@@ -294,6 +294,13 @@ describe('6w/12w stats', () => {
     expect(sql).toContain("workspace_id LIKE 'admin-call:%'");
   });
 
+  it('verified figures keep pending rows and only verified labelled rows; all figures filter nothing', () => {
+    expect(horizonStatsSql('6w', 'verified')).toContain("WHERE (outcome_6w IS NULL OR evidence_status = 'verified')");
+    expect(horizonStatsSql('6w')).toMatch(/\) rows_with_evidence\s+WHERE TRUE/);
+    expect(horizonStatsSql('12w')).toContain("to_jsonb(ai_signal_log)->'outcome_12w_provenance'");
+    expect(horizonStatsSql('12w')).toContain("'daily-bar-horizon-v1'");
+  });
+
   it('reports "not available" with the migration file until migration 105 has been run', async () => {
     state.columns = [];
     const s = await loadPositionHorizonStats();
@@ -312,6 +319,8 @@ describe('6w/12w stats', () => {
     expect(s.horizons.map((b) => [b.horizon, b.days])).toEqual([['6w', 42], ['12w', 84]]);
     expect(s.horizons[0].overall).toMatchObject({ setup: 'ALL', winRate: 60, pending: 4 });
     expect(s.horizons[0].bySetup[0]).toMatchObject({ setup: 'PRIORITY-DESK', enoughData: false, winRate: null });
+    expect(s.horizons[0].verifiedOnly.overall).toMatchObject({ setup: 'ALL', measured: 12 });
+    expect(s.horizons[0].evidence).toEqual({ verified: 0, unknown: 0, inconsistent: 0 });
   });
 });
 
