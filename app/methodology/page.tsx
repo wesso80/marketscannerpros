@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Scoring Methodology & Glossary",
+  title: "Methodology & Glossary",
   description:
-    "How MarketScanner Pros scores work: composite strength (not probability), independent factor groups, evidence quality, setup stage, extension state, data freshness, and market regime. Educational market analysis, not financial advice.",
+    "How MarketScanner Pros builds a reading: independent factor groups, evidence quality, lifecycle stage, extension state, data freshness, and market regime. The page describes the method and the data. Educational market analysis, not financial advice.",
   alternates: { canonical: "/methodology" },
   robots: { index: true, follow: true },
 };
@@ -25,8 +25,8 @@ export default function MethodologyPage() {
       <div className="mx-auto max-w-[880px]">
         <div className="rounded-3xl border border-emerald-500/20 bg-[var(--msp-card)] p-4 shadow-2xl md:p-6">
           <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-400/80">Methodology &amp; Glossary</p>
-          <h1 className="mt-2 text-2xl font-black text-slate-100">How our scores work</h1>
-          <p data-learn-verdict className="mt-2 text-sm text-slate-300">Scores summarise evidence; they do not predict outcomes.</p>
+          <h1 className="mt-2 text-2xl font-black text-slate-100">How the readings are built</h1>
+          <p data-learn-verdict className="mt-2 text-sm text-slate-300">Readings summarise the indicators, dates, and data quality on the page. They do not predict outcomes.</p>
 
           <div className="mt-4 space-y-3">
 <section>
@@ -57,7 +57,7 @@ export default function MethodologyPage() {
 
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <Term title="Dormant">Quiet; nothing developing.</Term>
-                <Term title="Building">Participation rising while price is still contained — the early signal.</Term>
+                <Term title="Building">Participation rising while price is still contained — an early observation.</Term>
                 <Term title="Confirming">Independent factors agree and price is beginning to validate the move.</Term>
                 <Term title="Expanding">Participation and price expanding together with rising volatility.</Term>
                 <Term title="Extended">A significant move has already occurred; the early window has passed.</Term>
@@ -66,10 +66,10 @@ export default function MethodologyPage() {
             </section>
 <CollapsibleSection title="How to interpret the evidence">
 <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
-            MarketScanner Pros is an educational market-analysis platform. Every score it shows is a
-            <strong className="text-slate-200"> composite summary of evidence</strong> — not a statistical probability,
-            not a forecast, and never a personalised instruction to buy, sell, or hold. This page explains exactly what
-            each score, badge, and state means so you can judge the evidence for yourself.
+            MarketScanner Pros is an educational market-analysis platform. A reading is a
+            <strong className="text-slate-200"> composite summary of the indicators and dates on the page</strong> — not a statistical probability,
+            not a forecast, and never a personalised instruction to buy, sell, or hold. This page explains the method and the data
+            behind each badge and state so you can judge the evidence for yourself.
           </p>
 <p className="text-xs leading-5 text-slate-300">
                 Many indicators measure the same thing. EMA position, MACD, ADX, and Aroon are all expressions of
@@ -81,13 +81,12 @@ export default function MethodologyPage() {
                 A description of observable behaviour — where a move appears to be in its lifecycle. It is context for
                 research, not a trade instruction.
               </p>
-            <CollapsibleSection title="Scores are composite strength, not probability">
+            <CollapsibleSection title="A composite reading is a weighted summary, not a probability">
               <p className="text-xs leading-5 text-slate-300">
-                A number like <strong className="text-slate-200">Composite Strength 78 / 100</strong> (also shown as
-                MSP Score or Confluence in places) is a weighted summary of how much of the current evidence points one
+                A number like <strong className="text-slate-200">Composite Strength 78 / 100</strong> is a weighted summary of how much of the current evidence points one
                 way. It is a <em>heuristic</em> — the weights are rules chosen for transparency, not calibrated against
                 historical outcomes. A 78 does <strong className="text-slate-200">not</strong> mean a 78% chance of
-                anything. Where a tooltip says &ldquo;reflects how many indicators agree, not a probability,&rdquo; that
+                anything. Where a tooltip says the number reflects how many indicators agree, and not a probability, that
                 is the literal truth of the number.
               </p>
             </CollapsibleSection>
@@ -115,7 +114,7 @@ export default function MethodologyPage() {
               <p className="text-xs leading-5 text-slate-300">
                 How far a move has already run, from distance-from-average, range, and volatility percentile.
                 <strong className="text-slate-200"> Early / Normal / Elevated / Extreme.</strong> An Extreme reading
-                means the obvious part of the move may already be behind it — context, not a signal.
+                means the obvious part of the move may already be behind it. That is context for the reading.
               </p>
             </CollapsibleSection>
 

@@ -20,7 +20,7 @@ export const COPY={
   watch:(range:string,limit:number,distance:string,price:string)=>`Base in place: range ${range} (limit ${limit}%). Last close is ${distance} below the base high; the rule close is ${price}.`,
   brokeOut:(failures:string)=>`Closed above the base high; rule not met: ${failures}.`,
   failedRule:(name:string,value:string,limit:string)=>`${name} ${value} (rule: ${limit})`,
-  meets:(date:string)=>`Meets rules 1 to 4 at the last close (${date}). Research rule; no proven edge.`,
+  meets:(date:string)=>`Meets rules 1 to 4 at the last close (${date}). Research rule; no measured outcome record.`,
   extended:(value:string,limit:number)=>`Extended: ${value} above the base high (limit ${limit}).`,
   fellBack:'Fell back: closed below the base high within 5 days of meeting the rules.',
   lastBar:(date:string)=>`Last completed bar: ${date} (UTC day).`,
@@ -29,12 +29,12 @@ export const COPY={
   chipSummary:(name:string,value:string,limit:string,state:string)=>`${name}: ${value}; rule ${limit}; ${state}`,
 
  },
- intro:'Facts and rule status only. Not a trade instruction.',footer:'Research snapshot. Not a trade instruction. The rules shown are research rules; none has a proven edge.',
+ intro:'Facts and rule status only. Not a trade instruction.',footer:'Research snapshot. Not a trade instruction. The rules shown are research rules; none has a measured outcome record.',
  titles:{price:'Price',ruleCheck:'Rule check',earlyContext:'Early context',marketContext:'Market context',derivatives:'Derivatives',liquidity:'Liquidity',supply:'Supply',levels:'Levels',risks:'Risks and warnings',sourcesCheck:'Sources check',notes:'Notes'},
  daily:'Daily rule. The existing charts and tabs below retain their selected timeframe.',
  loading:'Loading crypto breakdown…',error:'Crypto breakdown unavailable.',refresh:'Refresh',empty:'Data unavailable for this section.',unknown:'time unknown',unavailable:'— · not reported or unavailable',
  coinId:'CoinGecko id',rank:'Market-cap rank',matches:'coins share this symbol',identityUnchecked:'Symbol uniqueness not checked for static-map or explicit-id resolution.',
  capped:'CoinGecko daily limit reached; showing cached observations with their original times.',budgetUnavailable:'CoinGecko accounting unavailable; showing cached data only.',
  marketWide:'Market-wide derivatives',journal:'Log to journal (draft)',watchlist:'Add to watchlist (draft)',drafts:'These links open draft forms. Nothing is saved until you choose Save.',
- statusTitle:'Rule status',statusHeaders:['Rule / idea','Verdict','Evidence and source'],yes:'yes',no:'no',
+ statusTitle:'Rule status',statusHeaders:['Rule / idea','Reading','Evidence and source'],yes:'yes',no:'no',
 };

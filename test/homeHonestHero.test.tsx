@@ -41,8 +41,8 @@ describe('Homepage PR 2: honest preview and new headline', () => {
     expect(html).toContain('width="626"');
     expect(html).toContain('height="282"');
     expect(html).toContain('max-width:min(100%, 626px)');
-    expect(html).toContain('Pro scanner results for stocks: a list of candidates such as LMT, FDX, BA with prices and scores');
-    expect(html).toContain('Symbol page for AAPL: price, setup status, 90-day price chart, 20-day average, max pain and expected move');
+    expect(html).toContain('Scanner view for stocks: symbols such as LMT, FDX, and BA, with the prices shown on each row');
+    expect(html).toContain('Symbol page for AAPL: price, 90-day price chart, 20-day average, max pain, and expected move');
     const alts = [...html.matchAll(/\balt="([^"]*)"/g)].map((match) => match[1]);
     expect(alts).toHaveLength(2);
     for (const alt of alts) {

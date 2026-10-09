@@ -16,9 +16,9 @@ const READER_VERDICT: Record<string, string> = {
 
 /** Plain label for the closed card. Setup-less rows say so without the engine grade. */
 export function readerVerdict(verdict: DailyPickVerdict): string {
-  if (!verdict) return 'Verdict not available right now';
+  if (!verdict) return 'Reading not available right now';
   if (verdict.setupType === 'NONE') return 'No qualifying setup';
-  return READER_VERDICT[verdict.permission] ?? 'Verdict not available right now';
+  return READER_VERDICT[verdict.permission] ?? 'Reading not available right now';
 }
 
 /** The stored engine line (permission, grade, setup category, and any caution tags). Null when no verdict was stored. */

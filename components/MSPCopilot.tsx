@@ -111,20 +111,20 @@ export default function MSPCopilot({
           act: {
             title: '⚡ Analysis Actions',
             actions: [
-              { icon: '🔍', label: `Deep scan ${top3[0]?.symbol || 'top pick'}`, action: 'deep_scan' },
-              { icon: '📝', label: 'Log top pick to journal', action: 'journal_trade' },
-              { icon: '🔔', label: 'Create alerts for top 3', action: 'create_alert' },
-              { icon: '📊', label: 'Compare top setups', action: 'compare_setups' },
+              { icon: '🔍', label: `Open ${top3[0]?.symbol || 'a symbol'}`, action: 'deep_scan' },
+              { icon: '📝', label: 'Log a symbol to the journal', action: 'journal_trade' },
+              { icon: '🔔', label: 'Create alerts for these symbols', action: 'create_alert' },
+              { icon: '📊', label: 'Compare these symbols', action: 'compare_setups' },
             ],
             footer: 'Click an action or ask me to help.',
           },
           learn: {
-            title: '📚 Learn From This Scan',
+            title: '📚 Questions about this scan',
             topics: [
-              { icon: '📊', label: 'Why these symbols scored highest', question: `Analyze the top 3 scan results: ${top3.map(p => `${p.symbol} (${p.direction}, ${p.confidence}%)`).join(', ')}. What makes them stand out?` },
-              { icon: '🔄', label: 'Bullish vs bearish bias', question: `The scan found ${bullish} bullish and ${bearish} bearish setups. What does this tell us about current market conditions?` },
-              { icon: '⚡', label: 'Most aligned setup right now', question: `Out of these ${totalResults} scan results, which setup has the best risk/reward and why?` },
-              { icon: '🎯', label: 'How to filter these results', question: 'How should I filter and prioritize these scan results for the strongest confluence?' },
+              { icon: '📊', label: 'What data is shown?', question: `What data is shown for ${top3.map(p => p.symbol).join(', ')} and how fresh is it?` },
+              { icon: '🔄', label: 'What is recorded?', question: `The scan recorded ${bullish} up-side and ${bearish} down-side readings. Which dates are attached?` },
+              { icon: '⚡', label: 'What is missing?', question: `Of these ${totalResults} scan rows, which observations are missing?` },
+              { icon: '🎯', label: 'How fresh is it?', question: 'What dates are attached to the indicator readings in this scan?' },
             ],
             footer: 'Click a topic to learn more.',
           },
@@ -165,7 +165,7 @@ export default function MSPCopilot({
       const explainContent = isMarketsPage ? [
         { label: 'Symbol', value: symbol, highlight: true },
         { label: 'Price', value: price && typeof price === 'number' ? `$${price.toFixed(2)}` : 'N/A' },
-        { label: 'Verdict', value: verdict.toUpperCase(), color: verdict === 'tradable' ? 'var(--msp-bull)' : verdict === 'conditional' ? 'var(--msp-warn)' : verdict === 'blocked' ? 'var(--msp-bear)' : 'var(--msp-text-muted)' },
+        { label: 'Reading', value: verdict.toUpperCase(), color: verdict === 'tradable' ? 'var(--msp-bull)' : verdict === 'conditional' ? 'var(--msp-warn)' : verdict === 'blocked' ? 'var(--msp-bear)' : 'var(--msp-text-muted)' },
         { label: 'Alignment', value: alignment !== undefined ? `${alignment}%` : 'N/A', color: alignment >= 70 ? 'var(--msp-bull)' : alignment >= 50 ? 'var(--msp-warn)' : 'var(--msp-bear)' },
         { label: 'Confluence', value: confidence !== undefined ? `${confidence}%` : 'N/A', color: confidence >= 60 ? 'var(--msp-bull)' : confidence >= 40 ? 'var(--msp-warn)' : 'var(--msp-bear)' },
         { label: 'Research Status', value: authorization || 'N/A', color: authorization === 'ALIGNED' || authorization === 'ALLOW' ? 'var(--msp-bull)' : authorization === 'CONDITIONAL' || authorization === 'ALLOW_REDUCED' ? 'var(--msp-warn)' : 'var(--msp-bear)' },
@@ -219,17 +219,17 @@ export default function MSPCopilot({
           footer: 'Click an action or ask me to help.',
         },
         learn: {
-          title: '📚 Learn From This Setup',
+          title: '📚 Questions about this page',
           topics: isMarketsPage ? [
-            { icon: '🏛️', label: 'What does this verdict mean?', question: `Explain why ${symbol} is ${verdict} right now — what drove the alignment and confidence scores?` },
+            { icon: '🏛️', label: 'What data is shown?', question: `What data is shown for ${symbol} and how fresh is it?` },
             { icon: '📊', label: 'Explain the flow data', question: `Break down the ${symbol} flow data: ${marketMode || ''} mode, ${gammaState || ''} gamma, and what the key strikes mean` },
             { icon: '⚠️', label: 'What are the risks?', question: `What specific risks should I watch for with ${symbol} given the current ${volState || 'market'} environment and ${eventRisk || 'current'} event risk?` },
-            { icon: '🎯', label: 'How to trade this setup', question: `Given ${symbol} is ${verdict} with ${alignment || '?'}% alignment and ${rMultiple || '?'}R multiple, what\'s the optimal approach?` },
+            { icon: '🎯', label: 'What is missing?', question: `Which observations are missing for ${symbol}, and what dates are attached to the ones that are present?` },
           ] : [
-            { icon: '💡', label: 'Why this signal matters', question: `Explain why ${direction || 'this'} signal on ${symbol} is significant` },
-            { icon: '📈', label: 'What confluence means', question: 'Explain what confluence stack means and how to use it' },
-            { icon: '⚠️', label: 'Risk considerations', question: `What are the risks of this ${symbol} trade?` },
-            { icon: '🎯', label: 'Similar setups', question: `Show me examples of similar ${direction || 'trading'} setups` },
+            { icon: '💡', label: 'What data is shown?', question: `What data is shown for ${symbol} and how fresh is it?` },
+            { icon: '📈', label: 'Which readings are present?', question: `Which indicator readings are present for ${symbol}, and which are missing?` },
+            { icon: '⚠️', label: 'What is missing?', question: `What risks and missing observations are noted for ${symbol}?` },
+            { icon: '🎯', label: 'What dates are attached?', question: `What dates are attached to the readings shown for ${symbol}?` },
           ],
           footer: 'Click a topic to learn more.',
         },
@@ -408,14 +408,14 @@ export default function MSPCopilot({
         ];
       case 'scanner':
         return [
-          'What makes this signal strong?',
-          'Show me similar setups',
+          'What data is shown for this symbol and how fresh is it?',
+          'Which readings are missing?',
           'Create an alert for this',
         ];
       case 'options':
         return [
-          'What strategy fits this IV?',
-          'Calculate my max risk',
+          'What options data is shown, and how fresh is it?',
+          'Which options readings are missing?',
           'Explain the Greeks here',
         ];
       case 'journal':
@@ -432,15 +432,15 @@ export default function MSPCopilot({
         ];
       case 'deep_analysis':
         return [
-          'Summarize the key signals',
-          'What\'s the invalidation?',
-          'Review scenario analysis',
+          'What data is shown, and which readings are missing?',
+          'What would make this reading invalid?',
+          'What dates are attached to the notes on this page?',
         ];
       case 'market_movers':
         return [
-          'Is this tradable right now?',
-          'Explain the flow and gamma state',
-          'What\'s the risk/reward here?',
+          'What data is shown for this symbol and how fresh is it?',
+          'Explain the flow and gamma readings on the page',
+          'Which observations are missing?',
         ];
       default:
         return [

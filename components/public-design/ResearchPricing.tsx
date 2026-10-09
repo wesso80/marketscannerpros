@@ -55,7 +55,9 @@ export default function ResearchPricing({cycle,onCycle,onChoose,loading,error,ti
     <section className={styles.details}><h2>Clear limits. Clear context.</h2>
       {quotasEnabled===true && <details><summary>How are Symbol reports counted?</summary><p>One new symbol uses one report that day. Reopening, refreshing or changing sections on that symbol does not use another. Signed-out visitors get one daily report. Limits reset at midnight US Eastern; your report counter shows the reset in your local time.</p></details>}
       <details><summary>What happens to my records if I downgrade?</summary><p>Your saved records are kept. Free limits new open entries and positions; close existing records to make room. Pro adds advanced analysis and exports.</p></details>
-      <details><summary>Is the research financial advice?</summary><p>No. MarketScannerPros explains observations and their limitations for education. It does not tell you what to buy, sell or how much to invest.</p></details>
+      <details><summary>Can I cancel anytime?</summary><p>Yes. Access lasts until the end of the current billing period. Cancel from Account &gt; Manage Billing.</p></details>
+      <details><summary>Do you offer refunds?</summary><p>If you are not satisfied with your subscription, you may request a full refund within 7 days of your first payment. This guarantee applies to first-time subscribers only.</p></details>
+      <details><summary>Do you provide financial advice?</summary><p>No. General information only, not financial advice.</p></details>
       <p className={styles.fine}>Read our <Link href="/terms">terms</Link>, <Link href="/privacy">privacy policy</Link>, <Link href="/refund-policy">refund policy</Link> and <Link href="/disclaimer">research disclosure</Link>. <Link href="/contact">Contact support</Link> for account help.</p>
     </section>
   </section>;

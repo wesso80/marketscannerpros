@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Market Scanner | MarketScannerPros',
     description:
-      'Ranked market scanner with regime context and educational scenario analysis.',
+      'Scan stocks and crypto and review multi-timeframe indicator readings with the data shown for each symbol.',
     images: ['/scan-banner.png'],
   },
   robots: {

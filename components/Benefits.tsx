@@ -1,9 +1,9 @@
 // components/Benefits.tsx
 export default function Benefits() {
   const items = [
-    { title: "Spot squeeze setups across timeframes", blurb: "Automatic detection across multiple timeframes." },
-    { title: "Cut hours to minutes", blurb: "Bulk scans with confluence scores surface the highest-confluence setups fast." },
-    { title: "Focus on technically aligned setups", blurb: "Filter noise with momentum context and alerts." },
+    { title: "Readings across timeframes", blurb: "The scan lists the indicator readings collected on each timeframe." },
+    { title: "Many symbols in one pass", blurb: "A bulk scan shows the indicator readings and dates recorded for the symbols you chose." },
+    { title: "Context stays with the reading", blurb: "Momentum context and alerts stay next to the observation they came from." },
   ];
   return (
     <section className="border-b border-neutral-800 bg-neutral-950">

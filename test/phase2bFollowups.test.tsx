@@ -56,14 +56,29 @@ it('tool document titles are one visible name', () => {
   expect(read('app/v2/_components/RegimeBar.tsx')).not.toContain('Unavailable');
 });
 
-it('pricing calls the live Intelligence modules live', () => {
+it('pricing calls the live Intelligence modules live and shows the three-item FAQ', () => {
   const pricing = read('app/pricing/page.tsx');
+  const live = read('components/public-design/ResearchPricing.tsx');
   expect(pricing).toContain('Live with Pro: Global M2, Liquidity Transmission and Market Fragility');
-  expect(pricing).toContain('the live Intelligence modules (Global M2, Liquidity Transmission and Market Fragility)');
+  expect(pricing).not.toContain('the live Intelligence modules (Global M2, Liquidity Transmission and Market Fragility)');
   expect(pricing).not.toContain('Lead/Lag');
   expect(pricing).not.toContain('NQ Pressure');
   expect(pricing).not.toMatch(/\bAuction\b/);
   expect(pricing).not.toMatch(/\bMaster\b/);
   expect(pricing).not.toContain('Production Intelligence');
   expect(pricing).not.toContain('entire Intelligence suite');
+  for (const source of [pricing, live]) {
+    expect(source).toContain('Can I cancel anytime?');
+    expect(source).toContain('Yes. Access lasts until the end of the current billing period. Cancel from Account &gt; Manage Billing.');
+    expect(source).toContain('Do you offer refunds?');
+    expect(source).toContain('If you are not satisfied with your subscription, you may request a full refund within 7 days of your first payment.');
+    expect(source).toContain('This guarantee applies to first-time subscribers only.');
+    expect(source).toContain('Do you provide financial advice?');
+    expect(source).toContain('General information only, not financial advice.');
+    expect(source).not.toContain('What does Pro include?');
+    expect(source).not.toContain('Golden Egg');
+    expect(source).not.toContain('priority support');
+    expect(source).not.toContain('unlimited scanning');
+  }
+  expect(live).toContain('No. General information only, not financial advice.');
 });

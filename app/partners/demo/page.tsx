@@ -11,8 +11,8 @@ const capabilities = [
   },
   {
     icon: "GE",
-    title: "Golden Egg Analysis",
-    description: "Single-symbol deep analysis combining technicals, macro regime, options flow, time confluence, and AI commentary into a structured scenario report.",
+    title: "Symbol research",
+    description: "One symbol at a time: the indicator readings, macro context, options data, and dates shown on the page, in one research report.",
     tier: "Pro",
   },
   {
@@ -23,20 +23,20 @@ const capabilities = [
   },
   {
     icon: "TIME",
-    title: "Time Confluence Engine",
-    description: "Multi-timeframe candle close analysis with 50% retracement levels and weighted decompression targets. Unique analytical edge.",
+    title: "Timeframe readings",
+    description: "Multi-timeframe candle-close readings, with the retracement levels and decompression targets the method records.",
     tier: "Pro",
   },
   {
     icon: "OPT",
-    title: "Options Flow & Confluence",
-    description: "Put/call ratios, IV rank, max pain, unusual activity detection, and open interest distribution. Full options analytics dashboard.",
+    title: "Options research",
+    description: "Put/call ratios, IV rank, max pain, unusual activity, and open interest, with the dates shown.",
     tier: "Pro",
   },
   {
     icon: "BT",
     title: "Strategy Backtesting",
-    description: "User-defined strategy backtester against historical data. Returns win rate, profit factor, max drawdown, and equity curves with mandatory limitations disclaimer.",
+    description: "User-defined strategy backtester against historical data. Shows the sample, the assumptions, and the limitations of that run.",
     tier: "Pro",
   },
   {
@@ -206,7 +206,7 @@ export default function PartnerDemoPage() {
               {
                 stat: "15+",
                 label: "Technical Indicators",
-                detail: "RSI, MACD, Bollinger Bands, ATR, moving averages, volume analysis, and custom confluence scoring",
+                detail: "RSI, MACD, Bollinger Bands, ATR, moving averages, and volume, with the dates shown",
               },
               {
                 stat: "GPT-4.1",
@@ -511,7 +511,7 @@ export default function PartnerDemoPage() {
           }}>
             {[
               { href: "/tools/scanner", label: "Market Scanner" },
-              { href: "/tools/golden-egg", label: "Golden Egg" },
+              { href: "/tools/golden-egg", label: "Symbol" },
               { href: "/tools/scanner", label: "MSP AI" },
               { href: "/tools/terminal?tab=options-confluence", label: "Options Terminal" },
               { href: "/tools/explorer?tab=crypto-command", label: "Crypto Terminal" },
