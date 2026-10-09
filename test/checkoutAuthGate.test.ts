@@ -183,12 +183,54 @@ describe('checkout requires a signed-in account', () => {
   );
 
   it.each(['past_due', 'unpaid'] as const)(
-    'sends a %s subscription to the billing portal',
+    'sends a %s row to the portal when Stripe still has it on a Pro price',
     async (status) => {
       mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
       rowsOf(subRow({ status, current_period_end: PAST }));
+      mocks.subscriptionsRetrieve.mockResolvedValue(stripeSub(status));
       await expectAlreadySubscribed();
-      expect(mocks.subscriptionsRetrieve).not.toHaveBeenCalled();
+      expect(mocks.subscriptionsRetrieve).toHaveBeenCalledWith('sub_live');
+    },
+  );
+
+  it('opens checkout for a past_due row when Stripe is live on a price that is not Pro', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    rowsOf(subRow({ status: 'past_due', current_period_end: PAST }));
+    mocks.subscriptionsRetrieve.mockResolvedValue(stripeSub('past_due', 'price_not_pro'));
+    await expectCheckoutOpens();
+  });
+
+  it('sends a past_due row to the portal when Stripe says the Pro subscription is active', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    rowsOf(subRow({ status: 'past_due', current_period_end: PAST }));
+    mocks.subscriptionsRetrieve.mockResolvedValue(stripeSub('active'));
+    await expectAlreadySubscribed();
+  });
+
+  it.each(['past_due', 'unpaid'] as const)(
+    'opens checkout for a %s row when Stripe says the subscription is canceled',
+    async (status) => {
+      mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+      rowsOf(subRow({ status, current_period_end: PAST }));
+      mocks.subscriptionsRetrieve.mockResolvedValue(stripeSub('canceled'));
+      await expectCheckoutOpens();
+      expect(mocks.subscriptionsRetrieve).toHaveBeenCalledWith('sub_live');
+    },
+  );
+
+  it.each(['past_due', 'unpaid'] as const)(
+    'keeps a %s row on the portal when the Stripe confirm call fails',
+    async (status) => {
+      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+      rowsOf(subRow({ status, stripe_subscription_id: 'sub_owed', current_period_end: PAST }));
+      mocks.subscriptionsRetrieve.mockRejectedValue(Object.assign(new Error('No such subscription: sub_owed reader@example.test'), { code: 'resource_missing' }));
+      await expectAlreadySubscribed();
+      const logged = errSpy.mock.calls.flat().map(String).join('\n');
+      expect(logged).toContain('subscription confirm failed (resource_missing)');
+      expect(logged).not.toContain('reader@example.test');
+      expect(logged).not.toContain('sub_owed');
+      errSpy.mockRestore();
     },
   );
 
@@ -257,12 +299,43 @@ describe('checkout requires a signed-in account', () => {
     errSpy.mockRestore();
   });
 
-  it('opens checkout for a free row that has a stripe subscription id', async () => {
-    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
-    rowsOf(subRow({ tier: 'free', status: 'active', stripe_subscription_id: 'sub_free_label', current_period_end: FUTURE }));
-    await expectCheckoutOpens();
-    expect(mocks.subscriptionsRetrieve).not.toHaveBeenCalled();
-  });
+  it.each(['active', 'trialing'] as const)(
+    'refuses a free %s row when Stripe says the subscription is live on a Pro price',
+    async (status) => {
+      mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+      rowsOf(subRow({ tier: 'free', status, is_trial: status === 'trialing', stripe_subscription_id: 'sub_free_label', current_period_end: FUTURE }));
+      mocks.subscriptionsRetrieve.mockResolvedValue(stripeSub(status === 'trialing' ? 'trialing' : 'active'));
+      await expectAlreadySubscribed();
+      expect(mocks.subscriptionsRetrieve).toHaveBeenCalledWith('sub_free_label');
+    },
+  );
+
+  it.each(['active', 'trialing'] as const)(
+    'opens checkout for a free %s row when Stripe says the subscription is canceled',
+    async (status) => {
+      mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+      rowsOf(subRow({ tier: 'free', status, is_trial: status === 'trialing', stripe_subscription_id: 'sub_free_label', current_period_end: FUTURE }));
+      mocks.subscriptionsRetrieve.mockResolvedValue(stripeSub('canceled'));
+      await expectCheckoutOpens();
+      expect(mocks.subscriptionsRetrieve).toHaveBeenCalledWith('sub_free_label');
+    },
+  );
+
+  it.each(['active', 'trialing'] as const)(
+    'opens checkout for a free %s row when the Stripe confirm call fails',
+    async (status) => {
+      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+      rowsOf(subRow({ tier: 'free', status, is_trial: status === 'trialing', stripe_subscription_id: 'sub_free_label', current_period_end: FUTURE }));
+      mocks.subscriptionsRetrieve.mockRejectedValue(Object.assign(new Error('No such subscription: sub_free_label reader@example.test'), { code: 'resource_missing' }));
+      await expectCheckoutOpens();
+      const logged = errSpy.mock.calls.flat().map(String).join('\n');
+      expect(logged).toContain('subscription confirm failed (resource_missing)');
+      expect(logged).not.toContain('reader@example.test');
+      expect(logged).not.toContain('sub_free_label');
+      errSpy.mockRestore();
+    },
+  );
 
   it('continues checkout when the subscription read fails', async () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);

@@ -140,14 +140,24 @@ function certainProLive(row: CheckoutSubRow, nowMs: number): boolean {
   return isLiveStripeSubscription(row, nowMs);
 }
 
-/** past_due and unpaid still have a Stripe subscription. A second Checkout would duplicate it. */
+/** past_due and unpaid still claim a Stripe subscription. Confirm with Stripe before refusing. */
 function owedSubscription(row: CheckoutSubRow): boolean {
   if (!subscriptionIdOf(row)) return false;
   return row.status === 'past_due' || row.status === 'unpaid';
 }
 
-function needsStripeConfirm(row: CheckoutSubRow, nowMs: number): boolean {
-  return isStaleTrial(row, nowMs) || isStaleActive(row, nowMs);
+/**
+ * Stored as free, but active or trialing with a subscription id. The tier may
+ * be wrong. Ask Stripe before opening a second Checkout.
+ */
+function mislabelledFree(row: CheckoutSubRow): boolean {
+  if (row.tier !== 'free' || !subscriptionIdOf(row)) return false;
+  return row.status === 'active' || row.status === 'trialing';
+}
+
+/** A failed retrieve lets checkout proceed. The stored row is not proof that money is owed. */
+function needsFailOpenConfirm(row: CheckoutSubRow, nowMs: number): boolean {
+  return isStaleTrial(row, nowMs) || isStaleActive(row, nowMs) || mislabelledFree(row);
 }
 
 function knownProPriceIds(): Set<string> {
@@ -180,15 +190,21 @@ function stripeErrorCode(error: unknown): string {
   return 'unknown';
 }
 
-/** Refuse only when Stripe still has this subscription on a Pro price. A failed read does not refuse. */
-async function stripeConfirmsLivePro(subscriptionId: string): Promise<boolean> {
+type StripeConfirm = 'live_pro' | 'not_live' | 'failed';
+
+/**
+ * live_pro: Stripe status is active, trialing, past_due, or unpaid, on a Pro price.
+ * not_live: Stripe answered and it is not that.
+ * failed: the retrieve call threw. Callers choose whether that blocks checkout.
+ */
+async function confirmStripeSubscription(subscriptionId: string): Promise<StripeConfirm> {
   try {
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-    if (!STRIPE_CONFIRMED_LIVE.has(subscription.status)) return false;
-    return subscriptionHasProPrice(subscription);
+    if (!STRIPE_CONFIRMED_LIVE.has(subscription.status) || !subscriptionHasProPrice(subscription)) return 'not_live';
+    return 'live_pro';
   } catch (error) {
-    console.error(`[Checkout] subscription confirm failed (${stripeErrorCode(error)}); continuing checkout`);
-    return false;
+    console.error(`[Checkout] subscription confirm failed (${stripeErrorCode(error)})`);
+    return 'failed';
   }
 }
 
@@ -202,10 +218,21 @@ async function accountAlreadySubscribed(email: string | null, customerId: string
     [email, customerId],
   );
   const now = Date.now();
-  if (rows.some((row) => certainProLive(row, now) || owedSubscription(row))) return true;
-  const confirmIds = [...new Set(rows.filter((row) => needsStripeConfirm(row, now)).map(subscriptionIdOf).filter(Boolean))];
-  for (const id of confirmIds) {
-    if (await stripeConfirmsLivePro(id)) return true;
+  if (rows.some((row) => certainProLive(row, now))) return true;
+
+  const owedIds = new Set(rows.filter(owedSubscription).map(subscriptionIdOf).filter(Boolean));
+  // A failed retrieve on a stale or mislabelled-free row lets checkout proceed.
+  // A failed retrieve on past_due or unpaid keeps the block: the row says payment is owed,
+  // and we could not prove the subscription is gone. Canceled (or any non-Pro answer) proceeds.
+  const failOpenIds = [...new Set(
+    rows.filter((row) => needsFailOpenConfirm(row, now)).map(subscriptionIdOf).filter((id) => id && !owedIds.has(id)),
+  )];
+  for (const id of failOpenIds) {
+    if (await confirmStripeSubscription(id) === 'live_pro') return true;
+  }
+  for (const id of owedIds) {
+    const confirmed = await confirmStripeSubscription(id);
+    if (confirmed === 'live_pro' || confirmed === 'failed') return true;
   }
   return false;
 }
