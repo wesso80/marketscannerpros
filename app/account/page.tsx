@@ -225,8 +225,9 @@ export default function AccountPage() {
       return [
         "Unlimited Symbol reports",
         "20 AI questions a day",
-        "Production Intelligence (Global M2, Liquidity Transmission, Fragility)",
-        "Backtesting, options and derivatives tools",
+        "Macro liquidity research (Global M2, liquidity transmission, market fragility)",
+        "Historical backtesting (hypothetical, for learning)",
+        "Options and derivatives tools",
         "Unlimited open portfolio positions and journal entries",
         "Options research, exports, and stored M2 history",
       ];

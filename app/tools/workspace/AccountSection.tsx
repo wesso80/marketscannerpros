@@ -252,7 +252,7 @@ export default function AccountSection() {
   ];
 
   const planFeatures = useMemo(() => {
-    if (isPaid) return ['Unlimited Symbol reports', '20 AI questions a day', 'Production Intelligence (Global M2, Liquidity Transmission, Fragility)', 'Backtesting, options and derivatives tools', 'Unlimited open portfolio positions and journal entries', 'Options research, exports, and stored M2 history'];
+    if (isPaid) return ['Unlimited Symbol reports', '20 AI questions a day', 'Macro liquidity research (Global M2, liquidity transmission, market fragility)', 'Historical backtesting (hypothetical, for learning)', 'Options and derivatives tools', 'Unlimited open portfolio positions and journal entries', 'Options research, exports, and stored M2 history'];
     return [FREE_COPY.pricing.scans, 'Watchlists, markets and macro dashboards', FREE_COPY.pricing.macro, FREE_COPY.pricing.journal, 'Educational content and platform guides'];
   }, [isPaid]);
 
