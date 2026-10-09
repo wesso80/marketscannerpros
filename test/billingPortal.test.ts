@@ -94,6 +94,24 @@ describe('billing portal uses a real Stripe customer id', () => {
     expect(mocks.q).not.toHaveBeenCalled();
   });
 
+  it('picks the cus_ row when a newer free duplicate has no Stripe customer id', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'pro', workspaceId: 'w', exp: 0 };
+    mocks.q.mockResolvedValue([
+      { stripe_customer_id: null, updated_at: '2026-10-09T00:00:00.000Z', id: 2 },
+      { stripe_customer_id: 'cus_PaidUser1', updated_at: '2026-01-01T00:00:00.000Z', id: 1 },
+    ]);
+    const res = await POST(post());
+    expect(res.status).toBe(200);
+    expect(mocks.create).toHaveBeenCalledWith({
+      customer: 'cus_PaidUser1',
+      return_url: 'https://marketscannerpros.app/tools/explorer',
+    });
+    const sql = String(mocks.q.mock.calls[0][0]);
+    expect(sql).toContain('ORDER BY');
+    expect(sql).toContain('updated_at DESC');
+    expect(sql).not.toContain('LIMIT 1');
+  });
+
   it('rejects a stored id that does not have the cus_ prefix', async () => {
     mocks.session = { cid: 'admin_bradleywessling@yahoo.com.au', tier: 'pro_trader', workspaceId: 'w', exp: 0 };
     mocks.q.mockResolvedValue([{ stripe_customer_id: 'admin_bradleywessling@yahoo.com.au' }]);

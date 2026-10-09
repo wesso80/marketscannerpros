@@ -57,7 +57,8 @@ describe('getSessionFromCookie trial period', () => {
     const session = await getSessionFromCookie();
     expect(session?.tier).toBe('free');
     expect(String(mocks.q.mock.calls[0][0])).toContain('WHERE workspace_id = $1');
-    expect(mocks.q.mock.calls[0][1]).toEqual([WORKSPACE_ID]);
+    expect(String(mocks.q.mock.calls[0][0])).toContain('LOWER(email)');
+    expect(mocks.q.mock.calls[0][1]).toEqual([WORKSPACE_ID, 'ada@example.com']);
   });
 
   it('keeps Pro when the trial period end is still in the future', async () => {

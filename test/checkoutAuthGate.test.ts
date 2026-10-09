@@ -90,7 +90,7 @@ describe('checkout requires a signed-in account', () => {
     expect(JSON.stringify(params)).not.toContain('product_data');
     const eligibility = mocks.q.mock.calls.map((call) => String(call[0]));
     expect(eligibility.some((sql) => sql.includes('FROM user_trials'))).toBe(true);
-    expect(eligibility.some((sql) => sql.includes('stripe_subscription_id') && sql.includes('is_trial') && sql.includes("status = 'trialing'"))).toBe(true);
+    expect(eligibility.some((sql) => sql.includes('stripe_subscription_id') && sql.includes('is_trial') && sql.includes('status') && !sql.includes('LIMIT 1'))).toBe(true);
   });
 
   it.each([
@@ -98,7 +98,28 @@ describe('checkout requires a signed-in account', () => {
     ['a Stripe subscription id', 'FROM user_subscriptions'],
   ])('does not grant a trial when the email has %s', async (_label, table) => {
     mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
-    mocks.q.mockImplementation(async (sql: string) => (sql.includes(table) ? [{ ok: 1 }] : []));
+    mocks.q.mockImplementation(async (sql: string) => {
+      if (!sql.includes(table)) return [];
+      if (table === 'FROM user_subscriptions') {
+        return [{ stripe_subscription_id: 'sub_paid', stripe_customer_id: 'cus_Paid', is_trial: false, status: 'canceled' }];
+      }
+      return [{ ok: 1 }];
+    });
+    const res = await POST(post({ plan: 'pro', billing: 'monthly' }));
+    expect(res.status).toBe(200);
+    const params = mocks.create.mock.calls[0][0] as { subscription_data?: unknown };
+    expect(params.subscription_data).toBeUndefined();
+  });
+
+  it('does not grant a trial when only a later duplicate row has Stripe ids', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    mocks.q.mockImplementation(async (sql: string) => {
+      if (!sql.includes('FROM user_subscriptions')) return [];
+      return [
+        { stripe_subscription_id: null, stripe_customer_id: null, is_trial: false, status: 'active' },
+        { stripe_subscription_id: 'sub_paid', stripe_customer_id: 'cus_PaidUser1', is_trial: false, status: 'active' },
+      ];
+    });
     const res = await POST(post({ plan: 'pro', billing: 'monthly' }));
     expect(res.status).toBe(200);
     const params = mocks.create.mock.calls[0][0] as { subscription_data?: unknown };

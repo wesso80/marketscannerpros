@@ -4,6 +4,7 @@ import { apiLimiter, getClientIP } from '@/lib/rateLimit';
 import { q } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
 import { checkoutCustomerFromSession } from '@/lib/checkoutSignIn';
+import { rowsBlockTrial } from '@/lib/subscriptionRow';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-09-30.clover",
@@ -80,19 +81,18 @@ async function emailHadTrialOrSubscription(email: string): Promise<boolean> {
   } catch (error) {
     if (!dbErrorMessage(error).includes('does not exist')) throw error;
   }
-  const subs = await q(
-    `SELECT 1 FROM user_subscriptions
-      WHERE LOWER(email) = LOWER($1)
-        AND (
-          NULLIF(BTRIM(stripe_subscription_id), '') IS NOT NULL
-          OR NULLIF(BTRIM(stripe_customer_id), '') IS NOT NULL
-          OR is_trial IS TRUE
-          OR status = 'trialing'
-        )
-      LIMIT 1`,
+  const subs = await q<{
+    stripe_subscription_id: string | null;
+    stripe_customer_id: string | null;
+    is_trial: boolean | null;
+    status: string | null;
+  }>(
+    `SELECT stripe_subscription_id, stripe_customer_id, is_trial, status
+      FROM user_subscriptions
+      WHERE LOWER(email) = LOWER($1)`,
     [email],
   );
-  return subs.length > 0;
+  return rowsBlockTrial(subs);
 }
 
 async function resolveCheckoutEmail(fields: { customer?: string; customer_email?: string }): Promise<string | null> {

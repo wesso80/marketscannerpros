@@ -4,6 +4,7 @@ import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { checkoutCustomerFromSession } from "@/lib/checkoutSignIn";
 import { isStripeCustomerId } from "@/lib/billingPortal";
+import { chooseStripeCustomerId } from "@/lib/subscriptionRow";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-09-30.clover",
@@ -13,15 +14,18 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 const PORTAL_RETURN_URL = "https://marketscannerpros.app/tools/explorer";
 
 async function stripeCustomerIdForEmail(email: string): Promise<string | null> {
-  const rows = await q<{ stripe_customer_id: string | null }>(
-    `SELECT stripe_customer_id FROM user_subscriptions
+  const rows = await q<{ stripe_customer_id: string | null; updated_at?: Date | string | null; created_at?: Date | string | null; id?: number | null }>(
+    `SELECT stripe_customer_id, updated_at, created_at, id
+      FROM user_subscriptions
       WHERE LOWER(email) = LOWER($1)
-        AND NULLIF(BTRIM(stripe_customer_id), '') IS NOT NULL
-      LIMIT 1`,
+      ORDER BY
+        CASE WHEN BTRIM(stripe_customer_id) ~ '^cus_[A-Za-z0-9]+$' THEN 0 ELSE 1 END,
+        updated_at DESC NULLS LAST,
+        created_at DESC NULLS LAST,
+        id DESC`,
     [email],
   );
-  const stored = rows[0]?.stripe_customer_id?.trim() ?? "";
-  return isStripeCustomerId(stored) ? stored : null;
+  return chooseStripeCustomerId(rows);
 }
 
 export async function POST(_req: NextRequest) {

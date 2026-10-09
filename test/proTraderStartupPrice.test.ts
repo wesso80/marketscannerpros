@@ -1,8 +1,9 @@
 /**
  * The $50 startup price lives on the Pro Trader product. Its id is not in the
- * repo. Webhook tier mapping is unchanged: a configured Pro Trader price id is
- * stored as pro_trader (full Pro access), and an active price id that is not
- * configured does not replace the tier already stored for that email.
+ * repo. A configured Pro Trader price id is stored as pro_trader. An active
+ * price id that is not configured keeps pro_trader when that tier already
+ * exists, otherwise stores pro, and never stores free. A deleted subscription
+ * still stores free (covered in stripeWebhookPeriod).
  */
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
@@ -117,14 +118,32 @@ describe('Pro Trader prices stay Pro without changing the webhook map', () => {
     expect((insert![1] as unknown[])[2]).toBe('pro_trader');
   });
 
-  it('does not overwrite the stored tier when an active price id is not configured', async () => {
+  it('stores pro for an active unknown price when no paid tier exists, and never free', async () => {
     mocks.subscriptionsRetrieve.mockResolvedValue(subscription(UNCONFIGURED_PRICE));
     const res = await post(UNCONFIGURED_PRICE);
     expect(res.status).toBe(200);
     const insert = upsert();
     expect(insert).toBeTruthy();
-    expect((insert![1] as unknown[])[2]).toBe('free');
-    expect(String(insert![0])).toContain("WHEN EXCLUDED.tier = 'free' AND EXCLUDED.status IN ('active', 'trialing', 'past_due')");
-    expect(String(insert![0])).toContain('THEN user_subscriptions.tier');
+    expect((insert![1] as unknown[])[2]).toBe('pro');
+    expect((insert![1] as unknown[])[3]).toBe('active');
+    expect(String(insert![0])).toContain("WHEN EXCLUDED.tier = 'free' AND EXCLUDED.status IN ('active', 'trialing')");
+    expect(String(insert![0])).toContain("THEN 'pro'");
+    expect(String(insert![0])).toContain('ON CONFLICT (workspace_id)');
   });
+
+  it('keeps pro_trader when an active unknown price matches an existing paid row', async () => {
+    mocks.q.mockImplementation(async (sql: unknown) => {
+      if (String(sql).includes('SELECT tier FROM user_subscriptions')) {
+        return [{ tier: 'free' }, { tier: 'pro_trader' }];
+      }
+      return [];
+    });
+    mocks.subscriptionsRetrieve.mockResolvedValue(subscription(UNCONFIGURED_PRICE));
+    const res = await post(UNCONFIGURED_PRICE);
+    expect(res.status).toBe(200);
+    const insert = upsert();
+    expect((insert![1] as unknown[])[2]).toBe('pro_trader');
+    expect((insert![1] as unknown[])[2]).not.toBe('free');
+  });
+
 });
