@@ -4,8 +4,10 @@ import { q } from '@/lib/db';
 import { describeConditionMet, parseGlobalQuote, type AlertQuote } from '@/lib/alerts/priceConditions';
 import { deliverUserAlertEmail } from '@/lib/alerts/emailControls';
 import { sendPushToUser, PushTemplates } from '@/lib/pushServer';
-import { getPriceBySymbol } from '@/lib/coingecko';
+import { fetchAlertCryptoQuotes, type AlertCryptoQuote } from '@/lib/alerts/cryptoPriceBatch';
+import { symbolBase } from '@/lib/symbols/assetResolution';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { runWithAvBudget } from '@/lib/avLimiter';
 import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
 import { decideAlert, isStaleStockQuote } from '@/lib/alerts/alertTiming';
 import { fxQuoteUrl, parseFxAlertQuote, quoteSourceFor } from '@/lib/alerts/assetTypes';
@@ -52,6 +54,10 @@ export async function POST(req: NextRequest) {
 }
 
 async function checkAlerts(req: NextRequest) {
+  return runWithAvBudget({ lane: 'alerts', feature: 'alerts-price-check' }, () => checkAlertsBody(req));
+}
+
+async function checkAlertsBody(req: NextRequest) {
   // Verify cron secret (timing-safe comparison)
   const secret = req.headers.get('x-cron-secret') || '';
   if (CRON_SECRET) {
@@ -89,6 +95,13 @@ async function checkAlerts(req: NextRequest) {
 
     console.log(`[Alert Check] Found ${alerts.length} active alerts across ${Object.keys(symbolGroups).length} symbols`);
 
+    const cryptoSymbols = alerts.filter((alert) => quoteSourceFor(alert.asset_type) === 'crypto').map((alert) => alert.symbol);
+    const cryptoBatch = await fetchAlertCryptoQuotes(cryptoSymbols);
+    console.log(`[Alert Check] CoinGecko batch calls=${cryptoBatch.calls} quoted=${Object.keys(cryptoBatch.quotes).length} skipped=${cryptoBatch.skipped.length}`);
+    for (const skip of cryptoBatch.skipped) {
+      console.warn(`[Alert Check] skip ${skip.symbol}: ${skip.reason}`);
+    }
+
     const triggered: string[] = [];
     const errors: string[] = [];
     const skippedStale: string[] = [];
@@ -105,7 +118,7 @@ async function checkAlerts(req: NextRequest) {
           continue;
         }
         // Fetch current price (and the % change the same quote reports)
-        const quote = await fetchQuote(symbol, assetType);
+        const quote = await fetchQuote(symbol, assetType, cryptoBatch.quotes);
         console.log(`[Alert Check] ${symbol} price: ${quote?.price ?? null} change: ${quote?.changePercent ?? null}%`);
         
         if (quote === null) {
@@ -171,12 +184,11 @@ async function checkAlerts(req: NextRequest) {
 }
 
 // Fetch current price and % change based on asset type
-async function fetchQuote(symbol: string, assetType: string): Promise<AlertQuote | null> {
+async function fetchQuote(symbol: string, assetType: string, cryptoQuotes: Record<string, AlertCryptoQuote> = {}): Promise<AlertQuote | null> {
   try {
     const source = quoteSourceFor(assetType);
     if (source === 'crypto') {
-      // Use CoinGecko commercial API for crypto prices (24h change comes with the same call)
-      const result = await getPriceBySymbol(symbol);
+      const result = cryptoQuotes[symbolBase(symbol)];
       if (!result || !Number.isFinite(result.price)) return null;
       return { price: result.price, changePercent: Number.isFinite(result.change24h) ? result.change24h : null };
     } else if (source === 'forex') {

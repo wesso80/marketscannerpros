@@ -24,6 +24,7 @@ import { adminEquitiesPaused, ADMIN_EQUITIES_PAUSED_MESSAGE } from './adminEquit
 import { randomUUID } from "crypto";
 import type { CandidatePipeline } from "@/lib/operator/orchestrator";
 import { avFetch } from "@/lib/avRateGovernor";
+import { runWithAvBudget } from "@/lib/avLimiter";
 import { buildAdminScanContext } from "@/lib/admin/scan-context";
 import { buildAdminResearchScan, type AdminResearchPacket } from "@/lib/admin/getAdminResearchPacket";
 import {
@@ -146,7 +147,10 @@ export async function startSharedScan(req: SharedScanRequest): Promise<StartShar
     return { started: false, reason: "error", message: err instanceof Error ? err.message : String(err) };
   }
 
-  const done = executeRun({ runId, market, timeframe, symbols, req });
+  const done = runWithAvBudget(
+    { lane: 'scheduled', feature: market === 'CRYPTO' ? 'admin-crypto-scan' : 'admin-equity-scan' },
+    () => executeRun({ runId, market, timeframe, symbols, req }),
+  );
   return { started: true, runId, symbolsRequested: symbols.length, done };
 }
 

@@ -4,6 +4,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { q } from '@/lib/db';
+import { relationReady } from '@/lib/schema/relationReady';
 import type { DoctrineStats, PersonalProfile, Regime, DoctrineId } from './types';
 import { PLAYBOOKS } from './registry';
 
@@ -16,7 +17,22 @@ interface OutcomeRow {
   holding_days: number | null;
 }
 
+function emptyProfile(): PersonalProfile {
+  return {
+    totalTrades: 0,
+    overallWinRate: 0,
+    overallAvgRR: 0,
+    bestDoctrine: null,
+    worstDoctrine: null,
+    bestRegime: null,
+    worstRegime: null,
+    doctrineStats: [],
+    edgeScore: 0,
+  };
+}
+
 export async function getPersonalProfile(userId: string): Promise<PersonalProfile> {
+  if (!(await relationReady('doctrine_outcomes'))) return emptyProfile();
   const rows = await q<OutcomeRow>(
     `SELECT doctrine_id, regime, asset_class, outcome,
             r_multiple::float, holding_days
@@ -26,19 +42,7 @@ export async function getPersonalProfile(userId: string): Promise<PersonalProfil
     [userId],
   );
 
-  if (rows.length === 0) {
-    return {
-      totalTrades: 0,
-      overallWinRate: 0,
-      overallAvgRR: 0,
-      bestDoctrine: null,
-      worstDoctrine: null,
-      bestRegime: null,
-      worstRegime: null,
-      doctrineStats: [],
-      edgeScore: 0,
-    };
-  }
+  if (rows.length === 0) return emptyProfile();
 
   // ── Group by doctrine ───────────────────────────────────────────────────────
   const byDoctrine = new Map<string, OutcomeRow[]>();
