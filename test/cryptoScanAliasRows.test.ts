@@ -19,6 +19,35 @@ vi.mock('@/lib/coingecko', () => ({
   COINGECKO_ID_MAP: { BTC: 'bitcoin', ETH: 'ethereum', UNI: 'uniswap', HBAR: 'hedera-hashgraph' }, resolveSymbolToId: async (symbol: string) => IDS[symbol] ?? null,
 }));
 vi.mock('@/lib/scanner/cryptoBars', () => ({ fetchCryptoSeries: mocks.series }));
+// Regime overlay would otherwise download the Cboe VIX CSV, a FRED CSV, and Alpha Vantage daily bars.
+vi.mock('@/lib/macro/cboeVix', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/macro/cboeVix')>();
+  return {
+    ...actual,
+    getCboeVixDailyCached: async () => [
+      { on: '2026-10-08', value: 16.5 },
+      { on: '2026-10-07', value: 16.2 },
+      { on: '2026-10-06', value: 16.0 },
+      { on: '2026-10-03', value: 15.8 },
+      { on: '2026-10-02', value: 15.9 },
+      { on: '2026-10-01', value: 16.1 },
+    ],
+  };
+});
+vi.mock('@/lib/macro/fredCsv', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/macro/fredCsv')>();
+  return {
+    ...actual,
+    getFredCsvCached: async () => [
+      { date: '2026-09-10', value: '3.10' },
+      { date: '2026-10-08', value: '3.25' },
+    ],
+  };
+});
+vi.mock('@/lib/marketData/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/marketData/client')>();
+  return { ...actual, avFetchDailyBars: async () => null };
+});
 import { POST } from '@/app/api/scanner/bulk/route';
 
 const DAY_MS = 86_400_000;
