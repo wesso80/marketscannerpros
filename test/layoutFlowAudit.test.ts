@@ -1099,7 +1099,8 @@ describe('layout and flow audit regressions', () => {
     expect(goldenEggPage).toContain('Data trust');
     expect(goldenEggPage).toContain('Recorded levels');
     expect(goldenEggPage).not.toMatch(/Reference level|Reaction Zones|Scenario Map/);
-    expect(goldenEggPage).toContain('<ComplianceDisclaimer compact />');
+    expect(goldenEggPage.match(/General information only, not financial advice\./g)).toEqual(['General information only, not financial advice.']);
+    expect(goldenEggPage).not.toContain('<ComplianceDisclaimer');
     expect(goldenEggPage).toContain('Research packet');
     expect(goldenEggPage).toContain('Research views');
     expect(goldenEggPage).toContain('Open Liquidity Sweep');

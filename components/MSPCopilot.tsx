@@ -19,6 +19,15 @@ import type {
 } from '@/lib/ai/types';
 import { SKILL_CONFIGS } from '@/lib/ai/types';
 
+/** Evidence-first reading. Avoids tradable / conditional / blocked verdicts. */
+export function copilotReadingLabel(verdict: unknown): string {
+  const value = typeof verdict === 'string' ? verdict.trim().toLowerCase() : '';
+  if (value === 'tradable') return 'Data complete';
+  if (value === 'conditional') return 'Mixed readings';
+  if (value === 'blocked') return 'Insufficient data';
+  return 'Reading unavailable';
+}
+
 interface MSPCopilotProps {
   skill: PageSkill;
   pageData?: Record<string, unknown>;
@@ -165,7 +174,7 @@ export default function MSPCopilot({
       const explainContent = isMarketsPage ? [
         { label: 'Symbol', value: symbol, highlight: true },
         { label: 'Price', value: price && typeof price === 'number' ? `$${price.toFixed(2)}` : 'N/A' },
-        { label: 'Reading', value: verdict.toUpperCase(), color: verdict === 'tradable' ? 'var(--msp-bull)' : verdict === 'conditional' ? 'var(--msp-warn)' : verdict === 'blocked' ? 'var(--msp-bear)' : 'var(--msp-text-muted)' },
+        { label: 'Reading', value: copilotReadingLabel(verdict), color: verdict === 'tradable' ? 'var(--msp-bull)' : verdict === 'conditional' ? 'var(--msp-warn)' : verdict === 'blocked' ? 'var(--msp-bear)' : 'var(--msp-text-muted)' },
         { label: 'Alignment', value: alignment !== undefined ? `${alignment}%` : 'N/A', color: alignment >= 70 ? 'var(--msp-bull)' : alignment >= 50 ? 'var(--msp-warn)' : 'var(--msp-bear)' },
         { label: 'Confluence', value: confidence !== undefined ? `${confidence}%` : 'N/A', color: confidence >= 60 ? 'var(--msp-bull)' : confidence >= 40 ? 'var(--msp-warn)' : 'var(--msp-bear)' },
         { label: 'Research Status', value: authorization || 'N/A', color: authorization === 'ALIGNED' || authorization === 'ALLOW' ? 'var(--msp-bull)' : authorization === 'CONDITIONAL' || authorization === 'ALLOW_REDUCED' ? 'var(--msp-warn)' : 'var(--msp-bear)' },

@@ -277,7 +277,7 @@ export default function AccountPage() {
         <div className={studio.header}>
           <div>
             <p className={studio.eyebrow}>YOUR WORKSPACE / ACCOUNT</p><h1>Account settings</h1>
-            <p className="text-sm text-white/60 mt-1">Manage your subscription, alerts, and intelligence access.</p>
+            <p className="text-sm text-white/60 mt-1">Manage your subscription, alerts and research access.</p>
             <p className="text-xs text-white/50 mt-2">{email || "Email not collected"}</p>
           </div>
 
@@ -327,7 +327,11 @@ export default function AccountPage() {
                 <div>
                   <div className="text-lg font-semibold">{currentTier.name}</div>
                   <div className="text-xs text-white/60">
-                    {normalizedTier === "free" ? "Free tier · Upgrade any time" : "Active · Renewal date in billing portal"}
+                    {normalizedTier === "free"
+                      ? "Free tier · Upgrade any time"
+                      : billingNote === NO_BILLING_ACCOUNT_MESSAGE
+                        ? "Pro access granted manually"
+                        : "Active · Renewal date in billing portal"}
                   </div>
                 </div>
 
@@ -342,7 +346,7 @@ export default function AccountPage() {
                 {usage.map(metric => <UsageRing key={metric.label} {...metric} />)}
               </div>
               {realUsage && usage.some(metric => metric.used === null) ? <p className="mt-2 text-xs text-amber-300">Some usage counts were not collected.</p> : null}
-              <p className="mt-2 text-xs text-white/60">{isPaid ? `${WATCHLIST_LIMITS.pro.watchlists} × ${WATCHLIST_LIMITS.pro.items}` : FREE_COPY.pricing.watchlists}</p>
+              {!isPaid ? <p className="mt-2 text-xs text-white/60">{FREE_COPY.pricing.watchlists}</p> : null}
             </section>
             <CollapsibleSection title="Plan Features" summary={`${planFeatures.length} features`}>
               <ul className="space-y-2 text-xs text-white/75">

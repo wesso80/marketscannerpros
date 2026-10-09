@@ -48,7 +48,7 @@ export default function ResearchPricing({cycle,onCycle,onChoose,loading,error,ti
           <li>Portfolio and Journal advanced analysis</li>
           <li>Unlimited open portfolio positions and journal entries</li>
           <li>Exports and paid workspace tools</li>
-          {quotasEnabled===true && <li>Educational MSP Copilot: {PUBLIC_DAILY_LIMITS.pro.ai} questions per day</li>}
+          {quotasEnabled===true && <li>{PUBLIC_DAILY_LIMITS.pro.ai} AI questions a day</li>}
         </ul>
       </article>
     </div>

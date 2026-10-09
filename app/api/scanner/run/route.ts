@@ -38,8 +38,6 @@ import { computeScanEnhancements, type ScanEnhancements } from "@/lib/scannerEnh
 import { detectMomentumAcceleration } from "@/lib/indicators";
 import * as scannerMath from "@/lib/scanner/indicatorMath";
 import { computeDVE } from "@/lib/directionalVolatilityEngine";
-import { getEdgeContext } from "@/lib/intelligence/edgeContextBuilder";
-import { normalizeSide } from "@/lib/intelligence/edgeProfile";
 import type { DVEInput, DVEReading, DVESignalType, VolRegime } from "@/lib/directionalVolatilityEngine.types";
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from "@/lib/scanner/compliance";
 import { isAsciiCryptoTicker } from "@/lib/scanner/cryptoTicker";

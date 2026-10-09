@@ -361,8 +361,12 @@ export default function AccountSection() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-bold text-white">{currentTier.name}</div>
-                <div className="text-[11px] text-slate-500">
-                  {normalizedTier === 'free' ? 'Free tier · Upgrade any time' : 'Active · Renewal in billing portal'}
+                <div className="text-sm text-slate-300">
+                  {normalizedTier === 'free'
+                    ? 'Free tier · Upgrade any time'
+                    : billingNote === NO_BILLING_ACCOUNT_MESSAGE
+                      ? 'Pro access granted manually'
+                      : 'Active · Renewal in billing portal'}
                 </div>
               </div>
               <Badge label="Active" color={currentTier.color} small />
@@ -373,7 +377,7 @@ export default function AccountSection() {
           <Card>
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Usage</h3>
             <div className="space-y-3">
-              <p className="mb-3 text-xs">{isPaid ? `${WATCHLIST_LIMITS.pro.watchlists} × ${WATCHLIST_LIMITS.pro.items}` : FREE_COPY.pricing.watchlists}</p>
+              {!isPaid ? <p className="mb-3 text-xs text-slate-300">{FREE_COPY.pricing.watchlists}</p> : null}
               {usage.map(m => (
                 <div key={m.label}>
                   <div className="flex justify-between text-xs mb-1">
