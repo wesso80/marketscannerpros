@@ -1,7 +1,7 @@
 export default function Head() {
   return (
     <>
-      <title>Confluence Scanner | MarketScanner Pros</title>
+      <title>Confluence Scanner | MarketScannerPros</title>
       <meta
         name="description"
         content="Find technically aligned setups using multi-timeframe confluence scoring, trend alignment, and momentum confirmation."

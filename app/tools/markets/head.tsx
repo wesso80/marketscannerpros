@@ -1,7 +1,7 @@
 export default function MarketsHead() {
   return (
     <>
-      <title>Markets Dashboard | MarketScanner Pros</title>
+      <title>Markets Dashboard | MarketScannerPros</title>
       <meta
         name="description"
         content="Institutional-style markets flow: regime context, heatmap, benchmark compare, flow intelligence, watchlist, news, calendar, and alerts."

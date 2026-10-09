@@ -23,11 +23,11 @@ async function mount(path: string, name: string) {
 
 it('survives streamed metadata, follows tab changes, and stops observing on unmount', async () => {
   await mount('/', 'Journal');
-  expect(document.title).toBe('Journal | MarketScanner Pros');
-  await act(async () => { document.title = 'Track | MarketScanner Pros'; await Promise.resolve(); });
-  expect(document.title).toBe('Journal | MarketScanner Pros');
+  expect(document.title).toBe('Journal | MarketScannerPros');
+  await act(async () => { document.title = 'Track | MarketScannerPros'; await Promise.resolve(); });
+  expect(document.title).toBe('Journal | MarketScannerPros');
   await act(async () => root!.render(<Tab name="Portfolio" />));
-  expect(document.title).toBe('Portfolio | MarketScanner Pros');
+  expect(document.title).toBe('Portfolio | MarketScannerPros');
   await act(async () => root!.unmount());
   document.title = 'Next page';
   await Promise.resolve();
@@ -36,22 +36,22 @@ it('survives streamed metadata, follows tab changes, and stops observing on unmo
 
 it('does not reapply an old tab title after the pathname changes', async () => {
   await mount('/tools/workspace', 'Journal');
-  expect(document.title).toBe('Journal | MarketScanner Pros');
+  expect(document.title).toBe('Journal | MarketScannerPros');
 
   // Location moves before unmount. Streamed metadata for the next route must stick.
   window.history.pushState({}, '', '/pricing');
-  await act(async () => { document.title = 'Pricing | MarketScanner Pros'; await Promise.resolve(); });
-  expect(document.title).toBe('Pricing | MarketScanner Pros');
+  await act(async () => { document.title = 'Pricing | MarketScannerPros'; await Promise.resolve(); });
+  expect(document.title).toBe('Pricing | MarketScannerPros');
 
   window.history.pushState({}, '', '/about');
-  await act(async () => { document.title = 'About | MarketScanner Pros'; await Promise.resolve(); });
-  expect(document.title).toBe('About | MarketScanner Pros');
+  await act(async () => { document.title = 'About | MarketScannerPros'; await Promise.resolve(); });
+  expect(document.title).toBe('About | MarketScannerPros');
 
   // Router pathname catches up while this hook is still mounted.
   state.pathname = '/pricing';
   window.history.pushState({}, '', '/pricing');
   await act(async () => root!.render(<Tab name="Journal" />));
-  await act(async () => { document.title = 'Pricing | MarketScanner Pros'; await Promise.resolve(); });
-  expect(document.title).toBe('Pricing | MarketScanner Pros');
+  await act(async () => { document.title = 'Pricing | MarketScannerPros'; await Promise.resolve(); });
+  expect(document.title).toBe('Pricing | MarketScannerPros');
   await act(async () => root!.unmount());
 });

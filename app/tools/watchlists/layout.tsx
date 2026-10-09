@@ -5,17 +5,17 @@ export const metadata: Metadata = {
   description:
     'Watchlists now live inside Workspace for saved research, alerts, journal notes, and workflow organization.',
   openGraph: {
-    title: 'Workspace Watchlists | MarketScanner Pros',
+    title: 'Workspace Watchlists | MarketScannerPros',
     description:
       'Organize symbols inside the MarketScanner Pros Workspace workflow.',
     url: 'https://marketscannerpros.app/tools/workspace?tab=watchlists',
-    siteName: 'MarketScanner Pros',
+    siteName: 'MarketScannerPros',
     images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScanner Pros — Watchlists' }],
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Workspace Watchlists | MarketScanner Pros',
+    title: 'Workspace Watchlists | MarketScannerPros',
     description:
       'Organize symbols inside the MarketScanner Pros Workspace workflow.',
     images: ['/scan-banner.png'],

@@ -1,10 +1,11 @@
 import IntelligenceGate from '@/components/free/IntelligenceGate';
+import { TITLE_TEMPLATE } from '@/lib/brandTitle';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import IntelligenceNav from '@/components/intelligence/IntelligenceNav';
 
 export const metadata: Metadata = {
-  title: { default: 'Intelligence', template: '%s | MarketScanner Pros' },
+  title: { default: 'Intelligence', template: TITLE_TEMPLATE },
   description:
     'Cross-asset liquidity, structure, capital-flow and execution intelligence. A professional research terminal that fuses macro liquidity, market fragility, cross-asset lead/lag, institutional pressure and auction structure into one command view.',
   robots: { index: true, follow: true },

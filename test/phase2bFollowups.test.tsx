@@ -29,7 +29,9 @@ it('signed-out My Pages is a finished sign-in card without raw placeholders', ()
 it('tool document titles are one visible name', () => {
   const tools = read('app/tools/layout.tsx');
   expect(tools).toContain("default: 'All tools'");
-  expect(tools).toContain("template: '%s | MarketScanner Pros'");
+  expect(tools).toContain('template: TITLE_TEMPLATE');
+  expect(read('lib/brandTitle.ts')).toContain("export const BRAND = 'MarketScannerPros'");
+  expect(read('lib/brandTitle.ts')).toContain('export const TITLE_TEMPLATE = `%s | ${BRAND}`');
   expect(tools).not.toContain('Workflow | MarketScanner Pros');
   const titles: Record<string, string> = {
     'app/tools/command-center/layout.tsx': "title: 'Overview'",
@@ -47,7 +49,7 @@ it('tool document titles are one visible name', () => {
     try {
       const source = read(path);
       const first = source.match(/title:\s*['"]([^'"]+)['"]/);
-      if (first) expect(first[1], path).not.toMatch(/\| MarketScanner Pros$/);
+      if (first) expect(first[1], path).not.toMatch(/\| MarketScanner\s?Pros$/);
     } catch { /* directory without a layout */ }
   }
   expect(read('app/v2/_components/RegimeBar.tsx')).toContain('Not available right now');

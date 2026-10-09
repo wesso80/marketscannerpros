@@ -37,7 +37,7 @@ export default function TermsPage() {
 
       <h2 id="paper">2A. Paper Trade &amp; Simulation System</h2>
       <ul>
-        <li>The App is an <strong className="text-amber-500">educational paper trade simulation system</strong>. No feature of the App executes real trades, connects to live brokerage accounts, or places orders on any exchange.</li>
+        <li>The App is an <strong className="text-amber-500">educational research workspace</strong>. No feature of the App executes real trades, connects to live brokerage accounts, or places orders on any exchange.</li>
         <li>The portfolio tracker, trade journal, risk analysis engine, scenario plans, and all analysis outputs are for educational and simulated paper trading purposes only.</li>
         <li>Scores, alignment readings, confluence percentages, and scenario analyses reflect indicator agreement and technical pattern recognition &mdash; they do not represent profit probability, guaranteed outcomes, or trading instructions.</li>
         <li>Edge Profile insights are derived from your own journal data and reflect historical patterns only. Past performance does not guarantee future results.</li>
@@ -55,7 +55,7 @@ export default function TermsPage() {
 
       <h2 id="billing">3. Subscriptions &amp; Billing</h2>
       <ul>
-        <li>The App offers Free and Pro ({PLAN_PRICES.pro.monthly}/month or {PLAN_PRICES.pro.yearly}/year) plans. Pro Trader is a legacy plan identifier mapped to Pro.</li>
+        <li>The App offers Free and Pro ({PLAN_PRICES.pro.monthly}/month or {PLAN_PRICES.pro.yearly}/year) plans. A stored Pro Trader identifier is the earlier name for Pro and keeps Pro access.</li>
         <li>Payments are processed securely via Stripe (web/Android) or Apple In-App Purchase (iOS).</li>
         <li><strong>Plan features:</strong> See the <a href="/pricing">pricing page</a> for current features and usage limits. Checkout confirms your selected billing interval and any trial eligibility.</li>
         <li><strong>Email Required:</strong> You must provide a valid email address to verify trial eligibility.</li>
