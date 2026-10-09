@@ -12,6 +12,7 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { q } from '@/lib/db';
 import { rebuildMatrixForWorkspace } from '@/lib/edge/matrix';
 import { notifyAdmin } from '@/lib/admin/notifyAdmin';
+import { adminEquityEmailsDisabled } from '@/lib/admin/equityOutbound';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -62,12 +63,14 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    notifyAdmin({
-      subject: 'edge-rebuild-matrix failed',
-      body: `Edge matrix rebuild failed: ${message}`,
-      severity: 'error',
-      context: { durationMs: Date.now() - started },
-    }).catch(() => {});
+    if (!adminEquityEmailsDisabled()) {
+      notifyAdmin({
+        subject: 'edge-rebuild-matrix failed',
+        body: `Edge matrix rebuild failed: ${message}`,
+        severity: 'error',
+        context: { durationMs: Date.now() - started },
+      }).catch(() => {});
+    }
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

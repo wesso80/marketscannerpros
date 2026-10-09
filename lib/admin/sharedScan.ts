@@ -38,6 +38,7 @@ import {
 import { pipelineToScannerHit } from "@/lib/admin/serializer";
 import { recordSignals } from "@/lib/admin/signal-recorder";
 import { opsAlert } from "@/lib/opsAlerting";
+import { adminRadarDiscordEnabled } from "@/lib/admin/equityOutbound";
 import { COINGECKO_ID_MAP, getMarketData } from "@/lib/coingecko";
 import { guardScanChangePercent } from "@/lib/admin/scanMoveGuard";
 import * as store from "@/lib/admin/sharedScanStore";
@@ -356,7 +357,7 @@ async function executeRun(input: {
             .catch((err) => console.error("[sharedScan] signal recording failed:", err));
         }
         const appeared = summary.radarChanges.filter((c) => c.action === "appeared");
-        if (appeared.length > 0) {
+        if (appeared.length > 0 && adminRadarDiscordEnabled()) {
           opsAlert({
             title: `Shared admin scan — ${appeared.length} new radar signal(s)`,
             message: appeared.map((a) => `${a.symbol} (${a.permission} @ ${(a.confidence * 100).toFixed(1)}%)`).join("\n"),

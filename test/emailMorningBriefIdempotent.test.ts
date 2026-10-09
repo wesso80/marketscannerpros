@@ -26,6 +26,7 @@ const req = (body: unknown) => new Request('http://x/api/jobs/email-morning-brie
 
 beforeEach(() => {
   vi.clearAllMocks();
+  delete process.env.ADMIN_EQUITY_EMAILS_DISABLED;
   m.cron.mockReturnValue(true);
   m.already.mockResolvedValue(false);
   m.build.mockImplementation(async (o: { market: string }) => ({ briefId: `2026-09-27:${o.market}:15m`, market: o.market, deskState: 'WAIT', topPlays: [] }));

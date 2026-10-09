@@ -1,5 +1,5 @@
 import { consumeApiQuota, GLOBAL_API_WINDOW_MS } from '@/lib/apiQuota';
-import { discoveryOnlyAction, ADMIN_DISCOVERY_ONLY_MESSAGE } from './lib/admin/discoveryOnly';
+import { discoveryOnlyAction, discoveryOnlySkipBody, type DiscoveryJobHint } from './lib/admin/discoveryOnly';
 import { pausedAdminRequest, ADMIN_EQUITIES_PAUSED_MESSAGE } from './lib/admin/adminEquities';
 import { researchReadGrant, RESEARCH_READ_HEADER } from './lib/admin/researchReadKey';
 import { NextResponse } from 'next/server';
@@ -154,6 +154,28 @@ function isAdminMutationPath(pathname: string): boolean {
   return pathname.startsWith('/api/admin/') || pathname.startsWith('/api/operator/') || pathname === '/api/actions/execute';
 }
 
+/** Equity radar and equity edge persist read market/watchlist from the query or JSON body. Other paths do not. */
+async function discoveryJobHint(req: NextRequest): Promise<DiscoveryJobHint | undefined> {
+  const path = req.nextUrl.pathname.replace(/\/+$/, '') || '/';
+  if (path !== '/api/operator/engine/auto-scan' && path !== '/api/cron/persist-edge-packets') return undefined;
+  const hint: DiscoveryJobHint = {};
+  const apply = (source: DiscoveryJobHint) => {
+    if (typeof source.market === 'string') hint.market = source.market;
+    if (typeof source.asset === 'string') hint.asset = source.asset;
+    if (typeof source.watchlist === 'string') hint.watchlist = source.watchlist;
+  };
+  apply({
+    market: req.nextUrl.searchParams.get('market') ?? undefined,
+    asset: req.nextUrl.searchParams.get('asset') ?? undefined,
+    watchlist: req.nextUrl.searchParams.get('watchlist') ?? undefined,
+  });
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    const body = await req.clone().json().catch(() => null);
+    if (body && typeof body === 'object' && !Array.isArray(body)) apply(body);
+  }
+  return hint;
+}
+
 /**
  * Browser requests that change admin/operator state must come from this site. A request with an Origin header must
  * exactly match this request's origin or the public HTTPS site (apex or www); without Origin, a browser's
@@ -175,11 +197,11 @@ function crossSiteAdminMutation(req: NextRequest): boolean {
 export async function middleware(req: NextRequest) {
   // ── Global rate limit on API routes ──
   const { pathname } = req.nextUrl;
-  const discoveryAction = discoveryOnlyAction(pathname, req.method);
-  const discoveryPausedJson = () => NextResponse.json({
-    ok: discoveryAction === 'skip_job', paused: true, skipped: true, started: false,
-    reason: 'admin_discovery_only', error: ADMIN_DISCOVERY_ONLY_MESSAGE,
-  }, { status: discoveryAction === 'skip_job' ? 200 : 503, headers: { 'Cache-Control': 'no-store' } });
+  const discoveryAction = discoveryOnlyAction(pathname, req.method, await discoveryJobHint(req));
+  const discoveryPausedJson = () => NextResponse.json(
+    discoveryOnlySkipBody(discoveryAction === 'skip_job'),
+    { status: discoveryAction === 'skip_job' ? 200 : 503, headers: { 'Cache-Control': 'no-store' } },
+  );
   // Admin pages and /api/admin/** answer "paused" only AFTER the admin session check below, so a signed-out
   // visitor never learns the pause state (no-public-leakage). Cron jobs and the operator engine authenticate
   // with secrets in their handlers, not sessions, so they keep this early skipped/paused answer.
