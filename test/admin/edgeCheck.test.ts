@@ -70,6 +70,10 @@ describe('GET /api/admin/edge-check', () => {
     expect(m.params[0]).toEqual([LABELLER_FIX_AT, 30]);
     expect(body).toMatchObject({ ok: true, by: 'regime', days: 30 });
     expect(body.definition.costs).toMatch(/Assumed 0.2% round trip/);
+    expect(body.definition.split).toMatch(/equal timestamps stay together/);
+    expect(body.definition.split).toMatch(/not a held-out test/);
+    expect(body.definition.intervals).toMatch(/assume independent observations/);
+    expect(body.definition.caveats.join(' ')).toMatch(/no embargo/);
     expect(body.definition.caveats.join(' ')).toMatch(/Not a recommendation/);
     expect(body.truth.source).toMatch(/ai_signal_log/);
   });
