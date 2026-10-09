@@ -168,7 +168,6 @@ export default function LiquiditySweepPage() {
                 <details><summary className="cursor-pointer py-1">Level details</summary>
                   <div className="space-y-1 py-2">{r.levels.map((lev, i) => <p key={i}>{levelName(lev.label)} · {sweepPrice(lev.level)}</p>)}
                     {Number.isFinite(r.atrPct) && <p>Measured range: {r.atrPct.toFixed(1)}%</p>}
-                    {Number.isFinite(r.confidence) && <p>Pattern reading: {r.confidence}</p>}
                     <p>{r.levelCount} recorded levels</p>
                   </div>
                 </details>

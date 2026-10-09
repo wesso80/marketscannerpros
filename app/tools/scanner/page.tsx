@@ -778,7 +778,7 @@ function ScannerContent() {
         return {
           rank: idx + 1, symbol: pick.symbol, displaySymbol: proDisplaySymbol(pick.symbol, proScanResults?.type ?? proAsset), direction: dir, confidence: conf, matchConfidence: matchConf, quality: qual,
           scorePermission: noSetup ? 'NO SETUP' : primaryPermission, factorCoverage: pick.canonical?.coverage ?? pick.compositeV2?.coverage, canonical: pick.canonical,
-          scoreExplanation: pick.compositeV2?.version ? `${pick.compositeV2.version}: coverage-adjusted magnitude ${(pick.compositeV2.coverageAdjustedMagnitude ?? pick.compositeV2.conservativeMagnitude).toFixed(2)} × ${pick.compositeV2.appliedMultiplier.toFixed(4)} freshness/liquidity, rounded, × ${pick.compositeV2.gateMultiplier} gate, capped at ${pick.compositeV2.trustCap} = ${conf}/100. Factor coverage ${Math.round(pick.compositeV2.coverage * 100)}%. Research score, not a probability.` : undefined,
+          scoreExplanation: undefined,
           strategy: strat, rsi: pickRsi, adx: adxVal, atrPct, tfAlignment: tfA,
           volume24h: pick.volume ?? ind.volume, volumeUnit: (proScanResults?.type ?? proAsset) === 'crypto' ? 'usd' : 'shares', price: priceVal, permission: perm,
           squeeze: ind.squeeze ?? false, squeezeStrength: ind.squeezeStrength ?? 0,
