@@ -43,6 +43,23 @@ describe("isWinningOutcome", () => {
 });
 
 describe("computeCalibration", () => {
+  it("excludes non-verdicts from the hit-rate denominator while counting their signals", () => {
+    const rows = ["correct", "wrong", "neutral", "expired", "pending", null].map(outcome => ({ score: 80, outcome }));
+    const r = computeCalibration(rows);
+    expect(r.buckets[4].cases).toBe(6);
+    expect(r.totalLabelled).toBe(2);
+    expect(r.overallHitRate).toBe(50);
+  });
+  it("does not turn missing scores into zero, but includes a recorded zero", () => {
+    const r = computeCalibration([
+      { score: null, outcome: "correct" }, { score: undefined, outcome: "correct" },
+      { score: "", outcome: "correct" }, { score: 0, outcome: "wrong" },
+    ]);
+    expect(r.buckets[0].cases).toBe(1);
+    expect(r.buckets[0].avgScore).toBe(0);
+    expect(r.totalLabelled).toBe(1);
+    expect(r.overallHitRate).toBe(0);
+  });
   it("buckets by score and computes hit rate from labelled rows only", () => {
     const r = computeCalibration([
       { score: 80, outcome: "correct" }, { score: 85, outcome: "wrong" }, { score: 90, outcome: null }, { score: 10, outcome: "pending" },
