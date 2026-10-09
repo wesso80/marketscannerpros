@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { OverlapInterval } from '@/lib/admin/overlapUncertainty';
 import TruthStampLine from "@/components/admin/shared/TruthStampLine";
 
 type Verdict = "insufficient_sample" | "no_edge_after_costs" | "inconsistent" | "positive_after_costs";
@@ -9,6 +10,7 @@ interface Group {
   group: string; n: number; wins: number; losses: number; neutral: number;
   hitRate: number | null; hitRateLow: number | null; hitRateHigh: number | null;
   avgMove: number | null; avgMoveAfterCost: number | null; moveLow: number | null; moveHigh: number | null;
+  overlap?: { daily: OverlapInterval; weekly: OverlapInterval };
   earlier: Half; later: Half; verdict: Verdict;
 }
 interface Response {
@@ -37,6 +39,14 @@ const VERDICT: Record<Verdict, { label: string; color: string }> = {
 const pct = (n: number | null | undefined) => (n === null || n === undefined ? "—" : `${n > 0 ? "+" : ""}${n}%`);
 const day = (s: string | null) => (s ? new Date(s).toLocaleString() : "—");
 
+function Overlap({ value }: { value: OverlapInterval }) {
+  return <div style={{ marginBottom: 8 }}>
+    {value.blockDays === 1 ? 'UTC day' : 'Seven-day'}: {value.blocks} blocks · {value.signals} signals
+    <div>{value.status === 'available' ? `${pct(value.low === null ? null : Math.round(value.low * 100) / 100)} to ${pct(value.high === null ? null : Math.round(value.high * 100) / 100)} (approx. 95%)` : 'Interval unavailable: fewer than 30 blocks'}</div>
+    <div style={{fontSize:11}}>Largest block: {value.largestBlock} signals{value.excluded > 0 ? ` · ${value.excluded} excluded` : ''}</div>
+  </div>;
+}
+
 function Row({ g }: { g: Group }) {
   const v = VERDICT[g.verdict];
   return (
@@ -55,7 +65,8 @@ function Row({ g }: { g: Group }) {
         {pct(g.earlier.avgMoveAfterCost)} → {pct(g.later.avgMoveAfterCost)}
         <div style={{ color: "#64748B", fontSize: 11 }}>Earlier: {g.earlier.n} · {day(g.earlier.from)} to {day(g.earlier.to)}<br />Later: {g.later.n} · {day(g.later.from)} to {day(g.later.to)}</div>
       </td>
-      <td data-verdict={g.verdict} style={{ padding: "6px 8px", color: v.color, fontWeight: 600 }}>{v.label}</td>
+      <td style={{ padding: "6px 8px", color: "#CBD5E1" }}>{g.overlap ? <><Overlap value={g.overlap.daily}/><Overlap value={g.overlap.weekly}/></> : "Not available"}</td>
+      <td data-verdict={g.verdict} style={{ padding: "6px 8px", color: "#94A3B8", fontWeight: 600 }}>Nominal: {v.label}</td>
     </tr>
   );
 }
@@ -107,10 +118,11 @@ export default function EdgeCheckPage() {
                 <tr style={{ color: "#94A3B8", textAlign: "left" }}>
                   <th style={{ padding: "6px 8px" }}>Group</th>
                   <th style={{ padding: "6px 8px", textAlign: "right" }}>Signals</th>
-                  <th style={{ padding: "6px 8px", textAlign: "right" }}>Hit rate (95%)</th>
-                  <th style={{ padding: "6px 8px", textAlign: "right" }}>Avg 24h move after cost (95%)</th>
+                  <th style={{ padding: "6px 8px", textAlign: "right" }}>Hit rate (nominal 95%)</th>
+                  <th style={{ padding: "6px 8px", textAlign: "right" }}>Avg 24h move after cost (nominal 95%)</th>
                   <th style={{ padding: "6px 8px", textAlign: "right" }}>Earlier → later period</th>
-                  <th style={{ padding: "6px 8px" }}>Evidence</th>
+                  <th style={{ padding: "6px 8px" }}>Overlap sensitivity</th>
+                  <th style={{ padding: "6px 8px" }}>Nominal evidence</th>
                 </tr>
               </thead>
               <tbody>

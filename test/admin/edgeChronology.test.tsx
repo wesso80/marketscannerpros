@@ -43,5 +43,8 @@ describe('chronological evidence', () => {
   for(const d of [g.earlier.from,g.earlier.to,g.later.from,g.later.to]) expect(cell.textContent).toContain(new Date(d!).toLocaleString());
   expect(screen.getByText(/not a held-out test/)).toBeTruthy();
   expect(screen.getByText(/Nominal intervals/)).toBeTruthy();
+  expect(screen.getByText('Overlap sensitivity')).toBeTruthy();
+  expect(screen.getAllByText('Interval unavailable: fewer than 30 blocks')).toHaveLength(2);
+  expect(screen.getByText(/Nominal: /)).toBeTruthy();
  });
 });
