@@ -44,6 +44,11 @@ describe('cross-site browser mutations are refused', () => {
     expect(await refused(await (await mw())(req('https://marketscannerpros.app/api/admin/kill-switch', 'POST', { 'sec-fetch-site': 'cross-site' })))).toBe(true);
   });
 
+  it('the right host with the wrong scheme or port is refused (exact origin)', async () => {
+    expect(await refused(await (await mw())(req('https://marketscannerpros.app/api/operator/focus/pin', 'POST', { origin: 'http://marketscannerpros.app' })))).toBe(true);
+    expect(await refused(await (await mw())(req('https://marketscannerpros.app/api/admin/kill-switch', 'POST', { origin: 'https://marketscannerpros.app:8443' })))).toBe(true);
+  });
+
   it('an arbitrary subdomain of the site is refused (no wildcard trust)', async () => {
     expect(await refused(await (await mw())(req('https://marketscannerpros.app/api/admin/kill-switch', 'POST', { origin: 'https://staging.marketscannerpros.app' })))).toBe(true);
   });

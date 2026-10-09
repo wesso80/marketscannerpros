@@ -138,9 +138,9 @@ setInterval(() => {
 
 // ─── Admin/operator mutation origin check ───
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-// Same trust as lib/admin/mutationOrigin.ts: the public site (apex and www) or the request's own host; no forwarded
-// headers and no wildcard subdomains.
-const TRUSTED_SITE_HOSTS = new Set(['marketscannerpros.app', 'www.marketscannerpros.app']);
+// Exact origins (scheme, host and port), so http:// or another port never matches the HTTPS site. The public site is
+// trusted on apex and www; the request's own origin covers localhost and Render previews. No wildcard subdomains.
+const TRUSTED_SITE_ORIGINS = new Set(['https://marketscannerpros.app', 'https://www.marketscannerpros.app']);
 
 function isAdminMutationPath(pathname: string): boolean {
   return pathname.startsWith('/api/admin/') || pathname.startsWith('/api/operator/') || pathname === '/api/actions/execute';
@@ -148,7 +148,8 @@ function isAdminMutationPath(pathname: string): boolean {
 
 /**
  * Browser requests that change admin/operator state must come from this site. A request with an Origin header must
- * name this host or the public site (apex or www); without Origin, a browser's Sec-Fetch-Site: cross-site is
+ * exactly match this request's origin or the public HTTPS site (apex or www); without Origin, a browser's
+ * Sec-Fetch-Site: cross-site is
  * refused. Server-to-server callers (cron, worker, scripts) send neither header and are unaffected; their
  * secret/session checks still apply in the route.
  */
@@ -156,10 +157,9 @@ function crossSiteAdminMutation(req: NextRequest): boolean {
   if (!MUTATING_METHODS.has(req.method) || !isAdminMutationPath(req.nextUrl.pathname)) return false;
   const origin = req.headers.get('origin');
   if (origin !== null) {
-    let host: string;
-    try { host = new URL(origin).host.toLowerCase(); } catch { return true; } // includes the literal "null"
-    const requestHost = (req.headers.get('host') || req.nextUrl.host).toLowerCase();
-    return !(host === requestHost || TRUSTED_SITE_HOSTS.has(host));
+    let normalized: string;
+    try { normalized = new URL(origin).origin.toLowerCase(); } catch { return true; } // includes the literal "null"
+    return !(normalized === req.nextUrl.origin.toLowerCase() || TRUSTED_SITE_ORIGINS.has(normalized));
   }
   return req.headers.get('sec-fetch-site') === 'cross-site';
 }
