@@ -99,7 +99,7 @@ async function handleLegacyPost(req: NextRequest) {
     const quota = publicAiScope() ? {allowed:true,usageCount:0,dailyLimit:0} : await checkTierQuota(session.workspaceId, tier);
     if (!quota.allowed) {
       const upgradeMsg = tier === 'free' 
-        ? 'Upgrade to Pro for 50/day with GPT-4.1.' 
+        ? 'Upgrade to Pro for 20 questions/day with GPT-4.1.' 
         : 'Limit resets at midnight UTC.';
       
       return NextResponse.json({ 

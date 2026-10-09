@@ -3,6 +3,7 @@ import AnalyticsLoader from "../components/AnalyticsLoader";
 import ErrorBoundary from "../components/ErrorBoundary";
 import OperatorHeartbeat from "../components/OperatorHeartbeat";
 import PresenceHeartbeat from "../components/PresenceHeartbeat";
+import { BRAND, TITLE_TEMPLATE } from "@/lib/brandTitle";
 import { validateEnv } from "@/lib/env";
 import { Suspense } from "react";
 import RouteChrome from "@/components/layout/RouteChrome";
@@ -20,8 +21,8 @@ if (typeof window === 'undefined') {
 
 export const metadata = { 
   title: {
-    default: "MarketScanner Pros - Educational Market Analysis",
-    template: "%s | MarketScanner Pros",
+    default: `${BRAND} - Educational Market Analysis`,
+    template: TITLE_TEMPLATE,
   },
   description: "Educational market analysis platform with structured scanners, AI research context, technical indicators, and real-time market alerts for stocks and crypto.",
   metadataBase: new URL('https://marketscannerpros.app'),
@@ -29,8 +30,8 @@ export const metadata = {
     type: 'website',
     locale: 'en_US',
     url: 'https://marketscannerpros.app',
-    siteName: 'MarketScanner Pros',
-    title: 'MarketScanner Pros - Educational Market Analysis',
+    siteName: BRAND,
+    title: `${BRAND} - Educational Market Analysis`,
     description: 'Educational market analysis platform with structured scanners, AI research context, technical indicators, and real-time market alerts for stocks and crypto.',
     images: [
       {
@@ -43,7 +44,7 @@ export const metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'MarketScanner Pros',
+    title: BRAND,
     description: 'AI-supported educational market analysis for stocks and crypto.',
   },
   robots: {

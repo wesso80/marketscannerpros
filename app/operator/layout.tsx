@@ -4,19 +4,19 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: 'Operator Dashboard | MarketScanner Pros',
+  title: 'Operator Dashboard',
   description:
-    'Advanced trading command center with real-time risk governance, position tracking, regime analysis, and AI-powered operator coaching for professional traders.',
+    'Operator workspace for reviewing risk limits, open positions, and regime context.',
   alternates: {
     canonical: '/operator',
   },
   openGraph: {
     type: 'website',
     url: 'https://marketscannerpros.app/operator',
-    title: 'Operator Dashboard | MarketScanner Pros',
+    title: 'Operator Dashboard | MarketScannerPros',
     description:
-      'Advanced trading command center with real-time risk governance, position tracking, regime analysis, and AI-powered operator coaching.',
-    siteName: 'MarketScanner Pros',
+      'Operator workspace for reviewing risk limits, open positions, and regime context.',
+    siteName: 'MarketScannerPros',
     images: [
       {
         url: '/scan-banner.png',
@@ -28,9 +28,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Operator Dashboard | MarketScanner Pros',
+    title: 'Operator Dashboard | MarketScannerPros',
     description:
-      'Advanced trading command center with real-time risk governance and AI-powered operator coaching.',
+      'Operator workspace for reviewing risk limits and regime context.',
     images: ['/scan-banner.png'],
   },
   robots: {

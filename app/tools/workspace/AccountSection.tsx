@@ -12,7 +12,8 @@ import { FREE_COPY } from '@/components/free/copy';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { Card, Badge, SectionHeader, ScoreBar } from '@/app/v2/_components/ui';
-import { useUserTier } from '@/lib/useUserTier';
+import { getAILimit, useUserTier } from '@/lib/useUserTier';
+import { NO_BILLING_ACCOUNT_MESSAGE } from '@/lib/billingPortal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -73,6 +74,7 @@ export default function AccountSection() {
   const [subTab, setSubTab] = useState<SubTab>('Overview');
   const [email, setEmail] = useState<string | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
+  const [billingNote, setBillingNote] = useState<string | null>(null);
 
   // Notification state
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>({
@@ -199,10 +201,12 @@ export default function AccountSection() {
 
   const openBillingPortal = async () => {
     setBillingLoading(true);
+    setBillingNote(null);
     try {
       const res = await fetch('/api/payments/portal', { method: 'POST', credentials: 'include' });
       const data = await res.json();
       if (data?.url) window.location.href = data.url;
+      else if (res.status === 404 && data?.error === 'no_billing_account') setBillingNote(NO_BILLING_ACCOUNT_MESSAGE);
       else alert(data?.error || 'Unable to open billing portal');
     } catch {
       alert('Failed to open billing portal.');
@@ -242,7 +246,7 @@ export default function AccountSection() {
 
   const currentTier = tierDisplay[normalizedTier];
   const isPaid = normalizedTier === 'pro' || normalizedTier === 'pro_trader';
-  const aiLimit = isPaid ? 50 : 10;
+  const aiLimit = getAILimit(isPaid ? 'pro' : 'free');
   const aiUsed = realUsage?.aiUsed ?? 0;
 
   const usage = [
@@ -252,7 +256,7 @@ export default function AccountSection() {
   ];
 
   const planFeatures = useMemo(() => {
-    if (isPaid) return ['Unlimited scanning + Golden Egg', 'Production Intelligence (Global M2, Liquidity Transmission, Fragility)', 'Backtesting, options and derivatives tools', 'Unlimited portfolio and trade journal', 'Alerts, exports, priority support'];
+    if (isPaid) return ['Unlimited Symbol reports', '20 AI questions a day', 'Macro liquidity research (Global M2, liquidity transmission, market fragility)', 'Historical backtesting (hypothetical, for learning)', 'Options and derivatives tools', 'Unlimited open portfolio positions and journal entries', 'Options research, exports, and stored M2 history'];
     return [FREE_COPY.pricing.scans, 'Watchlists, markets and macro dashboards', FREE_COPY.pricing.macro, FREE_COPY.pricing.journal, 'Educational content and platform guides'];
   }, [isPaid]);
 
@@ -301,13 +305,15 @@ export default function AccountSection() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
+            {normalizedTier !== 'free' ? (
             <button
               onClick={() => void openBillingPortal()}
-              disabled={billingLoading || normalizedTier === 'free'}
+              disabled={billingLoading}
               className="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/50 text-xs text-slate-300 hover:bg-slate-700/60 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               {billingLoading ? 'Opening...' : 'Manage Billing'}
             </button>
+            ) : null}
             {!isPaid && (
               <Link href="/pricing" className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/30 transition-colors">
                 Upgrade
@@ -321,6 +327,12 @@ export default function AccountSection() {
             </button>
           </div>
         </div>
+        {billingNote ? (
+          <p role="status" className="mt-3 text-xs text-slate-400">
+            {billingNote}
+            {normalizedTier === 'free' ? <> <Link href="/pricing" className="text-emerald-400 underline">See Pro pricing</Link>.</> : null}
+          </p>
+        ) : null}
       </Card>
 
       {/* Sub-tabs */}

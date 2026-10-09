@@ -12,6 +12,7 @@ import React from "react";
 import { publicDesignEnabled } from "@/lib/publicDesign";
 import ResearchPricing from "@/components/public-design/ResearchPricing";
 import { PLAN_PRICES } from "@/lib/planPrices";
+import { checkoutSignInPath, goTo, shouldResumeCheckout } from "@/lib/checkoutSignIn";
 
 type BillingCycle = "monthly" | "yearly";
 
@@ -32,16 +33,14 @@ type Plan = {
   benefits: { group: string; lines: string[] }[];
 };
 
-type FAQ = { q: string; a: string };
-
 export default function PricingPage() {
   const [cycle, setCycle] = React.useState<BillingCycle>("monthly");
-  const [openFaq, setOpenFaq] = React.useState<number | null>(0);
   const [loadingPlan, setLoadingPlan] = React.useState<PlanId | null>(null);
   const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
   const [referralCode, setReferralCode] = React.useState<string | null>(null);
-  const [userEmail, setUserEmail] = React.useState<string | null>(null);
   const [currentTier, setCurrentTier] = React.useState<string | null>(null);
+  const [signedIn, setSignedIn] = React.useState<boolean | null>(null);
+  const resumedCheckout = React.useRef(false);
 
   React.useEffect(() => {
     const refFromQuery = new URLSearchParams(window.location.search).get("ref");
@@ -66,13 +65,14 @@ export default function PricingPage() {
   }, [referralCode]);
 
   React.useEffect(() => {
-    fetch("/api/me")
+    fetch("/api/me", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (d?.email) setUserEmail(d.email);
-        if (d?.tier && (!publicDesignEnabled() || d.authenticated === true)) setCurrentTier(d.tier);
+        const authed = d?.authenticated === true;
+        setSignedIn(authed);
+        if (d?.tier && (!publicDesignEnabled() || authed)) setCurrentTier(d.tier);
       })
-      .catch(() => {});
+      .catch(() => setSignedIn(false));
   }, []);
 
   const [quotasEnabled, setQuotasEnabled] = React.useState<boolean | null>(null);
@@ -87,9 +87,21 @@ export default function PricingPage() {
   const isPaidUser = currentTier === "pro" || currentTier === "pro_trader";
   const markedPlan = currentTier === "free" || isPaidUser;
 
-  const handleCheckout = async (planId: PlanId) => {
+  const handleCheckout = async (planId: PlanId, billing: BillingCycle = cycle) => {
     if (planId === "free") {
       window.location.href = publicDesignEnabled() ? (currentTier ? "/tools/command-center" : "/auth?next=%2Ftools%2Fcommand-center") : "/auth";
+      return;
+    }
+
+    let authed = signedIn;
+    if (authed == null) {
+      const me = await fetch("/api/me", { credentials: "include" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      authed = me?.authenticated === true;
+      setSignedIn(authed);
+      if (me?.tier && authed) setCurrentTier(me.tier);
+    }
+    if (!authed) {
+      goTo(checkoutSignInPath(billing));
       return;
     }
 
@@ -100,24 +112,41 @@ export default function PricingPage() {
       const res = await fetch("/api/payments/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           plan: planId,
-          billing: cycle,
+          billing,
           referralCode,
-          email: userEmail,
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        setLoadingPlan(null);
+        goTo(checkoutSignInPath(billing));
+        return;
+      }
       if (!res.ok || !data?.url) {
         throw new Error(data?.error || "Failed to start checkout");
       }
-      window.location.href = data.url;
+      goTo(data.url);
     } catch (error) {
       setCheckoutError(error instanceof Error ? error.message : "Failed to start checkout");
       setLoadingPlan(null);
     }
   };
+
+  React.useEffect(() => {
+    if (resumedCheckout.current || signedIn !== true || isPaidUser) return;
+    const billing = shouldResumeCheckout(window.location.search, true, false);
+    if (!billing) return;
+    if (billing !== cycle) {
+      setCycle(billing);
+      return;
+    }
+    resumedCheckout.current = true;
+    void handleCheckout("pro", billing);
+  }, [signedIn, isPaidUser, cycle]);
 
   const plans: Plan[] = [
     {
@@ -165,16 +194,16 @@ export default function PricingPage() {
         {
           group: "Scan",
           lines: [
-            "Unlimited Market Scanner with full filters, and up to 100 active alerts",
-            "Golden Egg symbol validation workflow",
+            "Unlimited Symbol reports",
+            "20 AI questions a day",
           ],
         },
         {
           group: "Validate",
           lines: [
             "Live with Pro: Global M2, Liquidity Transmission and Market Fragility",
-            "Deep Analysis, Options Terminal, Options Confluence",
-            "Time Confluence Scanner and Volatility Engine",
+            "Options research and the options terminal",
+            "Volatility readings",
           ],
         },
         {
@@ -182,7 +211,7 @@ export default function PricingPage() {
           lines: [
             "Every research and intelligence dashboard, unrestricted",
             "Crypto Command Centre + derivatives tools",
-            "Priority MSP AI",
+            "MSP Copilot: 20 questions a day",
           ],
         },
         {
@@ -194,33 +223,10 @@ export default function PricingPage() {
           lines: [
             "Unlimited portfolio and trade journal with advanced analytics",
             "Alerts, exports and workspace premium features",
-            "Priority support",
+            "Alerts and exports",
           ],
         },
       ],
-    },
-  ];
-
-  const faqs: FAQ[] = [
-    {
-      q: "What does Free include?",
-      a: Object.values(FREE_COPY.pricing).join(" · "),
-    },
-    {
-      q: "What does Pro include?",
-      a: "Pro unlocks the full platform: unlimited scanning, Golden Egg, the live Intelligence modules (Global M2, Liquidity Transmission and Market Fragility), research and workspace premium features, portfolio/journal advanced analytics, backtesting, options and derivatives tools, alerts, exports and priority support.",
-    },
-    {
-      q: "Can I cancel anytime?",
-      a: "Yes. You can cancel from your account settings. Access remains until the end of your billing period.",
-    },
-    {
-      q: "Do you offer refunds?",
-      a: "We offer a 7-day money-back guarantee. If you're unhappy, contact support within 7 days of purchase for a full refund.",
-    },
-    {
-      q: "Do you provide financial advice?",
-      a: "No. MarketScannerPros is an educational and informational tool. Nothing here is investment advice. Always manage risk and consult a licensed professional if needed.",
     },
   ];
 
@@ -314,14 +320,18 @@ export default function PricingPage() {
         <section className="mt-14">
           <h2 className="text-center text-lg font-semibold">Frequently asked questions</h2>
           <div className="mx-auto mt-6 max-w-3xl space-y-3">
-            {faqs.map((f, idx) => (
-              <FaqItem
-                key={idx}
-                faq={f}
-                open={openFaq === idx}
-                onToggle={() => setOpenFaq((v) => (v === idx ? null : idx))}
-              />
-            ))}
+            <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-4">
+              <div className="text-sm font-semibold">Can I cancel anytime?</div>
+              <p className="mt-2 text-sm text-white/70">Yes. Access lasts until the end of the current billing period. Cancel from Account &gt; Manage Billing.</p>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-4">
+              <div className="text-sm font-semibold">Do you offer refunds?</div>
+              <p className="mt-2 text-sm text-white/70">If you are not satisfied with your subscription, you may request a full refund within 7 days of your first payment. This guarantee applies to first-time subscribers only.</p>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-4">
+              <div className="text-sm font-semibold">Do you provide financial advice?</div>
+              <p className="mt-2 text-sm text-white/70">No. General information only, not financial advice.</p>
+            </div>
           </div>
         </section>
 
@@ -464,24 +474,5 @@ function BillingSwitch({ cycle, onToggle }: { cycle: BillingCycle; onToggle: () 
         ].join(" ")}
       />
     </button>
-  );
-}
-
-function FaqItem({ faq, open, onToggle }: { faq: FAQ; open: boolean; onToggle: () => void }) {
-  return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.04]">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left"
-      >
-        <div className="text-sm font-semibold">{faq.q}</div>
-        <span className="text-xs text-white/60" aria-hidden="true">{open ? "—" : "+"}</span>
-      </button>
-      {open ? (
-        <div className="border-t border-white/10 px-4 py-4 text-sm text-white/70">{faq.a}</div>
-      ) : null}
-    </div>
   );
 }

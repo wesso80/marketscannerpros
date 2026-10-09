@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: 'Dashboard with My Pages and Macro. Overview is the market home.',
   robots: { index: false, follow: false },
   openGraph: {
-    title: 'Dashboard | MarketScanner Pros',
+    title: 'Dashboard | MarketScannerPros',
     description: 'Dashboard with My Pages and Macro. Overview is the market home.',
     url: 'https://marketscannerpros.app/tools/dashboard',
     type: 'website',
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Dashboard | MarketScanner Pros',
+    title: 'Dashboard | MarketScannerPros',
     description: 'Dashboard with My Pages and Macro. Overview is the market home.',
     images: ['/scan-banner.png'],
   },

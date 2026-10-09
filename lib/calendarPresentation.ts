@@ -57,3 +57,31 @@ export function calendarDataWarning(events: CalendarObservation[] | undefined, n
   ].filter(Boolean);
   return parts.length ? `Calendar: ${parts.join('; ')}` : null;
 }
+
+const RAW_STATUS = /^(LIVE|DELAYED|STALE|MISSING|UNCONFIRMED)$/;
+
+/** Plain label for a release row. Does not invent a time, consensus, or actual. */
+export function releaseReadingLabel(event: { dataStatus?: string; statusDetail?: string; timingConfirmed?: boolean }): string {
+  const detail = event.statusDetail?.trim();
+  const plain = detail && !RAW_STATUS.test(detail) && !/\bMISSING\b/.test(detail) ? detail : null;
+  if (event.timingConfirmed === false || event.dataStatus === 'UNCONFIRMED') {
+    return plain ?? 'Release time not confirmed yet.';
+  }
+  if (event.dataStatus === 'MISSING') return plain ?? 'Consensus figure not available yet.';
+  if (event.dataStatus === 'STALE') return 'Saved reading may be out of date.';
+  if (event.dataStatus === 'DELAYED') return 'Released figure not available yet.';
+  if (event.dataStatus === 'LIVE') return 'Released figure available.';
+  return 'Data status not supplied.';
+}
+
+/** Public overview note. Separate from calendarDataWarning, which other surfaces still use. */
+export function calendarTimingNote(events: CalendarObservation[] | undefined, nowMs = Date.now()): string | null {
+  if (!events?.length) return null;
+  const h = calendarHealth(events, nowMs);
+  const counted = (count: number, noun: string, rest: string) => `${count} of ${h.total} ${noun} ${count === 1 ? 'is' : 'are'} ${rest}`;
+  const parts = [
+    h.timingUnconfirmed ? counted(h.timingUnconfirmed, 'release times', 'not confirmed yet') : null,
+    h.dataProblems ? counted(h.dataProblems, 'released readings', 'missing or out of date') : null,
+  ].filter(Boolean);
+  return parts.length ? `${parts.join('. ')}.` : null;
+}

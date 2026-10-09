@@ -24,6 +24,11 @@ it.each(['pro','pro_trader','free'])('uses existing limits and closed folds for 
  expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);
  expect(container.querySelectorAll('details[open]')).toHaveLength(0);
  expect(Boolean(screen.queryByText('Unlock More'))).toBe(!paid);
+ if (paid) expect(screen.getByRole('button', { name: 'Manage Billing' })).toBeTruthy();
+ else {
+  expect(screen.queryByRole('button', { name: 'Manage Billing' })).toBeNull();
+  expect(screen.getByRole('link', { name: 'Upgrade Plan' }).getAttribute('href')).toBe('/pricing');
+ }
  expect(screen.getByText('Request Data Deletion').closest('details')?.querySelector('summary')?.textContent).toContain('Danger zone');
  expect(state.requests.every(method=>method==='GET')).toBe(true);
 });

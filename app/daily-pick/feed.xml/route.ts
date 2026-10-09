@@ -79,7 +79,7 @@ export async function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>MarketScanner Pros — Daily scan observations</title>
+    <title>MarketScannerPros — Daily scan observations</title>
     <link>${SITE}/daily-pick</link>
     <atom:link href="${SITE}/daily-pick/feed.xml" rel="self" type="application/rss+xml" />
     <description>Symbols stored by the MarketScanner Pros daily scan, with measured price and session change, listed A–Z for each day. Not ratings, rankings or recommendations. Educational research only — not investment advice.</description>

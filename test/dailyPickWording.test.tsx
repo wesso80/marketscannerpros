@@ -56,7 +56,7 @@ it('translates permission into reader labels and keeps the engine line for the f
   expect(readerVerdict(watch)).toBe('Checks still open');
   expect(readerVerdict(blocked)).toBe('No qualifying setup');
   expect(readerVerdict(passed)).toBe('Checks passed');
-  expect(readerVerdict(null)).toBe('Verdict not available right now');
+  expect(readerVerdict(null)).toBe('Reading not available right now');
   expect(engineRecord(watch)).toBe('WATCH · A · Pullback · factors only');
   expect(engineRecord(watch)).toBe(canonicalLabel(watch));
   expect(foldedEngineDetail(watch)).toBe('Engine code WATCH · grade A · setup category Pullback · factors only');

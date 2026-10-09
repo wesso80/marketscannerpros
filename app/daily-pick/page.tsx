@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const { data, unavailable } = await latestPickState();
   const dateStr = data?.scan_date ?? new Date().toISOString().slice(0, 10);
   const count = data?.picks.length ?? 0;
-  const title = unavailable ? 'Daily scan unavailable · MarketScanner Pros' : `Daily scan observations ${dateStr} · MarketScanner Pros`;
+  const title = unavailable ? 'Daily scan unavailable · MarketScannerPros' : `Daily scan observations ${dateStr} · MarketScannerPros`;
   const asOf = data?.pricesAsOfNote ? ` ${data.pricesAsOfNote}` : '';
   const description = `${count ? `${count} stocks and crypto` : 'Symbols'} stored by the daily scan for the ${formatSessionDate(dateStr)} US session, listed A–Z with measured price, session change, float and short interest.${asOf} Educational snapshots, not ratings or recommendations.`;
   const url = 'https://marketscannerpros.app/daily-pick';
@@ -34,7 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
       canonical: url,
       types: {
         'application/rss+xml': [
-          { url: `${url}/feed.xml`, title: 'MarketScanner Pros — Daily scan RSS' },
+          { url: `${url}/feed.xml`, title: 'MarketScannerPros — Daily scan RSS' },
         ],
       },
     },

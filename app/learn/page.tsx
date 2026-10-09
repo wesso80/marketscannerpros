@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { publicDesignEnabled } from '@/lib/publicDesign';
 import styles from '@/components/public-design/PublicDesign.module.css';
 
-export const metadata={title:'Learning | MarketScannerPros',description:'Understand market measurements, observation dates and the limits of research evidence.'};
+export const metadata={title:'Learning',description:'Understand market measurements, observation dates and the limits of research evidence.'};
 const lessons=[
   {title:'Correlation versus performance',body:'Performance describes a change over a period. Correlation describes how paired returns move together. Two assets can have a positive correlation and different total returns. Correlation does not establish causation or predict the next move.',href:'/tools/golden-egg',link:'Explore Symbol comparisons'},
   {title:'What Bollinger band width percentile measures',body:'BBWP places current band width within a historical sample. A low percentile describes relatively narrow bands within that sample. It does not, by itself, identify a future price direction. Look at the timeframe, lookback and available history before interpreting a reading.',href:'/tools/golden-egg',link:'Explore volatility evidence'},

@@ -192,6 +192,12 @@ export async function middleware(req: NextRequest) {
     }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
   }
 
+  // The passphrase form must load before an admin session exists. The admin-login
+  // API check is unchanged. Every other /admin page still requires a session.
+  if (pathname === '/admin/login' || pathname === '/admin/login/') {
+    return withNoIndexHeaders(NextResponse.next());
+  }
+
   if (pathname === '/admin' || pathname.startsWith('/admin/')) {
     const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value);
     let appSessionIsAdmin = false;

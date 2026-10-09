@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { TITLE_TEMPLATE } from '@/lib/brandTitle';
 import ToolsLayoutClient from './ToolsLayoutClient';
 
 export const dynamic = 'force-dynamic';
@@ -6,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: {
     default: 'All tools',
-    template: '%s | MarketScanner Pros',
+    template: TITLE_TEMPLATE,
   },
   description:
     'The MSP market research workflow: scan, validate, test, journal, monitor alerts, and review macro context. Educational tools only — no advice or execution.',
@@ -16,10 +17,10 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     url: 'https://marketscannerpros.app/tools',
-    title: 'All tools | MarketScanner Pros',
+    title: 'All tools | MarketScannerPros',
     description:
       'Use the guided research sequence: find scenarios, validate evidence, test safely, track outcomes, and open specialist tools only when needed.',
-    siteName: 'MarketScanner Pros',
+    siteName: 'MarketScannerPros',
     images: [
       {
         url: '/scan-banner.png',
@@ -31,7 +32,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'All tools | MarketScanner Pros',
+    title: 'All tools | MarketScannerPros',
     description:
       'Use the guided research sequence: find scenarios, validate evidence, test safely, and track outcomes.',
     images: ['/scan-banner.png'],

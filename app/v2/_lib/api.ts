@@ -260,6 +260,7 @@ export interface EconomicEvent {
   releaseTimeUtc?: string;
   releaseTimeLocal?: string;
   dataStatus?: 'LIVE' | 'DELAYED' | 'STALE' | 'MISSING' | 'UNCONFIRMED';
+  statusDetail?: string;
   timingConfirmed?: boolean;
   display?: { actual: string; previous: string; consensus: string; surprise: string };
 }

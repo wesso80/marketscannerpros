@@ -6,8 +6,8 @@ import HomePreviewStrip from './HomePreviewStrip';
 import { useUserTier } from '@/lib/useUserTier';
 
 const workflowSteps = [
-  { step: '01', href: '/tools/scanner', title: 'Scanner', detail: 'Find ranked market scenarios across equities, crypto, and options context.' },
-  { step: '02', href: '/tools/golden-egg', title: 'Symbol', detail: 'Golden Egg, our Symbol validation workflow: evidence, data quality, reference zones, and invalidation context.' },
+  { step: '01', href: '/tools/scanner', title: 'Scanner', detail: 'Review market observations across equities, crypto, and options context.' },
+  { step: '02', href: '/tools/golden-egg', title: 'Symbol', detail: 'One symbol at a time: the evidence on the page, data quality, reference zones, and what would make the reading invalid.' },
   { step: '03', href: '/tools/workspace?tab=backtest', title: 'Backtest', detail: 'Run historical paper simulations with assumptions, sample quality, and limitations visible.' },
   { step: '04', href: '/tools/workspace', title: 'Track', detail: 'Save research, track journal outcomes, watchlists, alerts, and review loops.' },
 ];

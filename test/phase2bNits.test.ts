@@ -18,7 +18,7 @@ describe('Phase 2B review nits', () => {
 
   it('names the dashboard share cards Dashboard and Overview', () => {
     const layout = readFileSync('app/tools/dashboard/layout.tsx', 'utf8');
-    expect(layout).toContain("title: 'Dashboard | MarketScanner Pros'");
+    expect(layout).toContain("title: 'Dashboard | MarketScannerPros'");
     expect(layout).toContain('Overview is the market home.');
     expect(layout).not.toMatch(/Research Dashboard|Command Center/);
   });

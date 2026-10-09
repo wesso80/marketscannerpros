@@ -1,0 +1,76 @@
+// @vitest-environment jsdom
+import React from 'react';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+
+const goTo = vi.hoisted(() => vi.fn());
+const me = vi.hoisted(() => ({ authenticated: false, tier: null as string | null }));
+
+vi.mock('@/lib/checkoutSignIn', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/checkoutSignIn')>('@/lib/checkoutSignIn');
+  return { ...actual, goTo };
+});
+
+import PricingPage from '@/app/pricing/page';
+
+beforeEach(() => {
+  vi.stubGlobal('React', React);
+  me.authenticated = false;
+  me.tier = null;
+  window.history.replaceState(null, '', '/pricing');
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    const path = String(url);
+    if (path.includes('/api/me')) return { ok: true, status: 200, json: async () => ({ ...me, email: 'reader@example.test' }) };
+    if (path.includes('/api/payments/checkout')) {
+      return { ok: true, status: 200, json: async () => ({ url: 'https://checkout.stripe.com/c/pay/cs_test' }) };
+    }
+    return { ok: true, status: 200, json: async () => ({ enabled: true }) };
+  }));
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  goTo.mockClear();
+});
+
+it('sends a signed-out Pro click to sign-in with a validated return path', async () => {
+  render(<PricingPage />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Continue to Pro checkout' }));
+  await waitFor(() => expect(goTo).toHaveBeenCalledWith('/auth?next=' + encodeURIComponent('/pricing?billing=monthly&plan=pro')));
+  expect(vi.mocked(fetch).mock.calls.some((call) => String(call[0]).includes('/api/payments/checkout'))).toBe(false);
+});
+
+it('keeps the chosen annual plan in the sign-in return path', async () => {
+  render(<PricingPage />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Annual' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Continue to Pro checkout' }));
+  await waitFor(() => expect(goTo).toHaveBeenCalledWith('/auth?next=' + encodeURIComponent('/pricing?billing=yearly&plan=pro')));
+});
+
+it('starts checkout after sign-in when the return path names Pro', async () => {
+  me.authenticated = true;
+  me.tier = 'free';
+  window.history.replaceState(null, '', '/pricing?billing=yearly&plan=pro');
+  render(<PricingPage />);
+  await waitFor(() => expect(goTo).toHaveBeenCalledWith('https://checkout.stripe.com/c/pay/cs_test'));
+  const checkoutCall = vi.mocked(fetch).mock.calls.find((call) => String(call[0]).includes('/api/payments/checkout'));
+  expect(checkoutCall?.[1]).toEqual(expect.objectContaining({
+    method: 'POST',
+    credentials: 'include',
+    body: JSON.stringify({ plan: 'pro', billing: 'yearly', referralCode: null }),
+  }));
+});
+
+it('sends a signed-in visitor back to sign-in when checkout returns 401', async () => {
+  me.authenticated = true;
+  me.tier = 'free';
+  vi.mocked(fetch).mockImplementation(async (url: string) => {
+    if (String(url).includes('/api/payments/checkout')) return { ok: false, status: 401, json: async () => ({ error: 'Sign in required' }) };
+    if (String(url).includes('/api/me')) return { ok: true, status: 200, json: async () => ({ ...me, email: 'reader@example.test' }) };
+    return { ok: true, status: 200, json: async () => ({ enabled: true }) };
+  });
+  render(<PricingPage />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Continue to Pro checkout' }));
+  await waitFor(() => expect(goTo).toHaveBeenCalledWith('/auth?next=' + encodeURIComponent('/pricing?billing=monthly&plan=pro')));
+});

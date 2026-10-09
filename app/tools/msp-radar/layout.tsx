@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Daily Radar",
   description:
-    "Once-per-session market intelligence: regime, ranked research candidates, pre-move setups, lifecycle changes, and rotation — for paid MarketScannerPros members.",
+    "Once-per-session market observations: regime, stored research candidates, lifecycle changes, and rotation — for paid MarketScannerPros members.",
   robots: { index: false, follow: false },
 };
 

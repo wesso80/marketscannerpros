@@ -16,6 +16,7 @@ import { apiLimiter, scannerLimiter, aiLimiter, loginLimiter, getClientIP, creat
 import { getSessionFromCookie, SessionPayload } from '@/lib/auth';
 import { q } from '@/lib/db';
 import { effectiveTierFromSubscription } from '@/lib/entitlements';
+import { chooseAccessSubscription, emailFromSessionCid } from '@/lib/subscriptionRow';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { registerMemoryGauge } from '@/lib/memory/debugLog';
 
@@ -46,14 +47,28 @@ export async function getVerifiedTier(session: SessionPayload): Promise<string> 
   }
 
   try {
-    const rows = await q<{ tier: string; status: string; current_period_end: Date | string | null }>(
-      `SELECT tier, status, current_period_end FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1`,
+    const columns = 'tier, status, current_period_end, stripe_customer_id, stripe_subscription_id, updated_at, created_at, id, email';
+    const workspaceRows = await q<{ tier: string; status: string; current_period_end: Date | string | null; email?: string | null; stripe_customer_id?: string | null; stripe_subscription_id?: string | null; updated_at?: Date | string | null; created_at?: Date | string | null; id?: number | null }>(
+      `SELECT ${columns} FROM user_subscriptions WHERE workspace_id = $1`,
       [wid],
     );
-    if (rows.length > 0) {
-      const { status } = rows[0];
+    const email = emailFromSessionCid(session.cid) ?? workspaceRows.find((row) => row.email)?.email ?? null;
+    const otherRows = email
+      ? await q<typeof workspaceRows[number]>(
+        `SELECT ${columns} FROM user_subscriptions WHERE LOWER(email) = LOWER($1)`,
+        [email],
+      )
+      : session.cid.startsWith('cus_')
+        ? await q<typeof workspaceRows[number]>(
+          `SELECT ${columns} FROM user_subscriptions WHERE stripe_customer_id = $1`,
+          [session.cid],
+        )
+        : [];
+    const chosen = chooseAccessSubscription(workspaceRows, otherRows, now);
+    if (chosen) {
+      const { status } = chosen;
       // Cancelled / past_due / unpaid, and trials past current_period_end, are free.
-      const effectiveTier = effectiveTierFromSubscription(rows[0], now);
+      const effectiveTier = effectiveTierFromSubscription(chosen, now);
       tierCache.set(wid, { tier: effectiveTier, status, ts: now });
       return effectiveTier;
     }

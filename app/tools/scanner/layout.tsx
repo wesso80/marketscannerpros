@@ -5,11 +5,11 @@ export const metadata: Metadata = {
   description:
     'Scan equities and crypto with technical indicators, regime context, data-quality warnings, and educational scenario analysis.',
   openGraph: {
-    title: 'Market Scanner | MarketScanner Pros',
+    title: 'Market Scanner | MarketScannerPros',
     description:
       'Scan equities and crypto with technical indicators, regime context, data-quality warnings, and educational scenario analysis.',
     url: 'https://marketscannerpros.app/tools/scanner',
-    siteName: 'MarketScanner Pros',
+    siteName: 'MarketScannerPros',
     images: [
       {
         url: '/scan-banner.png',
@@ -22,9 +22,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Market Scanner | MarketScanner Pros',
+    title: 'Market Scanner | MarketScannerPros',
     description:
-      'Ranked market scanner with regime context and educational scenario analysis.',
+      'Scan stocks and crypto and review multi-timeframe indicator readings with the data shown for each symbol.',
     images: ['/scan-banner.png'],
   },
   robots: {
