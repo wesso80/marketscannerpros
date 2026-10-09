@@ -3,6 +3,17 @@
 Date: 2026-10-09. Base: `admin-integration` @ `d98ef088`. Read-only: no code, prompt, config or data changed.
 Question: can a public AI route produce output that reads as personal trading advice or an instruction to act?
 
+## Correction (same day)
+
+The first version of this report treated `/api/msp-analyst` and the tool-enabled `/api/ai/copilot` handler as
+public. They are not: `/api/msp-analyst` is wrapped in `privateAnalystHandler` (`lib/ai/legacyAnalystAccess.ts`,
+admin/operator only, others get `403 LEGACY_ANALYST_PRIVATE`), and `/api/ai/copilot` sends public users to
+`lib/ai/publicCopilot.ts` (`routeCopilotRequest`), which has no V3 template, no trading tools and a strict JSON
+schema; the legacy handler with tools runs only for admins/operators. `generate_trade_plan` and
+`risk_position_size` are also refused for non-admins at execution (`/api/ai/actions`, `PUBLIC_TRADE_ACTION_RETIRED`).
+So F1, F2 and F5 affect private admin output only (still worth fixing under the private risk-language rule), and the
+copilot tools need no public fix. F3 and F4 are the public findings.
+
 ## Routes reviewed
 
 Public routes that call an LLM: `/api/msp-analyst`, `/api/ai/copilot`, `/api/ai/analyst-context`, `/api/ai/explain`,
@@ -15,14 +26,15 @@ Public routes that call an LLM: `/api/msp-analyst`, `/api/ai/copilot`, `/api/ai/
 | news-sentiment | `NEWS_BRIEF_SYSTEM_PROMPT` | `stripAdviceSentences` | OK |
 | earnings-calendar | `EARNINGS_SUMMARY_SYSTEM_PROMPT` | `sanitizeEarningsSummary` (advice + directional) | OK |
 | portfolio/analyze | descriptive-only prompt + banned list | falls back to deterministic text on any advice word | OK (see F6) |
-| msp-analyst | `PUBLIC_AI_SAFETY_GUARDRAILS` + data binding | `appendPublicAISafetyCorrection` (appends a note, does not strip) | **F1, F2, F5** |
-| ai/copilot | same as msp-analyst | same | **F1, F2** |
+| msp-analyst (admin/operator only) | `PUBLIC_AI_SAFETY_GUARDRAILS` + data binding | `appendPublicAISafetyCorrection` (appends a note, does not strip) | F1, F2, F5 (private) |
+| ai/copilot — public path | `PUBLIC_COPILOT_INSTRUCTIONS`, strict JSON schema, verified page evidence only | `validateCopilotAnswer` | OK |
+| ai/copilot — legacy handler (admin/operator only) | same as msp-analyst | same | F1, F2 (private) |
 | ai/analyst-context | own prompt, no shared guardrail | none | **F3** |
 | ai/explain | one-paragraph prompt | none; result cached and shared | **F4** |
 
 ## Findings (most severe first)
 
-**F1 — High. The shared "scenario" template asks for a trade ticket.**
+**F1 — Medium (private only; first rated High). The shared "scenario" template asks for a trade ticket.**
 `lib/prompts/arcaV3Engine.ts:159-203` (`TRADE_CONSTRUCTION_PROMPT`), included by `buildV3EnginePrompt` in analyst mode
 of `/api/msp-analyst` (route.ts:405) and `/api/ai/copilot` (route.ts:187). The template tells the model to output
 `Direction: LONG/SHORT`, `Entry:` with a specific price, `Target 1/2`, `R:R`, and `Size Context: % of capital … "2% risk"`,
@@ -31,7 +43,7 @@ and for options specific strikes, DTE and a strategy. The same file bans those l
 The output check (`findPublicAdviceViolations`) does not catch any of it: it matches "you should buy", "place a limit
 order", "allocate N% of your account", not `Entry:` / `Target 1:` / `2% risk`. Even when it matches, it only appends a
 correction under the text.
-*Suggested fix (public change — needs your approval):* rewrite the template with the already-agreed labels
+*Fix:* #572 (admin/operator output only). rewrite the template with the already-agreed labels
 (Level of Interest / Invalidation / Key Levels, no Direction LONG/SHORT, no size or % of capital, no specific strikes/DTE),
 add `Entry:`/`Target`/`Size Context`/`% of capital` patterns to the output check, and add a test that the composed
 analyst prompt contains none of the banned labels.
@@ -75,5 +87,4 @@ advice sentences server-side, and portfolio falls back to deterministic text on 
 
 ## Recommendation
 
-F1 first (highest exposure: analyst mode on the two main chat routes), then F3 and F4 together, then F2/F5/F6.
-All are public-surface changes, so each needs explicit approval and its own PR; none is admin-only.
+F3 and F4 are the public fixes and come first. F1 (#572), F2 and F5 are private admin output. F6 is public but low.
