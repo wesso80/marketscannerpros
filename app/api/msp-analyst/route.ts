@@ -51,7 +51,8 @@ import { computePerformanceThrottle, applyPerformanceDampener } from '@/lib/ai/p
 import { computeSessionPhaseOverlay } from '@/lib/ai/sessionPhase';
 import { buildV3EnginePrompt } from '@/lib/prompts/arcaV3Engine';
 import { reasonsForPrompt, regimeStatsForPrompt, regimeStatsSql } from '@/lib/signals/outcomeStatsVisibility';
-import { PUBLIC_AI_SAFETY_GUARDRAILS, appendPublicAISafetyCorrection, buildPublicAIDataBindingGuardrail } from '@/lib/prompts/publicAiSafety';
+import { buildPublicAIDataBindingGuardrail } from '@/lib/prompts/publicAiSafety';
+import { ADMIN_OPERATOR_RULES } from '@/lib/prompts/adminOperatorRules';
 import { getEdgeContext } from '@/lib/intelligence/edgeContextBuilder';
 import { openAICircuit, CircuitBreakerOpenError } from '@/lib/circuitBreaker';
 import { fetchIntelligenceContext } from '@/lib/ai/intelligenceContext';
@@ -625,12 +626,12 @@ This query originated from the MarketScannerPros scanner.
 - Direction: ${scanner.direction ?? "N/A"}
 - Signal Score: ${scanner.score ?? "N/A"}
 
-CRITICAL: Your educational market analysis MUST NOT contradict the score of ${scanner.score ?? "N/A"}.
+CRITICAL: Your analysis MUST NOT contradict the score of ${scanner.score ?? "N/A"}.
 Use scanner-specific logic:
 1. Focus on explaining WHY this specific signal fired
 2. Reference the technical indicators that created this setup
-3. Provide educational scenario levels and invalidation conditions based on signal strength
-4. Discuss risk considerations specific to this signal type without telling the user what to trade
+3. Give a trade plan (entry, stop, targets, R:R, size) sized to signal strength, or NO TRADE
+4. Name the risks specific to this signal type
 5. End with a verdict: Conditions Aligned | Wait for More Evidence | Conditions Not Met
           `.trim(),
         });
@@ -669,7 +670,7 @@ Adaptive Trader Personality Layer (ATPL):
 - Reasons: ${reasonsForPrompt(adaptive.match.reasons).join(' | ')}
 
 Instruction:
-- Personalize educational explanations to this profile.
+- Personalize the analysis to this profile.
 - If No-Trade Bias is ACTIVE, prioritize missing-evidence and observation language unless very strong counter-evidence exists.
 - If profile is warming up, clearly state lower personalization confidence.
       `.trim(),
@@ -681,13 +682,13 @@ Instruction:
 Institutional Filter Engine (IFE):
 - Final Quality Score: ${institutionalFilter.finalScore}
 - Final Grade: ${institutionalFilter.finalGrade}
-- Educational Assessment: ${institutionalFilter.recommendation}
+- Filter Assessment: ${institutionalFilter.recommendation}
 - No-Trade Trigger: ${institutionalFilter.noTrade ? 'ACTIVE' : 'INACTIVE'}
 - Filter States: ${institutionalFilter.filters.map(f => `${f.label}=${f.status}`).join(' | ')}
 
 Instruction:
 - If No-Trade Trigger is ACTIVE, your default assessment should be "insufficient evidence" unless there is exceptional contradictory evidence.
-- Always surface which institutional filters pass, warn, or block before giving educational scenario analysis.
+- Always surface which institutional filters pass, warn, or block before giving a trade plan.
       `.trim(),
     });
 
@@ -854,8 +855,8 @@ Always mention which derivatives signals support or contradict your analysis.
 1. PLATFORM NAVIGATION: When users ask "where is X" or "what page is Y on", answer with the EXACT path from your Platform Knowledge. GEX → /tools/terminal?tab=options-confluence. Options flow → /tools/terminal?tab=options-flow. Funding rates → /tools/crypto-dashboard. NEVER give vague answers.
 2. DECISION TRACE: Include the 9-layer decision trace in every analytical response.
 3. MARKET NARRATIVE: Start analytical responses with a 3-5 line macro narrative.
-4. EDUCATIONAL SCENARIO MAP: When verdict is Conditions Aligned or Conditional, include reference levels, invalidation conditions, reaction zones, and key risks. Do not provide instructions to enter, exit, buy, sell, hold, size, or place orders.
-5. HONESTY: If confluence score < 55, say so. If evidence is weak, say "No clear educational edge in the current evidence."
+4. TRADE PLAN: When verdict is Conditions Aligned or Conditional, give direction, entry, stop, targets, R:R and size (% account risk). Never place or claim to place orders; the owner executes.
+5. HONESTY: If confluence score < 55, say so. If evidence is weak, say "No clear edge in the current evidence."
 6. CONFLUENCE GATE: Score < 55 → cannot be Conditions Aligned. Score < 25 → must be Conditions Not Met.`.trim(),
     });
 
@@ -870,7 +871,7 @@ Always mention which derivatives signals support or contradict your analysis.
 
     messages.push({
       role: "system",
-      content: PUBLIC_AI_SAFETY_GUARDRAILS,
+      content: ADMIN_OPERATOR_RULES,
     });
 
     messages.push({
@@ -1020,7 +1021,6 @@ Always mention which derivatives signals support or contradict your analysis.
       }
     }
 
-    validatedText = appendPublicAISafetyCorrection(validatedText);
 
     // ── Phase 3: Verdict enforcement ──
     // Collect freshness descriptors from scanner payload (if provided)
