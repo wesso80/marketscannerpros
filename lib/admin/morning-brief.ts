@@ -706,8 +706,9 @@ export type SavedMorningBrief = {
 };
 
 /** Newest saved brief for a market (any source), with its age. Null when none has been saved. */
-export async function loadLatestMorningBrief(market: Market, timeframe = "15m", nowMs: number = Date.now(), workspaceId?: string): Promise<SavedMorningBrief | null> {
-  await ensureMorningBriefTables();
+export async function loadLatestMorningBrief(market: Market, timeframe = "15m", nowMs: number = Date.now(), workspaceId?: string, options: { readOnly?: boolean } = {}): Promise<SavedMorningBrief | null> {
+  // Paused readers must not run CREATE TABLE/INDEX even when the table is missing.
+  if (!options.readOnly) await ensureMorningBriefTables();
   const rows = await q<{ brief_id: string; generated_at: string | Date; source: string; snapshot: MorningBrief }>(
     `SELECT brief_id, generated_at, source, snapshot
        FROM admin_morning_briefs

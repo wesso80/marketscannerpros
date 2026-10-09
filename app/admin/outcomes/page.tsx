@@ -1,5 +1,6 @@
 "use client";
 
+import { useAdmin } from "@/app/admin/admin-client-layout";
 import OutcomeCohortAnalysis from "@/components/admin/OutcomeCohortAnalysis";
 
 import { useState, useEffect, useCallback } from "react";
@@ -191,6 +192,7 @@ function AccuracyBar({ correct, wrong, total }: { correct: number; wrong: number
 
 /* ── Page ── */
 export default function OutcomesPage() {
+  const { discoveryPaused } = useAdmin();
   const [stats, setStats] = useState<Stats | null>(null);
   const [truth, setTruth] = useState<any>(null);
   const [signals, setSignals] = useState<Signal[]>([]);
@@ -234,6 +236,7 @@ export default function OutcomesPage() {
   }, [filterSymbol, filterRegime, filterOutcome, page]);
 
   const runLabeler = useCallback(async () => {
+    if (discoveryPaused) return;
     setLabelerRunning(true);
     setLabelerResult(null);
     try {
@@ -253,7 +256,7 @@ export default function OutcomesPage() {
     } finally {
       setLabelerRunning(false);
     }
-  }, [fetchStats, fetchSignals]);
+  }, [discoveryPaused, fetchStats, fetchSignals]);
 
   useEffect(() => {
     Promise.all([fetchStats(), fetchSignals()]).then(() => setLoading(false));
@@ -263,6 +266,7 @@ export default function OutcomesPage() {
 
   return (
     <div style={{ padding: "1.5rem", maxWidth: 1400, margin: "0 auto" }}>
+      {discoveryPaused && <p role="status">Read-only outcomes. Manual labelling is paused; Refresh reads saved results.</p>}
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
         <div>
@@ -275,7 +279,8 @@ export default function OutcomesPage() {
         <div style={{ display: "flex", gap: "0.5rem" }}>
           <button
             onClick={runLabeler}
-            disabled={labelerRunning}
+            disabled={discoveryPaused || labelerRunning}
+            title={discoveryPaused ? "Manual labelling is paused. Saved outcomes remain available." : undefined}
             style={{
               padding: "0.5rem 1rem", background: labelerRunning ? "rgba(251,191,36,0.1)" : "rgba(251,191,36,0.15)",
               border: "1px solid rgba(251,191,36,0.3)", borderRadius: "0.5rem",

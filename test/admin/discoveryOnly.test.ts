@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { adminDiscoveryOnly, businessScope, discoveryOnlyAction } from '@/lib/admin/discoveryOnly';
+import { adminDiscoveryOnly, analyticsReadScope, adminNavVisibleWhilePaused, businessScope, discoveryOnlyAction } from '@/lib/admin/discoveryOnly';
 afterEach(() => vi.unstubAllEnvs());
 it('defaults to the owner-requested discovery-only scope and can be explicitly restored', () => {
   vi.stubEnv('ADMIN_DISCOVERY_ONLY', undefined);
@@ -72,4 +72,23 @@ it('treats a missing method as GET and still pauses lowercase writes', () => {
   expect(discoveryOnlyAction('/api/admin/income')).toBe('allow');
   expect(discoveryOnlyAction('/api/admin/income/', 'post')).toBe('pause_api');
   expect(discoveryOnlyAction('/api/admin/trials/', 'DELETE')).toBe('pause_api');
+});
+
+
+it.each(analyticsReadScope.getApis)('reviewed analytics %s only allows GET', path => {
+  expect(discoveryOnlyAction(path, 'GET')).toBe('allow');
+  expect(discoveryOnlyAction(path + '/', 'get')).toBe('allow');
+  for (const method of ['POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']) {
+    expect(discoveryOnlyAction(path, method)).toBe('pause_api');
+  }
+  expect(discoveryOnlyAction(path + '/rebuild', 'GET')).toBe('pause_api');
+});
+it.each(analyticsReadScope.pages)('exposes reviewed page %s in navigation, with no page writes', path => {
+  expect(discoveryOnlyAction(path, 'GET')).toBe('allow');
+  expect(discoveryOnlyAction(path, 'POST')).toBe('pause_page');
+  expect(adminNavVisibleWhilePaused(path + '?cohort=verified#detail')).toBe(true);
+});
+it.each(['/api/admin/morning-brief/actions', '/api/admin/morning-brief/feedback'])('keeps adjacent writer %s paused', path => {
+  expect(discoveryOnlyAction(path, 'GET')).toBe('pause_api');
+  expect(discoveryOnlyAction(path, 'POST')).toBe('pause_api');
 });
