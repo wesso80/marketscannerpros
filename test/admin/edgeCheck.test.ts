@@ -9,8 +9,8 @@ import { ASSUMED_COST_PCT, MIN_SAMPLE, edgeCheck, meanInterval, summariseGroup, 
 import { RESEARCH_READ_PATHS } from '@/lib/admin/researchReadKey';
 import { LABELLER_FIX_AT } from '@/lib/admin/signalStats';
 
-const m = vi.hoisted(() => ({ sql: [] as string[], params: [] as unknown[][], rows: [] as unknown[] }));
-vi.mock('@/lib/adminAuth', () => ({ requireAdmin: vi.fn(async () => ({ ok: true })) }));
+const m = vi.hoisted(() => ({ sql: [] as string[], params: [] as unknown[][], rows: [] as unknown[], auth:true }));
+vi.mock('@/lib/adminAuth', () => ({ requireAdmin: vi.fn(async () => ({ ok: m.auth })) }));
 vi.mock('@/lib/db', () => ({ q: vi.fn(async (sql: string, params: unknown[]) => { m.sql.push(sql); m.params.push(params); return m.rows; }) }));
 import { GET } from '@/app/api/admin/edge-check/route';
 
@@ -20,7 +20,7 @@ const series = (group: string, moves: number[]): EdgeRow[] => moves.map((mv, i) 
 }));
 const repeat = (pattern: number[], n: number) => Array.from({ length: n }, (_, i) => pattern[i % pattern.length]);
 
-beforeEach(() => { m.sql = []; m.params = []; m.rows = []; });
+beforeEach(() => { m.sql = []; m.params = []; m.rows = []; m.auth = true; });
 
 describe('statistics', () => {
   it('wilson interval brackets the observed rate', () => {
@@ -62,7 +62,7 @@ describe('verdicts', () => {
 
 describe('GET /api/admin/edge-check', () => {
   it('reads fixed-labeller verdicts only, groups by a whitelisted expression and states its basis', async () => {
-    m.rows = series('Breakout · LONG', repeat([2, -1.2], 40)).map((r) => ({ grp: r.group, signal_at: r.signalAt, outcome: r.outcome, signed_move: r.signedMove }));
+    m.rows = series('Breakout · LONG', repeat([2, -1.2], 40)).map((r) => ({ grp: r.group, signal_at: r.signalAt, outcome: r.outcome, signed_move: r.signedMove, inclusion_status: 'measured' }));
     const body = await (await GET(new NextRequest('http://localhost/api/admin/edge-check?by=regime&days=30'))).json();
     expect(m.sql[0]).toMatch(/outcome_measured_at >= \$1::timestamptz/);
     expect(m.sql[0]).toMatch(/workspace_id = 'operator-terminal'/);
@@ -78,6 +78,22 @@ describe('GET /api/admin/edge-check', () => {
     expect(body.definition.caveats.join(' ')).toMatch(/no embargo/);
     expect(body.definition.caveats.join(' ')).toMatch(/Not a recommendation/);
     expect(body.truth.source).toMatch(/ai_signal_log/);
+  });
+  it('counts the full recorded cohort but passes only measured rows to statistics', async () => {
+    m.rows = ['measured','pending','expired','old_method','invalid_move','unknown'].map((status,i)=>({grp:'A',signal_at:`2026-10-0${i+1}T00:00:00Z`,outcome:status==='measured'?'correct':'pending',signed_move:2,inclusion_status:status}));
+    const body = await (await GET(new NextRequest('http://localhost/api/admin/edge-check'))).json();
+    expect(body.overall.n).toBe(1);
+    expect(body.completeness.total).toEqual({total:6,measured:1,pending:1,expired:1,old_method:1,invalid_move:1,unknown:1});
+    expect(body.groups[0].overlap.daily.signals).toBe(1);
+    expect(m.sql).toHaveLength(1);
+    const where=m.sql[0].split('FROM ai_signal_log')[1];
+    expect(where).not.toMatch(/outcome IN|outcome_measured_at|pct_move_24h/);
+    expect(m.sql[0]).toMatch(/END AS inclusion_status/);
+  });
+  it('refuses non-admin requests before reading the expanded population', async () => {
+    m.auth=false;
+    expect((await GET(new NextRequest('http://localhost/api/admin/edge-check'))).status).toBe(403);
+    expect(m.sql).toHaveLength(0);
   });
   it('ignores unknown grouping and clamps the window', async () => {
     await GET(new NextRequest('http://localhost/api/admin/edge-check?by=1;DROP&days=9999'));
