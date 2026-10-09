@@ -17,8 +17,8 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config();
 // The entrypoint sets the role, so Render does not need AV_PROCESS_ROLE.
 // The feature name does not select the fallback.
-// split: shared 300 + fallbacks 80/100/120 = 600. Shared Jarvis floor 120. This process's fallback is 120 on backfill.
-// 540: shared 540 + fallbacks 20/20/20 = 600. Shared Jarvis floor 216. This process's fallback is 20 on backfill.
+// split: shared 300 + fallbacks 80/100/120 = 600. Shared Jarvis floor 120, held only while this run refreshes its heartbeat.
+// 540: shared 540 + fallbacks 20/20/20 = 600. Shared Jarvis floor 216, same heartbeat. This process's fallback is 20 on backfill.
 process.env.AV_PROCESS_ROLE ??= 'jarvis';
 process.env.ALPHA_VANTAGE_RPM ??= '120';
 
@@ -82,31 +82,40 @@ async function main() {
   }
 
   const { runOvernightScan } = await import('../lib/jarvis/radar/scan');
-  const { runWithAvBudget } = await import('../lib/avLimiter');
-  const { report } = await runWithAvBudget({ lane: 'backfill', feature: 'jarvis-overnight' }, () => runOvernightScan({ nowMs, log, cryptoTop: Number(process.env.JARVIS_CRYPTO_TOP ?? 250) }));
-  // Holiday / lag guard: if the freshest US bar is not today's NY date the session did not happen — keep the report but say so.
-  if (scheduled && report.sessionDate !== ny.date) report.dataGaps.unshift(`Scheduled run on ${ny.date} but the latest US session is ${report.sessionDate} (holiday or provider lag) — equity content is from that earlier session`);
-  const md = renderMorning(report);
-  fs.writeFileSync(jsonPath, JSON.stringify(report, null, 2), 'utf8');
-  fs.writeFileSync(mdPath, md, 'utf8');
-  const peakMb = Math.round(peakRss / 1048576);
-  await saveRun({ runKey: report.sessionDate, generatedAt: report.generatedAt, sessionDate: report.sessionDate, kind: 'overnight', report, markdown: md, snapshot: report.snapshot, apiUsage: { av: report.apiUsage.alphaVantage, cg: report.apiUsage.coingecko, db: report.apiUsage.dbQueries, errors: report.apiUsage.errors, peakRssMb: peakMb, equityCap: Number(process.env.JARVIS_EQUITY_MAX ?? 900) }, runtimeMs: report.apiUsage.runtimeMs });
-  if (scheduled) await kvSet(`run_marker:${ny.date}`, { at: new Date(nowMs).toISOString(), status: 'completed', sessionDate: report.sessionDate });
-  // Log the shortlist as admin calls for outcome labelling (best-effort; never touches scan results).
+  const { runWithAvBudget, touchJarvisHeartbeat, clearJarvisHeartbeat, AV_JARVIS_HEARTBEAT_EVERY_MS } = await import('../lib/avLimiter');
+  // The shared pool holds the backfill floor only while this key is alive.
+  const beat = setInterval(() => { void touchJarvisHeartbeat(); }, AV_JARVIS_HEARTBEAT_EVERY_MS);
+  beat.unref();
+  await touchJarvisHeartbeat();
   try {
-    const { recordJarvisShortlist } = await import('../lib/jarvis/radar/adminCalls');
-    const logged = await recordJarvisShortlist(report);
-    if (logged) log(`admin calls: ${logged.recorded} logged, ${logged.duplicates} already logged, skipped ${JSON.stringify(logged.skipped)}${logged.error ? ` · error ${logged.error}` : ''}`);
-  } catch (e) { log(`admin call logging failed (scan results are intact): ${e instanceof Error ? e.message : String(e)}`); }
-  log(`done → ${path.relative(process.cwd(), mdPath)} · AV ${report.apiUsage.alphaVantage} calls · CG ${report.apiUsage.coingecko} · errors ${report.apiUsage.errors} · ${(report.apiUsage.runtimeMs / 60000).toFixed(1)} min · peak RSS ${peakMb} MB`);
-  // Daily report + delivery run AFTER the scan is fully persisted; any failure here is recorded and never touches scan results.
-  try {
-    const { generateDailyReport } = await import('../lib/jarvis/report/generateDailyReport');
-    const res = await generateDailyReport(report.sessionDate, { sendEmail: scheduled || args.has('--send-email') }, { log });
-    fs.writeFileSync(path.join(dir, `jarvis-daily-${report.sessionDate}.md`), res.markdown, 'utf8');
-    log(`daily report: ${res.report.status} / ${res.report.health.status} · email ${res.email ? res.email.status : 'not requested'}`);
-  } catch (e) { log(`daily report step failed (scan results are intact): ${e instanceof Error ? e.message : String(e)}`); }
-  log(`universe ${report.counts.universe} · movers ${report.counts.meaningfulMovers} · unusual ${report.counts.unusual} · candidates ${report.counts.initialCandidates} · shortlist ${report.counts.finalShortlist}: ${report.shortlist.map((c) => `${c.symbol}(${c.status})`).join(', ')}`);
+    const { report } = await runWithAvBudget({ lane: 'backfill', feature: 'jarvis-overnight' }, () => runOvernightScan({ nowMs, log, cryptoTop: Number(process.env.JARVIS_CRYPTO_TOP ?? 250) }));
+    // Holiday / lag guard: if the freshest US bar is not today's NY date the session did not happen — keep the report but say so.
+    if (scheduled && report.sessionDate !== ny.date) report.dataGaps.unshift(`Scheduled run on ${ny.date} but the latest US session is ${report.sessionDate} (holiday or provider lag) — equity content is from that earlier session`);
+    const md = renderMorning(report);
+    fs.writeFileSync(jsonPath, JSON.stringify(report, null, 2), 'utf8');
+    fs.writeFileSync(mdPath, md, 'utf8');
+    const peakMb = Math.round(peakRss / 1048576);
+    await saveRun({ runKey: report.sessionDate, generatedAt: report.generatedAt, sessionDate: report.sessionDate, kind: 'overnight', report, markdown: md, snapshot: report.snapshot, apiUsage: { av: report.apiUsage.alphaVantage, cg: report.apiUsage.coingecko, db: report.apiUsage.dbQueries, errors: report.apiUsage.errors, peakRssMb: peakMb, equityCap: Number(process.env.JARVIS_EQUITY_MAX ?? 900) }, runtimeMs: report.apiUsage.runtimeMs });
+    if (scheduled) await kvSet(`run_marker:${ny.date}`, { at: new Date(nowMs).toISOString(), status: 'completed', sessionDate: report.sessionDate });
+    // Log the shortlist as admin calls for outcome labelling (best-effort; never touches scan results).
+    try {
+      const { recordJarvisShortlist } = await import('../lib/jarvis/radar/adminCalls');
+      const logged = await recordJarvisShortlist(report);
+      if (logged) log(`admin calls: ${logged.recorded} logged, ${logged.duplicates} already logged, skipped ${JSON.stringify(logged.skipped)}${logged.error ? ` · error ${logged.error}` : ''}`);
+    } catch (e) { log(`admin call logging failed (scan results are intact): ${e instanceof Error ? e.message : String(e)}`); }
+    log(`done → ${path.relative(process.cwd(), mdPath)} · AV ${report.apiUsage.alphaVantage} calls · CG ${report.apiUsage.coingecko} · errors ${report.apiUsage.errors} · ${(report.apiUsage.runtimeMs / 60000).toFixed(1)} min · peak RSS ${peakMb} MB`);
+    // Daily report + delivery run AFTER the scan is fully persisted; any failure here is recorded and never touches scan results.
+    try {
+      const { generateDailyReport } = await import('../lib/jarvis/report/generateDailyReport');
+      const res = await generateDailyReport(report.sessionDate, { sendEmail: scheduled || args.has('--send-email') }, { log });
+      fs.writeFileSync(path.join(dir, `jarvis-daily-${report.sessionDate}.md`), res.markdown, 'utf8');
+      log(`daily report: ${res.report.status} / ${res.report.health.status} · email ${res.email ? res.email.status : 'not requested'}`);
+    } catch (e) { log(`daily report step failed (scan results are intact): ${e instanceof Error ? e.message : String(e)}`); }
+    log(`universe ${report.counts.universe} · movers ${report.counts.meaningfulMovers} · unusual ${report.counts.unusual} · candidates ${report.counts.initialCandidates} · shortlist ${report.counts.finalShortlist}: ${report.shortlist.map((c) => `${c.symbol}(${c.status})`).join(', ')}`);
+  } finally {
+    clearInterval(beat);
+    await clearJarvisHeartbeat();
+  }
   process.exit(0);
 }
 main().catch((e) => { console.error(e); process.exit(1); });

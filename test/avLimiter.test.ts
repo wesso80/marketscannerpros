@@ -4,15 +4,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const redisHarness = vi.hoisted(() => {
   const evalFn = vi.fn();
+  const setFn = vi.fn();
+  const delFn = vi.fn();
+  const getFn = vi.fn();
   return {
     evalFn,
+    setFn,
+    delFn,
+    getFn,
     mode: { value: 'off' as 'off' | 'on' },
   };
 });
 
 vi.mock('@/lib/redis', () => ({
   getRedis: () => null,
-  getLimiterRedis: () => (redisHarness.mode.value === 'on' ? { eval: redisHarness.evalFn } : null),
+  getLimiterRedis: () => (redisHarness.mode.value === 'on'
+    ? { eval: redisHarness.evalFn, set: redisHarness.setFn, del: redisHarness.delFn, get: redisHarness.getFn }
+    : null),
   LIMITER_REDIS_TIMEOUT_MS: 400,
 }));
 
@@ -24,6 +32,9 @@ import {
   AV_FALLBACK_LOG_EVERY_MS,
   AV_JARVIS_FALLBACK_PER_MIN,
   AV_JARVIS_FEATURE,
+  AV_JARVIS_HEARTBEAT_EVERY_MS,
+  AV_JARVIS_HEARTBEAT_KEY,
+  AV_JARVIS_HEARTBEAT_TTL_SEC,
   AV_LANES,
   AV_LANE_RESERVE,
   AV_LICENCE_PER_MIN,
@@ -36,6 +47,7 @@ import {
   applyAvProcessRoleForTests,
   avBudgetPlanForMode,
   avTryTake,
+  clearJarvisHeartbeat,
   decideAvTake,
   fallbackBudget,
   type AvLane,
@@ -47,15 +59,18 @@ import {
   refuseIllegalAvBudget,
   reservesForCeiling,
   resetAvLimiterLocalForTests,
+  touchJarvisHeartbeat,
+  webFallbackReserve,
 } from '@/lib/avLimiter';
 
-/** Same steps as AV_LIMITER_LUA: owed minimums, user borrow of idle alerts/scheduled, deny when total + 1 + mustLeave > ceiling. */
+/** Same steps as AV_LIMITER_LUA: hold unmet floors of other active lanes, deny when total + 1 + mustLeave > ceiling. */
 function luaWouldGrant(input: {
   rows: string[];
   lane: string;
   ceiling: number;
   reserves: Record<string, number>;
   order: readonly string[];
+  jarvisActive?: boolean;
 }): boolean {
   const used: Record<string, number> = {};
   for (const name of input.order) used[name] = 0;
@@ -64,30 +79,26 @@ function luaWouldGrant(input: {
     const lane = /^\d+:[^:]+:([^:]+):/.exec(member)?.[1];
     if (lane && used[lane] != null) used[lane] += 1;
   }
-  const unused: Record<string, number> = {};
-  for (const name of input.order) unused[name] = Math.max(0, (input.reserves[name] || 0) - (used[name] || 0));
-  let borrowed = Math.max(0, (used.user || 0) - (input.reserves.user || 0));
-  for (const name of ['scheduled', 'alerts']) {
-    if ((used[name] || 0) === 0) {
-      const take = Math.min(unused[name] || 0, borrowed);
-      unused[name] -= take;
-      borrowed -= take;
-    }
-  }
   let mustLeave = 0;
   for (const name of input.order) {
     if (name === input.lane) continue;
-    const userBorrowsIdle = input.lane === 'user' && (name === 'alerts' || name === 'scheduled') && (used[name] || 0) === 0;
-    if (!userBorrowsIdle) mustLeave += unused[name] || 0;
+    const count = used[name] || 0;
+    const floor = input.reserves[name] || 0;
+    const reserved = floor > 0 && (name === 'backfill' ? Boolean(input.jarvisActive) : count > 0);
+    if (reserved) mustLeave += Math.max(0, floor - count);
   }
   return total + 1 + mustLeave <= input.ceiling;
 }
 
-function takesFrom(lane: AvLane, start: Partial<Record<AvLane, number>>, ceiling?: number, reserve?: Record<AvLane, number>): number {
+function takesFrom(
+  lane: AvLane,
+  start: Partial<Record<AvLane, number>>,
+  opts?: { ceiling?: number; reserve?: Record<AvLane, number>; jarvisActive?: boolean },
+): number {
   const usedByLane: Record<AvLane, number> = { user: 0, alerts: 0, scheduled: 0, backfill: 0, ...start };
   let total = AV_LANES.reduce((sum, name) => sum + usedByLane[name], 0);
   let n = 0;
-  while (decideAvTake({ lane, usedTotal: total, usedByLane, ceiling, reserve }).allow) {
+  while (decideAvTake({ lane, usedTotal: total, usedByLane, ...opts }).allow) {
     usedByLane[lane] += 1;
     total += 1;
     n += 1;
@@ -104,6 +115,9 @@ describe('shared AV limiter', () => {
     applyAvProcessRoleForTests(null);
     redisHarness.mode.value = 'off';
     redisHarness.evalFn.mockReset();
+    redisHarness.setFn.mockReset();
+    redisHarness.delFn.mockReset();
+    redisHarness.getFn.mockReset();
   });
 
   afterEach(() => {
@@ -133,7 +147,10 @@ describe('shared AV limiter', () => {
     expect(wide.worstCase).toBe(540 + 20 + 20 + 20);
     expect(wide.worstCase).toBe(600);
     expect(AV_LANES.reduce((sum, lane) => sum + reservesForCeiling(AV_WEB_FALLBACK_PER_MIN)[lane], 0)).toBe(AV_WEB_FALLBACK_PER_MIN);
-    expect(reservesForCeiling(20, wide.reserves, wide.ceiling)).toEqual({ user: 3, alerts: 2, scheduled: 7, backfill: 8 });
+    expect(webFallbackReserve(AV_WEB_FALLBACK_PER_MIN)).toEqual({ user: 22, alerts: 13, scheduled: 45, backfill: 0 });
+    expect(webFallbackReserve(20)).toEqual({ user: 6, alerts: 3, scheduled: 11, backfill: 0 });
+    expect(AV_LANES.reduce((sum, lane) => sum + webFallbackReserve(AV_WEB_FALLBACK_PER_MIN)[lane], 0)).toBe(80);
+    expect(AV_LANES.reduce((sum, lane) => sum + webFallbackReserve(20)[lane], 0)).toBe(20);
     expect(() => readAvBudgetMode({ AV_BUDGET_MODE: 'wide' } as NodeJS.ProcessEnv)).toThrow(/AV_BUDGET_MODE=wide/);
     expect(() => refuseIllegalAvBudget({ ...split, worstCase: 601 })).toThrow(/AV_BUDGET_MODE=split/);
     expect(() => refuseIllegalAvBudget({ ...wide, webFallback: 21 })).toThrow(/AV_BUDGET_MODE=540/);
@@ -141,7 +158,7 @@ describe('shared AV limiter', () => {
     expect(() => applyAvBudgetForTests({ AV_BUDGET_MODE: '540' })).not.toThrow();
     expect(fallbackBudget('web')).toEqual({
       ceiling: 20,
-      reserve: { user: 3, alerts: 2, scheduled: 7, backfill: 8 },
+      reserve: { user: 6, alerts: 3, scheduled: 11, backfill: 0 },
     });
     expect(fallbackBudget('worker')).toEqual({
       ceiling: 20,
@@ -156,34 +173,66 @@ describe('shared AV limiter', () => {
     applyAvBudgetForTests({ AV_BUDGET_MODE: 'split' });
   });
 
-  it('treats reserves as minimums the user can borrow past, without giving away the other floors', () => {
-    const idle = { user: 50, alerts: 0, scheduled: 0, backfill: 0 };
-    expect(decideAvTake({ lane: 'user', usedTotal: 50, usedByLane: idle }).allow).toBe(true);
-    expect(takesFrom('user', idle)).toBe(130);
-    expect(decideAvTake({ lane: 'user', usedTotal: 180, usedByLane: { user: 180, alerts: 0, scheduled: 0, backfill: 0 } }).allow).toBe(false);
-
-    const userLoad = { user: 180, alerts: 0, scheduled: 0, backfill: 0 };
-    expect(takesFrom('backfill', userLoad)).toBe(120);
-    expect(decideAvTake({ lane: 'user', usedTotal: 180, usedByLane: userLoad }).allow).toBe(false);
-
-    const fair = { user: 50, alerts: 0, scheduled: 0, backfill: 0 };
-    expect(takesFrom('alerts', fair)).toBe(30);
-    expect(takesFrom('scheduled', fair)).toBe(100);
-    expect(takesFrom('backfill', fair)).toBe(120);
-
-    const scheduledStarted = { user: 50, alerts: 0, scheduled: 1, backfill: 0 };
-    expect(takesFrom('scheduled', scheduledStarted)).toBe(99);
-    expect(takesFrom('user', scheduledStarted)).toBeLessThan(130);
+  it('lets scheduled use idle backfill capacity well above 100', () => {
+    expect(takesFrom('scheduled', {})).toBe(AV_CEILING_PER_MIN);
+    const floorsMet = { user: 50, alerts: 30, scheduled: 0, backfill: 0 };
+    expect(takesFrom('scheduled', floorsMet)).toBe(220);
+    expect(takesFrom('scheduled', floorsMet)).toBeGreaterThan(100);
   });
 
-  it('lets a user take a token when backfill has used its 120 floor', () => {
-    const usedByLane = { user: 0, alerts: 0, scheduled: 0, backfill: 120 };
-    expect(decideAvTake({ lane: 'backfill', usedTotal: 119, usedByLane: { ...usedByLane, backfill: 119 } }).allow).toBe(true);
-    expect(decideAvTake({ lane: 'backfill', usedTotal: 120, usedByLane }).allow).toBe(false);
-    expect(decideAvTake({ lane: 'user', usedTotal: 120, usedByLane }).allow).toBe(true);
+  it('lets the user reach 200 per minute while the worker is running', () => {
+    expect(takesFrom('user', { scheduled: 80 })).toBe(200);
+    expect(takesFrom('user', { scheduled: 100 })).toBe(200);
+  });
+
+  it('keeps the scheduled floor after heavy user borrowing', () => {
+    expect(takesFrom('user', { scheduled: 1 })).toBe(200);
+    expect(takesFrom('scheduled', { scheduled: 1, user: 200 })).toBe(99);
+    expect(1 + 200 + 99).toBe(AV_CEILING_PER_MIN);
+  });
+
+  it('holds 120 for Jarvis while its heartbeat is active under user and scheduled load', () => {
+    expect(takesFrom('user', { scheduled: 100 }, { jarvisActive: true })).toBe(80);
+    expect(takesFrom('scheduled', { user: 80 }, { jarvisActive: true })).toBe(100);
+    expect(takesFrom('backfill', { user: 80, scheduled: 100 }, { jarvisActive: true })).toBe(120);
     const wide = avBudgetPlanForMode('540');
-    expect(decideAvTake({ lane: 'backfill', usedTotal: 215, usedByLane: {}, ceiling: wide.ceiling, reserve: wide.reserves }).allow).toBe(true);
-    expect(decideAvTake({ lane: 'backfill', usedTotal: 216, usedByLane: {}, ceiling: wide.ceiling, reserve: wide.reserves }).allow).toBe(false);
+    const opts = { ceiling: wide.ceiling, reserve: wide.reserves, jarvisActive: true };
+    expect(takesFrom('user', { scheduled: 180, user: 90 }, opts)).toBe(54);
+    expect(takesFrom('backfill', { scheduled: 180, user: 144 }, opts)).toBe(216);
+  });
+
+  it('lends the backfill floor when the Jarvis heartbeat is absent', () => {
+    expect(takesFrom('user', { scheduled: 100 })).toBe(200);
+    expect(takesFrom('backfill', { user: 200, scheduled: 100 })).toBe(0);
+    expect(takesFrom('scheduled', { user: 50, alerts: 30 })).toBe(220);
+  });
+
+  it('never lets the lanes add up past the ceiling', () => {
+    const fill = (jarvisActive: boolean) => {
+      const usedByLane: Record<AvLane, number> = { user: 0, alerts: 0, scheduled: 0, backfill: 0 };
+      let total = 0;
+      for (let guard = 0; guard < 1000; guard += 1) {
+        let progressed = false;
+        for (const lane of AV_LANES) {
+          if (!decideAvTake({ lane, usedTotal: total, usedByLane, jarvisActive }).allow) continue;
+          usedByLane[lane] += 1;
+          total += 1;
+          progressed = true;
+        }
+        if (!progressed) break;
+      }
+      for (const lane of AV_LANES) {
+        expect(decideAvTake({ lane, usedTotal: total, usedByLane, jarvisActive }).allow).toBe(false);
+      }
+      return total;
+    };
+    expect(fill(false)).toBe(AV_CEILING_PER_MIN);
+    expect(fill(true)).toBe(AV_CEILING_PER_MIN);
+    const wide = avBudgetPlanForMode('540');
+    const usedByLane = { user: wide.ceiling, alerts: 0, scheduled: 0, backfill: 0 };
+    for (const lane of AV_LANES) {
+      expect(decideAvTake({ lane, usedTotal: wide.ceiling, usedByLane, ceiling: wide.ceiling, reserve: wide.reserves, jarvisActive: true }).allow).toBe(false);
+    }
   });
 
   it('denies every lane once the shared minute is full', () => {
@@ -205,7 +254,8 @@ describe('shared AV limiter', () => {
     for (let i = 0; i < 130; i += 1) {
       if (await avTryTake({ lane: 'backfill', feature: AV_JARVIS_FEATURE }, t + i)) postedAsJarvis += 1;
     }
-    expect(postedAsJarvis).toBe(reservesForCeiling(AV_WEB_FALLBACK_PER_MIN).backfill);
+    expect(fallbackBudget('web').reserve).toEqual({ user: 22, alerts: 13, scheduled: 45, backfill: 0 });
+    expect(postedAsJarvis).toBe(AV_WEB_FALLBACK_PER_MIN);
     expect(postedAsJarvis).toBeLessThan(AV_JARVIS_FALLBACK_PER_MIN);
 
     resetAvLimiterLocalForTests();
@@ -235,9 +285,10 @@ describe('shared AV limiter', () => {
     for (let i = 0; i < 90; i += 1) {
       if (await avTryTake({ lane: 'user', feature: 'page' }, webAt + i)) web += 1;
     }
-    const webSplit = reservesForCeiling(AV_WEB_FALLBACK_PER_MIN);
-    expect(web).toBe(AV_WEB_FALLBACK_PER_MIN - webSplit.backfill);
-    expect(web).toBeGreaterThan(webSplit.user);
+    expect(web).toBe(AV_WEB_FALLBACK_PER_MIN);
+    const webReserve = fallbackBudget('web').reserve;
+    expect(takesFrom('user', { scheduled: 1 }, { ceiling: AV_WEB_FALLBACK_PER_MIN, reserve: webReserve })).toBe(35);
+    expect(takesFrom('scheduled', { scheduled: 1, user: 35 }, { ceiling: AV_WEB_FALLBACK_PER_MIN, reserve: webReserve })).toBe(44);
     expect(fallbackBudget('web').ceiling).toBe(AV_WEB_FALLBACK_PER_MIN);
   });
 
@@ -260,21 +311,26 @@ describe('shared AV limiter', () => {
   it('locks the Lua deny rule to the same reserve arithmetic', () => {
     expect(AV_LIMITER_LUA).toContain("string.match(m, '^%d+:[^:]+:([^:]+):')");
     expect(AV_LIMITER_LUA).toContain('if total + 1 + mustLeave > ceiling then return 0 end');
+    expect(AV_LIMITER_LUA).toContain("redis.call('GET', heartbeat)");
+    expect(AV_LIMITER_LUA).toContain("name == 'backfill'");
     const rows = [
       '1000:aa:backfill:worker-ingest',
       '1001:bb:user:page',
       '1002:cc:scheduled:daily-scan',
     ];
-    for (const lane of AV_LANES) {
-      const lua = luaWouldGrant({
-        rows,
-        lane,
-        ceiling: AV_CEILING_PER_MIN,
-        reserves: AV_LANE_RESERVE,
-        order: AV_LANES,
-      });
-      const usedByLane = { user: 1, alerts: 0, scheduled: 1, backfill: 1 };
-      expect(lua).toBe(decideAvTake({ lane, usedTotal: rows.length, usedByLane }).allow);
+    const usedByLane = { user: 1, alerts: 0, scheduled: 1, backfill: 1 };
+    for (const jarvisActive of [false, true]) {
+      for (const lane of AV_LANES) {
+        const lua = luaWouldGrant({
+          rows,
+          lane,
+          ceiling: AV_CEILING_PER_MIN,
+          reserves: AV_LANE_RESERVE,
+          order: AV_LANES,
+          jarvisActive,
+        });
+        expect(lua).toBe(decideAvTake({ lane, usedTotal: rows.length, usedByLane, jarvisActive }).allow);
+      }
     }
     const full = Array.from({ length: AV_CEILING_PER_MIN }, (_, i) => `${i}:x:user:page`);
     expect(luaWouldGrant({
@@ -320,6 +376,11 @@ describe('shared AV limiter', () => {
     expect(await avTryTake({ lane: 'user', feature: 'page' }, 100_000_000)).toBe(false);
     redisHarness.evalFn.mockResolvedValue(1);
     expect(await avTryTake({ lane: 'user', feature: 'page' }, 100_000_001)).toBe(true);
+    expect(redisHarness.evalFn).toHaveBeenCalledWith(
+      AV_LIMITER_LUA,
+      ['av_limiter:minute', AV_JARVIS_HEARTBEAT_KEY],
+      expect.any(Array),
+    );
   });
 
   it('tags every cron and job route, and the worker and Jarvis entrypoints', () => {
@@ -345,6 +406,18 @@ describe('shared AV limiter', () => {
     const jarvis = readFileSync('scripts/jarvis-overnight-scan.ts', 'utf8');
     expect(jarvis).toContain("lane: 'backfill'");
     expect(jarvis).toContain("AV_PROCESS_ROLE ??= 'jarvis'");
+    expect(jarvis).toContain('touchJarvisHeartbeat()');
+    expect(jarvis).toContain('clearJarvisHeartbeat()');
+    expect(jarvis).toContain('AV_JARVIS_HEARTBEAT_EVERY_MS');
+  });
+
+  it('writes the Jarvis heartbeat with a TTL and deletes it when the run ends', async () => {
+    redisHarness.mode.value = 'on';
+    await touchJarvisHeartbeat();
+    expect(redisHarness.setFn).toHaveBeenCalledWith(AV_JARVIS_HEARTBEAT_KEY, '1', { ex: AV_JARVIS_HEARTBEAT_TTL_SEC });
+    expect(AV_JARVIS_HEARTBEAT_TTL_SEC).toBeGreaterThan(AV_JARVIS_HEARTBEAT_EVERY_MS / 1000);
+    await clearJarvisHeartbeat();
+    expect(redisHarness.delFn).toHaveBeenCalledWith(AV_JARVIS_HEARTBEAT_KEY);
   });
 
   it('logs a per-feature counter line', () => {
