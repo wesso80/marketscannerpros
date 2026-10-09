@@ -50,6 +50,7 @@ import { computeACLFromScoring } from '@/lib/ai/adaptiveConfidenceLens';
 import { computePerformanceThrottle, applyPerformanceDampener } from '@/lib/ai/performanceThrottle';
 import { computeSessionPhaseOverlay } from '@/lib/ai/sessionPhase';
 import { buildV3EnginePrompt } from '@/lib/prompts/arcaV3Engine';
+import { reasonsForPrompt, regimeStatsForPrompt, regimeStatsSql } from '@/lib/signals/outcomeStatsVisibility';
 import { PUBLIC_AI_SAFETY_GUARDRAILS, appendPublicAISafetyCorrection, buildPublicAIDataBindingGuardrail } from '@/lib/prompts/publicAiSafety';
 import { getEdgeContext } from '@/lib/intelligence/edgeContextBuilder';
 import { openAICircuit, CircuitBreakerOpenError } from '@/lib/circuitBreaker';
@@ -357,17 +358,11 @@ async function handlePost(req: NextRequest) {
     // Phase 7: All four independent DB reads batched with Promise.all.
     // Batching: signal_log x3 + portfolio_closed x1 — eliminates 3 sequential round-trips.
     // Note: portfolio_closed results are consumed later in the perf-throttle section.
-    let signalMemory: { totalSignals: number; regimeStats: Array<{ regime: string; count: number; winRate: number }>; recentSignals: Array<{ symbol: string; verdict: string; confidence: number; outcome?: string }> } | null = null;
+    let signalMemory: { totalSignals: number; regimeStats: Array<{ regime: string; count: number; winRate?: number }>; recentSignals: Array<{ symbol: string; verdict: string; confidence: number; outcome?: string }> } | null = null;
     let rawRecentTrades: Array<{ pnl_r: string | number; created_at: string }> = [];
     try {
       const [regimeStats, recentSignals, totalResult, recentTradesResult] = await Promise.all([
-        q(
-          `SELECT regime, COUNT(*) as count,
-                  ROUND(100.0 * COUNT(*) FILTER (WHERE outcome = 'correct') / NULLIF(COUNT(*) FILTER (WHERE outcome != 'pending'), 0), 1) as win_rate
-           FROM ai_signal_log WHERE workspace_id = $1 AND signal_at > NOW() - INTERVAL '90 days'
-           GROUP BY regime ORDER BY count DESC`,
-          [workspaceId]
-        ),
+        q(regimeStatsSql(), [workspaceId]),
         q(
           `SELECT symbol, verdict, confidence, outcome FROM ai_signal_log
            WHERE workspace_id = $1 ORDER BY signal_at DESC LIMIT 5`,
@@ -387,7 +382,7 @@ async function handlePost(req: NextRequest) {
       ]);
       signalMemory = {
         totalSignals: parseInt(totalResult[0]?.total || '0'),
-        regimeStats: (regimeStats || []).map((r: any) => ({ regime: r.regime, count: parseInt(r.count), winRate: parseFloat(r.win_rate || '0') })),
+        regimeStats: regimeStatsForPrompt(regimeStats),
         recentSignals: (recentSignals || []).map((s: any) => ({ symbol: s.symbol, verdict: s.verdict, confidence: parseInt(s.confidence), outcome: s.outcome })),
       };
       rawRecentTrades = recentTradesResult || [];
@@ -541,11 +536,11 @@ async function handlePost(req: NextRequest) {
         confidence: aclResult.confidence,
         authorization: aclResult.authorization,
         throttle: finalThrottle,
-        reasonCodes: [
+        reasonCodes: reasonsForPrompt([
           ...aclResult.reasonCodes,
           sessionPhase.reason,
           ...perfAdjusted.reasonCodes,
-        ],
+        ]),
       },
       volatilityState: institutionalFilter.filters.find(f => f.key === 'volatility')?.reason,
     });
@@ -578,7 +573,7 @@ Performance Throttle:
 - RU Dampener: ×${perfThrottle.ruDampener.toFixed(2)}
 - Governor Recommendation: ${perfThrottle.governorRecommendation}
 - Final Effective Throttle: ${finalThrottle.toFixed(3)}
-- Reasons: ${perfThrottle.reasonCodes.join(' | ')}
+- Reasons: ${reasonsForPrompt(perfThrottle.reasonCodes).join(' | ')}
 
 Instruction:
 - If session phase is unfavorable, mention it explicitly and recommend waiting for a better window.
@@ -671,7 +666,7 @@ Adaptive Trader Personality Layer (ATPL):
 - Setup Fit Score: ${adaptive.match.personalityMatch}%
 - Adaptive Confluence: ${adaptive.match.adaptiveScore}%
 - No-Trade Bias: ${adaptive.match.noTradeBias ? 'ACTIVE' : 'INACTIVE'}
-- Reasons: ${adaptive.match.reasons.join(' | ')}
+- Reasons: ${reasonsForPrompt(adaptive.match.reasons).join(' | ')}
 
 Instruction:
 - Personalize educational explanations to this profile.
@@ -1073,11 +1068,11 @@ Always mention which derivatives signals support or contradict your analysis.
           verdict: aclResult.authorization === 'BLOCKED' ? 'NO_TRADE' :
                    aclResult.authorization === 'CONDITIONAL' ? 'CONDITIONAL' :
                    regimeScoring.tradeBias === 'HIGH_CONFLUENCE' ? 'TRADE_READY' : 'WATCH',
-          reasonCodes: [
+          reasonCodes: reasonsForPrompt([
             ...aclResult.reasonCodes,
             sessionPhase.reason,
             ...perfAdjusted.reasonCodes,
-          ],
+          ]),
         },
         confidence: {
           value: aclResult.confidence,
@@ -1109,7 +1104,7 @@ Always mention which derivatives signals support or contradict your analysis.
           level: perfThrottle.level,
           dampener: perfThrottle.ruDampener,
           governorRecommendation: perfThrottle.governorRecommendation,
-          reasons: perfThrottle.reasonCodes,
+          reasons: reasonsForPrompt(perfThrottle.reasonCodes),
         },
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }

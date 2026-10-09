@@ -9,6 +9,7 @@ const getOverallStats = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/db', () => ({ q }));
 vi.mock('@/lib/auth', () => ({ getSessionFromCookie: vi.fn(async () => ({ workspaceId: 'ws' })) }));
 vi.mock('@/lib/signalRecorder', () => ({ getRecentSignals, getOverallStats }));
+vi.mock('@/lib/signals/outcomeStatsVisibility', () => ({ SHOW_SIGNAL_OUTCOME_STATS: true }));
 
 import { GET } from '@/app/api/ai/accuracy/route';
 import { formatSignedPercent, moveExpectancy, signedPctMove } from '@/lib/signals/accuracyDisplay';
