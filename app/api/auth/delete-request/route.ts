@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionFromCookie } from "@/lib/auth";
+import { getSessionFromCookie, loggedErrorCode } from "@/lib/auth";
 import { q } from "@/lib/db";
 
 /**
@@ -38,19 +38,10 @@ export async function POST(req: NextRequest) {
       );
     } catch (dbError) {
       // Table might not exist - that's OK, we'll still log it
-      console.log("Deletion request table not found, logging request:", {
-        workspaceId,
-        customerId,
-        requestedAt: new Date().toISOString()
-      });
+      console.log('Deletion request table not found');
     }
 
-    // Log for manual processing
-    console.log("=== DATA DELETION REQUEST ===");
-    console.log("Workspace ID:", workspaceId);
-    console.log("Customer ID:", customerId);
-    console.log("Requested at:", new Date().toISOString());
-    console.log("=============================");
+    console.log('Deletion request recorded');
 
     return NextResponse.json({
       success: true,
@@ -58,7 +49,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error("Delete request error:", error);
+    console.error('Delete request error', { code: loggedErrorCode(error) });
     return NextResponse.json(
       { error: "Failed to process request" },
       { status: 500 }

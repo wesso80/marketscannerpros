@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { q } from '@/lib/db';
-import { hashWorkspaceId } from '@/lib/auth';
+import { hashWorkspaceId, loggedErrorCode } from '@/lib/auth';
 import { sendWelcomeEmail } from '@/lib/email';
 import { checkContestEntry } from '@/lib/referralContest';
 import { invoiceSubscriptionId, subscriptionPeriodDate } from '@/lib/stripe/subscriptionPeriod';
@@ -254,13 +254,13 @@ async function processReferralReward(
     );
 
     if (referralResult.length === 0) {
-      console.log(`[Referral] No pending referral for ${email}`);
+      console.log('[Referral] No pending referral');
       return;
     }
 
     const referral = referralResult[0];
     referralId = String(referral.id ?? '');
-    console.log(`[Referral] Found pending referral for ${email}, couponApplied=${refereeCouponApplied}`);
+    console.log(`[Referral] Found pending referral, couponApplied=${refereeCouponApplied}`);
 
     // Anti-abuse: monthly cap per referrer
     const monthlyRewards = await q(
@@ -283,7 +283,7 @@ async function processReferralReward(
       [referral.id],
     );
     if (claimedRows.length === 0) {
-      console.error(`[Referral] signup ${referral.id} is no longer pending; not applying credit again (customer ${stripeCustomerId}, event ${eventId})`);
+      console.error(`[Referral] signup is no longer pending; not applying credit again (event ${eventId})`);
       return;
     }
     claimed = true;
@@ -338,10 +338,10 @@ async function processReferralReward(
     // Check if referrer earned a contest entry (every 5 referrals)
     await checkContestEntry(referral.referrer_workspace_id);
 
-    console.log(`[Referral] ✅ Referee ${email} (${refereeTier}) — referrer credited $${creditCents / 100}`);
+    console.log(`[Referral] Referrer credited $${creditCents / 100}`);
 
   } catch (error) {
-    console.error(`[Referral] Error processing reward referral=${referralId || 'unknown'} customer=${stripeCustomerId} event=${eventId}:`, error);
+    console.error('[Referral] Error processing reward', { code: loggedErrorCode(error) });
     if (claimed && !movedMoney && referralId) {
       try {
         await q(
@@ -351,7 +351,7 @@ async function processReferralReward(
           [referralId],
         );
       } catch (rollbackError) {
-        console.error(`[Referral] Failed to roll back rewarded mark referral=${referralId} customer=${stripeCustomerId} event=${eventId}:`, rollbackError);
+        console.error('[Referral] Failed to roll back rewarded mark', { code: loggedErrorCode(rollbackError) });
       }
     }
     // Don't throw - referral failures shouldn't break subscription processing
@@ -442,7 +442,7 @@ async function upsertSubscription(
       [workspaceId],
     );
     if (existing[0] && !mayReplaceSubscription(existing[0], stripeSubscriptionId, status, periodEndValue)) {
-      console.error(`[Webhook] Not overwriting ${existing[0].status} subscription ${existing[0].stripe_subscription_id} with ${status} ${stripeSubscriptionId} for ${normalizedEmail}`);
+      console.error(`[Webhook] Not overwriting ${existing[0].status} subscription with ${status}`);
       return false;
     }
 
@@ -496,13 +496,13 @@ async function upsertSubscription(
     `, [workspaceId, normalizedEmail, tier, status, stripeSubscriptionId, customerId, periodEndValue, isTrial]);
 
     if (written.length === 0) {
-      console.error(`[Webhook] Upsert skipped by conflict guard for ${normalizedEmail} (${stripeSubscriptionId})`);
+      console.error('[Webhook] Upsert skipped by conflict guard');
       return false;
     }
-    console.log(`[Webhook] Upserted subscription: ${normalizedEmail} - ${tier} (${status})`);
+    console.log(`[Webhook] Upserted subscription: ${tier} (${status})`);
     return true;
   } catch (error) {
-    console.error('[Webhook] Failed to upsert subscription:', error);
+    console.error('[Webhook] Failed to upsert subscription', { code: loggedErrorCode(error) });
     throw error;
   }
 }
@@ -585,10 +585,10 @@ export async function POST(req: NextRequest) {
                    ON CONFLICT (referee_workspace_id) DO NOTHING`,
                   [referrerResult[0].workspace_id, workspaceId, loaded.email, referralCode.toUpperCase()]
                 );
-                console.log(`[Webhook] Recorded referral: ${loaded.email} referred by code ${referralCode}`);
+                console.log('[Webhook] Recorded referral');
               }
             } catch (refError) {
-              console.error('[Webhook] Error recording referral:', refError);
+              console.error('[Webhook] Error recording referral', { code: loggedErrorCode(refError) });
             }
           }
 
@@ -601,9 +601,9 @@ export async function POST(req: NextRequest) {
               if (tier === 'pro' || tier === 'pro_trader') {
                 try {
                   await sendWelcomeEmail(loaded.email, tier);
-                  console.log(`[Webhook] Welcome email sent to ${loaded.email} (${tier})`);
+                  console.log(`[Webhook] Welcome email sent (${tier})`);
                 } catch (emailErr) {
-                  console.error('[Webhook] Welcome email failed (non-blocking):', emailErr);
+                  console.error('[Webhook] Welcome email failed (non-blocking)', { code: loggedErrorCode(emailErr) });
                 }
               }
             });

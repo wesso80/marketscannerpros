@@ -94,3 +94,43 @@ it('removes the dead scanner import and shows one readable symbol disclaimer', (
     'app/tools/workspace/page.tsx',
   ]) expect(read(file), file).not.toContain('↗');
 });
+
+it('logs an error code or a fixed message from the older webhook and auth paths', () => {
+  const stripe = read('app/api/webhooks/stripe/route.ts');
+  expect(stripe).toContain("console.log('[Referral] No pending referral')");
+  expect(stripe).toContain('console.log(`[Referral] Found pending referral, couponApplied=${refereeCouponApplied}`)');
+  expect(stripe).toContain('console.log(`[Referral] Referrer credited $${creditCents / 100}`)');
+  expect(stripe).toContain("console.error(`[Webhook] Not overwriting ${existing[0].status} subscription with ${status}`)");
+  expect(stripe).toContain("console.error('[Webhook] Upsert skipped by conflict guard')");
+  expect(stripe).toContain('console.log(`[Webhook] Upserted subscription: ${tier} (${status})`)');
+  expect(stripe).toContain("console.log('[Webhook] Recorded referral')");
+  expect(stripe).toContain('console.log(`[Webhook] Welcome email sent (${tier})`)');
+  expect(stripe).toContain("console.error('[Referral] Error processing reward', { code: loggedErrorCode(error) })");
+  expect(stripe).not.toContain('for ${email}');
+  expect(stripe).not.toContain('${normalizedEmail}');
+  expect(stripe).not.toContain('sent to ${loaded.email}');
+  expect(stripe).not.toContain('${stripeCustomerId}');
+  expect(stripe).not.toContain('${stripeSubscriptionId}');
+  // #564 owns these two payment_failed lines. Leave them so that PR's wording wins.
+  expect(stripe).toContain('invoice.payment_failed subscription ${subscriptionId}');
+  expect(stripe).toContain('Marked subscription as past_due: ${loaded.email}');
+
+  const login = read('app/api/auth/login/route.ts');
+  expect(login).toContain("console.error('Trial check error', { code: subscriptionFailureCode(error) })");
+  expect(login).toContain("console.error('Cancel stale subscription error', { code: subscriptionFailureCode(error) })");
+  expect(login).toContain("console.error('Login error', { code: subscriptionFailureCode(err) })");
+  expect(login).not.toContain('${primarySub.id}');
+  const admin = read('app/api/auth/admin-login/route.ts');
+  expect(admin).toContain("console.error('Track subscription error', { code: loggedErrorCode(error) })");
+  expect(admin).toContain("console.error('Workspace upsert error', { code: loggedErrorCode(e) })");
+  expect(admin).toContain("console.error('Admin login error', { code: loggedErrorCode(err) })");
+  expect(admin).not.toContain('Track subscription error:');
+  expect(read('app/api/auth/debug/route.ts')).toContain("console.error('[auth/debug] failed', { code: loggedErrorCode(e) })");
+  expect(read('app/api/auth/magic-link/route.ts')).not.toContain('error.message');
+  const deletion = read('app/api/auth/delete-request/route.ts');
+  expect(deletion).toContain("console.log('Deletion request recorded')");
+  expect(deletion).not.toContain('Customer ID:');
+  expect(deletion).not.toContain('Workspace ID:');
+  expect(read('lib/auth.ts')).toContain("console.error('[auth] trial subscription read failed', { code: loggedErrorCode(err) })");
+  expect(read('lib/auth.ts')).toContain("console.error('[auth] verifySessionToken signature check failed')");
+});
