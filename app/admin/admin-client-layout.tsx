@@ -91,6 +91,7 @@ export default function AdminClientLayout({ children, discoveryPaused = false }:
         { href: "/admin/research-scheduler", label: "Research Scheduler", code: "RS" },
         { href: "/admin/journal-learning", label: "Journal Learning", code: "JL" },
         { href: "/admin/backtest-lab", label: "Backtest Lab", code: "BL" },
+        { href: "/admin/edge-check", label: "Edge Check", code: "EC" },
       ],
     },
     {
