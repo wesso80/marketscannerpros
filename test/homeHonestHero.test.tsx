@@ -55,7 +55,7 @@ describe('Homepage PR 2: honest preview and new headline', () => {
     // The words are fixed; only "one path" is coloured.
     expect(hero).toContain("Check the market in{' '}");
     expect(hero).toContain('<span className="text-emerald-400">one path</span>');
-    expect(hero).toContain(': regime, Symbol measurements with the reasons behind them, and data you can check.');
+    expect(hero).toContain(': regime, symbol measurements with the reasons behind them, and data you can check.');
     expect(hero).not.toMatch(/verdict/i);
     expect(hero).toContain('Educational market research for equities, crypto and options. No brokerage execution. No financial advice.');
     expect(hero).toContain('Educational research workflow');
