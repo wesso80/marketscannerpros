@@ -93,6 +93,8 @@ async function verifyAdminSessionCookie(): Promise<AdminAuthResult> {
   try {
     const payload = verifySessionToken(token);
     if (payload.kind !== 'admin') return { ok: false };
+    // Revocation: the cookie's identity must still be an admin (same rule as middleware).
+    if (typeof payload.cid !== 'string' || !isOperator(payload.cid)) return { ok: false };
     return {
       ok: true,
       source: 'admin_session',
