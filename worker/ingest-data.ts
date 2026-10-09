@@ -19,7 +19,7 @@ import { captureMarkUsable } from '../lib/portfolio/captureValues';
 import { isUsRegularSessionOpen } from '../lib/time/usSession';
 import { ensureCaptureSchema, captureDueAccounts, dueCaptureSymbols } from '../lib/portfolio/serverCapture';
 import { Redis } from '@upstash/redis';
-import { sleep } from '../lib/rateLimiter';
+import { sleep, TokenBucket } from '../lib/rateLimiter';
 import { avTakeToken } from '../lib/avRateGovernor';
 import { calculateAllIndicators, detectSqueeze, getIndicatorWarmupStatus, OHLCVBar } from '../lib/indicators';
 import { CACHE_KEYS, CACHE_TTL } from '../lib/redis';
@@ -261,9 +261,25 @@ function isDueForFetch(lastFetchedAt: Date | string | null | undefined, interval
   return Date.now() - parsed.getTime() >= intervalSeconds * 1000;
 }
 
-// Shared 540/min Alpha Vantage budget (lib/avLimiter.ts). The worker no longer keeps a private 200 rpm bucket.
-async function takeWorkerAvToken(): Promise<void> {
-  await avTakeToken({ lane: 'scheduled', feature: 'worker-ingest' });
+// Burst stays at 4 requests/second so a cycle cannot dump the shared minute budget at once.
+const WORKER_AV_BURST_PER_SECOND = 4;
+let workerBurst: TokenBucket | null = null;
+function workerBurstBucket(): TokenBucket {
+  if (!workerBurst) workerBurst = new TokenBucket(WORKER_AV_BURST_PER_SECOND, WORKER_AV_BURST_PER_SECOND);
+  return workerBurst;
+}
+
+// Shared Alpha Vantage budget (lib/avLimiter.ts), lane scheduled, feature worker-ingest.
+// A denial skips this fetch. It does not throw into the caller loop.
+async function takeWorkerAvToken(): Promise<boolean> {
+  try {
+    await workerBurstBucket().take(1, 5_000);
+    await avTakeToken({ lane: 'scheduled', feature: 'worker-ingest' });
+    return true;
+  } catch (err) {
+    console.warn(`[worker] AV budget skipped a fetch: ${err instanceof Error ? err.message : err}`);
+    return false;
+  }
 }
 
 // ============================================================================
@@ -459,7 +475,7 @@ async function fetchAVTimeSeries(
   interval: string = 'daily',
   outputsize: string = 'compact'
 ): Promise<AVBar[]> {
-  await takeWorkerAvToken();
+  if (!(await takeWorkerAvToken())) return [];
 
   const functionName = interval === 'daily' 
     ? 'TIME_SERIES_DAILY_ADJUSTED' 
@@ -525,7 +541,7 @@ async function fetchAVGlobalQuote(symbol: string): Promise<{
   changePct: number;
   latestDay: string;
 } | null> {
-  await takeWorkerAvToken();
+  if (!(await takeWorkerAvToken())) return null;
 
   const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&entitlement=realtime&apikey=${getEnv('ALPHA_VANTAGE_API_KEY')}`;
   
@@ -560,7 +576,7 @@ async function fetchAVGlobalQuote(symbol: string): Promise<{
  */
 async function fetchAVBulkQuotes(symbols: string[]): Promise<Map<string, WorkerEquityQuote>> {
   if (symbols.length === 0) return new Map();
-  await takeWorkerAvToken();
+  if (!(await takeWorkerAvToken())) return new Map();
 
   const symbolList = symbols.join(',');
   const url = `https://www.alphavantage.co/query?function=REALTIME_BULK_QUOTES&symbol=${encodeURIComponent(symbolList)}&entitlement=realtime&apikey=${getEnv('ALPHA_VANTAGE_API_KEY')}`;
@@ -1723,16 +1739,26 @@ async function refreshAndCaptureAccounts() {
   }
   const equities = missing.filter(row => row.asset_type === 'equity').map(row => row.symbol);
   if (isUsRegularSessionOpen(now.getTime())) {
-    for (const batch of chunkSymbols(equities)) await upsertEquityQuotesBatch(await fetchAVBulkQuotes(batch));
+    for (const batch of chunkSymbols(equities)) {
+      try {
+        await upsertEquityQuotesBatch(await fetchAVBulkQuotes(batch));
+      } catch (err) {
+        console.warn(`[worker] quote repair skipped a bulk batch: ${err instanceof Error ? err.message : err}`);
+      }
+    }
   } else {
     for (const symbol of equities) {
-      const mark = completedEquityMark(await fetchAVTimeSeries(symbol, 'daily', 'compact'), Date.now(), getEquityBarSchedule().dailySettleMin);
-      if (mark) await getPool().query(`
-        INSERT INTO quotes_latest (symbol, price, observed_price, observed_at)
-        VALUES ($1, $2, $2, $3::timestamptz)
-        ON CONFLICT (symbol) DO UPDATE SET observed_price = EXCLUDED.observed_price, observed_at = EXCLUDED.observed_at
-        WHERE quotes_latest.observed_at IS NULL OR quotes_latest.observed_at < EXCLUDED.observed_at
-      `, [symbol, mark.price, mark.updatedAt]);
+      try {
+        const mark = completedEquityMark(await fetchAVTimeSeries(symbol, 'daily', 'compact'), Date.now(), getEquityBarSchedule().dailySettleMin);
+        if (mark) await getPool().query(`
+          INSERT INTO quotes_latest (symbol, price, observed_price, observed_at)
+          VALUES ($1, $2, $2, $3::timestamptz)
+          ON CONFLICT (symbol) DO UPDATE SET observed_price = EXCLUDED.observed_price, observed_at = EXCLUDED.observed_at
+          WHERE quotes_latest.observed_at IS NULL OR quotes_latest.observed_at < EXCLUDED.observed_at
+        `, [symbol, mark.price, mark.updatedAt]);
+      } catch (err) {
+        console.warn(`[worker] quote repair skipped ${symbol}: ${err instanceof Error ? err.message : err}`);
+      }
     }
   }
   const captures = await captureDueAccounts();
@@ -1955,7 +1981,7 @@ async function main(): Promise<void> {
   }
 
   const legacyRpm = workerAvRpm(getEnv('ALPHA_VANTAGE_RPM'));
-  console.log(`[worker] Rate limit: shared ceiling 540/min lane=scheduled feature=worker-ingest (legacy ALPHA_VANTAGE_RPM ${getEnv('ALPHA_VANTAGE_RPM') || 'unset'} would have been ${legacyRpm}; it is not a separate budget)`);
+  console.log(`[worker] Rate limit: shared Redis ceiling lane=scheduled feature=worker-ingest, burst ${WORKER_AV_BURST_PER_SECOND}/s (legacy ALPHA_VANTAGE_RPM ${getEnv('ALPHA_VANTAGE_RPM') || 'unset'} would have been ${legacyRpm}; it is not a separate budget)`);
   const barSchedule = getEquityBarSchedule();
   console.log(`[worker] Equity AV: REALTIME_BULK_QUOTES per cycle (100/call); DAILY_ADJUSTED after close +${barSchedule.dailySettleMin}m and pre-open; 60min after each hourly close +${barSchedule.hourlySettleMin}m`);
   console.log(`[worker] Redis: ${getEnv('UPSTASH_REDIS_REST_URL') ? 'enabled' : 'disabled'}`);

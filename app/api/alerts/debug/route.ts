@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
-import { fetchAlertCryptoQuotes } from '@/lib/alerts/cryptoPriceBatch';
-import { symbolBase } from '@/lib/symbols/assetResolution';
+import { alertSymbolKey, fetchAlertCryptoQuotes, PRICE_UNAVAILABLE } from '@/lib/alerts/cryptoPriceBatch';
 
 /**
  * Debug endpoint for checking alert status
@@ -42,12 +41,12 @@ export async function GET(req: NextRequest) {
         try {
           if (alert.asset_type === 'crypto') {
             const batch = await fetchAlertCryptoQuotes([alert.symbol]);
-            const priceData = batch.quotes[symbolBase(alert.symbol)];
-            const skip = batch.skipped.find((row) => row.symbol === symbolBase(alert.symbol));
+            const priceData = batch.quotes[alertSymbolKey(alert.symbol)];
+            const skip = batch.skipped.find((row) => row.symbol === alertSymbolKey(alert.symbol));
             symbolsChecked[key] = {
               symbol: alert.symbol,
               currentPrice: priceData?.price ?? null,
-              error: priceData ? null : skip?.reason ?? 'Failed to fetch price'
+              error: priceData ? null : skip?.reason ?? PRICE_UNAVAILABLE
             };
           } else {
             symbolsChecked[key] = {

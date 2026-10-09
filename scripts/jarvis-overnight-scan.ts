@@ -15,8 +15,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config();
-// Shared ceiling is 540/min in lib/avLimiter.ts. This value is not a separate budget.
-// Without Upstash on this process, takes stay on the local emergency cap.
+// Not a separate budget. With UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN
+// this process shares the 300/min Redis ceiling. Without them, feature
+// jarvis-overnight uses the 120/min fallback (300 + 80 web + 100 worker + 120 = 600).
 process.env.ALPHA_VANTAGE_RPM ??= '120';
 
 const args = new Set(process.argv.slice(2));
@@ -68,7 +69,7 @@ async function main() {
   if (process.env.JARVIS_NOW) log(`clock override JARVIS_NOW=${process.env.JARVIS_NOW} (NY ${ny.date} ${hhmm(ny.minutes)} ${ny.weekday}) — gate test only`);
   if (scheduled) {
     const marker = await kvGet<{ at?: string; status?: string }>(`run_marker:${ny.date}`);
-    const decision = scheduledRunDecision(ny, marker);
+    const decision = scheduledRunDecision(ny, marker, clockNow());
     if (!decision.run) {
       log(`scheduled: ${decision.reason} (NY ${ny.date} ${hhmm(ny.minutes)} ${ny.weekday}${marker?.at ? `, marker ${marker.at}` : ''}) — exit`);
       process.exit(0);

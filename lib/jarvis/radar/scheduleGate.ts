@@ -6,16 +6,20 @@
  * "started" before the scan. A marker that is only "started" must not block
  * the later cron: a dead first process would otherwise leave no jarvis_runs row.
  * A completed marker, or a legacy marker with only `at`, still means already ran.
+ * A started marker younger than JARVIS_RUN_MAX_MS is still inside the first
+ * run, so the later cron does not start a second copy.
  */
 
 export const JARVIS_WINDOW_START = 16 * 60 + 45;
 export const JARVIS_WINDOW_END = 18 * 60 + 30;
+/** First overnight run is expected to finish within 45 minutes (~20 is typical). */
+export const JARVIS_RUN_MAX_MS = 45 * 60 * 1000;
 
 export type JarvisClock = { date: string; minutes: number; weekday: string };
 export type JarvisMarker = { at?: string; status?: string } | null;
 
 export type JarvisScheduleDecision =
-  | { run: false; reason: 'weekend' | 'outside-window' | 'already-ran' }
+  | { run: false; reason: 'weekend' | 'outside-window' | 'already-ran' | 'in-progress' }
   | { run: true; reason: 'due' | 'retry-incomplete' };
 
 export function nyClock(nowMs: number): JarvisClock {
@@ -37,10 +41,18 @@ export function nyClock(nowMs: number): JarvisClock {
   };
 }
 
-export function scheduledRunDecision(ny: Pick<JarvisClock, 'weekday' | 'minutes'>, marker: JarvisMarker): JarvisScheduleDecision {
+export function scheduledRunDecision(
+  ny: Pick<JarvisClock, 'weekday' | 'minutes'>,
+  marker: JarvisMarker,
+  nowMs = Date.now(),
+): JarvisScheduleDecision {
   if (ny.weekday === 'Sat' || ny.weekday === 'Sun') return { run: false, reason: 'weekend' };
   if (ny.minutes < JARVIS_WINDOW_START || ny.minutes > JARVIS_WINDOW_END) return { run: false, reason: 'outside-window' };
   if (!marker) return { run: true, reason: 'due' };
-  if (marker.status === 'started') return { run: true, reason: 'retry-incomplete' };
+  if (marker.status === 'started') {
+    const started = marker.at ? Date.parse(marker.at) : Number.NaN;
+    if (Number.isFinite(started) && nowMs - started < JARVIS_RUN_MAX_MS) return { run: false, reason: 'in-progress' };
+    return { run: true, reason: 'retry-incomplete' };
+  }
   return { run: false, reason: 'already-ran' };
 }

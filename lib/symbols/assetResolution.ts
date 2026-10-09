@@ -1,9 +1,9 @@
 /**
- * Minimal copy of the asset resolver added on PR #554
- * (branch cursor/daily-pick-staleness-outcomes-d6c6, lib/signals/outcomeGuard.ts).
- * That file is not on main. Keep these signatures compatible so the two can be
- * unified when #554 merges: symbolBase, resolveOutcomeAsset, resolveScanAsset.
- * Alerts use this to refuse a coin guess for an equity ticker. They never search.
+ * TODO: switch this file to PR #554's resolver once it is on main.
+ * Checked origin/main at 7d560349: #554 (cursor/daily-pick-staleness-outcomes-d6c6,
+ * lib/signals/outcomeGuard.ts) is not merged. Keep this copy minimal and compatible
+ * (symbolBase, resolveOutcomeAsset, resolveScanAsset). Do not teach it FTM/MATIC;
+ * outcome labelling still treats those as unknown. Alert pricing maps them separately.
  */
 
 export function symbolBase(symbol: string): string {

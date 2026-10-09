@@ -22,7 +22,14 @@ function splitCsv(line: string): string[] {
 
 export async function loadListings(): Promise<{ listings: Listing[]; total: number; excluded: number }> {
   const key = process.env.ALPHA_VANTAGE_API_KEY; if (!key) return { listings: [], total: 0, excluded: 0 };
-  await avTakeToken(); budget.av++;
+  try {
+    await avTakeToken();
+  } catch (err) {
+    budget.errors++;
+    console.warn(`[radar] listing fetch skipped: ${err instanceof Error ? err.message : err}`);
+    return { listings: [], total: 0, excluded: 0 };
+  }
+  budget.av++;
   const res = await fetch(`https://www.alphavantage.co/query?function=LISTING_STATUS&apikey=${key}`, { signal: AbortSignal.timeout(30000) });
   const text = await res.text();
   const lines = text.split(/\r?\n/).filter(Boolean);

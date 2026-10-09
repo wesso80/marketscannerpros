@@ -1,37 +1,68 @@
 /**
- * Shared Alpha Vantage limiter for web and worker.
+ * Shared Alpha Vantage limiter for web, worker, and the Jarvis cron.
  *
- * One sliding 60s window in Upstash Redis (the store avRateGovernor already used).
- * Safe ceiling is 540/min, under the 600/min licence. A denied call waits and
- * retries this window. It does not take a second token from a private bucket.
+ * Licence is 600 calls/min. A process with Upstash and a process without it do
+ * not share a counter, so their allowances add:
+ *
+ *   shared Redis ceiling          300  web + worker while Upstash answers
+ *   web fallback                  80   this web process after a timeout or with no Redis
+ *   worker fallback              100   the ingest process after a timeout or with no Redis
+ *   Jarvis fallback              120   jarvis-overnight when the cron has no Upstash keys
+ *   sum                          600  hard stop: this module throws if the sum exceeds 600
+ *
+ * Each allowance stays under 540. Jarvis's 120 is its explicit need (the cron's
+ * ALPHA_VANTAGE_RPM is 120; a weekday run is about 2,389 calls). On the fallback
+ * that whole 120 is usable by the backfill lane. It is not the ~28 left after
+ * holding the higher-lane reserves of a shared 150 window.
+ *
+ * Joining the shared Redis budget needs UPSTASH_REDIS_REST_URL and
+ * UPSTASH_REDIS_REST_TOKEN on that process. No other env var.
  *
  * Priority, highest first: user, alerts, scheduled, backfill.
- * Each higher lane keeps an unused reserve. A lower lane may use only what is
- * left after those reserves. A higher lane may use the whole ceiling.
+ * A lower lane must leave unused higher reserves. Untagged calls are scheduled,
+ * so a cron that forgot a tag does not spend the user reserve.
  *
- * When Redis is missing, this process uses a 150/min emergency window with the
- * same priority shares scaled down. That is not the shared budget.
- *
- * Jarvis on another machine takes from this budget with
- * POST /api/internal/av-budget (x-cron-secret). See AV_BUDGET_CONTRACT.
- * A copy of the scripts that does not call that route is outside the budget.
+ * Limiter Redis commands abort after LIMITER_REDIS_TIMEOUT_MS. Timeout or error
+ * uses this process's fallback. That spend is already inside the sum above.
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { getRedis } from '@/lib/redis';
+import { getLimiterRedis, LIMITER_REDIS_TIMEOUT_MS } from '@/lib/redis';
 
-export const AV_CEILING_PER_MIN = 540;
-export const AV_LOCAL_EMERGENCY_PER_MIN = 150;
+export const AV_LICENCE_PER_MIN = 600;
+export const AV_SINGLE_PROCESS_CAP = 539;
+export const AV_CEILING_PER_MIN = 300;
+export const AV_WEB_FALLBACK_PER_MIN = 80;
+export const AV_WORKER_FALLBACK_PER_MIN = 100;
+/** Explicit Jarvis overnight need when this process has no shared store. */
+export const AV_JARVIS_FALLBACK_PER_MIN = 120;
+export const AV_JARVIS_FEATURE = 'jarvis-overnight';
+export const AV_WORKER_FEATURE = 'worker-ingest';
+export const AV_LIMITER_REDIS_TIMEOUT_MS = LIMITER_REDIS_TIMEOUT_MS;
+export const AV_FALLBACK_LOG_EVERY_MS = 5 * 60_000;
 export const AV_BUDGET_PATH = '/api/internal/av-budget';
 export const AV_LANES = ['user', 'alerts', 'scheduled', 'backfill'] as const;
 export type AvLane = (typeof AV_LANES)[number];
 
-/** Unused headroom kept for each lane. Sum is the 540 ceiling. */
+/** Unused headroom kept for each lane. Sum is the shared Redis ceiling. */
 export const AV_LANE_RESERVE: Record<AvLane, number> = {
-  user: 120,
-  alerts: 80,
-  scheduled: 240,
-  backfill: 100,
+  user: 67,
+  alerts: 44,
+  scheduled: 133,
+  backfill: 56,
 };
+
+const AV_ALLOWANCES = [
+  AV_CEILING_PER_MIN,
+  AV_WEB_FALLBACK_PER_MIN,
+  AV_WORKER_FALLBACK_PER_MIN,
+  AV_JARVIS_FALLBACK_PER_MIN,
+] as const;
+
+export const AV_ALLOWANCE_SUM = AV_ALLOWANCES.reduce((sum, n) => sum + n, 0);
+
+if (AV_ALLOWANCE_SUM > AV_LICENCE_PER_MIN || AV_ALLOWANCES.some((n) => n > AV_SINGLE_PROCESS_CAP)) {
+  throw new Error(`AV allowances sum to ${AV_ALLOWANCE_SUM}, above the ${AV_LICENCE_PER_MIN}/min licence`);
+}
 
 export const AV_BUDGET_CONTRACT = {
   method: 'POST',
@@ -40,7 +71,7 @@ export const AV_BUDGET_CONTRACT = {
   body: { lane: 'backfill', feature: 'jarvis-overnight', count: 1 },
   countMax: 20,
   granted: { granted: 1, ceiling: AV_CEILING_PER_MIN, lane: 'backfill', feature: 'jarvis-overnight', retryAfterMs: 0 },
-  note: 'Take one token per Alpha Vantage HTTP call. Do not call Alpha Vantage when granted is 0. Jarvis must adopt this.',
+  note: 'Take one token per Alpha Vantage HTTP call. Do not call Alpha Vantage when granted is 0. The Jarvis cron already uses this process limiter. UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN put it on the shared 300/min window; without them it uses the 120/min fallback.',
 } as const;
 
 const REDIS_KEY = 'av_limiter:minute';
@@ -63,7 +94,7 @@ export function currentAvBudget(): AvBudget | undefined {
 
 export function normalizeBudget(input?: Partial<AvBudget> | null): AvBudget {
   const ctx = budgetContext.getStore();
-  const lane = isLane(input?.lane) ? input.lane : ctx?.lane ?? 'user';
+  const lane = isLane(input?.lane) ? input.lane : ctx?.lane ?? 'scheduled';
   const feature = sanitizeFeature(input?.feature || ctx?.feature || 'unspecified');
   return { lane, feature };
 }
@@ -110,7 +141,7 @@ export function decideAvTake(input: {
   return { allow: input.usedTotal + 1 + mustLeave <= ceiling, mustLeave };
 }
 
-const EVAL_SCRIPT = `
+export const AV_LIMITER_LUA = `
 local key = KEYS[1]
 local now = tonumber(ARGV[1])
 local windowMs = tonumber(ARGV[2])
@@ -142,7 +173,31 @@ return 1
 
 type LocalEvent = { at: number; lane: AvLane };
 const localEvents: LocalEvent[] = [];
-let loggedEmergency = false;
+let lastFallbackLog = 0;
+let lastRedisProblem = '';
+
+export function fallbackBudget(feature: string): { ceiling: number; reserve: Record<AvLane, number> } {
+  if (feature === AV_JARVIS_FEATURE) {
+    return {
+      ceiling: AV_JARVIS_FALLBACK_PER_MIN,
+      reserve: { user: 0, alerts: 0, scheduled: 0, backfill: AV_JARVIS_FALLBACK_PER_MIN },
+    };
+  }
+  if (feature === AV_WORKER_FEATURE) {
+    return {
+      ceiling: AV_WORKER_FALLBACK_PER_MIN,
+      reserve: { user: 0, alerts: 0, scheduled: AV_WORKER_FALLBACK_PER_MIN, backfill: 0 },
+    };
+  }
+  return { ceiling: AV_WEB_FALLBACK_PER_MIN, reserve: reservesForCeiling(AV_WEB_FALLBACK_PER_MIN) };
+}
+
+/** Test hook. Clears the in-process window and the fallback log clock. */
+export function resetAvLimiterLocalForTests(): void {
+  localEvents.length = 0;
+  lastFallbackLog = 0;
+  lastRedisProblem = '';
+}
 
 function localSnapshot(now: number): { usedTotal: number; usedByLane: Record<AvLane, number> } {
   const cutoff = now - WINDOW_MS;
@@ -154,60 +209,70 @@ function localSnapshot(now: number): { usedTotal: number; usedByLane: Record<AvL
   return { usedTotal: localEvents.length, usedByLane };
 }
 
-function tryLocal(lane: AvLane, now: number): boolean {
-  if (!loggedEmergency) {
-    loggedEmergency = true;
-    console.warn(`[avLimiter] shared store unavailable; local emergency cap ${AV_LOCAL_EMERGENCY_PER_MIN}/min`);
+function tryLocal(lane: AvLane, feature: string, now: number): boolean {
+  const budget = fallbackBudget(feature);
+  if (now - lastFallbackLog >= AV_FALLBACK_LOG_EVERY_MS) {
+    lastFallbackLog = now;
+    const problem = lastRedisProblem ? `; ${lastRedisProblem}` : '';
+    console.warn(`[avLimiter] shared store unavailable${problem}; local fallback cap ${budget.ceiling}/min feature=${feature}`);
   }
   const snap = localSnapshot(now);
   const decision = decideAvTake({
     lane,
     usedTotal: snap.usedTotal,
     usedByLane: snap.usedByLane,
-    ceiling: AV_LOCAL_EMERGENCY_PER_MIN,
-    reserve: reservesForCeiling(AV_LOCAL_EMERGENCY_PER_MIN),
+    ceiling: budget.ceiling,
+    reserve: budget.reserve,
   });
   if (!decision.allow) return false;
   localEvents.push({ at: now, lane });
   return true;
 }
 
+function limiterTimeout<T>(work: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('AV limiter Redis timeout')), AV_LIMITER_REDIS_TIMEOUT_MS);
+  });
+  return Promise.race([work, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
 async function tryRedis(budget: AvBudget, now: number): Promise<boolean | null> {
-  const redis = getRedis();
+  const redis = getLimiterRedis();
   if (!redis) return null;
   const member = `${now}:${Math.random().toString(36).slice(2, 10)}:${budget.lane}:${budget.feature}`;
   try {
-    if (typeof redis.eval === 'function') {
-      const granted = await redis.eval(
-        EVAL_SCRIPT,
-        [REDIS_KEY],
-        [String(now), String(WINDOW_MS), String(AV_CEILING_PER_MIN), budget.lane, member, JSON.stringify(AV_LANE_RESERVE), JSON.stringify(AV_LANES)],
-      );
-      return Number(granted) === 1;
-    }
+    return await limiterTimeout((async () => {
+      if (typeof redis.eval === 'function') {
+        const granted = await redis.eval(
+          AV_LIMITER_LUA,
+          [REDIS_KEY],
+          [String(now), String(WINDOW_MS), String(AV_CEILING_PER_MIN), budget.lane, member, JSON.stringify(AV_LANE_RESERVE), JSON.stringify(AV_LANES)],
+        );
+        return Number(granted) === 1;
+      }
+      await redis.zremrangebyscore(REDIS_KEY, 0, now - WINDOW_MS);
+      const rows = (await redis.zrange(REDIS_KEY, 0, -1)) as string[];
+      const usedByLane = Object.fromEntries(AV_LANES.map((lane) => [lane, 0])) as Record<AvLane, number>;
+      for (const row of rows) {
+        const lane = String(row).split(':')[2] as AvLane;
+        if (usedByLane[lane] != null) usedByLane[lane] += 1;
+      }
+      const decision = decideAvTake({ lane: budget.lane, usedTotal: rows.length, usedByLane });
+      if (!decision.allow) return false;
+      await redis.zadd(REDIS_KEY, { score: now, member });
+      await redis.expire(REDIS_KEY, 70);
+      const used = await redis.zcard(REDIS_KEY);
+      if ((used ?? 0) > AV_CEILING_PER_MIN) {
+        await redis.zrem(REDIS_KEY, member);
+        return false;
+      }
+      return true;
+    })());
   } catch (err) {
-    console.warn('[avLimiter] Redis eval failed, using a counted read:', (err as Error).message);
-  }
-  try {
-    await redis.zremrangebyscore(REDIS_KEY, 0, now - WINDOW_MS);
-    const rows = (await redis.zrange(REDIS_KEY, 0, -1)) as string[];
-    const usedByLane = Object.fromEntries(AV_LANES.map((lane) => [lane, 0])) as Record<AvLane, number>;
-    for (const row of rows) {
-      const lane = String(row).split(':')[2] as AvLane;
-      if (usedByLane[lane] != null) usedByLane[lane] += 1;
-    }
-    const decision = decideAvTake({ lane: budget.lane, usedTotal: rows.length, usedByLane });
-    if (!decision.allow) return false;
-    await redis.zadd(REDIS_KEY, { score: now, member });
-    await redis.expire(REDIS_KEY, 70);
-    const used = await redis.zcard(REDIS_KEY);
-    if ((used ?? 0) > AV_CEILING_PER_MIN) {
-      await redis.zrem(REDIS_KEY, member);
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.warn('[avLimiter] Redis error:', (err as Error).message);
+    lastRedisProblem = (err as Error).message || 'redis error';
     return null;
   }
 }
@@ -235,11 +300,11 @@ export function flushAvFeatureCounts(): string[] {
   return lines;
 }
 
-/** One non-blocking attempt. Null from Redis becomes the local emergency cap, not an extra budget on top of Redis. */
+/** One non-blocking attempt. A Redis timeout or error uses this process's fallback. A denial does not. */
 export async function avTryTake(input?: Partial<AvBudget>, now = Date.now()): Promise<boolean> {
   const budget = normalizeBudget(input);
   const redisResult = await tryRedis(budget, now);
-  const granted = redisResult === null ? tryLocal(budget.lane, now) : redisResult;
+  const granted = redisResult === null ? tryLocal(budget.lane, budget.feature, now) : redisResult;
   if (granted) noteAvFeatureCall(budget.feature, now);
   return granted;
 }

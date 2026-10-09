@@ -4,8 +4,8 @@ import { q } from '@/lib/db';
 import { describeConditionMet, parseGlobalQuote, type AlertQuote } from '@/lib/alerts/priceConditions';
 import { deliverUserAlertEmail } from '@/lib/alerts/emailControls';
 import { sendPushToUser, PushTemplates } from '@/lib/pushServer';
-import { fetchAlertCryptoQuotes, type AlertCryptoQuote } from '@/lib/alerts/cryptoPriceBatch';
-import { symbolBase } from '@/lib/symbols/assetResolution';
+import { alertSymbolKey, fetchAlertCryptoQuotes, type AlertCryptoQuote } from '@/lib/alerts/cryptoPriceBatch';
+import { writeAlertPriceStatus } from '@/lib/alerts/priceNotice';
 import { avTakeToken } from '@/lib/avRateGovernor';
 import { runWithAvBudget } from '@/lib/avLimiter';
 import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
@@ -99,7 +99,7 @@ async function checkAlertsBody(req: NextRequest) {
     const cryptoBatch = await fetchAlertCryptoQuotes(cryptoSymbols);
     console.log(`[Alert Check] CoinGecko batch calls=${cryptoBatch.calls} quoted=${Object.keys(cryptoBatch.quotes).length} skipped=${cryptoBatch.skipped.length}`);
     for (const skip of cryptoBatch.skipped) {
-      console.warn(`[Alert Check] skip ${skip.symbol}: ${skip.reason}`);
+      console.warn(`[Alert Check] skip ${skip.symbol}: ${skip.detail}`);
     }
 
     const triggered: string[] = [];
@@ -122,8 +122,14 @@ async function checkAlertsBody(req: NextRequest) {
         console.log(`[Alert Check] ${symbol} price: ${quote?.price ?? null} change: ${quote?.changePercent ?? null}%`);
         
         if (quote === null) {
+          if (quoteSourceFor(assetType) === 'crypto') {
+            await writeAlertPriceStatus(groupAlerts.map((alert) => ({ id: alert.id, unavailable: true })));
+          }
           errors.push(`Failed to fetch price for ${symbol}`);
           continue;
+        }
+        if (quoteSourceFor(assetType) === 'crypto') {
+          await writeAlertPriceStatus(groupAlerts.map((alert) => ({ id: alert.id, unavailable: false })));
         }
         const price = quote.price;
 
@@ -188,7 +194,7 @@ async function fetchQuote(symbol: string, assetType: string, cryptoQuotes: Recor
   try {
     const source = quoteSourceFor(assetType);
     if (source === 'crypto') {
-      const result = cryptoQuotes[symbolBase(symbol)];
+      const result = cryptoQuotes[alertSymbolKey(symbol)];
       if (!result || !Number.isFinite(result.price)) return null;
       return { price: result.price, changePercent: Number.isFinite(result.change24h) ? result.change24h : null };
     } else if (source === 'forex') {

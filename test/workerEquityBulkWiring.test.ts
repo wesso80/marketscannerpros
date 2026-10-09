@@ -52,6 +52,9 @@ describe('worker equities wiring (source guard)', () => {
 
   it('takes worker AV calls from the shared scheduled budget', () => {
     expect(src).toContain("avTakeToken({ lane: 'scheduled', feature: 'worker-ingest' })");
+    expect(src).toContain('WORKER_AV_BURST_PER_SECOND = 4');
+    expect(src).toContain('new TokenBucket(WORKER_AV_BURST_PER_SECOND, WORKER_AV_BURST_PER_SECOND)');
+    expect(src).toContain('[worker] quote repair skipped');
     expect(src).not.toContain('function getRateLimiter');
     expect(src).not.toMatch(/ALPHA_VANTAGE_RPM'\) \|\| '500'/);
     expect(src).not.toMatch(/ALPHA_VANTAGE_RPM'\) \|\| '200'/);
