@@ -31,7 +31,7 @@ export default function Hero() {
         <h1 className="mx-auto max-w-4xl !text-[1.25rem] font-extrabold leading-tight tracking-tight text-white sm:!text-4xl md:!text-5xl">
           Check the market in{' '}
           <span className="text-emerald-400">one path</span>
-          : regime, a clear Symbol verdict with reasons, and data you can check.
+          : regime, Symbol measurements with the reasons behind them, and data you can check.
         </h1>
 
         {/* Subtitle */}
