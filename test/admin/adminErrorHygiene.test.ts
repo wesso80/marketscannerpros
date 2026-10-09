@@ -9,8 +9,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { adminErrorText } from '@/lib/admin/errorResponse';
 
 const EXCLUDED = /^app\/api\/admin\/(crypto-markets|portfolio-lab|crypto-discovery|scanner-data-audit|diagnostics\/scanners)\//;
-// Rewritten without raw errors by Codex's Health PR (#550); drop this skip once that lands.
-const PENDING_REWRITE = new Set(['app/api/admin/health/route.ts']);
 
 function routes(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -35,7 +33,7 @@ describe('adminErrorText', () => {
 });
 
 describe('admin and operator routes do not return raw exception text', () => {
-  const files = [...routes('app/api/admin'), ...routes('app/api/operator')].filter((f) => !EXCLUDED.test(f) && !PENDING_REWRITE.has(f));
+  const files = [...routes('app/api/admin'), ...routes('app/api/operator')].filter((f) => !EXCLUDED.test(f));
   const LEAK = [
     /\b(\w+) instanceof Error \? \1\.message\b/,
     /\b(details?|error|reason|note): (e|err|error)\.message\b/,
