@@ -44,6 +44,14 @@ describe('cross-site browser mutations are refused', () => {
     expect(await refused(await (await mw())(req('https://marketscannerpros.app/api/admin/kill-switch', 'POST', { 'sec-fetch-site': 'cross-site' })))).toBe(true);
   });
 
+  it('an arbitrary subdomain of the site is refused (no wildcard trust)', async () => {
+    expect(await refused(await (await mw())(req('https://marketscannerpros.app/api/admin/kill-switch', 'POST', { origin: 'https://staging.marketscannerpros.app' })))).toBe(true);
+  });
+
+  it('a spoofed x-forwarded-host does not widen trust', async () => {
+    expect(await refused(await (await mw())(req('https://marketscannerpros.app/api/admin/kill-switch', 'POST', { origin: 'https://evil.example', 'x-forwarded-host': 'evil.example' })))).toBe(true);
+  });
+
   it('a look-alike domain is refused', async () => {
     expect(await refused(await (await mw())(req('https://marketscannerpros.app/api/admin/kill-switch', 'POST', { origin: 'https://marketscannerpros.app.evil.example' })))).toBe(true);
     expect(await refused(await (await mw())(req('https://marketscannerpros.app/api/admin/kill-switch', 'POST', { origin: 'https://evilmarketscannerpros.app' })))).toBe(true);
