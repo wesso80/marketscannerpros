@@ -26,7 +26,7 @@
  * uses this process's fallback. That spend is already inside the sum above.
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { getLimiterRedis, LIMITER_REDIS_TIMEOUT_MS } from '@/lib/redis';
+import * as redisModule from '@/lib/redis';
 
 export const AV_LICENCE_PER_MIN = 600;
 export const AV_SINGLE_PROCESS_CAP = 539;
@@ -37,7 +37,8 @@ export const AV_WORKER_FALLBACK_PER_MIN = 100;
 export const AV_JARVIS_FALLBACK_PER_MIN = 120;
 export const AV_JARVIS_FEATURE = 'jarvis-overnight';
 export const AV_WORKER_FEATURE = 'worker-ingest';
-export const AV_LIMITER_REDIS_TIMEOUT_MS = LIMITER_REDIS_TIMEOUT_MS;
+/** Same 400ms as LIMITER_REDIS_TIMEOUT_MS in lib/redis.ts. Not imported, so a Redis mock that only stubs getRedis still loads. */
+export const AV_LIMITER_REDIS_TIMEOUT_MS = 400;
 export const AV_FALLBACK_LOG_EVERY_MS = 5 * 60_000;
 export const AV_BUDGET_PATH = '/api/internal/av-budget';
 export const AV_LANES = ['user', 'alerts', 'scheduled', 'backfill'] as const;
@@ -239,8 +240,17 @@ function limiterTimeout<T>(work: Promise<T>): Promise<T> {
   });
 }
 
+function limiterRedis() {
+  try {
+    const getter = redisModule.getLimiterRedis;
+    return typeof getter === 'function' ? getter() : null;
+  } catch {
+    return null;
+  }
+}
+
 async function tryRedis(budget: AvBudget, now: number): Promise<boolean | null> {
-  const redis = getLimiterRedis();
+  const redis = limiterRedis();
   if (!redis) return null;
   const member = `${now}:${Math.random().toString(36).slice(2, 10)}:${budget.lane}:${budget.feature}`;
   try {

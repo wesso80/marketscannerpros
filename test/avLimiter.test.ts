@@ -189,6 +189,7 @@ describe('shared AV limiter', () => {
     await expect(pending).resolves.toBe(true);
     expect(warn.mock.calls.some((call) => String(call[0]).includes('AV limiter Redis timeout'))).toBe(true);
     const redisSource = readFileSync('lib/redis.ts', 'utf8');
+    expect(redisSource).toContain('export const LIMITER_REDIS_TIMEOUT_MS = 400');
     expect(redisSource).toContain('AbortSignal.timeout(LIMITER_REDIS_TIMEOUT_MS)');
     expect(redisSource).toContain('retries: 0');
     expect(AV_LIMITER_REDIS_TIMEOUT_MS).toBe(400);
