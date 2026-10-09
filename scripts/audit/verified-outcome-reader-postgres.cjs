@@ -1,0 +1,16 @@
+const {Client}=require('pg');const fs=require('node:fs');const assert=require('node:assert/strict');const ts=require('typescript');const Module=require('node:module');
+const url=process.env.VERIFIED_READER_TEST_URL;
+if(!url||!['127.0.0.1','localhost'].includes(new URL(url).hostname))throw new Error('Loopback fixture database required');
+const code=ts.transpileModule(fs.readFileSync('lib/admin/verifiedOutcomes.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+const mod=new Module('verifiedOutcomes-fixture');mod._compile(code,'verifiedOutcomes-fixture.js');const {EVIDENCE_SQL,evidenceStatus}=mod.exports;
+const db=new Client({connectionString:url});
+(async()=>{await db.connect();try{await db.query('BEGIN');
+ await db.query(`CREATE TEMP TABLE ai_signal_log(trade_bias text,signal_at timestamptz,price_at_signal numeric,price_after_24h numeric,outcome_measured_at timestamptz,outcome text,pct_move_24h numeric)`);
+ await db.query(`INSERT INTO ai_signal_log VALUES ('LONG','2026-10-01T12:00:00Z',100,102,'2026-10-02T12:03:00Z','correct',2)`);
+ let result=await db.query('SELECT '+EVIDENCE_SQL+' FROM ai_signal_log');assert.equal(evidenceStatus(result.rows[0].provenance_evidence),'unknown');
+ await db.query('ALTER TABLE ai_signal_log ADD COLUMN outcome_provenance jsonb, ADD COLUMN price_after_24h_at timestamptz');
+ await db.query(`UPDATE ai_signal_log SET price_after_24h_at='2026-10-02T12:00:00Z', outcome_provenance=jsonb_build_object('writer','label-ai-outcomes','method','first-completed-close-v1','horizon','24h','thresholdPct',1,'direction',trade_bias,'signalAt',signal_at,'entryPrice',price_at_signal,'observedPrice',price_after_24h,'observedAt','2026-10-02T12:00:00Z','processedAt',outcome_measured_at,'barSource','intraday','outcome',outcome,'pctMove',pct_move_24h)`);
+ result=await db.query('SELECT '+EVIDENCE_SQL+' FROM ai_signal_log');assert.equal(evidenceStatus(result.rows[0].provenance_evidence),'verified');
+ await db.query("UPDATE ai_signal_log SET outcome='neutral'");result=await db.query('SELECT '+EVIDENCE_SQL+' FROM ai_signal_log');assert.equal(evidenceStatus(result.rows[0].provenance_evidence),'inconsistent');
+ console.log('PASS: real PostgreSQL projection tolerates pre-migration schema, validates stored evidence and detects mismatched verdict.');
+}finally{await db.query('ROLLBACK');await db.end();}})().catch(e=>{console.error(e);process.exitCode=1;});
