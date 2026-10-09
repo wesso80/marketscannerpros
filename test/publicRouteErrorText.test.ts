@@ -13,7 +13,7 @@ import { expect, it } from 'vitest';
 
 const OPS = /^app\/api\/(admin|jobs|cron|migrations|operator|quant|journal|portfolio)\//;
 const PENDING = new Set([
-  'app/api/ai/actions/route.ts', 'app/api/ai/analyst-context/route.ts', 'app/api/catalyst/events/route.ts',
+  'app/api/ai/actions/route.ts', 'app/api/catalyst/events/route.ts',
   'app/api/deep-analysis/route.ts', 'app/api/earnings-calendar/route.ts', 'app/api/market-focus/generate/route.ts',
   'app/api/midpoints/route.ts', 'app/api/options-scan/route.ts', 'app/api/scanner/bulk/route.ts', 'app/api/test-email/route.ts',
 ]);
