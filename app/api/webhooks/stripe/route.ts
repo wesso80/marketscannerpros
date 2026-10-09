@@ -738,7 +738,7 @@ export async function POST(req: NextRequest) {
         if (subscriptionId) {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId);
           if (subscription.status !== 'past_due' && subscription.status !== 'unpaid') {
-            console.error(`[Webhook] invoice.payment_failed subscription ${subscriptionId} live status is ${subscription.status}; not writing past_due`);
+            console.error(`[Webhook] invoice.payment_failed live status is ${subscription.status}; not writing past_due`);
             break;
           }
           const customer = await stripe.customers.retrieve((invoice as any).customer as string);
@@ -758,7 +758,7 @@ export async function POST(req: NextRequest) {
               AND stripe_subscription_id IS NOT NULL
           `, [subscriptionId]);
           
-          console.log(`[Webhook] Marked subscription as past_due: ${loaded.email}`);
+          console.log('[Webhook] Marked subscription as past_due');
         }
         break;
       }

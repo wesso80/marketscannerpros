@@ -4,7 +4,7 @@ import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { checkoutCustomerFromSession } from "@/lib/checkoutSignIn";
 import { isStripeCustomerId } from "@/lib/billingPortal";
-import { chooseAccessSubscription, chooseStripeCustomerId, subscriptionRecency, type SubscriptionRowFields } from "@/lib/subscriptionRow";
+import { chooseAccessSubscription, chooseStripeCustomerId, isLiveStripeSubscription, subscriptionRecency, type SubscriptionRowFields } from "@/lib/subscriptionRow";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-09-30.clover",
@@ -14,6 +14,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 const PORTAL_RETURN_URL = "https://marketscannerpros.app/tools/explorer";
 
 type PortalSubscriptionRow = SubscriptionRowFields & { workspace_id?: string | null };
+
+function errorCode(error: unknown): string {
+  if (error && typeof error === 'object' && 'code' in error && typeof (error as { code?: unknown }).code === 'string') {
+    return (error as { code: string }).code;
+  }
+  return 'unknown';
+}
 
 function customerIdOnRow(row: SubscriptionRowFields | null): string | null {
   const id = typeof row?.stripe_customer_id === 'string' ? row.stripe_customer_id.trim() : '';
@@ -31,9 +38,12 @@ async function stripeCustomerIdForEmail(email: string, workspaceId: string): Pro
   );
   const workspaceRows = rows.filter((row) => row.workspace_id === workspaceId);
   const otherRows = rows.filter((row) => row.workspace_id !== workspaceId);
-  const chosen = chooseAccessSubscription(workspaceRows, otherRows);
-  const chosenId = customerIdOnRow(chosen);
-  if (chosenId) return chosenId;
+  const now = Date.now();
+  const chosen = chooseAccessSubscription(workspaceRows, otherRows, now);
+  if (chosen && isLiveStripeSubscription(chosen, now)) {
+    const chosenId = customerIdOnRow(chosen);
+    if (chosenId) return chosenId;
+  }
   const payable = rows
     .filter((row) => {
       const subscriptionId = typeof row.stripe_subscription_id === 'string' ? row.stripe_subscription_id.trim() : '';
@@ -58,7 +68,7 @@ export async function POST(_req: NextRequest) {
       customerId = account.customer;
     }
   } catch (error: unknown) {
-    console.error("Portal customer lookup failed:", error);
+    console.error(`Portal customer lookup failed (${errorCode(error)})`);
     return NextResponse.json({ error: "Failed to create portal session" }, { status: 500 });
   }
 
@@ -75,7 +85,7 @@ export async function POST(_req: NextRequest) {
 
     return NextResponse.json({ url: portalSession.url });
   } catch (error: unknown) {
-    console.error("Portal error:", error);
+    console.error(`Portal error (${errorCode(error)})`);
     return NextResponse.json(
       { error: "Failed to create portal session" },
       { status: 500 },

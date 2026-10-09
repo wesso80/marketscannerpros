@@ -118,11 +118,14 @@ function periodEndMillis(value: CheckoutSubRow['current_period_end']): number | 
   return Number.isFinite(ms) ? ms : null;
 }
 
-/** Active row whose stored period end is already past. The webhook may have been missed. */
+/**
+ * Active row whose period end is missing or already past. A NULL end is not
+ * proof the period is still open, so Stripe is asked before a 409.
+ */
 function isStaleActive(row: CheckoutSubRow, nowMs: number): boolean {
   if (row.status !== 'active' || !subscriptionIdOf(row)) return false;
   const endMs = periodEndMillis(row.current_period_end);
-  return endMs != null && endMs < nowMs;
+  return endMs == null || endMs < nowMs;
 }
 
 /** Trialing row that no longer counts as live because the period end is missing or past. */
@@ -132,8 +135,8 @@ function isStaleTrial(row: CheckoutSubRow, nowMs: number): boolean {
 }
 
 /**
- * Certain block: the row grants Pro and is live. A past period end on an
- * active row is not certain — Stripe is asked before that one is refused.
+ * Certain block: the row grants Pro and is live, and the period end is known
+ * to still be ahead. A missing or past end is not certain.
  */
 function certainProLive(row: CheckoutSubRow, nowMs: number): boolean {
   if (!subscriptionIdOf(row) || !grantsPro(row) || isStaleActive(row, nowMs)) return false;
@@ -155,9 +158,9 @@ function mislabelledFree(row: CheckoutSubRow): boolean {
   return row.status === 'active' || row.status === 'trialing';
 }
 
-/** A failed retrieve lets checkout proceed. The stored row is not proof that money is owed. */
-function needsFailOpenConfirm(row: CheckoutSubRow, nowMs: number): boolean {
-  return isStaleTrial(row, nowMs) || isStaleActive(row, nowMs) || mislabelledFree(row);
+/** Ask Stripe. A failed retrieve blocks checkout for every one of these rows. */
+function needsStripeConfirm(row: CheckoutSubRow, nowMs: number): boolean {
+  return isStaleTrial(row, nowMs) || isStaleActive(row, nowMs) || mislabelledFree(row) || owedSubscription(row);
 }
 
 function knownProPriceIds(): Set<string> {
@@ -194,8 +197,8 @@ type StripeConfirm = 'live_pro' | 'not_live' | 'failed';
 
 /**
  * live_pro: Stripe status is active, trialing, past_due, or unpaid, on a Pro price.
- * not_live: Stripe answered and it is not that.
- * failed: the retrieve call threw. Callers choose whether that blocks checkout.
+ * not_live: Stripe answered and it is not that. Checkout may proceed.
+ * failed: the retrieve call threw. Checkout stays closed.
  */
 async function confirmStripeSubscription(subscriptionId: string): Promise<StripeConfirm> {
   try {
@@ -208,8 +211,22 @@ async function confirmStripeSubscription(subscriptionId: string): Promise<Stripe
   }
 }
 
-async function accountAlreadySubscribed(email: string | null, customerId: string | null): Promise<boolean> {
-  if (!email && !customerId) return false;
+const ALREADY_SUBSCRIBED = {
+  error: 'You already have Pro. Manage it in billing.',
+  code: 'already_subscribed' as const,
+  portalUrl: '/api/payments/portal',
+};
+
+const BILLING_CHECK_FAILED = {
+  error: "We couldn't confirm your billing status right now. Please try again in a minute or open billing.",
+  code: 'billing_check_failed' as const,
+  portalUrl: '/api/payments/portal',
+};
+
+type CheckoutBlock = typeof ALREADY_SUBSCRIBED | typeof BILLING_CHECK_FAILED | null;
+
+async function checkoutBlock(email: string | null, customerId: string | null): Promise<CheckoutBlock> {
+  if (!email && !customerId) return null;
   const rows = await q<CheckoutSubRow>(
     `SELECT tier, status, current_period_end, stripe_subscription_id, stripe_customer_id
        FROM user_subscriptions
@@ -218,23 +235,17 @@ async function accountAlreadySubscribed(email: string | null, customerId: string
     [email, customerId],
   );
   const now = Date.now();
-  if (rows.some((row) => certainProLive(row, now))) return true;
+  if (rows.some((row) => certainProLive(row, now))) return ALREADY_SUBSCRIBED;
 
-  const owedIds = new Set(rows.filter(owedSubscription).map(subscriptionIdOf).filter(Boolean));
-  // A failed retrieve on a stale or mislabelled-free row lets checkout proceed.
-  // A failed retrieve on past_due or unpaid keeps the block: the row says payment is owed,
-  // and we could not prove the subscription is gone. Canceled (or any non-Pro answer) proceeds.
-  const failOpenIds = [...new Set(
-    rows.filter((row) => needsFailOpenConfirm(row, now)).map(subscriptionIdOf).filter((id) => id && !owedIds.has(id)),
-  )];
-  for (const id of failOpenIds) {
-    if (await confirmStripeSubscription(id) === 'live_pro') return true;
-  }
-  for (const id of owedIds) {
+  const confirmIds = [...new Set(rows.filter((row) => needsStripeConfirm(row, now)).map(subscriptionIdOf).filter(Boolean))];
+  let retrieveFailed = false;
+  for (const id of confirmIds) {
     const confirmed = await confirmStripeSubscription(id);
-    if (confirmed === 'live_pro' || confirmed === 'failed') return true;
+    if (confirmed === 'live_pro') return ALREADY_SUBSCRIBED;
+    if (confirmed === 'failed') retrieveFailed = true;
   }
-  return false;
+  // A failed retrieve on any subscription id stays closed. Canceled and non-Pro answers do not.
+  return retrieveFailed ? BILLING_CHECK_FAILED : null;
 }
 
 async function resolveCheckoutEmail(fields: { customer?: string; customer_email?: string }): Promise<string | null> {
@@ -305,22 +316,15 @@ export async function POST(req: NextRequest) {
     let grantTrial = false;
     const trialEmail = await resolveCheckoutEmail(customerFields);
     // A failed subscription read must not turn into a 500. Continue as if no live row was found.
-    let alreadySubscribed = false;
+    let block: CheckoutBlock = null;
     try {
-      alreadySubscribed = await accountAlreadySubscribed(trialEmail, customerFields.customer ?? null);
+      block = await checkoutBlock(trialEmail, customerFields.customer ?? null);
     } catch {
       console.error('[Checkout] Subscription read failed; continuing checkout');
-      alreadySubscribed = false;
+      block = null;
     }
-    if (alreadySubscribed) {
-      return NextResponse.json(
-        {
-          error: 'You already have Pro. Manage it in billing.',
-          code: 'already_subscribed',
-          portalUrl: '/api/payments/portal',
-        },
-        { status: 409 },
-      );
+    if (block) {
+      return NextResponse.json(block, { status: 409 });
     }
     if (trialEmail) {
       try {
@@ -351,7 +355,7 @@ export async function POST(req: NextRequest) {
           }
         }
       } catch (refErr) {
-        console.error('[Checkout] Referral validation error (continuing without discount):', refErr);
+        console.error(`[Checkout] Referral validation error (${stripeErrorCode(refErr)}); continuing without discount`);
       }
     }
 
@@ -387,7 +391,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
-    console.error("Checkout error:", error);
+    console.error(`[Checkout] Checkout error (${stripeErrorCode(error)})`);
     return NextResponse.json(
       { error: "Failed to create checkout session" },
       { status: 500 }

@@ -126,8 +126,12 @@ export default function PricingPage() {
         goTo(checkoutSignInPath(billing));
         return;
       }
-      if (res.status === 409 && data?.code === 'already_subscribed') {
-        setCheckoutError('You already have Pro. Manage it in billing.');
+      if (res.status === 409 && (data?.code === 'already_subscribed' || data?.code === 'billing_check_failed')) {
+        setCheckoutError(
+          data.code === 'billing_check_failed'
+            ? "We couldn't confirm your billing status right now. Please try again in a minute or open billing."
+            : 'You already have Pro. Manage it in billing.',
+        );
         const portalPath = typeof data.portalUrl === 'string' && data.portalUrl.startsWith('/api/payments/portal')
           ? data.portalUrl
           : '/api/payments/portal';

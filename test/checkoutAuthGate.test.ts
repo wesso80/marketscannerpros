@@ -154,6 +154,17 @@ describe('checkout requires a signed-in account', () => {
     expect(mocks.create).not.toHaveBeenCalled();
   }
 
+  async function expectBillingCheckFailed() {
+    const res = await POST(post({ plan: 'pro', billing: 'monthly' }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      error: "We couldn't confirm your billing status right now. Please try again in a minute or open billing.",
+      code: 'billing_check_failed',
+      portalUrl: '/api/payments/portal',
+    });
+    expect(mocks.create).not.toHaveBeenCalled();
+  }
+
   async function expectCheckoutOpens() {
     const res = await POST(post({ plan: 'pro', billing: 'monthly' }));
     expect(res.status).toBe(200);
@@ -219,13 +230,13 @@ describe('checkout requires a signed-in account', () => {
   );
 
   it.each(['past_due', 'unpaid'] as const)(
-    'keeps a %s row on the portal when the Stripe confirm call fails',
+    'keeps a %s row closed when the Stripe confirm call fails',
     async (status) => {
       const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
       mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
       rowsOf(subRow({ status, stripe_subscription_id: 'sub_owed', current_period_end: PAST }));
       mocks.subscriptionsRetrieve.mockRejectedValue(Object.assign(new Error('No such subscription: sub_owed reader@example.test'), { code: 'resource_missing' }));
-      await expectAlreadySubscribed();
+      await expectBillingCheckFailed();
       const logged = errSpy.mock.calls.flat().map(String).join('\n');
       expect(logged).toContain('subscription confirm failed (resource_missing)');
       expect(logged).not.toContain('reader@example.test');
@@ -286,14 +297,54 @@ describe('checkout requires a signed-in account', () => {
     await expectAlreadySubscribed();
   });
 
-  it('opens checkout when the Stripe confirm call fails', async () => {
+  it('keeps a stale trial closed when the Stripe confirm call fails', async () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
     rowsOf(subRow({ status: 'trialing', is_trial: true, current_period_end: PAST }));
     mocks.subscriptionsRetrieve.mockRejectedValue(Object.assign(new Error('No such subscription: sub_live reader@example.test'), { code: 'resource_missing' }));
-    await expectCheckoutOpens();
+    await expectBillingCheckFailed();
     const logged = errSpy.mock.calls.flat().map(String).join('\n');
     expect(logged).toContain('subscription confirm failed (resource_missing)');
+    expect(logged).not.toContain('reader@example.test');
+    expect(logged).not.toContain('sub_live');
+    errSpy.mockRestore();
+  });
+
+  it('keeps a stale active row closed when the Stripe confirm call fails', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    rowsOf(subRow({ status: 'active', current_period_end: PAST }));
+    mocks.subscriptionsRetrieve.mockRejectedValue(Object.assign(new Error('No such subscription: sub_live reader@example.test'), { code: 'resource_missing' }));
+    await expectBillingCheckFailed();
+    const logged = errSpy.mock.calls.flat().map(String).join('\n');
+    expect(logged).not.toContain('reader@example.test');
+    expect(logged).not.toContain('sub_live');
+    errSpy.mockRestore();
+  });
+
+  it('asks Stripe before refusing an active Pro row with a null period end', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    rowsOf(subRow({ status: 'active', tier: 'pro', current_period_end: null }));
+    mocks.subscriptionsRetrieve.mockResolvedValue(stripeSub('canceled'));
+    await expectCheckoutOpens();
+    expect(mocks.subscriptionsRetrieve).toHaveBeenCalledWith('sub_live');
+  });
+
+  it('refuses an active Pro row with a null period end when Stripe confirms a live Pro price', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    rowsOf(subRow({ status: 'active', tier: 'pro', current_period_end: null }));
+    mocks.subscriptionsRetrieve.mockResolvedValue(stripeSub('active'));
+    await expectAlreadySubscribed();
+    expect(mocks.subscriptionsRetrieve).toHaveBeenCalledWith('sub_live');
+  });
+
+  it('keeps an active Pro row with a null period end closed when the Stripe confirm call fails', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
+    rowsOf(subRow({ status: 'active', tier: 'pro', current_period_end: null }));
+    mocks.subscriptionsRetrieve.mockRejectedValue(Object.assign(new Error('No such subscription: sub_live reader@example.test'), { code: 'resource_missing' }));
+    await expectBillingCheckFailed();
+    const logged = errSpy.mock.calls.flat().map(String).join('\n');
     expect(logged).not.toContain('reader@example.test');
     expect(logged).not.toContain('sub_live');
     errSpy.mockRestore();
@@ -322,13 +373,13 @@ describe('checkout requires a signed-in account', () => {
   );
 
   it.each(['active', 'trialing'] as const)(
-    'opens checkout for a free %s row when the Stripe confirm call fails',
+    'keeps a free %s row with a subscription id closed when the Stripe confirm call fails',
     async (status) => {
       const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
       mocks.session = { cid: 'free_reader@example.test', tier: 'free', workspaceId: 'w', exp: 0 };
       rowsOf(subRow({ tier: 'free', status, is_trial: status === 'trialing', stripe_subscription_id: 'sub_free_label', current_period_end: FUTURE }));
       mocks.subscriptionsRetrieve.mockRejectedValue(Object.assign(new Error('No such subscription: sub_free_label reader@example.test'), { code: 'resource_missing' }));
-      await expectCheckoutOpens();
+      await expectBillingCheckFailed();
       const logged = errSpy.mock.calls.flat().map(String).join('\n');
       expect(logged).toContain('subscription confirm failed (resource_missing)');
       expect(logged).not.toContain('reader@example.test');

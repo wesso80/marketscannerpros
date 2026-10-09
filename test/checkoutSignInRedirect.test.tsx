@@ -113,6 +113,35 @@ it('keeps the billing sentence when the portal cannot be opened', async () => {
   expect(goTo).not.toHaveBeenCalled();
 });
 
+it('shows the billing-check message and opens billing when confirmation fails', async () => {
+  me.authenticated = true;
+  me.tier = 'free';
+  vi.mocked(fetch).mockImplementation(async (url: string) => {
+    const path = String(url);
+    if (path.includes('/api/payments/checkout')) {
+      return {
+        ok: false,
+        status: 409,
+        json: async () => ({
+          error: "We couldn't confirm your billing status right now. Please try again in a minute or open billing.",
+          code: 'billing_check_failed',
+          portalUrl: '/api/payments/portal',
+        }),
+      };
+    }
+    if (path.includes('/api/payments/portal')) {
+      return { ok: true, status: 200, json: async () => ({ url: 'https://billing.stripe.com/p/session/test' }) };
+    }
+    if (path.includes('/api/me')) return { ok: true, status: 200, json: async () => ({ ...me, email: 'reader@example.test' }) };
+    return { ok: true, status: 200, json: async () => ({ enabled: true }) };
+  });
+  render(<PricingPage />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Continue to Pro checkout' }));
+  expect((await screen.findByRole('alert')).textContent).toContain("We couldn't confirm your billing status right now. Please try again in a minute or open billing.");
+  await waitFor(() => expect(goTo).toHaveBeenCalledWith('https://billing.stripe.com/p/session/test'));
+  expect(goTo).not.toHaveBeenCalledWith('https://checkout.stripe.com/c/pay/cs_test');
+});
+
 it('sends a signed-in visitor back to sign-in when checkout returns 401', async () => {
   me.authenticated = true;
   me.tier = 'free';

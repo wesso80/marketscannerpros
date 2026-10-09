@@ -143,6 +143,37 @@ describe('billing portal uses a real Stripe customer id', () => {
     });
   });
 
+  it('prefers a past_due customer when the workspace row is canceled', async () => {
+    mocks.session = { cid: 'free_reader@example.test', tier: 'pro', workspaceId: 'w', exp: 0 };
+    mocks.q.mockResolvedValue([
+      {
+        workspace_id: 'w',
+        tier: 'pro',
+        status: 'canceled',
+        stripe_customer_id: 'cus_WorkspaceCanceled',
+        stripe_subscription_id: 'sub_canceled',
+        updated_at: '2026-10-09T00:00:00.000Z',
+        id: 9,
+      },
+      {
+        workspace_id: 'other',
+        tier: 'pro',
+        status: 'past_due',
+        stripe_customer_id: 'cus_PastDue',
+        stripe_subscription_id: 'sub_past_due',
+        current_period_end: '2026-09-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+        id: 1,
+      },
+    ]);
+    const res = await POST(post());
+    expect(res.status).toBe(200);
+    expect(mocks.create).toHaveBeenCalledWith({
+      customer: 'cus_PastDue',
+      return_url: 'https://marketscannerpros.app/tools/explorer',
+    });
+  });
+
   it('uses the past_due customer instead of a newer canceled customer', async () => {
     mocks.session = { cid: 'free_reader@example.test', tier: 'pro', workspaceId: 'w', exp: 0 };
     mocks.q.mockResolvedValue([
