@@ -11,6 +11,9 @@
  *     crypto:   one Alpha Vantage DIGITAL_CURRENCY_DAILY call per coin per run (rate-governed; no CoinGecko).
  * - Rows whose horizon bar is not there yet stay pending (NULL). Rows that can never be measured (history does not
  *   reach back to the call, a split in the window, no bars 30 days past the horizon) get outcome 'no_data' + a note.
+ * - A bar load that failed or was partial (provider quota/timeout/circuit breaker, missing API key, a database read
+ *   error) never produces 'no_data': once provenance is written the result is frozen, so the row waits for a run whose
+ *   load is complete. A provider answer of "no data for this symbol" is a complete (empty) load.
  * - Every UPDATE is guarded on "still NULL for this horizon": overlapping runs cannot relabel a row.
  * - Provenance (migration 134): every result, measured or no_data, is written with outcome_<h>_provenance in the same
  *   UPDATE; the migration's trigger then makes that evidence immutable. Until 134 is run, 6w/12w labelling is skipped
@@ -36,10 +39,7 @@ export const POSITION_MIGRATION_FILE = 'migrations/105_ai_signal_outcome_6w_12w.
 export const POSITION_PROVENANCE_MIGRATION_FILE = 'migrations/134_ai_outcome_long_horizon_provenance.sql';
 /** Recorded in outcome_<h>_provenance; bump when the measurement rules in positionHorizon.ts change. */
 export const POSITION_PROVENANCE_METHOD = 'daily-bar-horizon-v1';
-const BAR_SOURCE: Record<OutcomeAssetClass, string> = {
-  equity: 'daily-cache+ohlcv_bars',
-  crypto: 'alpha-vantage-digital-currency-daily',
-};
+const CRYPTO_BAR_SOURCE = 'alpha-vantage-digital-currency-daily';
 
 const SUPPORTED_ASSET_SQL = `LOWER(TRIM(asset_type)) IN ('equity','equities','stock','stocks','etf','crypto')`;
 const DIRECTIONAL_SQL = `UPPER(TRIM(COALESCE(trade_bias, ''))) IN ('LONG','SHORT')`;
@@ -72,7 +72,7 @@ export async function detectPositionHorizons(): Promise<PositionHorizon[]> {
   try {
     const rows = await q<{ column_name: string }>(
       `SELECT column_name FROM information_schema.columns
-       WHERE table_name = 'ai_signal_log'
+       WHERE table_schema = current_schema() AND table_name = 'ai_signal_log'
          AND column_name = ANY($1::text[])`,
       [wanted],
     );
@@ -124,44 +124,67 @@ export function positionCandidateSql(h: PositionHorizon, limit = positionMaxRows
       LIMIT ${limit}`;
 }
 
+/** One symbol's daily bars. `complete: false` = some read failed, so a missing bar is not evidence of no data. */
+export interface DailyBarLoad {
+  bars: DailyOhlcBar[];
+  complete: boolean;
+  source: string;
+}
+
+/** A plain array is a complete load; null is a failed load. */
+export type DailyBarLoader = (symbol: string) => Promise<DailyBarLoad | DailyOhlcBar[] | null>;
+
 export interface DailyBarLoaders {
-  equity: (symbol: string) => Promise<DailyOhlcBar[] | null>;
-  crypto: (symbol: string) => Promise<DailyOhlcBar[] | null>;
+  equity: DailyBarLoader;
+  crypto: DailyBarLoader;
+}
+
+function toLoad(r: DailyBarLoad | DailyOhlcBar[] | null, source: string): DailyBarLoad {
+  if (Array.isArray(r)) return { bars: r, complete: true, source };
+  return r ?? { bars: [], complete: false, source };
 }
 
 /** Equity daily bars: the shared cache series, plus the longer stored history (DB read only). */
-export async function loadEquityDailyOhlc(symbol: string): Promise<DailyOhlcBar[] | null> {
+export async function loadEquityDailyOhlc(symbol: string): Promise<DailyBarLoad> {
   let cached: DailyOhlcBar[] = [];
   let stored: DailyOhlcBar[] = [];
+  let complete = true;
   try {
     const env = await getBars(symbol, 'daily');
     cached = env.data ? equityDailyToOhlcBars(env.data) : [];
+    if (!env.data && env.error) {
+      complete = false;
+      console.warn(`[label-ai-outcomes] 6w/12w daily cache read failed for ${symbol}: ${env.error}`);
+    }
   } catch (err) {
+    complete = false;
     console.warn(`[label-ai-outcomes] 6w/12w daily cache read failed for ${symbol}: ${err instanceof Error ? err.message : String(err)}`);
   }
   try {
     const pg = await pgReadBars(symbol, 'daily', STORED_DAILY_BARS);
     stored = pg ? equityDailyToOhlcBars(pg.bars) : [];
-  } catch {
-    // ohlcv_bars unavailable: the cached series alone is used.
+  } catch (err) {
+    complete = false;
+    console.warn(`[label-ai-outcomes] 6w/12w ohlcv_bars read failed for ${symbol}: ${err instanceof Error ? err.message : String(err)}`);
   }
-  const merged = mergeDailyBars(cached, stored);
-  return merged.length ? merged : null;
+  const source = [cached.length ? 'daily-cache' : '', stored.length ? 'ohlcv_bars' : ''].filter(Boolean).join('+') || 'none';
+  return { bars: mergeDailyBars(cached, stored), complete, source };
 }
 
 /** Crypto daily bars: one AV DIGITAL_CURRENCY_DAILY call (rate-governed). */
-export async function loadCryptoDailyOhlc(symbol: string): Promise<DailyOhlcBar[] | null> {
+export async function loadCryptoDailyOhlc(symbol: string): Promise<DailyBarLoad> {
   const key = process.env.ALPHA_VANTAGE_API_KEY;
-  if (!key) return null;
+  if (!key) return { bars: [], complete: false, source: CRYPTO_BAR_SOURCE };
   const sym = normalizeCryptoSymbol(symbol);
   try {
     const url = `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=${encodeURIComponent(sym)}&market=USD&apikey=${encodeURIComponent(key)}`;
+    // avFetch returns null only for a genuine "no data" answer (404 / Error Message); quota, timeouts and an open
+    // circuit breaker throw.
     const json = await avFetch(url, `OUTCOME 6W/12W CRYPTO_DAILY ${sym}`);
-    const bars = json ? parseAvCryptoDailyOhlc(json) : [];
-    return bars.length ? bars : null;
+    return { bars: json ? parseAvCryptoDailyOhlc(json) : [], complete: true, source: CRYPTO_BAR_SOURCE };
   } catch (err) {
     console.warn(`[label-ai-outcomes] 6w/12w crypto daily fetch failed for ${sym}: ${err instanceof Error ? err.message : String(err)}`);
-    return null;
+    return { bars: [], complete: false, source: CRYPTO_BAR_SOURCE };
   }
 }
 
@@ -175,6 +198,8 @@ export interface PositionHorizonTally {
   neutral: number;
   noData: number;
   stillPending: number;
+  /** Would have been no_data, but the bar load failed or was partial: left pending for a later run. */
+  deferredLoadFailure: number;
   alreadyLabeled: number;
   skipped: number;
 }
@@ -188,7 +213,8 @@ export interface PositionHorizonRunResult {
 }
 
 const tally = (): PositionHorizonTally => ({
-  candidates: 0, labeled: 0, correct: 0, wrong: 0, neutral: 0, noData: 0, stillPending: 0, alreadyLabeled: 0, skipped: 0,
+  candidates: 0, labeled: 0, correct: 0, wrong: 0, neutral: 0, noData: 0, stillPending: 0, deferredLoadFailure: 0,
+  alreadyLabeled: 0, skipped: 0,
 });
 
 const numOrNull = (v: unknown): number | null => {
@@ -221,14 +247,15 @@ export async function labelPositionHorizons(opts: {
   }
 
   const started = Date.now();
-  const memo = new Map<string, Promise<DailyOhlcBar[] | null>>();
+  const memo = new Map<string, Promise<DailyBarLoad>>();
   const barLoads = { equity: 0, crypto: 0 };
   const load = (symbol: string, asset: OutcomeAssetClass) => {
     const k = `${asset}:${symbol.toUpperCase()}`;
     let p = memo.get(k);
     if (!p) {
       barLoads[asset] += 1;
-      p = loaders[asset](symbol).catch(() => null);
+      const fallback = asset === 'crypto' ? CRYPTO_BAR_SOURCE : 'equity-daily';
+      p = loaders[asset](symbol).then((r) => toLoad(r, fallback), () => toLoad(null, fallback));
       memo.set(k, p);
     }
     return p;
@@ -255,30 +282,31 @@ export async function labelPositionHorizons(opts: {
       // Cached bars do not make database writes free; defer all remaining rows once the budget expires.
       if (Date.now() - started >= opts.budgetMs) { result.deferredOverBudget++; continue; }
 
-      const bars = await load(row.symbol, asset);
+      const loaded = await load(row.symbol, asset);
       const stop = numOrNull(row.stop_loss);
       const target = numOrNull(row.target_1);
       const m = measurePositionHorizon({
-        direction, entry, signalAtMs, horizon: h, nowMs: opts.nowMs, stop, target, bars: bars ?? [],
+        direction, entry, signalAtMs, horizon: h, nowMs: opts.nowMs, stop, target, bars: loaded.bars,
       });
       if (m.status === 'pending') { t.stillPending++; continue; }
+      // A failed or partial load is not evidence that the data does not exist; no_data would be frozen permanently.
+      if (m.status === 'no_data' && !loaded.complete) { t.deferredLoadFailure++; continue; }
 
-      const base = {
-        writer: 'label-ai-outcomes', method: POSITION_PROVENANCE_METHOD, horizon: h, horizonDays: POSITION_HORIZON_DAYS[h],
-        direction, signalAt: new Date(signalAtMs).toISOString(), entryPrice: entry, stopLoss: stop, target,
-        barSource: BAR_SOURCE[asset], barCount: bars?.length ?? 0,
-      };
-      const provenance = JSON.stringify(m.status === 'no_data'
-        ? { ...base, outcome: 'no_data', reason: m.reason }
-        : {
-            ...base, outcome: m.outcome, exitPrice: m.exitPrice, exitAt: new Date(m.exitAt).toISOString(), pctMove: m.pctMove,
-            maxPrice: m.maxPrice, minPrice: m.minPrice, mfePct: m.mfePct, maePct: m.maePct, firstHit: m.firstHit,
-            firstHitDay: m.firstHitDay, rMultiple: m.rMultiple, bars: m.bars,
-          });
       const prov = positionProvenanceColumn(h);
-
       let updated: { id: number }[] = [];
       try {
+        const base = {
+          writer: 'label-ai-outcomes', method: POSITION_PROVENANCE_METHOD, horizon: h, horizonDays: POSITION_HORIZON_DAYS[h],
+          direction, signalAt: new Date(signalAtMs).toISOString(), entryPrice: entry, stopLoss: stop, target,
+          barSource: loaded.source, barLoadComplete: loaded.complete, barCount: loaded.bars.length,
+        };
+        const provenance = JSON.stringify(m.status === 'no_data'
+          ? { ...base, outcome: 'no_data', reason: m.reason.slice(0, 120) }
+          : {
+              ...base, outcome: m.outcome, exitPrice: m.exitPrice, exitAt: new Date(m.exitAt).toISOString(), pctMove: m.pctMove,
+              maxPrice: m.maxPrice, minPrice: m.minPrice, mfePct: m.mfePct, maePct: m.maePct, firstHit: m.firstHit,
+              firstHitDay: m.firstHitDay, rMultiple: m.rMultiple, bars: m.bars,
+            });
         updated = m.status === 'no_data'
           ? await q<{ id: number }>(
               `UPDATE ai_signal_log

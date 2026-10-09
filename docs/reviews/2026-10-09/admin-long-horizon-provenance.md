@@ -23,7 +23,14 @@ had neither: they could not be told apart from historical rows of unknown origin
     Provenance fields: `writer`, `method` (`daily-bar-horizon-v1`), `horizon`, `horizonDays`, `direction`, `signalAt`,
     `entryPrice`, `stopLoss`, `target`, `barSource`, `barCount`, `outcome`, and either the measured exit, move,
     excursions, first hit, R and bar count, or the `no_data` reason. `processedAt` is set by the database.
-  - Bar source is `daily-cache+ohlcv_bars` for equities and `alpha-vantage-digital-currency-daily` for crypto.
+  - Bar source records what was actually used: `daily-cache`, `ohlcv_bars` or both for equities, and
+    `alpha-vantage-digital-currency-daily` for crypto. `barLoadComplete` records whether every read succeeded.
+  - A failed or partial bar load never produces `no_data`, because that result would be frozen permanently. Failures
+    include a quota note, a timeout, an open circuit breaker, a missing API key or a database read error. The row
+    stays pending and is counted as `deferredLoadFailure` for a later run. A provider answer of "no data for this
+    symbol" is a complete, empty load and can still be recorded as `no_data`. Found in the independent review.
+  - If a symbol's load keeps failing, its rows stay pending, and they are picked first (oldest first, 200 per
+    horizon per run). Watch `deferredLoadFailure` in the run result.
   - Until 134 is applied, 6w/12w labelling is skipped with a note naming the migration, instead of writing results
     with no provenance. This never fails the labeller run; the 4h/24h steps are unaffected.
 
@@ -36,6 +43,8 @@ applied. Rows are not lost; they stay pending and are labelled on the next run a
 
 1. Read-only check that 105 and 133 (columns, function, trigger) exist in production.
 2. Apply 134 in an approved window. It takes a short `ALTER TABLE` lock and replaces the function in one transaction.
+   It sets `lock_timeout = 10s`, so it fails instead of queueing readers behind a long query. If it times out, run
+   it again.
 3. Deploy the labeller.
 4. Verify after the next labeller run: new 6w/12w rows have provenance whose `horizon`, `outcome` and exit fields
    match their columns; `processedAt` equals `outcome_<h>_measured_at`.

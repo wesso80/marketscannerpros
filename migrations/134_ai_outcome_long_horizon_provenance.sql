@@ -3,6 +3,8 @@
 -- Additive only: two nullable JSONB columns plus a wider immutability trigger. No backfill: existing 6w/12w results
 -- keep NULL provenance (unknown historical provenance) and stay editable, exactly as before. Safe to run twice.
 BEGIN;
+-- Fail fast instead of queueing every reader behind the ALTER if a long query holds the table; just re-run later.
+SET LOCAL lock_timeout = '10s';
 DO $$ BEGIN
  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='ai_signal_log' AND column_name='outcome_12w_measured_at')
  OR NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='ai_signal_log' AND column_name='outcome_6w_measured_at')
