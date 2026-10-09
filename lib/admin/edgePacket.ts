@@ -105,7 +105,8 @@ export interface AdminEdgePacket {
   timingScore: number;
   volatilityScore: number;
   liquidityScore: number;
-  optionsScore: number;
+  /** Options axis; null when there is no real options-chain data (it is then left out of the rank, not filled in). */
+  optionsScore: number | null;
   structureScore: number;
   trapRiskScore: number;              // higher = worse
   invalidationClarityScore: number;
@@ -172,7 +173,8 @@ export interface AdminEdgePacket {
   crossAssetConfluence: CrossAssetConfluence | null;
 
   /* truth + score-trio (kept separate per ADMIN_RULES.md) */
-  evidenceQualityScore: number;       // 0..100 — copy of dataTruth.trustScore
+  /** 0..100: data trust (dataTruth.trustScore) reduced for each piece of missing context (see missingFields). */
+  evidenceQualityScore: number;
   personalExposureFlag: "none" | "low" | "elevated" | "high";
   doNothing: DoNothingVerdict | null;
 
@@ -226,7 +228,6 @@ export function projectEdgePacket(
   const liquidityScore = clamp01to100(
     0.6 * structureScore + 0.4 * deriveTargetClarity(packet),
   );
-  const optionsScore = clamp01to100(axes.options ?? 50);
   const trapRiskScore = clamp01to100(
     packet.trapDetection?.trapRiskScore ?? (packet.snapshot?.dve?.trap ? 70 : 20),
   );
@@ -236,7 +237,15 @@ export function projectEdgePacket(
       : 60
     : 25;
 
-  const evidenceQualityScore = clamp01to100(packet.dataTruth?.trustScore ?? 0);
+  // The rank keeps its data-trust cap (unchanged ranking). The reported Evidence Quality also reflects missing context:
+  // synthetic options, unknown catalyst / regime / news, no crypto derivatives context.
+  const dataTrustScore = clamp01to100(packet.dataTruth?.trustScore ?? 0);
+  const completeness = evidenceCompleteness(packet);
+  // The options axis only counts with real options-chain data. Without it (today: always, the options engine is a
+  // synthetic placeholder and the axis is a cross-market proxy) it is left out of the rank rather than filled with 50.
+  const hasRealOptions = !completeness.missing.some((m) => m.startsWith("options"));
+  const optionsScore = hasRealOptions && Number.isFinite(axes.options) ? clamp01to100(axes.options as number) : null;
+  const evidenceQualityScore = clamp01to100(dataTrustScore * completeness.factor);
 
   const opportunityRankScore = computeRankScore({
     asymmetryScore,
@@ -247,7 +256,7 @@ export function projectEdgePacket(
     structureScore,
     trapRiskScore,
     invalidationClarityScore,
-    evidenceQualityScore,
+    evidenceQualityScore: dataTrustScore,
   });
 
   const doNothing = evaluateDoNothing(packet);
@@ -314,8 +323,48 @@ export function projectEdgePacket(
     sources: extractSources(packet),
     freshness: mapFreshness(packet.dataTruth?.status),
     simulated: false,
-    missingFields: [],
+    missingFields: completeness.missing,
   };
+}
+
+/** Evidence Quality deductions for missing context (fractions of the data-trust score). */
+export const MISSING_CONTEXT_PENALTY = {
+  options: 0.15,
+  catalyst: 0.1,
+  regime: 0.1,
+  news: 0.05,
+  cryptoDerivatives: 0.1,
+} as const;
+
+const UNKNOWN_LABEL = /^(|UNKNOWN|UNCLASSIFIED|N\/A|NONE)$/i;
+
+/**
+ * Which context is missing from a research packet, and the factor (0..1) applied to data trust for Evidence Quality.
+ * Missing is never replaced by a proxy: the synthetic options placeholder counts as missing, as does a crypto symbol's
+ * lack of an options chain (spot data only).
+ */
+export function evidenceCompleteness(packet: AdminResearchPacket): { factor: number; missing: string[] } {
+  const missing: string[] = [];
+  let penalty = 0;
+  const add = (field: string, weight: number) => { missing.push(field); penalty += weight; };
+
+  const oi = packet.optionsIntelligence as Partial<AdminResearchPacket["optionsIntelligence"]> | undefined;
+  const syntheticOptions = !oi || oi.fallbackScore !== undefined
+    || (oi.missingInputs ?? []).some((m) => /options chain/i.test(m))
+    || oi.dataTruth?.status === "MISSING" || !(Number(oi.dataTruth?.trustScore) > 0);
+  if (packet.assetClass === "crypto") add("options: no options chain for spot crypto", MISSING_CONTEXT_PENALTY.options);
+  else if (syntheticOptions) add("options: real chain data unavailable (synthetic placeholder ignored)", MISSING_CONTEXT_PENALTY.options);
+
+  if (packet.assetClass === "equity") {
+    const e = packet.earningsContext as Partial<AdminResearchPacket["earningsContext"]> | undefined;
+    if (!e || UNKNOWN_LABEL.test(String(e.classification ?? ""))) add("catalyst: earnings/event schedule unknown", MISSING_CONTEXT_PENALTY.catalyst);
+  }
+  if (UNKNOWN_LABEL.test(String(packet.snapshot?.regime ?? ""))) add("regime: unclassified", MISSING_CONTEXT_PENALTY.regime);
+  if (!packet.newsContext || UNKNOWN_LABEL.test(String(packet.newsContext.status ?? ""))) add("news: status unknown", MISSING_CONTEXT_PENALTY.news);
+  if (packet.assetClass === "crypto" && (!packet.cryptoContext || (packet.cryptoContext as { enabled?: boolean }).enabled === false)) {
+    add("crypto derivatives: funding/OI context unavailable", MISSING_CONTEXT_PENALTY.cryptoDerivatives);
+  }
+  return { factor: Math.max(0, 1 - penalty), missing };
 }
 
 /**
@@ -491,21 +540,25 @@ function computeRankScore(s: {
   timingScore: number;
   volatilityScore: number;
   liquidityScore: number;
-  optionsScore: number;
+  optionsScore: number | null;
   structureScore: number;
   trapRiskScore: number;
   invalidationClarityScore: number;
   evidenceQualityScore: number;
 }): number {
-  const raw =
-    0.22 * s.asymmetryScore +
-    0.18 * s.timingScore +
-    0.15 * s.volatilityScore +
-    0.12 * s.structureScore +
-    0.12 * s.liquidityScore +
-    0.11 * s.optionsScore +
-    0.10 * s.invalidationClarityScore -
-    0.20 * s.trapRiskScore;
+  // Positive axes are a weighted mean over the axes that have data (weights sum to 1 with options). A missing options
+  // axis is dropped and the rest re-weighted, so the scale is unchanged and nothing stands in for the missing value.
+  const parts: Array<[number, number]> = [
+    [0.22, s.asymmetryScore],
+    [0.18, s.timingScore],
+    [0.15, s.volatilityScore],
+    [0.12, s.structureScore],
+    [0.12, s.liquidityScore],
+    [0.10, s.invalidationClarityScore],
+  ];
+  if (s.optionsScore !== null) parts.push([0.11, s.optionsScore]);
+  const weight = parts.reduce((t, [w]) => t + w, 0);
+  const raw = parts.reduce((t, [w, v]) => t + w * v, 0) / weight - 0.20 * s.trapRiskScore;
   // Evidence cap: degraded data can never out-rank live.
   return clamp01to100((raw * s.evidenceQualityScore) / 100);
 }
