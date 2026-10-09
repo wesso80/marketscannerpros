@@ -5,25 +5,28 @@ It happens only when the owner explicitly approves. Nothing here has been run ag
 
 Validated tip: `admin-integration` @ `d98ef088` (contains `main` @ `63da1d34`):
 full suite 6,730 passed / 0 failed / 31 skipped, `tsc --noEmit` 0 errors, `next build` passes.
-These results are for `d98ef088` only. Re-run all three on the final tip, which must include the final head of
-Codex's #568 (mobile navigation plus visual work), #569, and any fix for the hold item below.
+Later tip `760a4efa` (adds #569, #574, #575, #576): 6,746 passed / 0 failed / 31 skipped, `tsc` 0, `next build` passes.
+These results are for those tips only. Re-run all three on the final tip, which must include the final head of
+Codex's #568 (mobile navigation plus visual work).
 
 ## 1. What ships
 
 ### Public-facing changes (call these out in release notes)
 
-Both were approved by the owner in the Claude session (low-float gate: "yes"; Journal: "it should not stop public
+#552 and #556 were approved by the owner in the Claude session (low-float gate: "yes"; Journal: "it should not stop public
 from using journal"). Codex's admin tasks keep public frozen and cannot see that approval, so the owner should
-re-confirm both when approving the release.
+re-confirm both when approving the release. #576 (retire rather than harden) was chosen by the owner on 2026-10-09.
 
 | PR | Change | Who notices |
 |----|--------|-------------|
 | #552 | `/api/scanner/low-float` is admin-only. Non-admins get `403 Admin access required`. | Any public page or user calling low-float. |
 | #556 | Journal `add-trade` is no longer blocked by the admin kill switch. | Users could log trades during a kill-switch pause. |
+| #576 | `/api/ai/analyst-context` and `/api/ai/explain` return 410 (retired). No page called them. | Only direct API callers. |
 
 No other public page, route or shared engine changed. Non-admin files touched outside admin paths:
 `middleware.ts`, `lib/adminAuth.ts` (admin gating only), `app/api/actions/execute/route.ts` (operator-only),
-plus the two routes above.
+plus the routes above (low-float, Journal add-trade, the two retired AI routes) and their tests; the unused
+`lib/ai/useAnalystContext.ts` hook is deleted.
 
 ### Admin sign-in and session behaviour
 
@@ -52,18 +55,16 @@ Health overview (#550); paper reads without DDL (#553); momentum GET read-only (
 
 ## 2. Hold items (unresolved — release waits on these or an explicit owner deferral)
 
-- [ ] **Symbol page freshness (from Codex's #566 review).** `app/api/admin/symbol/[symbol]/route.ts` passes
-      `packet.createdAt` to `storedTruth`, but `getAdminResearchPacket` sets `createdAt` to the build time on every
-      request. A freshly built packet over old input observations is therefore stamped as current. Fix: stamp from
-      the input observation times and show packet build time separately, with a route test (Claude, own PR).
-      Not all freshness stamps are complete until this lands.
+- [x] **Symbol page freshness (from Codex's #566 review)** — fixed by #574 + #575 (merged): `dataAsOf` is the close
+      of the newest completed price bar actually supplied (future/forming/unordered bars ignored, none → unknown),
+      packet build time shown separately as build time.
 
 ## 3. Before merging to `main`
 
 - [ ] Codex's #568 (mobile navigation and visual work) merged into `admin-integration` (or explicitly deferred).
 - [ ] Hold items in section 2 resolved or explicitly deferred by the owner.
-- [ ] Owner re-confirms the two public changes (#552, #556).
-- [ ] #569 (Health guard skip removal) merged or closed.
+- [ ] Owner re-confirms the public changes (#552, #556, #576).
+- [x] #569 (Health guard skip removal) merged.
 - [ ] Final tip re-validated: full vitest, `tsc --noEmit`, `next build`.
 - [ ] **Apply `migrations/130_admin_manual_order_requests.sql`** to the production Neon database (owner runs it;
       `CREATE TABLE IF NOT EXISTS`, additive, safe to apply before the deploy). Without it, manual simulated orders fail closed with 503.
@@ -72,7 +73,7 @@ Health overview (#550); paper reads without DDL (#553); momentum GET read-only (
 - [ ] Cookie-based admin scripts send `Origin: https://marketscannerpros.app`. Header-only callers are unchanged.
 - [ ] `ADMIN_EMAILS` on Render lists every admin email (this is now also the revocation list).
 - [ ] Tell admins they will be signed out once and should use `/admin/login`.
-- [ ] Release notes mention #552 and #556.
+- [ ] Release notes mention #552, #556 and #576.
 
 No new environment variables are required.
 
