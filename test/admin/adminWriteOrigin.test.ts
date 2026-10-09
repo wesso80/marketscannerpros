@@ -39,6 +39,7 @@ describe.each(['ms_admin', 'ms_auth'])('%s authenticated mutations', (cookie) =>
       expect(await requireAdmin(request(method, origin))).toEqual({ ok: false });
     }
     expect((await requireAdmin(request(method))).ok).toBe(true);
+    expect((await requireAdmin(request(method, 'https://www.marketscannerpros.app'))).ok).toBe(true);
     expect((await requireAdmin(request(method, 'http://localhost:10000'))).ok).toBe(true);
   });
   it('blocks the real paper route before automation, account reads or journal/cycle effects', async () => {
