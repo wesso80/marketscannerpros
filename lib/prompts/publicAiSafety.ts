@@ -32,6 +32,11 @@ const PUBLIC_ADVICE_PATTERNS: AdvicePattern[] = [
   { name: 'order placement instruction', pattern: /\b(?:place|submit|send)\s+(?:a\s+)?(?:market|limit|stop)\s+order\b/i },
   { name: 'personal allocation instruction', pattern: /\b(?:allocate|put|risk)\s+\d+(?:\.\d+)?%\s+of\s+(?:your|the)\s+(?:account|portfolio|capital)\b/i },
   { name: 'guaranteed outcome claim', pattern: /\b(?:guaranteed|cannot\s+lose|sure\s+thing|risk-free)\b/i },
+  // Trade-ticket labels at the start of a line ("Entry: 72,380", "**Target 1:**", "- Stop loss:"). Prose such as
+  // "the entry of new buyers" is not a label and does not match.
+  { name: 'trade ticket label', pattern: /^[ \t]*(?:[-*•][ \t]*)?(?:\*\*)?(?:entry(?:[ \t]+(?:price|zone))?|stop(?:[- ]loss)?|targets?(?:[ \t]*\d+)?|take[- ]profit(?:[ \t]*\d+)?|tp[ \t]*\d*|size[ \t]+context|position[ \t]+size)(?:\*\*)?[ \t]*:/im },
+  { name: 'direction call label', pattern: /^[ \t]*(?:[-*•][ \t]*)?(?:\*\*)?direction(?:\*\*)?[ \t]*:[ \t]*(?:\*\*)?(?:long|short)\b/im },
+  { name: 'position sizing instruction', pattern: /\b\d+(?:\.\d+)?[ \t]*%[ \t]+(?:of[ \t]+(?:your[ \t]+|the[ \t]+)?(?:capital|equity)\b|risk\b)|\brisk(?:ing)?[ \t]+\d+(?:\.\d+)?[ \t]*%[ \t]+(?:per|of)\b/i },
 ];
 
 export function findPublicAdviceViolations(text: string): string[] {
