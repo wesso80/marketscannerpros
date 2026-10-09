@@ -10,7 +10,7 @@ export const APPROVED_DISCLAIMERS = {
   educational_short:
     'Educational only. Not financial advice. Trading involves risk.',
   educational_full:
-    'MarketScanner Pros is an educational and informational tool. Nothing posted here is financial advice or a recommendation to trade. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed adviser before making investment decisions.',
+    'MarketScannerPros is an educational and informational tool. Nothing posted here is financial advice or a recommendation to trade. Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed adviser before making investment decisions.',
 };
 
 export const APPROVED_FEATURES = [
@@ -78,7 +78,7 @@ export const APPROVED_TIERS = [
 ];
 
 export const APPROVED_BRAND_POSITIONING = `
-MarketScanner Pros is a research and analytics command centre for active
+MarketScannerPros is a research and analytics command centre for active
 retail traders. It surfaces structure, regime, volatility, and time
 confluence — the same lenses an institutional desk uses — without
 pretending to be a broker or adviser. We do not place trades, route

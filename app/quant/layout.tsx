@@ -9,7 +9,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Quant Operator Console',
-  description: 'Private educational operator console for internal MarketScanner Pros quant research observations.',
+  description: 'Private educational operator console for internal MarketScannerPros quant research observations.',
   alternates: { canonical: '/quant' },
   robots: { index: false, follow: false },
 };

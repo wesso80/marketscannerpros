@@ -69,6 +69,9 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      // The partners pages were removed. Old links land on pricing.
+      { source: '/partners', destination: '/pricing', permanent: true, statusCode: 301 },
+      { source: '/partners/:path*', destination: '/pricing', permanent: true, statusCode: 301 },
       // The Nasdaq Reporting admin page and /api/admin/reporting were removed (brad, 27 Sep 2026).
       // Old bookmarks land on the admin home. The nasdaq_usage_reports table is left in place.
       {

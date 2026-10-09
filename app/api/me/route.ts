@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { effectiveTierFromSubscription, isFreeForAllMode } from "@/lib/entitlements";
+import { isStripeCustomerId } from "@/lib/billingPortal";
 import { chooseAccessSubscription, emailFromSessionCid } from "@/lib/subscriptionRow";
 
 // Admin emails — hardcoded + env var for guaranteed access
@@ -24,7 +25,7 @@ type SubRow = {
 
 const SUB_COLUMNS = 'email, tier, status, current_period_end, stripe_customer_id, stripe_subscription_id, updated_at, created_at, id';
 
-async function getSubscriptionFromDB(workspaceId: string, cid: string | undefined): Promise<SubRow | null> {
+async function getSubscriptionFromDB(workspaceId: string, cid: string | undefined): Promise<{ chosen: SubRow | null; rows: SubRow[] }> {
   try {
     const workspaceRows = await q<SubRow>(
       `SELECT ${SUB_COLUMNS} FROM user_subscriptions WHERE workspace_id = $1`,
@@ -43,10 +44,31 @@ async function getSubscriptionFromDB(workspaceId: string, cid: string | undefine
         [cid]
       );
     }
-    return chooseAccessSubscription(workspaceRows, otherRows);
+    return { chosen: chooseAccessSubscription(workspaceRows, otherRows), rows: [...workspaceRows, ...otherRows] };
   } catch {
-    return null;
+    return { chosen: null, rows: [] };
   }
+}
+
+function isTrialId(value: unknown): boolean {
+  return typeof value === 'string' && value.startsWith('trial_');
+}
+
+/** No-card trials stay Pro while they run, and they are not manual grants. */
+function isTrialAccess(sessionCid: string | undefined, row: SubRow | null): boolean {
+  if (isTrialId(sessionCid)) return true;
+  if (!row) return false;
+  return row.status === 'trialing' || isTrialId(row.stripe_subscription_id) || isTrialId(row.stripe_customer_id);
+}
+
+/** Calendar date only. No time, and nothing when the row has no readable end. */
+function trialEndDate(sessionCid: string | undefined, row: SubRow | null): string | null {
+  if (!isTrialAccess(sessionCid, row) || !row?.current_period_end) return null;
+  const parsed = row.current_period_end instanceof Date
+    ? row.current_period_end
+    : new Date(String(row.current_period_end));
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString().slice(0, 10);
 }
 
 // Extract email from cid (formats: "trial_email@example.com", "free_email@example.com", or "email@example.com")
@@ -73,13 +95,17 @@ export async function GET() {
       workspaceId: null,
       authenticated: false,
       isAdmin: false,
-      email: null
+      email: null,
+      has_billing: false,
+      is_manual_grant: false,
+      is_trial: false,
+      trial_ends_at: null,
     });
   }
 
   // Check DB for current subscription (source of truth for tier).
   // A free workspace row does not hide another active paid row for the same email.
-  const dbSub = await getSubscriptionFromDB(session.workspaceId, session.cid);
+  const { chosen: dbSub, rows } = await getSubscriptionFromDB(session.workspaceId, session.cid);
   
   let email = dbSub?.email ?? null;
   
@@ -104,11 +130,21 @@ export async function GET() {
     effectiveTier = "pro_trader";
   }
 
+  const has_billing = rows.some((row) => isStripeCustomerId(typeof row.stripe_customer_id === 'string' ? row.stripe_customer_id.trim() : ''));
+  const paid = effectiveTier === 'pro' || effectiveTier === 'pro_trader';
+  const is_trial = isTrialAccess(session.cid, dbSub);
+  const is_manual_grant = paid && !has_billing && !isFreeForAllMode() && !is_trial;
+  const trial_ends_at = trialEndDate(session.cid, dbSub);
+
   return NextResponse.json({ 
     tier: effectiveTier, 
     workspaceId: session.workspaceId,
     authenticated: true,
     isAdmin,
-    email: email || null
+    email: email || null,
+    has_billing,
+    is_manual_grant,
+    is_trial,
+    trial_ends_at,
   });
 }

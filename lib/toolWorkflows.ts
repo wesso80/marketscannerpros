@@ -12,7 +12,7 @@ export const areaLinks: Record<WorkflowArea, NavigationLink[]> = {
   intelligence: [link('/intelligence','Overview'),link('/intelligence/global-m2','Global M2'),link('/intelligence/fragility','Fragility'),link('/intelligence/liquidity','Liquidity')],
   // Accuracy page stays off this menu until labelled results exist. The URL still opens it.
   track: [link('/tools/workspace?tab=journal','Journal'),link('/tools/workspace?tab=portfolio','Portfolio'),link('/tools/workspace?tab=watchlists','Watchlists'),link('/tools/workspace?tab=alerts','Alerts'),link('/tools/workspace?tab=backtest','Backtest'),link('/tools/workspace?tab=learning','Learning'),link('/tools/workspace?tab=settings','Settings'),link('/tools/dashboard?tab=pages','My Pages')],
-  learn: [link('/guide','Guide'),link('/methodology','Methodology'),link('/blog','Blog'),link('/about','About'),link('/contact','Contact'),link('/partners','Partners'),link('/guide/open-interest','Open Interest Guide'),link('/','Home')],
+  learn: [link('/guide','Guide'),link('/methodology','Methodology'),link('/blog','Blog'),link('/about','About'),link('/contact','Contact'),link('/guide/open-interest','Open Interest Guide'),link('/','Home')],
   account: [link('/account','Account'),link('/auth','Sign In'),link('/pricing','Pricing'),link('/tools/referrals','Referrals'),link('/compliance-hub','Compliance Hub'),link('/privacy','Privacy'),link('/terms','Terms'),link('/cookie-policy','Cookies'),link('/refund-policy','Refund policy'),link('/disclaimer','Disclaimer')],
 };
 export const primaryNavTools = [
@@ -30,7 +30,7 @@ export function workflowArea(pathname: string, tab = ''): WorkflowArea | null {
   if (pathname.startsWith('/intelligence')) return 'intelligence';
   if (pathname === '/tools/dashboard') return selected === 'macro' ? 'markets' : selected === 'command' ? 'today' : 'track';
   if (pathname === '/tools/workspace' || /\/(journal|portfolio|watchlists|alerts|backtest|learning|settings|signal-accuracy)(\/|$)/.test(pathname)) return 'track';
-  if (/^\/(guide|methodology|blog|about|contact|partners|resources)(\/|$)/.test(pathname)) return 'learn';
+  if (/^\/(guide|methodology|blog|about|contact|resources)(\/|$)/.test(pathname)) return 'learn';
   if (/^\/(account|pricing|auth|compliance-hub|privacy|terms|cookie-policy|refund-policy|disclaimer|legal)(\/|$)/.test(pathname) || pathname === '/tools/referrals') return 'account';
   if (pathname === '/tools' || /\/(command-center|msp-radar|daily-pick|start)(\/|$)/.test(pathname)) return 'today';
   if (/\/(explorer|research|macro|crypto-dashboard|crypto-intel|markets|market-movers|gainers-losers|heatmap|commodities)(\/|$)/.test(pathname)) return 'markets';

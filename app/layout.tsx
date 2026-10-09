@@ -38,7 +38,7 @@ export const metadata = {
         url: '/opengraph-image',
         width: 1200,
         height: 630,
-        alt: 'MarketScanner Pros — market scanner for stocks, crypto and options',
+        alt: 'MarketScannerPros — market scanner for stocks, crypto and options',
       },
     ],
   },

@@ -3,14 +3,14 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Compliance Hub',
-  description: 'MarketScanner Pros compliance guardrails for educational use, no personal advice, no broker execution, data limitations, and risk disclosures.',
+  description: 'MarketScannerPros compliance guardrails for educational use, no personal advice, no broker execution, data limitations, and risk disclosures.',
   alternates: { canonical: '/compliance-hub' },
   openGraph: {
     title: 'MarketScannerPros Compliance Hub',
-    description: 'Educational-use guardrails, legal disclosures, data limitations, and risk information for MarketScanner Pros.',
+    description: 'Educational-use guardrails, legal disclosures, data limitations, and risk information for MarketScannerPros.',
     url: 'https://marketscannerpros.app/compliance-hub',
     siteName: 'MarketScannerPros',
-    images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScanner Pros compliance hub' }],
+    images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScannerPros compliance hub' }],
   },
   twitter: { card: 'summary_large_image', images: ['/scan-banner.png'] },
 };
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 const pillars = [
   {
     title: 'General information only',
-    body: 'MarketScanner Pros provides educational market research, scenario modelling, and analytical context only. It does not provide personal financial advice.',
+    body: 'MarketScannerPros provides educational market research, scenario modelling, and analytical context only. It does not provide personal financial advice.',
   },
   {
     title: 'No broker execution',
@@ -57,9 +57,9 @@ export default function ComplianceHubPage() {
       <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
         <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/[0.04] p-6 md:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-400">Trust & compliance</p>
-          <h1 className="mt-3 text-3xl font-black tracking-tight md:text-5xl">How MarketScanner Pros protects users</h1>
+          <h1 className="mt-3 text-3xl font-black tracking-tight md:text-5xl">How MarketScannerPros protects users</h1>
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-slate-300 md:text-base">
-            This hub summarizes the guardrails behind MSP: educational use, no personal advice, no broker execution, paper simulation, data-quality limits, and clear risk disclosures.
+            This hub summarizes the guardrails behind MarketScannerPros: educational use, no personal advice, no broker execution, paper simulation, data-quality limits, and clear risk disclosures.
           </p>
           <div className="mt-6 flex flex-wrap gap-2 text-xs text-slate-300">
             <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">NSW, Australia jurisdiction</span>

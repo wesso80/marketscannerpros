@@ -25,11 +25,11 @@ it('filters measured change without treating missing readings as zero',()=>{
  render(<ResearchOverview/>);
  fireEvent.change(screen.getByLabelText('Observed change'),{target:{value:'flat'}});
  expect(screen.getByText('1 of 7 symbols')).toBeTruthy();
- expect(screen.getByRole('link',{name:'SPY ↗'}).getAttribute('href')).toContain('type=equity');
+ expect(screen.getByRole('link',{name:'SPY'}).getAttribute('href')).toContain('type=equity');
  fireEvent.change(screen.getByLabelText('Observed change'),{target:{value:'negative'}});
  fireEvent.change(screen.getByLabelText('Asset class'),{target:{value:'crypto'}});
  expect(screen.getByText('1 of 7 symbols')).toBeTruthy();
- expect(screen.getByRole('link',{name:'BTC ↗'}).getAttribute('href')).toContain('type=crypto');
+ expect(screen.getByRole('link',{name:'BTC'}).getAttribute('href')).toContain('type=crypto');
  fireEvent.change(screen.getByLabelText('Asset class'),{target:{value:'equity'}});
  expect(screen.getByText('No available observations match these filters.')).toBeTruthy();
 });

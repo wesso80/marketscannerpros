@@ -1,5 +1,5 @@
 // This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
-// © MarketScanner Pros
+// © MarketScannerPros
 // MSP — Futures Time Gravity Scalper v4.2 (Globex)
 // Futures-first execution version with TP1 quick scalp + TP2 gravity target.
 // One active trade at a time, large HUD, clean BUY/SELL label, entry / TP1 / TP2 / SL lines.

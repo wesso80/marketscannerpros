@@ -43,7 +43,6 @@ export default function ResearchSnapshotCard({ s, links }: { s: ResearchSnapshot
           {links.map((l) => <Link key={l.href} href={l.href} className="text-emerald-400 hover:underline">{l.label} ›</Link>)}
         </nav>
       )}
-      <p className="mt-2 text-[10px] text-slate-500">Describes recorded observations only. Educational research, not a recommendation.</p>
     </section>
   );
 }

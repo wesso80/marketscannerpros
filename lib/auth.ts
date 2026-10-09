@@ -14,6 +14,20 @@ if (!process.env.APP_SIGNING_SECRET && isProductionRuntime) {
 
 const APP_SIGNING_SECRET: string = process.env.APP_SIGNING_SECRET || 'msp-local-dev-signing-secret-do-not-use-in-production';
 
+/** A Stripe/Postgres `code`, or `error.name` when there is no code. Never the message, the query, or the thrown object. */
+export function loggedErrorCode(error: unknown): string | number | undefined {
+  if (!error || typeof error !== 'object') return undefined;
+  if ('code' in error) {
+    const code = (error as { code?: unknown }).code;
+    if (typeof code === 'string' || typeof code === 'number') return code;
+  }
+  if ('name' in error) {
+    const name = (error as { name?: unknown }).name;
+    if (typeof name === 'string' && name.length > 0) return name;
+  }
+  return undefined;
+}
+
 function verify(token: string) {
   const [body, sig] = token.split(".");
   if (!body || !sig) return null;
@@ -111,7 +125,7 @@ export async function getSessionFromCookie(): Promise<SessionPayload | null> {
       // A duplicate active paid row wins over an expired trial on this workspace.
       if (row?.status === 'trialing' && effectiveTierFromSubscription(row) === 'free') session.tier = 'free';
     } catch (err) {
-      console.error('[auth] trial subscription read failed:', err);
+      console.error('[auth] trial subscription read failed', { code: loggedErrorCode(err) });
     }
   }
   return session;
@@ -135,7 +149,7 @@ export function verifySessionToken(t: string): Record<string, unknown> {
   try {
     if (!crypto.timingSafeEqual(Buffer.from(sig, 'base64url'), Buffer.from(expSig, 'base64url'))) throw new Error("Bad signature");
   } catch (err) {
-    console.error('[auth] verifySessionToken signature check failed:', err instanceof Error ? err.message : err);
+    console.error('[auth] verifySessionToken signature check failed');
     throw new Error("Bad signature");
   }
   const payload = JSON.parse(Buffer.from(p, "base64url").toString("utf8"));

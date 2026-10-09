@@ -1,7 +1,7 @@
 /**
  * ScoreTypeBadge — Algorithm Truth Labels
  *
- * Every score in MarketScanner Pros must display one of these badges so
+ * Every score in MarketScannerPros must display one of these badges so
  * users understand the nature and reliability of the number shown.
  * Do NOT display scores as calibrated probabilities without this label.
  */

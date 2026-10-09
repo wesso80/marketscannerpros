@@ -150,7 +150,7 @@ export async function GET(req: NextRequest) {
       market: 'stocks',
       methodology: 'MSP Proprietary Stock F&G Index',
       description: 'Combines VIX, S&P 500 trend, momentum, safe haven demand, and RSI',
-      source: 'MarketScanner Pros',
+      source: 'MarketScannerPros',
       cachedAt: new Date().toISOString(),
     };
 

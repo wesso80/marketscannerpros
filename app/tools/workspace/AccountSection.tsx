@@ -75,6 +75,10 @@ export default function AccountSection() {
   const [email, setEmail] = useState<string | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
   const [billingNote, setBillingNote] = useState<string | null>(null);
+  const [manualGrant, setManualGrant] = useState(false);
+  const [hasBilling, setHasBilling] = useState(false);
+  const [isTrial, setIsTrial] = useState(false);
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
 
   // Notification state
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>({
@@ -101,12 +105,18 @@ export default function AccountSection() {
 
   const normalizedTier: TierKey = (tier as TierKey) || 'anonymous';
 
-  // ─── Fetch email ─────────────────────────────────────────────────────────
+  // Plan label comes from /api/me on load, even when the tier hook already has an email.
   useEffect(() => {
-    if (tierEmail) { setEmail(tierEmail); return; }
+    if (tierEmail) setEmail(tierEmail);
     fetch('/api/me', { credentials: 'include' })
       .then(r => r.json())
-      .then(d => { if (d?.email) setEmail(d.email); })
+      .then(d => {
+        if (d?.email) setEmail(d.email);
+        setManualGrant(d?.is_manual_grant === true);
+        setHasBilling(d?.has_billing === true);
+        setIsTrial(d?.is_trial === true);
+        setTrialEndsAt(typeof d?.trial_ends_at === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d.trial_ends_at) ? d.trial_ends_at : null);
+      })
       .catch(() => {});
   }, [tierEmail]);
 
@@ -305,7 +315,7 @@ export default function AccountSection() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            {normalizedTier !== 'free' ? (
+            {isPaid && hasBilling ? (
             <button
               onClick={() => void openBillingPortal()}
               disabled={billingLoading}
@@ -361,8 +371,14 @@ export default function AccountSection() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-bold text-white">{currentTier.name}</div>
-                <div className="text-[11px] text-slate-500">
-                  {normalizedTier === 'free' ? 'Free tier · Upgrade any time' : 'Active · Renewal in billing portal'}
+                <div className="text-sm text-slate-300">
+                  {normalizedTier === 'free'
+                    ? 'Free tier · Upgrade any time'
+                    : isTrial
+                      ? (trialEndsAt ? `Pro trial · ends ${trialEndsAt}` : 'Pro trial')
+                      : manualGrant
+                        ? 'Pro access granted manually'
+                        : 'Active · Renewal date in billing portal'}
                 </div>
               </div>
               <Badge label="Active" color={currentTier.color} small />
@@ -373,7 +389,7 @@ export default function AccountSection() {
           <Card>
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Usage</h3>
             <div className="space-y-3">
-              <p className="mb-3 text-xs">{isPaid ? `${WATCHLIST_LIMITS.pro.watchlists} × ${WATCHLIST_LIMITS.pro.items}` : FREE_COPY.pricing.watchlists}</p>
+              {!isPaid ? <p className="mb-3 text-xs text-slate-300">{FREE_COPY.pricing.watchlists}</p> : null}
               {usage.map(m => (
                 <div key={m.label}>
                   <div className="flex justify-between text-xs mb-1">

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Dashboard',
-  description: 'MarketScanner Pros dashboard redirect to the educational trading command center.',
+  description: 'MarketScannerPros dashboard redirect to the educational trading command center.',
   alternates: { canonical: '/tools/dashboard' },
   robots: { index: false, follow: true },
 };

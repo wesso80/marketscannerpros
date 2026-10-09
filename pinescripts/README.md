@@ -1,6 +1,6 @@
 # MSP TradingView Pine Script Suite
 
-Complete collection of MarketScanner Pros trading indicators and strategies for TradingView, reverse-engineered from the full MSP platform codebase.
+Complete collection of MarketScannerPros trading indicators and strategies for TradingView, reverse-engineered from the full MSP platform codebase.
 
 All scripts are **Pine Script v6** and ready to paste into TradingView's Pine Editor.
 
@@ -217,7 +217,7 @@ Every script includes TradingView alert conditions. Total: **30+ unique alerts**
 
 ## 📋 Source
 
-All scripts are derived from the MarketScanner Pros platform codebase:
+All scripts are derived from the MarketScannerPros platform codebase:
 - Scanner engine: `app/api/scanner/run/route.ts`
 - Bulk scanner: `app/api/scanner/bulk/route.ts`
 - DVE engine: `lib/directionalVolatilityEngine.ts` (~1460 lines)

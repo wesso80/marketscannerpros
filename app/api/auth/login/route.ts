@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { subscriptionPeriodDate } from "@/lib/stripe/subscriptionPeriod";
-import { hashWorkspaceId, signSessionToken, verifySessionToken } from "@/lib/auth";
+import { hashWorkspaceId, loggedErrorCode, signSessionToken, verifySessionToken } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { loginLimiter, getClientIP } from "@/lib/rateLimit";
 import { isValidAdminSecret } from "@/lib/adminAuth";
@@ -127,9 +127,7 @@ async function trackSubscription(
 }
 
 function subscriptionFailureCode(error: unknown): string | number | undefined {
-  if (!error || typeof error !== 'object' || !('code' in error)) return undefined;
-  const code = (error as { code?: unknown }).code;
-  return typeof code === 'string' || typeof code === 'number' ? code : undefined;
+  return loggedErrorCode(error);
 }
 
 // Check if user has an active trial
@@ -151,7 +149,7 @@ async function checkTrialAccess(email: string): Promise<{ tier: "pro" | "pro_tra
   } catch (error: any) {
     // Table might not exist yet - that's OK, just skip trials
     if (!error?.message?.includes('does not exist')) {
-      console.error("Trial check error:", error);
+      console.error('Trial check error', { code: subscriptionFailureCode(error) });
     }
   }
   return null;
@@ -254,7 +252,7 @@ async function cancelStaleStripeRows(email: string, customerIds: string[]): Prom
     );
   } catch (error: any) {
     if (!error?.message?.includes("does not exist")) {
-      console.error("Cancel stale subscription error:", error);
+      console.error('Cancel stale subscription error', { code: subscriptionFailureCode(error) });
     }
   }
 }
@@ -507,7 +505,7 @@ export async function POST(req: NextRequest) {
 
     const periodEnd = subscriptionPeriodDate(primarySub, "current_period_end");
     if (!periodEnd) {
-      console.error(`[login] subscription ${primarySub.id}: current_period_end missing or unusable on items.data[0] and on the subscription; storing null`);
+      console.error('[login] current_period_end missing or unusable on items.data[0] and on the subscription; storing null');
     }
 
     // Track subscription in database
@@ -549,7 +547,7 @@ export async function POST(req: NextRequest) {
     for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);
     return res;
   } catch (err) {
-    console.error("Login error:", err);
+    console.error('Login error', { code: subscriptionFailureCode(err) });
     const errRes = NextResponse.json({ error: "Authentication failed. Please try again." }, { status: 500 });
     const originHeader = req.headers.get("origin");
     const headers = corsHeaders(originHeader);

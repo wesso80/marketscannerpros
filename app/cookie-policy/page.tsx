@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Cookie Policy",
-  description: "How MarketScanner Pros uses cookies and similar tracking technologies.",
+  description: "How MarketScannerPros uses cookies and similar tracking technologies.",
   alternates: { canonical: "/cookie-policy" },
   robots: { index: false, follow: true }
 };
@@ -18,7 +18,7 @@ export default function CookiePolicyPage() {
 
       <h2>Overview</h2>
       <p>
-        MarketScanner Pros ("we", "us", "our") uses cookies and similar tracking technologies to
+        MarketScannerPros ("we", "us", "our") uses cookies and similar tracking technologies to
         provide, secure, and improve our services. This Cookie Policy explains what these technologies
         are, how we use them, and your choices.
       </p>

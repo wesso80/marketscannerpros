@@ -1,0 +1,151 @@
+import { readFileSync } from 'node:fs';
+import { expect, it } from 'vitest';
+import { computeAdaptiveMatch, type AdaptiveProfile } from '@/lib/adaptiveTrader';
+import { buildJournalSummary } from '@/lib/ai/legacyJournalAnalysis';
+import { loggedErrorCode } from '@/lib/auth';
+import { buildSignalMemoryContext } from '@/lib/prompts/arcaV3Engine';
+import { SHOW_SIGNAL_OUTCOME_STATS } from '@/lib/signals/outcomeStatsVisibility';
+import { PUBLIC_DAILY_LIMITS } from '@/lib/publicPlans';
+
+const read = (path: string) => readFileSync(path, 'utf8');
+
+it('removes the copilot reading row and the unused live desk panel', () => {
+  const copilot = read('components/MSPCopilot.tsx');
+  expect(copilot).not.toContain("label: 'Reading'");
+  expect(copilot).not.toContain("label: 'Signal'");
+  expect(copilot).not.toContain("label: 'Quality'");
+  expect(copilot).not.toContain("label: 'Research Status'");
+  expect(copilot).not.toContain('copilotReadingLabel');
+  expect(copilot).not.toContain("quality === 'A+'");
+  expect(copilot).not.toContain('rMultiple >= 2');
+  expect(read('components/free/LockedPreview.tsx')).not.toContain('>74<');
+  expect(read('components/free/LockedPreview.tsx')).toContain('Sample layout');
+});
+
+it('drops the historical win-rate reason and labels member trade tables', () => {
+  const profile: AdaptiveProfile = {
+    sampleSize: 10, wins: 6, styleBias: 'momentum', riskDNA: 'balanced', decisionTiming: 'confirmation',
+    environmentRates: { trend: 72, range: 40, reversal: 30, unknown: 50 },
+  };
+  const match = computeAdaptiveMatch(profile, { setupText: 'momentum continuation', regime: 'trend', urgency: 'within_hour', riskPercent: 1 });
+  expect(match.reasons.join('\n')).not.toMatch(/win rate/i);
+  const summary = buildJournalSummary([
+    { symbol: 'AAPL', strategy: 'breakout', emotions: 'calm', isOpen: false, pl: 12, outcome: 'win' },
+    { symbol: 'MSFT', strategy: 'breakout', emotions: 'uneasy', isOpen: false, pl: -3, outcome: 'loss' },
+  ]);
+  expect(summary).toContain('STRATEGY PERFORMANCE — your own trades');
+  expect(summary).toContain('SYMBOL PERFORMANCE — your own trades');
+  expect(summary).toContain('LOGGED EMOTION GROUPS — your own trades');
+  expect(summary).toContain('Hit rate on your own trades');
+  expect(summary).not.toContain('| Win Rate |');
+  expect(read('app/api/workflow/events/route.ts')).toContain('Hit rate on your own trades:');
+  expect(read('app/api/workflow/events/route.ts')).not.toContain('Win Rate:');
+});
+
+it('keeps last-five outcome marks behind showOutcomeStats, which defaults off', () => {
+  const stats = {
+    totalSignals: 2,
+    regimeStats: [{ regime: 'trend', count: 2, winRate: 50 }],
+    recentSignals: [
+      { symbol: 'AAPL', verdict: 'watch', confidence: 60, outcome: 'correct' },
+      { symbol: 'MSFT', verdict: 'watch', confidence: 40, outcome: 'wrong' },
+    ],
+  };
+  expect(SHOW_SIGNAL_OUTCOME_STATS).toBe(false);
+  const hidden = buildSignalMemoryContext(stats, false);
+  expect(hidden).not.toContain('✅');
+  expect(hidden).not.toContain('❌');
+  expect(hidden).not.toContain('AAPL');
+  const shown = buildSignalMemoryContext(stats, true);
+  expect(shown).toContain('✅ AAPL');
+  expect(shown).toContain('❌ MSFT');
+});
+
+it('aligns unreachable legacy pricing copy and sources the live Pro allowance', () => {
+  const pricing = read('app/pricing/page.tsx');
+  const live = read('components/public-design/ResearchPricing.tsx');
+  expect(pricing).toContain('if (publicDesignEnabled()) return <ResearchPricing');
+  expect(pricing).toContain('`${PUBLIC_DAILY_LIMITS.free.symbol} Symbol reports a day`');
+  expect(pricing).toContain('${PUBLIC_DAILY_LIMITS.visitor.symbol} Symbol report a day');
+  expect(pricing).toContain('`${PUBLIC_DAILY_LIMITS.pro.ai} AI questions a day`');
+  expect(pricing).not.toContain('getAILimit');
+  expect(pricing).not.toContain('FREE_COPY.pricing.scans');
+  expect(live).toContain('{PUBLIC_DAILY_LIMITS.pro.ai} AI questions a day');
+  expect(live).not.toMatch(/20 AI questions/);
+  expect(PUBLIC_DAILY_LIMITS.pro.ai).toBe(20);
+  expect(PUBLIC_DAILY_LIMITS.free.symbol).toBe(3);
+  expect(PUBLIC_DAILY_LIMITS.visitor.symbol).toBe(1);
+});
+
+it('removes the dead scanner import and shows one readable symbol disclaimer', () => {
+  expect(read('app/api/scanner/run/route.ts')).not.toContain('getEdgeContext');
+  const symbol = read('app/tools/golden-egg/page.tsx');
+  expect(symbol.match(/General information only, not financial advice\./g)).toHaveLength(1);
+  expect(symbol).not.toContain('<ComplianceDisclaimer');
+  expect(symbol).not.toContain('Back to Overview ↗');
+  expect(symbol).not.toContain('Levels are calculated from technical indicators');
+  const css = read('components/public-design/SymbolStudio.module.css');
+  expect(css).toContain('font-size:16px;line-height:1.5;color:#d7e3df');
+  expect(css).toContain('color:#a8b9bf');
+  expect(read('app/not-found.tsx')).toContain('return to Tools');
+  expect(read('app/not-found.tsx')).not.toContain('dashboard');
+  expect(read('components/public-design/PublicDesignShell.tsx')).toContain('href="/tools/command-center">Product');
+  for (const file of [
+    'components/public-design/ResearchHome.tsx',
+    'components/public-design/ResearchOverview.tsx',
+    'components/public-design/PublicDesignShell.tsx',
+    'app/learn/page.tsx',
+    'app/tools/workspace/page.tsx',
+  ]) expect(read(file), file).not.toContain('↗');
+});
+
+it('logs an error code or a fixed message from the older webhook and auth paths', () => {
+  const stripe = read('app/api/webhooks/stripe/route.ts');
+  expect(stripe).toContain("console.log('[Referral] No pending referral')");
+  expect(stripe).toContain('console.log(`[Referral] Found pending referral, couponApplied=${refereeCouponApplied}`)');
+  expect(stripe).toContain('console.log(`[Referral] Referrer credited $${creditCents / 100}`)');
+  expect(stripe).toContain("console.error(`[Webhook] Not overwriting ${existing[0].status} subscription with ${status}`)");
+  expect(stripe).toContain("console.error('[Webhook] Upsert skipped by conflict guard')");
+  expect(stripe).toContain('console.log(`[Webhook] Upserted subscription: ${tier} (${status})`)');
+  expect(stripe).toContain("console.log('[Webhook] Recorded referral')");
+  expect(stripe).toContain('console.log(`[Webhook] Welcome email sent (${tier})`)');
+  expect(stripe).toContain("console.error('[Referral] Error processing reward', { code: loggedErrorCode(error) })");
+  expect(stripe).not.toContain('for ${email}');
+  expect(stripe).not.toContain('${normalizedEmail}');
+  expect(stripe).not.toContain('sent to ${loaded.email}');
+  expect(stripe).not.toContain('${stripeCustomerId}');
+  expect(stripe).not.toContain('${stripeSubscriptionId}');
+  expect(stripe).toContain('invoice.payment_failed live status is ${subscription.status}');
+  expect(stripe).toContain("console.log('[Webhook] Marked subscription as past_due')");
+  expect(stripe).not.toContain('invoice.payment_failed subscription ${subscriptionId}');
+  expect(stripe).not.toContain('Marked subscription as past_due: ${loaded.email}');
+  expect(stripe).toContain('[Webhook] checkout.session.completed: current_period_end missing');
+  expect(stripe).not.toContain('checkout.session.completed subscription ${subscription.id}');
+  expect(stripe).not.toContain('canceling by subscription id');
+  expect(stripe).toContain("console.error('[Webhook] Error processing event', { code: loggedErrorCode(error) })");
+  expect(stripe).not.toContain("console.error('[Webhook] Error processing event:', error)");
+  expect(loggedErrorCode({ code: '23505', name: 'error' })).toBe('23505');
+  expect(loggedErrorCode({ name: 'StripeError' })).toBe('StripeError');
+  expect(loggedErrorCode(new Error('hidden'))).toBe('Error');
+
+  const login = read('app/api/auth/login/route.ts');
+  expect(login).toContain("console.error('Trial check error', { code: subscriptionFailureCode(error) })");
+  expect(login).toContain("console.error('Cancel stale subscription error', { code: subscriptionFailureCode(error) })");
+  expect(login).toContain("console.error('Login error', { code: subscriptionFailureCode(err) })");
+  expect(login).not.toContain('${primarySub.id}');
+  const admin = read('app/api/auth/admin-login/route.ts');
+  expect(admin).toContain("console.error('Track subscription error', { code: loggedErrorCode(error) })");
+  expect(admin).toContain("console.error('Workspace upsert error', { code: loggedErrorCode(e) })");
+  expect(admin).toContain("console.error('Admin login error', { code: loggedErrorCode(err) })");
+  expect(admin).not.toContain('Track subscription error:');
+  expect(read('app/api/auth/debug/route.ts')).toContain("console.error('[auth/debug] failed', { code: loggedErrorCode(e) })");
+  expect(read('app/api/auth/magic-link/route.ts')).not.toContain('error.message');
+  const deletion = read('app/api/auth/delete-request/route.ts');
+  expect(deletion).toContain('sendDeletionRequestEmail');
+  expect(deletion).toContain('Deletion request was not recorded');
+  expect(deletion).toContain('within 48 hours');
+  expect(deletion).not.toContain('Customer ID:');
+  expect(deletion).not.toContain('Workspace ID:');
+  expect(read('lib/auth.ts')).toContain("console.error('[auth] trial subscription read failed', { code: loggedErrorCode(err) })");
+  expect(read('lib/auth.ts')).toContain("console.error('[auth] verifySessionToken signature check failed')");
+});

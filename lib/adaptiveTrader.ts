@@ -240,7 +240,6 @@ export function computeAdaptiveMatch(profile: AdaptiveProfile | null, context: A
   if (styleScore >= 70) reasons.push(`Matches your ${STYLE_LABEL[profile.styleBias]} win profile`);
   if (riskScore >= 70) reasons.push(`Risk profile aligns with your ${profile.riskDNA} execution DNA`);
   if (timingScore >= 70) reasons.push(`Entry timing fits your ${profile.decisionTiming.replace('_', ' ')} profile`);
-  reasons.push(`Similar ${currentEnvironment} conditions: ${envWinRate.toFixed(0)}% historical win rate`);
 
   const noTradeBias = profile.sampleSize >= 8 && environmentScore < 40;
 

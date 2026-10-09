@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionFromCookie } from "@/lib/auth";
+import { getSessionFromCookie, loggedErrorCode } from "@/lib/auth";
 import { q } from "@/lib/db";
+import { sendDeletionRequestEmail } from "@/lib/email";
 
 /**
  * POST /api/auth/delete-request
- * 
- * Handles GDPR/Privacy data deletion requests.
- * Records the request in the database for manual processing.
+ *
+ * Records a GDPR/privacy deletion request in deletion_requests and emails
+ * support. The 48-hour confirmation is promised only when one of those records.
  */
 export async function POST(req: NextRequest) {
   try {
     const session = await getSessionFromCookie();
-    
+
     if (!session?.workspaceId) {
       return NextResponse.json(
         { error: "Not authenticated" },
@@ -21,36 +22,41 @@ export async function POST(req: NextRequest) {
 
     const workspaceId = session.workspaceId;
     const customerId = session.cid;
+    const requestedAt = new Date().toISOString();
 
-    // Log the deletion request (for manual processing)
-    // In a full implementation, this would:
-    // 1. Send an email to the user confirming the request
-    // 2. Queue the deletion for processing
-    // 3. Delete all user data after verification
-    
+    let stored = false;
+    let mailed = false;
+    let storeError: unknown;
+    let mailError: unknown;
+
     try {
-      // Try to insert into a deletion_requests table if it exists
       await q(
         `INSERT INTO deletion_requests (workspace_id, customer_id, requested_at, status)
          VALUES ($1, $2, NOW(), 'pending')
          ON CONFLICT (workspace_id) DO UPDATE SET requested_at = NOW(), status = 'pending'`,
         [workspaceId, customerId]
       );
-    } catch (dbError) {
-      // Table might not exist - that's OK, we'll still log it
-      console.log("Deletion request table not found, logging request:", {
-        workspaceId,
-        customerId,
-        requestedAt: new Date().toISOString()
-      });
+      stored = true;
+    } catch (error) {
+      storeError = error;
     }
 
-    // Log for manual processing
-    console.log("=== DATA DELETION REQUEST ===");
-    console.log("Workspace ID:", workspaceId);
-    console.log("Customer ID:", customerId);
-    console.log("Requested at:", new Date().toISOString());
-    console.log("=============================");
+    try {
+      await sendDeletionRequestEmail({ workspaceId, customerId, requestedAt });
+      mailed = true;
+    } catch (error) {
+      mailError = error;
+    }
+
+    if (!stored && !mailed) {
+      console.error('Deletion request was not recorded', {
+        code: loggedErrorCode(storeError) ?? loggedErrorCode(mailError),
+      });
+      return NextResponse.json(
+        { error: "Failed to process request" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
@@ -58,7 +64,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error("Delete request error:", error);
+    console.error('Delete request error', { code: loggedErrorCode(error) });
     return NextResponse.json(
       { error: "Failed to process request" },
       { status: 500 }

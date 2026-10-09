@@ -32,7 +32,8 @@ it('retains children, legal links and account access with correct current destin
 });
 it('uses account-aware public website links without creating a new auth flow',()=>{
  render(<PublicDesignShell workspace={false}>Content</PublicDesignShell>);
- expect(screen.getByRole('link',{name:'Open workspace ↗'}).getAttribute('href')).toBe('/tools/command-center');
+ expect(screen.getByRole('link',{name:'Open workspace'}).getAttribute('href')).toBe('/tools/command-center');
+ expect(screen.getByRole('link',{name:'Product'}).getAttribute('href')).toBe('/tools/command-center');
  expect(screen.getByRole('link',{name:'Account',exact:true}).getAttribute('href')).toBe('/account');
 });
 

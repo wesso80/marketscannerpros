@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     username: 'MSP Admin Terminal',
     embeds: [
       {
-        title: 'MarketScanner Pros Alert',
+        title: 'MarketScannerPros Alert',
         description: 'Private admin research alert',
         color: 0x10B981,
         fields: [

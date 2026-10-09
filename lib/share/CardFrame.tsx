@@ -39,7 +39,7 @@ export function CardFrame({ kicker, asOf, accent = T.accent, children, note }: {
             MSP
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', marginLeft: 16 }}>
-            <div style={{ fontSize: 26, color: T.text, display: 'flex' }}>MarketScanner Pros</div>
+            <div style={{ fontSize: 26, color: T.text, display: 'flex' }}>MarketScannerPros</div>
             <div style={{ fontSize: 17, color: accent, letterSpacing: 2, display: 'flex' }}>{kicker.toUpperCase()}</div>
           </div>
         </div>

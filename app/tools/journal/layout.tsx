@@ -11,7 +11,7 @@ export const metadata: Metadata = {
       'A journal for recording trades and notes. Open-position marks refresh from quotes about once a minute when a price is available, and open P&L is estimated before fees.',
     url: 'https://marketscannerpros.app/tools/workspace?tab=journal',
     siteName: 'MarketScannerPros',
-    images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScanner Pros — Trade Journal' }],
+    images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScannerPros — Trade Journal' }],
     type: 'website',
   },
   twitter: {

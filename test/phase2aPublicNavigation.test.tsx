@@ -5,7 +5,6 @@ import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import Footer from "@/components/Footer";
 import PublicDesignShell from "@/components/public-design/PublicDesignShell";
 import IntelligenceNav from "@/components/intelligence/IntelligenceNav";
-import { metadata } from "@/app/partners/demo/layout";
 vi.mock("next/link", () => ({
   default: ({ children, ...props }: any) => <a {...props}>{children}</a>,
 }));
@@ -47,12 +46,10 @@ it("Footer links Contact to its page, exposes policies and keeps the compliance 
     "/contact",
     "/refund-policy",
     "/compliance-hub",
-    "/partners",
   ])
     expect(el.querySelector(`a[href="${href}"]`)).not.toBeNull();
   expect(el.textContent).toContain(
     "Nothing on this platform is financial, investment, or trading advice",
   );
+  expect(el.querySelector('a[href="/partners"]')).toBeNull();
 });
-it("the partner demo is not indexed", () =>
-  expect(metadata.robots).toEqual({ index: false, follow: false }));

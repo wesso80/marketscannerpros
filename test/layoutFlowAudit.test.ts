@@ -191,7 +191,6 @@ describe('layout and flow audit regressions', () => {
     const toolsNavBar = read('components/ToolsNavBar.tsx');
     const onboardingChecklist = read('components/OnboardingChecklist.tsx');
     const pricing = read('components/Pricing.tsx');
-    const partnerDemo = read('app/partners/demo/page.tsx');
     const email = read('lib/email.ts');
     const discordBridge = read('lib/discord-bridge.ts');
     const pushServer = read('lib/pushServer.ts');
@@ -212,11 +211,6 @@ describe('layout and flow audit regressions', () => {
     const sitemap = read('app/sitemap.ts');
     const staticToolsPreview = read('public/tools-preview.html');
 
-    expect(partnerDemo).toContain('icon: "SCAN"');
-    expect(partnerDemo).toContain('icon: "AI"');
-    expect(partnerDemo).toContain('Completed: no execution capability, broker connections, or order submission');
-    expect(partnerDemo).not.toContain('icon: "📊"');
-    expect(partnerDemo).not.toContain('✅ 350+ text changes');
     expect(toolWorkflows.map(w => w.title)).toEqual(['1. Overview', '2. Scanner', '3. Research', '4. Backtest', '5. Track']);
     expect(workflows).toContain("3. Research");
     const researchTools = toolWorkflows.find(w => w.id === 'mechanics')!.tools;
@@ -272,16 +266,13 @@ describe('layout and flow audit regressions', () => {
     expect(pricing).not.toContain('🤖');
     expect(pricing).not.toContain('📊');
     expect(pricing).not.toContain('📈');
-    expect(partnerDemo).toContain('href: "/tools/workspace?tab=backtest"');
-    expect(partnerDemo).toContain('href: "/tools/terminal?tab=options-confluence"');
-    expect(partnerDemo).toContain('href: "/tools/explorer?tab=crypto-command"');
     expect(email).toContain("['MSP AI', '/tools/scanner']");
     expect(email).toContain("['Portfolio', '/tools/workspace?tab=portfolio']");
     expect(email).toContain("['Journal', '/tools/workspace?tab=journal']");
     expect(email).toContain('https://app.marketscannerpros.app/tools/workspace?tab=alerts');
     expect(email).toContain("const alertCode = isSmartAlert ? 'AI' : 'PX';");
     expect(email).toContain("['SCAN', 'Unlimited Scanner'");
-    expect(email).toContain('Welcome to MarketScanner Pros ${planName}');
+    expect(email).toContain('Welcome to MarketScannerPros ${planName}');
     expect(email).not.toContain('🎉 Welcome');
     expect(email).not.toContain('📧 Email sent');
     expect(discordBridge).toContain('url: `${APP_BASE}/tools/scanner`');
@@ -724,7 +715,7 @@ describe('layout and flow audit regressions', () => {
     expect(economicCalendarPage).toContain('REVIEW: {gate.reviewState}');
     expect(economicCalendarPage).toContain('Research Mode: ${gate.researchMode}');
     expect(economicCalendarPage).not.toContain('Override permission output');
-    expect(toolsLayout).toContain('The MSP market research workflow');
+    expect(toolsLayout).toContain('The MarketScannerPros market research workflow');
   });
 
   it('keeps Workspace Alerts compact without duplicate compliance chrome', () => {
@@ -1099,7 +1090,8 @@ describe('layout and flow audit regressions', () => {
     expect(goldenEggPage).toContain('Data trust');
     expect(goldenEggPage).toContain('Recorded levels');
     expect(goldenEggPage).not.toMatch(/Reference level|Reaction Zones|Scenario Map/);
-    expect(goldenEggPage).toContain('<ComplianceDisclaimer compact />');
+    expect(goldenEggPage.match(/General information only, not financial advice\./g)).toEqual(['General information only, not financial advice.']);
+    expect(goldenEggPage).not.toContain('<ComplianceDisclaimer');
     expect(goldenEggPage).toContain('Research packet');
     expect(goldenEggPage).toContain('Research views');
     expect(goldenEggPage).toContain('Open Liquidity Sweep');

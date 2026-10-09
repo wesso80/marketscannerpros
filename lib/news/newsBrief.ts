@@ -1,7 +1,7 @@
 /**
  * Prompt + output rules for the News Intelligence "Daily Brief" (gpt-4o-mini, /api/news-sentiment).
  *
- * Compliance: MarketScanner Pros does not hold a financial-services licence, so the brief must be DESCRIPTIVE ONLY —
+ * Compliance: MarketScannerPros does not hold a financial-services licence, so the brief must be DESCRIPTIVE ONLY —
  * what was reported, what is scheduled, how prices moved. It must never tell the reader what to do (no "should",
  * "consider", "watch for entries", buy/sell/hold, positioning or price-target calls).
  */

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     title: 'Terminal | MarketScannerPros',
     description: 'Educational terminal for equity, crypto, and futures market-structure timing workflows.',
     type: 'website',
-    images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScanner Pros — Terminal' }],
+    images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScannerPros — Terminal' }],
   },
   twitter: {
     card: 'summary_large_image',
