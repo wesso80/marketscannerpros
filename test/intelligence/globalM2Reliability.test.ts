@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { classifyProviderFailure } from '@/lib/intelligence/data/globalM2Health';
 import { memoryGlobalM2Store } from '@/lib/intelligence/data/globalM2Store';
 import { buildWave3Bundle } from '@/lib/intelligence/data/globalM2Pipeline';
@@ -89,7 +89,11 @@ describe('Persisted source-of-truth fallback', () => {
   });
 
   it('persist:false keeps deterministic behaviour (no store access)', async () => {
-    const b = await buildWave3Bundle(liveDeps(), { persist: false });
+    // Fixture series end in Jun 2026; pin "now" just after so freshness does not depend on the day the suite runs.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-07-20T00:00:00Z'));
+    let b;
+    try { b = await buildWave3Bundle(liveDeps(), { persist: false }); } finally { vi.useRealTimers(); }
     // US/CN/CH/EU/GB/CA/BR live (7); JP/IN/KR/AU default fail-closed/unreachable.
     expect(b.result.validBlocCount).toBe(7);
     expect(b.providerStatus.find((p) => p.id === 'CN')?.health).toBe('LIVE');

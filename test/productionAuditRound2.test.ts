@@ -87,6 +87,7 @@ describe('post-remediation audit round 2 regressions', () => {
     expect(valuation).toContain('Number.isFinite(cost) && cost > 0');
     expect(valuation).toContain('profitLossUsd: available ? value - cost : null');
     expect(widget).toContain('Cost basis not supplied');
-    expect(widget).toContain('Unavailable');
+    // Public wording for a missing value is "Not collected".
+    expect(widget).toContain('<p className="font-semibold text-slate-500">Not collected</p>');
   });
 });

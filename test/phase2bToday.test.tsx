@@ -124,10 +124,11 @@ describe('Phase 2B today pages', () => {
     await render(<MacroDashboardPage embeddedInDashboard />);
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
     const lead = container.querySelector('[data-global-regime]');
-    expect(lead?.querySelector('h2')?.textContent).toBe('Global regime');
+    expect(lead?.querySelector('h2')?.textContent).toBe('Published macro observations');
     expect(lead?.querySelector('[data-verdict-box]')).not.toBeNull();
     expect(lead?.querySelectorAll('[data-macro-tile]')).toHaveLength(4);
-    expect(container.innerHTML.indexOf('data-global-regime')).toBeLessThan(container.innerHTML.indexOf('Decision detail'));
+    // J9 renamed the folded decision section to "Assessment detail".
+    expect(container.innerHTML.indexOf('data-global-regime')).toBeLessThan(container.innerHTML.indexOf('Assessment detail'));
     expect(container.querySelector('[data-global-regime] details')).toBeNull();
     expect(container.querySelector('[aria-label="Macro command header"]')).toBeNull();
     expect(container.textContent).not.toContain('Yield curve chart is the next row');
@@ -151,8 +152,9 @@ describe('Phase 2B today pages', () => {
   it('Macro inside Dashboard starts at Global regime', async () => {
     nav.tab = 'macro';
     await render(<DashboardPage />);
-    await vi.waitFor(() => expect(container.querySelector('[data-global-regime] h2')?.textContent).toBe('Global regime'));
-    expect(container.querySelector('h1')).toBeNull();
+    await vi.waitFor(() => expect(container.querySelector('[data-global-regime] h2')?.textContent).toBe('Published macro observations'));
+    // J9: the Dashboard hides its own heading on the Macro tab and the embedded view supplies the only h1.
+    expect([...container.querySelectorAll('h1')].map((h) => h.textContent)).toEqual(['Macro']);
     expect(container.querySelector('[aria-label="Dashboard lens"]')).toBeNull();
     expect(container.querySelector('[aria-label="Macro command header"]')).toBeNull();
     expect(container.textContent).not.toContain('Yield curve chart is the next row');
@@ -164,9 +166,9 @@ describe('Phase 2B today pages', () => {
     expect(container.querySelector('h1')?.textContent).toBe('Daily Radar');
     expect(container.textContent).not.toMatch(BANNED);
     root.render(<MarketMoversPage />);
-    await vi.waitFor(() => expect(container.querySelectorAll('[data-mover-bars]')).toHaveLength(2));
-    expect(container.querySelectorAll('[data-mover-bars]')).toHaveLength(2);
-    expect(container.textContent).toContain('Show all');
+    // Compact Movers presentation: an empty fixture states that nothing was collected and draws no charts.
+    await vi.waitFor(() => expect(container.querySelector('[data-movers-verdict]')?.textContent).toBe('No mover observations collected.'));
+    expect(container.querySelector('[data-mover-row]')).toBeNull();
     expect(container.textContent).not.toMatch(BANNED);
   });
 

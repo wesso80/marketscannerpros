@@ -57,7 +57,8 @@ describe('worker equities wiring (source guard)', () => {
   });
 
   it('writes the same quotes_latest columns as the per-symbol upsert', () => {
-    const cols = '(symbol, price, open, high, low, prev_close, volume, change_amount, change_percent, latest_trading_day, fetched_at)';
+    // observed_at / observed_price were added to both upserts so quotes carry their observation time.
+    const cols = '(symbol, price, open, high, low, prev_close, volume, change_amount, change_percent, latest_trading_day, fetched_at, observed_at, observed_price)';
     expect(between('async function upsertQuote(', 'async function upsertEquityQuotesBatch(')).toContain(cols);
     expect(between('async function upsertEquityQuotesBatch(', 'async function upsertBars(')).toContain(cols);
   });

@@ -74,10 +74,11 @@ it('renders a 7-column chain with a sticky strike and a phone Calls/Puts toggle'
   render(<OptionsTerminalView symbol="SPY" />);
   for (const name of ['Strike', 'Bid', 'Ask', 'Vol', 'OI', 'IV', 'Delta']) expect(screen.getAllByText(name).length).toBeGreaterThan(0);
   expect(document.querySelector('.sticky-strike')).toBeTruthy();
-  expect(document.querySelector('[data-testid="calls-puts-toggle"]')).toBeTruthy();
+  // The phone Calls/Puts toggle lives in the compact mobile chain (J16-WP2-2).
+  expect(document.querySelector('[data-mobile-options-chain] [aria-label="Contract side"]')).toBeTruthy();
   const css = readFileSync('app/globals.css', 'utf8');
   expect(css).toMatch(/@media \(max-width: 639px\)[\s\S]*\.msp-options-side-toggle \{ display: flex; \}/);
-  const puts = document.querySelector('[data-testid="calls-puts-toggle"] button:last-child') as HTMLButtonElement;
+  const puts = document.querySelector('[data-mobile-options-chain] [aria-label="Contract side"] button:last-child') as HTMLButtonElement;
   fireEvent.click(puts);
   expect(puts.getAttribute('aria-pressed')).toBe('true');
 });
