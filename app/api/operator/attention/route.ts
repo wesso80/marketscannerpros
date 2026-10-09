@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { operatorAccessDenied } from '@/lib/operator/privateAccess';
 
 type AttentionActionRequest = {
   action: 'pin' | 'snooze' | 'take_action' | 'clear_pin';
@@ -41,6 +42,8 @@ export async function POST(req: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const operatorDenied = operatorAccessDenied(session);
+    if (operatorDenied) return operatorDenied;
 
     const body = (await req.json()) as AttentionActionRequest;
     const action = body?.action;

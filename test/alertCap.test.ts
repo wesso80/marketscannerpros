@@ -22,6 +22,8 @@ vi.mock('@/lib/proTraderAccess', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/proTraderAccess')>();
   return { ...actual, hasPaidSessionAccess: () => paid.value };
 });
+// /api/actions/execute is operator-only (test/operatorRouteAccess.test.ts covers the gate); these tests exercise its alert-cap logic.
+vi.mock('@/lib/operator/privateAccess', () => ({ operatorAccessDenied: () => null }));
 vi.mock('@/lib/engine/jobQueue', () => ({ enqueueEngineJob: async () => ({ enqueued: false }) }));
 vi.mock('@/lib/execution/runPipeline', () => ({ runExecutionPipeline: async () => ({ ok: false }) }));
 
