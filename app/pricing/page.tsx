@@ -162,16 +162,16 @@ export default function PricingPage() {
         {
           group: "Scan",
           lines: [
-            "Unlimited Market Scanner with full filters, and up to 100 active alerts",
-            "Golden Egg symbol validation workflow",
+            "Unlimited Symbol reports",
+            "20 AI questions a day",
           ],
         },
         {
           group: "Validate",
           lines: [
             "Live with Pro: Global M2, Liquidity Transmission and Market Fragility",
-            "Deep Analysis, Options Terminal, Options Confluence",
-            "Time Confluence Scanner and Volatility Engine",
+            "Options research and the options terminal",
+            "Volatility readings",
           ],
         },
         {
@@ -179,7 +179,7 @@ export default function PricingPage() {
           lines: [
             "Every research and intelligence dashboard, unrestricted",
             "Crypto Command Centre + derivatives tools",
-            "Priority MSP AI",
+            "MSP Copilot: 20 questions a day",
           ],
         },
         {
@@ -191,7 +191,7 @@ export default function PricingPage() {
           lines: [
             "Unlimited portfolio and trade journal with advanced analytics",
             "Alerts, exports and workspace premium features",
-            "Priority support",
+            "Alerts and exports",
           ],
         },
       ],
@@ -284,6 +284,24 @@ export default function PricingPage() {
             {checkoutError}
           </div>
         ) : null}
+
+        <section className="mt-14">
+          <h2 className="text-center text-lg font-semibold">Frequently asked questions</h2>
+          <div className="mx-auto mt-6 max-w-3xl space-y-3">
+            <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-4">
+              <div className="text-sm font-semibold">Can I cancel anytime?</div>
+              <p className="mt-2 text-sm text-white/70">Yes. Access lasts until the end of the current billing period. Cancel from Account &gt; Manage Billing.</p>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-4">
+              <div className="text-sm font-semibold">Do you offer refunds?</div>
+              <p className="mt-2 text-sm text-white/70">If you are not satisfied with your subscription, you may request a full refund within 7 days of your first payment. This guarantee applies to first-time subscribers only.</p>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-4">
+              <div className="text-sm font-semibold">Do you provide financial advice?</div>
+              <p className="mt-2 text-sm text-white/70">No. General information only, not financial advice.</p>
+            </div>
+          </div>
+        </section>
 
         <div className="mx-auto mt-10 max-w-3xl rounded-lg border border-white/10 bg-white/[0.04] p-4">
           <div className="text-xs text-white/60">Disclaimer</div>

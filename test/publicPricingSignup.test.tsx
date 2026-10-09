@@ -19,7 +19,10 @@ it('keeps declared record limits equal to existing UI and journal enforcement',(
 it('shows new daily allowances only when enabled, never promises a trial or Free AI',()=>{
  const p=props();const view=render(<ResearchPricing {...p}/>);
  expect(screen.getByText('3 Symbol reports per day')).toBeTruthy();expect(screen.getByText(/20 questions per day/)).toBeTruthy();
- expect(view.container.textContent).not.toMatch(/free trial|7.day|Deep Analysis|Golden Egg|10 AI/i);
+ expect(view.container.textContent).toContain('If you are not satisfied with your subscription, you may request a full refund within 7 days of your first payment.');
+ expect(view.container.textContent).toContain('This guarantee applies to first-time subscribers only.');
+ expect(view.container.textContent).toContain('No. General information only, not financial advice.');
+ expect(view.container.textContent).not.toMatch(/free trial|7-day trial|7 day trial|Deep Analysis|Golden Egg|10 AI/i);
  view.rerender(<ResearchPricing {...p} quotasEnabled={false}/>);
  expect(screen.queryByText(/Symbol reports per day/)).toBeNull();expect(screen.queryByText(/questions per day/)).toBeNull();
 });

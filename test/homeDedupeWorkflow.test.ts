@@ -13,7 +13,8 @@ describe('Homepage: workflow once, tidy MSP AI section', () => {
       ['03', '/tools/workspace?tab=backtest', 'Backtest'],
       ['04', '/tools/workspace', 'Track'],
     ]);
-    expect(hub.match(/Golden Egg, our Symbol validation workflow/g)).toHaveLength(1);
+    expect(hub).toContain('One symbol at a time: the evidence on the page, data quality, reference zones, and what would make the reading invalid.');
+    expect(hub).not.toContain('Golden Egg, our Symbol validation workflow');
     expect(hub).not.toContain('Open workflow map');
   });
 

@@ -61,8 +61,8 @@ export default function Pricing({ loading, onLaunch, onCheckout }: Props) {
             </p>
             <ul className="mt-6 space-y-3">
               <li className={featureItem}>• Everything in Free</li>
-              <li className={featureItem}>• Unlimited symbol scanning</li>
-              <li className={featureItem}>• MSP AI (50/day)</li>
+              <li className={featureItem}>• Unlimited Symbol reports</li>
+              <li className={featureItem}>• 20 AI questions a day</li>
               <li className={featureItem}>• Market Movers & News</li>
               <li className={featureItem}>• Company Overview</li>
               <li className={featureItem}>• AI Tools & Insights</li>
@@ -97,10 +97,10 @@ export default function Pricing({ loading, onLaunch, onCheckout }: Props) {
             </p>
             <ul className="mt-6 space-y-3">
               <li className={featureItem}>• Everything in Pro</li>
-              <li className={featureItem}>• MSP AI (200/day)</li>
+              <li className={featureItem}>• 20 AI questions a day</li>
               <li className={featureItem}>• Full backtesting engine</li>
-              <li className={featureItem}>• Golden Egg Deep Analysis</li>
-              <li className={featureItem}>• AI Confluence Scanner</li>
+              <li className={featureItem}>• Symbol research</li>
+              <li className={featureItem}>• Multi-timeframe indicator scan</li>
               <li className={featureItem}>• Options Confluence Scanner</li>
               <li className={featureItem}>• Premium support</li>
             </ul>

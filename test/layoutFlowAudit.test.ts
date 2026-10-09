@@ -263,7 +263,8 @@ describe('layout and flow audit regressions', () => {
     expect(onboardingChecklist).not.toContain("icon: '🔍'");
     expect(onboardingChecklist).not.toContain("done ? '✅'");
     expect(pricing).toContain('Full backtesting engine');
-    expect(pricing).toContain("Golden Egg Deep Analysis");
+    expect(pricing).toContain("Symbol research");
+    expect(pricing).not.toContain("Golden Egg Deep Analysis");
     expect(pricing).toContain("Options Confluence Scanner");
     expect(pricing).toContain("PLAN_PRICES.pro.monthly");
     expect(pricing).not.toContain('🤖');

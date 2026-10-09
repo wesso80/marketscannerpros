@@ -3,8 +3,8 @@ export type AppTier = "free" | "pro" | "pro_trader";
 
 export const AI_DAILY_LIMITS: Record<AppTier, number> = {
   free: 10,
-  pro: 50,
-  pro_trader: 50,
+  pro: 20,
+  pro_trader: 20,
 };
 
 /** Model selection per tier — Pro (incl. legacy pro_trader) gets GPT-4.1; Free stays on gpt-4o-mini */

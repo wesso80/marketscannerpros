@@ -10,7 +10,7 @@
     MarketScanner Pros
   </text>
   <text x="60" y="300" fill="#e5e5e5" font-size="36" font-family="Segoe UI, Roboto, Helvetica, Arial">
-    Run smart scans · Interpret scores · Manage alerts
+    Review indicator readings · Check the dates · Manage alerts
   </text>
   <rect x="60" y="360" width="540" height="8" fill="#34d399"/>
 </svg>

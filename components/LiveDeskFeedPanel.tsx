@@ -127,7 +127,7 @@ export default function LiveDeskFeedPanel() {
           </div>
 
           <div style={{ marginTop: '0.2rem', borderTop: '1px solid var(--msp-divider)', paddingTop: '0.45rem', display: 'grid', gap: '0.28rem', fontSize: 11, color: 'var(--msp-text-muted)' }}>
-            <div>Alignment Score: <strong style={{ color: 'var(--msp-accent)' }}>73 / 100</strong></div>
+            <div>Alignment Score: <strong style={{ color: 'var(--msp-text-muted)' }}>Not collected</strong></div>
             <div>Regime State: <strong style={{ color: 'var(--msp-warn)' }}>Balanced Rotation</strong></div>
             <div>Trigger Ladder: <strong style={{ color: 'var(--msp-bull)' }}>2 / 4 Armed</strong></div>
           </div>

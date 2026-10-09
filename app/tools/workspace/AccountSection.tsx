@@ -12,7 +12,7 @@ import { FREE_COPY } from '@/components/free/copy';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { Card, Badge, SectionHeader, ScoreBar } from '@/app/v2/_components/ui';
-import { useUserTier } from '@/lib/useUserTier';
+import { getAILimit, useUserTier } from '@/lib/useUserTier';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -242,7 +242,7 @@ export default function AccountSection() {
 
   const currentTier = tierDisplay[normalizedTier];
   const isPaid = normalizedTier === 'pro' || normalizedTier === 'pro_trader';
-  const aiLimit = isPaid ? 50 : 10;
+  const aiLimit = getAILimit(isPaid ? 'pro' : 'free');
   const aiUsed = realUsage?.aiUsed ?? 0;
 
   const usage = [
@@ -252,7 +252,7 @@ export default function AccountSection() {
   ];
 
   const planFeatures = useMemo(() => {
-    if (isPaid) return ['Unlimited scanning + Golden Egg', 'Production Intelligence (Global M2, Liquidity Transmission, Fragility)', 'Backtesting, options and derivatives tools', 'Unlimited portfolio and trade journal', 'Alerts, exports, priority support'];
+    if (isPaid) return ['Unlimited Symbol reports', '20 AI questions a day', 'Production Intelligence (Global M2, Liquidity Transmission, Fragility)', 'Backtesting, options and derivatives tools', 'Unlimited open portfolio positions and journal entries', 'Options research, exports, and stored M2 history'];
     return [FREE_COPY.pricing.scans, 'Watchlists, markets and macro dashboards', FREE_COPY.pricing.macro, FREE_COPY.pricing.journal, 'Educational content and platform guides'];
   }, [isPaid]);
 

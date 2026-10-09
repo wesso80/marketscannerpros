@@ -223,11 +223,12 @@ export default function AccountPage() {
   const planFeatures = useMemo(() => {
     if (isPaid) {
       return [
-        "Unlimited scanning + Symbol",
+        "Unlimited Symbol reports",
+        "20 AI questions a day",
         "Production Intelligence (Global M2, Liquidity Transmission, Fragility)",
         "Backtesting, options and derivatives tools",
-        "Unlimited portfolio and trade journal",
-        "Alerts, exports, priority support",
+        "Unlimited open portfolio positions and journal entries",
+        "Options research, exports, and stored M2 history",
       ];
     }
     return [

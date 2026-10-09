@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: 'Operator Dashboard | MarketScanner Pros',
+  title: 'Operator Dashboard',
   description:
     'Operator workspace for reviewing risk limits, open positions, and regime context.',
   alternates: {
@@ -13,10 +13,10 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     url: 'https://marketscannerpros.app/operator',
-    title: 'Operator Dashboard | MarketScanner Pros',
+    title: 'Operator Dashboard | MarketScannerPros',
     description:
       'Operator workspace for reviewing risk limits, open positions, and regime context.',
-    siteName: 'MarketScanner Pros',
+    siteName: 'MarketScannerPros',
     images: [
       {
         url: '/scan-banner.png',
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Operator Dashboard | MarketScanner Pros',
+    title: 'Operator Dashboard | MarketScannerPros',
     description:
       'Operator workspace for reviewing risk limits and regime context.',
     images: ['/scan-banner.png'],

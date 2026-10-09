@@ -35,8 +35,8 @@ describe('tier and role access helpers', () => {
     expect(normalizeTier(null)).toBe('free');
     expect(getDailyAiLimit(undefined)).toBe(10);
     expect(getDailyAiLimit('free')).toBe(10);
-    expect(getDailyAiLimit('pro')).toBe(50);
-    expect(getDailyAiLimit('pro_trader')).toBe(50);
+    expect(getDailyAiLimit('pro')).toBe(20);
+    expect(getDailyAiLimit('pro_trader')).toBe(20);
     expect(hasProAccess('free')).toBe(false);
     expect(hasProAccess('pro')).toBe(true);
     expect(hasProAccess('pro_trader')).toBe(true);
