@@ -121,3 +121,25 @@ describe('public sessions are unchanged', () => {
     expect(res.status).toBe(200);
   });
 });
+
+describe('ms_admin cookies are revoked with the admin list', () => {
+  const adminCookie = (cid: string) => {
+    const p = { kind: 'admin', cid, tier: 'admin', workspaceId: ws(cid), exp: now() + 3600 };
+    return { cookie: `ms_admin=${sign(p)}` };
+  };
+  it('an admin cookie for a listed admin is admitted', async () => {
+    const middleware = await load();
+    expect(admitted(await middleware(new NextRequest('http://localhost/admin/overview', { headers: adminCookie(`admin_${ADMIN}`) })))).toBe(true);
+  });
+  it('an admin cookie whose email was removed from ADMIN_EMAILS is refused on /admin, /operator and /api/admin', async () => {
+    process.env.ADMIN_EMAILS = 'someone-else@example.com';
+    const middleware = await load();
+    expect((await middleware(new NextRequest('http://localhost/admin/overview', { headers: adminCookie(`admin_${ADMIN}`) }))).status).toBe(307);
+    expect((await middleware(new NextRequest('http://localhost/operator', { headers: adminCookie(`admin_${ADMIN}`) }))).status).toBe(307);
+    expect((await middleware(new NextRequest('http://localhost/api/admin/health', { headers: adminCookie(`admin_${ADMIN}`) }))).status).toBe(401);
+  });
+  it('a cookie minted by the retired secret login is refused', async () => {
+    const middleware = await load();
+    expect((await middleware(new NextRequest('http://localhost/admin/overview', { headers: adminCookie('admin_admin_secret') }))).status).toBe(307);
+  });
+});

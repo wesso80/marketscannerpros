@@ -15,7 +15,8 @@ vi.mock('next/headers', () => ({
 }));
 
 vi.mock('../lib/quant/operatorAuth', () => ({
-  isOperator: vi.fn(() => false),
+  // Only the test admin identity is on the admin list.
+  isOperator: vi.fn((cid: string) => cid === 'admin_founder@example.com'),
 }));
 
 const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -99,10 +100,20 @@ describe('/api/admin/verify', () => {
     expect(await res.json()).toEqual({ ok: true, source: 'admin_session' });
   });
 
-  it('DELETE clears the admin session cookie', async () => {
+  it('DELETE (admin logout) clears both the admin cookie and the admin app session', async () => {
     const { DELETE } = await import('../app/api/admin/verify/route');
     const res = await DELETE(request('/api/admin/verify', { method: 'DELETE' }) as any);
-    expect(res.headers.get('set-cookie')).toContain('ms_admin=;');
+    const cookies = res.headers.getSetCookie?.() ?? [res.headers.get('set-cookie') ?? ''];
+    const all = cookies.join('\n');
+    expect(all).toContain('ms_admin=;');
+    expect(all).toContain('ms_auth=;');
+  });
+
+  it('an ms_admin cookie for an identity no longer on the admin list is refused', async () => {
+    cookiesMock.mockResolvedValue(cookieStore({ ms_admin: createAdminSessionToken('admin_removed@example.com') }));
+    await expect(verifyAdminRequest(request())).resolves.toEqual({ ok: false });
+    cookiesMock.mockResolvedValue(cookieStore({ ms_admin: createAdminSessionToken() })); // retired secret-login cookie
+    await expect(verifyAdminRequest(request())).resolves.toEqual({ ok: false });
   });
 
   it('the admin layout has no secret form and points signed-out admins at /admin/login', () => {

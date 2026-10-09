@@ -17,9 +17,12 @@ export async function POST() {
   return retiredRouteResponse();
 }
 
+// Admin logout ends both sessions: the 12-hour admin cookie and the app session the admin sign-in issued (ms_auth),
+// which otherwise kept admin access through the app-session path. Same cookie scope as when they were set.
 export async function DELETE(req: NextRequest) {
   const res = NextResponse.json({ ok: true });
   const options = getAdminSessionCookieOptions(req);
   res.cookies.set(ADMIN_SESSION_COOKIE, '', { ...options, maxAge: 0 });
+  res.cookies.set('ms_auth', '', { ...options, maxAge: 0 });
   return res;
 }

@@ -76,10 +76,17 @@ async function verify(token: string) {
   return payload;
 }
 
-async function verifyAdminSessionToken(token: string | undefined) {
+/**
+ * A signed ms_admin cookie counts only while its identity is still on the admin list, so removing an email from
+ * ADMIN_EMAILS revokes cookies already issued (not just new sign-ins). Cookies minted by the retired secret login
+ * (cid admin_admin_secret) no longer pass.
+ */
+async function verifyAdminSessionToken(token: string | undefined, adminCids: string[]) {
   if (!token) return null;
   const payload = await verify(token);
-  return (payload as { kind?: string } | null)?.kind === 'admin' ? payload : null;
+  if ((payload as { kind?: string } | null)?.kind !== 'admin') return null;
+  const cid = String((payload as { cid?: string }).cid ?? '').toLowerCase();
+  return cid && adminCids.includes(cid) ? payload : null;
 }
 
 function withNoIndexHeaders(res: NextResponse) {
@@ -213,7 +220,7 @@ export async function middleware(req: NextRequest) {
   const summaryBot = pathname.replace(/\/+$/, '') === '/api/admin/crypto-markets/summary'
     && (Boolean(req.headers.get('x-crypto-summary-key')?.trim()) || /^Bearer\s+\S/i.test(req.headers.get('authorization') ?? ''));
   if (pathname.startsWith('/api/admin/') && !summaryBot) {
-    const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value);
+    const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value, ADMIN_CIDS);
     let appIsAdmin = false;
 
     if (!adminSession && cookie) {
@@ -247,7 +254,7 @@ export async function middleware(req: NextRequest) {
   }
 
   if (pathname === '/admin' || pathname.startsWith('/admin/')) {
-    const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value);
+    const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value, ADMIN_CIDS);
     let appSessionIsAdmin = false;
 
     if (!adminSession && cookie) {
@@ -272,7 +279,7 @@ export async function middleware(req: NextRequest) {
   }
 
   if (pathname === '/operator' || pathname.startsWith('/operator/')) {
-    const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value);
+    const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value, ADMIN_CIDS);
     let appSessionIsOperator = false;
 
     if (!adminSession && cookie) {
