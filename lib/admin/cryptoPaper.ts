@@ -1,3 +1,4 @@
+import {readPaperSchema} from './paperReadSchema';
 import {supportsPaperPair,fetchOkxUsdQuote,fetchOkxUsdPath,usdSignal,paperCostPortfolio,type ConvertedPaperQuote} from './cryptoPaperOkx';
 import {reconcileCryptoPaper,type CryptoReconciliation} from './cryptoPaperReconciliation';
 import {summarizeCryptoPaper,type CryptoPaperStats,type CryptoStatsRow} from './cryptoPaperStats';
@@ -31,8 +32,8 @@ import {fillTrailingNoTrade,type TrailingAnchor} from './cryptoCandleGaps';
 import {paperTradeLog,type PaperLogRow} from './cryptoTradeLog';
 import {paperEntryGate,CRYPTO_PAPER_LIMITS} from './cryptoEntryGate';
 import {LOCK,loadLock,saveLock,newLockState,markLock,advanceLockPosition,settleWithLedger,finishEpisodeIfDone} from './cryptoPaperLock';
-import {ledgerRecords,recordSignals,signalLedgerView,ensureSignalLedger} from './cryptoSignalLedger';
-import {trackExcursions,giveBackView,ensureExcursionTables,excursionTablesReady} from './cryptoPaperExcursion';
+import {ledgerRecords,recordSignals,signalLedgerView} from './cryptoSignalLedger';
+import {trackExcursions,giveBackView} from './cryptoPaperExcursion';
 import {fetchPaperQuote,fetchPaperPath,planCryptoPaper,PaperMarketError,CRYPTO_TIME_STOP} from './cryptoPaperMarket';
 export const CRYPTO_PAPER_NAME='Crypto Markets Paper';
 export const CRYPTO_PAPER_LIVE_NAME='Crypto Markets Paper Live';
@@ -147,14 +148,13 @@ export async function cryptoPaperTradeLog(workspaceId:string):Promise<string|nul
   FROM arca_simulated_orders o LEFT JOIN arca_positions p ON p.source_order_id=o.id AND p.workspace_id=o.workspace_id
   LEFT JOIN arca_trades t ON t.position_id=p.id AND t.workspace_id=o.workspace_id
   WHERE o.workspace_id=$1 AND o.portfolio_id=$2 AND o.filled_at IS NOT NULL ORDER BY o.filled_at`,[workspaceId,portfolio.id]);
- await ensureExcursionTables().catch(()=>undefined);
- const excursions=excursionTablesReady()?Object.fromEntries((await q<{position_id:string;mfe_r:number|null;mae_r:number|null;give_back:number|null}>('SELECT position_id,mfe_r,mae_r,give_back FROM crypto_trade_excursions WHERE portfolio_id=$1',[portfolio.id]).catch(()=>[])).map(r=>[r.position_id,{mfeR:r.mfe_r,maeR:r.mae_r,giveBack:r.give_back}])):{};
+ const schema=await readPaperSchema();
+ const excursions=schema.excursions?Object.fromEntries((await q<{position_id:string;mfe_r:number|null;mae_r:number|null;give_back:number|null}>('SELECT position_id,mfe_r,mae_r,give_back FROM crypto_trade_excursions WHERE portfolio_id=$1',[portfolio.id]).catch(()=>[])).map(r=>[r.position_id,{mfeR:r.mfe_r,maeR:r.mae_r,giveBack:r.give_back}])):{};
  return paperTradeLog(rows,await shadowStates(workspaceId,portfolio.id),excursions);
 }
 export async function cryptoPaperState(workspaceId:string){
- // Outside the transaction: give-back tables are read below only when this succeeded.
- await ensureExcursionTables().catch(()=>undefined);
- await ensureSignalLedger().catch(()=>undefined);
+ // Inspect optional tables outside the account transaction; never initialize schema on a read.
+ const schema=await readPaperSchema();
  return atomicQueries(async()=>{
  let portfolio=await getDefaultPortfolio(workspaceId,CRYPTO_PAPER_NAME);
  if(!portfolio)return {portfolio:null,positions:[],trades:[],journal:[],limits:{...L,clusterRiskPct:CORRELATION.clusterRiskPct},btcRegime:await savedBtcRegime(),stats:null,exitPlans:null,research:{mode:'SIMULATED' as const},live:{mode:'SIMULATED' as const,portfolio:null,positions:[]}};
@@ -169,10 +169,10 @@ export async function cryptoPaperState(workspaceId:string){
   reconciliation=reconcileCryptoPaper(portfolio,positions,{net:Number(totals.net),fees:Number(totals.fees),count:Number(totals.count),invalid:Number(totals.invalid)});
  }catch{reconciliation={status:'UNAVAILABLE',checkedAt:new Date().toISOString(),reason:'Ledger totals could not be read'};}
  let stats:CryptoPaperStats|null=null,exitPlans:ReturnType<typeof compareExitPlans>[]|null=null;
- try{const tracked=excursionTablesReady();const rows=await q<CryptoStatsRow>('SELECT t.position_id,t.r_multiple,t.realised_pnl,t.outcome,t.exit_reason,t.instrument_type,t.entry_time,t.exit_time,t.entry_price,t.exit_price,t.quantity,t.stop_loss,o.created_reason'+(tracked?',x.mfe_r,x.mae_r':'')+' FROM arca_trades t LEFT JOIN arca_positions p ON p.id=t.position_id AND p.workspace_id=t.workspace_id LEFT JOIN arca_simulated_orders o ON o.id=p.source_order_id AND o.workspace_id=t.workspace_id'+(tracked?" LEFT JOIN crypto_trade_excursions x ON x.position_id=t.position_id::text AND x.status='CLOSED'":'')+' WHERE t.workspace_id=$1 AND t.portfolio_id=$2',[workspaceId,portfolio.id]);stats=summarizeCryptoPaper(rows);const shadows=[...(await shadowStates(workspaceId,portfolio.id)).values()];exitPlans=SHADOW_PLANS_ACTIVE.map(plan=>compareExitPlans(rows,shadows,plan));}catch{stats=null;exitPlans=null;}
+ try{const tracked=schema.excursions;const rows=await q<CryptoStatsRow>('SELECT t.position_id,t.r_multiple,t.realised_pnl,t.outcome,t.exit_reason,t.instrument_type,t.entry_time,t.exit_time,t.entry_price,t.exit_price,t.quantity,t.stop_loss,o.created_reason'+(tracked?',x.mfe_r,x.mae_r':'')+' FROM arca_trades t LEFT JOIN arca_positions p ON p.id=t.position_id AND p.workspace_id=t.workspace_id LEFT JOIN arca_simulated_orders o ON o.id=p.source_order_id AND o.workspace_id=t.workspace_id'+(tracked?" LEFT JOIN crypto_trade_excursions x ON x.position_id=t.position_id::text AND x.status='CLOSED'":'')+' WHERE t.workspace_id=$1 AND t.portfolio_id=$2',[workspaceId,portfolio.id]);stats=summarizeCryptoPaper(rows);const shadows=[...(await shadowStates(workspaceId,portfolio.id)).values()];exitPlans=SHADOW_PLANS_ACTIVE.map(plan=>compareExitPlans(rows,shadows,plan));}catch{stats=null;exitPlans=null;}
  const livePortfolio=await getDefaultPortfolio(workspaceId,CRYPTO_PAPER_LIVE_NAME);
  const livePositions=livePortfolio?await listOpenPositions(workspaceId,livePortfolio.id):[];
- return {portfolio,positions,trades,journal,reconciliation,limits:{...L,clusterRiskPct:CORRELATION.clusterRiskPct},btcRegime:await savedBtcRegime(),stats,exitPlans,trending:await savedTrending().catch(()=>null),research:{mode:'SIMULATED' as const},live:{mode:'SIMULATED' as const,portfolio:livePortfolio,positions:livePositions,giveBack:livePortfolio?await giveBackView(livePortfolio.id,livePositions):null,lock:livePortfolio?await loadLock(livePortfolio.id):null},giveBack:await giveBackView(portfolio.id,positions),lock:await loadLock(portfolio.id),signalLedger:await signalLedgerView()};
+ return {portfolio,positions,trades,journal,reconciliation,limits:{...L,clusterRiskPct:CORRELATION.clusterRiskPct},btcRegime:await savedBtcRegime(),stats,exitPlans,trending:await savedTrending().catch(()=>null),research:{mode:'SIMULATED' as const},live:{mode:'SIMULATED' as const,portfolio:livePortfolio,positions:livePositions,giveBack:livePortfolio?await giveBackView(livePortfolio.id,livePositions,schema.excursions&&schema.marks):null,lock:livePortfolio?await loadLock(livePortfolio.id):null},giveBack:await giveBackView(portfolio.id,positions,schema.excursions&&schema.marks),lock:await loadLock(portfolio.id),signalLedger:await signalLedgerView(schema.signals)};
  });
 }
 export async function setCryptoPaperActive(workspaceId:string,active:boolean){
