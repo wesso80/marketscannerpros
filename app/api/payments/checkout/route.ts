@@ -197,8 +197,9 @@ type StripeConfirm = 'live_pro' | 'not_live' | 'failed';
 
 /**
  * live_pro: Stripe status is active, trialing, past_due, or unpaid, on a Pro price.
- * not_live: Stripe answered and it is not that. Checkout may proceed.
- * failed: the retrieve call threw. Checkout stays closed.
+ * not_live: Stripe answered and it is not that, or the subscription id is gone
+ * (resource_missing: deleted, or a test-mode id). Checkout may proceed.
+ * failed: the retrieve call threw for another reason. Checkout stays closed.
  */
 async function confirmStripeSubscription(subscriptionId: string): Promise<StripeConfirm> {
   try {
@@ -206,7 +207,9 @@ async function confirmStripeSubscription(subscriptionId: string): Promise<Stripe
     if (!STRIPE_CONFIRMED_LIVE.has(subscription.status) || !subscriptionHasProPrice(subscription)) return 'not_live';
     return 'live_pro';
   } catch (error) {
-    console.error(`[Checkout] subscription confirm failed (${stripeErrorCode(error)})`);
+    const code = stripeErrorCode(error);
+    console.error(`[Checkout] subscription confirm failed (${code})`);
+    if (code === 'resource_missing') return 'not_live';
     return 'failed';
   }
 }
@@ -244,7 +247,8 @@ async function checkoutBlock(email: string | null, customerId: string | null): P
     if (confirmed === 'live_pro') return ALREADY_SUBSCRIBED;
     if (confirmed === 'failed') retrieveFailed = true;
   }
-  // A failed retrieve on any subscription id stays closed. Canceled and non-Pro answers do not.
+  // A failed retrieve stays closed, except resource_missing, which is not_live.
+  // Canceled and non-Pro answers do not block checkout.
   return retrieveFailed ? BILLING_CHECK_FAILED : null;
 }
 
