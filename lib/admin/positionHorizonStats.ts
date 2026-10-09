@@ -13,6 +13,7 @@
  *   pending    = not measured yet: `waiting` (horizon not reached) + `due` (reached, not labelled yet)
  * Below MIN_HORIZON_SAMPLE measured calls a figure reads "not enough data".
  */
+import { adminErrorText } from "@/lib/admin/errorResponse";
 import { q } from "@/lib/db";
 import { POSITION_HORIZONS, POSITION_HORIZON_DAYS, type PositionHorizon } from "@/lib/outcomes/positionHorizon";
 import { POSITION_MIGRATION_FILE, detectPositionHorizons } from "@/lib/outcomes/positionHorizonLabeller";
@@ -39,6 +40,9 @@ export interface HorizonAggRow {
   no_data?: number | string | null;
   waiting?: number | string | null;
   due?: number | string | null;
+  return_count?: number | string | null;
+  mfe_count?: number | string | null;
+  mae_count?: number | string | null;
   avg_signed_move?: number | string | null;
   avg_r?: number | string | null;
   r_count?: number | string | null;
@@ -63,6 +67,10 @@ export interface HorizonSummary {
   /** Horizon reached, not labelled yet (the labeller runs every 6 h). */
   due: number;
   enoughData: boolean;
+  directionalCount: number;
+  returnCount: number;
+  mfeCount: number;
+  maeCount: number;
   /** correct ÷ (correct + wrong), %; null when not enough data. */
   winRate: number | null;
   /** Mean close move in the call's direction, %; null when not enough data. */
@@ -112,6 +120,7 @@ export function summarizeHorizon(r: HorizonAggRow, minSample = MIN_HORIZON_SAMPL
   const due = n(r.due);
   const rCount = n(r.r_count);
   const enoughData = measured >= minSample;
+  const returnCount = n(r.return_count), mfeCount = n(r.mfe_count), maeCount = n(r.mae_count);
   const decided = correct + wrong;
   return {
     setup: r.setup ?? "ALL",
@@ -124,21 +133,23 @@ export function summarizeHorizon(r: HorizonAggRow, minSample = MIN_HORIZON_SAMPL
     waiting,
     due,
     enoughData,
-    winRate: enoughData && decided > 0 ? Math.round((correct / decided) * 1000) / 10 : null,
-    avgReturnPct: enoughData ? numOrNull(r.avg_signed_move, 2) : null,
+    directionalCount: decided, returnCount, mfeCount, maeCount,
+    winRate: decided >= minSample && decided > 0 ? Math.round((correct / decided) * 1000) / 10 : null,
+    avgReturnPct: returnCount >= minSample ? numOrNull(r.avg_signed_move, 2) : null,
     avgR: rCount >= minSample ? numOrNull(r.avg_r, 2) : null,
     rCount,
     targetFirst: n(r.target_first),
     stopFirst: n(r.stop_first),
     neither: n(r.neither),
-    avgMfePct: enoughData ? numOrNull(r.avg_mfe, 2) : null,
-    avgMaePct: enoughData ? numOrNull(r.avg_mae, 2) : null,
+    avgMfePct: mfeCount >= minSample ? numOrNull(r.avg_mfe, 2) : null,
+    avgMaePct: maeCount >= minSample ? numOrNull(r.avg_mae, 2) : null,
   };
 }
 
 export function horizonStatsSql(h: PositionHorizon): string {
-  const signed = `(CASE WHEN UPPER(trade_bias) = 'SHORT' THEN -pct_move_${h} ELSE pct_move_${h} END)`;
+  const signed = `(CASE WHEN UPPER(TRIM(trade_bias)) = 'SHORT' THEN -pct_move_${h} ELSE pct_move_${h} END)`;
   const done = `outcome_${h} IN ('correct','wrong','neutral')`;
+  const validR = `r_multiple_${h} IS NOT NULL AND r_multiple_${h}::text NOT IN ('NaN','Infinity','-Infinity')`;
   return `
       SELECT ${SETUP_TYPE_SQL} AS setup,
              COUNT(*) FILTER (WHERE ${done})::int AS measured,
@@ -148,9 +159,12 @@ export function horizonStatsSql(h: PositionHorizon): string {
              COUNT(*) FILTER (WHERE outcome_${h} = 'no_data')::int AS no_data,
              COUNT(*) FILTER (WHERE outcome_${h} IS NULL AND signal_at > NOW() - INTERVAL '${POSITION_HORIZON_DAYS[h]} days')::int AS waiting,
              COUNT(*) FILTER (WHERE outcome_${h} IS NULL AND signal_at <= NOW() - INTERVAL '${POSITION_HORIZON_DAYS[h]} days')::int AS due,
+             COUNT(*) FILTER (WHERE ${done} AND ABS(pct_move_${h}) <= ${SANE_MOVE_PCT})::int AS return_count,
+             COUNT(*) FILTER (WHERE ${done} AND ABS(mfe_pct_${h}) <= ${SANE_MOVE_PCT})::int AS mfe_count,
+             COUNT(*) FILTER (WHERE ${done} AND ABS(mae_pct_${h}) <= ${SANE_MOVE_PCT})::int AS mae_count,
              ROUND(AVG(${signed}) FILTER (WHERE ${done} AND ABS(pct_move_${h}) <= ${SANE_MOVE_PCT})::numeric, 3) AS avg_signed_move,
-             ROUND(AVG(r_multiple_${h}) FILTER (WHERE ${done} AND r_multiple_${h} IS NOT NULL)::numeric, 3) AS avg_r,
-             COUNT(*) FILTER (WHERE ${done} AND r_multiple_${h} IS NOT NULL)::int AS r_count,
+             ROUND(AVG(r_multiple_${h}) FILTER (WHERE ${done} AND ${validR})::numeric, 3) AS avg_r,
+             COUNT(*) FILTER (WHERE ${done} AND ${validR})::int AS r_count,
              COUNT(*) FILTER (WHERE ${done} AND first_hit_${h} = 'target')::int AS target_first,
              COUNT(*) FILTER (WHERE ${done} AND first_hit_${h} IN ('stop','both_same_day'))::int AS stop_first,
              COUNT(*) FILTER (WHERE ${done} AND first_hit_${h} = 'neither')::int AS neither,
@@ -163,9 +177,10 @@ export function horizonStatsSql(h: PositionHorizon): string {
 }
 
 export const HORIZON_METHOD_NOTE =
-  "6w = 42 and 12w = 84 calendar days after the call, measured on daily bars. Win rate = correct ÷ (correct + wrong) on the close at the horizon (±1% counts as neutral). " +
+  "6w = 42 and 12w = 84 calendar days after the call, measured on daily bars. Win rate = correct ÷ (correct + wrong) on the close at the horizon (at least +1% in the call direction is correct; at most -1% is wrong; strictly between is neutral). " +
   "Avg R = stop-or-target result using the stop and first target logged with the call (a day touching both counts as the stop). " +
-  "Most logged stops/targets so far are the 15m levels, so R mostly shows how often those tight levels survive 6-12 weeks.";
+  "Levels use the timeframe recorded with each call and may be shorter than this horizon. These are simulated daily-bar results, not executed P&L; fees and slippage are not deducted. " +
+  "Method attribution is unverified: historical rows have no versioned 6w/12w evidence snapshot. The current algorithm description does not prove which method produced an older row. Each statistic needs its own minimum valid sample.";
 
 /** 6w/12w stats; `available: false` (with a note) until migration 105 has been run. Never throws. */
 export async function loadPositionHorizonStats(): Promise<PositionHorizonStats> {
@@ -187,8 +202,7 @@ export async function loadPositionHorizonStats(): Promise<PositionHorizonStats> 
     }
     return { ...base, available: true, horizons: blocks, note: HORIZON_METHOD_NOTE };
   } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    console.warn(`[position-horizon-stats] ${error}`);
+    const error = adminErrorText(err, "admin:position-horizon-stats");
     return { ...base, available: false, horizons: [], note: "6-week / 12-week stats could not be read.", error };
   }
 }

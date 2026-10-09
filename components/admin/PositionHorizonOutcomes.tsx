@@ -31,11 +31,13 @@ function Row({ s, minSample, label }: { s: HorizonSummary; minSample: number; la
         {s.due > 0 && <span style={{ color: "#9CA3AF" }}> ({s.due} due)</span>}
       </td>
       <td style={{ ...cell, color: "#10B981" }}>
-        {s.enoughData ? (s.winRate !== null ? `${s.winRate}%` : "—") : <NotEnough n={s.measured} />}
+        {s.directionalCount >= minSample ? (s.winRate !== null ? `${s.winRate}%` : "—") : <NotEnough n={s.directionalCount} />}
+        <span style={{ color: "#6B7280" }}> n={s.directionalCount}</span>
         {s.enoughData && <span style={{ color: "#6B7280" }}> {s.correct}/{s.wrong}/{s.neutral}</span>}
       </td>
       <td style={{ ...cell, color: tone(s.avgReturnPct) }}>
-        {s.enoughData ? (s.avgReturnPct !== null ? signed(s.avgReturnPct, "%") : "—") : <NotEnough n={s.measured} />}
+        {s.returnCount >= minSample ? (s.avgReturnPct !== null ? signed(s.avgReturnPct, "%") : "—") : <NotEnough n={s.returnCount} />}
+        <span style={{ color: "#6B7280" }}> n={s.returnCount}</span>
       </td>
       <td style={{ ...cell, color: tone(s.avgR) }}>
         {s.rCount >= minSample ? (s.avgR !== null ? signed(s.avgR, "R") : "—") : <NotEnough n={s.rCount} />}
@@ -93,7 +95,7 @@ export default function PositionHorizonOutcomes({ stats }: { stats: PositionHori
       ) : (
         <>
           <div style={{ fontSize: "0.7rem", color: "#9CA3AF", marginBottom: "0.6rem" }}>
-            {stats.note} Figures need at least {stats.minSample} measured calls; below that they read &quot;not enough data&quot;.
+            {stats.note} Each figure needs at least {stats.minSample} valid observations for its own denominator; below that they read &quot;not enough data&quot;.
           </div>
           {stats.horizons.map((b) => <HorizonTable key={b.horizon} block={b} minSample={stats.minSample} />)}
         </>
