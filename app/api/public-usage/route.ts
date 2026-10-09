@@ -1,4 +1,5 @@
 import { VISITOR_COOKIE, issueVisitor, verifyVisitor } from '@/lib/publicVisitor';
+import { acceptedPublicOrigin } from '@/lib/publicUsageOrigin';
 import { apiLimiter,getClientIP } from '@/lib/rateLimit';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
@@ -18,14 +19,14 @@ export async function GET(request:NextRequest) {
 
 export async function POST(request:NextRequest) {
  if(!publicQuotaEnabled())return reply({enabled:false},404);
- // Browser opt-in only; refuse cross-origin cookie issuance.
- if(request.headers.get('origin')!==request.nextUrl.origin)return reply({error:'Same-origin request required'},403);
+ const origin=acceptedPublicOrigin(request);
+ if(!origin)return reply({error:'Same-origin request required'},403);
  const rate=apiLimiter.check(getClientIP(request));if(!rate.allowed)return reply({error:'Please slow down'},429);
  try{
   const current=request.cookies.get(VISITOR_COOKIE)?.value;
   const token=verifyVisitor(current)?current!:issueVisitor();
   const response=reply({enabled:true,ready:true});
-  response.cookies.set(VISITOR_COOKIE,token,{httpOnly:true,secure:request.nextUrl.protocol==='https:',sameSite:'lax',path:'/',maxAge:30*86400});
+  response.cookies.set(VISITOR_COOKIE,token,{httpOnly:true,secure:origin.startsWith('https:'),sameSite:'lax',path:'/',maxAge:30*86400});
   return response;
  }catch{return reply({error:'Visitor access temporarily unavailable'},503);}
 }
