@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { resolveAlertsFromEmail } from "@/lib/alerts/emailPolicy";
+import { PUBLIC_PRO_LOUNGE_FEATURE } from "@/lib/publicPlans";
 
 export { DEFAULT_ALERTS_FROM_EMAIL, resolveAlertsFromEmail } from "@/lib/alerts/emailPolicy";
 
@@ -171,6 +172,7 @@ const PRO_FEATURES = [
   ['OPS', 'Operator Intelligence', 'Workflow automation and decision packets'],
   ['CSV', 'CSV Exports', 'Download scan results and journal data'],
   ['NEWS', 'Real-Time News', 'Curated market news feed with alerts'],
+  ['DSC', PUBLIC_PRO_LOUNGE_FEATURE, "Email support@marketscannerpros.app from your account address and we'll add your Pro role."],
 ];
 
 export async function sendWelcomeEmail(to: string, tier: 'pro' | 'pro_trader') {

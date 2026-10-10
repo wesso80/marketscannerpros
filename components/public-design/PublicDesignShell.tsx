@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
 import { PUBLIC_DESTINATIONS, PUBLIC_LEGAL_LINKS, publicDestination } from '@/lib/publicDesign';
+import DiscordFooterLink from '@/components/DiscordFooterLink';
 import styles from './PublicDesign.module.css';
 import editorial from './EditorialStudio.module.css';
 import surface from './SupportingSurface.module.css';
@@ -13,7 +14,7 @@ function Brand() {
   return <Link href="/" className={styles.brand} aria-label="MarketScannerPros home"><span className={styles.mark} aria-hidden="true"><i/><i/><i/></span>MSP<small>RESEARCH</small></Link>;
 }
 function LegalFooter() {
-  return <footer className={styles.footer}><div><Brand/><p>Educational market research. Sources, dates and limitations belong with every observation.</p></div><nav className={styles.footerLinks} aria-label="Legal and support">{PUBLIC_LEGAL_LINKS.map(link=><Link key={link.href} href={link.href}>{link.label}</Link>)}<Link href="/account">Account & billing</Link><Link href="/pricing">Pricing</Link></nav></footer>;
+  return <footer className={styles.footer}><div><Brand/><p>Educational market research. Sources, dates and limitations belong with every observation.</p></div><nav className={styles.footerLinks} aria-label="Legal and support">{PUBLIC_LEGAL_LINKS.map(link=><Link key={link.href} href={link.href}>{link.label}</Link>)}<Link href="/account">Account & billing</Link><Link href="/pricing">Pricing</Link><DiscordFooterLink /></nav></footer>;
 }
 export default function PublicDesignShell({children,workspace}:{children:ReactNode;workspace:boolean}) {
   const path=usePathname();

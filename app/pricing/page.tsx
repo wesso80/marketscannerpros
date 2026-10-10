@@ -2,7 +2,7 @@
 
 import { FREE_COPY } from '@/components/free/copy';
 import { getPortfolioLimit } from '@/lib/useUserTier';
-import { PUBLIC_DAILY_LIMITS } from '@/lib/publicPlans';
+import { PUBLIC_DAILY_LIMITS, PUBLIC_PRO_LOUNGE_FEATURE } from '@/lib/publicPlans';
 
 // 2026 pricing simplification: exactly two customer-facing plans, Free and Pro.
 // Legacy Pro Trader has been retired from the pricing page. Existing subscribers
@@ -248,6 +248,7 @@ export default function PricingPage() {
           lines: [
             "Every research and intelligence dashboard, unrestricted",
             "Crypto Command Centre + derivatives tools",
+            PUBLIC_PRO_LOUNGE_FEATURE,
             `MSP Copilot: ${PUBLIC_DAILY_LIMITS.pro.ai} AI questions a day`,
           ],
         },

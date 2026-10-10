@@ -8,6 +8,8 @@ import { getDailyAiLimit } from '@/lib/entitlements';
 import { ALERT_LIMITS } from '@/lib/alerts/planLimits';
 import { WATCHLIST_LIMITS } from '@/lib/tiers';
 import { FREE_COPY } from '@/components/free/copy';
+import ProLoungeNote from '@/components/account/ProLoungeNote';
+import { PUBLIC_PRO_LOUNGE_FEATURE } from '@/lib/publicPlans';
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -243,6 +245,7 @@ export default function AccountPage() {
         "Options and derivatives tools",
         "Unlimited open portfolio positions and journal entries",
         "Options research, exports, and stored M2 history",
+        PUBLIC_PRO_LOUNGE_FEATURE,
       ];
     }
     return [
@@ -349,6 +352,7 @@ export default function AccountPage() {
                   {currentTier.active ? "Active" : "Inactive"}
                 </span>
               </div>
+              {isPaid ? <ProLoungeNote className="mt-3 text-sm text-white/70" /> : null}
             </section>
 
             <section aria-label="Account usage" className="rounded-xl border border-white/10 p-3">

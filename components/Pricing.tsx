@@ -2,6 +2,7 @@
 "use client";
 
 import { PLAN_PRICES } from '@/lib/planPrices';
+import { PUBLIC_PRO_LOUNGE_FEATURE } from '@/lib/publicPlans';
 
 type Props = {
   loading: string | null;
@@ -67,6 +68,7 @@ export default function Pricing({ loading, onLaunch, onCheckout }: Props) {
               <li className={featureItem}>• Company Overview</li>
               <li className={featureItem}>• AI Tools & Insights</li>
               <li className={featureItem}>• CSV exports across the research workflow</li>
+              <li className={featureItem}>• {PUBLIC_PRO_LOUNGE_FEATURE}</li>
             </ul>
             <button
               onClick={() => onCheckout("pro")}

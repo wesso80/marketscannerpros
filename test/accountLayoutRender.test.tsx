@@ -136,3 +136,50 @@ it('workspace account keeps the paid label when the portal reports no billing ac
  expect(screen.getByText('Active · Renewal date in billing portal')).toBeTruthy();
  expect(screen.queryByText('Pro access granted manually')).toBeNull();
 });
+
+const LOUNGE_NOTE = "Get the Pro lounge: email support@marketscannerpros.app from your account address and we'll add your Pro role.";
+const loungeParagraph = () => screen.queryByText((_, node) => node?.tagName === 'P' && node.textContent === LOUNGE_NOTE);
+
+it.each([
+ ['pro', true],
+ ['pro_trader', true],
+ ['free', false],
+ ['anonymous', false],
+] as const)('account page lounge note for %s is %s', async (tier, shown) => {
+ state.tier = tier;
+ render(<AccountPage />);
+ if (tier === 'anonymous') expect(screen.getByText('Sign In Required')).toBeTruthy();
+ else await screen.findByText(shown ? 'Active · Renewal date in billing portal' : 'Free tier · Upgrade any time');
+ const note = loungeParagraph();
+ if (shown) {
+  expect(note).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'support@marketscannerpros.app' }).getAttribute('href')).toBe('mailto:support@marketscannerpros.app');
+  expect(document.body.textContent).toContain('Private Pro lounge on our Discord');
+ } else {
+  expect(note).toBeNull();
+  expect(screen.queryByRole('link', { name: 'support@marketscannerpros.app' })).toBeNull();
+  expect(document.body.textContent).not.toContain('Private Pro lounge on our Discord');
+ }
+});
+
+it.each([
+ ['pro', true],
+ ['pro_trader', true],
+ ['free', false],
+ ['anonymous', false],
+] as const)('workspace account lounge note for %s is %s', async (tier, shown) => {
+ state.tier = tier;
+ render(<AccountSection />);
+ if (tier === 'anonymous') expect(screen.getByText('Sign In Required')).toBeTruthy();
+ else await screen.findByText(shown ? 'Active · Renewal date in billing portal' : 'Free tier · Upgrade any time');
+ const note = loungeParagraph();
+ if (shown) {
+  expect(note).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'support@marketscannerpros.app' }).getAttribute('href')).toBe('mailto:support@marketscannerpros.app');
+  expect(document.body.textContent).toContain('Private Pro lounge on our Discord');
+ } else {
+  expect(note).toBeNull();
+  expect(screen.queryByRole('link', { name: 'support@marketscannerpros.app' })).toBeNull();
+  expect(document.body.textContent).not.toContain('Private Pro lounge on our Discord');
+ }
+});

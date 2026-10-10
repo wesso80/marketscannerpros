@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import DiscordFooterLink from '@/components/DiscordFooterLink';
 
 const footerLinks = [
   { href: '/refund-policy', label: 'Refund policy' },
@@ -75,6 +76,7 @@ export default function Footer() {
           Cookie Settings
         </button>
         <Link href="/contact" className="rounded-md px-1 py-0.5 no-underline transition-colors hover:text-[var(--msp-accent)]">Contact</Link>
+        <DiscordFooterLink className="rounded-md px-1 py-0.5 no-underline transition-colors hover:text-[var(--msp-accent)]" />
         <span className="hidden h-4 w-px bg-white/10 sm:inline-block" aria-hidden="true" />
         <div className="flex items-center gap-2">
           {socialLinks.map((link) => (
