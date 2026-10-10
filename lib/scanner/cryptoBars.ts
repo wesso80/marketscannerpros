@@ -12,6 +12,9 @@
  *
  * Partial-bar policy: the still-open bar is EXCLUDED from indicator inputs and returned as `partialBar` (used for the
  * current price). Indicators therefore describe the last COMPLETED bar. This is deliberate and surfaced in data trust.
+ *
+ * The daily partial bar is not that UTC day's exchange OHLC. Its open is the previous completed close. Its high, low,
+ * and volume are the rolling 24h figures from /coins/markets (high_24h, low_24h, total_volume).
  */
 import { getMarketData, getOHLC, getOHLCRange, getMarketChartRange, resolveSymbolToId } from '@/lib/coingecko';
 import { aggregateBars, attachDailyVolumes, barsFromPriceSamples, splitPartialBar, INTERVAL_MS, type Bar, type ScanBarInterval } from './barAggregation';
@@ -29,6 +32,12 @@ export interface CryptoSeries {
   lastCompletedBarAt: string | null;
   /** Latest trade-ish price: partial bar close when available, else last completed close. */
   currentPrice: number | null;
+  /** ISO time of the price observation. Null when no time was recorded. */
+  priceAsOf: string | null;
+  /** The observation is past the open-quote max age, or the price is yesterday's completed close. */
+  priceStale: boolean;
+  /** Evidence label: "as of <ISO>" or "yesterday's close, as of <ISO>". */
+  priceLabel: string;
   hlBasis: 'exchange_ohlc' | 'price_samples';
   volumeBasis: 'coingecko_daily_total_volume' | 'unavailable';
   source: string;
@@ -87,18 +96,48 @@ type OpenQuote = { price: number; high: number; low: number; volume: number | nu
 type MarketQuoteRow = { id?: string; current_price?: number | null; high_24h?: number | null; low_24h?: number | null; total_volume?: number | null };
 
 const completedMemory = new Map<string, { freshUntil: number; value: CompletedDaily }>();
-const openMemory = new Map<string, { minute: number; quote: OpenQuote }>();
+const openMemory = new Map<string, { minute: number; asOfMs: number; quote: OpenQuote }>();
 /** One Redis blob for the latest bulk /coins/markets snapshot. Pages read it; they do not refetch it. */
 const OPEN_QUOTE_REDIS_KEY = 'cg:crypto-open:v1';
 const MARKETS_IDS_PER_CALL = 250;
+/** In-process open quotes older than this are re-read from Redis. About two minutes. */
+const OPEN_QUOTE_MEMORY_MS = 120_000;
+/** Past this age an open quote is still returned, with stale:true. It is not treated as current. */
+const OPEN_QUOTE_MAX_AGE_MS = 15 * 60_000;
+/** A failed older window (~180 bars) must not sit for a day, or EMA200 cannot recover. */
+const DEGRADED_HISTORY_TTL_S = 20 * 60;
+const HISTORY_LOCK_S = 20;
 
+type SharedOpen = { quote: OpenQuote; asOfMs: number; stale: boolean };
 type OpenBatch = {
   minute: number;
+  asOfMs: number;
   ids: Set<string>;
-  waiters: Map<string, Array<(quote: OpenQuote | null) => void>>;
+  waiters: Map<string, Array<(quote: SharedOpen | null) => void>>;
   scheduled: boolean;
 };
 let openBatch: OpenBatch | null = null;
+const historyInflight = new Map<string, { windows: number; promise: Promise<CompletedDaily> }>();
+
+function openQuoteMemoryMs(): number {
+  const n = Number(process.env.CG_OPEN_QUOTE_MEMORY_MS);
+  return Number.isFinite(n) && n >= 0 ? n : OPEN_QUOTE_MEMORY_MS;
+}
+
+function openQuoteMaxAgeMs(): number {
+  const n = Number(process.env.CG_OPEN_QUOTE_MAX_AGE_MS);
+  return Number.isFinite(n) && n > 0 ? n : OPEN_QUOTE_MAX_AGE_MS;
+}
+
+function degradedHistoryTtlS(): number {
+  const n = Number(process.env.CG_DEGRADED_HISTORY_TTL_S);
+  if (Number.isFinite(n) && n >= 15 * 60 && n <= 30 * 60) return Math.floor(n);
+  return DEGRADED_HISTORY_TTL_S;
+}
+
+function historyIsDegraded(value: CompletedDaily): boolean {
+  return value.warnings.some((warning) => /older history missing|warm-up history shorter/.test(warning));
+}
 
 function completedKey(coinId: string, dayStartS: number): string {
   return `cg:crypto-daily:v1:${coinId}:${dayStartS}`;
@@ -129,14 +168,17 @@ async function redisCmd() {
 }
 
 function rememberCompleted(key: string, value: CompletedDaily, nowMs: number): void {
-  if (completedMemory.size >= COMPLETED_MEMORY_MAX) {
+  const existing = completedMemory.get(key);
+  if (existing && existing.freshUntil > nowMs && existing.value.windows > value.windows) return;
+  if (completedMemory.size >= COMPLETED_MEMORY_MAX && !completedMemory.has(key)) {
     const oldest = completedMemory.keys().next().value;
     if (oldest) completedMemory.delete(oldest);
   }
-  const freshUntil = nowMs + COMPLETED_DAY_CACHE_S * 1000;
+  const ttlS = historyIsDegraded(value) ? degradedHistoryTtlS() : COMPLETED_DAY_CACHE_S;
+  const freshUntil = nowMs + ttlS * 1000;
   completedMemory.set(key, { freshUntil, value });
   if (!redisConfigured()) return;
-  void redisCmd().then((redis) => redis?.set(key, { freshUntil, value }, { ex: COMPLETED_DAY_CACHE_S })).catch(() => undefined);
+  void redisCmd().then((redis) => redis?.set(key, { freshUntil, value }, { ex: ttlS })).catch(() => undefined);
 }
 
 async function readCompleted(key: string, nowMs: number): Promise<CompletedDaily | null> {
@@ -176,43 +218,73 @@ function quoteFromMarketRow(row: MarketQuoteRow | null | undefined): OpenQuote |
  * The worker's bulk /coins/markets snapshot. Writes the shared open-day book.
  * A page that already has completed bars reads this book and does not call CoinGecko.
  */
+function describeOpen(entry: { asOfMs: number; quote: OpenQuote }, nowMs: number): SharedOpen {
+  return { quote: entry.quote, asOfMs: entry.asOfMs, stale: nowMs - entry.asOfMs > openQuoteMaxAgeMs() };
+}
+
 export async function publishSharedOpenQuotes(rows: MarketQuoteRow[] | null, nowMs = Date.now()): Promise<void> {
   const minute = Math.floor(nowMs / 60_000);
   for (const row of Array.isArray(rows) ? rows : []) {
     const quote = quoteFromMarketRow(row);
-    if (quote && row.id) openMemory.set(row.id, { minute, quote });
+    if (quote && row.id) openMemory.set(row.id, { minute, asOfMs: nowMs, quote });
   }
   if (!redisConfigured()) return;
-  const quotes: Record<string, OpenQuote> = {};
-  for (const [id, entry] of openMemory) quotes[id] = entry.quote;
+  const quotes: Record<string, OpenQuote & { asOfMs: number }> = {};
+  for (const [id, entry] of openMemory) quotes[id] = { ...entry.quote, asOfMs: entry.asOfMs };
   try {
-    await (await redisCmd())?.set(OPEN_QUOTE_REDIS_KEY, { minute, quotes }, { ex: COMPLETED_DAY_CACHE_S });
+    await (await redisCmd())?.set(OPEN_QUOTE_REDIS_KEY, { minute, asOfMs: nowMs, quotes }, { ex: COMPLETED_DAY_CACHE_S });
   } catch { /* the in-process book still serves this process */ }
 }
 
-/** Last published open quote. Never calls CoinGecko. Any age is usable: a page must not block to refresh it. */
-async function readSharedOpenQuote(coinId: string): Promise<OpenQuote | null> {
-  const local = openMemory.get(coinId);
-  if (local) return local.quote;
-  if (!redisConfigured()) return null;
-  try {
-    const blob = await (await redisCmd())?.get(OPEN_QUOTE_REDIS_KEY) as { minute?: number; quotes?: Record<string, OpenQuote> } | null | undefined;
-    const minute = typeof blob?.minute === 'number' ? blob.minute : 0;
-    for (const [id, quote] of Object.entries(blob?.quotes ?? {})) {
-      if (quote && typeof quote.price === 'number' && quote.price > 0) openMemory.set(id, { minute, quote });
-    }
-  } catch { /* miss */ }
-  return openMemory.get(coinId)?.quote ?? null;
+async function refreshOpenBookFromRedis(): Promise<void> {
+  const blob = await (await redisCmd())?.get(OPEN_QUOTE_REDIS_KEY) as {
+    minute?: number;
+    asOfMs?: number;
+    quotes?: Record<string, OpenQuote & { asOfMs?: number }>;
+  } | null | undefined;
+  const bookAsOf = typeof blob?.asOfMs === 'number' ? blob.asOfMs : (typeof blob?.minute === 'number' ? blob.minute * 60_000 : 0);
+  const minute = typeof blob?.minute === 'number' ? blob.minute : Math.floor(bookAsOf / 60_000);
+  for (const [id, quote] of Object.entries(blob?.quotes ?? {})) {
+    if (!quote || typeof quote.price !== 'number' || !(quote.price > 0)) continue;
+    const asOfMs = typeof quote.asOfMs === 'number' ? quote.asOfMs : bookAsOf;
+    const local = openMemory.get(id);
+    if (local && local.asOfMs >= asOfMs) continue;
+    openMemory.set(id, {
+      minute,
+      asOfMs,
+      quote: {
+        price: quote.price,
+        high: Number(quote.high) > 0 ? Number(quote.high) : quote.price,
+        low: Number(quote.low) > 0 ? Number(quote.low) : quote.price,
+        volume: quote.volume == null || !Number.isFinite(Number(quote.volume)) ? null : Number(quote.volume),
+      },
+    });
+  }
 }
 
-function requestOpenQuote(coinId: string, nowMs: number): Promise<OpenQuote | null> {
+/**
+ * Last published open quote. Never calls CoinGecko.
+ * Memory younger than about two minutes is used as-is. Older memory is re-read from Redis.
+ * Past the max age the quote is still returned, with asOf and stale:true, so a page does not wait.
+ */
+async function readSharedOpenQuote(coinId: string, nowMs: number): Promise<SharedOpen | null> {
+  const local = openMemory.get(coinId);
+  if (local && nowMs - local.asOfMs <= openQuoteMemoryMs()) return describeOpen(local, nowMs);
+  if (redisConfigured()) {
+    try { await refreshOpenBookFromRedis(); } catch { /* keep the copy this process already has */ }
+  }
+  const entry = openMemory.get(coinId);
+  return entry ? describeOpen(entry, nowMs) : null;
+}
+
+function requestOpenQuote(coinId: string, nowMs: number): Promise<SharedOpen | null> {
   const minute = Math.floor(nowMs / 60_000);
   const hit = openMemory.get(coinId);
-  if (hit && hit.minute === minute) return Promise.resolve(hit.quote);
-  if (!openBatch || openBatch.minute !== minute) openBatch = { minute, ids: new Set(), waiters: new Map(), scheduled: false };
+  if (hit && hit.minute === minute) return Promise.resolve(describeOpen(hit, nowMs));
+  if (!openBatch || openBatch.minute !== minute) openBatch = { minute, asOfMs: nowMs, ids: new Set(), waiters: new Map(), scheduled: false };
   openBatch.ids.add(coinId);
   const batch = openBatch;
-  const promise = new Promise<OpenQuote | null>((resolve) => {
+  const promise = new Promise<SharedOpen | null>((resolve) => {
     const list = batch.waiters.get(coinId) ?? [];
     list.push(resolve);
     batch.waiters.set(coinId, list);
@@ -243,8 +315,9 @@ async function flushOpenQuotes(batch: OpenBatch): Promise<void> {
   const byId = new Map(list.filter((row) => row?.id).map((row) => [row.id, row]));
   for (const id of ids) {
     const quote = quoteFromMarketRow(byId.get(id));
-    if (quote) openMemory.set(id, { minute: batch.minute, quote });
-    for (const resolve of batch.waiters.get(id) ?? []) resolve(quote);
+    const shared = quote ? { quote, asOfMs: batch.asOfMs, stale: false } : null;
+    if (quote) openMemory.set(id, { minute: batch.minute, asOfMs: batch.asOfMs, quote });
+    for (const resolve of batch.waiters.get(id) ?? []) resolve(shared);
   }
 }
 
@@ -289,6 +362,11 @@ export async function warmSharedCryptoSeries(
   return { fromCache: ids.length - missing.length, historyCoins: missing.length, marketsCalls };
 }
 
+/**
+ * Open-day bar built from the shared markets snapshot.
+ * open = previous completed close (not the UTC session open).
+ * high / low / volume = rolling 24h high_24h, low_24h, and total_volume.
+ */
 function partialFromQuote(dayStartS: number, bars: Bar[], quote: OpenQuote): Bar {
   const prev = bars[bars.length - 1]?.close ?? quote.price;
   const close = quote.price;
@@ -307,13 +385,56 @@ export function resetCryptoDailyCacheForTests(): void {
   completedMemory.clear();
   openMemory.clear();
   openBatch = null;
+  historyInflight.clear();
+}
+
+async function pollSharedCompleted(coinId: string, dayStartS: number, windows: number, nowMs: number): Promise<CompletedDaily | null> {
+  for (let i = 0; i < 8; i++) {
+    if (i) await new Promise((resolve) => setTimeout(resolve, 40));
+    const hit = await readSharedCompleted(coinId, dayStartS, windows, nowMs);
+    if (hit) return hit;
+  }
+  return null;
 }
 
 async function fetchDailyBars(coinId: string, nowMs: number, requestOptions?: RequestOptions, windows = DEFAULT_DAILY_WINDOWS): Promise<CompletedDaily> {
   const { dayStartS } = cryptoRequestAnchors(nowMs);
   const key = completedKey(coinId, dayStartS);
+  const pending = historyInflight.get(key);
+  if (pending && pending.windows >= windows) return sliceCompleted(await pending.promise, dayStartS, windows);
+  const run = loadDailyBars(coinId, nowMs, requestOptions, windows, key, dayStartS);
+  if (!pending) historyInflight.set(key, { windows, promise: run });
+  try {
+    return await run;
+  } finally {
+    if (historyInflight.get(key)?.promise === run) historyInflight.delete(key);
+  }
+}
+
+async function loadDailyBars(coinId: string, nowMs: number, requestOptions: RequestOptions | undefined, windows: number, key: string, dayStartS: number): Promise<CompletedDaily> {
   const cached = await readSharedCompleted(coinId, dayStartS, windows, nowMs);
   if (cached) return cached;
+  let release: (() => Promise<void>) | null = null;
+  if (redisConfigured()) {
+    try {
+      const redis = await redisCmd();
+      const lockKey = `${key}:lock`;
+      const got = await redis?.set(lockKey, '1', { nx: true, ex: HISTORY_LOCK_S });
+      if (got) release = async () => { try { await redis?.del(lockKey); } catch { /* the lock expires on its own */ } };
+      else if (redis) {
+        const waited = await pollSharedCompleted(coinId, dayStartS, windows, nowMs);
+        if (waited) return waited;
+      }
+    } catch { /* a lock miss still fetches, so a dead holder cannot stall the read */ }
+  }
+  try {
+    return await fetchDailyBarsUncached(coinId, nowMs, requestOptions, windows, key, dayStartS);
+  } finally {
+    if (release) await release();
+  }
+}
+
+async function fetchDailyBarsUncached(coinId: string, nowMs: number, requestOptions: RequestOptions | undefined, windows: number, key: string, dayStartS: number): Promise<CompletedDaily> {
   const warnings: string[] = [];
   const completedOpts = { ...requestOptions, cacheSeconds: COMPLETED_DAY_CACHE_S };
   // Every window ends on the UTC day boundary, so the URL is stable for the whole day.
@@ -410,14 +531,14 @@ export async function fetchCryptoSeries(
   let hlBasis: CryptoSeries['hlBasis'] = 'exchange_ohlc';
   let volumeBasis: CryptoSeries['volumeBasis'] = 'unavailable';
   let source: string;
-  let openQuote: Promise<OpenQuote | null> | null = null;
+  let openQuote: Promise<SharedOpen | null> | null = null;
 
   if (timeframe === 'daily' || timeframe === 'weekly') {
     const windows = Math.min(MAX_DAILY_WINDOWS, Math.max(2, Math.floor(opts.dailyWindows ?? DEFAULT_DAILY_WINDOWS)));
     const { dayStartS } = cryptoRequestAnchors(nowMs);
     const shared = await readSharedCompleted(coinId, dayStartS, windows, nowMs);
     // A warm shared series returns here with no CoinGecko call, including when the minute has moved.
-    if (shared && timeframe === 'daily') openQuote = readSharedOpenQuote(coinId);
+    if (shared && timeframe === 'daily') openQuote = readSharedOpenQuote(coinId, nowMs);
     else if (!shared && timeframe === 'daily') openQuote = requestOpenQuote(coinId, nowMs);
     const d = shared ?? await fetchDailyBars(coinId, nowMs, opts.requestOptions, windows);
     warnings.push(...d.warnings);
@@ -460,13 +581,23 @@ export async function fetchCryptoSeries(
   const { completed, partial: splitPartial } = splitPartialBar(bars, barInterval, nowMs);
   const quote = openQuote ? await openQuote : null;
   const partial = timeframe === 'daily' && quote
-    ? partialFromQuote(cryptoRequestAnchors(nowMs).dayStartS, completed, quote)
+    ? partialFromQuote(cryptoRequestAnchors(nowMs).dayStartS, completed, quote.quote)
     : splitPartial;
   const lastCompleted = completed[completed.length - 1] ?? null;
+  const priceAsOf = timeframe === 'daily' && quote
+    ? new Date(quote.asOfMs).toISOString()
+    : (timeframe === 'daily' ? lastCompleted?.t ?? null : partial?.t ?? lastCompleted?.t ?? null);
+  const priceStale = timeframe === 'daily' ? (quote ? quote.stale : true) : false;
+  const priceLabel = timeframe === 'daily' && quote
+    ? `as of ${priceAsOf}`
+    : timeframe === 'daily'
+      ? (lastCompleted ? `yesterday's close, as of ${lastCompleted.t}` : `yesterday's close`)
+      : (priceAsOf ? `as of ${priceAsOf}` : 'price time not recorded');
   return {
     coinId, timeframe, barInterval, bars: completed, partialBar: partial,
     lastCompletedBarAt: lastCompleted?.t ?? null,
     currentPrice: partial?.close ?? lastCompleted?.close ?? null,
+    priceAsOf, priceStale, priceLabel,
     hlBasis, volumeBasis, source, warnings,
   };
 }

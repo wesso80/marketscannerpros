@@ -8,4 +8,10 @@ it('flags the daily picks phrase on a word boundary', () => {
   expect(scanForBannedPhrases('daily pickings and pick of the day')).toEqual([]);
   expect(replaceBannedPhrases('the daily picks list')).toBe('the Daily scan observations list');
   expect(replaceBannedPhrases('the Daily   Picks list')).toBe('the Daily scan observations list');
+  expect(scanForBannedPhrases('daily\npicks').map((match) => match.phrase)).toEqual(['daily\npicks']);
+  expect(scanForBannedPhrases('daily\tpicks').map((match) => match.phrase)).toEqual(['daily\tpicks']);
+  expect(scanForBannedPhrases('DAILY PICKS').map((match) => match.phrase)).toEqual(['DAILY PICKS']);
+  expect(replaceBannedPhrases('daily\npicks')).toBe('Daily scan observations');
+  expect(replaceBannedPhrases('daily\tpicks')).toBe('Daily scan observations');
+  expect(replaceBannedPhrases('see DAILY PICKS today')).toBe('see Daily scan observations today');
 });

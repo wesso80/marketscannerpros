@@ -241,6 +241,11 @@ interface ScanResult {
     source: string;
     computedAt: string;
     notes: string[];
+    /** Observation time of the displayed price, when the series recorded one. */
+    priceAsOf?: string | null;
+    priceStale?: boolean;
+    /** "as of <time>" or "yesterday's close, as of <time>". */
+    priceLabel?: string;
     /** Split-like close jump in the stored series (unadjusted corporate action); null when the series is continuous. */
     priceDiscontinuity?: { date: string | null; ratio: number } | null;
   };
@@ -1753,7 +1758,7 @@ async function runScanner(req: NextRequest, capturePublicRows?: (rows: readonly 
           const ema200Val = closes.length >= 200 ? emaArr[last] : NaN;
           const atrVal = atrArr[last - 1]; // ATR array has length-1 elements
           const close = closes[last];
-          // Price = live (open bar) when available; indicators describe the last COMPLETED bar.
+          // Price is the open-day observation when one exists; indicators describe the last COMPLETED bar.
           const price = series.currentPrice ?? close;
           const obvCurrent = volumeAvailable ? obvArr[last] : NaN;
           const obvPrev = volumeAvailable ? obvArr[last - 1] : NaN;
@@ -1876,7 +1881,10 @@ async function runScanner(req: NextRequest, capturePublicRows?: (rows: readonly 
               volumeBasis: series.volumeBasis,
               source: series.source,
               computedAt: new Date().toISOString(),
-              notes: series.warnings,
+              notes: series.priceLabel ? [...series.warnings, series.priceLabel] : series.warnings,
+              priceAsOf: series.priceAsOf,
+              priceStale: series.priceStale,
+              priceLabel: series.priceLabel,
             },
             liquidity: {
               avgVolume20: avgVolume20 ?? null,

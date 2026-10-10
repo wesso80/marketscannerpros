@@ -52,6 +52,16 @@ describe('public Find symbols observations', () => {
     expect(result.barInterval).toBe('4h');
     expect(result.priceObservedAt).toBeNull();
     expect(result.basis.lastCompletedBarAt).toBe('2026-10-07T20:00:00Z');
+    expect(result.priceTimeNote).toBe('The scan does not provide a separate observation time for its displayed price.');
+  });
+  it('shows an explicit price observation time without inventing one from the last bar', () => {
+    const result = publicScannerObservation(row({
+      type: 'crypto',
+      dataBasis: { barInterval: '1d', lastCompletedBarAt: '2026-10-09T00:00:00.000Z', priceAsOf: '2026-10-10T07:00:00.000Z', priceLabel: 'as of 2026-10-10T07:00:00.000Z' },
+    }))!;
+    expect(result.priceObservedAt).toBe('2026-10-10T07:00:00.000Z');
+    expect(result.priceTimeNote).toBe('as of 2026-10-10T07:00:00.000Z');
+    expect(result.basis.lastCompletedBarAt).toBe('2026-10-09T00:00:00.000Z');
   });
   it('rejects score filters, invalid indicator bounds and invalid paging', () => {
     expect(() => buildPublicScannerObservations([], { minScore: 80 } as any)).toThrow();

@@ -97,7 +97,7 @@ export async function loadBreakdown(input:string,id?:string,now=Date.now()):Prom
   metric('Change vs 24h ago',spot?.usd_24h_change??null,'CoinGecko',iso(spot?.last_updated_at?spot.last_updated_at*1000:null),'rolling 24h','spot','percent',now),
   sm('Change vs 7 days ago',network?.change7dPct??null,'percent'),sm('Change vs 30 days ago',network?.change30dPct??null,'percent'),
   dm('Last daily bar close',bars.at(-1)?.close??null,'price'),
- ],[!spot?`Price unavailable: ${fail(0)}`:'',!series?`Daily bars unavailable: ${fail(1)}`:''].filter(Boolean));
+ ],[!spot?`Price unavailable: ${fail(0)}`:'',!series?`Daily bars unavailable: ${fail(1)}`:'',series?.priceLabel??''].filter(Boolean));
  sections.ruleCheck=section([
   dm('Base length (daily bars)',Math.min(60,Math.max(0,bars.length-1)),'count'),dm('Base high (highest close)',rule.baseHigh,'price'),dm('Base low (daily lows)',rule.baseLow,'price'),
   dm('Base range; limit 35%',rule.rangePct,'percent'),dm('Volume / base median; minimum 3x',rule.volumeRatio,'ratio'),dm('Distance to base high',rule.distancePct,'percent'),

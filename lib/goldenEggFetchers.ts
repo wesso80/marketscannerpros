@@ -78,6 +78,8 @@ export interface PriceData {
    */
   indicatorHistory?: { closes: number[]; highs: number[]; lows: number[]; opens?: number[]; dates?: string[]; volumes?: Array<number | null> };
   priceTs?: string;
+  /** "as of <time>" or "yesterday's close, as of <time>" for the price actually returned. */
+  priceLabel?: string;
   source?: string;
   volumeBasis?: string;
   /** CoinGecko coin detail (market cap, supply, ATH…) when the symbol is crypto. */
@@ -226,8 +228,12 @@ export async function fetchPrice(
       const last = bars[bars.length - 1];
       const prev = bars[bars.length - 2];
       const md = detail?.market_data;
-      const livePrice = Number.isFinite(md?.current_price?.usd) && md.current_price.usd > 0 ? md.current_price.usd : series.currentPrice ?? last.close;
-      const changeBase = series.partialBar || livePrice !== last.close ? last.close : prev.close;
+      const detailPrice = Number(md?.current_price?.usd);
+      const usedDetail = Number.isFinite(detailPrice) && detailPrice > 0;
+      const detailAsOf = typeof detail?.last_updated === 'string' ? detail.last_updated : (typeof md?.last_updated === 'string' ? md.last_updated : null);
+      const observedPrice = usedDetail ? detailPrice : series.currentPrice ?? last.close;
+      const priceLabel = usedDetail && detailAsOf ? `as of ${detailAsOf}` : series.priceLabel;
+      const changeBase = series.partialBar || observedPrice !== last.close ? last.close : prev.close;
       const histLen = opts?.requireHistoricals ? 360 : 60;
       const tail = bars.slice(-histLen);
       // Indicator history: up to 1,000 completed daily bars (same rule as equities) so EMA200 converges for the displayed
@@ -235,9 +241,9 @@ export async function fetchPrice(
       const indicatorBars = longHistory && bars.length > tail.length ? bars.slice(-CRYPTO_INDICATOR_BARS) : null;
       const vols = tail.slice(-20).map((b) => b.volume).filter((v): v is number => v != null && v > 0);
       return {
-        price: livePrice,
-        change: livePrice - changeBase,
-        changePct: changeBase > 0 ? ((livePrice - changeBase) / changeBase) * 100 : 0,
+        price: observedPrice,
+        change: observedPrice - changeBase,
+        changePct: changeBase > 0 ? ((observedPrice - changeBase) / changeBase) * 100 : 0,
         high: series.partialBar?.high ?? last.high,
         low: series.partialBar?.low ?? last.low,
         volume: last.volume ?? md?.total_volume?.usd ?? 0,
@@ -255,8 +261,9 @@ export async function fetchPrice(
         } } : {}),
         barInterval: series.barInterval,
         lastCompletedBarAt: series.lastCompletedBarAt,
-        priceTs: detail?.last_updated || md?.last_updated || series.partialBar?.t || series.lastCompletedBarAt || undefined,
-        source: series.source,
+        priceTs: (usedDetail && detailAsOf ? detailAsOf : series.priceAsOf || series.partialBar?.t || series.lastCompletedBarAt) || undefined,
+        priceLabel,
+        source: priceLabel ? `${series.source}; ${priceLabel}` : series.source,
         volumeBasis: series.volumeBasis,
         coinDetail: detail ?? null,
         coinId: series.coinId,

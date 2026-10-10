@@ -67,7 +67,7 @@ describe('W3: /api/golden-egg serializes only the public Symbol contract', () =>
     const d = body.data;
     expect(d.contract).toBe('public-symbol-v2');
     expect(Object.keys(d).sort()).toEqual(['canonical', 'contract', 'layer2', 'layer3', 'meta', 'optionsRequest', 'priceEvidence', 'timingEvidence']);
-    expect(Object.keys(d.canonical).sort()).toEqual(['assetClass', 'barInterval', 'changePct', 'crossMarket', 'dataTrust', 'derivatives', 'fundamentals', 'historyBars', 'indicators', 'lastCompletedBarAt', 'liquidity', 'network', 'options', 'price', 'priceTs', 'source', 'symbol', 'timeframe']);
+    expect(Object.keys(d.canonical).sort()).toEqual(['assetClass', 'barInterval', 'changePct', 'crossMarket', 'dataTrust', 'derivatives', 'fundamentals', 'historyBars', 'indicators', 'lastCompletedBarAt', 'liquidity', 'network', 'options', 'price', 'priceLabel', 'priceTs', 'source', 'symbol', 'timeframe']);
     expect(Object.keys(d.layer2)).toEqual(['setup']);
     expect(Object.keys(d.layer2.setup)).toEqual(['keyLevels']);
     expect(Object.keys(d.layer3).sort()).toEqual(['momentum', 'options', 'structure', 'timeConfluence']);

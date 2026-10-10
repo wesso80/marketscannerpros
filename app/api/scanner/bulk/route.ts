@@ -489,7 +489,7 @@ async function fetchAVCryptoIndicators(symbol: string, timeframe: string) {
 // Genuine-timeframe bars via lib/scanner/cryptoBars (1d = daily OHLC, 1h = hourly OHLC, 30m/15m = fine candles);
 // completed bars only. Unknown symbols resolve dynamically instead of relying on the hardcoded map.
 const PRO_TF_TO_SERIES: Record<string, CryptoScanTimeframe> = { '1d': 'daily', '1h': '1h', '30m': '30m', '15m': '15m' };
-type CryptoFetchOutcome = { ohlcv: OHLCV[] | null; excludedReason?: 'stablecoin' | 'no_provider_mapping' | 'provider_no_data' | 'insufficient_history'; basis?: { barInterval: string; lastCompletedBarAt: string | null; historyBars: number; volumeBasis: string; coinId: string } };
+type CryptoFetchOutcome = { ohlcv: OHLCV[] | null; excludedReason?: 'stablecoin' | 'no_provider_mapping' | 'provider_no_data' | 'insufficient_history'; basis?: { barInterval: string; lastCompletedBarAt: string | null; historyBars: number; volumeBasis: string; coinId: string; priceAsOf: string | null; priceStale: boolean; priceLabel: string } };
 async function fetchCoinGeckoSeries(symbol: string, timeframe: string = '1d', opts: { coinId?: string; requestOptions?: { retries?: number; timeoutMs?: number } } = {}): Promise<CryptoFetchOutcome> {
   const upper = symbol.toUpperCase();
   if (STABLECOINS.has(upper)) return { ohlcv: null, excludedReason: 'stablecoin' };
@@ -499,7 +499,7 @@ async function fetchCoinGeckoSeries(symbol: string, timeframe: string = '1d', op
     const series = await runWithCgCaller('scanner-bulk', () => fetchCryptoSeries(upper, PRO_TF_TO_SERIES[timeframe] ?? 'daily', Date.now(), { coinId, requestOptions: opts.requestOptions }));
     if (series.bars.length < 20) return { ohlcv: null, excludedReason: 'insufficient_history' };
     const ohlcv: OHLCV[] = series.bars.map((b) => ({ date: b.t, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume ?? 0 }));
-    return { ohlcv, basis: { barInterval: series.barInterval, lastCompletedBarAt: series.lastCompletedBarAt, historyBars: series.bars.length, volumeBasis: series.volumeBasis, coinId: series.coinId } };
+    return { ohlcv, basis: { barInterval: series.barInterval, lastCompletedBarAt: series.lastCompletedBarAt, historyBars: series.bars.length, volumeBasis: series.volumeBasis, coinId: series.coinId, priceAsOf: series.priceAsOf, priceStale: series.priceStale, priceLabel: series.priceLabel } };
   } catch (err) {
     console.warn(`[bulk-scan] CoinGecko series error for ${symbol}:`, (err as any)?.message);
     return { ohlcv: null, excludedReason: 'provider_no_data' };

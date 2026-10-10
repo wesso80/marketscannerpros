@@ -82,6 +82,23 @@ describe('crypto daily history windows', () => {
     const ts = s.bars.map((b) => Date.parse(b.t));
     expect(ts.every((t, i) => i === 0 || t - ts[i - 1] === DAY)).toBe(true);
   });
+  it('keeps a full history for a day and a short history only for the degraded window', async () => {
+    await fetchCryptoSeries('BTC', 'daily', NOW, { coinId: 'bitcoin', dailyWindows: 6 });
+    const fullCalls = ohlcCalls();
+    await fetchCryptoSeries('BTC', 'daily', NOW + 21 * 60_000, { coinId: 'bitcoin', dailyWindows: 6 });
+    expect(ohlcCalls()).toBe(fullCalls);
+
+    resetCryptoDailyCacheForTests();
+    vi.mocked(cg.getOHLCRange).mockClear();
+    missingWindow = 3;
+    await fetchCryptoSeries('BTC', 'daily', NOW, { coinId: 'bitcoin', dailyWindows: 6 });
+    const shortCalls = ohlcCalls();
+    expect(shortCalls).toBeGreaterThan(0);
+    await fetchCryptoSeries('BTC', 'daily', NOW + 60_000, { coinId: 'bitcoin', dailyWindows: 6 });
+    expect(ohlcCalls()).toBe(shortCalls);
+    await fetchCryptoSeries('BTC', 'daily', NOW + 21 * 60_000, { coinId: 'bitcoin', dailyWindows: 6 });
+    expect(ohlcCalls()).toBeGreaterThan(shortCalls);
+  });
 });
 
 describe('Golden Egg crypto EMA200 uses the long indicator history', () => {

@@ -33,10 +33,10 @@ export function publicScannerObservation(input: unknown) {
     assetClass: row.type as 'equity' | 'crypto',
     requestedTimeframe: text(row.timeframe),
     barInterval: text(basis.barInterval) ?? text(row.barInterval),
-    // A bar timestamp is not a timestamp for a separate current-price quote.
+    // A bar timestamp is not a timestamp for a separate current-price quote. Use only an explicit price observation.
     price: metric(row.price, false, n => n > 0),
-    priceObservedAt: null,
-    priceTimeNote: 'The scan does not provide a separate observation time for its displayed price.',
+    priceObservedAt: timestamp(basis.priceAsOf),
+    priceTimeNote: text(basis.priceLabel) ?? 'The scan does not provide a separate observation time for its displayed price.',
     indicators: {
       rsi: metric(row.rsi, missing.has('RSI'), range100),
       adx: metric(row.adx, missing.has('ADX'), range100),
