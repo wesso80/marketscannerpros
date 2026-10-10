@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ASSET_CLASSES, findUniverseViolations, isCryptoPairSymbol, validateUniverseRow } from '../lib/universe/assetClass';
+import { classifyAvEquitySymbol } from '../lib/worker/unsupportedAvSymbol';
 
 /** The 47 rows found misclassified in production on 2026-09-18. */
 const PROD_MISCLASSIFIED = [
@@ -11,8 +12,8 @@ const PROD_MISCLASSIFIED = [
   'SUSHIUSD', 'TONUSD', 'TRXUSD', 'VELVETUSD', 'WETHUSD', 'WLDUSD', 'XCNUSDT', 'XLMUSD', 'ZECUSD',
 ];
 
-/** Legitimate short / odd equity tickers that must NOT be flagged. */
-const LEGIT_EQUITIES = ['A', 'H', 'GO', 'UP', 'BP', 'NV', 'USB', 'UUP', 'USO', 'SPY', 'SPCX', 'GOL', 'GSAT', 'BRK-B', 'TSLA', 'AAPL', 'USDP'];
+/** Legitimate short / odd equity tickers that must NOT be flagged. NV and GOL are omitted: they stay equity rows, and the Alpha Vantage list treats them as known-invalid. */
+const LEGIT_EQUITIES = ['A', 'H', 'GO', 'UP', 'BP', 'USB', 'UUP', 'USO', 'SPY', 'SPCX', 'GSAT', 'BRK-B', 'TSLA', 'AAPL', 'USDP'];
 
 describe('symbol_universe asset-class hygiene', () => {
   it('flags every known misclassified production row', () => {
@@ -26,6 +27,13 @@ describe('symbol_universe asset-class hygiene', () => {
     expect(validateUniverseRow('NQ1', 'equity')?.expected).toBe('future');
     expect(validateUniverseRow('SPX', 'equity')?.expected).toBe('index');
     expect(validateUniverseRow('ADAUSD', 'equity')?.expected).toBe('crypto');
+  });
+
+  it('leaves NV and GOL as equity rows while Alpha Vantage skips them', () => {
+    expect(validateUniverseRow('NV', 'equity')).toBeNull();
+    expect(validateUniverseRow('GOL', 'equity')).toBeNull();
+    expect(classifyAvEquitySymbol('NV')).toMatchObject({ action: 'skip', kind: 'known_invalid' });
+    expect(classifyAvEquitySymbol('GOL')).toMatchObject({ action: 'skip', kind: 'known_invalid' });
   });
 
   it('does not flag legitimate equities, ETFs or correctly classified rows', () => {

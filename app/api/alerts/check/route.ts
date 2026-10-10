@@ -7,6 +7,7 @@ import { sendPushToUser, PushTemplates } from '@/lib/pushServer';
 import { resolveAlertAsset, type AlertAssetDecision } from '@/lib/alerts/alertAsset';
 import { alertSymbolKey, fetchAlertCryptoQuotes, type AlertCryptoQuote } from '@/lib/alerts/cryptoPriceBatch';
 import { writeAlertPriceStatus } from '@/lib/alerts/priceNotice';
+import { classifyAvEquitySymbol } from '@/lib/worker/unsupportedAvSymbol';
 import { avTakeToken } from '@/lib/avRateGovernor';
 import { runWithAvBudget } from '@/lib/avLimiter';
 import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
@@ -140,18 +141,31 @@ async function checkAlertsBody(req: NextRequest) {
           errors.push(`No price feed for ${assetType} alerts (${symbol}); not checked`);
           continue;
         }
+        if (decision.source === 'stock') {
+          const classified = classifyAvEquitySymbol(symbol);
+          if (classified.action === 'skip') {
+            await markStockPriceUnavailable(groupAlerts, symbol, errors);
+            console.warn(`[Alert Check] skip ${symbol}: ${classified.reason}`);
+            continue;
+          }
+        }
         // Fetch current price (and the % change the same quote reports)
         const quote = await fetchQuote(symbol, decision.source, cryptoBatch.quotes);
         console.log(`[Alert Check] ${symbol} price: ${quote?.price ?? null} change: ${quote?.changePercent ?? null}%`);
-        
-        if (quote === null) {
-          if (decision.source === 'crypto') {
-            await writeAlertPriceStatus(groupAlerts.map((alert) => ({ id: alert.id, unavailable: true })));
+
+        const stockUnusable = decision.source === 'stock' && !usableStockQuote(quote);
+        if (quote == null || stockUnusable) {
+          if (decision.source === 'stock') {
+            await markStockPriceUnavailable(groupAlerts, symbol, errors);
+          } else {
+            if (decision.source === 'crypto') {
+              await writeAlertPriceStatus(groupAlerts.map((alert) => ({ id: alert.id, unavailable: true })));
+            }
+            errors.push(`Failed to fetch price for ${symbol}`);
           }
-          errors.push(`Failed to fetch price for ${symbol}`);
           continue;
         }
-        if (decision.source === 'crypto') {
+        if (decision.source === 'crypto' || decision.source === 'stock') {
           await writeAlertPriceStatus(groupAlerts.map((alert) => ({ id: alert.id, unavailable: false })));
         }
         const price = quote.price;
@@ -210,6 +224,16 @@ async function checkAlertsBody(req: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   }
+}
+
+function usableStockQuote(quote: AlertQuote | null): boolean {
+  return quote != null && Number.isFinite(quote.price) && quote.price > 0;
+}
+
+/** Stores the alert-list notice and names the symbol in the check response. */
+async function markStockPriceUnavailable(groupAlerts: Alert[], symbol: string, errors: string[]): Promise<void> {
+  await writeAlertPriceStatus(groupAlerts.map((alert) => ({ id: alert.id, unavailable: true })));
+  errors.push(`Price unavailable for ${symbol}`);
 }
 
 // Fetch current price and % change based on asset type

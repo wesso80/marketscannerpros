@@ -15,6 +15,8 @@ vi.mock('@/lib/proTraderAccess', () => ({ hasPaidSessionAccess: () => true }));
 import { POST as createAlert } from '@/app/api/alerts/route';
 import { GET as runCheck } from '@/app/api/alerts/check/route';
 import { parseFxAlertQuote, quoteSourceFor, validateBasicAlertAssetType } from '@/lib/alerts/assetTypes';
+import { clearAlertPriceNoticeCacheForTests, readAlertPriceNotices } from '@/lib/alerts/priceNotice';
+import { PRICE_UNAVAILABLE } from '@/lib/alerts/cryptoPriceBatch';
 
 function post(body: Record<string, unknown>) {
   return createAlert(new NextRequest('https://example.test/api/alerts', {
@@ -99,6 +101,7 @@ describe('price checker routes by asset type', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     fetchMock.mockReset();
+    clearAlertPriceNoticeCacheForTests();
     vi.stubGlobal('fetch', fetchMock);
     process.env.ALPHA_VANTAGE_API_KEY = 'test-key';
     mocks.push.mockResolvedValue(undefined);
@@ -152,6 +155,49 @@ describe('price checker routes by asset type', () => {
     }
     expect(urls.some((url) => url.includes('COINGECKO') || url.includes('function=CRYPTO'))).toBe(false);
     expect(body.errors).toBeUndefined();
+  });
+
+  function equityAlert(id: string, symbol: string, conditionValue: string) {
+    return {
+      id, workspace_id: 'ws-1', symbol, asset_type: 'equity',
+      condition_type: 'price_above', condition_value: conditionValue, last_price: null,
+      is_recurring: false, notify_email: true, notify_push: true, name: symbol,
+    };
+  }
+
+  it('does not call Alpha Vantage for a known-invalid equity alert', async () => {
+    withAlerts([equityAlert('nv1', 'NV', '1')]);
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ 'Global Quote': { '05. price': '50', '10. change percent': '1%', '07. latest trading day': '2099-01-01' } }) });
+    const body = await (await runCheck(new NextRequest('https://example.test/api/alerts/check'))).json();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(body.triggered).toBe(0);
+    expect(body.triggeredIds).toEqual([]);
+    expect(body.errors).toEqual(['Price unavailable for NV']);
+    expect(await readAlertPriceNotices(['nv1'])).toEqual({ nv1: PRICE_UNAVAILABLE });
+    expect(mocks.push).not.toHaveBeenCalled();
+    expect(mocks.email).not.toHaveBeenCalled();
+  });
+
+  it('marks a stock alert unavailable when the quote is missing or not a price', async () => {
+    withAlerts([equityAlert('a1', 'AAPL', '1')]);
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ 'Error Message': 'Invalid API call.' }) });
+    const missing = await (await runCheck(new NextRequest('https://example.test/api/alerts/check'))).json();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toContain('function=GLOBAL_QUOTE');
+    expect(missing.triggered).toBe(0);
+    expect(missing.triggeredIds).toEqual([]);
+    expect(missing.errors).toEqual(['Price unavailable for AAPL']);
+    expect(await readAlertPriceNotices(['a1'])).toEqual({ a1: PRICE_UNAVAILABLE });
+    expect(mocks.push).not.toHaveBeenCalled();
+
+    clearAlertPriceNoticeCacheForTests();
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ 'Global Quote': { '05. price': '0', '10. change percent': '1%' } }) });
+    const zero = await (await runCheck(new NextRequest('https://example.test/api/alerts/check'))).json();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(zero.triggered).toBe(0);
+    expect(zero.errors).toEqual(['Price unavailable for AAPL']);
+    expect(await readAlertPriceNotices(['a1'])).toEqual({ a1: PRICE_UNAVAILABLE });
   });
 
   it('does not price a crypto alert on CVX as the stock', async () => {

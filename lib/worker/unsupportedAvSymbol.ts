@@ -1,10 +1,20 @@
 /**
- * Symbols the equity worker must not send to Alpha Vantage.
+ * Symbols the equity worker and the stock alert checker must not send to Alpha Vantage.
  *
  * TIME_SERIES_* and REALTIME_BULK_QUOTES answer "Invalid API call" for a futures
  * root, a single-letter ticker AV does not list, or a known-invalid symbol.
  * One bad symbol in a bulk list fails the whole batch. These are dropped first.
  * A and H stay: the universe hygiene fixture treats them as real equities.
+ *
+ * known_invalid review
+ * Brad reviews KNOWN_INVALID and INVALID_SINGLE_LETTER. Add a symbol when the
+ * worker log shows Alpha Vantage "Invalid API call" for it, and it is not already
+ * a futures root, an index, or a protected equity (A and H). Review the list
+ * when that log line appears, and again before a release that changes which
+ * symbols are fetched.
+ * To remove an entry, delete the symbol from the set and update the tests in
+ * the same code change. Do not disable or edit symbol_universe rows here.
+ * A universe enable or disable is a separate data change for Brad.
  */
 import { KNOWN_FUTURE_ROOTS } from '@/lib/universe/assetClass';
 
@@ -14,11 +24,7 @@ export type AvSymbolDecision =
   | { action: 'fetch'; symbol: string }
   | { action: 'skip'; symbol: string; kind: AvSkipKind; reason: string };
 
-/**
- * Reported Invalid API call symbols that are not futures and not single-letter.
- * NV and GOL stay equities in the universe hygiene fixture. This set only stops
- * the equity worker from asking Alpha Vantage for them.
- */
+/** Reported Invalid API call symbols that are not futures and not single-letter. */
 const KNOWN_INVALID = new Set(['NV', 'GOL', 'ALBT']);
 /** Single-letter symbols AV rejects. A and H are real equities and are not here. */
 const INVALID_SINGLE_LETTER = new Set(['X', 'I']);
