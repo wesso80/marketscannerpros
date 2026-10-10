@@ -33,10 +33,11 @@ vi.mock('@/lib/coingecko', async (orig) => ({
     ],
   })),
   resolveSymbolToId: vi.fn(async () => 'bitcoin'),
+  getMarketData: vi.fn(async () => [{ id: 'bitcoin', current_price: 123.45, high_24h: 130, low_24h: 110, total_volume: 1 }]),
 }));
 
 import * as cg from '@/lib/coingecko';
-import { cryptoRequestAnchors, fetchCryptoDailyIncrement, fetchCryptoSeries } from '@/lib/scanner/cryptoBars';
+import { cryptoRequestAnchors, fetchCryptoDailyIncrement, fetchCryptoSeries, resetCryptoDailyCacheForTests } from '@/lib/scanner/cryptoBars';
 
 const ohlc = () => (cg.getOHLCRange as unknown as ReturnType<typeof vi.fn>).mock.calls as Array<[string, number, number, { cacheSeconds?: number } | undefined]>;
 const chart = () => (cg.getMarketChartRange as unknown as ReturnType<typeof vi.fn>).mock.calls as Array<[string, number, number]>;
@@ -49,6 +50,7 @@ function legacyDailyOpens(nowMs: number): string[] {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetCryptoDailyCacheForTests();
 });
 
 describe('cryptoRequestAnchors', () => {
@@ -80,22 +82,21 @@ describe('daily history windows', () => {
     });
   }
 
-  it('completed windows keep the same URL all UTC day and are cached longer; the live window ends on a minute', async () => {
+  it('completed windows keep the same URL all UTC day and are cached for 24h', async () => {
     makeSeries(Date.parse('2026-09-27T00:00:00Z'));
     await fetchCryptoSeries('BTC', 'daily', Date.parse('2026-09-27T06:00:17Z'), { coinId: 'bitcoin', dailyWindows: 4 });
     const morning = ohlc().map((c) => [c[1], c[2]]);
     vi.clearAllMocks();
+    resetCryptoDailyCacheForTests();
     await fetchCryptoSeries('BTC', 'daily', Date.parse('2026-09-27T18:44:03Z'), { coinId: 'bitcoin', dailyWindows: 4 });
     const evening = ohlc().map((c) => [c[1], c[2]]);
-    expect(evening.slice(1)).toEqual(morning.slice(1)); // windows 1..3 end on 00:00 UTC boundaries
-    expect(evening[0]).not.toEqual(morning[0]); // window 0 is the live edge
-    expect(evening[0][1] % 60).toBe(0);
-    for (const c of ohlc().slice(1)) {
+    expect(evening).toEqual(morning);
+    for (const c of ohlc()) {
       expect(c[2] % 86_400).toBe(0);
       expect(c[2] - c[1]).toBeLessThanOrEqual(180 * 86_400);
-      expect(c[3]?.cacheSeconds).toBe(6 * 3600);
+      expect(c[3]?.cacheSeconds).toBe(86_400);
     }
-    expect(ohlc()[0][3]?.cacheSeconds).toBeUndefined();
+    expect(chart()[0][2] % 86_400).toBe(0);
   });
 
   it('hourly and 15m requests also end on a minute boundary', async () => {

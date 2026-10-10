@@ -92,7 +92,7 @@ export async function historyStep(maxCalls:number,now=Date.now()){
   }
   const pending=await q<{id:string}>(`SELECT id FROM cg_hist_coins WHERE chart_status='PENDING' ORDER BY (status='active') DESC,id LIMIT $1`,[Math.max(0,left-calls)]);
   const from=Date.parse(CG_HISTORY.from)/1000,to=Math.floor(now/D)*D/1000;
-  await pool(pending,CG_HISTORY.concurrency,async({id})=>{calls++;await storeChart(id,await getMarketChartRange(id,from,to,{retries:1,timeoutMs:20000}));});
+  await pool(pending,CG_HISTORY.concurrency,async({id})=>{calls++;await storeChart(id,await getMarketChartRange(id,from,to,{retries:1,timeoutMs:20000,cacheSeconds:86400}));});
   let step=`pass 1: ${pending.length} coins`;
   if(!pending.length){
    if(!s.universeMarked){await markUniverse();s.universeMarked=true;}
@@ -150,10 +150,21 @@ async function topUpStep(s:HistState,maxCalls:number,now:number){
   }
   const from=(Math.floor(now/D)-CG_HISTORY.topUp.lookbackDays)*D/1000,to=Math.floor(now/D)*D/1000;
   const batch=s.topUpQueue.splice(0,Math.max(0,maxCalls-calls));
-  await pool(batch,CG_HISTORY.concurrency,async t=>{calls++;
-   if(t.kind==='chart'){const raw=await getMarketChartRange(t.id,from,to,{retries:1});const r=parseMarketChart(raw).filter(x=>x.marketCap!=null);
+  // `to` is today 00:00 UTC: that row is yesterday's close. Skip a coin that already has it.
+  const latestDay=dayKey(to*1000);
+  const have=new Map<string,{chart:boolean;ohlc:boolean}>();
+  const ids=[...new Set(batch.map(t=>t.id))];
+  if(ids.length){
+    const rows=await q<{coin_id:string;has_chart:unknown;has_ohlc:unknown}>(`SELECT coin_id,(market_cap IS NOT NULL) has_chart,(close IS NOT NULL) has_ohlc FROM cg_hist_daily WHERE day=$1::date AND coin_id = ANY($2::text[])`,[latestDay,ids]).catch(()=>[]);
+    const on=(v:unknown)=>v===true||v==='t'||v==='true'||v===1;
+    for(const r of rows)have.set(r.coin_id,{chart:on(r.has_chart),ohlc:on(r.has_ohlc)});
+  }
+  const due=batch.filter(t=>{const h=have.get(t.id);if(!h)return true;return t.kind==='chart'?!h.chart:!h.ohlc;});
+  const rangeOpts={retries:1,cacheSeconds:86400};
+  await pool(due,CG_HISTORY.concurrency,async t=>{calls++;
+   if(t.kind==='chart'){const raw=await getMarketChartRange(t.id,from,to,rangeOpts);const r=parseMarketChart(raw).filter(x=>x.marketCap!=null);
     if(r.length)await q(`INSERT INTO cg_hist_daily (coin_id,day,price,market_cap,volume) SELECT $1,* FROM unnest($2::date[],$3::float8[],$4::float8[],$5::float8[]) ON CONFLICT (coin_id,day) DO UPDATE SET price=EXCLUDED.price,market_cap=EXCLUDED.market_cap,volume=EXCLUDED.volume`,[t.id,r.map(x=>x.day),r.map(x=>x.close),r.map(x=>x.marketCap),r.map(x=>x.volume)]);}
-   else await storeOhlc(t.id,await getOHLCRange(t.id,from,to,{retries:1}));
+   else await storeOhlc(t.id,await getOHLCRange(t.id,from,to,rangeOpts));
   });
   // New candidates from the top-up go through pass 1 (and pass 2 if they enter the universe) under the normal flow.
   const [pend]=await q<{n:string}>(`SELECT COUNT(*) n FROM cg_hist_coins WHERE chart_status='PENDING'`);

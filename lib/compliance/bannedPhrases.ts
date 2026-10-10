@@ -10,6 +10,7 @@ const BANNED_PATTERNS: Array<{ pattern: RegExp; replacement: string; category: s
   { pattern: /\bsuggest(?:ion|s|ed|ing)?\b/gi, replacement: 'highlight', category: 'advisory' },
   { pattern: /\badvice\b/gi, replacement: 'analysis', category: 'advisory' },
   { pattern: /\badvise[ds]?\b/gi, replacement: 'analyse', category: 'advisory' },
+  { pattern: /\bdaily\s+picks\b/gi, replacement: 'daily scan', category: 'advisory' },
 
   // Action-oriented
   { pattern: /\bbest trade\b/gi, replacement: 'highest confluence setup', category: 'action' },

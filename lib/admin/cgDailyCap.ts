@@ -15,15 +15,18 @@ import { formatCgCallerCounts, readCgCallerCounts } from '@/lib/admin/cgCallers'
  * race stays because that is enough for one round trip; the old timeout fired
  * while planDailyCap issued several sequential calls on the retrying cache client.
  *
- * The sealed cap is min(that budget, CG_DAILY_HARD_MAX). The default is 16500.
- * A ledger already sealed higher is lowered on the next EVAL.
+ * The sealed cap is min(that budget, CG_DAILY_HARD_MAX minus the shelf share).
+ * The default hard max is 16500. The shelf share is reserved inside that ceiling
+ * so a timeout that still committed cannot add the shelf on top. A ledger already
+ * sealed higher is lowered on the next EVAL.
  *
  * An unconfirmed reserve (timeout, error, no client, undecoded reply) does not
  * spend process memory. Jobs and crons fail closed. A user-facing read may take
  * one credit from the shared web shelf,
  * floor(min(flat cap, CG_DAILY_HARD_MAX) / (processes * 4)),
- * stored in Postgres so a restart does not mint a new share. If that charge
- * cannot be confirmed, the read is refused and cgFetch serves cache.
+ * stored in Postgres so a restart does not mint a new share. That share is the
+ * amount already subtracted from the sealed ceiling. If that charge cannot be
+ * confirmed, the read is refused and cgFetch serves cache.
  */
 export const CG_REDIS_PREFIX = 'admin:cg-credits:v1';
 export const CG_ESTIMATED_PROCESSES_DEFAULT = 4;
@@ -214,6 +217,23 @@ export function conservativeProcessShare(dailyCap: number, processes: number): n
   const count = Number.isFinite(processes) && processes >= 1 ? Math.floor(processes) : CG_ESTIMATED_PROCESSES_DEFAULT;
   if (!(dailyCap > 0)) return 0;
   return Math.floor(dailyCap / (count * 4));
+}
+
+/** Shelf credits a user-facing outage may spend today. Same input reserveCgCall charges. */
+export function shelfShareFor(env: Record<string, string | undefined>, daysInMonth: number): number {
+  const hard = cgDailyHardMax(env);
+  const flat = clampDailyCap(flatDailyCap(cgQuota(env), cgTargetPct(env), daysInMonth), hard);
+  return conservativeProcessShare(flat, cgEstimatedProcesses(env));
+}
+
+/**
+ * Ledger ceiling. The shelf share is counted inside CG_DAILY_HARD_MAX, so a script
+ * that committed after the client timed out plus the shelf cannot pass the hard max.
+ */
+export function ledgerHardMax(hardMax: number, shelfShare: number): number {
+  const ceiling = Number.isFinite(hardMax) && hardMax > 0 ? Math.floor(hardMax) : CG_DAILY_HARD_MAX_DEFAULT;
+  const reserved = Number.isFinite(shelfShare) && shelfShare > 0 ? Math.floor(shelfShare) : 0;
+  return Math.max(0, ceiling - Math.min(reserved, ceiling));
 }
 
 export type CgProcessRole = 'web' | 'worker' | 'jarvis';
@@ -474,7 +494,7 @@ async function evalLedger(now: number, env: Record<string, string | undefined>, 
     KEY_FRESH_MS,
     COUNTER_TTL_SECONDS,
     charge,
-    cgDailyHardMax(env),
+    ledgerHardMax(cgDailyHardMax(env), shelfShareFor(env, daysInMonth)),
   ];
   try {
     const parsed = parseLedger(await withTimeout(redis.eval(CG_LEDGER_LUA, ledgerKeys(day, month), args), CG_LIMITER_REDIS_TIMEOUT_MS));
@@ -718,7 +738,7 @@ export async function capFields(now = Date.now(), env: Record<string, string | u
 export async function reserveCgCall(now = Date.now(), env: Record<string, string | undefined> = process.env): Promise<void> {
   const { daysInMonth, day } = utcMonthParts(now);
   const flat = clampDailyCap(flatDailyCap(cgQuota(env), cgTargetPct(env), daysInMonth), cgDailyHardMax(env));
-  const share = conservativeProcessShare(flat, cgEstimatedProcesses(env));
+  const share = shelfShareFor(env, daysInMonth);
   const outcome = await evalLedger(now, env, 1);
 
   if (outcome.kind === 'ready') {

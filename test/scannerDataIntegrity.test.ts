@@ -9,7 +9,7 @@ vi.mock('@/lib/coingecko', () => ({
 
 import * as cg from '@/lib/coingecko';
 import { aggregateBars, attachDailyVolumes, barsFromPriceSamples, bucketStart, detectPriceDiscontinuity, splitPartialBar, type Bar } from '../lib/scanner/barAggregation';
-import { fetchCryptoSeries } from '../lib/scanner/cryptoBars';
+import { fetchCryptoSeries, resetCryptoDailyCacheForTests } from '../lib/scanner/cryptoBars';
 import { evaluateDataTrust, lastCompletedEquitySession, normalizeTimeframeInterval } from '../lib/scanner/dataTrust';
 import { buildAnalysisNarrative, buildConfirmation, classifySetupFamily } from '../lib/scanner/analysisNarrative';
 import { buildCachedScanData } from '../lib/scannerCache';
@@ -79,6 +79,7 @@ describe('crypto series timeframe → source mapping', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    resetCryptoDailyCacheForTests();
     resolve.mockImplementation(async (sym: string) => ({ BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', AVAX: 'avalanche-2', INJ: 'injective-protocol', APT: 'aptos', HBAR: 'hedera-hashgraph', NEAR: 'near', ARB: 'arbitrum', LINK: 'chainlink', XRP: 'ripple' }[sym] ?? null));
   });
 
@@ -89,8 +90,12 @@ describe('crypto series timeframe → source mapping', () => {
     const requestOptions = { retries: 0, timeoutMs: 4000 };
     await fetchCryptoSeries('BTC', timeframe, now, { requestOptions });
     // Completed daily windows also carry a longer fetch-cache lifetime (cacheSeconds); the deadline is still forwarded.
-    for (const call of getOHLCRange.mock.calls) expect(call[3]).toMatchObject(requestOptions);
-    for (const call of getMarketChartRange.mock.calls) expect(call[3]).toEqual(requestOptions);
+    for (const call of getOHLCRange.mock.calls) {
+      expect(call[3]).toMatchObject(timeframe === 'daily' ? { ...requestOptions, cacheSeconds: 86_400 } : requestOptions);
+    }
+    for (const call of getMarketChartRange.mock.calls) {
+      expect(call[3]).toEqual(timeframe === 'daily' ? { ...requestOptions, cacheSeconds: 86_400 } : requestOptions);
+    }
     for (const call of getOHLC.mock.calls) expect(call[2]).toEqual(requestOptions);
   });
 

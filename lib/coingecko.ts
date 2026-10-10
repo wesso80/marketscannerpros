@@ -240,6 +240,12 @@ function logCg(label: string, error: unknown): void {
 type CachedCgBody<T> = { body: T; freshUntil: number };
 const cgResponseCache = new Map<string, CachedCgBody<unknown>>();
 const CG_RESPONSE_CACHE_MAX = 100;
+/**
+ * Completed-day history. A fresh body is returned before reserveCgCall, so a retry
+ * of the same URL cannot spend a second credit. Shorter TTLs (quote snapshot 90s,
+ * simple price 30s) still reserve on every attempt.
+ */
+export const CG_LONG_CACHE_S = 86_400;
 
 export function resetCgResponseCacheForTests(): void {
   cgResponseCache.clear();
@@ -320,6 +326,10 @@ async function cgFetch<T>(
 
   const execute = async (remainingRetries: number): Promise<T> => {
     const cacheTtl = revalidateSeconds(options?.init);
+    if (cacheTtl !== null && cacheTtl >= CG_LONG_CACHE_S) {
+      const cached = await readFreshResponse<T>(url);
+      if (cached !== undefined) return cached;
+    }
     if (!coinGeckoCircuitIsBlocking()) {
       try {
         await reserveCgCall();
@@ -1972,7 +1982,12 @@ export async function getMarketChartRange(
   coinId: string,
   fromUnixSeconds: number,
   toUnixSeconds: number,
-  requestOptions?: { retries?: number; timeoutMs?: number },
+  requestOptions?: {
+    retries?: number;
+    timeoutMs?: number;
+    /** Next data-cache lifetime. Windows that end on a completed UTC day pass CG_LONG_CACHE_S. */
+    cacheSeconds?: number;
+  },
 ): Promise<{
   prices: [number, number][];
   market_caps: [number, number][];
@@ -1990,7 +2005,7 @@ export async function getMarketChartRange(
       total_volumes: [number, number][];
     }>(`/coins/${coinId}/market_chart/range`, {
       params,
-      init: { next: { revalidate: 900 } },
+      init: { next: { revalidate: requestOptions?.cacheSeconds && requestOptions.cacheSeconds > 0 ? Math.floor(requestOptions.cacheSeconds) : 900 } },
       retries: requestOptions?.retries,
       timeoutMs: requestOptions?.timeoutMs,
     });

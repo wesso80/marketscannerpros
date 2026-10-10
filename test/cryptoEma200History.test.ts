@@ -34,12 +34,13 @@ vi.mock('@/lib/coingecko', async (orig) => ({
     return series.filter((r) => r[0] / 1000 > from && r[0] / 1000 <= to);
   }),
   getMarketChartRange: vi.fn(async () => ({ total_volumes: [], prices: [] })),
+  getMarketData: vi.fn(async () => null),
   getCoinDetail: vi.fn(async () => null),
   resolveSymbolToId: vi.fn(async () => 'bitcoin'),
 }));
 
 import * as cg from '@/lib/coingecko';
-import { fetchCryptoSeries } from '@/lib/scanner/cryptoBars';
+import { fetchCryptoSeries, resetCryptoDailyCacheForTests } from '@/lib/scanner/cryptoBars';
 import { fetchIndicators, fetchPrice } from '@/lib/goldenEggFetchers';
 import * as scannerMath from '@/lib/scanner/indicatorMath';
 import { goldenEggCanonicalBars } from '@/lib/goldenEgg/canonicalVerdict';
@@ -51,6 +52,7 @@ const fullEma200 = () => { const e = scannerMath.ema(series.map((r) => r[4]), 20
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetCryptoDailyCacheForTests();
   vi.spyOn(Date, 'now').mockReturnValue(NOW);
   missingWindow = null;
   makeSeries(1);

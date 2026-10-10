@@ -50,6 +50,7 @@ it('downloads nothing before approval, stops at the cap, and pauses while credit
  expect(cg.getMarketChartRange).not.toHaveBeenCalled();
  const ok=await job.approveHistory();expect(ok).toMatchObject({phase:'RUNNING',startRemaining:400000,cap:200000});
  await job.historyStep(40);expect(cg.getMarketChartRange).toHaveBeenCalledTimes(2);
+ expect(cg.getMarketChartRange.mock.calls[0][3]).toMatchObject({ retries: 1, cacheSeconds: 86_400 });
  // Spend beyond the cap (CoinGecko /key shows 250k used since approval): the job stops, no further calls.
  cg.getApiUsage.mockResolvedValue({monthly_call_credit:500000,current_total_monthly_calls:350000,current_remaining_monthly_calls:150000});store.delete('admin:cg-credits:v1:key');
  cg.getMarketChartRange.mockClear();
@@ -58,6 +59,33 @@ it('downloads nothing before approval, stops at the cap, and pauses while credit
  await job.approveHistory();cg.getApiUsage.mockResolvedValue({monthly_call_credit:500000,current_total_monthly_calls:450000,current_remaining_monthly_calls:50000});store.delete('admin:cg-credits:v1:key');
  expect(await job.historyStep(40)).toMatchObject({paused:true});expect(cg.getMarketChartRange).not.toHaveBeenCalled();
  expect(CG_HISTORY.maxShareOfRemaining).toBe(.5);
+});
+it('an arca-cycle top-up with yesterday stored makes no history calls',async()=>{
+ cg.getApiUsage.mockResolvedValue({monthly_call_credit:500000,current_total_monthly_calls:100000,current_remaining_monthly_calls:400000});
+ const {q}=await import('@/lib/db');
+ (q as ReturnType<typeof vi.fn>).mockImplementation(async(s:string)=>{
+  sql.push(s);
+  if(/has_chart/.test(s))return [{coin_id:'bitcoin',has_chart:true,has_ohlc:true}];
+  return [];
+ });
+ store.set('admin:crypto-markets:cg-history:v1',{phase:'BACKFILL_DONE',estimateCalls:0,jobCalls:0,globalDone:true,universeMarked:true,topUpDay:'2026-10-10',topUpQueue:[{id:'bitcoin',kind:'chart'},{id:'bitcoin',kind:'ohlc'}]});
+ const job=await import('@/lib/admin/cgHistoryJob');
+ const result=await job.historyStep(40,Date.parse('2026-10-10T12:00:00Z'));
+ expect(result).toMatchObject({ok:true,topUp:true,calls:0});
+ expect(cg.getMarketChartRange).not.toHaveBeenCalled();
+ expect(cg.getOHLCRange).not.toHaveBeenCalled();
+});
+it('a missing yesterday row still fetches history once and caches the range for a day',async()=>{
+ cg.getApiUsage.mockResolvedValue({monthly_call_credit:500000,current_total_monthly_calls:100000,current_remaining_monthly_calls:400000});
+ const {q}=await import('@/lib/db');
+ (q as ReturnType<typeof vi.fn>).mockImplementation(async(s:string)=>{sql.push(s);return [];});
+ store.set('admin:crypto-markets:cg-history:v1',{phase:'BACKFILL_DONE',estimateCalls:0,jobCalls:0,globalDone:true,universeMarked:true,topUpDay:'2026-10-10',topUpQueue:[{id:'ethereum',kind:'chart'},{id:'ethereum',kind:'ohlc'}]});
+ const job=await import('@/lib/admin/cgHistoryJob');
+ await job.historyStep(40,Date.parse('2026-10-10T12:00:00Z'));
+ expect(cg.getMarketChartRange).toHaveBeenCalledTimes(1);
+ expect(cg.getOHLCRange).toHaveBeenCalledTimes(1);
+ expect(cg.getMarketChartRange.mock.calls[0][3]).toMatchObject({cacheSeconds:86_400});
+ expect(cg.getOHLCRange.mock.calls[0][3]).toMatchObject({cacheSeconds:86_400});
 });
 it('splits the DDL into runnable statements even when a comment contains a semicolon',()=>{
  const st=ddlStatements();

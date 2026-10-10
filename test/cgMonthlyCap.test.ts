@@ -54,7 +54,7 @@ vi.mock('@/lib/redis', () => ({
   getLimiterRedis: () => holder.redis,
 }));
 
-import { getSimplePrices, resetCgResponseCacheForTests } from '@/lib/coingecko';
+import { getMarketChartRange, getMarketData, getSimplePrices, resetCgResponseCacheForTests } from '@/lib/coingecko';
 import { runWithAvBudget } from '@/lib/avLimiter';
 import {
   CG_LIMITER_REDIS_TIMEOUT_MS,
@@ -65,7 +65,9 @@ import {
   clampDailyCap,
   conservativeProcessShare,
   flatDailyCap,
+  ledgerHardMax,
   pacedDailyCap,
+  shelfShareFor,
   perProcessDailyCap,
   planDailyCap,
   resetCgCapStateForTests,
@@ -177,12 +179,16 @@ describe('daily cap math', () => {
     const october = clampDailyCap(flatDailyCap(500_000, 80, 31));
     const february = clampDailyCap(flatDailyCap(500_000, 80, 28));
     expect(october).toBe(12_903);
-    expect(conservativeProcessShare(october, 4)).toBe(806);
-    expect(october + 806).toBe(13_709);
-    expect(16_500 + conservativeProcessShare(october, 4)).toBe(17_306);
+    const octoberShare = conservativeProcessShare(october, 4);
+    const februaryShare = conservativeProcessShare(february, 4);
+    expect(octoberShare).toBe(806);
+    expect(october + octoberShare).toBe(13_709);
     expect(february).toBe(14_285);
-    expect(february + conservativeProcessShare(february, 4)).toBe(15_177);
-    expect(16_500 + conservativeProcessShare(february, 4)).toBe(17_392);
+    expect(february + februaryShare).toBe(15_177);
+    expect(ledgerHardMax(16_500, octoberShare) + octoberShare).toBe(16_500);
+    expect(ledgerHardMax(16_500, februaryShare) + februaryShare).toBe(16_500);
+    expect(ledgerHardMax(16_500, octoberShare) + octoberShare).toBeLessThanOrEqual(16_500);
+    expect(ledgerHardMax(16_500, februaryShare) + februaryShare).toBeLessThanOrEqual(16_500);
     expect(conservativeProcessShare(8, 4)).toBe(0);
     expect(conservativeProcessShare(8, 1)).toBe(2);
   });
@@ -205,7 +211,7 @@ describe('daily cap math', () => {
     const first = await planDailyCap(OCT31);
     expect(first).toMatchObject({ mode: 'paced', usedAtStart: 1_000, day: '2026-10-31' });
     expect(pacedDailyCap(500_000, 80, 1_000, 1)).toBe(399_000);
-    expect(first.cap).toBe(clampDailyCap(pacedDailyCap(500_000, 80, 1_000, 1)));
+    expect(first.cap).toBe(ledgerHardMax(16_500, shelfShareFor(process.env, 31)));
 
     const later = OCT31 + 60_000;
     seedKey(redis, later, 8_000);
@@ -238,14 +244,16 @@ describe('daily cap math', () => {
     seedKey(redis, OCT31, 1_000);
     const sealed = await planDailyCap(OCT31);
     expect(pacedDailyCap(500_000, 80, 1_000, 1)).toBe(399_000);
-    expect(sealed.cap).toBe(16_500);
+    const ceiling = ledgerHardMax(16_500, shelfShareFor(process.env, 31));
+    expect(ceiling + shelfShareFor(process.env, 31)).toBeLessThanOrEqual(16_500);
+    expect(sealed.cap).toBe(ceiling);
 
     const ledger = redis.store.get('admin:cg-credits:v1:ledger:2026-10-31') as { cap: number };
     ledger.cap = 30_000;
     const lowered = await planDailyCap(OCT31);
-    expect(lowered.cap).toBe(16_500);
+    expect(lowered.cap).toBe(ceiling);
     expect(lowered.usedAtStart).toBe(1_000);
-    expect((redis.store.get('admin:cg-credits:v1:ledger:2026-10-31') as { cap: number }).cap).toBe(16_500);
+    expect((redis.store.get('admin:cg-credits:v1:ledger:2026-10-31') as { cap: number }).cap).toBe(ceiling);
   });
 
   it('uses a CG_DAILY_HARD_MAX override for the sealed cap and the shelf', async () => {
@@ -255,7 +263,8 @@ describe('daily cap math', () => {
     seedKey(redis, OCT31, 1_000);
     vi.stubEnv('CG_DAILY_HARD_MAX', '1000');
     const plan = await planDailyCap(OCT31);
-    expect(plan.cap).toBe(1_000);
+    expect(plan.cap).toBe(ledgerHardMax(1_000, shelfShareFor(process.env, 31)));
+    expect(plan.cap + shelfShareFor(process.env, 31)).toBeLessThanOrEqual(1_000);
     expect(plan.usedAtStart).toBe(1_000);
 
     holder.redis = null;
@@ -307,11 +316,49 @@ describe('daily cap math', () => {
     vi.stubEnv('CG_DAILY_HARD_MAX', 'nope');
     const plan = await planDailyCap(OCT31);
     expect(pacedDailyCap(500_000, 80, 1_000, 1)).toBe(399_000);
-    expect(plan.cap).toBe(16_500);
+    const ceiling = ledgerHardMax(16_500, shelfShareFor(process.env, 31));
+    expect(plan.cap).toBe(ceiling);
+    expect(plan.cap + shelfShareFor(process.env, 31)).toBeLessThanOrEqual(16_500);
+  });
+
+  it('drops caller tallies from older UTC days', async () => {
+    const yesterday = Date.UTC(2026, 9, 30, 12);
+    const { rememberCgCaller } = await import('@/lib/admin/cgCallers');
+    rememberCgCaller('scanner-run', 'ohlc/range', yesterday);
+    rememberCgCaller('scanner-run', 'market_chart/range', OCT31);
+    expect(await readCgCallerCounts(yesterday)).toEqual({});
+    expect(await readCgCallerCounts(OCT31)).toEqual({ 'scanner-run': { 'market_chart/range': 1 } });
   });
 });
 
 describe('cgFetch gate', () => {
+  it('serves a 24h history body without a second reserve, and still fetches the quote snapshot', async () => {
+    const redis = makeRedis();
+    holder.redis = redis;
+    seedKey(redis, OCT31, 0);
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => ({ prices: [[OCT31, 1]], market_caps: [[OCT31, 2]], total_volumes: [[OCT31, 3]] }),
+      text: async () => '',
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const from = Math.floor(OCT31 / 1000) - 7 * 86_400;
+    const to = Math.floor(OCT31 / 1000);
+    await getMarketChartRange('bitcoin', from, to, { retries: 1, cacheSeconds: 86_400 });
+    await getMarketChartRange('bitcoin', from, to, { retries: 1, cacheSeconds: 86_400 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const ledger = redis.store.get('admin:cg-credits:v1:ledger:2026-10-31') as { issued: number };
+    expect(ledger.issued).toBe(1);
+
+    fetchMock.mockClear();
+    await getMarketData({ ids: ['bitcoin'], per_page: 1, sparkline: false });
+    await getMarketData({ ids: ['bitcoin'], per_page: 1, sparkline: false });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('refuses at the cap and does not fetch', async () => {
     const redis = makeRedis();
     holder.redis = redis;
@@ -561,7 +608,7 @@ describe('cgFetch gate', () => {
       remaining: 499_000,
       targetPct: 80,
       targetCredits: 400_000,
-      todayCap: clampDailyCap(pacedDailyCap(500_000, 80, 1_000, 1)),
+      todayCap: ledgerHardMax(16_500, shelfShareFor(process.env, 31)),
       callsToday: 0,
       refusedToday: 0,
       capMode: 'paced',
