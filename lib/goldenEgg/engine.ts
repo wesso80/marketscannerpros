@@ -2,6 +2,7 @@ import { describeMultiple } from '@/lib/goldenEgg/fundamentalsContext';
 import { buildTimingEvidence, TIMING_EVIDENCE } from '@/lib/research/timingEvidence';
 import { buildCalendarFeed } from '@/lib/macro/calendar/feed';
 import { priceEvidenceFromSeries as evidenceFromPrice } from '@/lib/research/priceEvidence';
+import { publicDailyChart } from '@/lib/research/publicDailyChart';
 import { oiBasisLabel } from '@/lib/options/oiSummary';
 import { valuationAtPrice } from '@/lib/market/valuationIntegrity';
 /**
@@ -269,6 +270,10 @@ export function buildPayload(
   const closes = price.historicalCloses ?? [];
   const barsPerDay = barsPerDayFor(tfLabel, assetClass);
   const timeframeKey = extras.timeframeKey ?? (tfLabel === '15m' ? '15m' : tfLabel === '1H' ? '1h' : tfLabel === '1W' ? 'weekly' : 'daily');
+  const dailyChart = publicDailyChart({
+    assetClass, timeframeKey, source: price.source ?? null, nowMs,
+    dates: price.historicalDates, closes: price.historicalCloses, highs: price.historicalHighs, lows: price.historicalLows,
+  });
 
   // ── Liquidity (dollar terms). CoinGecko crypto volume is already USD; equity volume is shares. ─────────
   const avgVolume = price.avgVolume ?? null;
@@ -732,6 +737,7 @@ export function buildPayload(
   return {
     meta: { symbol, assetClass, price: p, asOfTs: new Date(nowMs).toISOString(), timeframe: tfLabel },
     priceEvidence,
+    dailyChart,
     layer1: {
       assessment: toPublicAssessment(permission),
       direction,
@@ -940,6 +946,8 @@ export interface GoldenEggComputeParams {
   workspaceId?: string | null;
   /** Skip the 3-minute memory cache. */
   fresh?: boolean;
+  /** Cap for optional sections. The price series is not capped here. */
+  enrichmentTimeoutMs?: number;
   /** Explicit options expiry (YYYY-MM-DD, equities). Used only if listed in the chain; never replaced by the default. */
   expiry?: string | null;
 }
@@ -958,12 +966,12 @@ export function tfLabelFor(timeframe: string): string {
 
 async function buildCrossMarket(assetClass: 'equity' | 'crypto' | 'forex', direction: Direction, sector: string | null, symbolBase: string, series: { btcCloses?: number[]; ethCloses?: number[] }): Promise<CrossMarketContext> {
   const items: CrossMarketItem[] = [];
-  const readEquity = async (sym: string, label: string, inverse = false) => {
+  const readEquity = async (sym: string, label: string, inverse = false): Promise<CrossMarketItem> => {
     try {
       const [q, i] = await Promise.all([getQuote(sym), getIndicators(sym, 'daily')]);
       const t = trendFromLevels(q?.price ?? null, i?.sma20 ?? null, i?.sma50 ?? null, q?.changePct ?? null);
-      items.push({ symbol: sym, label, price: q?.price ?? null, changePct: q?.changePct ?? null, trend: t.trend, detail: t.detail, relation: relate(t.trend, direction, inverse), inverse, asOf: (q as any)?.latestDay ?? null });
-    } catch { items.push({ symbol: sym, label, price: null, changePct: null, trend: 'unknown', detail: 'unavailable', relation: 'unknown' }); }
+      return { symbol: sym, label, price: q?.price ?? null, changePct: q?.changePct ?? null, trend: t.trend, detail: t.detail, relation: relate(t.trend, direction, inverse), inverse, asOf: (q as any)?.latestDay ?? null };
+    } catch { return { symbol: sym, label, price: null, changePct: null, trend: 'unknown', detail: 'unavailable', relation: 'unknown' }; }
   };
   const readSeries = (sym: string, label: string, closes?: number[]) => {
     if (!closes || closes.length < 21) { items.push({ symbol: sym, label, price: null, changePct: null, trend: 'unknown', detail: 'series unavailable', relation: 'unknown' }); return; }
@@ -974,12 +982,11 @@ async function buildCrossMarket(assetClass: 'equity' | 'crypto' | 'forex', direc
     items.push({ symbol: sym, label, price: last, changePct: chg5 != null ? Math.round(chg5 * 100) / 100 : null, trend: t.trend, detail: `${t.detail} (5-bar change)`, relation: relate(t.trend, direction) });
   };
   if (assetClass === 'equity') {
-    await readEquity('SPY', 'S&P 500');
-    await readEquity('QQQ', 'Nasdaq 100');
+    const reads = [readEquity('SPY', 'S&P 500'), readEquity('QQQ', 'Nasdaq 100')];
     const etf = sector ? SECTOR_ETF[sector.toUpperCase()] : undefined;
-    if (etf) await readEquity(etf, `Sector ETF (${sector})`);
-    await readEquity('TLT', 'Long bonds (rates proxy)');
-    await readEquity('UUP', 'US dollar', true);
+    if (etf) reads.push(readEquity(etf, `Sector ETF (${sector})`));
+    reads.push(readEquity('TLT', 'Long bonds (rates proxy)'), readEquity('UUP', 'US dollar', true));
+    items.push(...await Promise.all(reads));
   } else if (assetClass === 'crypto') {
     if (symbolBase !== 'BTC') readSeries('BTC', 'Bitcoin (daily)', series.btcCloses);
     if (symbolBase !== 'ETH') readSeries('ETH', 'Ether (daily)', series.ethCloses);
@@ -992,6 +999,17 @@ async function buildCrossMarket(assetClass: 'equity' | 'crypto' | 'forex', direc
     } catch { /* optional */ }
   }
   return summarizeCrossMarket(items, direction);
+}
+
+/** Optional section that does not arrive in time is omitted. The price series is never passed through this. */
+function settleWithin<T>(work: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(fallback), ms);
+    work.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      () => { clearTimeout(timer); resolve(fallback); },
+    );
+  });
 }
 
 /**
@@ -1017,15 +1035,24 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
 
   const tcSymbol = assetClass === 'crypto' ? `${symbol.replace(/[-/]?(USDT|USD)$/i, '')}USD` : symbol;
   const base = symbol.replace(/[-/]?(USDT|USD)$/i, '');
-  const [priceData, tcData, macroRegime] = await Promise.all([
-    fetchPrice(symbol, assetClass, { requireHistoricals: true, avInterval, cryptoIndicatorHistory: true }),
-    fetchTimeConfluence(tcSymbol),
-    fetchMacroRegime(),
-  ]);
-  const mpeData = await fetchMPE(symbol, assetClass, tcData);
-  // Scheduled high-importance US releases for the timing section (providers cache ~10 min; a failure is reported, not fatal).
-  const calendarFeed = assetClass === 'forex' ? null : await buildCalendarFeed({ nowMs: Date.now(), days: TIMING_EVIDENCE.eventHorizonDays, countries: ['US'], importance: 'high' }).catch(() => null);
+  const enrichmentMs = Math.min(20_000, Math.max(1, params.enrichmentTimeoutMs ?? 8_000));
+  // Price is required. Calendar, macro, confluence and fundamentals do not depend on it, so they start with it.
+  // A slow optional call is dropped at enrichmentMs and the report still renders.
+  const pricePromise = fetchPrice(symbol, assetClass, { requireHistoricals: true, avInterval, cryptoIndicatorHistory: true });
+  const tcPromise = settleWithin(fetchTimeConfluence(tcSymbol), enrichmentMs, null);
+  const macroPromise = settleWithin(fetchMacroRegime(), enrichmentMs, null);
+  const calendarPromise = assetClass === 'forex' ? Promise.resolve(null) : settleWithin(
+    buildCalendarFeed({ nowMs: Date.now(), days: TIMING_EVIDENCE.eventHorizonDays, countries: ['US'], importance: 'high' }).catch(() => null),
+    enrichmentMs,
+    null,
+  );
+  const fundamentalsPromise = assetClass === 'equity'
+    ? settleWithin(getFundamentalsSummary(symbol).catch(() => null), enrichmentMs, null)
+    : Promise.resolve(null);
+  const mpePromise = tcPromise.then((tc) => fetchMPE(symbol, assetClass, tc));
+  const overlayPromise = macroPromise.then((macro) => loadRegimeOverlayInputs({ macroRiskState: macro?.riskState ?? null }).catch(() => null));
 
+  const priceData = await pricePromise;
   if (!priceData) {
     if (isLocalGoldenEggDemoAllowed()) {
       const reason = `Unable to fetch live price data for ${symbol}`;
@@ -1037,25 +1064,20 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
 
   // Indicators use the longer indicator history when the fetcher provides it (EMA200 convergence), else the display bars.
   const indHist = priceData.indicatorHistory && priceData.indicatorHistory.closes.length > priceData.historicalCloses.length ? priceData.indicatorHistory : null;
-  const indData = await fetchIndicators(symbol, assetClass, indHist?.closes ?? priceData.historicalCloses, indHist?.highs ?? priceData.historicalHighs, indHist?.lows ?? priceData.historicalLows, avInterval);
+  const indPromise = fetchIndicators(symbol, assetClass, indHist?.closes ?? priceData.historicalCloses, indHist?.highs ?? priceData.historicalHighs, indHist?.lows ?? priceData.historicalLows, avInterval);
+  const optsPromise = assetClass === 'equity'
+    ? settleWithin(fetchOptionsSnapshot(symbol, priceData.price, { recentCloses: priceData.historicalCloses, recentDates: priceData.historicalDates, expiry }), enrichmentMs, null)
+    : Promise.resolve(null);
+  const derivsPromise = assetClass === 'crypto' ? fetchCryptoDerivatives(symbol) : Promise.resolve(null);
+  const btcPromise = assetClass === 'crypto' && base !== 'BTC' ? fetchCryptoSeries('BTC', 'daily', Date.now(), { coinId: 'bitcoin' }).catch(() => null) : Promise.resolve(null);
+  const ethPromise = assetClass === 'crypto' && base !== 'ETH' && base !== 'BTC' ? fetchCryptoSeries('ETH', 'daily', Date.now(), { coinId: 'ethereum' }).catch(() => null) : Promise.resolve(null);
 
-  let optsData: OptionsSnapshot | null = null;
-  let cryptoDerivsData: CryptoDerivatives | null = null;
-  let fundamentals: FundamentalsSummary | null = null;
+  const [tcData, macroRegime, calendarFeed, fundamentals, indData, mpeData, optsData, cryptoDerivsData, btc, eth] = await Promise.all([
+    tcPromise, macroPromise, calendarPromise, fundamentalsPromise, indPromise, mpePromise, optsPromise, derivsPromise, btcPromise, ethPromise,
+  ]);
   let network: NetworkContext | null = null;
   const benchSeries: { btcCloses?: number[]; ethCloses?: number[] } = {};
-  if (assetClass === 'equity') {
-    [optsData, fundamentals] = await Promise.all([
-      fetchOptionsSnapshot(symbol, priceData.price, { recentCloses: priceData.historicalCloses, recentDates: priceData.historicalDates, expiry }),
-      getFundamentalsSummary(symbol).catch(() => null),
-    ]);
-  } else if (assetClass === 'crypto') {
-    const [derivs, btc, eth] = await Promise.all([
-      fetchCryptoDerivatives(symbol),
-      base === 'BTC' ? Promise.resolve(null) : fetchCryptoSeries('BTC', 'daily', Date.now(), { coinId: 'bitcoin' }).catch(() => null),
-      base === 'ETH' || base === 'BTC' ? Promise.resolve(null) : fetchCryptoSeries('ETH', 'daily', Date.now(), { coinId: 'ethereum' }).catch(() => null),
-    ]);
-    cryptoDerivsData = derivs;
+  if (assetClass === 'crypto') {
     benchSeries.btcCloses = btc?.bars.map((b) => b.close);
     benchSeries.ethCloses = eth?.bars.map((b) => b.close);
     network = buildNetworkContext(priceData.coinDetail, { symbolCloses: priceData.historicalCloses, btcCloses: benchSeries.btcCloses, ethCloses: benchSeries.ethCloses, interval: priceData.barInterval ?? '1d', isBtc: base === 'BTC', isEth: base === 'ETH' });
@@ -1063,7 +1085,11 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
 
   // Direction is needed to relate cross-market items; build the payload once without cross-market, then attach.
   const provisional = buildPayload(symbol, assetClass, priceData, indData, optsData, mpeData, tfLabel, cryptoDerivsData, tcData, macroRegime, { fundamentals, network, timeframeKey: timeframe });
-  const crossMarket = await buildCrossMarket(assetClass, provisional.layer1.direction, fundamentals?.sector ?? null, base, benchSeries).catch(() => null);
+  const crossMarket = await settleWithin(
+    buildCrossMarket(assetClass, provisional.layer1.direction, fundamentals?.sector ?? null, base, benchSeries).catch(() => null),
+    enrichmentMs,
+    null,
+  );
   let payload = crossMarket ? buildPayload(symbol, assetClass, priceData, indData, optsData, mpeData, tfLabel, cryptoDerivsData, tcData, macroRegime, { fundamentals, network, crossMarket, timeframeKey: timeframe }) : provisional;
 
   // Canonical engine verdict is PRIMARY (permission/grade/setup/direction); the confluence read above is kept as the
@@ -1071,7 +1097,7 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
   try {
     const earningsWindow = holdingWindowDays(timeframe);
     const dte = fundamentals?.daysToEarnings;
-    const overlay = await loadRegimeOverlayInputs({ macroRiskState: macroRegime?.riskState ?? null }).catch(() => null);
+    const overlay = await overlayPromise;
     const canonicalVerdict = evaluateGoldenEggCanonical(goldenEggCanonicalBars(priceData), {
       symbol, assetClass, timeframe,
       trustLevel: payload.canonical?.dataTrust.level ?? null,

@@ -155,6 +155,8 @@ export interface DeepAnalysisData {
 export interface GoldenEggPayload {
   /** Measured price/volatility evidence: completed daily bars only, each value dated (lib/research/priceEvidence). Null off the daily timeframe. */
   priceEvidence?: import('@/lib/research/priceEvidence').PriceEvidence | null;
+  /** Completed daily candles from the same fetch as price evidence. The Symbol chart draws these directly. */
+  dailyChart?: import('@/lib/research/publicDailyChart').PublicDailyChart | null;
   /** Session, bar closes, next earnings and scheduled releases, each dated (lib/research/timingEvidence). */
   timingEvidence?: import('@/lib/research/timingEvidence').TimingEvidence | null;
   /** Present when the caller asked for a specific options expiry: whether that expiry's chain was used. */

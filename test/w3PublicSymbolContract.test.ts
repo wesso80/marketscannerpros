@@ -66,7 +66,7 @@ describe('W3: /api/golden-egg serializes only the public Symbol contract', () =>
     expect(status).toBe(200);
     const d = body.data;
     expect(d.contract).toBe('public-symbol-v2');
-    expect(Object.keys(d).sort()).toEqual(['canonical', 'contract', 'layer2', 'layer3', 'meta', 'optionsRequest', 'priceEvidence', 'timingEvidence']);
+    expect(Object.keys(d).sort()).toEqual(['canonical', 'contract', 'dailyChart', 'layer2', 'layer3', 'meta', 'optionsRequest', 'priceEvidence', 'timingEvidence']);
     expect(Object.keys(d.canonical).sort()).toEqual(['assetClass', 'barInterval', 'changePct', 'crossMarket', 'dataTrust', 'derivatives', 'fundamentals', 'historyBars', 'indicators', 'lastCompletedBarAt', 'liquidity', 'network', 'options', 'price', 'priceTs', 'source', 'symbol', 'timeframe']);
     expect(Object.keys(d.layer2)).toEqual(['setup']);
     expect(Object.keys(d.layer2.setup)).toEqual(['keyLevels']);
@@ -88,6 +88,8 @@ describe('W3: /api/golden-egg serializes only the public Symbol contract', () =>
     // Evidence that must remain.
     expect(d.canonical.fundamentals.lastReportedQuarter).toBe('2026-06-30');
     expect(d.layer3.timeConfluence.closeSchedule.length).toBe(h.packet.layer3.timeConfluence.closeSchedule.length);
+    expect(d.dailyChart.bars.length).toBeGreaterThan(1);
+    expect(d.dailyChart.bars.at(-1).t < '2026-10-05').toBe(true);
   });
   it('the projection shares no object with the cached internal packet (no aliases)', () => {
     const packet = h.packet;

@@ -264,9 +264,11 @@ export async function fetchPrice(
     }
 
 
-    // Equity: try getQuote cache cascade first (skip if historicals required)
-    const cached = await getQuote(symbol);
-    if (cached?.price && !opts?.requireHistoricals && !isIntraday) {
+    // A quote is enough only when the caller did not ask for bars. A required series starts the daily
+    // download immediately; the quote is the fallback if that download fails.
+    const quoteIsEnough = !opts?.requireHistoricals && !isIntraday;
+    let cached = quoteIsEnough ? await getQuote(symbol) : null;
+    if (cached?.price && quoteIsEnough) {
       return {
         price: cached.price,
         change: cached.changeAmt ?? 0,
@@ -290,6 +292,7 @@ export async function fetchPrice(
     const data = await avFetch<Record<string, any>>(url, `${interval.toUpperCase()} ${symbol}`);
     if (!data) {
       // Fallback to cached price when AV unavailable
+      if (!cached) cached = await getQuote(symbol);
       if (cached?.price) {
         return {
           price: cached.price,

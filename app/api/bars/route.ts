@@ -5,6 +5,19 @@ import { calculateAllIndicators } from '@/lib/indicators';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTryToken } from '@/lib/avRateGovernor';
 import { apiLimiter, getClientIP } from '@/lib/rateLimit';
+import { publicInstrumentKey, publicQuota, publicQuotaEnabled, resolvePublicActor } from '@/lib/publicQuotaAccess';
+
+/** Stored bars for a symbol whose report this visitor already opened. No Alpha Vantage call. */
+async function publicChartUnlocked(subject: string, symbol: string): Promise<boolean> {
+  const keys: string[] = [];
+  for (const asset of ['equity', 'crypto'] as const) {
+    try { keys.push(publicInstrumentKey(symbol, asset)); } catch { /* unmapped identity */ }
+  }
+  for (const key of keys) {
+    if (await publicQuota.isUnlocked(subject, key)) return true;
+  }
+  return false;
+}
 
 /**
  * GET /api/bars?symbol=AAPL&timeframe=daily&limit=50
@@ -16,9 +29,11 @@ import { apiLimiter, getClientIP } from '@/lib/rateLimit';
  * { ok, candles[], ema200[], rsi[], macd[], source }
  */
 export async function GET(req: NextRequest) {
-  // Auth guard: AV license requires authenticated users only
+  // Alpha Vantage stays behind a signed-in session. A signed-out visitor who already
+  // opened this Symbol report may read bars the worker stored. That path never calls AV.
   const session = await getSessionFromCookie();
-  if (!session?.workspaceId) {
+  const signedIn = Boolean(session?.workspaceId);
+  if (!signedIn && !publicQuotaEnabled()) {
     return NextResponse.json({ ok: false, error: 'Please log in to access market data' }, { status: 401 });
   }
 
@@ -36,6 +51,24 @@ export async function GET(req: NextRequest) {
 
   if (!symbol) {
     return NextResponse.json({ ok: false, error: 'Missing symbol' }, { status: 400 });
+  }
+
+  if (!signedIn) {
+    let access: Awaited<ReturnType<typeof resolvePublicActor>>;
+    try { access = await resolvePublicActor(req, session); }
+    catch { return NextResponse.json({ ok: false, error: 'Report access temporarily unavailable' }, { status: 503 }); }
+    if (!access) {
+      return NextResponse.json({ ok: false, error: 'Please log in to access market data' }, { status: 401 });
+    }
+    if (!access.bypass) {
+      try {
+        if (!await publicChartUnlocked(access.subject, symbol)) {
+          return NextResponse.json({ ok: false, error: 'Open this Symbol report before its chart' }, { status: 403 });
+        }
+      } catch {
+        return NextResponse.json({ ok: false, error: 'Report access temporarily unavailable' }, { status: 503 });
+      }
+    }
   }
 
   // 1. Try Redis cache first
@@ -64,6 +97,9 @@ export async function GET(req: NextRequest) {
     );
 
     if (!rows || rows.length === 0) {
+      if (!signedIn) {
+        return NextResponse.json({ ok: true, candles: [], ema200: [], rsi: [], macd: [], source: 'none' });
+      }
       // DB empty — try Alpha Vantage as fallback
       return fetchFromAVFallback(symbol, timeframe, limit, cacheKey);
     }
@@ -120,6 +156,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, ...payload, source: 'database' });
   } catch (err: any) {
     console.error('[bars] DB error:', err?.message || err);
+    if (!signedIn) {
+      return NextResponse.json({ ok: false, error: 'No bars available' }, { status: 503 });
+    }
     // DB error — try AV fallback
     return fetchFromAVFallback(symbol, timeframe, limit, cacheKey);
   }
