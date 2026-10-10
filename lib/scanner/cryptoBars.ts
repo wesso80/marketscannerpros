@@ -389,12 +389,17 @@ export function resetCryptoDailyCacheForTests(): void {
 }
 
 async function pollSharedCompleted(coinId: string, dayStartS: number, windows: number, nowMs: number): Promise<CompletedDaily | null> {
-  for (let i = 0; i < 8; i++) {
-    if (i) await new Promise((resolve) => setTimeout(resolve, 40));
+  const budgetMs = HISTORY_LOCK_S * 1000;
+  const started = Date.now();
+  let delay = 40;
+  for (;;) {
     const hit = await readSharedCompleted(coinId, dayStartS, windows, nowMs);
     if (hit) return hit;
+    const left = budgetMs - (Date.now() - started);
+    if (left <= 0) return null;
+    await new Promise((resolve) => setTimeout(resolve, Math.min(delay, left)));
+    delay = Math.min(delay * 2, 1000);
   }
-  return null;
 }
 
 async function fetchDailyBars(coinId: string, nowMs: number, requestOptions?: RequestOptions, windows = DEFAULT_DAILY_WINDOWS): Promise<CompletedDaily> {
