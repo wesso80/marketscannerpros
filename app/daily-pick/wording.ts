@@ -1,5 +1,5 @@
 /**
- * Daily Picks reader copy. Presentation only — never pass these labels back to scoring, ranking, or storage.
+ * Daily scan observations reader copy. Presentation only. Never pass these labels back into storage.
  * Engine codes, letter grades, and setup categories stay in `foldedEngineDetail`.
  */
 import { canonicalLabel } from '@/lib/scoring/canonical/dailyPick';

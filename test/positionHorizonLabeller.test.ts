@@ -28,7 +28,9 @@ import {
   type DailyBarLoaders,
 } from '@/lib/outcomes/positionHorizonLabeller';
 import { loadPositionHorizonStats, summarizeHorizon, horizonStatsSql, MIN_HORIZON_SAMPLE } from '@/lib/admin/positionHorizonStats';
-import type { DailyOhlcBar } from '@/lib/outcomes/positionHorizon';
+import { positionHorizonTargetMs, type DailyOhlcBar } from '@/lib/outcomes/positionHorizon';
+import { splitSessionInOutcomeWindow } from '@/lib/scanner/corporateActions';
+import { nyDateTime } from '@/lib/time/usSession';
 import { POST } from '@/app/api/cron/label-ai-outcomes/route';
 import { positionBudgetMs } from '@/lib/outcomes/labelBudget';
 
@@ -230,6 +232,37 @@ describe('6w/12w labeller', () => {
     expect(load.bars.map((b) => [b.day, b.close])).toEqual([['2026-09-24', 9.5], ['2026-09-25', 10.5]]);
     expect(load).toMatchObject({ complete: true, source: 'daily-cache+ohlcv_bars' });
     expect(m.avFetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps a split on the signal session outside the horizon and blocks one on the horizon session', async () => {
+    const row = cand(1, 50);
+    const signalAtMs = Date.parse(row.signal_at);
+    const signalDay = nyDateTime(signalAtMs).ymd;
+    const horizonDay = nyDateTime(positionHorizonTargetMs(signalAtMs, '6w')).ymd;
+    expect(signalDay < horizonDay).toBe(true);
+    const base = m.q.getMockImplementation()!;
+    const bars = series(Date.parse('2026-09-27T00:00:00Z') - 120 * DAY, 120);
+    for (const splitSession of [signalDay, horizonDay]) {
+      state.rows['6w'] = [row];
+      m.q.mockImplementation(async (sql: string, params: unknown[] = []) => {
+        if (String(sql).includes('equity_corporate_actions')) {
+          return splitSessionInOutcomeWindow(splitSession, String(params[1]), String(params[2])) ? [{ n: 1 }] : [];
+        }
+        return base(sql, params);
+      });
+      const equity = vi.fn(async () => bars);
+      const r = await labelPositionHorizons({ nowMs: NOW, budgetMs: 10_000, loaders: { equity, crypto: async () => null } });
+      const splitCall = calls(/equity_corporate_actions/).at(-1);
+      expect(splitCall?.[1]).toEqual(['AAPL', signalDay, horizonDay]);
+      if (splitSession === signalDay) {
+        expect(equity).toHaveBeenCalled();
+        expect(r.horizons['6w']).toMatchObject({ labeled: 1, noData: 0 });
+      } else {
+        expect(equity).not.toHaveBeenCalled();
+        expect(r.horizons['6w']).toMatchObject({ noData: 1, labeled: 0 });
+        expect((calls(/SET outcome_6w = 'no_data'/).at(-1)?.[1] as unknown[]).slice(0, 2)).toEqual([1, 'split in the outcome window']);
+      }
+    }
   });
 
   it('marks no_data and skips the bar load when a recorded split sits inside the horizon', async () => {

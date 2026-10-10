@@ -145,7 +145,11 @@ export async function getBars(symbol: string, timeframe: BarTimeframe, opts: Fet
       let raw = rawOhlcFromDailyPayload(payload);
       if (full) raw = raw.slice(-500);
       if (!(await isWorkerOwnedDailySymbol(symbol))) {
-        await recordCorporateActions(symbol, payload);
+        // A failed write must not drop the bars already fetched. The log is the ticker only.
+        await recordCorporateActions(symbol, payload).catch(() => {
+          const ticker = symbol.trim().toUpperCase();
+          console.warn(`[getBars] corporate action record failed for ${/^[A-Z0-9.\-]{1,15}$/.test(ticker) ? ticker : 'redacted'}`);
+        });
         await pgUpsertBars(symbol, 'daily', raw).catch(() => undefined);
       }
     } else if (!dailyFamily) {
