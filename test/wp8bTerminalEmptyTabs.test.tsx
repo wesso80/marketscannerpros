@@ -115,7 +115,9 @@ describe('Crypto Derivatives tab', () => {
     expect(screen.queryByText('Liquidations')).toBeNull();
     expect(screen.getByText('Based on funding, long/short and open interest.')).toBeTruthy();
     expect(calls.some((url) => url.includes('/api/crypto/liquidations'))).toBe(false);
-    expect(screen.queryByRole('link')).toBeNull();
+    const links = screen.getAllByRole('link');
+    expect(links.map((el) => el.getAttribute('href'))).toEqual(['https://www.coingecko.com/en/api']);
+    expect(links[0].textContent).toBe('Data provided by CoinGecko');
   });
 
   it('shows one not-collected gate when the feeds have no reading', async () => {
