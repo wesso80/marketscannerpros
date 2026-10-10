@@ -105,6 +105,18 @@ export interface OptionsIntelligence {
 }
 
 /**
+ * True only when the reading comes from real options-chain data. computeOptionsIntelligence currently returns a
+ * synthetic placeholder (volatility proxy + fixed ratios), which is never real: callers must treat its scores as
+ * unavailable, not as evidence.
+ */
+export function hasRealOptionsData(oi: Partial<OptionsIntelligence> | null | undefined): boolean {
+  if (!oi) return false;
+  if (oi.fallbackScore !== undefined) return false;
+  if ((oi.missingInputs ?? []).some((m) => /options chain/i.test(m))) return false;
+  return oi.dataTruth?.status !== "MISSING" && Number(oi.dataTruth?.trustScore) > 0;
+}
+
+/**
  * Compute options intelligence from available chain data.
  * Returns a complete OptionsIntelligence object with fallback scoring when data is sparse.
  */
