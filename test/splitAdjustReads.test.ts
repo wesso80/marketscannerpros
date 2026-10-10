@@ -130,7 +130,7 @@ describe('split adjustment on stored raw bars', () => {
     expect(upsert.mock.calls[0][1]).toBe('60min');
   });
 
-  it('adjusts the six long-indicator reads and leaves the labellers raw', () => {
+  it('adjusts the six long-indicator reads and keeps only the raw-entry labellers raw', () => {
     const readers = [
       'app/api/scanner/bulk/route.ts',
       'app/api/scanner/run/route.ts',
@@ -145,14 +145,22 @@ describe('split adjustment on stored raw bars', () => {
     }
     const outcomeWorker = readFileSync('worker/label-outcomes.ts', 'utf8');
     expect(outcomeWorker).toContain('price_at_signal is the raw print');
-    expect(outcomeWorker).not.toMatch(/from ['"].*corporateActions['"]/);
+    expect(outcomeWorker).toContain('positionHorizonLabeller and aiOutcomePrices are split-only');
+    expect(outcomeWorker).not.toMatch(/splitAdjustStoredBars\s*\(/);
     const worker = readFileSync('worker/ingest-data.ts', 'utf8');
     expect(worker).toContain('recordCorporateActions(symbol, captured.payload');
     expect(worker.match(/TIME_SERIES_DAILY_ADJUSTED/g)).toHaveLength(1);
     const market = readFileSync('lib/marketData/index.ts', 'utf8');
     expect(market).toContain('else if (!dailyFamily)');
-    expect(readFileSync('lib/edge/outcomeLabeller.ts', 'utf8')).toContain('price_at_signal is the raw print');
-    expect(readFileSync('worker/label-outcomes.ts', 'utf8')).toContain('price_at_signal is the raw print');
+    expect(market).toContain('recordCorporateActions(symbol, payload)');
+    const edge = readFileSync('lib/edge/outcomeLabeller.ts', 'utf8');
+    expect(edge).toContain('price_at_signal is the raw print');
+    expect(edge).toContain('positionHorizonLabeller and aiOutcomePrices are split-only');
+    expect(readFileSync('lib/outcomes/positionHorizonLabeller.ts', 'utf8')).toContain('are split-only');
+    expect(readFileSync('lib/outcomes/aiOutcomePrices.ts', 'utf8')).toContain('are split-only');
+    for (const path of ['lib/outcomes/positionHorizonLabeller.ts', 'lib/outcomes/aiOutcomePrices.ts']) {
+      expect(readFileSync(path, 'utf8'), path).not.toContain('splitAdjustStoredBars');
+    }
   });
 
   it('returns one split-only basis from postgres and from the AV payload, and does not use the adjusted close', async () => {
@@ -253,5 +261,76 @@ describe('split adjustment on stored raw bars', () => {
     expect(env.data?.[0].close).toBe(50);
     expect(vi.mocked(client.avFetchDailyBars)).toHaveBeenCalledTimes(1);
     expect(upsert).not.toHaveBeenCalled();
+    expect(vi.mocked(q).mock.calls.some(([sql]) => String(sql).includes('equity_corporate_actions'))).toBe(false);
+  });
+
+  it('records a non-universe split from the same payload so the warm read matches the miss', async () => {
+    const payload = {
+      'Time Series (Daily)': {
+        '2024-06-07': {
+          '1. open': '1313', '2. high': '1320', '3. low': '1300', '4. close': '1313',
+          '5. adjusted close': '100', '6. volume': '100', '7. dividend amount': '0', '8. split coefficient': '1',
+        },
+        '2024-06-10': {
+          '1. open': '131.3', '2. high': '140', '3. low': '120', '4. close': '131.3',
+          '5. adjusted close': '99', '6. volume': '1000', '7. dividend amount': '0', '8. split coefficient': '10',
+        },
+      },
+    };
+    vi.mocked(client.avFetchDailyBars).mockResolvedValue({
+      bars: [{ date: '2024-06-10', ts: Date.parse('2024-06-10T00:00:00Z'), open: 99, high: 105, low: 90, close: 99, volume: 1000 }],
+      fetchedAt: new Date().toISOString(),
+      payload,
+    });
+    const recorded: unknown[][] = [];
+    vi.mocked(q).mockImplementation(async (sql: string, params?: unknown[]) => {
+      if (sql.includes('INSERT INTO equity_corporate_actions')) {
+        recorded.push(params ?? []);
+        return [];
+      }
+      if (sql.includes('symbol_universe')) return [];
+      if (sql.includes('ohlcv_bars')) {
+        const written = upsert.mock.calls.at(-1)?.[2] as Array<{ ts: number; open: number; high: number; low: number; close: number; volume: number }> | undefined;
+        if (!written) return [];
+        const rows = [
+          { ts: new Date('2024-01-02T00:00:00.000Z'), open: '1313', high: '1320', low: '1300', close: '1313', volume: '100' },
+          ...written.map((bar) => ({
+            ts: new Date(bar.ts), open: String(bar.open), high: String(bar.high), low: String(bar.low), close: String(bar.close), volume: String(bar.volume),
+          })),
+        ];
+        return rows.sort((a, b) => b.ts.getTime() - a.ts.getTime());
+      }
+      if (sql.includes('equity_corporate_actions')) {
+        return recorded.length
+          ? [{ symbol: 'XYZ', session: '2024-06-10', split_coefficient: '10', dividend_amount: '0' }]
+          : [];
+      }
+      return [];
+    });
+
+    const missed = await getBars('XYZ', 'daily');
+    expect(missed.fromCache).toBe('av');
+    expect(missed.data?.map((bar) => bar.close)).toEqual([131.3, 131.3]);
+    expect(missed.data?.some((bar) => bar.close === 1313 || bar.close === 99 || bar.close === 100)).toBe(false);
+    expect(vi.mocked(client.avFetchDailyBars)).toHaveBeenCalledTimes(1);
+    expect(upsert).toHaveBeenCalledTimes(1);
+    expect(upsert.mock.calls[0][2].map((bar: { close: number }) => bar.close)).toEqual([1313, 131.3]);
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0][0]).toBe('XYZ');
+    expect(recorded[0][1]).toEqual(['2024-06-10']);
+    expect(recorded[0][2]).toEqual([10]);
+
+    const warm = await pgReadBars('XYZ', 'daily');
+    expect(warm?.bars.map((bar) => bar.close)).toEqual([131.3, 131.3, 131.3]);
+    expect(warm?.bars.map((bar) => bar.date)).toEqual(['2024-01-02', '2024-06-07', '2024-06-10']);
+    expect(vi.mocked(client.avFetchDailyBars)).toHaveBeenCalledTimes(1);
+
+    const { loadEquityDailyOhlc } = await import('@/lib/outcomes/positionHorizonLabeller');
+    const merged = await loadEquityDailyOhlc('XYZ');
+    expect(merged.bars.map((bar) => bar.close)).toEqual([131.3, 131.3, 131.3]);
+    expect(merged.bars.map((bar) => bar.day)).toEqual(['2024-01-02', '2024-06-07', '2024-06-10']);
+    expect(merged.complete).toBe(true);
+    // The merge's cache read is the same fetch the miss already made, plus one more only because the stored tail is still short of 100 bars.
+    expect(vi.mocked(client.avFetchDailyBars)).toHaveBeenCalledTimes(2);
   });
 });

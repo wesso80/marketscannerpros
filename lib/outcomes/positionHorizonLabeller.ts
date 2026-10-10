@@ -5,12 +5,14 @@
  * - Migration not run: the columns are detected at runtime; without them this logs one line and does nothing.
  * - Candidates: LONG/SHORT rows with an entry price and a supported asset whose horizon (42 / 84 calendar days) has
  *   passed and that are not labelled for it yet, oldest first, POSITION_MAX_ROWS per horizon per run.
- * - Bars (DAILY only, one load per symbol per run, shared by both horizons):
+ * - Bars (DAILY only, one load per symbol per run, shared by both horizons) are split-only. getBars and pgReadBars
+ *   return one basis, so the cache series and the stored tail agree:
  *     equities: the shared lib/marketData daily cache (Redis → Postgres → AV compact, the series everything else
  *               already uses) merged with the longer stored history in ohlcv_bars (a DB read, no API call);
  *     crypto:   one Alpha Vantage DIGITAL_CURRENCY_DAILY call per coin per run (rate-governed; no CoinGecko).
  * - Rows whose horizon bar is not there yet stay pending (NULL). Rows that can never be measured (history does not
- *   reach back to the call, a split in the window, no bars 30 days past the horizon) get outcome 'no_data' + a note.
+ *   reach back to the call, a split in equity_corporate_actions inside the horizon, no bars 30 days past the horizon)
+ *   get outcome 'no_data' + a note. A missing actions table is not a split.
  * - A bar load that failed or was partial (provider quota/timeout/circuit breaker, missing API key, a database read
  *   error) never produces 'no_data': once provenance is written the result is frozen, so the row waits for a run whose
  *   load is complete. A provider answer of "no data for this symbol" is a complete (empty) load.
@@ -23,6 +25,8 @@ import { q } from '@/lib/db';
 import { avFetch } from '@/lib/avRateGovernor';
 import { getBars } from '@/lib/marketData';
 import { pgReadBars } from '@/lib/marketData/store';
+import { equitySplitInWindow } from '@/lib/scanner/corporateActions';
+import { nyDateTime } from '@/lib/time/usSession';
 import { normalizeAssetClass, normalizeCryptoSymbol, normalizeDirection, type OutcomeAssetClass } from './aiOutcomeLabel';
 import {
   POSITION_HORIZONS,
@@ -31,8 +35,10 @@ import {
   measurePositionHorizon,
   mergeDailyBars,
   parseAvCryptoDailyOhlc,
+  positionHorizonTargetMs,
   type DailyOhlcBar,
   type PositionHorizon,
+  type PositionHorizonResult,
 } from './positionHorizon';
 
 export const POSITION_MIGRATION_FILE = 'migrations/105_ai_signal_outcome_6w_12w.sql';
@@ -144,7 +150,7 @@ function toLoad(r: DailyBarLoad | DailyOhlcBar[] | null, source: string): DailyB
   return r ?? { bars: [], complete: false, source };
 }
 
-/** Equity daily bars: the shared cache series, plus the longer stored history (DB read only). */
+/** Equity daily bars on one split-only basis: the shared cache series plus the longer stored history (DB read only). */
 export async function loadEquityDailyOhlc(symbol: string): Promise<DailyBarLoad> {
   let cached: DailyOhlcBar[] = [];
   let stored: DailyOhlcBar[] = [];
@@ -282,12 +288,30 @@ export async function labelPositionHorizons(opts: {
       // Cached bars do not make database writes free; defer all remaining rows once the budget expires.
       if (Date.now() - started >= opts.budgetMs) { result.deferredOverBudget++; continue; }
 
-      const loaded = await load(row.symbol, asset);
       const stop = numOrNull(row.stop_loss);
       const target = numOrNull(row.target_1);
-      const m = measurePositionHorizon({
-        direction, entry, signalAtMs, horizon: h, nowMs: opts.nowMs, stop, target, bars: loaded.bars,
-      });
+      let loaded: DailyBarLoad | null = null;
+      let m: PositionHorizonResult | null = null;
+      if (asset === 'equity') {
+        try {
+          const after = nyDateTime(signalAtMs).ymd;
+          const through = nyDateTime(positionHorizonTargetMs(signalAtMs, h)).ymd;
+          if (await equitySplitInWindow(row.symbol, after, through)) {
+            loaded = { bars: [], complete: true, source: 'equity_corporate_actions' };
+            m = { status: 'no_data', reason: 'split in the outcome window' };
+          }
+        } catch (err) {
+          console.warn(`[label-ai-outcomes] ${h} split lookup failed for ${row.symbol}: ${err instanceof Error ? err.message : String(err)}`);
+          t.skipped++;
+          continue;
+        }
+      }
+      if (!loaded || !m) {
+        loaded = await load(row.symbol, asset);
+        m = measurePositionHorizon({
+          direction, entry, signalAtMs, horizon: h, nowMs: opts.nowMs, stop, target, bars: loaded.bars,
+        });
+      }
       if (m.status === 'pending') { t.stillPending++; continue; }
       // A failed or partial load is not evidence that the data does not exist; no_data would be frozen permanently.
       if (m.status === 'no_data' && !loaded.complete) { t.deferredLoadFailure++; continue; }

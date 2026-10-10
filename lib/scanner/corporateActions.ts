@@ -26,6 +26,16 @@ export const LOAD_ACTIONS_SQL = `SELECT symbol, session::text AS session, split_
   FROM equity_corporate_actions
  WHERE symbol = ANY($1::text[])`;
 
+/** A split after the entry session and on or before the horizon session. Dividends do not match. */
+export const SPLIT_IN_WINDOW_SQL = `SELECT 1
+  FROM equity_corporate_actions
+ WHERE symbol = $1
+   AND session > $2::date
+   AND session <= $3::date
+   AND split_coefficient > 0
+   AND abs(split_coefficient - 1) > 1e-9
+ LIMIT 1`;
+
 type Query = (sql: string, params?: unknown[]) => Promise<unknown>;
 type QueryRows = (sql: string, params?: unknown[]) => Promise<unknown[]>;
 
@@ -128,6 +138,27 @@ export async function recordCorporateActions(symbol: string, payload: unknown, q
     return actions.length;
   } catch (err) {
     if (isMissingRelation(err)) return 0;
+    throw err;
+  }
+}
+
+/**
+ * True when a recorded split sits after `afterSession` and on or before `throughSession`.
+ * A missing equity_corporate_actions table is false: there is nothing to apply.
+ */
+export async function equitySplitInWindow(
+  symbol: string,
+  afterSession: string,
+  throughSession: string,
+  query: QueryRows = defaultRows,
+): Promise<boolean> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(afterSession) || !/^\d{4}-\d{2}-\d{2}$/.test(throughSession)) return false;
+  if (throughSession <= afterSession) return false;
+  try {
+    const rows = await query(SPLIT_IN_WINDOW_SQL, [symbol.trim().toUpperCase(), afterSession, throughSession]);
+    return rows.length > 0;
+  } catch (err) {
+    if (isMissingRelation(err)) return false;
     throw err;
   }
 }

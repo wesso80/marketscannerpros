@@ -232,6 +232,50 @@ describe('6w/12w labeller', () => {
     expect(m.avFetch).not.toHaveBeenCalled();
   });
 
+  it('marks no_data and skips the bar load when a recorded split sits inside the horizon', async () => {
+    state.rows['6w'] = [cand(1, 50)];
+    const base = m.q.getMockImplementation()!;
+    m.q.mockImplementation(async (sql: string, params: unknown[] = []) => {
+      if (String(sql).includes('equity_corporate_actions')) return [{ n: 1 }];
+      return base(sql, params);
+    });
+    const equity = vi.fn(async () => series(Date.parse('2026-09-27T00:00:00Z') - 120 * DAY, 120));
+    const r = await labelPositionHorizons({ nowMs: NOW, budgetMs: 10_000, loaders: { equity, crypto: async () => null } });
+    expect(equity).not.toHaveBeenCalled();
+    expect(r.horizons['6w']).toMatchObject({ noData: 1, labeled: 0, stillPending: 0 });
+    const noData = calls(/SET outcome_6w = 'no_data'/);
+    expect((noData[0][1] as unknown[]).slice(0, 2)).toEqual([1, 'split in the outcome window']);
+  });
+
+  it('treats a missing actions table as no split and still measures the horizon', async () => {
+    state.rows['6w'] = [cand(1, 50)];
+    const base = m.q.getMockImplementation()!;
+    const missing = Object.assign(new Error('relation "equity_corporate_actions" does not exist'), { code: '42P01' });
+    m.q.mockImplementation(async (sql: string, params: unknown[] = []) => {
+      if (String(sql).includes('equity_corporate_actions')) throw missing;
+      return base(sql, params);
+    });
+    const bars = series(Date.parse('2026-09-27T00:00:00Z') - 120 * DAY, 120);
+    const r = await labelPositionHorizons({ nowMs: NOW, budgetMs: 10_000, loaders: { equity: async () => bars, crypto: async () => null } });
+    expect(r.horizons['6w']).toMatchObject({ labeled: 1, noData: 0 });
+  });
+
+  it('leaves the row pending when the split lookup fails for a reason other than a missing table', async () => {
+    state.rows['6w'] = [cand(1, 50)];
+    const base = m.q.getMockImplementation()!;
+    m.q.mockImplementation(async (sql: string, params: unknown[] = []) => {
+      if (String(sql).includes('equity_corporate_actions')) throw new Error('connection reset');
+      return base(sql, params);
+    });
+    const equity = vi.fn();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const r = await labelPositionHorizons({ nowMs: NOW, budgetMs: 10_000, loaders: { equity, crypto: async () => null } });
+    expect(equity).not.toHaveBeenCalled();
+    expect(r.horizons['6w']).toMatchObject({ labeled: 0, noData: 0, skipped: 1 });
+    expect(calls(/UPDATE/)).toHaveLength(0);
+    warn.mockRestore();
+  });
+
   it('equity bars: a failed cache or ohlcv_bars read marks the load incomplete (and names what was used)', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     m.getBars.mockResolvedValue({ data: [{ date: '2026-09-25', ts: 0, open: 10, high: 11, low: 9, close: 10.5, volume: 1 }] });

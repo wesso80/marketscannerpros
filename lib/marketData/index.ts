@@ -23,7 +23,7 @@ import {
   avFetchOptionsChain,
   avFetchNews,
 } from './client';
-import { rawOhlcFromDailyPayload, splitOnlyOhlcFromDailyPayload } from '@/lib/scanner/corporateActions';
+import { rawOhlcFromDailyPayload, recordCorporateActions, splitOnlyOhlcFromDailyPayload } from '@/lib/scanner/corporateActions';
 import {
   isWorkerOwnedDailySymbol,
   pgReadBars, pgUpsertBars,
@@ -125,7 +125,8 @@ export async function getBars(symbol: string, timeframe: BarTimeframe, opts: Fet
 
   // 3. AV. One fetch. Daily returns split-only bars from raw '4. close' plus split coefficients.
   // '5. adjusted close' is not the returned basis. Non-universe symbols get those raw bars written
-  // back so label-outcomes and the 6w/12w stored tail do not go stale. Universe symbols stay worker-owned.
+  // back, and the split facts from this same payload, so a later warm read matches the miss.
+  // Universe symbols stay worker-owned.
   try {
     const dailyFamily = timeframe === 'daily' || timeframe === 'weekly' || timeframe === 'monthly';
     const fresh = dailyFamily
@@ -144,6 +145,7 @@ export async function getBars(symbol: string, timeframe: BarTimeframe, opts: Fet
       let raw = rawOhlcFromDailyPayload(payload);
       if (full) raw = raw.slice(-500);
       if (!(await isWorkerOwnedDailySymbol(symbol))) {
+        await recordCorporateActions(symbol, payload);
         await pgUpsertBars(symbol, 'daily', raw).catch(() => undefined);
       }
     } else if (!dailyFamily) {

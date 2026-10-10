@@ -22,6 +22,8 @@ dotenv.config({ path: '.env.local' });
 import { Pool } from 'pg';
 import { alertWorkerError } from '../lib/opsAlerting';
 import { COINGECKO_ID_MAP } from '../lib/coingecko';
+import { equitySplitInWindow } from '../lib/scanner/corporateActions';
+import { nyDateTime } from '../lib/time/usSession';
 import { bandForHorizon, bandsFromRows, horizonsWithFallback } from '../lib/signals/outcomeRule';
 import {
   allowUnclassifiedEquityBars, declaredAssetClass, inCryptoSymbolMap, labelHorizonMove, resolveOutcomeLabelAsset, symbolBase,
@@ -87,8 +89,12 @@ interface ScopedBar {
  *
  * Stays raw. price_at_signal is the raw print stored with the signal, and this query compares
  * that print to the raw close. splitAdjustStoredBars would move the exit and leave the entry.
+ * positionHorizonLabeller and aiOutcomePrices are split-only. This worker is not.
+ * A split inside the window is stored as unknown: signal_outcomes has no no_data value.
+ * A missing equity_corporate_actions table is not a split.
  * Crypto rows have no equity split coefficient. Equity rows with no symbol_universe row are
- * still read here, so getBars writes those raw daily bars back on the fetch it already made.
+ * still read here, so getBars writes those raw daily bars back, and records the splits from
+ * that same payload, on the fetch it already made.
  */
 async function getScopedBars(
   symbol: string,
@@ -167,7 +173,7 @@ function pickClassBar(
   return null;
 }
 
-async function labelOutcomes() {
+export async function labelOutcomes() {
   console.log('='.repeat(60));
   console.log('🎯 Signal Outcome Labeler');
   console.log('='.repeat(60));
@@ -257,7 +263,24 @@ async function labelOutcomes() {
       });
       let observation: { price: number; observedAtMs: number; live: false; barClass: 'equity' | 'crypto' } | null = null;
       let otherClassOnly = false;
-      if (asset.status === 'ok') {
+      let splitUnknown = false;
+      if (asset.status === 'ok' && asset.assetClass === 'equity') {
+        const tolerance = TOLERANCE_WINDOWS[horizon_minutes] || { bars: 2, minutes: 240 };
+        const windowEnd = new Date(targetTime.getTime() + tolerance.minutes * 60 * 1000);
+        try {
+          splitUnknown = await equitySplitInWindow(
+            symbol,
+            nyDateTime(signalTime.getTime()).ymd,
+            nyDateTime(windowEnd.getTime()).ymd,
+            q,
+          );
+        } catch (err) {
+          console.warn(`[outcomes] ${symbol} split lookup failed; left unlabeled`, err instanceof Error ? err.message : err);
+          skipped++;
+          continue;
+        }
+      }
+      if (asset.status === 'ok' && !splitUnknown) {
         const tolerance = TOLERANCE_WINDOWS[horizon_minutes] || { bars: 2, minutes: 240 };
         const windowEnd = new Date(targetTime.getTime() + tolerance.minutes * 60 * 1000);
         const entryFrom = new Date(signalTime.getTime() - 2 * 24 * 60 * 60 * 1000);
@@ -276,7 +299,9 @@ async function labelOutcomes() {
           observation = { price: horizonBar.price, observedAtMs: horizonBar.observedAtMs, live: false, barClass: horizonBar.barClass };
         }
       }
-      const decision = labelHorizonMove({
+      const decision = splitUnknown
+        ? { action: 'write' as const, outcome: 'unknown' as const, priceLater: null, pctMove: null, reason: 'split_in_window' as const }
+        : labelHorizonMove({
         direction,
         bandPct: bandForHorizon(horizon_minutes, bandMap),
         priceAtSignal,
@@ -293,7 +318,7 @@ async function labelOutcomes() {
         continue;
       }
 
-      if (decision.reason === 'suspect' || decision.reason === 'ambiguous' || decision.reason === 'expired' || decision.reason === 'wrong_asset') {
+      if (decision.reason === 'suspect' || decision.reason === 'ambiguous' || decision.reason === 'expired' || decision.reason === 'wrong_asset' || decision.reason === 'split_in_window') {
         console.warn(`[outcomes] ${symbol} ${decision.reason}${decision.pctMove != null ? ` ${decision.pctMove.toFixed(2)}%` : ''} → unknown`);
       }
       

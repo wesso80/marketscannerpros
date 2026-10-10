@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ avFetch: vi.fn(), getBars: vi.fn() }));
+const mocks = vi.hoisted(() => ({ avFetch: vi.fn(), getBars: vi.fn(), q: vi.fn(async () => [] as unknown[]) }));
 vi.mock('@/lib/avRateGovernor', () => ({ avFetch: mocks.avFetch }));
 vi.mock('@/lib/marketData', () => ({ getBars: mocks.getBars }));
+vi.mock('@/lib/db', () => ({ q: mocks.q }));
 
 import {
   createHorizonPriceResolver,
@@ -107,5 +108,32 @@ describe('createHorizonPriceResolver', () => {
     expect(resolve.hasLoaded('AAPL', 'equity')).toBe(true);
     expect(resolve.hasLoaded('BTC', 'crypto')).toBe(true);
     expect(resolve.hasLoaded('BTC', 'equity')).toBe(false);
+  });
+
+  it('returns a split block and does not fetch bars when a split sits inside the horizon', async () => {
+    mocks.q.mockResolvedValueOnce([1]);
+    const f = fetchers();
+    const resolve = createHorizonPriceResolver(now, f);
+    expect(await resolve('AAPL', 'equity', signal, '24h')).toEqual({ blocked: 'split' });
+    expect(f.equityIntraday).not.toHaveBeenCalled();
+    expect(f.equityDaily).not.toHaveBeenCalled();
+  });
+
+  it('still prices the horizon when the actions table is missing', async () => {
+    const missing = Object.assign(new Error('relation "equity_corporate_actions" does not exist'), { code: '42P01' });
+    mocks.q.mockRejectedValueOnce(missing);
+    const f = fetchers();
+    const resolve = createHorizonPriceResolver(now, f);
+    expect(await resolve('AAPL', 'equity', signal, '24h')).toEqual({ price: 105, at: signal + 30 * 3_600_000, source: 'daily' });
+    expect(f.equityIntraday).toHaveBeenCalledTimes(1);
+    expect(f.equityDaily).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the horizon unpriced when the split lookup fails', async () => {
+    mocks.q.mockRejectedValueOnce(new Error('connection reset'));
+    const f = fetchers();
+    const resolve = createHorizonPriceResolver(now, f);
+    expect(await resolve('AAPL', 'equity', signal, '24h')).toBeNull();
+    expect(f.equityIntraday).not.toHaveBeenCalled();
   });
 });
