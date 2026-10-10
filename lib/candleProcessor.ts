@@ -12,6 +12,7 @@ import { closedCandles } from '@/lib/market/candleIntegrity';
  */
 
 import { getMidpointService, type CandleData } from './midpointService';
+import { avRowVolume } from './scanner/avVolume';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -234,6 +235,15 @@ export class CandleProcessor {
 // INTEGRATION HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
 
+/** Adjusted daily rows use '6. volume'. Intraday rows use '5. volume'. A non-AV bar may only have volume. */
+function barVolume(data: Record<string, unknown> | null | undefined): number {
+  const fromAv = avRowVolume(data);
+  if (fromAv > 0) return fromAv;
+  if (!data || !Object.prototype.hasOwnProperty.call(data, 'volume')) return 0;
+  const plain = Number(data.volume);
+  return Number.isFinite(plain) ? plain : 0;
+}
+
 /**
  * Convert Alpha Vantage time series data to OHLCV bars
  */
@@ -249,7 +259,7 @@ export function parseAlphaVantageTimeSeries(
       high: parseFloat(data['2. high'] || data.high || 0),
       low: parseFloat(data['3. low'] || data.low || 0),
       close: parseFloat(data['4. close'] || data.close || 0),
-      volume: parseFloat(data['5. volume'] || data.volume || 0),
+      volume: barVolume(data),
     });
   }
   
