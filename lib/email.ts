@@ -36,7 +36,10 @@ interface SendEmailParams {
 /** Dedicated sign-in sender. The domain is already verified with Resend, so this mailbox does not need its own DNS. */
 export const DEFAULT_AUTH_FROM_EMAIL = "MarketScannerPros <login@marketscannerpros.app>";
 
-export const SIGN_IN_EMAIL_SUBJECT = "Your sign-in link";
+export const SIGN_IN_EMAIL_SUBJECT = "Your MarketScannerPros sign-in link";
+
+/** Published support address. Sign-in mail uses this as Reply-To unless AUTH_REPLY_TO is set. */
+export const SIGN_IN_REPLY_TO_EMAIL = "support@marketscannerpros.app";
 
 const SAFE_SIGN_IN_URL = /^https:\/\/[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+$/;
 
@@ -46,10 +49,10 @@ export function resolveAuthFromEmail(env: NodeJS.ProcessEnv = process.env): stri
   return DEFAULT_AUTH_FROM_EMAIL;
 }
 
-/** Optional Reply-To. Omitted when unset — the repo has no shared support-address constant. */
-export function resolveAuthReplyTo(env: NodeJS.ProcessEnv = process.env): string | undefined {
+/** Reply-To for sign-in mail. AUTH_REPLY_TO overrides the support address. */
+export function resolveAuthReplyTo(env: NodeJS.ProcessEnv = process.env): string {
   const replyTo = (env.AUTH_REPLY_TO || "").trim();
-  return replyTo || undefined;
+  return replyTo || SIGN_IN_REPLY_TO_EMAIL;
 }
 
 export function buildSignInEmail(verifyUrl: string): { subject: string; text: string; html: string } {
@@ -58,20 +61,29 @@ export function buildSignInEmail(verifyUrl: string): { subject: string; text: st
   }
 
   const text = [
+    "MarketScannerPros",
+    "",
     "Use this link to sign in. It expires in 15 minutes.",
     "",
+    "Sign in",
     verifyUrl,
     "",
     "If you did not request this email, you can ignore it.",
+    "",
+    "MarketScannerPros",
+    SIGN_IN_REPLY_TO_EMAIL,
   ].join("\n");
 
   const html = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:24px;background-color:#ffffff;color:#1f2937;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;">
+  <p style="margin:0 0 16px;font-weight:700;">MarketScannerPros</p>
   <p style="margin:0 0 16px;">Use this link to sign in. It expires in 15 minutes.</p>
-  <p style="margin:0 0 16px;"><a href="${verifyUrl}" style="color:#1d4ed8;">Sign in</a></p>
-  <p style="margin:0;color:#4b5563;font-size:14px;">If you did not request this email, you can ignore it.</p>
+  <p style="margin:0 0 8px;"><a href="${verifyUrl}" style="display:inline-block;background-color:#1d4ed8;color:#ffffff;padding:10px 16px;text-decoration:none;">Sign in</a></p>
+  <p style="margin:0 0 16px;font-size:14px;word-break:break-all;">${verifyUrl}</p>
+  <p style="margin:0 0 24px;color:#4b5563;font-size:14px;">If you did not request this email, you can ignore it.</p>
+  <p style="margin:0;color:#4b5563;font-size:12px;">MarketScannerPros<br>${SIGN_IN_REPLY_TO_EMAIL}</p>
 </body>
 </html>`;
 
