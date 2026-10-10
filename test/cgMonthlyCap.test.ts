@@ -14,7 +14,7 @@ type FakeRedis = {
   hgetall: (key: string) => Promise<Record<string, number>>;
   incrby: (key: string, by: number) => Promise<number>;
   hincrby: (key: string, field: string, by: number) => Promise<number>;
-  eval?: (script: string, keys: string[], args: string[]) => Promise<number[]>;
+  eval?: (script: string, keys: string[], args: Array<string | number>) => Promise<unknown>;
 };
 
 function makeRedis(): FakeRedis {
@@ -41,21 +41,33 @@ function makeRedis(): FakeRedis {
       return next;
     },
     async hincrby() { return 1; },
+    async eval(script, keys, args) {
+      const { applyCgLedger } = await import('@/lib/admin/cgDailyCap');
+      if (!script.includes("'cg'") && !script.includes('cjson.decode')) return [0, 0, 0];
+      return applyCgLedger(store, keys, args);
+    },
   };
 }
 
-vi.mock('@/lib/redis', () => ({ getRedis: () => holder.redis }));
+vi.mock('@/lib/redis', () => ({
+  getRedis: () => holder.redis,
+  getLimiterRedis: () => holder.redis,
+}));
 
 import { getSimplePrices, resetCgResponseCacheForTests } from '@/lib/coingecko';
+import { runWithAvBudget } from '@/lib/avLimiter';
 import {
   CG_LIMITER_REDIS_TIMEOUT_MS,
+  cgDuty,
   cgQuota,
   cgTargetPct,
+  conservativeProcessShare,
   flatDailyCap,
   pacedDailyCap,
   perProcessDailyCap,
   planDailyCap,
   resetCgCapStateForTests,
+  setCgShelfForTests,
   utcMonthParts,
 } from '@/lib/admin/cgDailyCap';
 import { cgBudgetStatus } from '@/lib/admin/cgCredits';
@@ -66,6 +78,7 @@ const OCT31 = Date.UTC(2026, 9, 31, 12, 0, 0);
 function seedKey(redis: FakeRedis, now: number, used: number, quota = 500_000) {
   redis.store.set('admin:cg-credits:v1:key', {
     at: new Date(now).toISOString(),
+    atMs: now,
     key: {
       plan: 'Analyst',
       monthly_call_credit: quota,
@@ -85,10 +98,48 @@ function priceResponse(usd = 42) {
   };
 }
 
+function makeShelf() {
+  const rows = new Map<string, { spent: number; timeouts: number }>();
+  const shelf = {
+    rows,
+    charges: 0,
+    async chargeWeb(day: string, limit: number, timeoutInc: number) {
+      shelf.charges += 1;
+      if (!(limit > 0)) return 'exhausted' as const;
+      const key = `${day}:web`;
+      const row = rows.get(key) ?? { spent: 0, timeouts: 0 };
+      if (row.spent >= limit) return 'exhausted' as const;
+      row.spent += 1;
+      row.timeouts += timeoutInc;
+      rows.set(key, row);
+      return 'admitted' as const;
+    },
+    async noteTimeout(day: string, role: 'web' | 'worker' | 'jarvis') {
+      const key = `${day}:${role}`;
+      const row = rows.get(key) ?? { spent: 0, timeouts: 0 };
+      row.timeouts += 1;
+      rows.set(key, row);
+    },
+    async read(day: string) {
+      const spent = { web: 0, worker: 0, jarvis: 0 };
+      let timeouts = 0;
+      for (const role of ['web', 'worker', 'jarvis'] as const) {
+        const row = rows.get(`${day}:${role}`);
+        if (!row) continue;
+        spent[role] = row.spent;
+        timeouts += row.timeouts;
+      }
+      return { spent, timeouts };
+    },
+  };
+  return shelf;
+}
+
 beforeEach(() => {
   holder.redis = makeRedis();
   resetCgCapStateForTests();
   resetCgResponseCacheForTests();
+  setCgShelfForTests(makeShelf());
   vi.stubEnv('CG_MONTHLY_CREDITS', '500000');
   vi.stubEnv('CG_TARGET_PCT', '80');
   vi.stubEnv('CG_ESTIMATED_PROCESSES', '4');
@@ -98,6 +149,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  setCgShelfForTests(null);
   vi.useRealTimers();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
@@ -116,6 +168,11 @@ describe('daily cap math', () => {
     expect(pacedDailyCap(500_000, 80, 399_999, 1)).toBe(1);
     expect(perProcessDailyCap(8, 4)).toBe(2);
     expect(perProcessDailyCap(2, 4)).toBe(0);
+    expect(conservativeProcessShare(flatDailyCap(500_000, 80, 31), 4)).toBe(806);
+    expect(flatDailyCap(500_000, 80, 31) + 806).toBe(13_709);
+    expect(flatDailyCap(500_000, 80, 28) + conservativeProcessShare(flatDailyCap(500_000, 80, 28), 4)).toBe(15_177);
+    expect(conservativeProcessShare(8, 4)).toBe(0);
+    expect(conservativeProcessShare(8, 1)).toBe(2);
   });
 
   it('counts days left including today, including month ends and leap day', () => {
@@ -222,28 +279,36 @@ describe('cgFetch gate', () => {
     expect(lines).toEqual([expect.stringMatching(/^\[CoinGecko\] budget calls_today=\d+ cap=\d+ refused=\d+$/)]);
   });
 
-  it('uses an in-process counter at the flat cap divided by the process estimate when Redis is down', async () => {
+  it('uses the shared shelf at the conservative share when Redis is down', async () => {
     holder.redis = null;
-    vi.stubEnv('CG_MONTHLY_CREDITS', '78');
+    const shelf = makeShelf();
+    setCgShelfForTests(shelf);
+    vi.stubEnv('CG_MONTHLY_CREDITS', '310');
     vi.stubEnv('CG_ESTIMATED_PROCESSES', '1');
     vi.stubEnv('CG_TARGET_PCT', '80');
-    expect(perProcessDailyCap(flatDailyCap(78, 80, 31), 1)).toBe(2);
+    const flat = flatDailyCap(310, 80, 31);
+    expect(perProcessDailyCap(flat, 1)).toBe(8);
+    expect(conservativeProcessShare(flat, 1)).toBe(2);
     const fetchMock = vi.fn(async () => priceResponse());
     vi.stubGlobal('fetch', fetchMock);
     vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     expect((await getSimplePrices(['bitcoin'], { noStore: true }))?.bitcoin.usd).toBe(42);
     expect((await getSimplePrices(['ethereum'], { noStore: true }))?.bitcoin.usd).toBe(42);
     expect(await getSimplePrices(['solana'], { noStore: true })).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(shelf.rows.get('2026-10-31:web')?.spent).toBe(2);
   });
 
-  it('uses the in-process fallback when Redis errors', async () => {
+  it('uses the conservative shelf when Redis errors', async () => {
     const redis = makeRedis();
     holder.redis = redis;
-    vi.stubEnv('CG_MONTHLY_CREDITS', '78');
+    const shelf = makeShelf();
+    setCgShelfForTests(shelf);
+    vi.stubEnv('CG_MONTHLY_CREDITS', '310');
     vi.stubEnv('CG_ESTIMATED_PROCESSES', '1');
-    redis.incr = async () => { throw new Error('redis down'); };
+    redis.eval = async () => { throw new Error('redis down'); };
     const fetchMock = vi.fn(async () => priceResponse());
     vi.stubGlobal('fetch', fetchMock);
     vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -256,21 +321,106 @@ describe('cgFetch gate', () => {
     expect(warn.mock.calls.map((call) => String(call[0])).some((line) => line.startsWith('[CoinGecko] fallback timeout=0 error='))).toBe(true);
   });
 
-  it('aborts a Redis reservation after 400ms and uses the same in-process fallback', async () => {
+  it('a Redis timeout spends the conservative shelf and does not grant the old per-process cap', async () => {
     expect(CG_LIMITER_REDIS_TIMEOUT_MS).toBe(400);
     const redis = makeRedis();
     holder.redis = redis;
-    vi.stubEnv('CG_MONTHLY_CREDITS', '78');
+    const shelf = makeShelf();
+    setCgShelfForTests(shelf);
+    vi.stubEnv('CG_MONTHLY_CREDITS', '310');
     vi.stubEnv('CG_ESTIMATED_PROCESSES', '1');
-    redis.incr = () => new Promise(() => {});
+    expect(conservativeProcessShare(flatDailyCap(310, 80, 31), 1)).toBe(2);
+    redis.eval = () => new Promise(() => {});
     const fetchMock = vi.fn(async () => priceResponse());
     vi.stubGlobal('fetch', fetchMock);
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     expect((await getSimplePrices(['bitcoin'], { noStore: true }))?.bitcoin.usd).toBe(42);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect((await getSimplePrices(['ethereum'], { noStore: true }))?.bitcoin.usd).toBe(42);
+    expect(await getSimplePrices(['solana'], { noStore: true })).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(shelf.rows.get('2026-10-31:web')?.timeouts).toBe(1);
     expect(warn.mock.calls.map((call) => String(call[0])).join('\n')).toMatch(/\[CoinGecko\] fallback timeout=1 error=0 absent=0 cap=/);
+  });
+
+  it('a cron fails closed when the global reservation is not confirmed', async () => {
+    holder.redis = null;
+    const shelf = makeShelf();
+    setCgShelfForTests(shelf);
+    vi.stubEnv('AV_PROCESS_ROLE', 'jarvis');
+    expect(cgDuty({ AV_PROCESS_ROLE: 'jarvis' })).toBe('job');
+    const fetchMock = vi.fn(async () => priceResponse());
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(await getSimplePrices(['bitcoin'], { noStore: true })).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(shelf.charges).toBe(0);
+
+    vi.stubEnv('AV_PROCESS_ROLE', '');
+    holder.redis = makeRedis();
+    holder.redis.eval = () => new Promise(() => {});
+    await runWithAvBudget({ lane: 'scheduled', feature: 'cron-test' }, async () => {
+      expect(cgDuty()).toBe('job');
+      expect(await getSimplePrices(['bitcoin'], { noStore: true })).toBeNull();
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(shelf.charges).toBe(0);
+    expect(shelf.rows.get('2026-10-31:web')?.timeouts).toBe(1);
+  });
+
+  it('does not mint a new shelf share after a simulated restart', async () => {
+    holder.redis = null;
+    const shelf = makeShelf();
+    setCgShelfForTests(shelf);
+    vi.stubEnv('CG_MONTHLY_CREDITS', '160');
+    vi.stubEnv('CG_ESTIMATED_PROCESSES', '1');
+    expect(conservativeProcessShare(flatDailyCap(160, 80, 31), 1)).toBe(1);
+    const fetchMock = vi.fn(async () => priceResponse());
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect((await getSimplePrices(['bitcoin'], { noStore: true }))?.bitcoin.usd).toBe(42);
+    resetCgCapStateForTests();
+    setCgShelfForTests(shelf);
+    expect(await getSimplePrices(['ethereum'], { noStore: true })).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(shelf.rows.get('2026-10-31:web')?.spent).toBe(1);
+
+    const redis = makeRedis();
+    holder.redis = redis;
+    vi.stubEnv('CG_MONTHLY_CREDITS', '100');
+    vi.stubEnv('CG_ESTIMATED_PROCESSES', '4');
+    seedKey(redis, OCT31, 79, 100);
+    resetCgCapStateForTests();
+    setCgShelfForTests(shelf);
+    expect((await getSimplePrices(['bitcoin'], { noStore: true }))?.bitcoin.usd).toBe(42);
+    resetCgCapStateForTests();
+    setCgShelfForTests(shelf);
+    expect(await getSimplePrices(['bitcoin'], { noStore: true })).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('logs the same totals once an hour', async () => {
+    const redis = makeRedis();
+    holder.redis = redis;
+    seedKey(redis, OCT31, 0);
+    vi.stubGlobal('fetch', vi.fn(async () => priceResponse()));
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await getSimplePrices(['bitcoin'], { noStore: true });
+    expect(log.mock.calls.map((call) => String(call[0])).some((line) => line.startsWith('[CoinGecko] daily '))).toBe(false);
+
+    vi.setSystemTime(OCT31 + 60 * 60 * 1000 + 1);
+    await getSimplePrices(['ethereum'], { noStore: true });
+    const lines = log.mock.calls.map((call) => String(call[0])).filter((line) => line.startsWith('[CoinGecko] daily '));
+    expect(lines).toEqual([
+      expect.stringMatching(/^\[CoinGecko\] daily reserved=\d+ cap=\d+ fallback web=\d+ worker=\d+ jarvis=\d+ timeouts=\d+$/),
+    ]);
   });
 
   it('does not treat a foreign eval tuple as the cap decision', async () => {
@@ -288,14 +438,17 @@ describe('cgFetch gate', () => {
     redis.eval = foreign as FakeRedis['eval'];
     vi.stubEnv('CG_MONTHLY_CREDITS', '78');
     vi.stubEnv('CG_ESTIMATED_PROCESSES', '1');
+    expect(conservativeProcessShare(flatDailyCap(78, 80, 31), 1)).toBe(0);
     const fetchMock = vi.fn(async () => priceResponse());
     vi.stubGlobal('fetch', fetchMock);
     vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    expect((await getSimplePrices(['bitcoin'], { noStore: true }))?.bitcoin.usd).toBe(42);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(await getSimplePrices(['bitcoin'], { noStore: true })).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(readFileSync('lib/admin/cgDailyCap.ts', 'utf8')).not.toContain('evalRunsCapScript');
+    expect(isCgCapScript(readFileSync('lib/admin/cgDailyCap.ts', 'utf8'))).toBe(true);
+    expect(readFileSync('lib/admin/cgDailyCap.ts', 'utf8')).toContain('math.floor((quota * (targetPct / 100) - (used or 0)) / daysLeft)');
   });
 
   it('reports plan, quota, used, remaining, the 80% target, and today on the admin readout', async () => {

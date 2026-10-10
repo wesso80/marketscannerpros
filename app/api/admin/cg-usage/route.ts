@@ -29,5 +29,8 @@ export async function GET(req: NextRequest) {
     capMode: budget.capMode,
     source: budget.source,
     checkedAt: budget.checkedAt,
+    globalReserved: budget.globalReserved,
+    fallbackByRole: budget.fallbackByRole,
+    timeouts: budget.timeouts,
   });
 }

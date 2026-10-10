@@ -1,49 +1,121 @@
-import { getRedis } from '@/lib/redis';
+import * as redisModule from '@/lib/redis';
+import { currentAvBudget } from '@/lib/avLimiter';
 
 /**
  * Hard daily gate for CoinGecko. The monthly target is CG_MONTHLY_CREDITS * CG_TARGET_PCT
  * (defaults 500000 and 80). Each UTC day may spend
  *   (quota * target - used at the start of that UTC day) / days left in the month,
- * including today. That cap is recomputed when the cached /key snapshot refreshes
- * (10 minutes, same key cgBudgetStatus writes). used-at-start is fixed for the UTC day.
- * If /key is unavailable, the day gets the flat share quota * target / days in the month.
- * A paced cap already computed today is kept while /key is merely between refreshes,
- * so a stale snapshot cannot raise the cap.
+ * including today. used-at-start is fixed for the UTC day. A stale /key snapshot
+ * cannot raise a paced cap already sealed today. If /key is unavailable, the day
+ * gets the flat share quota * target / days in the month.
  *
- * Enforcement is an atomic per-UTC-day Redis counter: INCR before the HTTP call, and
- * refuse with CG_MONTHLY_CAP when the result is over the cap. Nothing is queued.
+ * The reserve hot path is one EVAL on getLimiterRedis() (one client, no retries,
+ * 400ms abort). The script seals the cap and increments the ledger. The 400ms
+ * race stays because that is enough for one round trip; the old timeout fired
+ * while planDailyCap issued several sequential calls on the retrying cache client.
  *
- * Redis-down fallback (same rule as the Alpha Vantage limiter):
- * The reservation aborts after 400ms. A timeout, a Redis error, or no Redis client
- * uses this process's fallback. A cap denial does not: that call is refused.
- * The web service, the data worker, and a Jarvis cron can call CoinGecko, and a
- * second web instance may exist. CG_ESTIMATED_PROCESSES (default 4) overestimates
- * that set. Each process then counts alone, at floor(flat daily cap / N), remainder
- * dropped. The counter resets at the UTC day boundary and does not survive a restart.
- * A timeout can still land on the server and on this process counter together.
- * The fallback log is a count of codes (timeout, error, absent), once per 5 minutes.
+ * An unconfirmed reserve (timeout, error, no client, undecoded reply) does not
+ * spend process memory. Jobs and crons fail closed. A user-facing read may take
+ * one credit from the shared web shelf, floor(flat cap / (processes * 4)),
+ * stored in Postgres so a restart does not mint a new share. If that charge
+ * cannot be confirmed, the read is refused and cgFetch serves cache.
  */
 export const CG_REDIS_PREFIX = 'admin:cg-credits:v1';
 export const CG_ESTIMATED_PROCESSES_DEFAULT = 4;
-/** Same 400ms bound the AV limiter uses for its Redis commands. */
+/** Same 400ms bound the AV limiter uses. One aborted command, not a retry budget. */
 export const CG_LIMITER_REDIS_TIMEOUT_MS = 400;
+/** Postgres shelf charge. Only the outage path waits this long. */
+export const CG_SHELF_WAIT_MS = 1_000;
 const KEY_FRESH_MS = 600_000;
 const COUNTER_TTL_SECONDS = 8 * 86400;
 const LOG_EVERY_MS = 5 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+const REDIS_BACKOFF_MS = 5_000;
 
-const RESERVE_LUA = `
-local cap = tonumber(ARGV[1])
-local ttl = tonumber(ARGV[2])
-local n = redis.call('INCR', KEYS[1])
-if n == 1 then redis.call('EXPIRE', KEYS[1], ttl) end
-if cap == nil or n > cap then
-  redis.call('DECR', KEYS[1])
-  local r = redis.call('INCR', KEYS[2])
-  if r == 1 then redis.call('EXPIRE', KEYS[2], ttl) end
-  return {'cg', 0, n - 1, r}
+const JOB_LANES = new Set(['alerts', 'scheduled', 'backfill']);
+
+/**
+ * Spec for CG_LEDGER_LUA. Tests run this function. Production runs the script.
+ * Both must keep used-at-start fixed for the UTC day and refuse when issued
+ * would pass the sealed cap.
+ */
+export const CG_LEDGER_LUA = `
+local function n(v)
+  if v == false or v == nil then return nil end
+  return tonumber(v)
 end
-local refused = tonumber(redis.call('GET', KEYS[2]) or '0')
-return {'cg', 1, n, refused}
+local function decode(raw)
+  if raw == false or raw == nil then return nil end
+  if type(raw) == 'table' then return raw end
+  local ok, value = pcall(cjson.decode, raw)
+  if ok and type(value) == 'table' then return value end
+  return nil
+end
+local flatCap = n(ARGV[1]) or 0
+local quota = n(ARGV[2]) or 0
+local targetPct = n(ARGV[3]) or 0
+local daysLeft = n(ARGV[4]) or 0
+local nowMs = n(ARGV[5]) or 0
+local freshMs = n(ARGV[6]) or 0
+local ttl = n(ARGV[7]) or 0
+local charge = n(ARGV[8]) or 0
+local ledger = decode(redis.call('GET', KEYS[1])) or {}
+local cap = n(ledger.cap) or 0
+local mode = ledger.mode == 'paced' and 'paced' or 'flat'
+local used = n(ledger.used)
+if used ~= nil and used < 0 then used = nil end
+local snapshotAt = ledger.snapshotAt
+if snapshotAt == cjson.null then snapshotAt = nil end
+local issued = n(ledger.issued) or 0
+local refused = n(ledger.refused) or 0
+local legacy = n(redis.call('GET', KEYS[3]))
+if legacy ~= nil and legacy > issued then issued = legacy end
+local snap = decode(redis.call('GET', KEYS[2]))
+local freshAt, freshUsed = nil, nil
+if snap ~= nil then
+  local atMs = n(snap.atMs)
+  if atMs ~= nil and nowMs >= atMs and (nowMs - atMs) <= freshMs then
+    freshAt = snap.at or tostring(atMs)
+    if type(snap.key) == 'table' then freshUsed = n(snap.key.current_total_monthly_calls) end
+  end
+end
+local monthUsed = n(redis.call('GET', KEYS[4])) or 0
+if freshAt ~= nil and mode == 'paced' and snapshotAt == freshAt then
+elseif freshAt ~= nil then
+  if used == nil then used = freshUsed or monthUsed end
+  local room = quota * (targetPct / 100) - (used or 0)
+  if room > 0 and daysLeft > 0 then
+    cap = math.floor((quota * (targetPct / 100) - (used or 0)) / daysLeft)
+  else
+    cap = 0
+  end
+  mode = 'paced'
+  snapshotAt = freshAt
+elseif mode == 'paced' and ledger.cap ~= nil then
+else
+  cap = flatCap > 0 and math.floor(flatCap) or 0
+  mode = 'flat'
+  used = nil
+  snapshotAt = nil
+end
+local ok = 1
+if charge == 1 then
+  issued = issued + 1
+  if cap == nil or issued > cap then
+    issued = issued - 1
+    refused = refused + 1
+    ok = 0
+  end
+end
+redis.call('SET', KEYS[1], cjson.encode({
+  cap = cap,
+  mode = mode,
+  used = used == nil and -1 or used,
+  snapshotAt = snapshotAt == nil and cjson.null or snapshotAt,
+  issued = issued,
+  refused = refused,
+}), 'EX', ttl)
+return {'cg', ok, issued, refused, cap, mode, used == nil and -1 or used}
 `;
 
 export class CgMonthlyCapError extends Error {
@@ -112,13 +184,44 @@ export function perProcessDailyCap(flatCap: number, processes: number): number {
   return Math.floor(flatCap / count);
 }
 
-type StoredStart = { used: number; snapshotAt: string | null };
-type StoredCap = { cap: number; mode: 'paced' | 'flat'; snapshotAt: string | null };
-type KeySnapshot = { at: string; key: { current_total_monthly_calls?: number; monthly_call_credit?: number; plan?: string } };
+/**
+ * One share for the whole web fleet, not a fresh share per restart.
+ * floor(dailyCap / (CG_ESTIMATED_PROCESSES * 4)).
+ */
+export function conservativeProcessShare(dailyCap: number, processes: number): number {
+  const count = Number.isFinite(processes) && processes >= 1 ? Math.floor(processes) : CG_ESTIMATED_PROCESSES_DEFAULT;
+  if (!(dailyCap > 0)) return 0;
+  return Math.floor(dailyCap / (count * 4));
+}
+
+export type CgProcessRole = 'web' | 'worker' | 'jarvis';
+export type CgDuty = 'user' | 'job';
+
+export function cgProcessRole(env: Record<string, string | undefined> = process.env): CgProcessRole {
+  const raw = (env.AV_PROCESS_ROLE ?? '').trim().toLowerCase();
+  if (raw === 'worker' || raw === 'jarvis') return raw;
+  return 'web';
+}
+
+/** Worker, Jarvis, and any AV lane other than a page request are jobs. */
+export function cgDuty(env: Record<string, string | undefined> = process.env): CgDuty {
+  const raw = (env.AV_PROCESS_ROLE ?? '').trim().toLowerCase();
+  if (raw === 'worker' || raw === 'jarvis') return 'job';
+  if (raw !== '' && raw !== 'web') return 'job';
+  try {
+    const lane = currentAvBudget()?.lane;
+    if (lane && JOB_LANES.has(lane)) return 'job';
+  } catch {
+    return 'job';
+  }
+  return 'user';
+}
+
+type StoredCapMode = 'paced' | 'flat';
 
 export type CapPlan = {
   cap: number;
-  mode: 'paced' | 'flat' | 'process';
+  mode: StoredCapMode | 'shelf';
   usedAtStart: number | null;
   day: string;
   quota: number;
@@ -126,6 +229,8 @@ export type CapPlan = {
   callsToday: number;
   refusedToday: number;
 };
+
+export type RoleCounts = Record<CgProcessRole, number>;
 
 export type CgCapFields = {
   quota: number;
@@ -135,23 +240,57 @@ export type CgCapFields = {
   callsToday: number;
   refusedToday: number;
   capMode: CapPlan['mode'];
+  /** Redis ledger plus shelf admissions. Null when neither store answered. */
+  globalReserved: number | null;
+  fallbackByRole: RoleCounts;
+  timeouts: number;
 };
+
+type FallbackCode = 'timeout' | 'error' | 'absent';
+type ShelfCharge = 'admitted' | 'exhausted' | 'unavailable';
+
+export type CgShelfPort = {
+  chargeWeb(day: string, limit: number, timeoutInc: number): Promise<ShelfCharge>;
+  noteTimeout(day: string, role: CgProcessRole): Promise<void>;
+  read(day: string): Promise<{ spent: RoleCounts; timeouts: number } | null>;
+};
+
+type ParsedLedger = {
+  ok: boolean;
+  issued: number;
+  refused: number;
+  cap: number;
+  mode: StoredCapMode;
+  usedAtStart: number | null;
+};
+
+type LedgerOutcome =
+  | { kind: 'ready'; parsed: ParsedLedger }
+  | { kind: 'unconfirmed'; code: FallbackCode; attempted: boolean };
 
 const memory = { day: '', allowed: 0, refused: 0 };
 let lastBudgetLogAt = 0;
-type FallbackCode = 'timeout' | 'error' | 'absent';
+let lastHourlyLogAt = 0;
 const fallbackCounts: Record<FallbackCode, number> = { timeout: 0, error: 0, absent: 0 };
 let lastFallbackLogAt = 0;
+let redisBackoffUntil = 0;
+let shelfPort: CgShelfPort | null = null;
+
+export function setCgShelfForTests(port: CgShelfPort | null): void {
+  shelfPort = port;
+}
 
 export function resetCgCapStateForTests(): void {
   memory.day = '';
   memory.allowed = 0;
   memory.refused = 0;
   lastBudgetLogAt = 0;
+  lastHourlyLogAt = 0;
   lastFallbackLogAt = 0;
   fallbackCounts.timeout = 0;
   fallbackCounts.error = 0;
   fallbackCounts.absent = 0;
+  redisBackoffUntil = 0;
 }
 
 function finiteNumber(value: unknown): number | null {
@@ -164,6 +303,167 @@ function asCount(value: unknown): number {
   return finiteNumber(value) ?? 0;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function emptyRoles(): RoleCounts {
+  return { web: 0, worker: 0, jarvis: 0 };
+}
+
+/** JS twin of CG_LEDGER_LUA. The test fake's eval delegates here. */
+export function applyCgLedger(store: Map<string, unknown>, keys: string[], args: Array<string | number>): unknown[] {
+  const [ledgerKey, snapshotKey, legacyKey, monthKey] = keys;
+  const flatCap = Number(args[0]);
+  const quota = Number(args[1]);
+  const targetPct = Number(args[2]);
+  const daysLeft = Number(args[3]);
+  const nowMs = Number(args[4]);
+  const freshMs = Number(args[5]);
+  const charge = Number(args[7]) === 1 ? 1 : 0;
+
+  const existing = asRecord(store.get(ledgerKey));
+  let cap = finiteNumber(existing?.cap) ?? 0;
+  let mode: StoredCapMode = existing?.mode === 'paced' ? 'paced' : 'flat';
+  let used = finiteNumber(existing?.used);
+  if (used !== null && used < 0) used = null;
+  let snapshotAt = typeof existing?.snapshotAt === 'string' ? existing.snapshotAt : null;
+  let issued = finiteNumber(existing?.issued) ?? 0;
+  let refused = finiteNumber(existing?.refused) ?? 0;
+  const legacy = finiteNumber(store.get(legacyKey));
+  if (legacy !== null && legacy > issued) issued = legacy;
+
+  const snap = asRecord(store.get(snapshotKey));
+  let freshAt: string | null = null;
+  let freshUsed: number | null = null;
+  if (snap) {
+    const atMs = finiteNumber(snap.atMs);
+    if (atMs !== null && nowMs >= atMs && nowMs - atMs <= freshMs) {
+      freshAt = typeof snap.at === 'string' ? snap.at : String(atMs);
+      const key = asRecord(snap.key);
+      freshUsed = finiteNumber(key?.current_total_monthly_calls);
+    }
+  }
+  const monthUsed = finiteNumber(store.get(monthKey)) ?? 0;
+
+  if (freshAt !== null && mode === 'paced' && snapshotAt === freshAt) {
+    // Sealed against this snapshot.
+  } else if (freshAt !== null) {
+    if (used === null) used = freshUsed ?? monthUsed;
+    cap = pacedDailyCap(quota, targetPct, used ?? 0, daysLeft);
+    mode = 'paced';
+    snapshotAt = freshAt;
+  } else if (mode === 'paced' && existing && finiteNumber(existing.cap) !== null) {
+    // Keep today's paced cap while /key is between refreshes.
+  } else {
+    cap = Number.isFinite(flatCap) && flatCap > 0 ? Math.floor(flatCap) : 0;
+    mode = 'flat';
+    used = null;
+    snapshotAt = null;
+  }
+
+  let ok = 1;
+  if (charge === 1) {
+    issued += 1;
+    if (!(cap >= 0) || issued > cap) {
+      issued -= 1;
+      refused += 1;
+      ok = 0;
+    }
+  }
+
+  store.set(ledgerKey, { cap, mode, used: used === null ? -1 : used, snapshotAt, issued, refused });
+  return ['cg', ok, issued, refused, cap, mode, used === null ? -1 : used];
+}
+
+function parseLedger(raw: unknown): ParsedLedger | null {
+  if (!Array.isArray(raw) || raw.length < 7 || raw[0] !== 'cg') return null;
+  const flag = Number(raw[1]);
+  if (flag !== 0 && flag !== 1) return null;
+  const mode = raw[5] === 'paced' || raw[5] === 'flat' ? raw[5] : null;
+  if (!mode) return null;
+  if (![raw[2], raw[3], raw[4], raw[6]].every((value) => Number.isFinite(Number(value)))) return null;
+  const used = Number(raw[6]);
+  return {
+    ok: flag === 1,
+    issued: asCount(raw[2]),
+    refused: asCount(raw[3]),
+    cap: asCount(raw[4]),
+    mode,
+    usedAtStart: used < 0 ? null : used,
+  };
+}
+
+type RedisLike = {
+  eval?: (script: string, keys: string[], args: Array<string | number>) => Promise<unknown>;
+};
+
+function limiterRedis(): RedisLike | null {
+  try {
+    const getter = redisModule.getLimiterRedis ?? redisModule.getRedis;
+    if (typeof getter !== 'function') return null;
+    return getter();
+  } catch {
+    return null;
+  }
+}
+
+function ledgerKeys(day: string, month: string): string[] {
+  return [
+    `${CG_REDIS_PREFIX}:ledger:${day}`,
+    `${CG_REDIS_PREFIX}:key`,
+    `${CG_REDIS_PREFIX}:cap-count:${day}`,
+    `${CG_REDIS_PREFIX}:month:${month}`,
+  ];
+}
+
+function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('CG cap Redis timeout')), ms);
+  });
+  return Promise.race([work, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
+async function evalLedger(now: number, env: Record<string, string | undefined>, charge: 0 | 1): Promise<LedgerOutcome> {
+  const redis = limiterRedis();
+  if (!redis || typeof redis.eval !== 'function') return { kind: 'unconfirmed', code: 'absent', attempted: false };
+  if (now < redisBackoffUntil) return { kind: 'unconfirmed', code: 'timeout', attempted: false };
+  const { daysInMonth, daysLeft, day, month } = utcMonthParts(now);
+  const args = [
+    flatDailyCap(cgQuota(env), cgTargetPct(env), daysInMonth),
+    cgQuota(env),
+    cgTargetPct(env),
+    daysLeft,
+    now,
+    KEY_FRESH_MS,
+    COUNTER_TTL_SECONDS,
+    charge,
+  ];
+  try {
+    const parsed = parseLedger(await withTimeout(redis.eval(CG_LEDGER_LUA, ledgerKeys(day, month), args), CG_LIMITER_REDIS_TIMEOUT_MS));
+    if (!parsed) {
+      redisBackoffUntil = now + REDIS_BACKOFF_MS;
+      return { kind: 'unconfirmed', code: 'error', attempted: true };
+    }
+    redisBackoffUntil = 0;
+    return { kind: 'ready', parsed };
+  } catch (error) {
+    redisBackoffUntil = now + REDIS_BACKOFF_MS;
+    return { kind: 'unconfirmed', code: redisFailureCode(error), attempted: true };
+  }
+}
+
 function noteBudgetLine(calls: number, cap: number, refused: number, now: number): void {
   if (lastBudgetLogAt === 0) {
     lastBudgetLogAt = now;
@@ -174,142 +474,24 @@ function noteBudgetLine(calls: number, cap: number, refused: number, now: number
   console.log(`[CoinGecko] budget calls_today=${calls} cap=${cap} refused=${refused}`);
 }
 
-function rollMemory(day: string): void {
-  if (memory.day !== day) {
-    memory.day = day;
-    memory.allowed = 0;
-    memory.refused = 0;
-  }
+function formatHourlyLine(reserved: number | null, cap: number, spent: RoleCounts, timeouts: number): string {
+  const reservedText = reserved === null ? 'unknown' : String(reserved);
+  return `[CoinGecko] daily reserved=${reservedText} cap=${cap} fallback web=${spent.web} worker=${spent.worker} jarvis=${spent.jarvis} timeouts=${timeouts}`;
 }
 
-function takeMemorySlot(cap: number, day: string): { ok: boolean; calls: number; refused: number } {
-  rollMemory(day);
-  if (memory.allowed >= cap) {
-    memory.refused += 1;
-    return { ok: false, calls: memory.allowed, refused: memory.refused };
+async function maybeHourlyLog(now: number, env: Record<string, string | undefined>, reserved: number | null, cap: number): Promise<void> {
+  if (lastHourlyLogAt === 0) {
+    lastHourlyLogAt = now;
+    return;
   }
-  memory.allowed += 1;
-  return { ok: true, calls: memory.allowed, refused: memory.refused };
-}
-
-function capTuple(raw: unknown): { ok: boolean; calls: number; refused: number } | null {
-  if (!Array.isArray(raw) || raw.length < 4 || raw[0] !== 'cg') return null;
-  const flag = Number(raw[1]);
-  if (flag !== 0 && flag !== 1) return null;
-  if (!Number.isFinite(Number(raw[2])) || !Number.isFinite(Number(raw[3]))) return null;
-  return { ok: flag === 1, calls: asCount(raw[2]), refused: asCount(raw[3]) };
-}
-
-async function reserveShared(redis: NonNullable<ReturnType<typeof getRedis>>, cap: number, day: string): Promise<{ ok: boolean; calls: number; refused: number }> {
-  const countKey = `${CG_REDIS_PREFIX}:cap-count:${day}`;
-  const refusedKey = `${CG_REDIS_PREFIX}:cap-refused:${day}`;
-  if (typeof redis.eval === 'function') {
-    try {
-      const parsed = capTuple(await redis.eval(RESERVE_LUA, [countKey, refusedKey], [cap, COUNTER_TTL_SECONDS]));
-      if (parsed) return parsed;
-    } catch {
-      // Fall through to INCR. A thrown eval is a Redis failure, not a cap hit.
-    }
-  }
-  if (typeof redis.incr !== 'function') {
-    throw new Error('cg cap redis incr unavailable');
-  }
-  const n = asCount(await redis.incr(countKey));
-  if (n === 1 && typeof redis.expire === 'function') await redis.expire(countKey, COUNTER_TTL_SECONDS).catch(() => undefined);
-  if (n > cap) {
-    if (typeof redis.decr === 'function') await redis.decr(countKey);
-    const refused = asCount(await redis.incr(refusedKey));
-    if (refused === 1 && typeof redis.expire === 'function') await redis.expire(refusedKey, COUNTER_TTL_SECONDS).catch(() => undefined);
-    return { ok: false, calls: Math.max(0, n - 1), refused };
-  }
-  const refused = asCount(await redis.get(refusedKey).catch(() => 0));
-  return { ok: true, calls: n, refused };
-}
-
-async function readCounters(redis: NonNullable<ReturnType<typeof getRedis>>, day: string): Promise<{ calls: number; refused: number }> {
-  const [calls, refused] = await Promise.all([
-    redis.get(`${CG_REDIS_PREFIX}:cap-count:${day}`).catch(() => 0),
-    redis.get(`${CG_REDIS_PREFIX}:cap-refused:${day}`).catch(() => 0),
-  ]);
-  return { calls: asCount(calls), refused: asCount(refused) };
-}
-
-/** Reads the /key snapshot and the local month counter. Does not call CoinGecko. */
-export async function planDailyCap(now = Date.now(), env: Record<string, string | undefined> = process.env): Promise<CapPlan> {
-  const quota = cgQuota(env);
-  const targetPct = cgTargetPct(env);
-  const { daysInMonth, daysLeft, day, month } = utcMonthParts(now);
-  const flat = flatDailyCap(quota, targetPct, daysInMonth);
-  const redis = getRedis();
-  if (!redis) {
-    rollMemory(day);
-    return {
-      cap: perProcessDailyCap(flat, cgEstimatedProcesses(env)),
-      mode: 'process',
-      usedAtStart: null,
-      day,
-      quota,
-      targetPct,
-      callsToday: memory.allowed,
-      refusedToday: memory.refused,
-    };
-  }
-
-  const snapshot = await redis.get<KeySnapshot>(`${CG_REDIS_PREFIX}:key`).catch(() => null);
-  const fresh = snapshot && Number.isFinite(Date.parse(snapshot.at)) && now - Date.parse(snapshot.at) <= KEY_FRESH_MS ? snapshot : null;
-  const localMonth = asCount(await redis.get(`${CG_REDIS_PREFIX}:month:${month}`).catch(() => 0));
-  const startKey = `${CG_REDIS_PREFIX}:day-start:${day}`;
-  const capKey = `${CG_REDIS_PREFIX}:day-cap:${day}`;
-  let usedAtStart: number | null = null;
-  let cap = flat;
-  let mode: 'paced' | 'flat' = 'flat';
-
-  if (fresh) {
-    const storedStart = await redis.get<StoredStart>(startKey).catch(() => null);
-    if (storedStart && typeof storedStart.used === 'number' && Number.isFinite(storedStart.used)) {
-      usedAtStart = storedStart.used;
-    } else {
-      usedAtStart = finiteNumber(fresh.key?.current_total_monthly_calls) ?? localMonth;
-      const start: StoredStart = { used: usedAtStart, snapshotAt: fresh.at };
-      await redis.set(startKey, start, { ex: 40 * 86400 }).catch(() => undefined);
-    }
-    const storedCap = await redis.get<StoredCap>(capKey).catch(() => null);
-    if (storedCap && storedCap.mode === 'paced' && storedCap.snapshotAt === fresh.at && Number.isFinite(storedCap.cap)) {
-      cap = storedCap.cap;
-    } else {
-      cap = pacedDailyCap(quota, targetPct, usedAtStart, daysLeft);
-      const next: StoredCap = { cap, mode: 'paced', snapshotAt: fresh.at };
-      await redis.set(capKey, next, { ex: 40 * 86400 }).catch(() => undefined);
-    }
-    mode = 'paced';
-  } else {
-    const storedCap = await redis.get<StoredCap>(capKey).catch(() => null);
-    if (storedCap && storedCap.mode === 'paced' && Number.isFinite(storedCap.cap)) {
-      cap = storedCap.cap;
-      mode = 'paced';
-      const storedStart = await redis.get<StoredStart>(startKey).catch(() => null);
-      usedAtStart = storedStart && typeof storedStart.used === 'number' ? storedStart.used : null;
-    } else {
-      cap = flat;
-      mode = 'flat';
-    }
-  }
-
-  const counts = await readCounters(redis, day);
-  return { cap, mode, usedAtStart, day, quota, targetPct, callsToday: counts.calls, refusedToday: counts.refused };
-}
-
-export async function capFields(now = Date.now(), env: Record<string, string | undefined> = process.env): Promise<CgCapFields> {
-  const plan = await planDailyCap(now, env);
-  return {
-    quota: plan.quota,
-    targetPct: plan.targetPct,
-    targetCredits: Math.floor(plan.quota * (plan.targetPct / 100)),
-    todayCap: plan.cap,
-    callsToday: plan.callsToday,
-    refusedToday: plan.refusedToday,
-    capMode: plan.mode,
-  };
+  if (now - lastHourlyLogAt < HOUR_MS) return;
+  lastHourlyLogAt = now;
+  const day = utcMonthParts(now).day;
+  const shelf = await readShelf(day, env).catch(() => null);
+  const spent = shelf?.spent ?? emptyRoles();
+  const shelfSpent = spent.web + spent.worker + spent.jarvis;
+  const total = reserved === null ? (shelf ? shelfSpent : null) : reserved + shelfSpent;
+  console.log(formatHourlyLine(total, cap, spent, shelf?.timeouts ?? 0));
 }
 
 function redisFailureCode(err: unknown): FallbackCode {
@@ -330,48 +512,205 @@ function noteFallback(code: FallbackCode, now: number, cap: number): void {
   fallbackCounts.absent = 0;
 }
 
-function limiterTimeout<T>(work: Promise<T>): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error('CG cap Redis timeout')), CG_LIMITER_REDIS_TIMEOUT_MS);
-  });
-  return Promise.race([work, timeout]).finally(() => {
-    if (timer) clearTimeout(timer);
-  });
+function rollMemory(day: string): void {
+  if (memory.day !== day) {
+    memory.day = day;
+    memory.allowed = 0;
+    memory.refused = 0;
+  }
+}
+
+let productionShelf: CgShelfPort | null = null;
+
+async function postgresShelf(): Promise<CgShelfPort> {
+  if (productionShelf) return productionShelf;
+  const { pool } = await import('@/lib/db');
+  productionShelf = {
+    async chargeWeb(day, limit, timeoutInc) {
+      if (!(limit > 0)) return 'exhausted';
+      if (!process.env.DATABASE_URL) return 'unavailable';
+      try {
+        const result = await withTimeout(
+          pool.query(
+            `INSERT INTO cg_call_shelf AS s (day, role, spent, timeouts)
+             VALUES ($1::date, 'web', 1, $2::int)
+             ON CONFLICT (day, role) DO UPDATE
+             SET spent = s.spent + 1,
+                 timeouts = s.timeouts + EXCLUDED.timeouts
+             WHERE s.spent < $3::int
+             RETURNING spent`,
+            [day, timeoutInc, limit],
+          ),
+          CG_SHELF_WAIT_MS,
+        );
+        return result.rows.length > 0 ? 'admitted' : 'exhausted';
+      } catch {
+        return 'unavailable';
+      }
+    },
+    async noteTimeout(day, role) {
+      if (!process.env.DATABASE_URL) return;
+      await withTimeout(
+        pool.query(
+          `INSERT INTO cg_call_shelf (day, role, spent, timeouts)
+           VALUES ($1::date, $2, 0, 1)
+           ON CONFLICT (day, role) DO UPDATE
+           SET timeouts = cg_call_shelf.timeouts + 1`,
+          [day, role],
+        ),
+        CG_SHELF_WAIT_MS,
+      );
+    },
+    async read(day) {
+      if (!process.env.DATABASE_URL) return null;
+      const result = await withTimeout(
+        pool.query(`SELECT role, spent, timeouts FROM cg_call_shelf WHERE day = $1::date`, [day]),
+        CG_SHELF_WAIT_MS,
+      );
+      const spent = emptyRoles();
+      let timeouts = 0;
+      for (const row of result.rows as { role: string; spent: number; timeouts: number }[]) {
+        if (row.role === 'web' || row.role === 'worker' || row.role === 'jarvis') spent[row.role] = asCount(row.spent);
+        timeouts += asCount(row.timeouts);
+      }
+      return { spent, timeouts };
+    },
+  };
+  return productionShelf;
+}
+
+async function activeShelf(): Promise<CgShelfPort | null> {
+  if (shelfPort) return shelfPort;
+  // Provider contract tests call cgFetch with no Redis and no DATABASE_URL.
+  // Production never sets VITEST, so a missing shelf there fails closed.
+  if (process.env.VITEST === 'true') return null;
+  if (!process.env.DATABASE_URL) return null;
+  try {
+    return await postgresShelf();
+  } catch {
+    return null;
+  }
+}
+
+async function chargeUserShelf(day: string, limit: number, timeoutInc: number): Promise<ShelfCharge> {
+  const shelf = await activeShelf();
+  if (!shelf) {
+    if (process.env.VITEST !== 'true') return 'unavailable';
+    if (!(limit > 0)) return 'exhausted';
+    rollMemory(day);
+    if (memory.allowed >= limit) {
+      memory.refused += 1;
+      return 'exhausted';
+    }
+    memory.allowed += 1;
+    return 'admitted';
+  }
+  try {
+    return await shelf.chargeWeb(day, limit, timeoutInc);
+  } catch {
+    return 'unavailable';
+  }
+}
+
+async function noteShelfTimeout(day: string, role: CgProcessRole): Promise<void> {
+  const shelf = await activeShelf();
+  if (!shelf) return;
+  await shelf.noteTimeout(day, role).catch(() => undefined);
+}
+
+async function readShelf(day: string, _env: Record<string, string | undefined>): Promise<{ spent: RoleCounts; timeouts: number } | null> {
+  const shelf = await activeShelf();
+  if (!shelf) return null;
+  try {
+    return await shelf.read(day);
+  } catch {
+    return null;
+  }
+}
+
+/** Reads the sealed ledger. Does not call CoinGecko. Charge 0 does not increment. */
+export async function planDailyCap(now = Date.now(), env: Record<string, string | undefined> = process.env): Promise<CapPlan> {
+  const quota = cgQuota(env);
+  const targetPct = cgTargetPct(env);
+  const { daysInMonth, day } = utcMonthParts(now);
+  const flat = flatDailyCap(quota, targetPct, daysInMonth);
+  const outcome = await evalLedger(now, env, 0);
+  if (outcome.kind === 'unconfirmed') {
+    return {
+      cap: flat,
+      mode: outcome.code === 'absent' && !limiterRedis() ? 'shelf' : 'flat',
+      usedAtStart: null,
+      day,
+      quota,
+      targetPct,
+      callsToday: 0,
+      refusedToday: 0,
+    };
+  }
+  return {
+    cap: outcome.parsed.cap,
+    mode: outcome.parsed.mode,
+    usedAtStart: outcome.parsed.usedAtStart,
+    day,
+    quota,
+    targetPct,
+    callsToday: outcome.parsed.issued,
+    refusedToday: outcome.parsed.refused,
+  };
+}
+
+export async function capFields(now = Date.now(), env: Record<string, string | undefined> = process.env): Promise<CgCapFields> {
+  const plan = await planDailyCap(now, env);
+  const shelf = await readShelf(plan.day, env);
+  const fallbackByRole = shelf?.spent ?? emptyRoles();
+  const timeouts = shelf?.timeouts ?? 0;
+  const shelfSpent = fallbackByRole.web + fallbackByRole.worker + fallbackByRole.jarvis;
+  const ledgerKnown = plan.mode !== 'shelf';
+  const globalReserved = ledgerKnown ? plan.callsToday + shelfSpent : shelf ? shelfSpent : null;
+  const fields: CgCapFields = {
+    quota: plan.quota,
+    targetPct: plan.targetPct,
+    targetCredits: Math.floor(plan.quota * (plan.targetPct / 100)),
+    todayCap: plan.cap,
+    callsToday: globalReserved ?? 0,
+    refusedToday: plan.refusedToday,
+    capMode: plan.mode,
+    globalReserved,
+    fallbackByRole,
+    timeouts,
+  };
+  await maybeHourlyLog(now, env, plan.mode === 'shelf' ? null : plan.callsToday, plan.cap);
+  return fields;
 }
 
 /**
  * Reserve one CoinGecko HTTP attempt. Throws CG_MONTHLY_CAP when today's cap is
- * already spent. Does not fetch, sleep, or queue. Redis work aborts after 400ms;
- * timeout or error uses the in-process fallback. A denial does not.
+ * spent or the global reserve cannot be confirmed for a job. A user-facing miss
+ * spends the shared shelf or throws so cgFetch can serve cache.
  */
 export async function reserveCgCall(now = Date.now(), env: Record<string, string | undefined> = process.env): Promise<void> {
-  const quota = cgQuota(env);
-  const targetPct = cgTargetPct(env);
   const { daysInMonth, day } = utcMonthParts(now);
-  const processCap = perProcessDailyCap(flatDailyCap(quota, targetPct, daysInMonth), cgEstimatedProcesses(env));
-  const redis = getRedis();
+  const flat = flatDailyCap(cgQuota(env), cgTargetPct(env), daysInMonth);
+  const share = conservativeProcessShare(flat, cgEstimatedProcesses(env));
+  const outcome = await evalLedger(now, env, 1);
 
-  const finish = (slot: { ok: boolean; calls: number; refused: number }, cap: number) => {
-    noteBudgetLine(slot.calls, cap, slot.refused, now);
-    if (!slot.ok) throw new CgMonthlyCapError();
-  };
-
-  if (!redis) {
-    noteFallback('absent', now, processCap);
-    finish(takeMemorySlot(processCap, day), processCap);
+  if (outcome.kind === 'ready') {
+    noteBudgetLine(outcome.parsed.issued, outcome.parsed.cap, outcome.parsed.refused, now);
+    await maybeHourlyLog(now, env, outcome.parsed.issued, outcome.parsed.cap);
+    if (!outcome.parsed.ok) throw new CgMonthlyCapError();
     return;
   }
 
-  try {
-    const reserved = await limiterTimeout((async () => {
-      const plan = await planDailyCap(now, env);
-      return { cap: plan.cap, slot: await reserveShared(redis, plan.cap, plan.day) };
-    })());
-    finish(reserved.slot, reserved.cap);
-  } catch (error) {
-    if (isCgMonthlyCap(error)) throw error;
-    noteFallback(redisFailureCode(error), now, processCap);
-    finish(takeMemorySlot(processCap, day), processCap);
+  noteFallback(outcome.code, now, share);
+  const duty = cgDuty(env);
+  if (duty === 'job') {
+    if (outcome.attempted && outcome.code === 'timeout') await noteShelfTimeout(day, cgProcessRole(env));
+    await maybeHourlyLog(now, env, null, flat);
+    throw new CgMonthlyCapError();
   }
+
+  const admitted = await chargeUserShelf(day, share, outcome.attempted && outcome.code === 'timeout' ? 1 : 0);
+  await maybeHourlyLog(now, env, null, flat);
+  if (admitted === 'admitted') return;
+  throw new CgMonthlyCapError();
 }

@@ -38,13 +38,13 @@ export function assessBudget(key:CgKeyInfo|null,local:CgBudget['local'],keyCheck
 /** /key is cached for 10 minutes so checking the budget costs at most 144 calls a day. */
 export async function cgBudgetStatus(fetchKey:()=>Promise<unknown>,now=Date.now()):Promise<CgBudgetStatus>{
  const r=getRedis();
- let cached=await r?.get<{at:string;key:CgKeyInfo}>(KEY_CACHE).catch(()=>null)??null;
+ let cached=await r?.get<{at:string;atMs?:number;key:CgKeyInfo}>(KEY_CACHE).catch(()=>null)??null;
  if(!cached||now-Date.parse(cached.at)>CG_BUDGET.keyCacheSeconds*1000){
   const key=await fetchKey().catch(()=>null) as CgKeyInfo|null;
-  if(key&&typeof key==='object'&&'monthly_call_credit' in key){cached={at:new Date(now).toISOString(),key};await r?.set(KEY_CACHE,cached,{ex:CG_BUDGET.keyCacheSeconds}).catch(()=>undefined);}
+  if(key&&typeof key==='object'&&'monthly_call_credit' in key){cached={at:new Date(now).toISOString(),atMs:now,key};await r?.set(KEY_CACHE,cached,{ex:CG_BUDGET.keyCacheSeconds}).catch(()=>undefined);}
  }
  const [month,today,fam]=await Promise.all([r?.get<number>(`${P}:month:${monthOf(now)}`),r?.get<number>(`${P}:day:${dayOf(now)}`),r?.hgetall<Record<string,number>>(`${P}:family:${dayOf(now)}`)].map(p=>Promise.resolve(p).catch(()=>null)));
  const base=assessBudget(cached?.key??null,{month:Number(month)||0,today:Number(today)||0,todayByFamily:(fam as Record<string,number>|null)??{}},cached?.at??null,now);
  const cap=await capFields(now).catch(()=>null);
- return {...base,...(cap??{quota:CG_BUDGET.monthlyCredits,targetPct:80,targetCredits:Math.floor(CG_BUDGET.monthlyCredits*0.8),todayCap:0,callsToday:0,refusedToday:0,capMode:'flat' as const})};
+ return {...base,...(cap??{quota:CG_BUDGET.monthlyCredits,targetPct:80,targetCredits:Math.floor(CG_BUDGET.monthlyCredits*0.8),todayCap:0,callsToday:0,refusedToday:0,capMode:'flat' as const,globalReserved:null,fallbackByRole:{web:0,worker:0,jarvis:0},timeouts:0})};
 }
