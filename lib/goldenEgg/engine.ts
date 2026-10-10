@@ -31,6 +31,7 @@ import { buildMechanicalZones } from '@/lib/goldenEgg/mechanicalZones';
 import type { DVEInput, DVEReading } from '@/lib/directionalVolatilityEngine.types';
 import { classifyBestDoctrine, type ClassifierInput } from '@/lib/doctrine/classifier';
 import { recordSignal } from '@/lib/signalRecorder';
+import { createEquityBarStaleRun } from '@/lib/signals/equityBarStale';
 import { recordEngineEvent } from '@/lib/brain/engineBridge';
 import type { GoldenEggPayload, Direction, Verdict, GoldenEggCanonical } from '@/src/features/goldenEgg/types';
 import { buildMarketDataProviderStatus, emitProductionDemoDataAlert, isLocalDemoMarketDataAllowed } from '@/lib/scanner/providerStatus';
@@ -1085,7 +1086,8 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
   }
 
   // Signal records describe the default packet; a packet for an explicitly chosen expiry is not a new signal.
-  if (payload.layer1.direction !== 'NEUTRAL' && !expiry) {
+  const staleEquityBars = assetClass === 'equity' && createEquityBarStaleRun('golden-egg').skip(symbol, priceData.lastCompletedBarAt, Date.now());
+  if (!staleEquityBars && payload.layer1.direction !== 'NEUTRAL' && !expiry) {
     recordSignal({
       symbol, signalType: 'golden_egg', direction: payload.layer1.direction === 'LONG' ? 'bullish' : 'bearish', score: payload.canonicalVerdict?.score ?? payload.layer1.confidence,
       priceAtSignal: priceData.price, timeframe: tfLabel,

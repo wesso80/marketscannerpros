@@ -61,6 +61,8 @@ import {
   type WorkerEquityQuote,
 } from '../lib/worker/equityBulk';
 import { partitionAvEquitySymbols, unsupportedAvLogOnce } from '../lib/worker/unsupportedAvSymbol';
+import { fetchWithInvalidIntradayCache, type InvalidIntradayRedis } from '../lib/worker/invalidIntraday';
+import { createEquityBarStaleRun, type EquityBarStaleRun } from '../lib/signals/equityBarStale';
 
 // ============================================================================
 // Signal Detection Types
@@ -1367,6 +1369,7 @@ interface EquityBarHold {
   hourly?: BarFetchState;
 }
 const equityBarHolds = new Map<string, EquityBarHold>();
+let equityStaleRun: EquityBarStaleRun = createEquityBarStaleRun('worker');
 let equityBarSchedule: EquityBarSchedule | null = null;
 function getEquityBarSchedule(): EquityBarSchedule {
   if (!equityBarSchedule) equityBarSchedule = equityBarScheduleFromEnv(process.env);
@@ -1508,32 +1511,50 @@ async function processEquitySymbol(symbol: string, ctx: EquityProcessContext): P
 
       // ── Store intraday midpoints for TGM (1H + 4H): 60min refetched only after each hourly close + settle ──
       if (isHourlyRefreshDue(hold.hourly, nowMs, cfg)) {
-        try {
-          out.apiCalls++;
-          out.avHourlyCalls++;
-          const intradayBars = await fetchAVTimeSeries(symbol, '60min', 'compact');
+        const gated = await fetchWithInvalidIntradayCache(
+          symbol,
+          () => fetchAVTimeSeries(symbol, '60min', 'compact'),
+          getRedis() as InvalidIntradayRedis | null,
+          nowMs,
+        );
+        if (!gated.ok && gated.skipped) {
+          // Negative cache still inside 7 days. Daily bars above are unchanged.
+        } else if (!gated.ok && !gated.invalid) {
+          out.apiCalls += gated.calls;
+          out.avHourlyCalls += gated.calls;
+          hold.hourly = { fetchedAtMs: nowMs, complete: false };
+          const intradayErr = gated.error;
+          console.warn(`[worker] ${symbol}: Intraday midpoint fetch failed (non-fatal):`, intradayErr instanceof Error ? intradayErr.message : intradayErr);
+        } else if (!gated.ok) {
+          out.apiCalls += gated.calls;
+          out.avHourlyCalls += gated.calls;
+          hold.hourly = { fetchedAtMs: nowMs, complete: false };
+        } else {
+          out.apiCalls += gated.calls;
+          out.avHourlyCalls += gated.calls;
+          const intradayBars = gated.value;
           hold.hourly = { fetchedAtMs: nowMs, complete: intradayBars.length > 0 };
           if (intradayBars.length > 0) {
-            const processor = getCandleProcessor();
-            const hourlyTGM: TGMBar[] = intradayBars.map(b => ({
-              time: new Date(b.timestamp), open: b.open, high: b.high,
-              low: b.low, close: b.close, volume: b.volume,
-            }));
+            try {
+              const processor = getCandleProcessor();
+              const hourlyTGM: TGMBar[] = intradayBars.map(b => ({
+                time: new Date(b.timestamp), open: b.open, high: b.high,
+                low: b.low, close: b.close, volume: b.volume,
+              }));
 
-            const h1Count = await processor.processCandleBatch(symbol, '1H', hourlyTGM, 'equity');
-            const fourHourBars = aggregate1HTo4H(hourlyTGM);
-            const h4Count = fourHourBars.length > 0
-              ? await processor.processCandleBatch(symbol, '4H', fourHourBars, 'equity')
-              : 0;
+              const h1Count = await processor.processCandleBatch(symbol, '1H', hourlyTGM, 'equity');
+              const fourHourBars = aggregate1HTo4H(hourlyTGM);
+              const h4Count = fourHourBars.length > 0
+                ? await processor.processCandleBatch(symbol, '4H', fourHourBars, 'equity')
+                : 0;
 
-            if (h1Count + h4Count > 0) {
-              console.log(`[worker] ${symbol}: Stored ${h1Count + h4Count} intraday TGM midpoints (${h1Count} 1H, ${h4Count} 4H)`);
+              if (h1Count + h4Count > 0) {
+                console.log(`[worker] ${symbol}: Stored ${h1Count + h4Count} intraday TGM midpoints (${h1Count} 1H, ${h4Count} 4H)`);
+              }
+            } catch (intradayErr: any) {
+              console.warn(`[worker] ${symbol}: Intraday midpoint fetch failed (non-fatal):`, intradayErr?.message);
             }
           }
-        } catch (intradayErr: any) {
-          hold.hourly = { fetchedAtMs: nowMs, complete: false };
-          // Non-fatal — daily/weekly midpoints still work
-          console.warn(`[worker] ${symbol}: Intraday midpoint fetch failed (non-fatal):`, intradayErr?.message);
         }
       }
 
@@ -1562,8 +1583,10 @@ async function processEquitySymbol(symbol: string, ctx: EquityProcessContext): P
       await cacheIndicators(symbol, 'daily', fullIndicators);
       
       // 6. Detect and record signals (runs on full universe automatically)
-      const latestPrice = bars[bars.length - 1]?.close;
-      if (latestPrice && warmup.coreReady) {
+      const latestBar = bars[bars.length - 1];
+      const latestPrice = latestBar?.close;
+      const staleEquityBars = equityStaleRun.skip(symbol, latestBar?.timestamp, nowMs);
+      if (latestPrice && warmup.coreReady && !staleEquityBars) {
         const detectedSignals = detectSignals(symbol, fullIndicators, latestPrice);
         if (detectedSignals.length > 0) {
           const recorded = await recordSignals(symbol, detectedSignals, latestPrice, 'daily');
@@ -1571,7 +1594,7 @@ async function processEquitySymbol(symbol: string, ctx: EquityProcessContext): P
             console.log(`[worker] ${symbol}: Recorded ${recorded} signal(s): ${detectedSignals.map(s => `${s.signalType}:${s.direction}`).join(', ')}`);
           }
         }
-      } else if (latestPrice) {
+      } else if (latestPrice && !staleEquityBars) {
         console.log(`[worker] ${symbol}: Skipping signals, warmup incomplete (${warmup.missingIndicators.join(', ')})`);
       }
     }
@@ -1823,6 +1846,7 @@ async function runIngestionCycle(
   equityBarsOnlyRefreshes: number;
   coingeckoCalls: number;
 }> {
+  equityStaleRun = createEquityBarStaleRun('worker');
   const stats = {
     symbolsProcessed: 0,
     symbolsDue: 0,

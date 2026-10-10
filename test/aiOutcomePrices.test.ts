@@ -92,6 +92,21 @@ describe('createHorizonPriceResolver', () => {
     expect(f.equityDaily).toHaveBeenCalledTimes(1);
   });
 
+  it('24h does not score an equity whose latest daily bar is years behind', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const oldSignal = Date.parse('2018-06-01T14:00:00Z');
+    const barAt = Date.parse('2018-06-04T20:00:00Z');
+    const f = fetchers({
+      equityIntraday: vi.fn(async () => null),
+      equityDaily: vi.fn(async () => [{ closeTime: barAt, close: 4 }]),
+    });
+    const resolve = createHorizonPriceResolver(now, f);
+    expect(await resolve('STO', 'equity', oldSignal, '24h')).toBeNull();
+    expect(await resolve('STO', 'equity', oldSignal, '24h')).toBeNull();
+    expect(warn.mock.calls.filter(([msg]) => String(msg).includes('[ai-outcomes] STO:'))).toHaveLength(1);
+    warn.mockRestore();
+  });
+
   it('does not fetch anything for a horizon that has not passed', async () => {
     const f = fetchers();
     const resolve = createHorizonPriceResolver(signal + 3 * 3_600_000, f);

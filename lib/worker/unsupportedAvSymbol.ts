@@ -7,11 +7,13 @@
  * A and H stay: the universe hygiene fixture treats them as real equities.
  *
  * known_invalid review
- * Brad reviews KNOWN_INVALID and INVALID_SINGLE_LETTER. Add a symbol when the
- * worker log shows Alpha Vantage "Invalid API call" for it, and it is not already
- * a futures root, an index, or a protected equity (A and H). Review the list
- * when that log line appears, and again before a release that changes which
- * symbols are fetched.
+ * Brad reviews KNOWN_INVALID and INVALID_SINGLE_LETTER. Add a symbol only when
+ * it must be dropped before every Alpha Vantage call, including
+ * REALTIME_BULK_QUOTES and TIME_SERIES_DAILY_ADJUSTED, and it is not already
+ * a futures root, an index, or a protected equity (A and H).
+ * An intraday-only "Invalid API call" (daily history still current) is not
+ * added here. lib/worker/invalidIntraday.ts stores
+ * av:invalid-intraday:<SYMBOL> for 7 days and retries after it expires.
  * To remove an entry, delete the symbol from the set and update the tests in
  * the same code change. Do not disable or edit symbol_universe rows here.
  * A universe enable or disable is a separate data change for Brad.

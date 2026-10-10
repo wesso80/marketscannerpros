@@ -49,6 +49,7 @@ afterEach(() => { vi.useRealTimers(); });
 
 describe('edge outcome split window', () => {
   function route(sql: string, market = 'equity', actions: 'split' | 'missing' | 'fail' | 'none' = 'none') {
+    if (sql.includes('latest_daily_bar')) return [{ latest_daily_bar: new Date('2026-10-09T20:00:00Z') }];
     if (sql.includes('edge_ledger_setups')) return [setup(market)];
     if (sql.includes('ohlcv_bars')) return [{ ts: new Date('2026-06-02T00:00:00Z'), high: '110', low: '99', close: '108' }];
     if (sql.includes('equity_corporate_actions')) {
@@ -101,6 +102,15 @@ describe('edge outcome split window', () => {
     expect(splitCall?.[1]).toEqual(['XYZ', signalDay, horizonDay]);
     expect(label?.status).not.toBe('no_data');
     expect(label?.barsUsed).toBe(1);
+  });
+
+  it('does not label an equity whose latest daily bar is older than 5 sessions', async () => {
+    q.mockImplementation(async (sql: string) => {
+      if (sql.includes('latest_daily_bar')) return [{ latest_daily_bar: '2018-06-14' }];
+      return route(sql);
+    });
+    expect(await labelOutcome(7)).toBeNull();
+    expect(q.mock.calls.some(([sql]) => String(sql).includes('SELECT ts, high'))).toBe(false);
   });
 
   it('stores no_data when a split falls on the horizon session', async () => {
@@ -221,6 +231,16 @@ describe('signal outcome split window', () => {
     expect(inserts).toHaveLength(1);
     expect(inserts[0][1]).toEqual([9, 1440, null, null, 'unknown']);
     expect(query.mock.calls.some(([sql]) => String(sql).includes('ohlcv_bars'))).toBe(false);
+  });
+
+  it('does not write an outcome when the latest equity daily bar is older than 5 sessions', async () => {
+    install('none');
+    query.mockImplementation(async (sql: string, params: unknown[] = []) => {
+      if (sql.includes('latest_daily_bar')) return { rows: [{ latest_daily_bar: new Date('2018-06-14T00:00:00Z') }] };
+      return boundaryQuery(sql, params);
+    });
+    await labelOutcomes();
+    expect(query.mock.calls.some(([sql]) => String(sql).includes('INSERT INTO signal_outcomes'))).toBe(false);
   });
 });
 

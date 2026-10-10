@@ -15,6 +15,7 @@ import { verifyCronAuth, requireAdmin } from "@/lib/adminAuth";
 import { publicScannerHandler } from '@/lib/scanner/publicBoundary';
 import { isFreeForAllMode, getEffectiveTier } from "@/lib/entitlements";
 import { recordSignalsBatch, RecordSignalParams } from "@/lib/signalRecorder";
+import { createEquityBarStaleRun } from "@/lib/signals/equityBarStale";
 import { recordEngineEvent } from "@/lib/brain/engineBridge";
 import { getRuntimeRiskSnapshotInput } from "@/lib/risk/runtimeSnapshot";
 import { buildPermissionSnapshot } from "@/lib/risk-governor-hard";
@@ -1603,6 +1604,7 @@ async function runScanner(req: NextRequest, capturePublicRows?: (rows: readonly 
     }
     const results: ScanResult[] = [];
     const errors: string[] = [];
+    const storedDailyAsOf = new Map<string, string>();
 
     // Read crypto histories concurrently and derivatives once, within the browser's
     // 30-second deadline. A failed/slow coin must not hide other completed reads.
@@ -2121,7 +2123,9 @@ async function runScanner(req: NextRequest, capturePublicRows?: (rows: readonly 
                 }
                 candles = bars.map((b) => ({ t: b.t.slice(0, 10), open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume ?? 0 }));
                 equitySource = timeframe === 'weekly' ? 'ohlcv_bars (daily → Monday-anchored weekly) + quotes_latest' : 'ohlcv_bars + quotes_latest';
-                if (!latestTradingDay) latestTradingDay = dailyBars[dailyBars.length - 1]?.t.slice(0, 10) ?? null;
+                const dailyAsOf = dailyBars[dailyBars.length - 1]?.t.slice(0, 10) ?? null;
+                if (dailyAsOf) storedDailyAsOf.set(sym.toUpperCase(), dailyAsOf);
+                if (!latestTradingDay) latestTradingDay = dailyAsOf;
               }
             } catch (barErr) {
               console.warn(`[scanner] ohlcv_bars read failed for ${sym}:`, (barErr as any)?.message);
@@ -2839,8 +2843,15 @@ async function runScanner(req: NextRequest, capturePublicRows?: (rows: readonly 
 
     // Record signals for AI learning (async, non-blocking)
     if (results.length > 0 && !rgLocked) {
+      const equityStale = createEquityBarStaleRun('scanner');
       const signalsToRecord: RecordSignalParams[] = results
-        .filter(r => (r.canonical?.permission ?? r.compositeV2?.permission) === 'PASS' && r.price && r.direction && r.direction !== 'neutral' && ((r as any).rawScore ?? r.score) >= 50) // Only record high-conviction bullish/bearish signals
+        .filter(r => {
+          if (type === 'equity' && !isIntradayTimeframe) {
+            const asOf = storedDailyAsOf.get(r.symbol.toUpperCase()) ?? r.lastCandleTime;
+            if (asOf && equityStale.skip(r.symbol, asOf, Date.now())) return false;
+          }
+          return (r.canonical?.permission ?? r.compositeV2?.permission) === 'PASS' && r.price && r.direction && r.direction !== 'neutral' && ((r as any).rawScore ?? r.score) >= 50;
+        }) // Only record high-conviction bullish/bearish signals
         .map(r => {
           const learningScore = (r as any).rawScore ?? r.score; // anti-bias: never feed personalized score back into the brain
           return {

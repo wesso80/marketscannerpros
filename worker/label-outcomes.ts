@@ -24,6 +24,7 @@ import { alertWorkerError } from '../lib/opsAlerting';
 import { COINGECKO_ID_MAP } from '../lib/coingecko';
 import { equitySplitInWindow } from '../lib/scanner/corporateActions';
 import { nyDateTime } from '../lib/time/usSession';
+import { createEquityBarStaleRun } from '../lib/signals/equityBarStale';
 import { bandForHorizon, bandsFromRows, horizonsWithFallback } from '../lib/signals/outcomeRule';
 import {
   allowUnclassifiedEquityBars, declaredAssetClass, inCryptoSymbolMap, labelHorizonMove, resolveOutcomeLabelAsset, symbolBase,
@@ -173,7 +174,16 @@ function pickClassBar(
   return null;
 }
 
+async function latestStoredEquityDailyBar(symbol: string): Promise<unknown> {
+  const rows = await q<{ latest_daily_bar: unknown }>(
+    `SELECT MAX(ts) AS latest_daily_bar FROM ohlcv_bars WHERE symbol = UPPER($1) AND timeframe = 'daily'`,
+    [symbol],
+  );
+  return rows[0]?.latest_daily_bar ?? null;
+}
+
 export async function labelOutcomes() {
+  const staleEquity = createEquityBarStaleRun('outcomes');
   console.log('='.repeat(60));
   console.log('🎯 Signal Outcome Labeler');
   console.log('='.repeat(60));
@@ -316,6 +326,20 @@ export async function labelOutcomes() {
       if (decision.action === 'skip') {
         skipped++;
         continue;
+      }
+
+      if (asset.status === 'ok' && asset.assetClass === 'equity' && observation) {
+        try {
+          const latest = await latestStoredEquityDailyBar(symbol);
+          if (staleEquity.skip(symbol, latest, Date.now())) {
+            skipped++;
+            continue;
+          }
+        } catch (err) {
+          console.warn(`[outcomes] ${symbol} latest daily bar read failed; left unlabeled`, err instanceof Error ? err.message : err);
+          skipped++;
+          continue;
+        }
       }
 
       if (decision.reason === 'suspect' || decision.reason === 'ambiguous' || decision.reason === 'expired' || decision.reason === 'wrong_asset' || decision.reason === 'split_in_window') {
