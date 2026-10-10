@@ -64,7 +64,7 @@ describe('worker ingest keeps the full fetch and releases the arrays', () => {
 
   it('trims the equity hold, still fetches full history, and still writes the same bar cap', () => {
     expect(worker).toContain('retainEquityDailyBars(fresh)');
-    expect(worker).toContain("fetchAVTimeSeries(symbol, 'daily', 'full')");
+    expect(worker).toContain("fetchAVTimeSeries(symbol, 'daily', 'full', captured)");
     expect(worker).toContain('bars.slice(-1100)');
     expect(worker).toContain('completedEquityMark(fresh, nowMs, cfg.dailySettleMin)');
   });
