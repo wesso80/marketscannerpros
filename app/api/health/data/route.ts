@@ -1,17 +1,38 @@
-import { NextResponse } from 'next/server';
-import { getCached } from '@/lib/redis';
-import { CACHE_KEYS } from '@/lib/redis';
+import { NextRequest, NextResponse } from 'next/server';
+import { getCached, CACHE_KEYS } from '@/lib/redis';
 import { avCircuit, coinGeckoCircuit, openAICircuit } from '@/lib/circuitBreaker';
+import { requireAdmin } from '@/lib/adminAuth';
+import { getSessionFromCookie } from '@/lib/auth';
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
+const PRIVATE_HEADERS = {
+  'Cache-Control': 'private, no-store',
+  Vary: 'Cookie, Authorization',
+};
 
 /**
  * GET /api/health/data
- * Lightweight freshness probe — checks if key market data caches are populated
- * and recent. Used by the StaleDataBanner component.
+ * Admin freshness probe. Reports cache age and provider circuit snapshots.
  *
- * Only flags stale when a cache key EXISTS but is too old.
- * Missing keys are ignored (cache simply hasn't been populated yet).
+ * Signed-out callers get 401. Signed-in non-admins get 403. Both bodies are
+ * `{ error: 'Unauthorized' }` and are returned before any cache read.
+ *
+ * Public liveness stays on GET /api/health. Uptime monitors use
+ * GET /api/health/status. StaleDataBanner treats a non-OK response as
+ * "do not show a warning", so a denial does not render provider detail.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = await requireAdmin(req).catch(() => null);
+  if (!auth?.ok) {
+    const session = await getSessionFromCookie().catch(() => null);
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: session ? 403 : 401, headers: PRIVATE_HEADERS },
+    );
+  }
+
   const STALE_THRESHOLD_SEC = 7200; // 2 hours
 
   try {
@@ -66,10 +87,10 @@ export async function GET() {
         coinGecko: coinGeckoCircuit.getSnapshot(),
         openAI: openAICircuit.getSnapshot(),
       },
-    });
+    }, { headers: PRIVATE_HEADERS });
   } catch (err) {
     console.error('[health/data] Error:', err);
     // On error, don't assume stale — avoid false-positive banner
-    return NextResponse.json({ ok: false, stale: false });
+    return NextResponse.json({ ok: false, stale: false }, { headers: PRIVATE_HEADERS });
   }
 }
