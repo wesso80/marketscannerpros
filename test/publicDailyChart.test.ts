@@ -27,4 +27,16 @@ describe('public daily chart bars', () => {
     expect(publicDailyChart({ assetClass: 'equity', timeframeKey: 'daily', nowMs: now, closes: [1, 2] })).toBeNull();
     expect(publicDailyChart({ assetClass: 'forex', timeframeKey: 'daily', nowMs: now, dates, closes: dates.map(() => 1) })).toBeNull();
   });
+
+  it('rounds prices to cents from $100, four places from $1, and eight places below $1', () => {
+    const chart = publicDailyChart({
+      assetClass: 'equity', timeframeKey: 'daily', source, nowMs: now,
+      dates: ['2026-10-08', '2026-10-09'],
+      closes: [100.126, 0.123456789],
+      highs: [100.129, 1.23456789],
+      lows: [99.99499, 0.1],
+    });
+    expect(chart?.bars?.[0]).toMatchObject({ c: 100.13, h: 100.13, l: 99.995 });
+    expect(chart?.bars?.[1]).toMatchObject({ c: 0.12345679, h: 1.2346, l: 0.1 });
+  });
 });

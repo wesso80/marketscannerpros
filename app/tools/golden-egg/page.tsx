@@ -11,6 +11,7 @@ import studio from '@/components/public-design/SymbolStudio.module.css';
    --------------------------------------------------------------------------- */
 
 import { CLOSE_CALENDAR_LABEL, TIMING_TOOLTIP } from '@/lib/goldenEgg/labels';
+import { sectionTimedOut } from '@/lib/goldenEgg/sectionCutoff';
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { parseResearchTimeframe } from '@/lib/researchContext';
@@ -447,7 +448,7 @@ function GoldenEggReport() {
     },
     {
       label: ge?.meta?.assetClass === 'crypto' ? 'Derivatives' : 'Options',
-      statusLabel: geCanonical?.options?.quality.level ?? (geCanonical?.derivatives ? 'PARTIAL' : 'Not collected'),
+      statusLabel: sectionTimedOut(geWarnings, 'Options') ? 'timed out' : geCanonical?.options?.quality.level ?? (geCanonical?.derivatives ? 'PARTIAL' : 'Not collected'),
       status: buildMarketDataProviderStatus({
         source: ge?.meta?.assetClass === 'crypto' ? 'derivatives' : 'options',
         provider: ge?.meta?.assetClass === 'crypto' ? 'derivatives evidence' : 'options evidence',
@@ -457,7 +458,7 @@ function GoldenEggReport() {
     },
     {
       label: 'Time',
-      statusLabel: ge?.layer3?.timeConfluence?.enabled ? 'COMPUTED' : 'Not collected',
+      statusLabel: sectionTimedOut(geWarnings, 'Time confluence') ? 'timed out' : ge?.layer3?.timeConfluence?.enabled ? 'COMPUTED' : 'Not collected',
       status: buildMarketDataProviderStatus({
         source: 'time-confluence',
         provider: 'time confluence',
@@ -475,7 +476,7 @@ function GoldenEggReport() {
     },
     {
       label: 'Reference markets',
-      value: crossMarketFactors.length ? `${crossMarketFactors.length} recorded` : 'Not recorded',
+      value: sectionTimedOut(geWarnings, 'Cross-market') ? 'timed out' : crossMarketFactors.length ? `${crossMarketFactors.length} recorded` : 'Not recorded',
       status: 'neutral' as const,
       detail: crossMarketFactors.slice(0, 3).join(' | ') || 'No cross-market data.',
     },

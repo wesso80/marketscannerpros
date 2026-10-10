@@ -6,6 +6,7 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { avTryToken } from '@/lib/avRateGovernor';
 import { apiLimiter, getClientIP } from '@/lib/rateLimit';
 import { publicInstrumentKey, publicQuota, publicQuotaEnabled, resolvePublicActor } from '@/lib/publicQuotaAccess';
+import { publicChartMode } from '@/lib/research/publicChartMode';
 
 /** Stored bars for a symbol whose report this visitor already opened. No Alpha Vantage call. */
 async function publicChartUnlocked(subject: string, symbol: string): Promise<boolean> {
@@ -29,11 +30,13 @@ async function publicChartUnlocked(subject: string, symbol: string): Promise<boo
  * { ok, candles[], ema200[], rsi[], macd[], source }
  */
 export async function GET(req: NextRequest) {
-  // Alpha Vantage stays behind a signed-in session. A signed-out visitor who already
-  // opened this Symbol report may read bars the worker stored. That path never calls AV.
+  // Alpha Vantage stays behind a signed-in session. The licence notes on the market
+  // routes require that for raw data. PUBLIC_CHART_MODE defaults to safe, which
+  // disables this signed-out path. Raw mode still serves stored daily bars only,
+  // after the Symbol report is open, and never calls AV.
   const session = await getSessionFromCookie();
   const signedIn = Boolean(session?.workspaceId);
-  if (!signedIn && !publicQuotaEnabled()) {
+  if (!signedIn && (publicChartMode() === 'safe' || !publicQuotaEnabled())) {
     return NextResponse.json({ ok: false, error: 'Please log in to access market data' }, { status: 401 });
   }
 
@@ -51,6 +54,10 @@ export async function GET(req: NextRequest) {
 
   if (!symbol) {
     return NextResponse.json({ ok: false, error: 'Missing symbol' }, { status: 400 });
+  }
+
+  if (!signedIn && timeframe !== 'daily') {
+    return NextResponse.json({ ok: false, error: 'Please log in to access market data' }, { status: 401 });
   }
 
   if (!signedIn) {

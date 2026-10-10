@@ -63,6 +63,8 @@ import { fetchIndicators, fetchMacroRegime, fetchMPE, fetchOptionsSnapshot, fetc
 import { buildCalendarFeed } from '@/lib/macro/calendar/feed';
 import { getFundamentalsSummary } from '@/lib/goldenEgg/companyOverview';
 import { getQuote } from '@/lib/onDemandFetch';
+import { loadRegimeOverlayInputs } from '@/lib/scoring/canonical/regimeOverlayData';
+import { sectionTimeoutWarning } from '@/lib/goldenEgg/sectionCutoff';
 
 async function serialReport(): Promise<number> {
   const started = Date.now();
@@ -103,6 +105,49 @@ describe('symbol report load', () => {
     expect(result.payload.meta.symbol).toBe('SLOW1');
     expect(result.payload.dailyChart?.bars.length).toBe(3);
     expect(elapsed).toBeLessThan(350);
+    expect(result.warnings).toContain(sectionTimeoutWarning('Time confluence'));
     console.log(`[symbol-report-load] confluence cap elapsed ${elapsed}ms`);
+  });
+
+  it('drops MPE and the regime overlay at the same cutoff', async () => {
+    vi.mocked(fetchTimeConfluence).mockResolvedValueOnce(null);
+    vi.mocked(fetchMPE).mockImplementationOnce(() => new Promise((resolve) => setTimeout(() => resolve(null), 400)));
+    const mpeStarted = Date.now();
+    const mpe = await computeGoldenEgg({ symbol: 'MPE30', timeframe: 'daily', assetClass: 'equity', fresh: true, enrichmentTimeoutMs: 40 });
+    expect(Date.now() - mpeStarted).toBeLessThan(350);
+    expect(mpe.warnings).toContain(sectionTimeoutWarning('MPE'));
+    expect(mpe.warnings).not.toContain(sectionTimeoutWarning('Time confluence'));
+
+    vi.mocked(fetchMacroRegime).mockResolvedValueOnce(null);
+    vi.mocked(loadRegimeOverlayInputs).mockImplementationOnce(() => new Promise((resolve) => setTimeout(() => resolve(null), 400)));
+    const overlayStarted = Date.now();
+    const overlay = await computeGoldenEgg({ symbol: 'OVL30', timeframe: 'daily', assetClass: 'equity', fresh: true, enrichmentTimeoutMs: 40 });
+    expect(Date.now() - overlayStarted).toBeLessThan(350);
+    expect(overlay.warnings).toContain(sectionTimeoutWarning('Regime overlay'));
+    expect(overlay.warnings).not.toContain(sectionTimeoutWarning('Macro regime'));
+  });
+
+  it('caches a timed-out report for 30 seconds and a complete report for longer', async () => {
+    vi.mocked(fetchTimeConfluence).mockImplementationOnce(() => new Promise((resolve) => setTimeout(() => resolve(null), 400)));
+    const partial = await computeGoldenEgg({ symbol: 'PART30', timeframe: 'daily', assetClass: 'equity', fresh: true, enrichmentTimeoutMs: 30 });
+    expect(partial.cached).toBe(false);
+    expect(partial.warnings).toContain(sectionTimeoutWarning('Time confluence'));
+    const partialHit = await computeGoldenEgg({ symbol: 'PART30', timeframe: 'daily', assetClass: 'equity', enrichmentTimeoutMs: 30 });
+    expect(partialHit.cached).toBe(true);
+    expect(partialHit.warnings).toContain(sectionTimeoutWarning('Time confluence'));
+
+    const complete = await computeGoldenEgg({ symbol: 'FULL30', timeframe: 'daily', assetClass: 'equity', fresh: true });
+    expect(complete.warnings.filter((w) => w.includes('timed out'))).toEqual([]);
+
+    const base = Date.now();
+    const spy = vi.spyOn(Date, 'now').mockImplementation(() => base + 31_000);
+    try {
+      const expired = await computeGoldenEgg({ symbol: 'PART30', timeframe: 'daily', assetClass: 'equity', enrichmentTimeoutMs: 30 });
+      expect(expired.cached).toBe(false);
+      const held = await computeGoldenEgg({ symbol: 'FULL30', timeframe: 'daily', assetClass: 'equity' });
+      expect(held.cached).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

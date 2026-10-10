@@ -48,10 +48,12 @@ import { trendFromLevels, relate, summarizeCrossMarket, SECTOR_ETF, type CrossMa
 import { getFundamentalsSummary, type FundamentalsSummary } from './companyOverview';
 import { applyCanonicalToGoldenEgg, evaluateGoldenEggCanonical, goldenEggCanonicalBars } from './canonicalVerdict';
 import { loadRegimeOverlayInputs } from '@/lib/scoring/canonical/regimeOverlayData';
+import { sectionTimeoutWarning } from '@/lib/goldenEgg/sectionCutoff';
 
-// ── In-memory cache (3 min) ─────────────────────────────────────────────
-const cache = new Map<string, { data: GoldenEggPayload; ts: number }>();
+// ── In-memory cache (3 min, 30s when a section timed out) ────────────────
+const cache = new Map<string, { data: GoldenEggPayload; ts: number; ttl: number; timeouts: string[] }>();
 const CACHE_TTL = 3 * 60 * 1000;
+const PARTIAL_CACHE_TTL = 30 * 1000;
 type InternalPermission = 'TRADE' | 'NO_TRADE' | 'WATCH';
 
 export function isLocalGoldenEggDemoAllowed(): boolean {
@@ -1001,15 +1003,28 @@ async function buildCrossMarket(assetClass: 'equity' | 'crypto' | 'forex', direc
   return summarizeCrossMarket(items, direction);
 }
 
-/** Optional section that does not arrive in time is omitted. The price series is never passed through this. */
-function settleWithin<T>(work: Promise<T>, ms: number, fallback: T): Promise<T> {
+type Cutoff<T> = { value: T; timedOut: boolean };
+
+/** Optional section that does not arrive in time is omitted and marked timed out. A rejection is an empty section, not a timeout. The price series is never passed through this. */
+function settleWithin<T>(work: Promise<T>, ms: number, fallback: T): Promise<Cutoff<T>> {
   return new Promise((resolve) => {
-    const timer = setTimeout(() => resolve(fallback), ms);
+    let done = false;
+    const finish = (result: Cutoff<T>) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve(result);
+    };
+    const timer = setTimeout(() => finish({ value: fallback, timedOut: true }), ms);
     work.then(
-      (value) => { clearTimeout(timer); resolve(value); },
-      () => { clearTimeout(timer); resolve(fallback); },
+      (value) => finish({ value, timedOut: false }),
+      () => finish({ value: fallback, timedOut: false }),
     );
   });
+}
+
+function ready<T>(value: T): Promise<Cutoff<T>> {
+  return Promise.resolve({ value, timedOut: false });
 }
 
 /**
@@ -1028,29 +1043,40 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
   // Everything that changes the packet is in the key: symbol, timeframe, asset class and the options expiry.
   const cacheKey = `${symbol}_${timeframe}_${assetClass}_${expiry ?? 'default-expiry'}`;
   const hit = cache.get(cacheKey);
-  if (!params.fresh && hit && Date.now() - hit.ts < CACHE_TTL) {
+  if (!params.fresh && hit && Date.now() - hit.ts < hit.ttl) {
     const req = hit.data.optionsRequest;
-    return { payload: hit.data, cached: true, localDemo: false, warnings: req?.status === 'unavailable' ? [`Options for the requested ${req.expiry} expiry are not available; no other expiry was substituted.`] : [], dataQuality: buildMarketDataProviderStatus({ source: 'memory_cache', provider: 'memory_cache' }) };
+    const warnings = [...hit.timeouts];
+    if (req?.status === 'unavailable') warnings.push(`Options for the requested ${req.expiry} expiry are not available; no other expiry was substituted.`);
+    return { payload: hit.data, cached: true, localDemo: false, warnings, dataQuality: buildMarketDataProviderStatus({ source: 'memory_cache', provider: 'memory_cache' }) };
   }
 
   const tcSymbol = assetClass === 'crypto' ? `${symbol.replace(/[-/]?(USDT|USD)$/i, '')}USD` : symbol;
   const base = symbol.replace(/[-/]?(USDT|USD)$/i, '');
   const enrichmentMs = Math.min(20_000, Math.max(1, params.enrichmentTimeoutMs ?? 8_000));
+  const timeouts: string[] = [];
+  const take = <T>(section: string, settled: Cutoff<T>): T => {
+    if (settled.timedOut) timeouts.push(sectionTimeoutWarning(section));
+    return settled.value;
+  };
   // Price is required. Calendar, macro, confluence and fundamentals do not depend on it, so they start with it.
-  // A slow optional call is dropped at enrichmentMs and the report still renders.
+  // A slow optional call is dropped at enrichmentMs and the report still renders. MPE and the regime overlay share that cutoff.
   const pricePromise = fetchPrice(symbol, assetClass, { requireHistoricals: true, avInterval, cryptoIndicatorHistory: true });
-  const tcPromise = settleWithin(fetchTimeConfluence(tcSymbol), enrichmentMs, null);
-  const macroPromise = settleWithin(fetchMacroRegime(), enrichmentMs, null);
-  const calendarPromise = assetClass === 'forex' ? Promise.resolve(null) : settleWithin(
+  const tcSettled = settleWithin(fetchTimeConfluence(tcSymbol), enrichmentMs, null);
+  const macroSettled = settleWithin(fetchMacroRegime(), enrichmentMs, null);
+  const calendarSettled = assetClass === 'forex' ? ready(null) : settleWithin(
     buildCalendarFeed({ nowMs: Date.now(), days: TIMING_EVIDENCE.eventHorizonDays, countries: ['US'], importance: 'high' }).catch(() => null),
     enrichmentMs,
     null,
   );
-  const fundamentalsPromise = assetClass === 'equity'
+  const fundamentalsSettled = assetClass === 'equity'
     ? settleWithin(getFundamentalsSummary(symbol).catch(() => null), enrichmentMs, null)
-    : Promise.resolve(null);
-  const mpePromise = tcPromise.then((tc) => fetchMPE(symbol, assetClass, tc));
-  const overlayPromise = macroPromise.then((macro) => loadRegimeOverlayInputs({ macroRiskState: macro?.riskState ?? null }).catch(() => null));
+    : ready(null);
+  const mpeSettled = settleWithin(tcSettled.then((tc) => fetchMPE(symbol, assetClass, tc.value)), enrichmentMs, null);
+  const overlaySettled = settleWithin(
+    macroSettled.then((macro) => loadRegimeOverlayInputs({ macroRiskState: macro.value?.riskState ?? null }).catch(() => null)),
+    enrichmentMs,
+    null,
+  );
 
   const priceData = await pricePromise;
   if (!priceData) {
@@ -1065,16 +1091,22 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
   // Indicators use the longer indicator history when the fetcher provides it (EMA200 convergence), else the display bars.
   const indHist = priceData.indicatorHistory && priceData.indicatorHistory.closes.length > priceData.historicalCloses.length ? priceData.indicatorHistory : null;
   const indPromise = fetchIndicators(symbol, assetClass, indHist?.closes ?? priceData.historicalCloses, indHist?.highs ?? priceData.historicalHighs, indHist?.lows ?? priceData.historicalLows, avInterval);
-  const optsPromise = assetClass === 'equity'
+  const optsSettled = assetClass === 'equity'
     ? settleWithin(fetchOptionsSnapshot(symbol, priceData.price, { recentCloses: priceData.historicalCloses, recentDates: priceData.historicalDates, expiry }), enrichmentMs, null)
-    : Promise.resolve(null);
+    : ready(null);
   const derivsPromise = assetClass === 'crypto' ? fetchCryptoDerivatives(symbol) : Promise.resolve(null);
   const btcPromise = assetClass === 'crypto' && base !== 'BTC' ? fetchCryptoSeries('BTC', 'daily', Date.now(), { coinId: 'bitcoin' }).catch(() => null) : Promise.resolve(null);
   const ethPromise = assetClass === 'crypto' && base !== 'ETH' && base !== 'BTC' ? fetchCryptoSeries('ETH', 'daily', Date.now(), { coinId: 'ethereum' }).catch(() => null) : Promise.resolve(null);
 
-  const [tcData, macroRegime, calendarFeed, fundamentals, indData, mpeData, optsData, cryptoDerivsData, btc, eth] = await Promise.all([
-    tcPromise, macroPromise, calendarPromise, fundamentalsPromise, indPromise, mpePromise, optsPromise, derivsPromise, btcPromise, ethPromise,
+  const [tcS, macroS, calendarS, fundamentalsS, indData, mpeS, optsS, cryptoDerivsData, btc, eth] = await Promise.all([
+    tcSettled, macroSettled, calendarSettled, fundamentalsSettled, indPromise, mpeSettled, optsSettled, derivsPromise, btcPromise, ethPromise,
   ]);
+  const tcData = take('Time confluence', tcS);
+  const macroRegime = take('Macro regime', macroS);
+  const calendarFeed = take('Calendar', calendarS);
+  const fundamentals = take('Fundamentals', fundamentalsS);
+  const mpeData = take('MPE', mpeS);
+  const optsData = take('Options', optsS);
   let network: NetworkContext | null = null;
   const benchSeries: { btcCloses?: number[]; ethCloses?: number[] } = {};
   if (assetClass === 'crypto') {
@@ -1085,11 +1117,11 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
 
   // Direction is needed to relate cross-market items; build the payload once without cross-market, then attach.
   const provisional = buildPayload(symbol, assetClass, priceData, indData, optsData, mpeData, tfLabel, cryptoDerivsData, tcData, macroRegime, { fundamentals, network, timeframeKey: timeframe });
-  const crossMarket = await settleWithin(
+  const crossMarket = take('Cross-market', await settleWithin(
     buildCrossMarket(assetClass, provisional.layer1.direction, fundamentals?.sector ?? null, base, benchSeries).catch(() => null),
     enrichmentMs,
     null,
-  );
+  ));
   let payload = crossMarket ? buildPayload(symbol, assetClass, priceData, indData, optsData, mpeData, tfLabel, cryptoDerivsData, tcData, macroRegime, { fundamentals, network, crossMarket, timeframeKey: timeframe }) : provisional;
 
   // Canonical engine verdict is PRIMARY (permission/grade/setup/direction); the confluence read above is kept as the
@@ -1097,7 +1129,7 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
   try {
     const earningsWindow = holdingWindowDays(timeframe);
     const dte = fundamentals?.daysToEarnings;
-    const overlay = await overlayPromise;
+    const overlay = take('Regime overlay', await overlaySettled);
     const canonicalVerdict = evaluateGoldenEggCanonical(goldenEggCanonicalBars(priceData), {
       symbol, assetClass, timeframe,
       trustLevel: payload.canonical?.dataTrust.level ?? null,
@@ -1137,12 +1169,12 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
       releases: calendarFeed ? { events: calendarFeed.events.filter((e) => !e.isReleased), source: `Economic calendar (${calendarFeed.meta?.providers?.map((p: { id: string }) => p.id).join(', ') || 'providers'})` } : null,
     }) };
   }
-  const warnings: string[] = [];
+  const warnings: string[] = [...timeouts];
   if (expiry) {
     const used = payload.canonical?.options?.expiry === expiry;
     payload = { ...payload, optionsRequest: { expiry, status: used ? 'used' : 'unavailable' } };
     if (!used) warnings.push(`Options for the requested ${expiry} expiry are not available (not listed in the chain, or no usable open interest); no other expiry was substituted.`);
   }
-  cache.set(cacheKey, { data: payload, ts: Date.now() });
+  cache.set(cacheKey, { data: payload, ts: Date.now(), ttl: timeouts.length ? PARTIAL_CACHE_TTL : CACHE_TTL, timeouts: [...timeouts] });
   return { payload, cached: false, localDemo: false, warnings, dataQuality: goldenEggLiveDataQuality(assetClass) };
 }

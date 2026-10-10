@@ -36,7 +36,7 @@ export interface PublicSymbolPacket {
   contract: typeof PUBLIC_SYMBOL_CONTRACT;
   meta: { symbol: string; assetClass: C['assetClass']; price: number; asOfTs: string; timeframe: string };
   priceEvidence: GoldenEggPayload['priceEvidence'] | null;
-  /** Completed daily candles already used for price evidence. Null when that series has no dates. */
+  /** Completed daily candles, or a server-drawn image when signed-out raw bars are withheld. */
   dailyChart: PublicDailyChart | null;
   timingEvidence: GoldenEggPayload['timingEvidence'] | null;
   optionsRequest: { expiry: string; status: 'used' | 'unavailable' } | null;
