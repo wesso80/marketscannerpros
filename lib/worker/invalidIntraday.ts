@@ -26,6 +26,11 @@ export interface InvalidIntradayRedis {
   set(key: string, value: string, opts: { ex: number }): Promise<unknown>;
 }
 
+export interface InvalidIntradayScan {
+  del(key: string): Promise<unknown>;
+  scan(cursor: number | string, opts: { match: string; count: number }): Promise<[string | number, string[]]>;
+}
+
 const memoryExpiresAt = new Map<string, number>();
 const loggedKeys = new Set<string>();
 
@@ -62,12 +67,11 @@ export async function invalidIntradayBlocked(
   nowMs: number,
 ): Promise<boolean> {
   const key = invalidIntradayKey(symbol);
-  if (!key.endsWith(':') && memoryBlocked(key, nowMs)) return true;
-  if (!redis || key.endsWith(':')) return false;
+  if (key.endsWith(':')) return false;
+  if (!redis) return memoryBlocked(key, nowMs);
   try {
     const expiresAt = expiresAtFromRedis(await redis.get(key), nowMs);
-    if (expiresAt == null) return false;
-    if (expiresAt <= nowMs) {
+    if (expiresAt == null || expiresAt <= nowMs) {
       forget(key);
       return false;
     }
@@ -111,8 +115,10 @@ export async function fetchWithInvalidIntradayCache<T>(
   fetchOnce: () => Promise<T>,
   redis: InvalidIntradayRedis | null,
   nowMs: number,
-  log?: (line: string) => void,
+  opts?: { log?: (line: string) => void; rememberInvalid?: boolean },
 ): Promise<InvalidIntradayFetch<T>> {
+  const log = opts?.log;
+  const rememberInvalid = opts?.rememberInvalid !== false;
   if (await invalidIntradayBlocked(symbol, redis, nowMs)) {
     return { ok: false, calls: 0, skipped: true, invalid: true, error: null };
   }
@@ -121,9 +127,46 @@ export async function fetchWithInvalidIntradayCache<T>(
     return { ok: true, value, calls: 1 };
   } catch (error) {
     if (isAvInvalidApiCall(error)) {
-      await rememberInvalidIntraday(symbol, redis, nowMs, log);
+      if (rememberInvalid) await rememberInvalidIntraday(symbol, redis, nowMs, log);
       return { ok: false, calls: 1, skipped: false, invalid: true, error };
     }
     return { ok: false, calls: 1, skipped: false, invalid: false, error };
   }
+}
+
+async function scanInvalidKeys(redis: InvalidIntradayScan): Promise<string[]> {
+  const keys: string[] = [];
+  let cursor: string | number = 0;
+  for (let i = 0; i < 50; i++) {
+    const [next, batch] = await redis.scan(cursor, { match: `${INVALID_INTRADAY_KEY_PREFIX}*`, count: 100 });
+    for (const key of batch) {
+      if (key.startsWith(INVALID_INTRADAY_KEY_PREFIX)) keys.push(key);
+    }
+    cursor = next;
+    if (String(cursor) === '0') break;
+  }
+  return keys;
+}
+
+export async function clearInvalidIntraday(
+  redis: InvalidIntradayScan | null,
+  scope: { symbol: string } | { all: true },
+): Promise<string[]> {
+  if ('all' in scope) {
+    for (const key of [...memoryExpiresAt.keys()]) {
+      if (key.startsWith(INVALID_INTRADAY_KEY_PREFIX)) forget(key);
+    }
+    if (!redis) return [];
+    const keys = await scanInvalidKeys(redis);
+    for (const key of keys) {
+      await redis.del(key);
+      forget(key);
+    }
+    return keys;
+  }
+  const key = invalidIntradayKey(scope.symbol);
+  if (key.endsWith(':')) return [];
+  forget(key);
+  if (redis) await redis.del(key);
+  return [key];
 }

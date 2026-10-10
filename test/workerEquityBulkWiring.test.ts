@@ -47,6 +47,7 @@ describe('worker equities wiring (source guard)', () => {
     expect(processEquity.lastIndexOf('isDailyRefreshDue(hold.daily?.state, nowMs, cfg)', daily)).toBeGreaterThan(-1);
     expect(processEquity.lastIndexOf('isHourlyRefreshDue(hold.hourly, nowMs, cfg)', hourly)).toBeGreaterThan(-1);
     expect(processEquity.lastIndexOf('fetchWithInvalidIntradayCache', hourly)).toBeGreaterThan(-1);
+    expect(processEquity).toContain('rememberInvalid: fetchedDaily');
     expect(processEquity).toContain('equityStaleRun.skip(symbol, latestBar?.timestamp, nowMs)');
     expect(processEquity).toContain('buildLiveDailyBar(quote, liveSession)');
     expect(processEquity).toContain('mergeLiveDailyBar(heldBars, liveBar)');

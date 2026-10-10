@@ -35,6 +35,7 @@ import type { RegimePriority, LifecycleState } from '@/app/v2/_lib/types';
 import { useUserTier, FREE_DAILY_SCAN_LIMIT, canAccessUnlimitedScanning } from '@/lib/useUserTier';
 import ScreenerTable, { type ScreenerRow } from '@/components/scanner/ScreenerTable';
 import { formatScannerPrice, proDisplaySymbol } from '@/lib/scanner/proDisplay';
+import { PriceAsOfStamp } from '@/components/market/StalePriceMark';
 import ScannerInsightStrip from '@/components/analysis/ScannerInsightStrip';
 import CompositeBreakdown from '@/components/analysis/CompositeBreakdown';
 import CanonicalVerdict from '@/components/analysis/CanonicalVerdict';
@@ -336,8 +337,7 @@ function ScannerFlowRail({
 }
 
 function ScannerRowStamp({row}:{row:ScanResult}) {
-  const label = row.dataBasis?.priceLabel;
-  return <span>{row.price == null ? 'Not collected' : formatScannerPrice(row.price)}{label ? <small className="mt-0.5 block text-[10px] font-normal text-slate-500">{label}</small> : null}</span>;
+  return <PriceAsOfStamp priceText={row.price == null ? 'Not collected' : formatScannerPrice(row.price)} label={row.dataBasis?.priceLabel} stale={row.dataBasis?.priceStale} />;
 }
 
 function ProScannerCards({ rows, onRowClick }: { rows: ScreenerRow[]; onRowClick: (row: ScreenerRow) => void }) {

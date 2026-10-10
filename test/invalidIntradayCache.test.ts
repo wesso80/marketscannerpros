@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   INVALID_INTRADAY_TTL_SEC,
+  clearInvalidIntraday,
   fetchWithInvalidIntradayCache,
   invalidIntradayKey,
   resetInvalidIntradayCacheForTests,
   type InvalidIntradayRedis,
+  type InvalidIntradayScan,
 } from '@/lib/worker/invalidIntraday';
 
 const T0 = Date.parse('2026-10-10T15:00:00Z');
@@ -24,9 +26,9 @@ describe('invalid intraday negative cache', () => {
   it('calls once, skips until the entry expires, then calls again', async () => {
     const fetchOnce = invalidFetch();
     const log = vi.fn();
-    const first = await fetchWithInvalidIntradayCache('co', fetchOnce, null, T0, log);
-    const second = await fetchWithInvalidIntradayCache('CO', fetchOnce, null, T0 + 60_000, log);
-    const after = await fetchWithInvalidIntradayCache('CO', fetchOnce, null, T0 + WEEK + 1, log);
+    const first = await fetchWithInvalidIntradayCache('co', fetchOnce, null, T0, { log });
+    const second = await fetchWithInvalidIntradayCache('CO', fetchOnce, null, T0 + 60_000, { log });
+    const after = await fetchWithInvalidIntradayCache('CO', fetchOnce, null, T0 + WEEK + 1, { log });
 
     expect(first.calls).toBe(1);
     expect(first.ok).toBe(false);
@@ -86,5 +88,57 @@ describe('invalid intraday negative cache', () => {
     await fetchWithInvalidIntradayCache('AAPL', fetchOnce, null, T0);
     await fetchWithInvalidIntradayCache('AAPL', fetchOnce, null, T0 + 1000);
     expect(fetchOnce).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not remember Invalid API call when the same run did not get daily bars', async () => {
+    const fetchOnce = invalidFetch();
+    const first = await fetchWithInvalidIntradayCache('GTBIF', fetchOnce, null, T0, { rememberInvalid: false });
+    const second = await fetchWithInvalidIntradayCache('GTBIF', fetchOnce, null, T0 + 1000, { rememberInvalid: false });
+    expect(first.calls).toBe(1);
+    expect(first.ok).toBe(false);
+    if (!first.ok) expect(first.invalid).toBe(true);
+    expect(second.calls).toBe(1);
+    expect(fetchOnce).toHaveBeenCalledTimes(2);
+  });
+
+  it('tries again after another process deletes the redis key', async () => {
+    const store = new Map<string, string>();
+    const redis: InvalidIntradayRedis = {
+      get: async (key) => store.get(key) ?? null,
+      set: async (key, value) => { store.set(key, value); },
+    };
+    const fetchOnce = invalidFetch();
+    await fetchWithInvalidIntradayCache('GTBIF', fetchOnce, redis, T0);
+    expect(store.has(invalidIntradayKey('GTBIF'))).toBe(true);
+    store.delete(invalidIntradayKey('GTBIF'));
+    const again = await fetchWithInvalidIntradayCache('GTBIF', fetchOnce, redis, T0 + 1000);
+    expect(again.calls).toBe(1);
+    expect(fetchOnce).toHaveBeenCalledTimes(2);
+  });
+
+  it('clears one symbol or every av:invalid-intraday key', async () => {
+    const store = new Map<string, string>();
+    const redis: InvalidIntradayRedis & InvalidIntradayScan = {
+      get: async (key) => store.get(key) ?? null,
+      set: async (key, value) => { store.set(key, value); },
+      del: async (key) => { store.delete(key); },
+      scan: async (_cursor, opts) => {
+        const prefix = opts.match.replace(/\*$/, '');
+        return ['0', [...store.keys()].filter((key) => key.startsWith(prefix))];
+      },
+    };
+    const fetchOnce = invalidFetch();
+    await fetchWithInvalidIntradayCache('GTBIF', fetchOnce, redis, T0);
+    await fetchWithInvalidIntradayCache('NVDA', fetchOnce, redis, T0);
+    store.set('other:key', 'keep');
+    expect(await clearInvalidIntraday(redis, { symbol: 'gtbif' })).toEqual(['av:invalid-intraday:GTBIF']);
+    expect(store.has('av:invalid-intraday:GTBIF')).toBe(false);
+    expect(store.has('av:invalid-intraday:NVDA')).toBe(true);
+    const again = await fetchWithInvalidIntradayCache('GTBIF', fetchOnce, redis, T0 + 1000);
+    expect(again.calls).toBe(1);
+    expect((await clearInvalidIntraday(redis, { all: true })).sort()).toEqual(['av:invalid-intraday:GTBIF', 'av:invalid-intraday:NVDA']);
+    expect([...store.keys()]).toEqual(['other:key']);
+    const afterAll = await fetchWithInvalidIntradayCache('NVDA', fetchOnce, redis, T0 + 2000);
+    expect(afterAll.calls).toBe(1);
   });
 });

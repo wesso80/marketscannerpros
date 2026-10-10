@@ -36,6 +36,7 @@ import { priceChangeBasisLabel } from '@/lib/scoring/canonical/display';
 import {optionsHref} from '@/lib/market/links';
 import { lookupAssetType } from '@/lib/lookupAssetType';
 import {SymbolSnapshotHeader} from '@/components/market/SymbolSnapshotHeader';
+import {StalePriceMark, SymbolAsOfLine} from '@/components/market/StalePriceMark';
 import LockedPreview from '@/components/free/LockedPreview';
 import { FREE_COPY } from '@/components/free/copy';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
@@ -760,7 +761,7 @@ function GoldenEggReport() {
                 <div className="text-xs text-slate-500 py-3">Derivatives evidence is not available for this asset right now.</div>
               )}
               <div className="mt-3 grid gap-1 sm:grid-cols-3 text-xs">
-                <div className="rounded-md bg-[var(--msp-panel-2)] px-2 py-1.5"><div className="text-slate-500 text-[10px] uppercase">Price</div><div className="text-white font-mono">{symbolText(isUsableNumber(ge?.meta?.price) ? formatLevel(ge!.meta.price) : 'Not recorded')}</div>{geCanonical && <div className="text-[10px] text-slate-500">{symbolText(geCanonical.priceLabel || `as of ${String(geCanonical.priceTs).slice(11, 16)} UTC · last bar ${geCanonical.lastCompletedBarAt ? String(geCanonical.lastCompletedBarAt).slice(0, 10) : 'Not recorded'}`)}</div>}</div>
+                <div className="rounded-md bg-[var(--msp-panel-2)] px-2 py-1.5"><div className="text-slate-500 text-[10px] uppercase">Price</div><div className="text-white font-mono">{symbolText(isUsableNumber(ge?.meta?.price) ? formatLevel(ge!.meta.price) : 'Not recorded')}</div>{geCanonical && <SymbolAsOfLine stale={geCanonical.priceStale} label={geCanonical.priceLabel || `as of ${String(geCanonical.priceTs).slice(11, 16)} UTC · last bar ${geCanonical.lastCompletedBarAt ? String(geCanonical.lastCompletedBarAt).slice(0, 10) : 'Not recorded'}`} />}</div>
                 <div className="rounded-md bg-[var(--msp-panel-2)] px-2 py-1.5"><div className="text-slate-500 text-[10px] uppercase">Market regime</div><div className="text-white">{symbolText(humanizeEnum(regime.data?.regime))}</div></div>
                 <div className="rounded-md bg-[var(--msp-panel-2)] px-2 py-1.5"><div className="text-slate-500 text-[10px] uppercase">Data trust</div><div className="text-white">{symbolText(geDataQuality==='GOOD'?'Checks passed':'Some checks failed')}</div></div>
               </div>
@@ -1253,7 +1254,7 @@ function GoldenEggReport() {
       </>}
       </CollapsibleSection>}
       {!isAuthBlocked&&geCanonical?.historyBars!=null&&geCanonical.historyBars>0&&<CollapsibleSection deferMount title="Backtest" summary={`${geCanonical.historyBars} recorded ${geCanonical.barInterval??timeframe} bars`}><a className="inline-flex min-h-10 items-center underline" href={`/tools/workspace?tab=backtest&symbol=${encodeURIComponent(sym)}&type=${snapshotAsset}&timeframe=${timeframe}`}>Open Backtest with {symbolText(sym)}</a></CollapsibleSection>}
-      {(quoteType==='crypto'?Boolean(cryptoStamp?.source&&cryptoStamp?.asOf):Boolean((geCanonical?.source??quote.data?.source)&&(geCanonical?.priceTs??quote.data?.observedAt)))&&<SourceLine {...(quoteType==='crypto'?{...cryptoStamp,source:readerSourceLabel(cryptoStamp?.source)}:{source:readerSourceLabel(geCanonical?.source??quote.data?.source),asOf:geCanonical?.priceTs??quote.data?.observedAt,basis:geCanonical?.priceLabel??geCanonical?.barInterval??'Last session close'})}/>}
+      {(quoteType==='crypto'?Boolean(cryptoStamp?.source&&cryptoStamp?.asOf):Boolean((geCanonical?.source??quote.data?.source)&&(geCanonical?.priceTs??quote.data?.observedAt)))&&<div className="flex flex-wrap items-center gap-1">{quoteType==='crypto'?<SourceLine {...{...cryptoStamp,source:readerSourceLabel(cryptoStamp?.source)}}/>:<SourceLine source={readerSourceLabel(geCanonical?.source??quote.data?.source)} asOf={geCanonical?.priceTs??quote.data?.observedAt} basis={geCanonical?.priceLabel??geCanonical?.barInterval??'Last session close'}/>}{geCanonical?.priceStale ? <StalePriceMark stale /> : null}</div>}
       <p className={studio.disclaimer}>General information only, not financial advice.</p>
     </div>
   );

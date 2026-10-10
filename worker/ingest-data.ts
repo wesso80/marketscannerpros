@@ -1520,6 +1520,7 @@ async function processEquitySymbol(symbol: string, ctx: EquityProcessContext): P
           () => fetchAVTimeSeries(symbol, '60min', 'compact'),
           getRedis() as InvalidIntradayRedis | null,
           nowMs,
+          { rememberInvalid: fetchedDaily },
         );
         if (!gated.ok && gated.skipped) {
           // Negative cache still inside 7 days. Daily bars above are unchanged.

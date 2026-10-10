@@ -49,6 +49,7 @@ afterEach(() => {
   for (const key of redisEnv) delete process.env[key];
   redisStore.clear();
   redisBox.current = defaultRedis;
+  vi.useRealTimers();
 });
 
 beforeEach(() => {
@@ -191,4 +192,39 @@ it('waits on a busy Redis history lock and does not fetch OHLC once the cache ap
   expect(vi.mocked(cg.getMarketChartRange)).not.toHaveBeenCalled();
   expect(series.bars.at(-1)?.close).toBe(11);
   expect(series.priceLabel.startsWith('as of ')).toBe(true);
+});
+
+it('waits out a busy history lock past a short poll and still uses the cached close', async () => {
+  vi.useFakeTimers();
+  process.env.UPSTASH_REDIS_REST_URL = 'https://example.upstash.io';
+  process.env.UPSTASH_REDIS_REST_TOKEN = 'test';
+  const started = Date.now();
+  redisBox.current = {
+    async set(_key, _value, opts) {
+      if (opts?.nx) return null;
+      return 'OK';
+    },
+    async get(key) {
+      const text = String(key);
+      if (text.endsWith(':lock')) return '1';
+      if (!text.startsWith('cg:crypto-daily:')) return null;
+      if (Date.now() - started < 18_000) return null;
+      return {
+        freshUntil: NOW + 86_400_000,
+        value: {
+          bars: [{ t: '2026-10-09T00:00:00.000Z', open: 40, high: 44, low: 39, close: 42, volume: null }],
+          volumes: [[Date.parse('2026-10-09T00:00:00.000Z'), 1_000]],
+          warnings: [],
+          windows: 2,
+        },
+      };
+    },
+    async del() { return 1; },
+  };
+  const pending = fetchCryptoSeries('bitcoin', 'daily', NOW, { coinId: 'bitcoin' });
+  await vi.runAllTimersAsync();
+  const series = await pending;
+  expect(series.bars.at(-1)?.close).toBe(42);
+  expect(vi.mocked(cg.getOHLCRange)).not.toHaveBeenCalled();
+  expect(Date.now() - started).toBeGreaterThanOrEqual(18_000);
 });

@@ -80,6 +80,7 @@ export interface PriceData {
   priceTs?: string;
   /** "as of <time>" or "yesterday's close, as of <time>" for the price actually returned. */
   priceLabel?: string;
+  priceStale?: boolean;
   source?: string;
   volumeBasis?: string;
   /** CoinGecko coin detail (market cap, supply, ATH…) when the symbol is crypto. */
@@ -263,6 +264,7 @@ export async function fetchPrice(
         lastCompletedBarAt: series.lastCompletedBarAt,
         priceTs: (usedDetail && detailAsOf ? detailAsOf : series.priceAsOf || series.partialBar?.t || series.lastCompletedBarAt) || undefined,
         priceLabel,
+        priceStale: series.priceStale,
         source: priceLabel ? `${series.source}; ${priceLabel}` : series.source,
         volumeBasis: series.volumeBasis,
         coinDetail: detail ?? null,
