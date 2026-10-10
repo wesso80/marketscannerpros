@@ -84,6 +84,11 @@ interface ScopedBar {
  * crypto universe row. quotes_latest is never used.
  *
  * Symbols are stored uppercased, so compare to UPPER($1) and leave the symbol index usable.
+ *
+ * Stays raw. price_at_signal is the raw print stored with the signal, and this query compares
+ * that print to the raw close. splitAdjustStoredBars would move the exit and leave the entry.
+ * Crypto rows have no equity split coefficient. Equity rows with no symbol_universe row are
+ * still read here, so getBars writes those raw daily bars back on the fetch it already made.
  */
 async function getScopedBars(
   symbol: string,

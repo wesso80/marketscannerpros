@@ -127,6 +127,9 @@ export async function labelOutcome(setupId: number): Promise<LabelResult | null>
 
   // The ingest worker already maintains real equity and crypto daily OHLC.
   // Read it directly: a crypto ticker must never fall through to an equity-only AV endpoint.
+  // Stays raw. price_at_signal is the raw print stored with the setup, and this query compares
+  // that print to the raw close. splitAdjustStoredBars would move the exit and leave the entry.
+  // Crypto rows have no equity split coefficient.
   const bars = await q<{ ts: Date | string; high: string; low: string; close: string }>(
     `SELECT ts, high, low, close FROM ohlcv_bars
       WHERE symbol = $1 AND timeframe = 'daily' AND ts >= $2::timestamptz - INTERVAL '1 day'

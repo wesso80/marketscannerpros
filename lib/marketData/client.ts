@@ -42,7 +42,7 @@ type AvDailySeries = Record<string, {
   '6. volume'?: string;
 }>;
 
-export async function avFetchDailyBars(symbol: string, full: boolean): Promise<{ bars: OhlcBar[]; fetchedAt: string } | null> {
+export async function avFetchDailyBars(symbol: string, full: boolean): Promise<{ bars: OhlcBar[]; fetchedAt: string; payload: unknown } | null> {
   const url = `${AV_BASE}?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&outputsize=${full ? 'full' : 'compact'}&apikey=${key()}`;
   const json = await avFetch<{ 'Time Series (Daily)'?: AvDailySeries; 'Meta Data'?: Record<string, string> }>(url, `DAILY_ADJ ${symbol}`);
   if (!json) return null;
@@ -65,7 +65,9 @@ export async function avFetchDailyBars(symbol: string, full: boolean): Promise<{
     });
   }
   bars.sort((a, b) => a.ts - b.ts);
-  return { bars, fetchedAt: new Date().toISOString() };
+  // `bars` stays dividend-adjusted for callers that ask for that series.
+  // getBars ignores it and builds split-only bars from this payload.
+  return { bars, fetchedAt: new Date().toISOString(), payload: json };
 }
 
 export async function avFetchIntradayBars(symbol: string, interval: Exclude<BarTimeframe, 'daily' | 'weekly' | 'monthly'>): Promise<{ bars: OhlcBar[]; fetchedAt: string } | null> {

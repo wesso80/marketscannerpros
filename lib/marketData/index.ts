@@ -23,7 +23,9 @@ import {
   avFetchOptionsChain,
   avFetchNews,
 } from './client';
+import { rawOhlcFromDailyPayload, splitOnlyOhlcFromDailyPayload } from '@/lib/scanner/corporateActions';
 import {
+  isWorkerOwnedDailySymbol,
   pgReadBars, pgUpsertBars,
   pgReadQuote, pgUpsertQuote,
   pgReadOverview, pgUpsertOverview,
@@ -99,7 +101,8 @@ export async function getBars(symbol: string, timeframe: BarTimeframe, opts: Fet
 
   const full = timeframe === 'daily' && opts.fullDailyHistory === true;
   const barLimit = full ? 500 : AV_DAILY_COMPACT_BARS;
-  const cacheKey = CK.bars(symbol, full ? 'daily-position-v2' : timeframe);
+  // v3 / daily-split-v1 drop Redis entries that still hold dividend-adjusted closes.
+  const cacheKey = CK.bars(symbol, full ? 'daily-position-v3' : timeframe === 'daily' ? 'daily-split-v1' : timeframe);
   // 1. Redis
   if (!opts.forceFresh) {
     const hit = await rGet<OhlcBar[]>(cacheKey);
@@ -108,8 +111,7 @@ export async function getBars(symbol: string, timeframe: BarTimeframe, opts: Fet
     }
   }
 
-  // The legacy store mixes raw worker OHLC and adjusted closes. Position history requires
-  // a coherently adjusted provider series; reuse its separate Redis cache above.
+  // Postgres daily rows are raw. pgReadBars returns them split-only, the same basis as the AV path below.
   if (!opts.forceFresh && !full) {
     const pg = dataType === 'dailyBars' && timeframe === 'daily'
       ? await pgReadBars(symbol, timeframe, barLimit)
@@ -121,9 +123,12 @@ export async function getBars(symbol: string, timeframe: BarTimeframe, opts: Fet
     }
   }
 
-  // 3. AV
+  // 3. AV. One fetch. Daily returns split-only bars from raw '4. close' plus split coefficients.
+  // '5. adjusted close' is not the returned basis. Non-universe symbols get those raw bars written
+  // back so label-outcomes and the 6w/12w stored tail do not go stale. Universe symbols stay worker-owned.
   try {
-    const fresh = timeframe === 'daily' || timeframe === 'weekly' || timeframe === 'monthly'
+    const dailyFamily = timeframe === 'daily' || timeframe === 'weekly' || timeframe === 'monthly';
+    const fresh = dailyFamily
       ? await avFetchDailyBars(symbol, full)
       : await avFetchIntradayBars(symbol, timeframe);
     if (!fresh) {
@@ -132,13 +137,20 @@ export async function getBars(symbol: string, timeframe: BarTimeframe, opts: Fet
       if (pg) return wrap({ data: pg.bars, source, fetchedAt: pg.fetchedAt, fromCache: 'postgres', dataType, missingFields: ['live-fetch-failed'] });
       return wrap<OhlcBar[]>({ data: null, source, fetchedAt: new Date().toISOString(), fromCache: 'miss', dataType, error: 'no data' });
     }
-    if (full) fresh.bars = fresh.bars.slice(-500);
-    // Daily, weekly, and monthly stay out of ohlcv_bars. That table is the worker's raw series.
-    // Writing the adjusted helper back would mix the two bases. Intraday writes stay.
-    const dailyFamily = timeframe === 'daily' || timeframe === 'weekly' || timeframe === 'monthly';
-    if (!dailyFamily) await pgUpsertBars(symbol, timeframe, fresh.bars).catch(() => undefined);
-    await rSet(cacheKey, fresh.bars, fresh.fetchedAt, FRESHNESS_RULES[dataType].realTime);
-    return wrap({ data: fresh.bars, source, fetchedAt: fresh.fetchedAt, fromCache: 'av', dataType });
+    const payload = dailyFamily && 'payload' in fresh ? fresh.payload : undefined;
+    let seriesBars = payload ? splitOnlyOhlcFromDailyPayload(payload) : fresh.bars;
+    if (full) seriesBars = seriesBars.slice(-500);
+    if (timeframe === 'daily' && payload) {
+      let raw = rawOhlcFromDailyPayload(payload);
+      if (full) raw = raw.slice(-500);
+      if (!(await isWorkerOwnedDailySymbol(symbol))) {
+        await pgUpsertBars(symbol, 'daily', raw).catch(() => undefined);
+      }
+    } else if (!dailyFamily) {
+      await pgUpsertBars(symbol, timeframe, fresh.bars).catch(() => undefined);
+    }
+    await rSet(cacheKey, seriesBars, fresh.fetchedAt, FRESHNESS_RULES[dataType].realTime);
+    return wrap({ data: seriesBars, source, fetchedAt: fresh.fetchedAt, fromCache: 'av', dataType });
   } catch (e) {
     const pg = await pgReadBars(symbol, timeframe);
     if (pg) return wrap({ data: pg.bars, source, fetchedAt: pg.fetchedAt, fromCache: 'postgres', dataType, missingFields: ['live-fetch-error'], error: (e as Error).message });

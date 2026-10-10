@@ -3,6 +3,9 @@
  * Recording uses a payload the caller already downloaded. A missing table is no actions.
  */
 import { q } from '@/lib/db';
+import type { OhlcBar } from '@/lib/marketData/types';
+import { parseAlphaVantageDailyBars } from '@/lib/scanner/avDailyBars';
+import { avRowVolume } from '@/lib/scanner/avVolume';
 
 export interface CorporateAction {
   session: string;
@@ -49,6 +52,44 @@ export function corporateActionsFromPayload(payload: unknown): CorporateAction[]
   }
   out.sort((a, b) => (a.session < b.session ? -1 : a.session > b.session ? 1 : 0));
   return out;
+}
+
+/** Split-only bars from a TIME_SERIES_DAILY_ADJUSTED payload. Uses raw '4. close' and '8. split coefficient'. Ignores '5. adjusted close', which also removes dividends. */
+export function splitOnlyOhlcFromDailyPayload(payload: unknown): OhlcBar[] {
+  return parseAlphaVantageDailyBars(payload, 20_000).map((bar) => ({
+    date: bar.t.slice(0, 10),
+    ts: Date.parse(bar.t),
+    open: bar.open,
+    high: bar.high,
+    low: bar.low,
+    close: bar.close,
+    volume: bar.volume ?? 0,
+  }));
+}
+
+/** Raw bars for ohlcv_bars. No split factor and no dividend adjustment. A new row may have volume 0. */
+export function rawOhlcFromDailyPayload(payload: unknown): OhlcBar[] {
+  if (!payload || typeof payload !== 'object') return [];
+  const series = (payload as Record<string, unknown>)['Time Series (Daily)'];
+  if (!series || typeof series !== 'object') return [];
+  const bars: OhlcBar[] = [];
+  for (const [date, raw] of Object.entries(series as Record<string, unknown>)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !raw || typeof raw !== 'object') continue;
+    const row = raw as Record<string, string>;
+    const open = Number(row['1. open']);
+    const high = Number(row['2. high']);
+    const low = Number(row['3. low']);
+    const close = Number(row['4. close']);
+    if (![open, high, low, close].every((value) => Number.isFinite(value) && value > 0)) continue;
+    bars.push({
+      date,
+      ts: Date.parse(`${date}T00:00:00.000Z`),
+      open, high, low, close,
+      volume: avRowVolume(row),
+    });
+  }
+  bars.sort((a, b) => a.ts - b.ts);
+  return bars;
 }
 
 /** OHLC divided by later split coefficients, volume multiplied. Dividends do not move the price. Input order is kept. */

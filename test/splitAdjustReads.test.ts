@@ -1,12 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { q } from '@/lib/db';
+import { pgReadBars } from '@/lib/marketData/store';
 import {
   UPSERT_ACTIONS_SQL,
   corporateActionsFromPayload,
   isMissingRelation,
   loadCorporateActions,
+  rawOhlcFromDailyPayload,
   recordCorporateActions,
   splitAdjustStoredBars,
+  splitOnlyOhlcFromDailyPayload,
 } from '@/lib/scanner/corporateActions';
 
 const upsert = vi.hoisted(() => vi.fn(async () => 1));
@@ -38,6 +42,7 @@ vi.mock('@/lib/marketData/store', async () => {
 });
 
 import { getBars } from '@/lib/marketData';
+import * as client from '@/lib/marketData/client';
 
 const prior = { t: '2024-06-07T00:00:00.000Z', open: 200, high: 210, low: 190, close: 200, volume: 1000 };
 const splitDay = { t: '2024-06-10T00:00:00.000Z', open: 100, high: 105, low: 95, close: 100, volume: 2000 };
@@ -45,6 +50,10 @@ const splitDay = { t: '2024-06-10T00:00:00.000Z', open: 100, high: 105, low: 95,
 describe('split adjustment on stored raw bars', () => {
   beforeEach(() => {
     upsert.mockClear();
+    vi.mocked(client.avFetchDailyBars).mockClear();
+    vi.mocked(q).mockReset();
+    vi.mocked(q).mockImplementation(async () => []);
+    vi.useRealTimers();
   });
 
   it('halves the pre-split close and doubles its volume, and leaves the split day alone', () => {
@@ -131,13 +140,118 @@ describe('split adjustment on stored raw bars', () => {
       'lib/jarvis/radar/collect.ts',
     ];
     for (const path of readers) expect(readFileSync(path, 'utf8'), path).toContain('splitAdjustStoredBars');
-    for (const path of ['lib/outcomes/positionHorizonLabeller.ts', 'lib/outcomes/aiOutcomePrices.ts', 'worker/label-outcomes.ts']) {
+    for (const path of ['lib/outcomes/positionHorizonLabeller.ts', 'lib/outcomes/aiOutcomePrices.ts']) {
       expect(readFileSync(path, 'utf8'), path).not.toContain('splitAdjustStoredBars');
     }
+    const outcomeWorker = readFileSync('worker/label-outcomes.ts', 'utf8');
+    expect(outcomeWorker).toContain('price_at_signal is the raw print');
+    expect(outcomeWorker).not.toMatch(/from ['"].*corporateActions['"]/);
     const worker = readFileSync('worker/ingest-data.ts', 'utf8');
     expect(worker).toContain('recordCorporateActions(symbol, captured.payload');
     expect(worker.match(/TIME_SERIES_DAILY_ADJUSTED/g)).toHaveLength(1);
     const market = readFileSync('lib/marketData/index.ts', 'utf8');
-    expect(market).toContain('if (!dailyFamily) await pgUpsertBars');
+    expect(market).toContain('else if (!dailyFamily)');
+    expect(readFileSync('lib/edge/outcomeLabeller.ts', 'utf8')).toContain('price_at_signal is the raw print');
+    expect(readFileSync('worker/label-outcomes.ts', 'utf8')).toContain('price_at_signal is the raw print');
+  });
+
+  it('returns one split-only basis from postgres and from the AV payload, and does not use the adjusted close', async () => {
+    const payload = {
+      'Time Series (Daily)': {
+        '2024-06-07': {
+          '1. open': '200', '2. high': '210', '3. low': '190', '4. close': '200',
+          '5. adjusted close': '90', '6. volume': '1000', '7. dividend amount': '1.00', '8. split coefficient': '1',
+        },
+        '2024-06-10': {
+          '1. open': '100', '2. high': '110', '3. low': '90', '4. close': '100',
+          '5. adjusted close': '99', '6. volume': '2000', '7. dividend amount': '0', '8. split coefficient': '2',
+        },
+      },
+    };
+    const splitOnly = splitOnlyOhlcFromDailyPayload(payload);
+    expect(splitOnly.map((bar) => bar.close)).toEqual([100, 100]);
+    expect(splitOnly.map((bar) => bar.volume)).toEqual([2000, 2000]);
+    expect(rawOhlcFromDailyPayload(payload).map((bar) => bar.close)).toEqual([200, 100]);
+
+    vi.mocked(q).mockImplementation(async (sql: string) => {
+      if (sql.includes('equity_corporate_actions')) {
+        return [{ symbol: 'NVDA', session: '2024-06-10', split_coefficient: '2', dividend_amount: '1' }];
+      }
+      if (sql.includes('ohlcv_bars')) {
+        return [
+          { ts: new Date('2024-06-10T00:00:00.000Z'), open: '100', high: '110', low: '90', close: '100', volume: '2000' },
+          { ts: new Date('2024-06-07T00:00:00.000Z'), open: '200', high: '210', low: '190', close: '200', volume: '1000' },
+        ];
+      }
+      return [];
+    });
+    const stored = await pgReadBars('nvda', 'daily');
+    expect(stored?.bars.map((bar) => bar.close)).toEqual([100, 100]);
+    expect(stored?.bars.map((bar) => bar.volume)).toEqual([2000, 2000]);
+    const intraday = await pgReadBars('nvda', '60min');
+    expect(intraday?.bars[0].close).toBe(200);
+
+    vi.mocked(client.avFetchDailyBars).mockResolvedValueOnce({
+      bars: [{ date: '2024-06-10', ts: Date.parse('2024-06-10T00:00:00Z'), open: 99, high: 108.9, low: 89.1, close: 99, volume: 2000 }],
+      fetchedAt: new Date().toISOString(),
+      payload,
+    });
+    vi.mocked(q).mockImplementation(async (sql: string) => sql.includes('symbol_universe') ? [] : []);
+    const missed = await getBars('ZZZ', 'daily');
+    expect(missed.fromCache).toBe('av');
+    expect(missed.data?.map((bar) => bar.close)).toEqual([100, 100]);
+    expect(missed.data?.some((bar) => bar.close === 90 || bar.close === 99)).toBe(false);
+    expect(vi.mocked(client.avFetchDailyBars)).toHaveBeenCalledTimes(1);
+    expect(upsert).toHaveBeenCalledTimes(1);
+    expect(upsert.mock.calls[0][0]).toBe('ZZZ');
+    expect(upsert.mock.calls[0][1]).toBe('daily');
+    expect(upsert.mock.calls[0][2].map((bar: { close: number }) => bar.close)).toEqual([200, 100]);
+  });
+
+  it('serves a fresh raw store split-only and does not call Alpha Vantage', async () => {
+    vi.useFakeTimers({ now: Date.parse('2026-10-10T15:00:00Z'), toFake: ['Date'] });
+    const last = Date.parse('2026-10-09T00:00:00.000Z');
+    const rows = Array.from({ length: 100 }, (_, i) => {
+      const ts = new Date(last - i * 86_400_000);
+      const close = ts.toISOString().slice(0, 10) < '2026-09-01' ? 200 : 100;
+      return { ts, open: String(close), high: String(close + 1), low: String(close - 1), close: String(close), volume: '1000' };
+    });
+    vi.mocked(q).mockImplementation(async (sql: string) => {
+      if (sql.includes('equity_corporate_actions')) {
+        return [{ symbol: 'NVDA', session: '2026-09-01', split_coefficient: '2', dividend_amount: '0.4' }];
+      }
+      if (sql.includes('ohlcv_bars')) return rows;
+      return [];
+    });
+    const env = await getBars('NVDA', 'daily');
+    expect(env.fromCache).toBe('postgres');
+    expect(vi.mocked(client.avFetchDailyBars)).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+    const before = env.data?.find((bar) => bar.date === '2026-08-31');
+    const onSplit = env.data?.find((bar) => bar.date === '2026-09-01');
+    expect(before?.close).toBe(100);
+    expect(before?.volume).toBe(2000);
+    expect(onSplit?.close).toBe(100);
+  });
+
+  it('does not write daily bars for a worker-owned symbol, and still makes one AV call on a miss', async () => {
+    const payload = {
+      'Time Series (Daily)': {
+        '2026-10-09': {
+          '1. open': '50', '2. high': '51', '3. low': '49', '4. close': '50',
+          '5. adjusted close': '40', '6. volume': '10', '8. split coefficient': '1',
+        },
+      },
+    };
+    vi.mocked(client.avFetchDailyBars).mockResolvedValueOnce({
+      bars: [{ date: '2026-10-09', ts: Date.parse('2026-10-09T00:00:00Z'), open: 40, high: 40.8, low: 39.2, close: 40, volume: 10 }],
+      fetchedAt: new Date().toISOString(),
+      payload,
+    });
+    vi.mocked(q).mockImplementation(async (sql: string) => sql.includes('symbol_universe') ? [{ n: 1 }] : []);
+    const env = await getBars('AAPL', 'daily');
+    expect(env.data?.[0].close).toBe(50);
+    expect(vi.mocked(client.avFetchDailyBars)).toHaveBeenCalledTimes(1);
+    expect(upsert).not.toHaveBeenCalled();
   });
 });
