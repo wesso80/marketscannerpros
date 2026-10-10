@@ -14,9 +14,13 @@ import { currentAvBudget } from '@/lib/avLimiter';
  * race stays because that is enough for one round trip; the old timeout fired
  * while planDailyCap issued several sequential calls on the retrying cache client.
  *
+ * The sealed cap is min(that budget, CG_DAILY_HARD_MAX). The default is 16500.
+ * A ledger already sealed higher is lowered on the next EVAL.
+ *
  * An unconfirmed reserve (timeout, error, no client, undecoded reply) does not
  * spend process memory. Jobs and crons fail closed. A user-facing read may take
- * one credit from the shared web shelf, floor(flat cap / (processes * 4)),
+ * one credit from the shared web shelf,
+ * floor(min(flat cap, CG_DAILY_HARD_MAX) / (processes * 4)),
  * stored in Postgres so a restart does not mint a new share. If that charge
  * cannot be confirmed, the read is refused and cgFetch serves cache.
  */
@@ -36,8 +40,8 @@ const JOB_LANES = new Set(['alerts', 'scheduled', 'backfill']);
 
 /**
  * Spec for CG_LEDGER_LUA. Tests run this function. Production runs the script.
- * Both must keep used-at-start fixed for the UTC day and refuse when issued
- * would pass the sealed cap.
+ * Both must keep used-at-start fixed for the UTC day, clamp the sealed cap to
+ * ARGV[9], and refuse when issued would pass that cap.
  */
 export const CG_LEDGER_LUA = `
 local function n(v)
@@ -98,6 +102,8 @@ else
   used = nil
   snapshotAt = nil
 end
+local hardMax = n(ARGV[9]) or 0
+if hardMax > 0 and cap > hardMax then cap = math.floor(hardMax) end
 local ok = 1
 if charge == 1 then
   issued = issued + 1
@@ -148,6 +154,21 @@ export function cgEstimatedProcesses(env: Record<string, string | undefined> = p
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) : CG_ESTIMATED_PROCESSES_DEFAULT;
 }
 
+/** Brad's rule. A paced catch-up day cannot admit more than this. */
+export const CG_DAILY_HARD_MAX_DEFAULT = 16_500;
+
+export function cgDailyHardMax(env: Record<string, string | undefined> = process.env): number {
+  const n = Number(env.CG_DAILY_HARD_MAX);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : CG_DAILY_HARD_MAX_DEFAULT;
+}
+
+/** Enforcement cap. pacedDailyCap stays the unclamped budget. */
+export function clampDailyCap(budget: number, hardMax = CG_DAILY_HARD_MAX_DEFAULT): number {
+  if (!(budget > 0)) return 0;
+  const ceiling = Number.isFinite(hardMax) && hardMax > 0 ? Math.floor(hardMax) : CG_DAILY_HARD_MAX_DEFAULT;
+  return Math.min(Math.floor(budget), ceiling);
+}
+
 export function utcMonthParts(now: number): { daysInMonth: number; daysLeft: number; day: string; month: string } {
   const date = new Date(now);
   const year = date.getUTCFullYear();
@@ -186,7 +207,7 @@ export function perProcessDailyCap(flatCap: number, processes: number): number {
 
 /**
  * One share for the whole web fleet, not a fresh share per restart.
- * floor(dailyCap / (CG_ESTIMATED_PROCESSES * 4)).
+ * Pass the clamped flat cap. floor(dailyCap / (CG_ESTIMATED_PROCESSES * 4)).
  */
 export function conservativeProcessShare(dailyCap: number, processes: number): number {
   const count = Number.isFinite(processes) && processes >= 1 ? Math.floor(processes) : CG_ESTIMATED_PROCESSES_DEFAULT;
@@ -370,6 +391,9 @@ export function applyCgLedger(store: Map<string, unknown>, keys: string[], args:
     snapshotAt = null;
   }
 
+  const hardMax = Number(args[8]);
+  if (Number.isFinite(hardMax) && hardMax > 0 && cap > hardMax) cap = Math.floor(hardMax);
+
   let ok = 1;
   if (charge === 1) {
     issued += 1;
@@ -449,6 +473,7 @@ async function evalLedger(now: number, env: Record<string, string | undefined>, 
     KEY_FRESH_MS,
     COUNTER_TTL_SECONDS,
     charge,
+    cgDailyHardMax(env),
   ];
   try {
     const parsed = parseLedger(await withTimeout(redis.eval(CG_LEDGER_LUA, ledgerKeys(day, month), args), CG_LIMITER_REDIS_TIMEOUT_MS));
@@ -633,7 +658,7 @@ export async function planDailyCap(now = Date.now(), env: Record<string, string 
   const quota = cgQuota(env);
   const targetPct = cgTargetPct(env);
   const { daysInMonth, day } = utcMonthParts(now);
-  const flat = flatDailyCap(quota, targetPct, daysInMonth);
+  const flat = clampDailyCap(flatDailyCap(quota, targetPct, daysInMonth), cgDailyHardMax(env));
   const outcome = await evalLedger(now, env, 0);
   if (outcome.kind === 'unconfirmed') {
     return {
@@ -690,7 +715,7 @@ export async function capFields(now = Date.now(), env: Record<string, string | u
  */
 export async function reserveCgCall(now = Date.now(), env: Record<string, string | undefined> = process.env): Promise<void> {
   const { daysInMonth, day } = utcMonthParts(now);
-  const flat = flatDailyCap(cgQuota(env), cgTargetPct(env), daysInMonth);
+  const flat = clampDailyCap(flatDailyCap(cgQuota(env), cgTargetPct(env), daysInMonth), cgDailyHardMax(env));
   const share = conservativeProcessShare(flat, cgEstimatedProcesses(env));
   const outcome = await evalLedger(now, env, 1);
 

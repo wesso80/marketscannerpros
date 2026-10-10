@@ -58,9 +58,11 @@ import { getSimplePrices, resetCgResponseCacheForTests } from '@/lib/coingecko';
 import { runWithAvBudget } from '@/lib/avLimiter';
 import {
   CG_LIMITER_REDIS_TIMEOUT_MS,
+  cgDailyHardMax,
   cgDuty,
   cgQuota,
   cgTargetPct,
+  clampDailyCap,
   conservativeProcessShare,
   flatDailyCap,
   pacedDailyCap,
@@ -164,13 +166,20 @@ describe('daily cap math', () => {
     expect(cgTargetPct({ CG_TARGET_PCT: '80' })).toBe(80);
     expect(flatDailyCap(500_000, 80, 31)).toBe(Math.floor(400_000 / 31));
     expect(pacedDailyCap(500_000, 80, 100_000, 10)).toBe(30_000);
+    expect(clampDailyCap(pacedDailyCap(500_000, 80, 100_000, 10))).toBe(16_500);
     expect(pacedDailyCap(500_000, 80, 400_000, 10)).toBe(0);
     expect(pacedDailyCap(500_000, 80, 399_999, 1)).toBe(1);
     expect(perProcessDailyCap(8, 4)).toBe(2);
     expect(perProcessDailyCap(2, 4)).toBe(0);
-    expect(conservativeProcessShare(flatDailyCap(500_000, 80, 31), 4)).toBe(806);
-    expect(flatDailyCap(500_000, 80, 31) + 806).toBe(13_709);
-    expect(flatDailyCap(500_000, 80, 28) + conservativeProcessShare(flatDailyCap(500_000, 80, 28), 4)).toBe(15_177);
+    const october = clampDailyCap(flatDailyCap(500_000, 80, 31));
+    const february = clampDailyCap(flatDailyCap(500_000, 80, 28));
+    expect(october).toBe(12_903);
+    expect(conservativeProcessShare(october, 4)).toBe(806);
+    expect(october + 806).toBe(13_709);
+    expect(16_500 + conservativeProcessShare(october, 4)).toBe(17_306);
+    expect(february).toBe(14_285);
+    expect(february + conservativeProcessShare(february, 4)).toBe(15_177);
+    expect(16_500 + conservativeProcessShare(february, 4)).toBe(17_392);
     expect(conservativeProcessShare(8, 4)).toBe(0);
     expect(conservativeProcessShare(8, 1)).toBe(2);
   });
@@ -192,7 +201,8 @@ describe('daily cap math', () => {
     seedKey(redis, OCT31, 1_000);
     const first = await planDailyCap(OCT31);
     expect(first).toMatchObject({ mode: 'paced', usedAtStart: 1_000, day: '2026-10-31' });
-    expect(first.cap).toBe(pacedDailyCap(500_000, 80, 1_000, 1));
+    expect(pacedDailyCap(500_000, 80, 1_000, 1)).toBe(399_000);
+    expect(first.cap).toBe(clampDailyCap(pacedDailyCap(500_000, 80, 1_000, 1)));
 
     const later = OCT31 + 60_000;
     seedKey(redis, later, 8_000);
@@ -215,6 +225,68 @@ describe('daily cap math', () => {
     expect(plan.mode).toBe('flat');
     expect(plan.cap).toBe(flatDailyCap(500_000, 80, 31));
     expect(plan.usedAtStart).toBeNull();
+  });
+
+  it('clamps a paced budget above 16500 to 16500, including a ledger sealed higher', async () => {
+    expect(cgDailyHardMax({})).toBe(16_500);
+    expect(clampDailyCap(pacedDailyCap(500_000, 80, 100_000, 10))).toBe(16_500);
+    const redis = makeRedis();
+    holder.redis = redis;
+    seedKey(redis, OCT31, 1_000);
+    const sealed = await planDailyCap(OCT31);
+    expect(pacedDailyCap(500_000, 80, 1_000, 1)).toBe(399_000);
+    expect(sealed.cap).toBe(16_500);
+
+    const ledger = redis.store.get('admin:cg-credits:v1:ledger:2026-10-31') as { cap: number };
+    ledger.cap = 30_000;
+    const lowered = await planDailyCap(OCT31);
+    expect(lowered.cap).toBe(16_500);
+    expect(lowered.usedAtStart).toBe(1_000);
+    expect((redis.store.get('admin:cg-credits:v1:ledger:2026-10-31') as { cap: number }).cap).toBe(16_500);
+  });
+
+  it('uses a CG_DAILY_HARD_MAX override for the sealed cap and the shelf', async () => {
+    expect(cgDailyHardMax({ CG_DAILY_HARD_MAX: '1000' })).toBe(1_000);
+    const redis = makeRedis();
+    holder.redis = redis;
+    seedKey(redis, OCT31, 1_000);
+    vi.stubEnv('CG_DAILY_HARD_MAX', '1000');
+    const plan = await planDailyCap(OCT31);
+    expect(plan.cap).toBe(1_000);
+    expect(plan.usedAtStart).toBe(1_000);
+
+    holder.redis = null;
+    const shelf = makeShelf();
+    setCgShelfForTests(shelf);
+    vi.stubEnv('CG_ESTIMATED_PROCESSES', '1');
+    vi.stubEnv('CG_DAILY_HARD_MAX', '8');
+    const flat = flatDailyCap(500_000, 80, 31);
+    expect(flat).toBeGreaterThan(8);
+    expect(conservativeProcessShare(flat, 1)).toBeGreaterThan(2);
+    expect(conservativeProcessShare(clampDailyCap(flat, 8), 1)).toBe(2);
+    const fetchMock = vi.fn(async () => priceResponse());
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect((await getSimplePrices(['bitcoin'], { noStore: true }))?.bitcoin.usd).toBe(42);
+    expect((await getSimplePrices(['ethereum'], { noStore: true }))?.bitcoin.usd).toBe(42);
+    expect(await getSimplePrices(['solana'], { noStore: true })).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(shelf.rows.get('2026-10-31:web')?.spent).toBe(2);
+  });
+
+  it('falls back to 16500 when CG_DAILY_HARD_MAX is not a positive number', async () => {
+    expect(cgDailyHardMax({ CG_DAILY_HARD_MAX: 'nope' })).toBe(16_500);
+    expect(cgDailyHardMax({ CG_DAILY_HARD_MAX: '0' })).toBe(16_500);
+    expect(cgDailyHardMax({ CG_DAILY_HARD_MAX: '-5' })).toBe(16_500);
+    expect(cgDailyHardMax({ CG_DAILY_HARD_MAX: '' })).toBe(16_500);
+    const redis = makeRedis();
+    holder.redis = redis;
+    seedKey(redis, OCT31, 1_000);
+    vi.stubEnv('CG_DAILY_HARD_MAX', 'nope');
+    const plan = await planDailyCap(OCT31);
+    expect(pacedDailyCap(500_000, 80, 1_000, 1)).toBe(399_000);
+    expect(plan.cap).toBe(16_500);
   });
 });
 
@@ -448,7 +520,10 @@ describe('cgFetch gate', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(readFileSync('lib/admin/cgDailyCap.ts', 'utf8')).not.toContain('evalRunsCapScript');
     expect(isCgCapScript(readFileSync('lib/admin/cgDailyCap.ts', 'utf8'))).toBe(true);
-    expect(readFileSync('lib/admin/cgDailyCap.ts', 'utf8')).toContain('math.floor((quota * (targetPct / 100) - (used or 0)) / daysLeft)');
+    const source = readFileSync('lib/admin/cgDailyCap.ts', 'utf8');
+    expect(source).toContain('math.floor((quota * (targetPct / 100) - (used or 0)) / daysLeft)');
+    expect(source).toContain('local hardMax = n(ARGV[9]) or 0');
+    expect(source).toContain('if hardMax > 0 and cap > hardMax then cap = math.floor(hardMax) end');
   });
 
   it('reports plan, quota, used, remaining, the 80% target, and today on the admin readout', async () => {
@@ -465,7 +540,7 @@ describe('cgFetch gate', () => {
       remaining: 499_000,
       targetPct: 80,
       targetCredits: 400_000,
-      todayCap: pacedDailyCap(500_000, 80, 1_000, 1),
+      todayCap: clampDailyCap(pacedDailyCap(500_000, 80, 1_000, 1)),
       callsToday: 0,
       refusedToday: 0,
       capMode: 'paced',
