@@ -5,8 +5,10 @@
  *   EQUITY_DAILY_BACKFILL=1 npx tsx scripts/backfill-equity-daily-history.ts --symbols=SPY,AAPL,NVDA
  *   EQUITY_DAILY_BACKFILL=1 npx tsx scripts/backfill-equity-daily-history.ts
  *
- * Off unless EQUITY_DAILY_BACKFILL=1. --audit is read-only and does not need the switch.
+ * Off unless EQUITY_DAILY_BACKFILL is 1 or true. --audit is read-only and does not need the switch.
+ * Do not run this before pull request 636 is merged. The read path has to be split-only first.
  * Apply migrations/135_equity_history_backfill.sql by hand first. This script does not create it.
+ * A new bar is inserted even when its volume is 0. A 0 never overwrites a volume already stored.
  */
 process.env.AV_PROCESS_ROLE = 'jarvis';
 
@@ -25,7 +27,7 @@ async function main(): Promise<void> {
 
   const argv = process.argv.slice(2);
   const audit = argv.includes('--audit');
-  if (!audit && process.env.EQUITY_DAILY_BACKFILL !== '1') {
+  if (!audit && process.env.EQUITY_DAILY_BACKFILL !== '1' && process.env.EQUITY_DAILY_BACKFILL !== 'true') {
     console.log('[equity-daily-backfill] disabled');
     process.exit(0);
   }

@@ -4,6 +4,8 @@ Design sketch, 2026-10-10. Nothing in this sketch was run against Neon, Render, 
 
 This pull request builds the backfill only. `recordCorporateActions` and `splitAdjustStoredBars` are the companion change, so this script does not write corporate actions and does not change the worker's download path.
 
+Do not run the backfill before pull request 636 is merged. Until that read path is on the split-only basis, a raw 20-year series is served next to dividend-adjusted closes.
+
 The stored series stays raw, which is what the worker already writes. A 20-year load of adjusted closes would be overwritten on the next equity refresh for the newest 100 sessions and left adjusted behind that, which is the mixed series PR #107 refused. Split adjustment happens on read, in the same change as the load, so EMA200 can use the new history. Volume repair is the same upsert.
 
 ## Synthesis decision
@@ -182,7 +184,7 @@ WHERE (ohlcv_bars.open, ohlcv_bars.high, ohlcv_bars.low, ohlcv_bars.close, ohlcv
 
 `ts` is bound as a `Z` timestamp, so the row hits the worker's key regardless of the session TimeZone. A bare `YYYY-MM-DD` is not bound. `onDemandFetch` and `/api/bars` still bind a bare date (`lib/onDemandFetch.ts:233`, `app/api/bars/route.ts:207`). Whether those collide with UTC midnight depends on the database TimeZone, which was not queried. The audit counts off-midnight daily rows and the job does not delete them.
 
-The `CASE` repairs a stored 0 and refuses to replace a positive volume with a provider 0. The `IS DISTINCT FROM` guard makes a second pass write nothing when the row is already right. The `EXISTS` guard repeats the universe predicate at write time. `ORDER BY r.ts` matches the worker's ascending lock order (`worker/ingest-data.ts:918-919`).
+A new row is inserted even when volume is 0. The `CASE` applies only on conflict: a 0 never overwrites an existing volume, and a positive volume still replaces a stored 0. The `IS DISTINCT FROM` guard makes a second pass write nothing when the row is already right. The `EXISTS` guard repeats the universe predicate at write time. `ORDER BY r.ts` matches the worker's ascending lock order (`worker/ingest-data.ts:918-919`).
 
 The statement does not go through `upsertBars`. That function keeps `bars.slice(-1100)` (`worker/ingest-data.ts:913`) and would drop a 20-year series to 1,100 bars. It also does not call `cleanup_old_bars`. The default of that function keeps 500 bars and would delete the load.
 
@@ -301,7 +303,7 @@ Failure:
 
 | Outcome | What the script does | Progress row |
 |---|---|---|
-| Kill switch is not exactly `1` | Exit 0 before Redis, AV, or SQL | none |
+| Kill switch is not `1` or `true` | Exit 0 before Redis, AV, or SQL | none |
 | Role is not `jarvis`, or limiter Redis is missing | Exit 2, no AV call | none |
 | `avTakeToken` throws denied | Sleep 30s, same symbol. Denied for 10 minutes: exit 3 | unchanged |
 | `allowFallback: false` throws | Exit 2. Completed symbols stay `done` | unchanged |
@@ -312,7 +314,7 @@ Failure:
 | Clock enters the NY session window | Exit 3 | as committed |
 | SIGTERM | The open transaction commits or rolls back. Exit 3 | as committed |
 
-Kill switch: `EQUITY_DAILY_BACKFILL` must equal `1`. Unset, `true`, `0`, and anything else are off. It is not added to `render.yaml`. A test reads `render.yaml` and fails if the name appears. Cancelling the process is the stop. The same command resumes.
+Kill switch: `EQUITY_DAILY_BACKFILL` must equal `1` or `true`. Unset, `0`, and anything else are off. It is not added to `render.yaml`. A test reads `render.yaml` and fails if the name appears. Cancelling the process is the stop. The same command resumes. Do not run the backfill before pull request 636 is merged.
 
 ## 3. Blast radius
 
@@ -382,7 +384,7 @@ Run these before any production pass. The first group needs no network, no datab
 5. Conflict text. The SQL constant contains `ON CONFLICT (symbol, timeframe, ts) DO UPDATE` and `volume = CASE WHEN EXCLUDED.volume > 0`. It does not contain `cleanup_old_bars` or `slice(-1100)`.
 6. Source contract, over the repo rather than one file. Production daily writers of `ohlcv_bars` are the worker, `onDemandFetch`, `/api/bars`, and this module. `getBars` does not call `pgUpsertBars` for `daily`, `weekly`, or `monthly`. The script assigns `AV_PROCESS_ROLE = 'jarvis'`, passes `lane: 'backfill'` and `allowFallback: false`, and does not reference `touchJarvisHeartbeat`, `cleanup_old_bars`, or `backfill-equities`. `render.yaml` does not contain `EQUITY_DAILY_BACKFILL`. The split-adjust call sites are the six listed in section 2, and the labellers are not among them.
 7. Limiter. Existing `test/avLimiter.test.ts` cases still fall back when Redis is absent. A new case: `allowFallback: false` with `tryRedis` returning null throws and does not call `tryLocal`. `getLimiterRedis()` null refuses the run with zero fetches. Two AV starts are at least `ceil(60_000 / reserves.backfill)` apart when the take resolves immediately. A spy records zero heartbeat calls.
-8. Kill switch. Unset, `true`, and `0` return disabled and `avCalls: 0`.
+8. Kill switch. Unset and `0` return disabled and `avCalls: 0`. `1` and `true` both enable the run.
 9. Resume. A `done` symbol makes no fetch. A thrown statement inside the symbol transaction rolls back and leaves no `done` row. The next call fetches that symbol.
 
 Then one loopback Postgres test, gated on an explicit test URL, in a schema that has the `ohlcv_bars` DDL from migration 002 plus migration 135. Seed an equity with 100 zero-volume rows and a handful of adjusted rows, a crypto symbol, and a live bar for today. After the run: zeros in the window are repaired, adjusted rows are raw, crypto rows are unchanged, today's bar is unchanged. A second run changes nothing. A truncate reopens `done`.

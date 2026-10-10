@@ -192,15 +192,29 @@ describe('equity daily backfill', () => {
     expect(plan.rows[0].volume).toBe(4149575);
   });
 
-  it('stays off unless EQUITY_DAILY_BACKFILL is exactly 1', async () => {
+  it('stays off unless EQUITY_DAILY_BACKFILL is 1 or true', async () => {
     const h = harness(['AAA']);
     const fetchDaily = async () => { throw new Error('fetched'); };
-    for (const env of [{}, { EQUITY_DAILY_BACKFILL: '0' }, { EQUITY_DAILY_BACKFILL: 'true' }] as NodeJS.ProcessEnv[]) {
+    for (const env of [{}, { EQUITY_DAILY_BACKFILL: '0' }, { EQUITY_DAILY_BACKFILL: 'TRUE' }] as NodeJS.ProcessEnv[]) {
       const report = await runEquityHistoryBackfill({ env, deps: h.deps({ fetchDaily }) });
       expect(report).toMatchObject({ exitCode: 0, status: 'disabled', avCalls: 0 });
     }
     expect(h.fetched).toEqual([]);
-    expect(h.bars).toEqual([]);
+    const enabled = await runEquityHistoryBackfill({ env: { EQUITY_DAILY_BACKFILL: 'true' }, deps: h.deps() });
+    expect(enabled).toMatchObject({ exitCode: 0, status: 'complete', avCalls: 1, done: 1 });
+    expect(h.bars[0].volume).toBe(4149575);
+  });
+
+  it('inserts a new zero-volume bar and does not let that 0 overwrite a stored volume', () => {
+    const incoming: RawDailyBar[] = [{
+      session: SESSION, ts: `${SESSION}T00:00:00.000Z`, open: 50, high: 51, low: 49, close: 50, volume: 0,
+    }];
+    const inserted = planSymbolWrite(incoming, []);
+    expect(inserted.rows).toHaveLength(1);
+    expect(inserted.rows[0].volume).toBe(0);
+    const kept = planSymbolWrite(incoming, [{ ts: incoming[0].ts, open: 50, high: 51, low: 49, close: 50, volume: 80 }]);
+    expect(kept.rows).toHaveLength(0);
+    expect(kept.unchanged).toBe(1);
   });
 
   it('audit mode makes no Alpha Vantage call', async () => {
@@ -268,6 +282,8 @@ describe('equity daily backfill', () => {
     expect(script).not.toContain('CREATE TABLE');
     expect(script).not.toContain('backfill-equities');
     expect(script).toContain("process.env.EQUITY_DAILY_BACKFILL !== '1'");
+    expect(script).toContain("process.env.EQUITY_DAILY_BACKFILL !== 'true'");
+    expect(script).toContain('pull request 636');
     expect(migration).toContain('CREATE TABLE IF NOT EXISTS equity_history_backfill');
     expect(migration).not.toContain('CREATE TABLE IF NOT EXISTS ohlcv_bars');
     expect(migration).not.toContain('ALTER TABLE ohlcv_bars');

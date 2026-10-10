@@ -2,6 +2,8 @@
  * One-shot 20-year raw daily equity load into ohlcv_bars.
  * The script owns the run. This module does not create tables and does not call Alpha Vantage
  * unless a caller invokes the run with the kill switch on.
+ * Do not run the backfill before pull request 636 is merged. Readers have to be on the split-only
+ * basis first, or a raw 20-year series is served next to dividend-adjusted closes.
  */
 import { avRowVolume } from '@/lib/scanner/avVolume';
 import {
@@ -34,6 +36,7 @@ export const STALE_DONE_SQL = `SELECT 1 FROM ohlcv_bars
    AND ts < $2::timestamptz + INTERVAL '14 days'
  LIMIT 1`;
 
+// A new row is inserted even when volume is 0. On conflict, a 0 never overwrites the stored volume.
 export const UPSERT_BARS_SQL = `INSERT INTO ohlcv_bars (symbol, timeframe, ts, open, high, low, close, volume)
 SELECT $1, 'daily', r.ts, r.open, r.high, r.low, r.close, r.volume
   FROM unnest($2::timestamptz[], $3::numeric[], $4::numeric[], $5::numeric[], $6::numeric[], $7::bigint[])
@@ -195,7 +198,8 @@ export interface BackfillDeps {
 }
 
 export function backfillEnabled(env: NodeJS.ProcessEnv): boolean {
-  return env[KILL_SWITCH] === '1';
+  const value = env[KILL_SWITCH];
+  return value === '1' || value === 'true';
 }
 
 export function backfillPaceMs(reservePerMin: number): number {
