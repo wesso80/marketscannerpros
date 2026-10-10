@@ -92,24 +92,51 @@ describe('sign-in email hardening', () => {
     vi.restoreAllMocks();
   });
 
-  it('builds plain text and html with the sign-in URL exactly once and no emoji', () => {
+  it('builds plain text and html with the sign-in URL in the link and the message, and no emoji', () => {
     const url = 'https://marketscannerpros.app/auth/verify?token=abc.def&next=%2Ftools';
     const built = buildSignInEmail(url);
-    expect(built.subject).toBe('Your sign-in link');
+    expect(built.subject).toBe('Your MarketScannerPros sign-in link');
     expect(count(built.text, url)).toBe(1);
-    expect(count(built.html, url)).toBe(1);
+    expect(count(built.html, url)).toBe(2);
+    expect(built.html).toContain(`href="${url}"`);
+    expect(built.html).toContain(`>${url}</p>`);
     expect(built.html).toContain('background-color:#ffffff');
     expect(`${built.subject}\n${built.text}\n${built.html}`).not.toMatch(EMOJI);
     expect(built.html).not.toContain('#070B14');
     expect(built.html).not.toContain('#0f172a');
+    expect(built.html).not.toContain('<img');
+  });
+
+  it('uses the MarketScannerPros subject, support reply-to, visible URL, and footer', async () => {
+    const url = 'https://marketscannerpros.app/auth/verify?token=abc.def&next=%2Ftools';
+    const built = buildSignInEmail(url);
+    expect(built.subject).toBe('Your MarketScannerPros sign-in link');
+    expect(built.html).toContain('>MarketScannerPros</p>');
+    expect(built.html).toContain(`href="${url}"`);
+    expect(built.html).toContain(`>${url}</p>`);
+    expect(built.text).toContain(url);
+    expect(count(built.text, url)).toBe(1);
+    expect(built.html).toContain('MarketScannerPros<br>support@marketscannerpros.app');
+    expect(built.text).toContain('MarketScannerPros\nsupport@marketscannerpros.app');
+    expect(built.html).not.toContain('<img');
+
+    await sendSignInEmail({ to: 'person@example.test', verifyUrl: url });
+    const payload = mocks.send.mock.calls.at(-1)?.[0] as { subject: string; replyTo?: string; html: string; text: string };
+    expect(payload.subject).toBe('Your MarketScannerPros sign-in link');
+    expect(payload.replyTo).toBe('support@marketscannerpros.app');
+    expect(payload.html).toContain(url);
+    expect(payload.text).toContain(url);
+    expect(payload.html).toContain('support@marketscannerpros.app');
+    expect(payload.text).toContain('support@marketscannerpros.app');
   });
 
   it('selects the dedicated auth sender and falls back when AUTH_FROM_EMAIL is unset', () => {
     expect(resolveAuthFromEmail({ AUTH_FROM_EMAIL: '  Login <login@example.test>  ' } as NodeJS.ProcessEnv)).toBe('Login <login@example.test>');
     expect(resolveAuthFromEmail({} as NodeJS.ProcessEnv)).toBe(DEFAULT_AUTH_FROM_EMAIL);
     expect(resolveAuthFromEmail({ RESEND_FROM_EMAIL: 'MarketScanner Pros <alerts@marketscannerpros.app>' } as NodeJS.ProcessEnv)).toBe(DEFAULT_AUTH_FROM_EMAIL);
-    expect(resolveAuthReplyTo({} as NodeJS.ProcessEnv)).toBeUndefined();
+    expect(resolveAuthReplyTo({} as NodeJS.ProcessEnv)).toBe('support@marketscannerpros.app');
     expect(resolveAuthReplyTo({ AUTH_REPLY_TO: ' support@marketscannerpros.app ' } as NodeJS.ProcessEnv)).toBe('support@marketscannerpros.app');
+    expect(resolveAuthReplyTo({ AUTH_REPLY_TO: ' desk@example.test ' } as NodeJS.ProcessEnv)).toBe('desk@example.test');
   });
 
   it('sends sign-in mail from the auth sender and leaves alert mail on the alerts sender', async () => {
@@ -122,12 +149,12 @@ describe('sign-in email hardening', () => {
       from: 'MarketScanner Pros <login@marketscannerpros.app>',
       replyTo: 'support@marketscannerpros.app',
       to: 'person@example.test',
-      subject: 'Your sign-in link',
+      subject: 'Your MarketScannerPros sign-in link',
     }));
     const signInPayload = mocks.send.mock.calls.at(-1)?.[0] as { text: string; html: string };
     expect(count(signInPayload.text, url)).toBe(1);
-    expect(count(signInPayload.html, url)).toBe(1);
-    expect(logText()).toContain('Email sent to person@example.test: Your sign-in link id=email_123');
+    expect(count(signInPayload.html, url)).toBe(2);
+    expect(logText()).toContain('Email sent to person@example.test: Your MarketScannerPros sign-in link id=email_123');
     expect(logText()).not.toContain(url);
     expect(logText()).not.toContain('token=');
 
@@ -143,12 +170,12 @@ describe('sign-in email hardening', () => {
     expect(logText()).toContain('id=email_123');
   });
 
-  it('keeps sign-in working with the login sender and no reply-to when the new env vars are unset', async () => {
+  it('sends sign-in mail from the login sender with the support reply-to when AUTH_REPLY_TO is unset', async () => {
     await sendSignInEmail({ to: 'person@example.test', verifyUrl: 'https://marketscannerpros.app/auth/verify?token=abc' });
     const payload = mocks.send.mock.calls.at(-1)?.[0] as { from: string; replyTo?: string; text?: string };
     expect(payload.from).toBe(DEFAULT_AUTH_FROM_EMAIL);
     expect(payload.from).not.toContain('alerts@');
-    expect(payload.replyTo).toBeUndefined();
+    expect(payload.replyTo).toBe('support@marketscannerpros.app');
     expect(payload.text).toContain('https://marketscannerpros.app/auth/verify?token=abc');
   });
 
@@ -160,8 +187,8 @@ describe('sign-in email hardening', () => {
     const sent = mocks.send.mock.calls[0][0] as { subject: string; text: string; html: string; from: string };
     const urls = sent.text.match(/https:\/\/\S+/g) ?? [];
     expect(urls).toHaveLength(1);
-    expect(count(sent.html, urls[0])).toBe(1);
-    expect(sent.subject).toBe('Your sign-in link');
+    expect(count(sent.html, urls[0])).toBe(2);
+    expect(sent.subject).toBe('Your MarketScannerPros sign-in link');
     expect(`${sent.subject}\n${sent.text}\n${sent.html}`).not.toMatch(EMOJI);
     expect(logText()).toMatch(/id=email_123/);
     expect(logText()).not.toContain(urls[0]);
