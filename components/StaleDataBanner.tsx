@@ -4,28 +4,22 @@ import { useEffect, useState, useCallback } from 'react';
 import { usePolling } from '@/hooks/usePolling';
 
 /**
- * Global stale-data indicator. When API responses include a `dataAge`
- * header or meta field older than the configured threshold, shows
- * a dismissible banner. This is mounted once in the root layout.
+ * Global stale-data indicator. Polls GET /api/health/stale, which returns
+ * only `{ stale: boolean }`. A failed check leaves the banner hidden.
+ * Mounted once in the root layout.
  */
 export default function StaleDataBanner() {
   const [stale, setStale] = useState(false);
-  const [source, setSource] = useState('');
   const [dismissed, setDismissed] = useState(false);
 
   const check = useCallback(async () => {
     try {
-      const res = await fetch('/api/health/data', { cache: 'no-store' });
+      const res = await fetch('/api/health/stale', { cache: 'no-store' });
       if (!res.ok) return;
       const data = await res.json();
-      if (data?.stale) {
-        setStale(true);
-        setSource(data.source || 'market data');
-      } else {
-        setStale(false);
-      }
+      setStale(data?.stale === true);
     } catch {
-      // Silent — this is best-effort
+      // A failed check does not show a warning.
     }
   }, []);
 
@@ -40,7 +34,7 @@ export default function StaleDataBanner() {
         <div className="flex-1">
           <p className="text-sm font-medium text-amber-200">Data may be stale</p>
           <p className="mt-0.5 text-xs text-amber-300/70">
-            {source} data hasn&apos;t refreshed recently. Displayed values may be outdated.
+            Market data hasn&apos;t refreshed recently. Displayed values may be outdated.
           </p>
         </div>
         <button
