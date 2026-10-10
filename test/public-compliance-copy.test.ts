@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
+import { scanForBannedPhrases } from '@/lib/compliance/bannedPhrases';
 
 const root = process.cwd();
 
@@ -126,12 +127,19 @@ describe('public educational compliance copy', () => {
     expect(portfolioAnalyzeRoute).toContain('Restate the simulation records in plain English only');
   });
 
-  it('does not call the daily scan Daily Picks in customer-visible copy', () => {
-    const banned = /daily picks/i;
-    const files = customerCopyFiles();
-    const violations = files.filter((file) => banned.test(readFileSync(file, 'utf8')));
-    expect(violations.map((file) => file.slice(root.length + 1))).toEqual([]);
-    expect(files.some((file) => file.endsWith('lib/toolWorkflows.ts'))).toBe(true);
+  it('flags a Daily Picks fixture and keeps that phrase out of customer copy', () => {
+    const fixture = ['Open Daily Picks', 'see daily picks today', 'DAILY PICKS'].join('\n');
+    const fixtureHits = scanForBannedPhrases(fixture);
+    expect(fixtureHits.map((hit) => hit.phrase)).toEqual(['Daily Picks', 'daily picks', 'DAILY PICKS']);
+    expect(fixtureHits.every((hit) => hit.replacement === 'Daily scan observations')).toBe(true);
+
+    const violations = customerCopyFiles().flatMap((file) =>
+      scanForBannedPhrases(readFileSync(file, 'utf8'))
+        .filter((hit) => hit.phrase.toLowerCase() === 'daily picks')
+        .map((hit) => `${file.slice(root.length + 1)}:${hit.index}:${hit.phrase}`),
+    );
+    expect(violations).toEqual([]);
+    expect(readFileSync(join(root, 'lib/compliance/bannedPhrases.ts'), 'utf8')).toMatch(/\\bdaily picks\\b\/gi/);
     expect(readFileSync(join(root, 'lib/toolWorkflows.ts'), 'utf8')).toContain("link('/daily-pick','Daily scan observations')");
   });
 });
