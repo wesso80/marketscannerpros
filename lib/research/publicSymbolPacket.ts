@@ -36,8 +36,10 @@ export interface PublicSymbolPacket {
   contract: typeof PUBLIC_SYMBOL_CONTRACT;
   meta: { symbol: string; assetClass: C['assetClass']; price: number; asOfTs: string; timeframe: string };
   priceEvidence: GoldenEggPayload['priceEvidence'] | null;
-  /** Completed daily candles, or a server-drawn image when signed-out raw bars are withheld. */
-  dailyChart: PublicDailyChart | null;
+  /** Completed daily candles for a signed-in reader. Omitted from a signed-out response. */
+  dailyChart?: PublicDailyChart | null;
+  /** Server-drawn chart for a signed-out reader. No raw series. */
+  chartImage?: string | null;
   timingEvidence: GoldenEggPayload['timingEvidence'] | null;
   optionsRequest: { expiry: string; status: 'used' | 'unavailable' } | null;
   canonical: {

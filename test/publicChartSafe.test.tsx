@@ -1,14 +1,13 @@
 // @vitest-environment jsdom
 /**
- * PUBLIC_CHART_MODE defaults to safe. A signed-out Symbol response must not
- * carry an OHLC array in the report packet, /api/bars, or the chart HTML.
+ * A signed-out Symbol response carries a server-drawn chart and no OHLC array
+ * in the report packet or the chart HTML. /api/bars stays signed-in only.
  */
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { cleanup, render, screen } from '@testing-library/react';
 import { buildPayload } from '@/lib/goldenEgg/engine';
-import { publicChartMode, PUBLIC_CHART_MODE_ENV, presentDailyChart } from '@/lib/research/publicChartMode';
 import EquityTop from '@/components/crypto/top/EquityTop';
 import { ind, now, price, tc } from './fixtures/goldenEggTiming';
 
@@ -61,7 +60,6 @@ beforeEach(() => {
   cleanup();
   vi.stubGlobal('fetch', vi.fn());
   vi.stubEnv('PUBLIC_DAILY_QUOTAS_ENABLED', 'true');
-  vi.stubEnv(PUBLIC_CHART_MODE_ENV, '');
   h.session = null;
   h.actor = { bypass: true, subject: 'visitor:safe', plan: 'visitor' };
   h.packet = buildPayload('AAPL', 'equity', {
@@ -72,58 +70,30 @@ beforeEach(() => {
   }, ind, null, null, '1D', null, tc, null, { nowMs: now, timeframeKey: 'daily' });
 });
 
-describe('public chart mode', () => {
-  it('defaults to safe unless the env is raw', () => {
-    expect(PUBLIC_CHART_MODE_ENV).toBe('PUBLIC_CHART_MODE');
-    expect(publicChartMode({} as NodeJS.ProcessEnv)).toBe('safe');
-    expect(publicChartMode({ PUBLIC_CHART_MODE: 'safe' })).toBe('safe');
-    expect(publicChartMode({ PUBLIC_CHART_MODE: 'nope' })).toBe('safe');
-    expect(publicChartMode({ PUBLIC_CHART_MODE: ' raw ' })).toBe('raw');
-  });
-
-  it('keeps bars for a signed-in reader in both modes', () => {
-    const chart = h.packet.dailyChart;
-    expect(presentDailyChart(chart, true, 'safe')?.bars?.length).toBeGreaterThan(1);
-    expect(presentDailyChart(chart, true, 'raw')?.image).toBeUndefined();
-  });
-
-  it('gives a signed-out visitor an image in safe mode and bars in raw mode', () => {
-    const chart = h.packet.dailyChart;
-    const safe = presentDailyChart(chart, false, 'safe');
-    expect(safe?.bars).toBeUndefined();
-    expect(safe?.image?.startsWith('<svg ')).toBe(true);
-    expect(ohlcArrayPaths(safe)).toEqual([]);
-    expect(presentDailyChart(chart, false, 'raw')?.bars?.length).toBeGreaterThan(1);
-  });
-});
-
-describe('signed-out Symbol response in safe mode', () => {
-  it('puts no OHLC array in the report packet or the chart HTML', async () => {
+describe('signed-out Symbol chart', () => {
+  it('omits dailyChart, draws the server picture, and puts no OHLC array in the packet or the page HTML', async () => {
     const { status, body } = await call();
     expect(status).toBe(200);
-    expect(body.data.dailyChart.bars).toBeUndefined();
-    expect(String(body.data.dailyChart.image).startsWith('<svg ')).toBe(true);
+    expect(body.data.dailyChart).toBeUndefined();
+    expect(Object.keys(body.data)).not.toContain('dailyChart');
+    expect(String(body.data.chartImage).startsWith('<svg ')).toBe(true);
     expect(ohlcArrayPaths(body)).toEqual([]);
 
     const { container } = render(<EquityTop data={body.data} />);
-    await screen.findByRole('img');
+    const chart = await screen.findByRole('img');
+    expect(chart.tagName).toBe('svg');
     expect(fetch).not.toHaveBeenCalled();
     const html = container.innerHTML;
     expect(html).toContain('<svg ');
     expect(html).not.toMatch(/data-(?:bars|ohlc|candles|series)\s*=/i);
     expect(ohlcArrayPaths(html)).toEqual([]);
-    expect(ohlcArrayPaths(body.data)).toEqual([]);
   });
 
-  it('still sends bars to a signed-in reader, and to a signed-out reader in raw mode', async () => {
+  it('still sends dailyChart bars to a signed-in reader', async () => {
     h.session = { workspaceId: 'ws-a', tier: 'pro' };
     const signedIn = await call();
     expect(signedIn.body.data.dailyChart.bars.length).toBeGreaterThan(1);
-
-    h.session = null;
-    vi.stubEnv(PUBLIC_CHART_MODE_ENV, 'raw');
-    const raw = await call();
-    expect(raw.body.data.dailyChart.bars.length).toBeGreaterThan(1);
-    expect(raw.body.data.dailyChart.image).toBeUndefined();
+    expect(signedIn.body.data.chartImage).toBeUndefined();
+    expect(signedIn.body.data.dailyChart.bars.at(-1).c).toBeTypeOf('number');
   });
 });

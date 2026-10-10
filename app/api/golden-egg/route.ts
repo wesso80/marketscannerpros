@@ -14,12 +14,19 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { hasPaidSessionAccess } from '@/lib/proTraderAccess';
 import { detectAssetClass } from '@/lib/goldenEggFetchers';
 import { computeGoldenEgg, tfLabelFor, buildLocalDemoGoldenEggPayload, goldenEggDemoDataQuality, isLocalGoldenEggDemoAllowed } from '@/lib/goldenEgg/engine';
-import { toPublicSymbolPacket } from '@/lib/research/publicSymbolPacket';
-import { presentDailyChart } from '@/lib/research/publicChartMode';
+import { toPublicSymbolPacket, type PublicSymbolPacket } from '@/lib/research/publicSymbolPacket';
+import { signedOutChartImage } from '@/lib/research/publicDailyChart';
 import { buildMarketDataProviderStatus, emitProductionDemoDataAlert, isLocalDemoMarketDataAllowed } from '@/lib/scanner/providerStatus';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+/** Signed-in readers keep dailyChart. Signed-out readers get the picture and no bar series. */
+function readerPacket(packet: PublicSymbolPacket, signedIn: boolean): PublicSymbolPacket {
+  if (signedIn) return packet;
+  const { dailyChart: _omit, ...rest } = packet;
+  return { ...rest, chartImage: signedOutChartImage(packet.dailyChart) };
+}
 
 export async function GET(request: NextRequest) {
   let reservation: QuotaReservation | undefined;
@@ -77,8 +84,7 @@ export async function GET(request: NextRequest) {
     const providerStatus = result.cached
       ? buildMarketDataProviderStatus({ source: 'memory_cache', provider: 'memory_cache' })
       : result.dataQuality;
-    const projected = toPublicSymbolPacket(result.payload);
-    const publicData = { ...projected, dailyChart: presentDailyChart(projected.dailyChart, signedIn) };
+    const publicData = readerPacket(toPublicSymbolPacket(result.payload), signedIn);
     produced = true;
     if (reservation) {
       const settled = await publicQuota.settle(reservation,result.localDemo || !publicData.canonical ? 'released' : 'completed');
@@ -116,10 +122,7 @@ export async function GET(request: NextRequest) {
       const dq = goldenEggDemoDataQuality(message, { symbol: fallbackSymbol, assetClass: fallbackAssetClass, timeframe: fallbackTfLabel });
       return NextResponse.json({
         success: true,
-        data: (() => {
-          const projected = toPublicSymbolPacket(buildLocalDemoGoldenEggPayload(fallbackSymbol, fallbackAssetClass, fallbackTfLabel, message));
-          return { ...projected, dailyChart: presentDailyChart(projected.dailyChart, signedIn) };
-        })(),
+        data: readerPacket(toPublicSymbolPacket(buildLocalDemoGoldenEggPayload(fallbackSymbol, fallbackAssetClass, fallbackTfLabel, message)), signedIn),
         localDemo: true,
         warnings: dq.warnings,
         dataQuality: dq,

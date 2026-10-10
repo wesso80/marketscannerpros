@@ -20,7 +20,7 @@ function barsFromReport(data:PublicSymbolPacket):DisplayChart['bars']{
 /** Presentation only: no stock stage/base is inferred from crypto rules. */
 export default function EquityTop({data,pick}:{data:PublicSymbolPacket;pick?:{grade?:string|null;scan_date?:string}|null}){
  const fromReport=barsFromReport(data);
- const chartImage=dailyChartSvgMarkup(data.dailyChart?.image);
+ const chartImage=dailyChartSvgMarkup(data.chartImage);
  const [bars,setBars]=useState<DisplayChart['bars']>(fromReport),[error,setError]=useState(false);
  useEffect(()=>{
   if(chartImage){setBars([]);setError(false);return;}

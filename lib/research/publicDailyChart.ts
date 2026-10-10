@@ -4,12 +4,8 @@ import { partialBarDate } from '@/lib/research/priceEvidence';
 export const PUBLIC_DAILY_CHART_LIMIT = 140;
 
 export type PublicDailyBar = { t: string; h: number; l: number; c: number };
-/**
- * `bars` is the raw series for a signed-in reader, and for a signed-out reader
- * when PUBLIC_CHART_MODE=raw. `image` is the server-drawn chart used instead
- * when that mode is safe.
- */
-export type PublicDailyChart = { basis: string; bars?: PublicDailyBar[]; image?: string | null };
+/** Completed daily candles for a signed-in reader. Signed-out readers receive a picture instead. */
+export type PublicDailyChart = { basis: string; bars: PublicDailyBar[] };
 
 const positive = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0;
 
@@ -95,6 +91,13 @@ export function dailyChartSvg(chart: { basis: string; bars: PublicDailyBar[] }):
   const last = bars[bars.length - 1]?.t ?? '';
   const label = xmlText(`${bars.length} daily closes, last bar ${last}`);
   return `<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${label}" viewBox="0 0 ${width} ${height}" width="100%" height="${height}"><title>${label}</title><polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1.8"/><text x="4" y="24" font-size="10">${xmlText(axisLabel(max))}</text><text x="4" y="${bottom}" font-size="10">${xmlText(axisLabel(min))}</text><text x="${left}" y="172" font-size="10">${xmlText(first)}</text><text x="${width - 8}" y="172" text-anchor="end" font-size="10">${xmlText(last)}</text><text x="${left}" y="14" font-size="10">${xmlText(chart.basis)}</text></svg>`;
+}
+
+/** Picture for a signed-out reader. Null when there is no series to draw. */
+export function signedOutChartImage(chart: PublicDailyChart | null | undefined): string | null {
+  const bars = chart?.bars;
+  if (!chart || !bars || bars.length < 2) return null;
+  return dailyChartSvg(chart);
 }
 
 /** Accept only the SVG this module draws. Rejects scripts and series data attributes. */
