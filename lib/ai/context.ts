@@ -324,8 +324,10 @@ export async function getMarketState(): Promise<MarketState> {
       };
     }
 
+    const cronSecret = process.env.CRON_SECRET;
     const fngResponse = await fetch(`${apiBase}/api/fear-greed`, {
-      next: { revalidate: 300 }
+      next: { revalidate: 300 },
+      headers: cronSecret ? { 'x-cron-secret': cronSecret } : undefined,
     }).catch(() => null);
     
     let fng = 50;

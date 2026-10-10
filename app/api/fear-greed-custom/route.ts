@@ -1,6 +1,7 @@
 import { getOkxFundingRates } from '@/lib/crypto/okxDerivatives';
 import { NextRequest, NextResponse } from 'next/server';
 import { getGlobalData, getMarketData } from '@/lib/coingecko';
+import { cgViewerAllowed, cgViewerDenied } from '@/lib/cgViewer';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -247,7 +248,8 @@ function calculateCustomStockFG(data: MarketData): FGResult {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const market = searchParams.get('market') || 'crypto'; // 'crypto' or 'stock'
-  
+  if (market === 'crypto' && !(await cgViewerAllowed(req))) return cgViewerDenied();
+
   // Check cache
   const cacheKey = `fg_${market}`;
   if (cache && cache.data[cacheKey] && Date.now() - cache.timestamp < CACHE_DURATION * 1000) {

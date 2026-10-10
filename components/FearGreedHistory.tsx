@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 interface HistoryPoint {
   value: number;
@@ -327,6 +328,7 @@ export default function FearGreedHistory({
           </div>
         </div>
       </div>
+      <CoinGeckoAttribution className="px-4 pb-4" />
     </div>
   );
 }

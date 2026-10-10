@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import CryptoDataStatus from '@/components/CryptoDataStatus';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 interface TrendingPool {
   id: string;
@@ -259,6 +260,7 @@ export default function TrendingPoolsWidget() {
       }}>
         💡 Trending pools across all DEXs. High volume + high buy ratio = strong demand.
       </div>
+      <CoinGeckoAttribution className="mt-3" />
     </div>
   );
 }

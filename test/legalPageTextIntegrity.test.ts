@@ -29,6 +29,11 @@ for (const slug of ['refund-policy', 'cookie-policy', 'terms'] as const) {
   baseline[slug].text = baseline[slug].text.replaceAll('MarketScanner Pros', 'MarketScannerPros');
 }
 
+baseline.terms.text = baseline.terms.text.replace(
+  'without prior written permission.5. Disclaimer of WarrantiesThe App is provided',
+  'without prior written permission.Some cryptocurrency data is provided by the CoinGecko API, which is the property of CoinGecko. CoinGecko is not responsible for this service, and to the extent permitted by law we exclude all liability of CoinGecko in connection with your use of it.5. Disclaimer of WarrantiesThe App is provided',
+);
+
 const TERMS_HEADING_IDS = [
   "eligibility",
   "use",

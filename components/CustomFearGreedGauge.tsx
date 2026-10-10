@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 interface ComponentData {
   name: string;
@@ -293,6 +294,7 @@ export default function CustomFearGreedGauge({
           Last updated: {new Date(data.cachedAt).toLocaleTimeString()}
         </p>
       </div>
+      {data.market !== 'stock' && <CoinGeckoAttribution className="mt-3" />}
     </div>
   );
 }

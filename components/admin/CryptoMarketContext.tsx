@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import type {MarketContext} from '@/lib/admin/cryptoMarketContext';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 export default function CryptoMarketContext({now}:{now:number}){
   const [data,setData]=useState<MarketContext|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
   async function load(method:'GET'|'POST'){
@@ -29,6 +30,7 @@ export default function CryptoMarketContext({now}:{now:number}){
         <p className="text-xs text-slate-400">{n.source} · {new Date(n.postedAt).toLocaleString()}{now-Date.parse(n.postedAt)>86400000?' · Older than 24h':''}</p></li>)}</ul>
         {!data.news.length&&<p>{data.failures.includes('news')?'News feed unavailable':'No valid headlines returned'}</p>}
       </div></div>
+      {(data.global || data.trending.length > 0) && <CoinGeckoAttribution />}
     </>}
   </section>;
 }

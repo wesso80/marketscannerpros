@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest';
+vi.mock('@/lib/auth', () => ({ getSessionFromCookie: async () => ({ workspaceId: 'ws', tier: 'pro', cid: 'c' }) }));
 import { NextRequest } from 'next/server';
 
 const state = vi.hoisted(() => ({ available: true, persist: true }));

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import CryptoDataStatus from '@/components/CryptoDataStatus';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 interface Category {
   id: string;
@@ -298,6 +299,7 @@ export default function CategoryHeatmapWidget() {
           {(avgChange ?? 0) >= 0 ? '+' : ''}{(avgChange ?? 0).toFixed(1)}%
         </span>
       </div>
+      <CoinGeckoAttribution className="mt-3" />
     </div>
   );
 }

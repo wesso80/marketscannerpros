@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildCoinGeckoResponseMeta, getMarketData, symbolToId } from '@/lib/coingecko';
 import { getOiEvidence } from '@/lib/crypto/oiHistory';
+import { cgViewerAllowed, cgViewerDenied } from '@/lib/cgViewer';
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
+  if (!(await cgViewerAllowed(req))) return cgViewerDenied();
   try {
     const evidence = await getOiEvidence();
     const ids = evidence.coins.map(c => symbolToId(c.symbol)).filter((id): id is string => !!id);

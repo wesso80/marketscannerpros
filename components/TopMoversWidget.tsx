@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 interface Mover {
   id: string;
@@ -275,6 +276,7 @@ export default function TopMoversWidget() {
           : `Big losers may present bounce scenarios — check support levels and volume.`
         }
       </div>
+      <CoinGeckoAttribution className="mt-3" />
     </div>
   );
 }

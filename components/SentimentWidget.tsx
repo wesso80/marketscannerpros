@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 interface MarketSentiment {
   value: number;
@@ -294,6 +295,7 @@ export default function SentimentWidget({
           </div>
         </div>
       )}
+      {cryptoData && <CoinGeckoAttribution className="mt-3" />}
     </div>
   );
 }

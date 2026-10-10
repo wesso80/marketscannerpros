@@ -61,6 +61,7 @@ import {friendlyStatus} from '@/lib/free/friendlyStatus';
 import {readerSourceLabel,symbolText,symbolDate} from '@/lib/presentation/symbolDisplay';
 import EquityTop from '@/components/crypto/top/EquityTop';
 import CryptoBreakdown from '@/components/crypto/CryptoBreakdown';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 import {SymbolOptionsContext} from '@/components/market/SymbolMarketContext';
 import {usePublicMarketFeed} from '@/hooks/usePublicMarketFeed';
 import {findSymbolPick,symbolQuoteStamp} from '@/lib/market/symbolSnapshot';
@@ -768,6 +769,7 @@ function GoldenEggReport() {
                 <Link href={`/tools/explorer?tab=crypto-command&symbol=${encodeURIComponent(sym)}&type=crypto&timeframe=${encodeURIComponent(timeframe)}`} className="text-[11px] text-emerald-400 hover:underline">Open Crypto Command ›</Link>
                 <Link href={`/tools/crypto-dashboard?symbol=${encodeURIComponent(sym)}&type=crypto&timeframe=${encodeURIComponent(timeframe)}`} className="text-[11px] text-emerald-400 hover:underline">Open Crypto Derivatives lens ›</Link>
               </div>
+              <CoinGeckoAttribution className="mt-3" />
             </Card>
           ) : (
             <>

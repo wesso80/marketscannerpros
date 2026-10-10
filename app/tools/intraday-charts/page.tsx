@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import ExplorerActionGrid from '@/components/explorer/ExplorerActionGrid';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
 import { useV2 } from '@/app/v2/_lib/V2Context';
@@ -1401,6 +1402,7 @@ export default function IntradayChartsPage({
                   {outerTimeframe && <p className="text-slate-400">Research case: {outerTimeframe}. Chart detail: {interval}.</p>}
                   {data.warning && <p className="text-amber-300">{data.warning}</p>}
                   Window: {new Date(data.data[0].timestamp).toLocaleString()} – {new Date(data.lastRefreshed).toLocaleString()} ({data.data.length} bars). {assetType !== 'crypto' && 'Equity data includes extended hours. RTH adds session markers; it does not filter the data.'}
+                  {assetType === 'crypto' && <CoinGeckoAttribution className="mt-2" />}
                   {rangePercent > 20 && <p className="text-amber-300">Large window range: inspect individual bars and extended-hours prints before relying on window VWAP or liquidity summaries.</p>}
                 </div>
               </div>

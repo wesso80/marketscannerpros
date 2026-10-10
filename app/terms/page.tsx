@@ -70,6 +70,9 @@ export default function TermsPage() {
         All content, features, and code within the App are owned by MarketScannerPros. You may not
         copy, modify, distribute, or resell without prior written permission.
       </p>
+      <p>
+        Some cryptocurrency data is provided by the CoinGecko API, which is the property of CoinGecko. CoinGecko is not responsible for this service, and to the extent permitted by law we exclude all liability of CoinGecko in connection with your use of it.
+      </p>
 
       <h2 id="warranty">5. Disclaimer of Warranties</h2>
       <p>

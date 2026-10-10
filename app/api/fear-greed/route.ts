@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCachedMulti, getRedis } from '@/lib/redis';
 import { getGlobalData, getGlobalMarketCapChart } from '@/lib/coingecko';
+import { cgViewerAllowed, cgViewerDenied } from '@/lib/cgViewer';
 
 const CACHE_DURATION = 3600;
 let cache: { data: any; timestamp: number } | null = null;
@@ -25,6 +26,7 @@ function computeScore(params: { mcapChange24h: number; stableDominance: number }
 }
 
 export async function GET(req: NextRequest) {
+  if (!(await cgViewerAllowed(req))) return cgViewerDenied();
   if (cache && Date.now() - cache.timestamp < CACHE_DURATION * 1000) {
     return NextResponse.json(cache.data);
   }

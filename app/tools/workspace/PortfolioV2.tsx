@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { detectAssetClass } from '@/lib/detectAssetClass';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
 
 /* ═══════════════════════════════════════════════════════════════
@@ -772,6 +773,7 @@ export default function PortfolioV2() {
                 </table>
               </div>
             )}
+            {positions.some((p) => detectAssetClass(p.symbol) === 'crypto') && <CoinGeckoAttribution className="m-3" />}
           </div>
         </div>
       )}

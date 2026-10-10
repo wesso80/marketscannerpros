@@ -3,6 +3,7 @@
  * Inline styles match lib/email.ts branding (dark #0f172a, accent #10b981).
  */
 import type { DailyReport } from './types';
+import { coinGeckoAttributionHtml } from '@/components/CoinGeckoAttribution';
 import { BRAND, REPORT_TITLE, classifyCaveat } from './types';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -35,6 +36,7 @@ export function renderEmailHtml(r: DailyReport, fullReportUrl: string): string {
     const lc = r.lifecycle;
     parts.push(section('Lifecycle changes (persisted watchlist)', `<div style="color:${MUTED};font-size:12px;margin-bottom:6px;">${esc(Object.entries(lc.counts).filter(([, v]) => v > 0).map(([k, v]) => `${k} ${v}`).join(' · ') || 'no entries')}</div>${li(lc.highlights.slice(0, 8).map((t) => `${esc(t.symbol)}: ${esc(t.from ?? 'new')} → <b style="color:#f1f5f9;">${esc(t.to)}</b> — ${esc(t.note.slice(0, 110))}`))}`));
     parts.push(section('Theme rotation', li([`<b style="color:#f1f5f9;">Leading:</b> ${esc(r.themes.equity.leading.join(', ') || 'n/a')}`, `<b style="color:#f1f5f9;">Improving:</b> ${esc(r.themes.equity.improving.join(', ') || 'none')}`, `<b style="color:#f1f5f9;">Deteriorating:</b> ${esc(r.themes.equity.deteriorating.join(', ') || 'none')}`, ...r.themes.equity.groups.filter((g) => g.verdict === 'GENUINE_GROUP_MOVE').slice(0, 3).map((g) => `<b style="color:#f1f5f9;">${esc(g.name)}</b> ${g.up}/${g.members} up, median ${esc(g.medianMove)} · early: ${esc(g.early.slice(0, 4).join(', ') || '—')}`), `<b style="color:#f1f5f9;">Crypto:</b> ${esc(r.themes.crypto.context)}`, ...r.themes.crypto.groups.filter((g) => g.verdict === 'GENUINE_GROUP_MOVE').slice(0, 3).map((g) => `<b style="color:#f1f5f9;">${esc(g.name)}</b> ${g.up}/${g.members} up, median ${esc(g.medianMove)} · ${esc(g.confirmation)}`)])));
+    parts.push(coinGeckoAttributionHtml());
   }
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background-color:#0f172a;color:${TEXT};padding:20px;margin:0;">

@@ -711,7 +711,12 @@ Instruction:
         // Fetch all derivatives data in parallel (surface failures for data health)
         const safeJsonFetch = async (url: string, label: string) => {
           try {
-            const r = await fetch(url, { cache: 'no-store' });
+            const headers: Record<string, string> = {};
+            const cookie = req.headers.get('cookie');
+            if (cookie) headers.cookie = cookie;
+            const cron = req.headers.get('x-cron-secret') || process.env.CRON_SECRET || '';
+            if (cron) headers['x-cron-secret'] = cron;
+            const r = await fetch(url, { cache: 'no-store', headers });
             if (!r.ok) { console.warn(`[msp-analyst] ${label} returned HTTP ${r.status}`); return null; }
             return await r.json();
           } catch (err) {

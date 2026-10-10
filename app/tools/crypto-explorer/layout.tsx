@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Crypto Explorer',
   description:
-    'Explore cryptocurrency assets with real-time prices, charts, and market data powered by CoinGecko.',
+    'Explore cryptocurrency assets with real-time prices, charts, and market statistics. Cryptocurrency prices and market statistics include CoinGecko data.',
   robots: { index: false, follow: true },
   alternates: { canonical: 'https://marketscannerpros.app/tools/explorer?tab=crypto' },
 };

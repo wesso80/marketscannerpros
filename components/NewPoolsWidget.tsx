@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import CryptoDataStatus from '@/components/CryptoDataStatus';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 interface NewPool {
   id: string;
@@ -241,6 +242,7 @@ export default function NewPoolsWidget() {
           New pools are high-risk. Many are scams or rug pulls. DYOR.
         </p>
       </div>
+      <CoinGeckoAttribution className="mt-3" />
     </div>
   );
 }

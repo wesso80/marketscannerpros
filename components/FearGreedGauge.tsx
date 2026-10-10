@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 interface FearGreedData {
   current: {
@@ -238,10 +239,10 @@ Based on: Volatility, Volume, Social Media, Surveys, BTC Dominance, Google Trend
         </>
       )}
 
-      {/* Source attribution */}
       <div className="mt-3 text-xs text-slate-500 text-right">
-        Source: CoinGecko-derived MSP proxy. History mixes retained observations with explicitly modelled values.
+        History mixes retained observations with explicitly modelled values.
       </div>
+      <CoinGeckoAttribution className="mt-2 text-right" />
     </div>
   );
 }

@@ -567,10 +567,21 @@ async function runScanner(req: NextRequest, capturePublicRows?: (rows: readonly 
   try {
     // Auth check FIRST - cron jobs and paid users bypass rate limiter
     const isCronBypass = verifyCronAuth(req);
+    const cookieSession = isCronBypass ? null : await getSessionFromCookie();
+    const privileged = isCronBypass || (await requireAdmin(req)).ok;
+    if (!privileged && !cookieSession?.workspaceId) {
+      const peeked = await req.clone().json().catch(() => null);
+      if (peeked?.type === 'crypto') {
+        return NextResponse.json(
+          { error: 'Please log in to access cryptocurrency market data' },
+          { status: 401 },
+        );
+      }
+    }
 
     const rawSession = isCronBypass
       ? { workspaceId: 'system-cron', tier: 'pro_trader' as const, cid: 'system' }
-      : (await getSessionFromCookie()) ?? { workspaceId: 'anonymous', tier: 'free' as const, cid: 'anonymous' };
+      : cookieSession ?? { workspaceId: 'anonymous', tier: 'free' as const, cid: 'anonymous' };
 
     // Resolve effective tier from DB (matches /api/me logic — admin, FFA, Stripe subscription)
     const effectiveTier = isCronBypass

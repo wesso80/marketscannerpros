@@ -15,6 +15,7 @@ import { decideAlert, isStaleStockQuote } from '@/lib/alerts/alertTiming';
 import { fxQuoteUrl, parseFxAlertQuote, type QuoteSource } from '@/lib/alerts/assetTypes';
 import { equityTickerList } from '@/lib/symbols/equityTickers';
 import { historyPriceInsert } from '@/lib/alerts/historyPrice';
+import { coinGeckoAttributionHtml, coinGeckoAttributionText } from '@/components/CoinGeckoAttribution';
 
 /**
  * Alert Price Checker
@@ -361,11 +362,12 @@ async function triggerAlert(alert: Alert, quote: AlertQuote) {
   if (alert.notify_email && userEmail) {
     try {
       const formattedPrice = triggerPrice >= 1 ? triggerPrice.toFixed(2) : triggerPrice.toFixed(6);
+      const cryptoPrice = alert.asset_type === 'crypto';
       const delivered = await deliverUserAlertEmail({
         workspaceId: alert.workspace_id,
         to: userEmail,
         subject: `🔔 Price Alert: ${alert.symbol} - ${alert.name || conditionMet}`,
-        line: `${alert.symbol}: ${conditionMet}`,
+        line: `${alert.symbol}: ${conditionMet}${cryptoPrice ? `\n${coinGeckoAttributionText()}` : ''}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #0f172a; color: #fff;">
             <h1 style="color: #10b981; margin-bottom: 20px;">🔔 Price Alert Triggered</h1>
@@ -399,6 +401,7 @@ async function triggerAlert(alert: Alert, quote: AlertQuote) {
               ${alert.is_recurring ? '🔄 This is a recurring alert and will trigger again.' : 'This alert has been automatically deactivated.'}
             </p>
             
+            ${cryptoPrice ? coinGeckoAttributionHtml() : ''}
             <hr style="border: none; border-top: 1px solid #334155; margin: 20px 0;" />
             <p style="color: #64748b; font-size: 11px;">
               MarketScannerPros • <a href="https://marketscannerpros.app/tools/workspace?tab=alerts" style="color: #64748b;">Manage Alerts</a>

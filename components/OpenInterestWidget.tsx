@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import CryptoDataStatus from '@/components/CryptoDataStatus';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 interface CoinOI {
   symbol: string;
@@ -464,6 +465,7 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
           <strong className="text-slate-300"> OI Falling + Price Rising</strong> = Shorts covering (watch for reversal).
         </p>
       </div>
+      <CoinGeckoAttribution className="mt-3" />
     </div>
   );
 }

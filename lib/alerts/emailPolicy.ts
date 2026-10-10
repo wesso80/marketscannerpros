@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "crypto";
+import { coinGeckoAttributionHtml, coinGeckoAttributionText } from '@/components/CoinGeckoAttribution';
 
 export const DEFAULT_ALERTS_FROM_EMAIL = "MarketScannerPros Alerts <alerts@marketscannerpros.app>";
 export const ALERT_UNSUBSCRIBE_LIST = "alerts";
@@ -160,6 +161,7 @@ export function renderAlertDigestEmail(input: {
   const days = [...new Set(input.lines.map((row) => row.sydneyDay))].sort();
   const dayLabel = days.length === 1 ? formatSydneyDay(days[0]) : "recent days";
   const subject = `Your alert summary for ${dayLabel}`;
+  const showsCryptoPrice = input.lines.some((row) => row.line.includes("in 24h"));
   const textItems = input.lines.map((row) => `- ${row.line}`).join("\n");
   const safeUrl = escapeHtml(input.unsubscribeUrl);
   const html = `<!DOCTYPE html>
@@ -170,6 +172,7 @@ export function renderAlertDigestEmail(input: {
   <p style="margin:0 0 16px;">These alerts triggered on ${escapeHtml(dayLabel)} (Sydney time). They are also in the app. This is research information, not a trade instruction.</p>
   <ul style="margin:0 0 16px;padding-left:20px;">${input.lines.map((row) => `<li style="margin:0 0 8px;">${escapeHtml(row.line)}</li>`).join("")}</ul>
   <p style="margin:0 0 16px;"><a href="https://marketscannerpros.app/tools/workspace?tab=alerts">View alerts in the app</a></p>
+  ${showsCryptoPrice ? coinGeckoAttributionHtml() : ""}
   <p style="margin:0;font-size:12px;color:#4b5563;">You get one daily summary by default. <a href="${safeUrl}">Unsubscribe from alert emails</a>. Sign-in emails are not affected.</p>
 </body>
 </html>`;
@@ -180,6 +183,7 @@ export function renderAlertDigestEmail(input: {
     textItems,
     "",
     "View alerts: https://marketscannerpros.app/tools/workspace?tab=alerts",
+    ...(showsCryptoPrice ? ["", coinGeckoAttributionText()] : []),
     "",
     `Unsubscribe from alert emails: ${input.unsubscribeUrl}`,
     "Sign-in emails are not affected.",

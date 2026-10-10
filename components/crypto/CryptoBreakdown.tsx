@@ -21,6 +21,7 @@ import LevelsSection from './sections/LevelsSection';
 import RisksSection from './sections/RisksSection';
 import SourcesBadge from './sections/SourcesBadge';
 import HandoffSection from './sections/HandoffSection';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 export default function CryptoBreakdown({symbol,timeframe:_,coinId,compact=false,showSource=true,onStamp}:{symbol:string;timeframe:string;coinId?:string;compact?:boolean;showSource?:boolean;onStamp?:(stamp:StampLineProps|null)=>void}){
  const publishEvidence=useCopilotSection('crypto',symbol);
  const base=normalizeCryptoSymbol(symbol),[data,setData]=useState<Breakdown|null>(null),[error,setError]=useState<string|null>(null),[loading,setLoading]=useState(true),[refresh,setRefresh]=useState(0);
@@ -42,6 +43,7 @@ export default function CryptoBreakdown({symbol,timeframe:_,coinId,compact=false
     </CollapsibleSection>)}
     <ChipRow items={[{id:'evidence',label:`${Object.values(data.sections).some(s=>['Unknown','Degraded'].includes(s.status))?'Some data checks failed':'Evidence and data checks'} · ${Object.keys(data.sections).length} sections`,warning:Object.values(data.sections).some(s=>['Unknown','Degraded'].includes(s.status)),detail:<div className="space-y-3">{(['price','ruleCheck','liquidity','supply','risks','sourcesCheck'] as const).map(key=><div key={key}><h3 className="font-semibold">{COPY.titles[key]}</h3>{detail(key)}</div>)}</div>}]}/>
     {showSource&&<PageSourceLine source={readerSourceLabel([...new Set([data.top?.daily.source,data.top?.derivatives.source].filter(Boolean))].join(' · '))} asOf={data.top?.daily.asOf} basis={data.top?.daily.basis}/>}
+    <CoinGeckoAttribution />
    </>}
    <p className="text-xs text-[var(--msp-text-muted)]">{COPY.footer}</p>
   </div>;
@@ -50,7 +52,7 @@ export default function CryptoBreakdown({symbol,timeframe:_,coinId,compact=false
   <div className="flex items-center justify-between gap-3"><p className="text-sm text-slate-300">{COPY.intro}</p><button type="button" onClick={()=>setRefresh(v=>v+1)} disabled={loading} className="rounded border border-white/20 px-3 py-2 disabled:opacity-50">{COPY.refresh}</button></div>
   <p className="text-xs text-slate-400">{COPY.daily}</p>
   {loading&&<p role="status">{COPY.loading}</p>}{error&&<p role="alert" className="text-amber-300">{error}</p>}
-  {data&&<><CryptoTop data={data}/><p className="text-sm text-slate-400">{COPY.top.detailRows}</p><PriceSection data={data}/><RuleCheckSection data={data.sections.ruleCheck}/><EarlyContextSection data={data.sections.earlyContext}/><MarketContextSection data={data.sections.marketContext}/><DerivativesSection data={data.sections.derivatives}/><LiquiditySection data={data.sections.liquidity}/><SupplySection data={data.sections.supply}/><LevelsSection data={data.sections.levels}/><RisksSection data={data.sections.risks}/><SourcesBadge data={data.sections.sourcesCheck}/><HandoffSection data={data}/></>}
+  {data&&<><CryptoTop data={data}/><p className="text-sm text-slate-400">{COPY.top.detailRows}</p><PriceSection data={data}/><RuleCheckSection data={data.sections.ruleCheck}/><EarlyContextSection data={data.sections.earlyContext}/><MarketContextSection data={data.sections.marketContext}/><DerivativesSection data={data.sections.derivatives}/><LiquiditySection data={data.sections.liquidity}/><SupplySection data={data.sections.supply}/><LevelsSection data={data.sections.levels}/><RisksSection data={data.sections.risks}/><SourcesBadge data={data.sections.sourcesCheck}/><HandoffSection data={data}/><CoinGeckoAttribution /></>}
   <p className="text-xs text-slate-400">{COPY.footer}</p>
  </div>;
 }

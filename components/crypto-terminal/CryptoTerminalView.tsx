@@ -11,6 +11,7 @@ import {
 import type { DerivativeRow, DerivedSignal, FundingHeatmapCell } from '@/types/cryptoTerminal';
 import { freshContractOpenInterest, openInterestSourceLabel } from '@/lib/crypto/openInterestTotal';
 import { formatCryptoNumber as fmt, formatCryptoUsd as fmtUsd, formatCryptoPercent as fmtPct, formatCryptoFunding as fmtFunding } from '@/lib/cryptoTerminalFormatting';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 /* ═══ TYPES FOR NEW FEATURES ═══ */
 interface FundingSnapshot {
@@ -803,6 +804,7 @@ export default function CryptoTerminalView({
             </div>
           </div>
         )}
+        <CoinGeckoAttribution className="mt-4" />
       </div>
     </div>
   );

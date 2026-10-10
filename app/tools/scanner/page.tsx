@@ -22,6 +22,7 @@ import { boundedJsonFetch } from '@/lib/boundedFetch';
 import { HIGH_MSP_SCORE, rowHasWeakData } from '@/lib/scanner/researchValidity';
 import { legacyExecutionReason } from '@/lib/scanner/legacyReason';
 import Link from 'next/link';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useRegime, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '@/app/v2/_lib/api';
 import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
@@ -951,6 +952,7 @@ function ScannerContent() {
               <RankedMobileCards rows={showAllRows?rankedRows:rankedRows.slice(0,5)} activeRegime={currentRegime} onRowClick={handleV2RowClick}/>
               <RankedDesktopFallbackTable rows={showAllRows?rankedRows:rankedRows.slice(0,5)} activeRegime={currentRegime} onRowClick={handleV2RowClick}/>
               {rankedRows.length>5&&<button onClick={()=>setShowAllRows(!showAllRows)} className="mt-2 text-sm text-emerald-300">{showAllRows?'Show top 5':`Show all ${rankedRows.length}`}</button>}
+              {rankedRows.some(r => (r as { _assetClass?: string })._assetClass === 'crypto') && <CoinGeckoAttribution className="mt-3" />}
             </>}
           </Card>
         </>
@@ -1097,6 +1099,7 @@ function ScannerContent() {
               {(proScanResults.selection?.excluded>0||proScanResults.universe?.excluded?.length>0)&&<span className="mb-2 inline-block rounded-full border border-slate-700 px-3 py-1 text-xs">Excluded: {proScanResults.selection?.excluded ?? proScanResults.universe.excluded.length}</span>}
               <ProScannerCards rows={showAllRows?proScreenerRows:proScreenerRows.slice(0,5)} onRowClick={handleProRowClick}/>
               {proScreenerRows.length>5&&<button onClick={()=>setShowAllRows(!showAllRows)} className="mt-2 text-sm text-emerald-300">{showAllRows?'Show top 5':`Show all ${proScreenerRows.length}`}</button>}
+              {(proScanResults.type ?? proAsset) === 'crypto' && <CoinGeckoAttribution className="mt-3" />}
 
             </div>
           )}

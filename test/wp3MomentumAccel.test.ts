@@ -4,6 +4,7 @@ import { momentumAccelFromBars, momentumAccelFromWarmup } from '@/lib/movers/mom
 
 const mocks = vi.hoisted(() => ({ q: vi.fn() }));
 vi.mock('@/lib/db', () => ({ q: (...args: unknown[]) => mocks.q(...args) }));
+vi.mock('@/lib/auth', () => ({ getSessionFromCookie: async () => ({ workspaceId: 'ws', tier: 'pro', cid: 'c' }) }));
 vi.mock('@/lib/coingecko', () => ({
   getTopGainersLosers: async () => ({ top_gainers: [], top_losers: [] }),
   getMarketData: async () => [],

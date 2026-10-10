@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import CryptoDataStatus from '@/components/CryptoDataStatus';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 interface DefiData {
   marketCap: number;
@@ -233,6 +234,7 @@ export default function DefiStatsWidget() {
           </div>
         </div>
       </div>
+      <CoinGeckoAttribution className="mt-3" />
     </div>
   );
 }

@@ -27,6 +27,7 @@ import {
 } from '@/app/v2/_lib/api';
 import { Card, Badge } from '@/app/v2/_components/ui';
 import { PageHero } from '@/components/ui';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 import BuildingInterestPanel from '@/components/analysis/BuildingInterestPanel';
 import CrossAssetPanel from '@/components/analysis/CrossAssetPanel';
 import Link from 'next/link';
@@ -416,6 +417,7 @@ function LegacyCommandCenter() {
           <Link className="text-emerald-300" href="/tools/crypto-dashboard">Market-wide derivatives</Link>
         </Card>
       </div>
+      <CoinGeckoAttribution />
 
         </>:<ul className="grid gap-2 md:grid-cols-2">{sectorData.filter(sector => typeof sector.changePercent === 'number').map(sector=><li key={sector.symbol}>{sector.name}: {sector.changePercent!.toFixed(2)}% vs prior close</li>)}</ul>}
       </section>

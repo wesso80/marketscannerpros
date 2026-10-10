@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 interface SearchResult {
   id: string;
@@ -384,6 +385,7 @@ export default function CryptoSearchWidget() {
               >
                 View Full Details →
               </a>
+              <CoinGeckoAttribution className="mt-3" />
             </>
           ) : (
             <div style={{ color: 'var(--msp-flat)', textAlign: 'center', padding: '20px' }}>
