@@ -11,6 +11,8 @@ import {
   resetEntitlementDowngrade,
   type BarFetchers,
 } from '@/lib/outcomes/aiOutcomePrices';
+import { splitSessionInOutcomeWindow } from '@/lib/scanner/corporateActions';
+import { nyDateTime } from '@/lib/time/usSession';
 
 const intradayPayload = {
   'Meta Data': { '6. Time Zone': 'US/Eastern' },
@@ -108,6 +110,31 @@ describe('createHorizonPriceResolver', () => {
     expect(resolve.hasLoaded('AAPL', 'equity')).toBe(true);
     expect(resolve.hasLoaded('BTC', 'crypto')).toBe(true);
     expect(resolve.hasLoaded('BTC', 'equity')).toBe(false);
+  });
+
+  it('prices a split on the signal session and blocks a split on the horizon session', async () => {
+    const signalDay = nyDateTime(signal).ymd;
+    const horizonDay = nyDateTime(signal + 24 * 3_600_000).ymd;
+    expect(signalDay).toBe('2026-09-24');
+    expect(horizonDay).toBe('2026-09-25');
+    for (const splitSession of [signalDay, horizonDay]) {
+      mocks.q.mockImplementation(async (_sql: string, params: unknown[] = []) => (
+        splitSessionInOutcomeWindow(splitSession, String(params[1]), String(params[2])) ? [1] : []
+      ));
+      const f = fetchers();
+      const resolve = createHorizonPriceResolver(now, f);
+      const priced = await resolve('AAPL', 'equity', signal, '24h');
+      expect(mocks.q).toHaveBeenCalledWith(expect.stringContaining('equity_corporate_actions'), ['AAPL', signalDay, horizonDay]);
+      if (splitSession === signalDay) {
+        expect(priced).toEqual({ price: 105, at: signal + 30 * 3_600_000, source: 'daily' });
+        expect(f.equityIntraday).toHaveBeenCalled();
+      } else {
+        expect(priced).toEqual({ blocked: 'split' });
+        expect(f.equityIntraday).not.toHaveBeenCalled();
+        expect(f.equityDaily).not.toHaveBeenCalled();
+      }
+      mocks.q.mockReset();
+    }
   });
 
   it('returns a split block and does not fetch bars when a split sits inside the horizon', async () => {

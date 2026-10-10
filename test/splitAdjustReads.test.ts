@@ -120,6 +120,39 @@ describe('split adjustment on stored raw bars', () => {
     await expect(loadCorporateActions(['NVDA'], async () => { throw missing; })).resolves.toEqual(new Map());
   });
 
+  it('returns the fetched daily bars when recording corporate actions fails', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const secret = 'ada@example.com';
+    const payload = {
+      'Time Series (Daily)': {
+        '2024-06-10': {
+          '1. open': '100', '2. high': '110', '3. low': '90', '4. close': '100',
+          '5. adjusted close': '99', '6. volume': '2000', '7. dividend amount': '0', '8. split coefficient': '2',
+        },
+      },
+    };
+    vi.mocked(client.avFetchDailyBars).mockResolvedValueOnce({
+      bars: [{ date: '2024-06-10', ts: Date.parse('2024-06-10T00:00:00Z'), open: 100, high: 110, low: 90, close: 100, volume: 2000 }],
+      fetchedAt: new Date().toISOString(),
+      payload,
+    });
+    vi.mocked(q).mockImplementation(async (sql: string) => {
+      if (sql.includes('INSERT INTO equity_corporate_actions')) throw new Error(`db down ${secret}`);
+      if (sql.includes('symbol_universe')) return [];
+      return [];
+    });
+    const env = await getBars('ZZZ', 'daily');
+    expect(env.fromCache).toBe('av');
+    expect(env.error).toBeUndefined();
+    expect(env.data?.map((bar) => bar.close)).toEqual([100]);
+    expect(upsert).toHaveBeenCalledTimes(1);
+    const logged = warn.mock.calls.map((call) => call.map(String).join(' ')).join('\n');
+    expect(logged).toContain('[getBars] corporate action record failed for ZZZ');
+    expect(logged).not.toContain(secret);
+    expect(logged).not.toContain('db down');
+    warn.mockRestore();
+  });
+
   it('stops getBars from writing daily, weekly, and monthly rows, and still writes intraday', async () => {
     await getBars('NVDA', 'daily');
     await getBars('NVDA', 'weekly');

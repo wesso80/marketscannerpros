@@ -4,7 +4,7 @@ import studio from '@/components/public-design/AccountStudio.module.css';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import ReferralCard from '@/components/account/ReferralCard';
-import { getDailyAiLimit } from '@/lib/entitlements';
+import { getDailyAiLimit, hasProAccess } from '@/lib/entitlements';
 import { ALERT_LIMITS } from '@/lib/alerts/planLimits';
 import { WATCHLIST_LIMITS } from '@/lib/tiers';
 import { FREE_COPY } from '@/components/free/copy';
@@ -352,7 +352,7 @@ export default function AccountPage() {
                   {currentTier.active ? "Active" : "Inactive"}
                 </span>
               </div>
-              {isPaid ? <ProLoungeNote className="mt-3 text-sm text-white/70" /> : null}
+              {hasProAccess(normalizedTier) ? <ProLoungeNote className="mt-3 text-sm text-white/70" /> : null}
             </section>
 
             <section aria-label="Account usage" className="rounded-xl border border-white/10 p-3">
