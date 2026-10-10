@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTopGainersLosers, getMarketData } from '@/lib/coingecko';
+import { cgViewerAllowed } from '@/lib/cgViewer';
 import { q } from '@/lib/db';
 import { normalizeCryptoMover } from '@/lib/analysis/publicMover';
 import { fetchAvTopMovers } from '@/lib/avTopMovers';
@@ -92,20 +93,40 @@ function acceptedStoredClose(
   return stored.prevClose;
 }
 
+function dropCryptoRows<T extends { asset_class?: string }>(rows: T[] | undefined): T[] {
+  return (rows || []).filter((row) => row.asset_class !== 'crypto');
+}
+
+function equityOnlyPayload(payload: any) {
+  return {
+    ...payload,
+    source: 'alphavantage',
+    metadata: payload?.metadata
+      ? { ...payload.metadata, provider: 'alphavantage', model: 'TOP_GAINERS_LOSERS + indicators_latest' }
+      : payload?.metadata,
+    topGainers: dropCryptoRows(payload?.topGainers),
+    topLosers: dropCryptoRows(payload?.topLosers),
+    mostActive: dropCryptoRows(payload?.mostActive),
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const duration = (searchParams.get('duration') || '24h') as '1h' | '24h' | '7d' | '14d' | '30d' | '60d' | '1y';
+    const includeCrypto = await cgViewerAllowed(request);
 
     const [topMovers, mostActive, equityMovers] = await Promise.all([
-      getTopGainersLosers(duration, '1000'),
-      getMarketData({
-        order: 'volume_desc',
-        per_page: 30,
-        page: 1,
-        sparkline: false,
-        price_change_percentage: ['24h'],
-      }),
+      includeCrypto ? getTopGainersLosers(duration, '1000') : Promise.resolve(null),
+      includeCrypto
+        ? getMarketData({
+            order: 'volume_desc',
+            per_page: 30,
+            page: 1,
+            sparkline: false,
+            price_change_percentage: ['24h'],
+          })
+        : Promise.resolve(null),
       fetchEquityMovers(),
     ]);
 
@@ -148,12 +169,18 @@ export async function GET(request: NextRequest) {
     const cryptoLosers = withoutExtremes(cryptoLoserPool).slice(0, 10);
     const cryptoActive = withoutExtremes(cryptoActivePool).slice(0, 10);
 
-    // If both sources failed, try returning cached data
+    // If both sources failed, try returning cached data. Anonymous callers only see the equity rows.
     if (eqGainers.length === 0 && cryptoGainers.length === 0) {
       if (cachedResponse && Date.now() - cachedResponse.ts < CACHE_TTL_MS * 6) {
-        return NextResponse.json(cachedResponse.data, {
-          headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
-        });
+        const cached = includeCrypto ? cachedResponse.data : equityOnlyPayload(cachedResponse.data);
+        const stillEmpty = (cached.topGainers?.length ?? 0) === 0 && (cached.topLosers?.length ?? 0) === 0 && (cached.mostActive?.length ?? 0) === 0;
+        if (!stillEmpty) {
+          return NextResponse.json(cached, {
+            headers: includeCrypto
+              ? { 'Cache-Control': 'private, no-store' }
+              : { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
+          });
+        }
       }
       return NextResponse.json({ error: 'No top movers data available' }, { status: 500 });
     }
@@ -290,11 +317,13 @@ export async function GET(request: NextRequest) {
 
     const payload = {
       success: true,
-      source: 'alphavantage+coingecko',
+      source: includeCrypto ? 'alphavantage+coingecko' : 'alphavantage',
       duration,
       metadata: {
-        provider: 'alphavantage+coingecko',
-        model: 'TOP_GAINERS_LOSERS + coins/top_gainers_losers + indicators_latest',
+        provider: includeCrypto ? 'alphavantage+coingecko' : 'alphavantage',
+        model: includeCrypto
+          ? 'TOP_GAINERS_LOSERS + coins/top_gainers_losers + indicators_latest'
+          : 'TOP_GAINERS_LOSERS + indicators_latest',
         equityFilter: `no warrants/rights/units; price >= $1; volume >= ${EQUITY_MOVER_MIN_VOLUME.toLocaleString('en-US')}; market cap >= $100M when known`,
       },
       lastUpdated: new Date().toISOString(),
@@ -309,18 +338,25 @@ export async function GET(request: NextRequest) {
       mostActive: [...eqActive, ...cryptoActive].map(enrich),
     };
 
-    // Cache successful response
-    cachedResponse = { data: payload, ts: Date.now() };
+    // Keep the shared cache for signed-in responses only, so an anonymous equity list cannot replace it.
+    if (includeCrypto) cachedResponse = { data: payload, ts: Date.now() };
 
     return NextResponse.json(payload, {
-      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
+      headers: includeCrypto
+        ? { 'Cache-Control': 'private, no-store' }
+        : { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
     });
   } catch (error) {
     console.error('[Market Movers API] Error:', error);
-    // Return cached data on error instead of failing
+    // Return cached data on error instead of failing. Anonymous callers only see the equity rows.
     if (cachedResponse && Date.now() - cachedResponse.ts < CACHE_TTL_MS * 6) {
-      return NextResponse.json(cachedResponse.data, {
-        headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
+      let includeCrypto = false;
+      try { includeCrypto = await cgViewerAllowed(request); } catch { includeCrypto = false; }
+      const cached = includeCrypto ? cachedResponse.data : equityOnlyPayload(cachedResponse.data);
+      return NextResponse.json(cached, {
+        headers: includeCrypto
+          ? { 'Cache-Control': 'private, no-store' }
+          : { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
       });
     }
     return NextResponse.json(

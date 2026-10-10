@@ -7,6 +7,7 @@ import { sectorCells, type SectorInput } from '@/lib/overview/today';
 import { quoteStamp, type DisplayQuote } from '@/lib/market/quotePresentation';
 import { priceText } from '@/lib/market/priceStamp';
 import type { StrengthRanking } from '@/lib/analysis/commandCenter';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 export default function TodayStrip({ regime, loading, hasRegimeData, regimeColor, sectors, sectorTime, sectorDay, strength, quotes, quotesLoading = false }: {
   regime: { regimeLabel: string; available: boolean; stale: boolean; asOf: string | null };
   loading: boolean; hasRegimeData: boolean; regimeColor: string;
@@ -27,5 +28,9 @@ export default function TodayStrip({ regime, loading, hasRegimeData, regimeColor
       })}
       <StatCard label={c.sectorsUp} value={strength.total ? `${Math.round(strength.greenRatio * strength.total)} / ${strength.total}` : "Not collected"} />
     </div>
+    {([c.btc, c.eth] as const).some(symbol => {
+      const price = quotes?.[symbol]?.price;
+      return typeof price === 'number' && Number.isFinite(price) && price !== 0;
+    }) && <CoinGeckoAttribution />}
   </section>;
 }

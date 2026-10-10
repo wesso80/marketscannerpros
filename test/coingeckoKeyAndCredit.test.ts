@@ -40,16 +40,22 @@ describe('CoinGecko API key resolution (BP-13)', () => {
 });
 
 describe('CoinGecko attribution (BP-5)', () => {
-  it('footer shows "Data provided by CoinGecko" linked to coingecko.com/en/api', () => {
+  it('uses the required phrase, link, new tab, noopener, and at least 14px', () => {
+    const attr = readFileSync(resolve(__dirname, '../components/CoinGeckoAttribution.tsx'), 'utf8');
+    expect(attr).toContain("COINGECKO_ATTRIBUTION_URL = 'https://www.coingecko.com/en/api'");
+    expect(attr).toContain("COINGECKO_ATTRIBUTION_TEXT = 'Data provided by CoinGecko'");
+    expect(attr).toContain('target="_blank"');
+    expect(attr).toContain('rel="noopener noreferrer"');
+    expect(attr).toContain('text-[14px]');
+    expect(attr).not.toMatch(/partner|endorsed|official data partner/i);
     const footer = readFileSync(resolve(__dirname, '../components/Footer.tsx'), 'utf8');
-    expect(footer).toMatch(/<a href="https:\/\/www\.coingecko\.com\/en\/api"[^>]*>\s*Data provided by CoinGecko\s*<\/a>/);
+    expect(footer).toContain('CoinGeckoAttribution');
     expect(footer).not.toContain('Market data powered by CoinGecko');
   });
 
-  it('in-app credit component links the same phrase to /en/api', () => {
+  it('the older credit name renders the same attribution', () => {
     const credit = readFileSync(resolve(__dirname, '../components/CoinGeckoCredit.tsx'), 'utf8');
-    expect(credit).toContain("COINGECKO_ATTRIBUTION_URL = 'https://www.coingecko.com/en/api'");
-    expect(credit).toMatch(/<a href=\{COINGECKO_ATTRIBUTION_URL\}[^>]*>\s*Data provided by CoinGecko\s*<\/a>/);
+    expect(credit).toContain('<CoinGeckoAttribution');
   });
 
   // The Footer is hidden on /tools/*, so the credit must also sit on the in-app CoinGecko surfaces.

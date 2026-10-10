@@ -13,6 +13,7 @@ import { useUserTier, canAccessTimeScanner } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
 import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 import TimeConfluenceWidget from '@/components/TimeConfluenceWidget';
 import type { PublicTimeConfluence } from '@/lib/research/publicTimeConfluence';
 
@@ -635,6 +636,7 @@ export default function TimeScannerPage({ embeddedInTerminal = false, symbol: pr
         {embeddedInTerminal && scanData && (
           <CollapsibleSection title="Scheduled timing context"><TimeConfluenceWidget showMacro showMicro showCalendar assetClass={isCrypto ? 'crypto' : 'equity'} symbol={displaySymbol} /></CollapsibleSection>
         )}
+        {isCrypto && scanData && <CoinGeckoAttribution />}
         {scanData && <SourceLine source={`Time Confluence scan · ${scanData.price.source}`} asOf={scanData.observedAt} tradingDay="Observation time not supplied" basis="Calculated candle schedules and measured prior-candle midpoints" />}
       </main>
     </TimeScannerShell>

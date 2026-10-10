@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildCoinGeckoResponseMeta, getPoolWithVolumeBreakdown } from '@/lib/coingecko';
+import { cgViewerAllowed, cgViewerDenied } from '@/lib/cgViewer';
 
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
+  if (!(await cgViewerAllowed(req))) return cgViewerDenied();
   const { searchParams } = new URL(req.url);
   const network = searchParams.get('network');
   const address = searchParams.get('address');

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import CryptoDataStatus from '@/components/CryptoDataStatus';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 interface NewCoin {
   id: string;
@@ -221,6 +222,7 @@ export default function NewListingsWidget() {
       }}>
         ⚠️ New listings are high-risk. DYOR before investing. Many new coins fail.
       </div>
+      <CoinGeckoAttribution className="mt-3" />
     </div>
   );
 }

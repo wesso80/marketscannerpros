@@ -5,6 +5,7 @@ import { NextRequest } from 'next/server';
 
 const mocks = vi.hoisted(() => ({ q: vi.fn(), top: vi.fn(), market: vi.fn(), fetch: vi.fn() }));
 vi.mock('@/lib/db', () => ({ q: mocks.q }));
+vi.mock('@/lib/auth', () => ({ getSessionFromCookie: async () => ({ workspaceId: 'ws', tier: 'pro', cid: 'c' }) }));
 vi.mock('@/lib/coingecko', () => ({ getTopGainersLosers: mocks.top, getMarketData: mocks.market }));
 vi.mock('@/lib/avRateGovernor', () => ({ avTakeToken: async () => undefined }));
 

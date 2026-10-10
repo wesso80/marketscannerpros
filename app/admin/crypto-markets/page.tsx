@@ -27,6 +27,7 @@ import type { MomentumChart } from '@/lib/admin/cryptoMomentum';
 const CryptoExchangeVolume = dynamic(()=>import('@/components/admin/CryptoExchangeVolume'), {ssr:false});
 const CryptoReviewChart = dynamic(()=>import('@/components/admin/CryptoReviewChart'), {ssr:false});
 import { useEffect, useState } from 'react';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 import type { DiscoveryRow, VenueEvidence } from '@/lib/admin/cryptoDiscovery';
 import {reviewStatusLabel,type MomentumReview} from '@/lib/admin/cryptoMomentum';
 type Snapshot = { startedAt:string; finishedAt:string; requests:number; partial:boolean; uniqueCoins:number; missingMarketIds?:string[]; failedMarketBatches?:number[];
@@ -173,6 +174,7 @@ export default function CryptoMarketsPage() {
           <td className="p-2">{r.fixedScanCovered?'Covered':'Outside fixed list'}</td><td className="p-2 text-xs text-slate-400">{r.reasons.join(', ') || 'None at scan'}</td>
         </tr>)}</tbody></table></div>
       <p className="text-xs text-slate-400">Showing {rows.length} matching coins (maximum 100). Search the complete saved snapshot by coin name or ID. Missing here can mean outside the capped pair window, failed venue checks or missing market data.</p>
+      {rows.length > 0 && <CoinGeckoAttribution />}
     </section>}
     <CryptoBaseScanner now={now} refreshVersion={refreshVersion} />
     </>}

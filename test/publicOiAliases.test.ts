@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+vi.mock('@/lib/auth', () => ({ getSessionFromCookie: async () => ({ workspaceId: 'ws', tier: 'pro', cid: 'c' }) }));
 import { expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 

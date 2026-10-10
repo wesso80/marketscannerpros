@@ -5,6 +5,7 @@ import type {BaseReview} from '@/lib/admin/cryptoBase';
 import type {MomentumChart,MomentumReview} from '@/lib/admin/cryptoMomentum';
 import {setupDisplayLabel,type VolumeMomentum,type MomentumScanRow} from '@/lib/admin/cryptoVolumeMomentum';
 import {catalystText,chartDetail,chartText,jevDetail,jevScored} from '@/lib/admin/cryptoJevEvidence';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 type RuleRow=VolumeMomentum&{id?:string;symbol?:string;jev?:MomentumScanRow['jev'];catalyst?:MomentumScanRow['catalyst'];chart?:MomentumScanRow['chart'];shadow?:MomentumScanRow['shadow']};
 const fmt=(n?:number|null)=>typeof n==='number'&&Number.isFinite(n)?n.toPrecision(6):'—';
 const DARK={layout:{background:{type:ColorType.Solid,color:'#111e26'},textColor:'#a8b9bf'},grid:{vertLines:{color:'#293a42'},horzLines:{color:'#293a42'}},timeScale:{timeVisible:true,secondsVisible:false},handleScroll:{vertTouchDrag:false}} as const;
@@ -142,5 +143,6 @@ export default function CryptoReviewChart({chart,review,base,onLabel}:{chart:Mom
     <p className="text-xs text-slate-300 tabular-nums">{readout?`${readout.time} · O ${fmt(readout.o)} H ${fmt(readout.h)} L ${fmt(readout.l)} C ${fmt(readout.c)}`:'Hover a candle for OHLC.'}</p>
     <p className="text-xs text-slate-400">CoinGecko aggregate USD prices · {bars?.length??0} completed candles · Times show candle closes in UTC. Drag to pan; scroll to zoom. 4h candles aggregate completed 1h bars. Switching timeframes uses the same saved history. Candle volume is not in this feed; use Validate Coinbase volume below for exchange volume.</p>
     <p className="text-xs text-slate-400">{rule?`4h volume rule on this chart (dashed): prior 20-bar high ${fmt(rule.trigger)}, 20-bar average ${fmt(rule.sma20)}, entry floor ${fmt(rule.entryFloor)}, chase limit ${fmt(rule.maxEntry)}, stop ${fmt(rule.stop)}. Label: ${rule.stage==='MOMENTUM_VOLUME'?setupDisplayLabel(rule,review.levels?.entry):rule.stage}.` :review.levels?'Lines show research levels from this review, not orders.':'No proposed trade levels for this review.'}</p>
+    {bars?.length ? <CoinGeckoAttribution /> : null}
   </section>;
 }

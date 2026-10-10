@@ -30,6 +30,7 @@ import { filterMoversByFloor } from '@/lib/analysis';
 import { humanizeEnum } from '@/lib/presentation/labels';
 import { proDisplaySymbol } from '@/lib/scanner/proDisplay';
 import type { ResearchAsset } from '@/lib/researchContext';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
 const EquityExplorer = dynamic(() => import('@/app/tools/equity-explorer/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Equity Explorer…</div> });
@@ -327,6 +328,7 @@ export default function ExplorerPage() {
               )}
             </Card>
           </div>
+          {(cryptoData || cryptoGainers.length > 0 || cryptoLosers.length > 0 || cryptoSectors.length > 0) && <CoinGeckoAttribution />}
           </CollapsibleSection>
         </div>
       )}

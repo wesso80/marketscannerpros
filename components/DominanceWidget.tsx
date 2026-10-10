@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import CryptoDataStatus from '@/components/CryptoDataStatus';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 interface DominanceData {
   btc: number;
@@ -285,6 +286,7 @@ export default function DominanceWidget() {
           • <span style={{ color: 'var(--msp-bull)' }}>Low stablecoin dominance</span> = Money in market, bullish
         </div>
       </div>
+      <CoinGeckoAttribution className="mt-3" />
     </div>
   );
 }

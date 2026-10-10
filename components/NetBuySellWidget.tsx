@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 interface TimeframeBreakdown {
   timeframe: string;
@@ -317,6 +318,7 @@ export default function NetBuySellWidget() {
               </div>
             </div>
           </div>
+          <CoinGeckoAttribution className="mt-3" />
         </>
       )}
 

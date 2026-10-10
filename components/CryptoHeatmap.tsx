@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 interface CryptoData {
   symbol: string;
@@ -562,6 +563,7 @@ export default function CryptoHeatmap() {
           </div>
         </div>
       )}
+      <CoinGeckoAttribution className="mt-3" />
     </div>
   );
 }

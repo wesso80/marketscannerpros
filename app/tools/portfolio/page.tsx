@@ -14,6 +14,8 @@ import type { TradePayload } from '@/lib/workflow/types';
 import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
 import { formatDollar } from '@/lib/riskDisplay';
 import { detectAssetClass } from '@/lib/detectAssetClass';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
+import { csvCellForAsset } from '@/lib/coingeckoSearchCoin';
 import { cagrFromEquityHistory } from '@/lib/portfolio/cagr';
 import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
@@ -1511,14 +1513,16 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     const rows = positions.map(p => {
       const pl = openPositionPL(p);
       const plPercent = openPositionPLPercent(p);
+      const kind = p.assetClass || detectAssetClass(p.symbol);
+      const blankCrypto = (value: string) => csvCellForAsset(kind, value, true) || 'unavailable';
       return [
         p.symbol,
         p.side,
         p.quantity,
         formatPriceRaw(p.entryPrice),
-        hasCurrentPrice(p.currentPrice) ? formatPriceRaw(p.currentPrice) : 'unavailable',
-        pl == null ? 'unavailable' : pl.toFixed(2),
-        plPercent == null ? 'unavailable' : plPercent.toFixed(2),
+        hasCurrentPrice(p.currentPrice) ? blankCrypto(formatPriceRaw(p.currentPrice)) : 'unavailable',
+        pl == null ? 'unavailable' : blankCrypto(pl.toFixed(2)),
+        plPercent == null ? 'unavailable' : blankCrypto(plPercent.toFixed(2)),
         new Date(p.entryDate).toLocaleDateString()
       ];
     });
@@ -1833,6 +1837,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
           Export Positions {!canExportCSV(tier) && 'Locked'}
         </button>
       )}
+      {positions.some((p) => (p.assetClass || detectAssetClass(p.symbol)) === 'crypto') && <CoinGeckoAttribution className="basis-full" />}
       {closedPositions.length > 0 && (
         <button
           type="button"

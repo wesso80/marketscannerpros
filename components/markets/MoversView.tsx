@@ -10,6 +10,7 @@ import { symbolHref } from '@/lib/market/links';
 import { moverResearchLink } from '@/lib/options/journey';
 import { equityMoversBasisLabel } from '@/lib/alphaVantageEntitlement';
 import type { EvaluatedMover, MoversData } from '@/app/tools/market-movers/page';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 type Environment = {
   deploymentMode: 'YES' | 'CONDITIONAL' | 'NO';
@@ -88,6 +89,7 @@ export default function MoversView(props: MoversViewProps) {
       </CollapsibleSection>
       <CollapsibleSection title="Change charts" summary="Recorded gainers and decliners"><div className="grid gap-5 md:grid-cols-2"><MoversChart title="Gainers" rows={data!.topGainers} medianVol={environment.medianVol}/><MoversChart title="Decliners" rows={data!.topLosers} medianVol={environment.medianVol}/></div></CollapsibleSection>
     </>}
+    {!loading && data && !error && [data.topGainers, data.topLosers, data.mostActive].some(list => list.some(row => row.asset_class === 'crypto')) && <CoinGeckoAttribution />}
     {!loading && data && !error && <SourceLine source={`${equityMoversBasisLabel(data.equityFeed) || 'Equity movers'} · crypto market snapshot`} asOf={data.equityAsOf || undefined} basis="Equity observation time when supplied · crypto observations have a separate feed basis; no shared observation time supplied" />}
     {error && <p className="text-sm text-amber-200">No current list is shown. Reload this page to try again.</p>}
   </section>;

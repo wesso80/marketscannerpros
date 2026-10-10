@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import CryptoDataStatus from '@/components/CryptoDataStatus';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 interface DominanceData {
   btc: number;
@@ -341,9 +342,8 @@ export default function MarketPulseHero() {
           </div>
         </div>
         
-        <p className="text-center text-xs text-gray-500 mt-4">
-          Data from CoinGecko • Refreshes every minute
-        </p>
+        <p className="text-center text-xs text-gray-500 mt-4">Refreshes every minute</p>
+        <CoinGeckoAttribution className="mt-2 text-center" />
       </div>
     </section>
   );

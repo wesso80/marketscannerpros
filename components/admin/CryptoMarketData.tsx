@@ -4,6 +4,7 @@ import type {DerivRow,CategoryRow,MoverRow,TrendingRow,GlobalPoint} from '@/lib/
 import type {CgBudgetStatus} from '@/lib/admin/cgCredits';
 import {COMPRESSION_STRONG_SCORE,sortCompressionRows,type CompressionRow,type CompressionWindow} from '@/lib/admin/cryptoCompression';
 import CryptoNewListings from './CryptoNewListings';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 type Status={ok:boolean;at:string;skipped?:string;error?:string;calls:number};
 type View={error?:string;config:Record<string,number>;status:{status:Record<string,Status>;lastRunAt:string|null};budget:CgBudgetStatus|null;
  derivatives:{at:string;source:string;exchanges:number;tickers:number;dayAgoAt:string|null;flagged:DerivRow[];topFunding:DerivRow[];topOiChange:DerivRow[]}|null;
@@ -117,6 +118,7 @@ export default function CryptoMarketData({refreshVersion=0}:{refreshVersion?:num
     {!data.trending?<p>No data yet.</p>:<ul className="text-sm">{data.trending.rows.map(t=><li key={t.id} className={t.openPosition||t.watchlist?'text-amber-300':''}>#{t.rank} {t.name} ({t.symbol}){t.marketCapRank?` · rank ${t.marketCapRank}`:''}{t.openPosition?' · OPEN PAPER POSITION: possible crowding':''}{t.watchlist?' · on momentum watchlist: possible crowding':''}</li>)}</ul>}
    </Panel>
   </>}
+  <CoinGeckoAttribution />
   <CryptoNewListings refreshVersion={refreshVersion} />
  </section>;
 }

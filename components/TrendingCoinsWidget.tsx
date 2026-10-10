@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import CryptoDataStatus from '@/components/CryptoDataStatus';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 interface TrendingCoin {
   id: string;
@@ -224,6 +225,7 @@ export default function TrendingCoinsWidget() {
           </div>
         </div>
       )}
+      <CoinGeckoAttribution className="mt-3" />
     </div>
   );
 }

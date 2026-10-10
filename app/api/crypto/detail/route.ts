@@ -7,9 +7,9 @@ import {
   getAggregatedFundingRates,
   getCoinDetailFull,
   searchCoins,
-  getMarketChartFull,
 } from '@/lib/coingecko';
 import { getOpenInterestTotals } from '@/lib/crypto/openInterestTotal.server';
+import { searchWidgetCoin } from '@/lib/coingeckoSearchCoin';
 
 interface CoinDetail {
   id: string;
@@ -102,28 +102,29 @@ export async function GET(req: NextRequest) {
   const symbol = searchParams.get('symbol');
   const query = searchParams.get('q');
   const coinIdParam = searchParams.get('id');
-  
-  // Simple coin lookup by ID (for search widget - no auth required)
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Search widget lookup. Only the fields that card renders.
   if (coinIdParam && !action) {
-    console.log('[CryptoDetail] Fetching coin:', coinIdParam);
     const coinDetail = await getCoinDetailFull(coinIdParam);
     if (!coinDetail) {
-      console.error('[CryptoDetail] Failed to fetch:', coinIdParam);
       return NextResponse.json({ error: 'Coin not found' }, { status: 404 });
     }
-    console.log('[CryptoDetail] Success:', coinIdParam, coinDetail.name);
     const meta = buildCoinGeckoResponseMeta({
       endpointFamily: 'GENERAL',
       lastUpdated: coinDetail.market_data?.last_updated ?? null,
       maxAgeMs: 300_000,
     });
-    return NextResponse.json({ ...coinDetail, source: meta.provider, freshnessStatus: meta.freshnessStatus, timestamp: meta.lastUpdated, meta });
-  }
-  
-  // Protected routes require auth
-  const session = await getSessionFromCookie();
-  if (!session?.workspaceId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({
+      ...searchWidgetCoin(coinDetail),
+      source: meta.provider,
+      freshnessStatus: meta.freshnessStatus,
+      timestamp: meta.lastUpdated,
+      meta,
+    });
   }
   
   // Search for coins
@@ -145,10 +146,9 @@ export async function GET(req: NextRequest) {
     const coinId = COINGECKO_ID_MAP[symbol.toUpperCase()] || symbol.toLowerCase();
     
     // Fetch all data in parallel
-    const [coinDetail, ohlcData, chartData] = await Promise.all([
+    const [coinDetail, ohlcData] = await Promise.all([
       getCoinDetailFull(coinId),
       getOHLC(coinId, 30).catch(() => []),
-      getMarketChartFull(coinId, 30).catch(() => null),
     ]);
     
     if (!coinDetail) {
@@ -262,10 +262,6 @@ export async function GET(req: NextRequest) {
         is_stale: t.is_stale,
       })),
       ohlc: ohlcData,
-      chart: chartData ? {
-        prices: chartData.prices?.slice(-100) || [],
-        volumes: chartData.total_volumes?.slice(-100) || [],
-      } : null,
       sparkline: coinDetail.market_data?.sparkline_7d?.price,
       derivatives: fundingRates || openInterest ? {
         funding_rate: fundingRates?.rate,

@@ -5,6 +5,7 @@ import StatTile from '@/components/visual/StatTile';
 import SourceLine from '@/components/visual/SourceLine';
 import { boundedJsonFetch } from '@/lib/boundedFetch';
 import { coinCode, selectCryptoDeskTiles, type DeskTile } from '@/lib/terminal/cryptoDeskTiles';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 type DeskState =
   | { status: 'loading' }
@@ -72,6 +73,7 @@ export default function TerminalCryptoDesk({ symbol }: { symbol: string }) {
         ))}
       </div>
       {state.basis ? <p className="text-xs text-[var(--msp-warn)]">{state.basis}</p> : null}
+      <CoinGeckoAttribution />
     </section>
   );
 }

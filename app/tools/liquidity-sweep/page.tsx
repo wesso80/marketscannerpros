@@ -7,6 +7,7 @@ import LockedPreview from '@/components/free/LockedPreview';
 import { levelName, sweepPrice, sweepSession } from '@/components/liquidity-sweep/presentation';
 import { useUserTier, canAccessScanner, canAccessUnlimitedScanning } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 
 /* ── Types matching API response ── */
@@ -152,7 +153,8 @@ export default function LiquiditySweepPage() {
           {data && <span className="text-xs text-slate-400">{data.scanned} scanned · {filtered.length} matching</span>}
         </div>
         {error && <p className="rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-200">{error}. {error.includes('(429)') ? 'Wait before trying again.' : /\((401|403)\)/.test(error) ? 'Check your sign-in and access.' : 'Run again to retry.'}</p>}
-        {data && <p data-sweep-source className="text-xs text-slate-400">{sweepSession(data.results.map(r => r.candleDate))} · Source: {data.type === 'crypto' ? 'CoinGecko' : 'Alpha Vantage'} completed daily candles</p>}
+        {data && <p data-sweep-source className="text-xs text-slate-400">{sweepSession(data.results.map(r => r.candleDate))} · Source: {data.type === 'crypto' ? 'completed daily candles' : 'Alpha Vantage completed daily candles'}</p>}
+        {data?.type === 'crypto' && <CoinGeckoAttribution />}
         {!loading && !data && !error && <p className="rounded-lg border border-amber-400/30 p-3 text-sm text-amber-200">No recorded result in this view. Use Run scan to request observations.</p>}
         {data && filtered.length > 0 && <>
           <p data-sweep-legend className="text-xs text-slate-400"><span className="text-slate-200">● Active sweep</span> means a recorded candle crossed a level. It is a price-pattern observation.</p>

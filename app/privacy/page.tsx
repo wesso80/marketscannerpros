@@ -57,6 +57,7 @@ export default function PrivacyPage() {
         <li><strong>Stripe</strong> (payments &amp; portal).</li>
         <li><strong>OpenAI</strong> (the MSP AI chatbot uses third-party large language models, currently from OpenAI, and those models are not trained on your data).</li>
         <li><strong>Alpha Vantage</strong> (real-time and historical market data provider).</li>
+        <li>Some cryptocurrency data is provided by the CoinGecko API, which is the property of CoinGecko. CoinGecko is not responsible for this service, and to the extent permitted by law we exclude all liability of CoinGecko in connection with your use of it.</li>
         <li><strong>Render</strong> (application hosting and web services).</li>
         <li><strong>Neon</strong> (PostgreSQL database hosting).</li>
       </ul>

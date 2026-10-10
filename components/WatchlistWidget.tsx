@@ -17,6 +17,8 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { isPaidTier, watchlistLimitsFor } from '@/lib/tiers';
 import { filterByMove, formatTodayMove, sortByMove, summarizeMoves, todayMove, type MoveFilter, type MoveSort } from '@/lib/watchlist/todayMove';
 import { fetchWatchlistQuotes, formatQuoteAsOf, type WatchlistQuote } from '@/lib/watchlist/quotes';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
+import { csvCellForAsset } from '@/lib/coingeckoSearchCoin';
 import { afterWatchlistDeleted, upsertWatchlistItem, watchlistNameError, WATCHLIST_NAME_MAX } from '@/lib/watchlist/listState';
 
 interface Watchlist {
@@ -432,8 +434,8 @@ export default function WatchlistWidget() {
     const rows = filteredIdeas.map((row) => [
       row.item.symbol,
       row.item.asset_type,
-      row.quote?.price != null ? String(row.quote.price) : '',
-      row.changePercent != null ? row.changePercent.toFixed(2) : '',
+      csvCellForAsset(row.item.asset_type, row.quote?.price != null ? String(row.quote.price) : '', true),
+      csvCellForAsset(row.item.asset_type, row.changePercent != null ? row.changePercent.toFixed(2) : '', true),
       row.quote?.asOf ?? '',
     ]);
     const csv = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
@@ -723,6 +725,7 @@ export default function WatchlistWidget() {
             </CollapsibleSection>
           </div>
         ) : null}
+        {items.some((item) => item.asset_type === 'crypto') && <CoinGeckoAttribution className="mt-3" />}
       </div>
 
       {/* Create Watchlist Modal */}

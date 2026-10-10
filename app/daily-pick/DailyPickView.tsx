@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { formatSessionDate } from '@/lib/time/usSession';
 import { formatFloat, SELECTION_NOTE, SORT_NOTE, type DayData } from '@/lib/og/dailyPicksLatest';
 import { readableObservedAt, readablePrice, readablePriceLabel } from './wording';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 
 /**
  * Public /daily-pick: the latest daily-scan observations, measured values only (price, session change, float, short
@@ -72,6 +73,7 @@ export default function DailyPickView({ data }: { data: DayData }) {
             </div>
           ))}
         </div>
+        {data.picks.some((p) => p.asset_class === 'crypto') && <CoinGeckoAttribution className="mt-4" />}
 
         <div style={{ marginTop: 32, padding: '20px 22px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 14 }}>
           <h2 style={{ margin: 0, fontSize: 22, color: '#F8FAFC' }}>Want the full research workspace?</h2>

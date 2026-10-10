@@ -1,4 +1,5 @@
 import PriceStamp from '@/components/market/PriceStamp';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 import Link from 'next/link';
 import {symbolHref} from '@/lib/market/links';
 import { MarketStripItem } from './types';
@@ -38,6 +39,7 @@ export default function DerivativesMarketStrip({ items }: DerivativesMarketStrip
           );
         })}
       </div>
+      <CoinGeckoAttribution className="mt-3" />
     </div>
   );
 }

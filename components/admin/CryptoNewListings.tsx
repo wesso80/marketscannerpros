@@ -2,6 +2,7 @@
 import {useEffect,useState} from 'react';
 import type {Listing} from '@/lib/admin/cryptoNewListingsJob';
 import type {TickerCheck} from '@/lib/admin/cryptoNewListings';
+import CoinGeckoAttribution from '@/components/CoinGeckoAttribution';
 type View={error?:string;config:{everyMinutes:number;liquid:{minVolumeUsd:number;maxSpreadPct:number;minDepthUsd:number};concentration:{top10Pct:number;top1Pct:number}};lastRunAt:string|null;lastListAt:string|null;lastError:string|null;callsLastRun:number;webhookEvents:number;webhookUnparsed:{at:string;keys:string[]}[];webhookEnabled:boolean;listings:Listing[]};
 const usd=(n:number|null|undefined)=>n==null?'—':n>=1e9?`$${(n/1e9).toFixed(2)}B`:n>=1e6?`$${(n/1e6).toFixed(2)}M`:n>=1e3?`$${(n/1e3).toFixed(0)}k`:`$${n.toFixed(0)}`;
 const liqTone={LIQUID:'text-emerald-300',THIN:'text-amber-300',NO_USABLE_TICKERS:'text-red-300',UNAVAILABLE:'text-slate-400'};
@@ -34,6 +35,7 @@ export default function CryptoNewListings({refreshVersion=0}:{refreshVersion?:nu
      <td className="p-1 text-xs">{l.tickers?.exchanges.slice(0,3).map(e=><div key={`${e.exchange}${e.pair}`}>{e.name} · {e.pair} · {usd(e.volumeUsd)} · {e.spreadPct==null?'—':`${e.spreadPct.toFixed(2)}%`}</div>)??'—'}</td>
      <td className="p-1 text-xs">{l.holders?<span title={l.holders.note} className={l.holders.flag==='CONCENTRATED'?'text-red-300':l.holders.flag==='OK'?'':'text-slate-400'}>{l.holders.flag} · {l.holders.top1Pct==null?'—':`${l.holders.top1Pct.toFixed(1)}%`} / {l.holders.top10Pct==null?'—':`${l.holders.top10Pct.toFixed(1)}%`} · {l.holders.network}{l.holders.top[0]?.label?` · #1 ${l.holders.top[0].label}`:''}</span>:l.contract&&'reason' in l.contract?<span className="text-slate-400">{l.contract.reason}</span>:'—'}</td>
     </tr>)}</tbody></table></div>}
+   {data.listings.length > 0 && <CoinGeckoAttribution />}
   </>}
  </section>;
 }

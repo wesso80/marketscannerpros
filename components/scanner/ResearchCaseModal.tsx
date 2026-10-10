@@ -3,6 +3,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { saveResearchCase } from '@/lib/clientResearchCases';
 import { OPEN_INTEREST_VENUE_CAP, openInterestSourceLabel } from '@/lib/crypto/openInterestTotal';
+import { csvCellForAsset } from '@/lib/coingeckoSearchCoin';
 
 /* ─── Types ─── */
 
@@ -273,12 +274,12 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
       ['Asset Type', assetType],
       [],
       ['SCENARIO LEVELS'],
-      ['Current Price', fmtPrice(price)],
-      ['Reference Level', fmtPrice(entry)],
-      ['Invalidation Level', fmtPrice(stop)],
-      ['Reaction Zone 1', fmtPrice(targets[0])],
-      ['Reaction Zone 2', fmtPrice(targets[1])],
-      ['Reaction Zone 3', fmtPrice(targets[2])],
+      ['Current Price', csvCellForAsset(assetType, fmtPrice(price), true)],
+      ['Reference Level', csvCellForAsset(assetType, fmtPrice(entry), true)],
+      ['Invalidation Level', csvCellForAsset(assetType, fmtPrice(stop), true)],
+      ['Reaction Zone 1', csvCellForAsset(assetType, fmtPrice(targets[0]), true)],
+      ['Reaction Zone 2', csvCellForAsset(assetType, fmtPrice(targets[1]), true)],
+      ['Reaction Zone 3', csvCellForAsset(assetType, fmtPrice(targets[2]), true)],
       ['Scenario R:R example', `${rr.toFixed(1)}:1 — hypothetical illustration only`],
       ['ATR', fmt(atr)],
       [],
