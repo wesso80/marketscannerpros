@@ -1,4 +1,5 @@
 import type { GoldenEggPayload, GoldenEggCanonical, IndicatorState } from '@/src/features/goldenEgg/types';
+import type { PublicDailyChart } from '@/lib/research/publicDailyChart';
 
 /**
  * Public Symbol contract (W3: P3-07, P3-08, P4-01, P4-02; W3-R leaf projection). The Symbol page's response is BUILT
@@ -35,6 +36,10 @@ export interface PublicSymbolPacket {
   contract: typeof PUBLIC_SYMBOL_CONTRACT;
   meta: { symbol: string; assetClass: C['assetClass']; price: number; asOfTs: string; timeframe: string };
   priceEvidence: GoldenEggPayload['priceEvidence'] | null;
+  /** Completed daily candles for a signed-in reader. Omitted from a signed-out response. */
+  dailyChart?: PublicDailyChart | null;
+  /** Server-drawn chart for a signed-out reader. No raw series. */
+  chartImage?: string | null;
   timingEvidence: GoldenEggPayload['timingEvidence'] | null;
   optionsRequest: { expiry: string; status: 'used' | 'unavailable' } | null;
   canonical: {
@@ -105,6 +110,7 @@ export function toPublicSymbolPacket(p: GoldenEggPayload): PublicSymbolPacket {
     contract: PUBLIC_SYMBOL_CONTRACT,
     meta: { symbol: p.meta.symbol, assetClass: p.meta.assetClass, price: p.meta.price, asOfTs: p.meta.asOfTs, timeframe: p.meta.timeframe },
     priceEvidence: copy(p.priceEvidence),
+    dailyChart: copy(p.dailyChart ?? null),
     timingEvidence: copy(p.timingEvidence),
     optionsRequest: p.optionsRequest ? { expiry: p.optionsRequest.expiry, status: p.optionsRequest.status } : null,
     canonical: c && i && l ? {

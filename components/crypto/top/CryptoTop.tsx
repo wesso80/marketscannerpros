@@ -15,11 +15,11 @@ import BaseChart from './BaseChart';
 import StatCards from './StatCards';
 import {verdictLine} from '@/lib/crypto/breakdown/top';
 import SourceLine from './SourceLine';
-export function SymbolSummary({stage,verdict,rules,chart,top,tiles}:{stage:ReactNode;verdict:string;rules?:DisplayRule[];chart?:DisplayChart;top?:Breakdown['top'];tiles:DisplayStat[]}){
+export function SymbolSummary({stage,verdict,rules,chart,chartImage,top,tiles}:{stage:ReactNode;verdict:string;rules?:DisplayRule[];chart?:DisplayChart;chartImage?:string|null;top?:Breakdown['top'];tiles:DisplayStat[]}){
  return <section data-symbol-summary className="min-w-0 space-y-3 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 sm:p-4">
  <div className="flex flex-wrap items-start gap-3">{stage}<p className="min-w-0 flex-1 text-sm leading-relaxed">{verdict}</p></div>
  <RuleChips top={top} items={rules} showSource={false}/>
- <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"><BaseChart top={top} model={chart} showSource={false}/><StatCards tiles={tiles} showSource={false}/></div>
+ <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">{chartImage?<div className="min-w-0 rounded-lg border border-white/10 p-3" dangerouslySetInnerHTML={{__html:chartImage}}/>:<BaseChart top={top} model={chart} showSource={false}/>}<StatCards tiles={tiles} showSource={false}/></div>
  </section>;
 }
 export default function CryptoTop({data,showSource=true}:{data:Breakdown;showSource?:boolean}){
