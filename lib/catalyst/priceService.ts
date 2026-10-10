@@ -12,6 +12,7 @@
 
 import type { PriceBar } from './types';
 import { avFetch } from '@/lib/avRateGovernor';
+import { avRowVolume } from '@/lib/scanner/avVolume';
 import { registerMemoryGauge } from '@/lib/memory/debugLog';
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
@@ -171,7 +172,7 @@ async function fetchAVTimeSeries(url: string, seriesKey: string): Promise<PriceB
         high: parseFloat(v['2. high']),
         low: parseFloat(v['3. low']),
         close: parseFloat(v['4. close']),
-        volume: parseFloat(v['5. volume'] || '0'),
+        volume: avRowVolume(v),
       });
     }
 

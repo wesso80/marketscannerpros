@@ -20,6 +20,7 @@ import { HierarchicalScanResult, ConfluenceLearningAgent, ScanMode, CandleCloseC
 import { scanPatterns, Candle as PatternCandle } from './patterns/pattern-engine';
 import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from './coingecko';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { avRowVolume } from '@/lib/scanner/avVolume';
 import { defaultChainProviders, fetchSharedOptionsChain } from '@/lib/options/chainCache';
 import { measuredIvRank } from '@/lib/options/ivRank';
 export { measuredIvRank };
@@ -87,7 +88,7 @@ function parseAvTimeSeriesToPatternCandles(series: Record<string, any> | undefin
       high: Number(values?.['2. high']),
       low: Number(values?.['3. low']),
       close: Number(values?.['4. close']),
-      volume: Number(values?.['5. volume'] ?? 0),
+      volume: avRowVolume(values),
     }))
     .filter(c => Number.isFinite(c.ts) && Number.isFinite(c.open) && Number.isFinite(c.high) && Number.isFinite(c.low) && Number.isFinite(c.close))
     .sort((a, b) => a.ts - b.ts);

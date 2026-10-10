@@ -2,6 +2,7 @@ import { valuationAtPrice } from '@/lib/market/valuationIntegrity';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { avRowVolume } from '@/lib/scanner/avVolume';
 import { selectTickerNews } from '@/lib/equityNewsRelevance';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
@@ -142,7 +143,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Parse daily data for chart first (we'll use as fallback for quote)
-    const timeSeries = daily['Time Series (Daily)'] as Record<string, { '1. open': string; '2. high': string; '3. low': string; '4. close': string; '5. volume': string }> || {};
+    const timeSeries = (daily['Time Series (Daily)'] ?? {}) as Record<string, Record<string, string>>;
     const chartData = Object.entries(timeSeries)
       .slice(0, 90) // Last 90 days
       .reverse()
@@ -152,15 +153,14 @@ export async function GET(request: NextRequest) {
         high: parseFloat(values['2. high']),
         low: parseFloat(values['3. low']),
         close: parseFloat(values['4. close']),
-        volume: parseInt(values['5. volume']),
+        volume: avRowVolume(values),
       }));
 
     // Get latest day from daily data as fallback
     const latestDayEntry = Object.entries(timeSeries)[0];
-    const latestDay = latestDayEntry ? {
-      date: latestDayEntry[0],
-      ...latestDayEntry[1],
-    } : null;
+    const latestDay = latestDayEntry
+      ? { date: latestDayEntry[0], ...latestDayEntry[1] } as { date: string } & Record<string, string>
+      : null;
 
     // Parse quote data with fallback to daily data
     const globalQuote = quote['Global Quote'] || {};
@@ -180,7 +180,7 @@ export async function GET(request: NextRequest) {
       open = parseFloat(latestDay['1. open']) || 0;
       high = parseFloat(latestDay['2. high']) || 0;
       low = parseFloat(latestDay['3. low']) || 0;
-      volume = parseInt(latestDay['5. volume']) || 0;
+      volume = avRowVolume(latestDay);
       latestTradingDay = latestDayEntry![0];
       
       // Calculate change from previous day if available

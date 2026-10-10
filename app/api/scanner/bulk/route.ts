@@ -31,6 +31,7 @@ import {
 import { getAdaptiveLayer } from '@/lib/adaptiveTrader';
 import { computeInstitutionalFilter, inferStrategyFromText } from '@/lib/institutionalFilter';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { avRowVolume } from '@/lib/scanner/avVolume';
 import { fetchAvTopMovers } from '@/lib/avTopMovers';
 import { getBulkCachedScanData, getBulkCachedScanDataFast, CachedScanData } from '@/lib/scannerCache';
 import { crossSectionalPercentiles } from '@/lib/analysis';
@@ -550,7 +551,7 @@ async function fetchAlphaVantageData(symbol: string, timeframe: string = '1d', o
       high: parseFloat(values['2. high']),
       low: parseFloat(values['3. low']),
       close: parseFloat(values['4. close']),
-      volume: parseFloat(values['5. volume'] || '0')
+      volume: avRowVolume(values)
     }))
     .filter((c: OHLCV) => Number.isFinite(c.close))
     .sort((a, b) => a.date.localeCompare(b.date)); // Sort oldest first
