@@ -35,7 +35,7 @@ import {
   getSimplePrices,
   resolveSymbolToId,
 } from '../lib/coingecko';
-import { fetchCryptoDailyIncrement, fetchCryptoSeries } from '../lib/scanner/cryptoBars';
+import { fetchCryptoDailyIncrement, fetchCryptoSeries, publishSharedOpenQuotes } from '../lib/scanner/cryptoBars';
 import { avRowVolume } from '../lib/scanner/avVolume';
 import { recordCorporateActions } from '../lib/scanner/corporateActions';
 import { buildObservedCryptoQuote, fetchCryptoQuoteSnapshot, type CryptoQuoteSnapshot } from '../lib/worker/cryptoQuote';
@@ -710,10 +710,14 @@ async function refreshCryptoQuoteSnapshot(symbols: string[]): Promise<number> {
   if (!withIds.length) return 0;
   const snapshot = await runWithCgCaller('worker:crypto-quotes', () => fetchCryptoQuoteSnapshot(
     withIds,
-    (ids) => getMarketData({ ids, per_page: ids.length, page: 1, precision: 'full' }, {
-      retries: 1,
-      timeoutMs: getPositiveIntFromEnv('WORKER_CG_OHLC_TIMEOUT_MS', 6000),
-    }),
+    async (ids) => {
+      const rows = await getMarketData({ ids, per_page: ids.length, page: 1, precision: 'full' }, {
+        retries: 1,
+        timeoutMs: getPositiveIntFromEnv('WORKER_CG_OHLC_TIMEOUT_MS', 6000),
+      });
+      await publishSharedOpenQuotes(rows).catch(() => undefined);
+      return rows;
+    },
   ));
   cryptoQuoteSnapshot = snapshot;
   if (snapshot.quotes.size) {
