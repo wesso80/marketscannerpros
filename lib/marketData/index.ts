@@ -133,8 +133,10 @@ export async function getBars(symbol: string, timeframe: BarTimeframe, opts: Fet
       return wrap<OhlcBar[]>({ data: null, source, fetchedAt: new Date().toISOString(), fromCache: 'miss', dataType, error: 'no data' });
     }
     if (full) fresh.bars = fresh.bars.slice(-500);
-    // Persist
-    await pgUpsertBars(symbol, timeframe, fresh.bars).catch(() => undefined);
+    // Daily, weekly, and monthly stay out of ohlcv_bars. That table is the worker's raw series.
+    // Writing the adjusted helper back would mix the two bases. Intraday writes stay.
+    const dailyFamily = timeframe === 'daily' || timeframe === 'weekly' || timeframe === 'monthly';
+    if (!dailyFamily) await pgUpsertBars(symbol, timeframe, fresh.bars).catch(() => undefined);
     await rSet(cacheKey, fresh.bars, fresh.fetchedAt, FRESHNESS_RULES[dataType].realTime);
     return wrap({ data: fresh.bars, source, fetchedAt: fresh.fetchedAt, fromCache: 'av', dataType });
   } catch (e) {

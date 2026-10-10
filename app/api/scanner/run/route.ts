@@ -28,6 +28,7 @@ import { boundedBatch } from '@/lib/scanner/boundedBatch';
 import { COINGECKO_ID_MAP, getDerivativesForSymbols, getGlobalData, getOHLC, getOHLCWithVolume, resolveSymbolToId } from "@/lib/coingecko";
 import { fetchCryptoSeries, type CryptoSeries, type CryptoScanTimeframe } from "@/lib/scanner/cryptoBars";
 import { aggregateBars, detectPriceDiscontinuity, type Bar as ScanBar } from "@/lib/scanner/barAggregation";
+import { loadCorporateActions, splitAdjustStoredBars } from '@/lib/scanner/corporateActions';
 import { evaluateDataTrust, lastCompletedEquitySession, type DataTrustResult } from "@/lib/scanner/dataTrust";
 import { classifyRegime, volatilityThresholds } from "@/lib/regime-classifier";
 import { applyCanonicalToScannerRow, canonicalFeaturesFromCandles, compareCanonicalRows, dataWatchFrom, evaluateCanonical, evaluateRegimeOverlay, hardBlocksFrom, overlayForDirection, type CanonicalFeatures, type CanonicalResult } from "@/lib/scoring/canonical";
@@ -2104,7 +2105,12 @@ async function runScanner(req: NextRequest, capturePublicRows?: (rows: readonly 
                   open: Number(r.open), high: Number(r.high), low: Number(r.low), close: Number(r.close),
                   volume: r.volume != null && Number.isFinite(Number(r.volume)) && Number(r.volume) > 0 ? Number(r.volume) : null,
                 })).filter((b) => Number.isFinite(b.close));
-                let bars = timeframe === 'weekly' ? aggregateBars(dailyBars, '1w') : dailyBars;
+                let actions: Awaited<ReturnType<typeof loadCorporateActions>> = new Map();
+                try { actions = await loadCorporateActions([sym]); } catch (actionErr) {
+                  console.warn('[scanner] corporate actions unavailable:', (actionErr as Error)?.message);
+                }
+                const adjustedDaily = splitAdjustStoredBars(dailyBars, actions.get(sym.toUpperCase()) ?? []);
+                let bars = timeframe === 'weekly' ? aggregateBars(adjustedDaily, '1w') : adjustedDaily;
                 // A weekly equity bar is complete once that week's Friday session has closed; otherwise it is the
                 // forming bar and is excluded from indicators (same partial-bar policy as crypto).
                 if (timeframe === 'weekly' && bars.length) {

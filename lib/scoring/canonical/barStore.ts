@@ -4,6 +4,7 @@
  * (returns null) when the store has too little history. Deliberately NOT exported from ./index (client bundles).
  */
 import { q } from '@/lib/db';
+import { loadCorporateActions, splitAdjustStoredBars } from '@/lib/scanner/corporateActions';
 import { canonicalForDailyPick } from './dailyPick';
 import type { RegimeOverlayInputs } from './regimeOverlay';
 import type { CanonicalAssetClass, CanonicalBar, CanonicalResult } from './types';
@@ -11,7 +12,7 @@ import type { CanonicalAssetClass, CanonicalBar, CanonicalResult } from './types
 export async function loadStoredDailyBars(symbol: string, limit = 500): Promise<CanonicalBar[]> {
   const rows = await q<{ ts: Date | string; open: string | number; high: string | number; low: string | number; close: string | number; volume: string | number | null }>(
     `SELECT ts, open, high, low, close, volume FROM ohlcv_bars WHERE symbol = $1 AND timeframe = 'daily' ORDER BY ts DESC LIMIT $2`, [symbol, limit]);
-  return rows.reverse().map((r) => {
+  const raw = rows.reverse().map((r) => {
     const vol = Number(r.volume);
     return {
       t: r.ts instanceof Date ? r.ts.toISOString() : new Date(String(r.ts)).toISOString(),
@@ -19,6 +20,12 @@ export async function loadStoredDailyBars(symbol: string, limit = 500): Promise<
       volume: Number.isFinite(vol) && vol > 0 ? vol : null,
     };
   });
+  try {
+    const actions = await loadCorporateActions([symbol]);
+    return splitAdjustStoredBars(raw, actions.get(symbol.toUpperCase()) ?? []);
+  } catch {
+    return raw;
+  }
 }
 
 export async function canonicalFromBarStore(symbol: string, assetClass: CanonicalAssetClass, overlay: RegimeOverlayInputs | null = null): Promise<CanonicalResult | null> {

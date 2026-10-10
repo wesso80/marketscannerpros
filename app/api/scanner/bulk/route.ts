@@ -18,6 +18,7 @@ import { boundedBatch } from '@/lib/scanner/boundedBatch';
 import { fetchCryptoSeries, type CryptoScanTimeframe } from '@/lib/scanner/cryptoBars';
 import { evaluateDataTrust } from '@/lib/scanner/dataTrust';
 import { detectPriceDiscontinuity } from '@/lib/scanner/barAggregation';
+import { loadCorporateActions, splitAdjustStoredBars, type CorporateAction } from '@/lib/scanner/corporateActions';
 import { adx, atr as atrFn, atrPercent as atrPctFn, cci, ema, getIndicatorWarmupStatus, macd, OHLCVBar, rsi, stochastic, detectSqueeze, detectMomentumAcceleration } from '@/lib/indicators';
 import { getSectorETF, SECTOR_ETFS } from '@/lib/sectorMap';
 import { getSessionFromCookie } from '@/lib/auth';
@@ -1627,7 +1628,14 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
       arr.push({ ts: typeof r.ts === 'string' ? r.ts : new Date(r.ts).toISOString(), close: Number(r.close), volume: r.volume != null && Number(r.volume) > 0 ? Number(r.volume) : null });
       bySymbol.set(r.symbol.toUpperCase(), arr);
     }
-    for (const [sym, arr] of bySymbol) {
+    let actions = new Map<string, CorporateAction[]>();
+    try {
+      actions = await loadCorporateActions(cachedSymbols);
+    } catch (actionErr) {
+      console.warn('[bulk-scan/cached] corporate actions unavailable:', (actionErr as any)?.message);
+    }
+    for (const [sym, raw] of bySymbol) {
+      const arr = splitAdjustStoredBars(raw, actions.get(sym) ?? []);
       const closes = arr.map((b) => b.close).filter((c) => Number.isFinite(c));
       const emaVal = closes.length >= 200 ? ema(closes, 200) : null;
       const vols = arr.slice(-20).map((b) => b.volume).filter((v): v is number => v !== null);

@@ -36,6 +36,7 @@ import {
 } from '../lib/coingecko';
 import { fetchCryptoDailyIncrement, fetchCryptoSeries } from '../lib/scanner/cryptoBars';
 import { avRowVolume } from '../lib/scanner/avVolume';
+import { recordCorporateActions } from '../lib/scanner/corporateActions';
 import { buildObservedCryptoQuote, fetchCryptoQuoteSnapshot, type CryptoQuoteSnapshot } from '../lib/worker/cryptoQuote';
 import { CryptoDailyHistoryCache, DAY_MS, DEFAULT_DAILY_HISTORY_CONFIG, WORKER_DAILY_WINDOWS, type DailyHistoryEntry } from '../lib/worker/cryptoDailyHistory';
 import { sequentialBatches } from '../lib/worker/seriesBatch';
@@ -476,7 +477,8 @@ function aggregate1HTo4H(bars: TGMBar[]): TGMBar[] {
 async function fetchAVTimeSeries(
   symbol: string,
   interval: string = 'daily',
-  outputsize: string = 'compact'
+  outputsize: string = 'compact',
+  captured?: { payload: unknown },
 ): Promise<AVBar[]> {
   if (!(await takeWorkerAvToken())) return [];
 
@@ -496,6 +498,7 @@ async function fetchAVTimeSeries(
   }
 
   const json = await res.json();
+  if (captured) captured.payload = json;
 
   // Check for rate limit or error messages
   if (json['Note'] || json['Information']) {
@@ -1408,8 +1411,9 @@ async function processEquitySymbol(symbol: string, ctx: EquityProcessContext): P
       out.apiCalls++;
       out.avDailyCalls++;
       let fresh: AVBar[];
+      const captured: { payload: unknown } = { payload: null };
       try {
-        fresh = await fetchAVTimeSeries(symbol, 'daily', 'full');
+        fresh = await fetchAVTimeSeries(symbol, 'daily', 'full', captured);
       } catch (err) {
         hold.daily = { bars: hold.daily?.bars ?? [], state: { fetchedAtMs: nowMs, complete: false } };
         throw err;
@@ -1417,6 +1421,11 @@ async function processEquitySymbol(symbol: string, ctx: EquityProcessContext): P
       if (fresh.length > 0) {
         // Completeness and the EOD mark use the full download. The hold keeps the warmup tail: the next
         // mergeLiveDailyBar still yields the same compact series indicators already run on.
+        try {
+          await recordCorporateActions(symbol, captured.payload, (sql, params) => getPool().query(sql, params as never[]));
+        } catch (err) {
+          console.warn(`[worker] corporate actions ${symbol}:`, err instanceof Error ? err.message : err);
+        }
         const complete = dailyHistoryComplete(fresh, nowMs);
         hold.daily = { bars: retainEquityDailyBars(fresh), state: { fetchedAtMs: nowMs, complete } };
         fetchedDaily = true;
