@@ -49,6 +49,7 @@ import {
   applyAvBudgetForTests,
   applyAvProcessRoleForTests,
   avBudgetPlanForMode,
+  avTakeToken,
   avTryTake,
   clearJarvisHeartbeat,
   decideAvTake,
@@ -425,6 +426,23 @@ describe('shared AV limiter', () => {
     expect(redisSource).toContain('AbortSignal.timeout(LIMITER_REDIS_TIMEOUT_MS)');
     expect(redisSource).toContain('retries: 0');
     expect(AV_LIMITER_REDIS_TIMEOUT_MS).toBe(400);
+    warn.mockRestore();
+  });
+
+  it('throws on a Redis miss when allowFallback is false and does not spend the local bucket', async () => {
+    redisHarness.mode.value = 'off';
+    applyAvProcessRoleForTests('jarvis');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await expect(avTryTake({ lane: 'backfill', feature: 'equity-daily-history', allowFallback: false }, 110_000_000))
+      .rejects.toThrow('AV limiter Redis unavailable');
+    await expect(avTakeToken({ lane: 'backfill', feature: 'equity-daily-history', allowFallback: false }))
+      .rejects.toThrow('AV limiter Redis unavailable');
+    let granted = 0;
+    for (let i = 0; i < 120; i++) {
+      if (await avTryTake({ lane: 'backfill', feature: 'equity-daily-history' }, 110_000_000)) granted += 1;
+    }
+    expect(granted).toBe(120);
+    expect(await avTryTake({ lane: 'backfill', feature: 'equity-daily-history' }, 110_000_000)).toBe(false);
     warn.mockRestore();
   });
 

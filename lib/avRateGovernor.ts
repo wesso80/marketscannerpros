@@ -16,16 +16,16 @@ import { pausedAdminAvRequest } from './admin/adminEquities';
  */
 
 import { avCircuit, CircuitBreakerOpenError } from './circuitBreaker';
-import { avTakeToken as takeSharedToken, avTryTake, currentAvBudget, currentAvBudgetPlan, type AvBudget } from './avLimiter';
+import { avTakeToken as takeSharedToken, avTryTake, currentAvBudget, currentAvBudgetPlan, type AvBudget, type AvTakeOptions } from './avLimiter';
 
-export type { AvBudget };
+export type { AvBudget, AvTakeOptions };
 
 /**
  * Take a token from the shared limiter.
  * Pass a lane and feature, or call inside runWithAvBudget.
  * Untagged callers are the user lane. A cron or worker must pass its own lane.
  */
-export async function avTakeToken(budget?: Partial<AvBudget>): Promise<void> {
+export async function avTakeToken(budget?: AvTakeOptions): Promise<void> {
   await takeSharedToken(budget);
 }
 

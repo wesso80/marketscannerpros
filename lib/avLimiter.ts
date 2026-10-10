@@ -620,10 +620,21 @@ export function flushAvFeatureCounts(): string[] {
   return lines;
 }
 
+export type AvTakeOptions = Partial<AvBudget> & {
+  /**
+   * Default true: a Redis miss, timeout, or error uses this process's fallback bucket.
+   * False throws instead, so a backfill cannot spend a second jarvis-role allowance on top of the shared ceiling.
+   */
+  allowFallback?: boolean;
+};
+
 /** One non-blocking attempt. A Redis timeout or error uses this process's fallback. A denial does not. */
-export async function avTryTake(input?: Partial<AvBudget>, now = Date.now()): Promise<boolean> {
+export async function avTryTake(input?: AvTakeOptions, now = Date.now()): Promise<boolean> {
   const budget = normalizeBudget(input);
   const redisResult = await tryRedis(budget, now);
+  if (redisResult === null && input?.allowFallback === false) {
+    throw new Error('AV limiter Redis unavailable');
+  }
   const granted = redisResult === null ? tryLocal(budget.lane, now) : redisResult;
   if (granted) noteAvFeatureCall(budget.feature, now);
   return granted;
@@ -631,11 +642,11 @@ export async function avTryTake(input?: Partial<AvBudget>, now = Date.now()): Pr
 
 const WAIT_MS: Record<AvLane, number> = { user: 2_000, alerts: 8_000, scheduled: 15_000, backfill: 20_000 };
 
-export async function avTakeToken(input?: Partial<AvBudget>): Promise<void> {
+export async function avTakeToken(input?: AvTakeOptions): Promise<void> {
   const budget = normalizeBudget(input);
   const deadline = Date.now() + WAIT_MS[budget.lane];
   for (;;) {
-    if (await avTryTake(budget)) return;
+    if (await avTryTake(input)) return;
     if (Date.now() >= deadline) {
       throw new Error(`AV limiter denied ${budget.feature} (${budget.lane})`);
     }
