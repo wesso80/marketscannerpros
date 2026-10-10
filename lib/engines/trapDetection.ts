@@ -26,6 +26,7 @@ export interface TrapDetectionInput {
   dataTruth: DataTruth;
   hasNewsShock?: boolean;
   earningsWindowHours?: number | null;
+  /** 0..100 from real options-chain positioning only; null/absent = unknown (no CROWDED_OPTIONS flag, no proxy). */
   optionsCrowdingScore?: number | null;
   higherTimeframeConflict?: boolean;
 }
