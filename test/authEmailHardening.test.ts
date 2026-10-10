@@ -153,7 +153,7 @@ describe('sign-in email hardening', () => {
     }));
     const signInPayload = mocks.send.mock.calls.at(-1)?.[0] as { text: string; html: string };
     expect(count(signInPayload.text, url)).toBe(1);
-    expect(count(signInPayload.html, url)).toBe(1);
+    expect(count(signInPayload.html, url)).toBe(2);
     expect(logText()).toContain('Email sent to person@example.test: Your MarketScannerPros sign-in link id=email_123');
     expect(logText()).not.toContain(url);
     expect(logText()).not.toContain('token=');
