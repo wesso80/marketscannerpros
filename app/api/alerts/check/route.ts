@@ -4,13 +4,16 @@ import { q } from '@/lib/db';
 import { describeConditionMet, parseGlobalQuote, type AlertQuote } from '@/lib/alerts/priceConditions';
 import { deliverUserAlertEmail } from '@/lib/alerts/emailControls';
 import { sendPushToUser, PushTemplates } from '@/lib/pushServer';
+import { resolveAlertAsset, type AlertAssetDecision } from '@/lib/alerts/alertAsset';
 import { alertSymbolKey, fetchAlertCryptoQuotes, type AlertCryptoQuote } from '@/lib/alerts/cryptoPriceBatch';
 import { writeAlertPriceStatus } from '@/lib/alerts/priceNotice';
+import { classifyAvEquitySymbol } from '@/lib/worker/unsupportedAvSymbol';
 import { avTakeToken } from '@/lib/avRateGovernor';
 import { runWithAvBudget } from '@/lib/avLimiter';
 import { deliverAlertToUserDiscord } from '@/lib/alerts/userDiscord';
 import { decideAlert, isStaleStockQuote } from '@/lib/alerts/alertTiming';
-import { fxQuoteUrl, parseFxAlertQuote, quoteSourceFor } from '@/lib/alerts/assetTypes';
+import { fxQuoteUrl, parseFxAlertQuote, type QuoteSource } from '@/lib/alerts/assetTypes';
+import { equityTickerList } from '@/lib/symbols/equityTickers';
 import { historyPriceInsert } from '@/lib/alerts/historyPrice';
 
 /**
@@ -95,7 +98,21 @@ async function checkAlertsBody(req: NextRequest) {
 
     console.log(`[Alert Check] Found ${alerts.length} active alerts across ${Object.keys(symbolGroups).length} symbols`);
 
-    const cryptoSymbols = alerts.filter((alert) => quoteSourceFor(alert.asset_type) === 'crypto').map((alert) => alert.symbol);
+    const equitySymbols = equityTickerList();
+    // inCryptoMap is true on purpose: a coin alias must not pull an equity alert off the stock feed.
+    const routeFor = (assetType: string, symbol: string): AlertAssetDecision => resolveAlertAsset({
+      assetType,
+      symbol,
+      inCryptoMap: true,
+      equitySymbols,
+    });
+
+    const cryptoSymbols = alerts
+      .filter((alert) => {
+        const decision = routeFor(alert.asset_type, alert.symbol);
+        return decision.source === 'crypto' && !decision.skipped;
+      })
+      .map((alert) => alert.symbol);
     const cryptoBatch = await fetchAlertCryptoQuotes(cryptoSymbols);
     console.log(`[Alert Check] CoinGecko batch calls=${cryptoBatch.calls} quoted=${Object.keys(cryptoBatch.quotes).length} skipped=${cryptoBatch.skipped.length}`);
     for (const skip of cryptoBatch.skipped) {
@@ -109,32 +126,52 @@ async function checkAlertsBody(req: NextRequest) {
     // Check each symbol group
     for (const [key, groupAlerts] of Object.entries(symbolGroups)) {
       const [assetType, symbol] = key.split(':');
+      const decision = routeFor(assetType, symbol);
       
       try {
-        if (quoteSourceFor(assetType) === 'unsupported') {
+        if (decision.skipped) {
+          await writeAlertPriceStatus(groupAlerts.map((alert) => ({ id: alert.id, unavailable: true })));
+          errors.push(`Failed to fetch price for ${symbol}`);
+          console.warn(`[Alert Check] skip ${symbol}: ${decision.detail}`);
+          continue;
+        }
+        if (decision.source === 'unsupported') {
           // e.g. commodity alerts: there is no live feed for them here, so say so instead of
           // pricing the symbol as a stock (TR-18).
           errors.push(`No price feed for ${assetType} alerts (${symbol}); not checked`);
           continue;
         }
-        // Fetch current price (and the % change the same quote reports)
-        const quote = await fetchQuote(symbol, assetType, cryptoBatch.quotes);
-        console.log(`[Alert Check] ${symbol} price: ${quote?.price ?? null} change: ${quote?.changePercent ?? null}%`);
-        
-        if (quote === null) {
-          if (quoteSourceFor(assetType) === 'crypto') {
-            await writeAlertPriceStatus(groupAlerts.map((alert) => ({ id: alert.id, unavailable: true })));
+        if (decision.source === 'stock') {
+          const classified = classifyAvEquitySymbol(symbol);
+          if (classified.action === 'skip') {
+            await markStockPriceUnavailable(groupAlerts, symbol, errors);
+            console.warn(`[Alert Check] skip ${symbol}: ${classified.reason}`);
+            continue;
           }
-          errors.push(`Failed to fetch price for ${symbol}`);
+        }
+        // Fetch current price (and the % change the same quote reports)
+        const quote = await fetchQuote(symbol, decision.source, cryptoBatch.quotes);
+        console.log(`[Alert Check] ${symbol} price: ${quote?.price ?? null} change: ${quote?.changePercent ?? null}%`);
+
+        const stockUnusable = decision.source === 'stock' && !usableStockQuote(quote);
+        if (quote == null || stockUnusable) {
+          if (decision.source === 'stock') {
+            await markStockPriceUnavailable(groupAlerts, symbol, errors);
+          } else {
+            if (decision.source === 'crypto') {
+              await writeAlertPriceStatus(groupAlerts.map((alert) => ({ id: alert.id, unavailable: true })));
+            }
+            errors.push(`Failed to fetch price for ${symbol}`);
+          }
           continue;
         }
-        if (quoteSourceFor(assetType) === 'crypto') {
+        if (decision.source === 'crypto' || decision.source === 'stock') {
           await writeAlertPriceStatus(groupAlerts.map((alert) => ({ id: alert.id, unavailable: false })));
         }
         const price = quote.price;
 
         // A stock quote from before the latest session that has opened is stale: fire nothing on it (TR-17).
-        if (assetType !== 'crypto' && isStaleStockQuote(quote)) {
+        if (decision.source === 'stock' && isStaleStockQuote(quote)) {
           skippedStale.push(`${symbol} (quote from ${quote.asOfDate})`);
           continue;
         }
@@ -189,10 +226,19 @@ async function checkAlertsBody(req: NextRequest) {
   }
 }
 
+function usableStockQuote(quote: AlertQuote | null): boolean {
+  return quote != null && Number.isFinite(quote.price) && quote.price > 0;
+}
+
+/** Stores the alert-list notice and names the symbol in the check response. */
+async function markStockPriceUnavailable(groupAlerts: Alert[], symbol: string, errors: string[]): Promise<void> {
+  await writeAlertPriceStatus(groupAlerts.map((alert) => ({ id: alert.id, unavailable: true })));
+  errors.push(`Price unavailable for ${symbol}`);
+}
+
 // Fetch current price and % change based on asset type
-async function fetchQuote(symbol: string, assetType: string, cryptoQuotes: Record<string, AlertCryptoQuote> = {}): Promise<AlertQuote | null> {
+async function fetchQuote(symbol: string, source: QuoteSource, cryptoQuotes: Record<string, AlertCryptoQuote> = {}): Promise<AlertQuote | null> {
   try {
-    const source = quoteSourceFor(assetType);
     if (source === 'crypto') {
       const result = cryptoQuotes[alertSymbolKey(symbol)];
       if (!result || !Number.isFinite(result.price)) return null;
