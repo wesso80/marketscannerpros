@@ -180,7 +180,8 @@ function rankedTrustDetail(r: ScanResult): string {
   if (String(r.setup || '').startsWith('Local demo:')) return 'Development-only sample row. Not live market data.';
   if (r.dataTrust) {
     const basis = r.dataBasis ? ` · ${r.dataBasis.barInterval} bars, last completed ${String(r.dataBasis.lastCompletedBarAt ?? 'n/a').slice(0, 16).replace('T', ' ')}` : '';
-    return (r.dataTrust.reasons.length ? r.dataTrust.reasons.join(' · ') : 'Fresh completed bar; price, ATR, RSI, ADX and EMA200 available.') + basis;
+    const priceLabel = r.dataBasis?.priceLabel ? ` · ${r.dataBasis.priceLabel}` : '';
+    return (r.dataTrust.reasons.length ? r.dataTrust.reasons.join(' · ') : 'Fresh completed bar; price, ATR, RSI, ADX and EMA200 available.') + basis + priceLabel;
   }
   if (!isUsableNumber(r.price)) return 'Missing usable price.';
   const qualityWarnings = [
@@ -334,7 +335,10 @@ function ScannerFlowRail({
   );
 }
 
-function ScannerRowStamp({row}:{row:ScanResult}) { return <span>{row.price == null ? 'Not collected' : formatScannerPrice(row.price)}</span>; }
+function ScannerRowStamp({row}:{row:ScanResult}) {
+  const label = row.dataBasis?.priceLabel;
+  return <span>{row.price == null ? 'Not collected' : formatScannerPrice(row.price)}{label ? <small className="mt-0.5 block text-[10px] font-normal text-slate-500">{label}</small> : null}</span>;
+}
 
 function ProScannerCards({ rows, onRowClick }: { rows: ScreenerRow[]; onRowClick: (row: ScreenerRow) => void }) {
  return <div className="space-y-2" data-scanner-results>{rows.map(row=><button key={row.symbol} onClick={()=>onRowClick(row)} className="min-h-10 w-full rounded-lg border border-slate-700 p-3 text-left">
@@ -785,7 +789,7 @@ function ScannerContent() {
           momentumAccel: ind.momentumAccel ?? false, momentumAccelScore: ind.momentumAccelScore ?? 0,
           sectorRelStr: ind.sectorRelStr, reason, dataQuality, dataQualityDetail: dataQualityDetailText,
           dataTrustLevel: pick.dataTrust ? DATA_TRUST_LABEL[pick.dataTrust.level as keyof typeof DATA_TRUST_LABEL] : undefined,
-          barInterval: pick.dataBasis?.barInterval, lastCompletedBarAt: pick.dataBasis?.lastCompletedBarAt ?? null,
+          barInterval: pick.dataBasis?.barInterval, lastCompletedBarAt: pick.dataBasis?.lastCompletedBarAt ?? null, priceLabel: pick.dataBasis?.priceLabel,
         } as ScreenerRow;
       })
       .map((row: ScreenerRow, index: number) => ({ ...row, rank: index + 1 }));

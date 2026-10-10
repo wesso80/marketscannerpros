@@ -38,6 +38,7 @@ function series(bars: Bar[]): CryptoSeries {
   return {
     coinId: 'ethereum', timeframe: 'daily', barInterval: '1d', bars, partialBar: null,
     lastCompletedBarAt: last?.t ?? null, currentPrice: last?.close ?? null,
+    priceAsOf: last?.t ?? null, priceStale: true, priceLabel: last ? `yesterday's close, as of ${last.t}` : `yesterday's close`,
     hlBasis: 'exchange_ohlc', volumeBasis: 'unavailable', source: 'fixture', warnings: [],
   };
 }

@@ -674,7 +674,7 @@ export function buildPayload(
 
   const canonical: GoldenEggCanonical = {
     symbol, assetClass, timeframe: tfLabel, barInterval: price.barInterval ?? null,
-    price: p, changePct: Math.round(price.changePct * 100) / 100, priceTs: price.priceTs ?? price.lastCompletedBarAt ?? '', lastCompletedBarAt: price.lastCompletedBarAt ?? null, historyBars: closes.length, source: price.source ?? null,
+    price: p, changePct: Math.round(price.changePct * 100) / 100, priceTs: price.priceTs ?? price.lastCompletedBarAt ?? '', priceLabel: price.priceLabel ?? null, lastCompletedBarAt: price.lastCompletedBarAt ?? null, historyBars: closes.length, source: price.source ?? null,
     indicators: {
       rsi: ind?.rsi ?? null, adx: ind?.adx ?? null, atr: ind?.atr ?? null, atrPct: ind?.atr != null && p > 0 ? Math.round((ind.atr / p) * 10000) / 100 : null,
       ema20: ind?.ema20 ?? null, ema50: ind?.ema50 ?? null, ema200: ind?.ema200 ?? null, sma20: ind?.sma20 ?? null, sma50: ind?.sma50 ?? null, macdHist: ind?.macdHist ?? null, macd: ind?.macd ?? null, macdSignal: ind?.macdSignal ?? null, stochK: ind?.stochK ?? null,

@@ -34,12 +34,13 @@ vi.mock('@/lib/coingecko', async (orig) => ({
     return series.filter((r) => r[0] / 1000 > from && r[0] / 1000 <= to);
   }),
   getMarketChartRange: vi.fn(async () => ({ total_volumes: [], prices: [] })),
+  getMarketData: vi.fn(async () => null),
   getCoinDetail: vi.fn(async () => null),
   resolveSymbolToId: vi.fn(async () => 'bitcoin'),
 }));
 
 import * as cg from '@/lib/coingecko';
-import { fetchCryptoSeries } from '@/lib/scanner/cryptoBars';
+import { fetchCryptoSeries, resetCryptoDailyCacheForTests } from '@/lib/scanner/cryptoBars';
 import { fetchIndicators, fetchPrice } from '@/lib/goldenEggFetchers';
 import * as scannerMath from '@/lib/scanner/indicatorMath';
 import { goldenEggCanonicalBars } from '@/lib/goldenEgg/canonicalVerdict';
@@ -51,6 +52,7 @@ const fullEma200 = () => { const e = scannerMath.ema(series.map((r) => r[4]), 20
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetCryptoDailyCacheForTests();
   vi.spyOn(Date, 'now').mockReturnValue(NOW);
   missingWindow = null;
   makeSeries(1);
@@ -79,6 +81,23 @@ describe('crypto daily history windows', () => {
     expect(s.warnings.join(' ')).toMatch(/warm-up history shorter/);
     const ts = s.bars.map((b) => Date.parse(b.t));
     expect(ts.every((t, i) => i === 0 || t - ts[i - 1] === DAY)).toBe(true);
+  });
+  it('keeps a full history for a day and a short history only for the degraded window', async () => {
+    await fetchCryptoSeries('BTC', 'daily', NOW, { coinId: 'bitcoin', dailyWindows: 6 });
+    const fullCalls = ohlcCalls();
+    await fetchCryptoSeries('BTC', 'daily', NOW + 21 * 60_000, { coinId: 'bitcoin', dailyWindows: 6 });
+    expect(ohlcCalls()).toBe(fullCalls);
+
+    resetCryptoDailyCacheForTests();
+    vi.mocked(cg.getOHLCRange).mockClear();
+    missingWindow = 3;
+    await fetchCryptoSeries('BTC', 'daily', NOW, { coinId: 'bitcoin', dailyWindows: 6 });
+    const shortCalls = ohlcCalls();
+    expect(shortCalls).toBeGreaterThan(0);
+    await fetchCryptoSeries('BTC', 'daily', NOW + 60_000, { coinId: 'bitcoin', dailyWindows: 6 });
+    expect(ohlcCalls()).toBe(shortCalls);
+    await fetchCryptoSeries('BTC', 'daily', NOW + 21 * 60_000, { coinId: 'bitcoin', dailyWindows: 6 });
+    expect(ohlcCalls()).toBeGreaterThan(shortCalls);
   });
 });
 

@@ -39,6 +39,8 @@ const BANNED_PATTERNS: Array<{ pattern: RegExp; replacement: string; category: s
 
   // Product name. Case-insensitive. The route name with a hyphen is a different string.
   { pattern: /\bdaily picks\b/gi, replacement: 'Daily scan observations', category: 'product' },
+  // Repeated whitespace ("Daily   Picks") is the same phrase. Listed second so a single space stays one match.
+  { pattern: /\bdaily\s+picks\b/gi, replacement: 'Daily scan observations', category: 'product' },
 ];
 
 export interface BannedPhraseMatch {
@@ -58,11 +60,15 @@ export function scanForBannedPhrases(text: string): BannedPhraseMatch[] {
     let m: RegExpExecArray | null;
     const re = new RegExp(bp.pattern.source, bp.pattern.flags);
     while ((m = re.exec(text)) !== null) {
+      const index = m.index;
+      const phrase = m[0];
+      const overlaps = matches.some((existing) => index < existing.index + existing.phrase.length && existing.index < index + phrase.length);
+      if (overlaps) continue;
       matches.push({
-        phrase: m[0],
+        phrase,
         replacement: bp.replacement,
         category: bp.category,
-        index: m.index,
+        index,
       });
     }
   }

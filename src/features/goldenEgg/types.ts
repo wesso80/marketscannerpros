@@ -14,6 +14,8 @@ export interface GoldenEggCanonical {
   /** Change vs the previous completed bar close (daily/weekly) or previous bar (intraday), in percent. */
   changePct: number;
   priceTs: string;
+  /** "as of <time>" or "yesterday's close, as of <time>" when the price source recorded one. */
+  priceLabel?: string | null;
   lastCompletedBarAt: string | null;
   historyBars: number;
   source: string | null;

@@ -65,7 +65,14 @@ function fieldOf(caller: string, endpoint: string): string {
   return `${cgCallToken(caller, 'unknown')}|${cgCallToken(endpoint, 'unknown')}`;
 }
 
+function pruneDays(day: string): void {
+  for (const key of memory.keys()) {
+    if (key < day) memory.delete(key);
+  }
+}
+
 function bump(day: string, field: string): void {
+  pruneDays(day);
   const row = memory.get(day) ?? new Map<string, number>();
   row.set(field, (row.get(field) ?? 0) + 1);
   memory.set(day, row);
@@ -114,6 +121,7 @@ export function rememberCgCaller(caller: string, endpoint: string, now = Date.no
 /** Redis when this process has published any row today. Otherwise the in-process tally. */
 export async function readCgCallerCounts(now = Date.now()): Promise<CgCallerCounts> {
   const day = dayOf(now);
+  pruneDays(day);
   try {
     const raw = await getRedis()?.hgetall<Record<string, number>>(`${CG_CALLER_REDIS_PREFIX}:caller:${day}`).catch(() => null);
     const parsed = parseHash(raw);

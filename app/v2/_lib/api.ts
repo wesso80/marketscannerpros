@@ -133,6 +133,9 @@ export interface ScanResult {
     computedAt: string;
     notes: string[];
     atrPercentDailyEquivalent?: number;
+    priceAsOf?: string | null;
+    priceStale?: boolean;
+    priceLabel?: string;
   };
   liquidity?: { avgVolume20: number | null; adv20: number | null; volumeRatio: number | null; lastVolume: number | null };
   dataTrust?: { level: 'GOOD' | 'DEGRADED' | 'STALE' | 'INSUFFICIENT_DATA'; reasons: string[]; factor: number; freshness: 'fresh' | 'delayed' | 'stale' | 'unknown'; intervalMismatch: boolean };

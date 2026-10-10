@@ -11,6 +11,8 @@ vi.mock('@/lib/auth',()=>({getSessionFromCookie:vi.fn()}));
 vi.mock('@/lib/proTraderAccess',()=>({hasPaidSessionAccess:vi.fn()}));
 import {loadBreakdown} from '@/lib/crypto/breakdown/load';
 import {resetFlights} from '@/lib/crypto/breakdown/cache';
+import {resetCryptoDailyCacheForTests} from '@/lib/scanner/cryptoBars';
+import {resetCgResponseCacheForTests} from '@/lib/coingecko';
 import {GET} from '@/app/api/crypto/breakdown/route';
 import {getSessionFromCookie} from '@/lib/auth';
 import {hasPaidSessionAccess} from '@/lib/proTraderAccess';
@@ -19,7 +21,7 @@ let cgCalls=0,failed='',noSwap=false,okxCode:string|null=null;
 const OKX_NOT_LISTED={"code":"51001","msg":"Instrument ID, Instrument ID code, or Spread ID doesn't exist.","data":[] as unknown[]};
 const chart=()=>({prices:Array.from({length:400},(_,i)=>[Math.floor(now/day)*day-(399-i)*day,100]),market_caps:Array.from({length:400},(_,i)=>[Math.floor(now/day)*day-(399-i)*day,1000000]),total_volumes:Array.from({length:400},(_,i)=>[Math.floor(now/day)*day-(399-i)*day,10000000])});
 const response=(x:unknown,status=200)=>new Response(JSON.stringify(x),{status,headers:{'content-type':'application/json'}});
-beforeEach(()=>{vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(now);memory.clear();resetFlights();cgCalls=0;failed='';noSwap=false;okxCode=null;
+beforeEach(()=>{vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(now);memory.clear();resetFlights();resetCryptoDailyCacheForTests();resetCgResponseCacheForTests();cgCalls=0;failed='';noSwap=false;okxCode=null;
  vi.stubGlobal('fetch',vi.fn(async(raw:RequestInfo|URL)=>{
  const u=new URL(String(raw)),p=u.pathname;
  if(u.hostname.includes('coingecko')){
@@ -49,17 +51,17 @@ beforeEach(()=>{vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(now);memory
  }));
 });
 afterEach(()=>{vi.unstubAllGlobals();vi.useRealTimers();});
-it('measures actual mocked transport calls: LINK cold 10, warm zero; concurrent share',async()=>{
- const [a,b]=await Promise.all([loadBreakdown('LINK',undefined,now),loadBreakdown('LINK',undefined,now)]);expect(a.coinId).toBe('chainlink');expect(b.coinId).toBe(a.coinId);expect(Object.keys(a.sections)).toHaveLength(10);expect(cgCalls).toBe(10);expect(a.budget.breakdownToday).toBe(22);await loadBreakdown('LINK',undefined,now);expect(cgCalls).toBe(10);expect(a.sections.derivatives.value?.metrics.find(m=>m.label==='Open interest (USD)')?.value).toBe(30000000);
+it('measures actual mocked transport calls: LINK cold 11, warm zero; concurrent share',async()=>{
+ const [a,b]=await Promise.all([loadBreakdown('LINK',undefined,now),loadBreakdown('LINK',undefined,now)]);expect(a.coinId).toBe('chainlink');expect(b.coinId).toBe(a.coinId);expect(Object.keys(a.sections)).toHaveLength(10);expect(cgCalls).toBe(11);expect(a.budget.breakdownToday).toBe(22);await loadBreakdown('LINK',undefined,now);expect(cgCalls).toBe(11);expect(a.sections.derivatives.value?.metrics.find(m=>m.label==='Open interest (USD)')?.value).toBe(30000000);
 });
 it('top projects the same completed ninety daily bars without extra provider transport',async()=>{
  const a=await loadBreakdown('LINK',undefined,now),top=a.top!;
  expect(top.chart.bars).toEqual(Array.from({length:90},(_,i)=>({t:new Date(Math.floor(now/day)*day-(90-i)*day).toISOString(),close:100,high:102,low:98})));
  expect(top.stage).toBe(a.sections.ruleCheck.value?.stage);expect(top.spot).toEqual(a.sections.price.value?.metrics.find(m=>m.label==='Spot'));
- const urls=()=>vi.mocked(fetch).mock.calls.map(c=>String(c[0]));expect(cgCalls).toBe(10);expect(urls().filter(u=>u.includes('okx.com'))).toHaveLength(6);expect(urls().filter(u=>u.includes('yahoo'))).toHaveLength(1);
+ const urls=()=>vi.mocked(fetch).mock.calls.map(c=>String(c[0]));expect(cgCalls).toBe(11);expect(urls().filter(u=>u.includes('okx.com'))).toHaveLength(6);expect(urls().filter(u=>u.includes('yahoo'))).toHaveLength(1);
  const before=urls();await loadBreakdown('LINK',undefined,now);expect(urls()).toEqual(before);
 });
-it('QNT searches exactly once, preserves duplicate count, and uses exact identity',async()=>{const a=await loadBreakdown('QNT',undefined,now);expect(a.coinId).toBe('quant-network');expect(a.identityMatches).toBe(2);expect(cgCalls).toBe(11);});
+it('QNT searches exactly once, preserves duplicate count, and uses exact identity',async()=>{const a=await loadBreakdown('QNT',undefined,now);expect(a.coinId).toBe('quant-network');expect(a.identityMatches).toBe(2);expect(cgCalls).toBe(12);});
 it('CRVUSD is not stripped by the legacy resolver',async()=>{expect((await loadBreakdown('CRVUSD',undefined,now)).coinId).toBe('crvusd');});
 it('no OKX perpetual is a fact and other sources remain',async()=>{noSwap=true;const a=await loadBreakdown('LINK',undefined,now);expect(a.sections.derivatives.value?.notes.join()).toContain('No OKX perpetual');expect(a.sections.price.value?.metrics[0].value).toBe(100);});
 it('OKX code 51001 is not listed and cached like an empty directory',async()=>{

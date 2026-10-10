@@ -42,6 +42,8 @@ export interface ScreenerRow {
   matchConfidence?: number;
   barInterval?: string;
   lastCompletedBarAt?: string | null;
+  /** "as of <time>" or "yesterday's close, as of <time>" when the scan recorded it. */
+  priceLabel?: string;
   // extra fields from bulk scan
   liquidityState?: string;
   volatilityState?: string;
@@ -132,7 +134,7 @@ const COLUMNS: Column[] = [
   {
     key: 'price', label: 'Price', width: '90px', align: 'right',
     title: 'Last price from the scan (latest bar close or quote)',
-    render: (r) => <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatScannerPrice(r.price)}</span>,
+    render: (r) => <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatScannerPrice(r.price)}{r.priceLabel ? <span style={{ display: 'block', fontSize: 10, fontWeight: 400, color: 'var(--msp-text-muted)' }}>{r.priceLabel}</span> : null}</span>,
   },
   {
     key: 'direction', label: 'Bias', width: '82px', align: 'center',
@@ -176,8 +178,9 @@ const COLUMNS: Column[] = [
       const label = r.dataTrustLevel || r.dataQuality || 'DEGRADED';
       const color = dataQualityColor(label === 'INSUFFICIENT DATA' ? 'MISSING' : label === 'STALE' ? 'DEGRADED' : label);
       const basis = r.barInterval ? ` · ${r.barInterval} bars${r.lastCompletedBarAt ? `, last completed ${String(r.lastCompletedBarAt).slice(0, 16).replace('T', ' ')}` : ''}` : '';
+      const priceLabel = r.priceLabel ? ` · ${r.priceLabel}` : '';
       return (
-        <span title={(r.dataQualityDetail || `${label} scanner inputs`) + basis} style={{ fontSize: 11, fontWeight: 700, color, background: `${color}15`, border: `1px solid ${color}40`, borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap' }}>
+        <span title={(r.dataQualityDetail || `${label} scanner inputs`) + basis + priceLabel} style={{ fontSize: 11, fontWeight: 700, color, background: `${color}15`, border: `1px solid ${color}40`, borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap' }}>
           {label}
         </span>
       );
