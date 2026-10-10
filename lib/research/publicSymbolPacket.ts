@@ -39,7 +39,7 @@ export interface PublicSymbolPacket {
   optionsRequest: { expiry: string; status: 'used' | 'unavailable' } | null;
   canonical: {
     symbol: string; assetClass: C['assetClass']; timeframe: string; barInterval: string | null; price: number; changePct: number;
-    priceTs: string; priceLabel: string | null; lastCompletedBarAt: string | null; historyBars: number; source: string | null;
+    priceTs: string; priceLabel: string | null; priceStale: boolean; lastCompletedBarAt: string | null; historyBars: number; source: string | null;
     indicators: C['indicators'];
     liquidity: C['liquidity'];
     dataTrust: { level: C['dataTrust']['level']; label: string; reasons: string[]; freshness: string };
@@ -109,7 +109,7 @@ export function toPublicSymbolPacket(p: GoldenEggPayload): PublicSymbolPacket {
     optionsRequest: p.optionsRequest ? { expiry: p.optionsRequest.expiry, status: p.optionsRequest.status } : null,
     canonical: c && i && l ? {
       symbol: c.symbol, assetClass: c.assetClass, timeframe: c.timeframe, barInterval: c.barInterval, price: c.price, changePct: c.changePct,
-      priceTs: c.priceTs, priceLabel: typeof c.priceLabel === 'string' && c.priceLabel.length > 0 ? c.priceLabel : null, lastCompletedBarAt: c.lastCompletedBarAt, historyBars: c.historyBars, source: c.source,
+      priceTs: c.priceTs, priceLabel: typeof c.priceLabel === 'string' && c.priceLabel.length > 0 ? c.priceLabel : null, priceStale: c.priceStale === true, lastCompletedBarAt: c.lastCompletedBarAt, historyBars: c.historyBars, source: c.source,
       indicators: { rsi: i.rsi, adx: i.adx, atr: i.atr, atrPct: i.atrPct, ema20: i.ema20, ema50: i.ema50, ema200: i.ema200, sma20: i.sma20, sma50: i.sma50, macdHist: i.macdHist, macd: i.macd, macdSignal: i.macdSignal, stochK: i.stochK, computedOn: i.computedOn },
       liquidity: { volume: l.volume, avgVolume: l.avgVolume, advUsd: l.advUsd, volumeBasis: l.volumeBasis },
       dataTrust: { level: c.dataTrust.level, label: c.dataTrust.label, reasons: strs(c.dataTrust.reasons), freshness: c.dataTrust.freshness },

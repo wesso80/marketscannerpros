@@ -16,6 +16,7 @@ export interface GoldenEggCanonical {
   priceTs: string;
   /** "as of <time>" or "yesterday's close, as of <time>" when the price source recorded one. */
   priceLabel?: string | null;
+  priceStale?: boolean;
   lastCompletedBarAt: string | null;
   historyBars: number;
   source: string | null;
