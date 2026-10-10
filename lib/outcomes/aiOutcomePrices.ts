@@ -15,6 +15,7 @@ import { avFetch } from '@/lib/avRateGovernor';
 import { getBars } from '@/lib/marketData';
 import { equitySplitInWindow } from '@/lib/scanner/corporateActions';
 import { nyDateTime } from '@/lib/time/usSession';
+import { createEquityBarStaleRun } from '@/lib/signals/equityBarStale';
 import {
   equityDailyToPriceBars,
   horizonTargetMs,
@@ -163,6 +164,7 @@ export interface SplitBlockedPrice {
  */
 export function createHorizonPriceResolver(nowMs: number, fetchers: BarFetchers = defaultBarFetchers) {
   const memo = new Map<string, Promise<PriceBar[] | null>>();
+  const staleEquity = createEquityBarStaleRun('ai-outcomes');
   /** Distinct bar fetches this run (≈ provider calls: intraday = one AV call; daily may come from the cache). */
   const counts = { intraday: 0, daily: 0 };
   const load = (kind: keyof BarFetchers, symbol: string) => {
@@ -200,6 +202,10 @@ export function createHorizonPriceResolver(nowMs: number, fetchers: BarFetchers 
     if (fromIntraday) return { ...fromIntraday, source: 'intraday' };
     if (horizon !== '24h') return null;
     const daily = await load(assetClass === 'crypto' ? 'cryptoDaily' : 'equityDaily', symbol);
+    if (assetClass === 'equity' && daily && daily.length) {
+      const latest = daily.reduce((max, bar) => bar.closeTime > max ? bar.closeTime : max, 0);
+      if (staleEquity.skip(symbol, latest, nowMs)) return null;
+    }
     const fromDaily = daily ? priceAtOrAfter(daily, target, nowMs) : null;
     return fromDaily ? { ...fromDaily, source: 'daily' } : null;
   };

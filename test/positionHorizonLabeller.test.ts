@@ -335,6 +335,19 @@ describe('6w/12w labeller', () => {
     warn.mockRestore();
   });
 
+  it('does not write an outcome when the equity daily series ends in 2018', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    state.rows['6w'] = [cand(1, 50)];
+    state.rows['12w'] = [cand(4, 90)];
+    const bars = series(Date.parse('2018-01-02T00:00:00Z'), 30);
+    const r = await labelPositionHorizons({ nowMs: NOW, budgetMs: 10_000, loaders: { equity: async () => bars, crypto: async () => null } });
+    expect(r.horizons['6w']).toMatchObject({ candidates: 1, labeled: 0, skipped: 1, noData: 0 });
+    expect(r.horizons['12w']).toMatchObject({ candidates: 1, labeled: 0, skipped: 1, noData: 0 });
+    expect(calls(/UPDATE ai_signal_log/)).toHaveLength(0);
+    expect(warn.mock.calls.filter(([msg]) => String(msg).includes('[position-horizon] AAPL:'))).toHaveLength(1);
+    warn.mockRestore();
+  });
+
   it('never freezes a failed load as no_data: the row waits; a complete empty load is no_data', async () => {
     // 80 days old: past the 6w horizon + 30-day give-up, so an empty series would be final.
     state.rows['6w'] = [cand(1, 80, { symbol: 'BTC', asset_type: 'crypto' }), cand(2, 80, { symbol: 'ETH', asset_type: 'crypto' }), cand(3, 80)];

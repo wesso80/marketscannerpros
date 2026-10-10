@@ -27,6 +27,7 @@ import { getBars } from '@/lib/marketData';
 import { pgReadBars } from '@/lib/marketData/store';
 import { equitySplitInWindow } from '@/lib/scanner/corporateActions';
 import { nyDateTime } from '@/lib/time/usSession';
+import { createEquityBarStaleRun } from '@/lib/signals/equityBarStale';
 import { normalizeAssetClass, normalizeCryptoSymbol, normalizeDirection, type OutcomeAssetClass } from './aiOutcomeLabel';
 import {
   POSITION_HORIZONS,
@@ -145,6 +146,15 @@ export interface DailyBarLoaders {
   crypto: DailyBarLoader;
 }
 
+function latestOhlcDay(bars: DailyOhlcBar[]): string | null {
+  let best: string | null = null;
+  for (const bar of bars) {
+    const day = bar.day?.slice(0, 10);
+    if (day && (!best || day > best)) best = day;
+  }
+  return best;
+}
+
 function toLoad(r: DailyBarLoad | DailyOhlcBar[] | null, source: string): DailyBarLoad {
   if (Array.isArray(r)) return { bars: r, complete: true, source };
   return r ?? { bars: [], complete: false, source };
@@ -253,6 +263,7 @@ export async function labelPositionHorizons(opts: {
   }
 
   const started = Date.now();
+  const staleEquity = createEquityBarStaleRun('position-horizon');
   const memo = new Map<string, Promise<DailyBarLoad>>();
   const barLoads = { equity: 0, crypto: 0 };
   const load = (symbol: string, asset: OutcomeAssetClass) => {
@@ -308,6 +319,13 @@ export async function labelPositionHorizons(opts: {
       }
       if (!loaded || !m) {
         loaded = await load(row.symbol, asset);
+        if (asset === 'equity') {
+          const latest = latestOhlcDay(loaded.bars);
+          if (latest && staleEquity.skip(row.symbol, latest, opts.nowMs)) {
+            t.skipped++;
+            continue;
+          }
+        }
         m = measurePositionHorizon({
           direction, entry, signalAtMs, horizon: h, nowMs: opts.nowMs, stop, target, bars: loaded.bars,
         });

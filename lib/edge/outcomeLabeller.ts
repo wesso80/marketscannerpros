@@ -17,6 +17,7 @@
 import { q } from '@/lib/db';
 import { equitySplitInWindow } from '@/lib/scanner/corporateActions';
 import { isUsTradingDay, lastCompletedUsSessionDate, nextUsTradingDay, nyDateTime } from '@/lib/time/usSession';
+import { createEquityBarStaleRun, type EquityBarStaleRun } from '@/lib/signals/equityBarStale';
 
 export interface LabelResult {
   setupId: number;
@@ -108,7 +109,7 @@ export function computeWindow(
   };
 }
 
-export async function labelOutcome(setupId: number): Promise<LabelResult | null> {
+export async function labelOutcome(setupId: number, staleEquity: EquityBarStaleRun = createEquityBarStaleRun('edge-outcomes')): Promise<LabelResult | null> {
   const setupRows = await q<{
     id: number; workspace_id: string; symbol: string; market: string; direction: 'long' | 'short';
     entry_price: string | null; stop_price: string | null; target_price: string | null;
@@ -124,6 +125,19 @@ export async function labelOutcome(setupId: number): Promise<LabelResult | null>
   if (entry === null || risk === null || !Number.isFinite(entry) || !Number.isFinite(risk) || entry <= 0 || risk <= 0 || !['equity', 'crypto'].includes(s.market)) {
     // Can't label without entry + risk
     return null;
+  }
+
+  if (s.market === 'equity') {
+    try {
+      const latestRows = await q<{ latest_daily_bar: unknown }>(
+        `SELECT MAX(ts) AS latest_daily_bar FROM ohlcv_bars WHERE symbol = $1 AND timeframe = 'daily'`,
+        [s.symbol.toUpperCase()],
+      );
+      if (staleEquity.skip(s.symbol, latestRows[0]?.latest_daily_bar ?? null, Date.now())) return null;
+    } catch (err) {
+      console.warn(`[edge-outcomes] ${s.symbol} latest daily bar read failed; left unlabeled`, err instanceof Error ? err.message : err);
+      return null;
+    }
   }
 
   // The ingest worker already maintains real equity and crypto daily OHLC.
@@ -224,8 +238,9 @@ export async function labelAllPending(opts: { limit?: number } = {}): Promise<{ 
     [opts.limit ?? 500],
   );
   let complete = 0, partial = 0, pending = 0, noData = 0;
+  const staleEquity = createEquityBarStaleRun('edge-outcomes');
   for (const s of setups) {
-    const label = await labelOutcome(s.id);
+    const label = await labelOutcome(s.id, staleEquity);
     if (!label) { pending++; continue; }
     await persistOutcome(s.workspace_id, label);
     if (label.status === 'complete') complete++;

@@ -25,6 +25,8 @@ import type {
   MetaHealthState,
 } from '@/types/operator';
 import { generateId, nowISO, makeEnvelope, ENVIRONMENT_MODE } from './shared';
+import { isIntradayTimeframe } from './market-data';
+import { createEquityBarStaleRun, type EquityBarStaleRun } from '@/lib/signals/equityBarStale';
 import { ENGINE_VERSIONS } from './version-registry';
 import { computeFeatureVector } from './feature-engine';
 import { classifyRegime } from './regime-engine';
@@ -99,6 +101,15 @@ export interface MarketDataProvider {
 
 /* ── Pipeline for a single symbol ───────────────────────────── */
 
+function latestBarTimestamp(bars: Bar[]): string | null {
+  let latest: string | null = null;
+  for (const bar of bars) {
+    if (!bar.timestamp) continue;
+    if (latest == null || bar.timestamp > latest) latest = bar.timestamp;
+  }
+  return latest;
+}
+
 async function runSymbolPipeline(
   symbol: string,
   market: Market,
@@ -106,6 +117,7 @@ async function runSymbolPipeline(
   requestId: string,
   dataProvider: MarketDataProvider,
   context: ScanContext,
+  staleEquity: EquityBarStaleRun,
 ): Promise<{ candidates: CandidatePipeline[]; snapshot: DecisionSnapshot | null; errors: string[] }> {
   const startTime = Date.now();
   const errors: string[] = [];
@@ -120,6 +132,15 @@ async function runSymbolPipeline(
 
   if (bars.length === 0) {
     return { candidates: [], snapshot: null, errors: ['NO_BAR_DATA'] };
+  }
+
+  // Equity daily and weekly scans read the stored daily cache. A series whose
+  // latest bar is more than 5 US sessions behind does not become a signal.
+  if (market === 'EQUITIES' && !isIntradayTimeframe(timeframe)) {
+    const latest = latestBarTimestamp(bars);
+    if (latest && staleEquity.skip(symbol, latest, Date.now())) {
+      return { candidates: [], snapshot: null, errors: [] };
+    }
   }
 
   // §13.3 — compute symbol trust from bar history
@@ -273,12 +294,13 @@ export async function runScan(
     context.scoringWeights = await loadActiveWeights();
   }
 
-  // Process each symbol
+  // Process each symbol. One stale-bar log per symbol for this scan.
+  const staleEquity = createEquityBarStaleRun('operator');
   for (const symbol of request.symbols) {
     try {
       const { candidates, snapshot, errors } = await runSymbolPipeline(
         symbol, request.market, request.timeframe,
-        requestId, dataProvider, context,
+        requestId, dataProvider, context, staleEquity,
       );
       allPipelines.push(...candidates);
       if (snapshot) allSnapshots.push(snapshot);
