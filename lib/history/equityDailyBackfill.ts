@@ -253,7 +253,7 @@ export function parseDailyAdjustedRaw(payload: unknown, window: WriteWindow): {
     const high = num(row['2. high']);
     const low = num(row['3. low']);
     const close = num(row['4. close']);
-    if (!saneOhlc(open, high, low, close)) {
+    if (open == null || high == null || low == null || close == null || !saneOhlc(open, high, low, close)) {
       rejected += 1;
       continue;
     }
@@ -380,7 +380,7 @@ export async function runEquityHistoryBackfill(input: {
   let lastStart = 0;
   for (const symbol of symbols) {
     if (!backfillWindowOpen(deps.nowMs())) {
-      return { exitCode: 3, status: 'resumable', avCalls: counts.avCalls, ...counts, reason: 'window closed' };
+      return { exitCode: 3, status: 'resumable', ...counts, reason: 'window closed' };
     }
     if (!deps.limiterRedisPresent()) return stopped(counts, 2, 'refused', 'limiter redis absent');
     const prior = progress.get(symbol);
@@ -420,7 +420,7 @@ export async function runEquityHistoryBackfill(input: {
     }
     if (outcome.kind === 'throttle') {
       deps.log(`${symbol} throttle: ${outcome.reason}`);
-      return { exitCode: 4, status: 'throttle', avCalls: counts.avCalls, ...counts, reason: outcome.reason };
+      return { exitCode: 4, status: 'throttle', ...counts, reason: outcome.reason };
     }
     const attempts = Number(prior?.attempts ?? 0) + 1;
     if (outcome.kind === 'no_data') {
@@ -466,7 +466,7 @@ export async function runEquityHistoryBackfill(input: {
         await deps.query(PROGRESS_UPSERT_SQL, [CAMPAIGN, symbol, status, attempts, null, null, null, 0, 0, 0, reason]);
       } catch (writeErr) {
         return {
-          exitCode: 1, status: 'crash', avCalls: counts.avCalls, ...counts,
+          exitCode: 1, status: 'crash', ...counts,
           reason: writeErr instanceof Error ? writeErr.message : String(writeErr),
         };
       }
@@ -480,13 +480,13 @@ export async function runEquityHistoryBackfill(input: {
     deps.log(`${symbol} done insert=${plan.insert} volumeRepair=${plan.volumeRepair} unchanged=${plan.unchanged}`);
   }
   if (counts.failed > 0) {
-    return { exitCode: 1, status: 'crash', avCalls: counts.avCalls, ...counts, reason: 'symbol failed' };
+    return { exitCode: 1, status: 'crash', ...counts, reason: 'symbol failed' };
   }
   const pendingRetry = symbols.some((symbol) => progress.get(symbol)?.status === 'retry');
   if (pendingRetry) {
-    return { exitCode: 3, status: 'resumable', avCalls: counts.avCalls, ...counts, reason: 'retry remaining' };
+    return { exitCode: 3, status: 'resumable', ...counts, reason: 'retry remaining' };
   }
-  return { exitCode: 0, status: 'complete', avCalls: counts.avCalls, ...counts };
+  return { exitCode: 0, status: 'complete', ...counts };
 }
 
 export function parseSymbolsArg(argv: readonly string[]): string[] | undefined {
@@ -545,7 +545,7 @@ async function takeOrStop(
   const started = deps.nowMs();
   for (;;) {
     if (!deps.limiterRedisPresent()) {
-      return { stop: { exitCode: 2, status: 'refused', avCalls: counts.avCalls, ...counts, reason: 'limiter redis absent' } };
+      return { stop: { exitCode: 2, status: 'refused', ...counts, reason: 'limiter redis absent' } };
     }
     try {
       await deps.takeToken();
@@ -553,13 +553,13 @@ async function takeOrStop(
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (/redis unavailable/i.test(message)) {
-        return { stop: { exitCode: 2, status: 'refused', avCalls: counts.avCalls, ...counts, reason: message } };
+        return { stop: { exitCode: 2, status: 'refused', ...counts, reason: message } };
       }
       if (!/denied/i.test(message)) {
-        return { stop: { exitCode: 1, status: 'crash', avCalls: counts.avCalls, ...counts, reason: message } };
+        return { stop: { exitCode: 1, status: 'crash', ...counts, reason: message } };
       }
       if (deps.nowMs() - started >= DENIAL_BUDGET_MS) {
-        return { stop: { exitCode: 3, status: 'resumable', avCalls: counts.avCalls, ...counts, reason: 'limiter denied' } };
+        return { stop: { exitCode: 3, status: 'resumable', ...counts, reason: 'limiter denied' } };
       }
       await deps.sleep(DENIAL_SLEEP_MS);
     }
@@ -575,8 +575,7 @@ function num(value: unknown): number | null {
   return null;
 }
 
-function saneOhlc(open: number | null, high: number | null, low: number | null, close: number | null): boolean {
-  if (open == null || high == null || low == null || close == null) return false;
+function saneOhlc(open: number, high: number, low: number, close: number): boolean {
   return open > 0 && high > 0 && low > 0 && close > 0 && low <= Math.min(open, close) && high >= Math.max(open, close);
 }
 
