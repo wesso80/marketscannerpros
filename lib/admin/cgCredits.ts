@@ -1,5 +1,6 @@
 import {getRedis} from '@/lib/redis';
 import {CG_REDIS_PREFIX,capFields,type CgCapFields} from '@/lib/admin/cgDailyCap';
+import {currentCgCaller,readCgCallerCounts,rememberCgCaller,type CgCallerCounts} from '@/lib/admin/cgCallers';
 /**
  * CoinGecko credit accounting. CoinGecko's own /key endpoint is the source of truth; the local counter (every HTTP
  * attempt made through lib/coingecko cgFetch, including retries) is shown alongside it and used only as a labelled
@@ -16,16 +17,20 @@ export const CG_BUDGET={
 const P=CG_REDIS_PREFIX,KEY_CACHE=`${P}:key`;
 const monthOf=(t:number)=>new Date(t).toISOString().slice(0,7),dayOf=(t:number)=>new Date(t).toISOString().slice(0,10);
 /** Fire-and-forget; never throws and never delays the request it counts. */
-export function recordCgCall(family:string,now=Date.now()){
+export function recordCgCall(family:string,meta?:{caller?:string;endpoint?:string}|number,now=Date.now()){
+ const at=typeof meta==='number'?meta:now;
+ const caller=typeof meta==='object'&&meta?.caller?meta.caller:currentCgCaller();
+ const endpoint=typeof meta==='object'&&meta?.endpoint?meta.endpoint:family;
+ try{rememberCgCaller(caller,endpoint||family||'unknown',at);}catch{/* counting must never break a provider call */}
  try{
   const r=getRedis();if(!r)return;
-  const m=`${P}:month:${monthOf(now)}`,d=`${P}:day:${dayOf(now)}`,f=`${P}:family:${dayOf(now)}`;
+  const m=`${P}:month:${monthOf(at)}`,d=`${P}:day:${dayOf(at)}`,f=`${P}:family:${dayOf(at)}`;
   void Promise.all([r.incrby(m,CG_BUDGET.creditsPerCall),r.expire(m,40*86400),r.incrby(d,CG_BUDGET.creditsPerCall),r.expire(d,8*86400),r.hincrby(f,family,CG_BUDGET.creditsPerCall),r.expire(f,8*86400)]).catch(()=>undefined);
  }catch{/* counting must never break a provider call */}
 }
 export type CgKeyInfo={plan?:string;rate_limit_request_per_minute?:number;monthly_call_credit?:number;current_total_monthly_calls?:number;current_remaining_monthly_calls?:number};
 export type CgBudget={checkedAt:string;source:'coingecko /key'|'local estimate (/key unavailable)';plan:string|null;allowance:number;used:number;remaining:number;remainingPct:number;pauseBelowPct:number;pauseNonEssential:boolean;local:{month:number;today:number;todayByFamily:Record<string,number>};keyCheckedAt:string|null};
-export type CgBudgetStatus=CgBudget&CgCapFields;
+export type CgBudgetStatus=CgBudget&CgCapFields&{callsByCaller:CgCallerCounts};
 /** Pure: combines /key (preferred) with the local counter. Missing /key fields fall back to the local estimate, labelled. */
 export function assessBudget(key:CgKeyInfo|null,local:CgBudget['local'],keyCheckedAt:string|null,now=Date.now(),cfg=CG_BUDGET):CgBudget{
  const ok=!!key&&Number.isFinite(key.monthly_call_credit)&&Number(key.monthly_call_credit)>0&&Number.isFinite(key.current_remaining_monthly_calls);
@@ -38,13 +43,14 @@ export function assessBudget(key:CgKeyInfo|null,local:CgBudget['local'],keyCheck
 /** /key is cached for 10 minutes so checking the budget costs at most 144 calls a day. */
 export async function cgBudgetStatus(fetchKey:()=>Promise<unknown>,now=Date.now()):Promise<CgBudgetStatus>{
  const r=getRedis();
- let cached=await r?.get<{at:string;key:CgKeyInfo}>(KEY_CACHE).catch(()=>null)??null;
+ let cached=await r?.get<{at:string;atMs?:number;key:CgKeyInfo}>(KEY_CACHE).catch(()=>null)??null;
  if(!cached||now-Date.parse(cached.at)>CG_BUDGET.keyCacheSeconds*1000){
   const key=await fetchKey().catch(()=>null) as CgKeyInfo|null;
-  if(key&&typeof key==='object'&&'monthly_call_credit' in key){cached={at:new Date(now).toISOString(),key};await r?.set(KEY_CACHE,cached,{ex:CG_BUDGET.keyCacheSeconds}).catch(()=>undefined);}
+  if(key&&typeof key==='object'&&'monthly_call_credit' in key){cached={at:new Date(now).toISOString(),atMs:now,key};await r?.set(KEY_CACHE,cached,{ex:CG_BUDGET.keyCacheSeconds}).catch(()=>undefined);}
  }
  const [month,today,fam]=await Promise.all([r?.get<number>(`${P}:month:${monthOf(now)}`),r?.get<number>(`${P}:day:${dayOf(now)}`),r?.hgetall<Record<string,number>>(`${P}:family:${dayOf(now)}`)].map(p=>Promise.resolve(p).catch(()=>null)));
  const base=assessBudget(cached?.key??null,{month:Number(month)||0,today:Number(today)||0,todayByFamily:(fam as Record<string,number>|null)??{}},cached?.at??null,now);
  const cap=await capFields(now).catch(()=>null);
- return {...base,...(cap??{quota:CG_BUDGET.monthlyCredits,targetPct:80,targetCredits:Math.floor(CG_BUDGET.monthlyCredits*0.8),todayCap:0,callsToday:0,refusedToday:0,capMode:'flat' as const})};
+ const callsByCaller=await readCgCallerCounts(now).catch(()=>({}));
+ return {...base,...(cap??{quota:CG_BUDGET.monthlyCredits,targetPct:80,targetCredits:Math.floor(CG_BUDGET.monthlyCredits*0.8),todayCap:0,callsToday:0,refusedToday:0,capMode:'flat' as const,globalReserved:null,fallbackByRole:{web:0,worker:0,jarvis:0},timeouts:0}),callsByCaller};
 }

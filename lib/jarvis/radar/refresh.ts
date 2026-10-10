@@ -2,6 +2,7 @@
  * Second pass before the owner reads the report: refresh only crypto (price, volume, funding, OI,
  * dominance, breadth, categories) against the latest persisted overnight run. No equity calls.
  */
+import { currentCgCaller, runWithCgCaller } from '../../admin/cgCallers';
 import { loadCategories, loadCryptoMarkets, loadDerivatives } from './collect';
 import { budget, resetBudget } from './budget';
 import type { MorningReport } from './types';
@@ -10,6 +11,7 @@ const sp = (n: number | null | undefined, d = 1) => (n === null || n === undefin
 const median = (a: number[]) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : null; };
 
 export async function refreshCrypto(report: MorningReport, nowMs: number): Promise<{ lines: string[]; material: boolean; snapshotPatch: MorningReport['snapshot'] }> {
+  if (currentCgCaller() !== 'jarvis:crypto-refresh') return runWithCgCaller('jarvis:crypto-refresh', () => refreshCrypto(report, nowMs));
   resetBudget();
   const rows = await loadCryptoMarkets(250);
   if (!rows.length) return { lines: ['CoinGecko unavailable — crypto section not refreshed (values below are from the overnight run).'], material: false, snapshotPatch: {} };

@@ -16,6 +16,7 @@
  */
 
 import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
+import { currentCgCaller, runWithCgCaller } from '@/lib/admin/cgCallers';
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyCronAuth, verifyAdminAuth } from '@/lib/adminAuth';
 import { runPipeline, persistScanResult } from '@/lib/quant/orchestrator';
@@ -34,7 +35,8 @@ export async function POST(req: NextRequest): Promise<Response> {
   return runQuantScan(req);
 }
 
-async function runQuantScan(req: NextRequest) {
+async function runQuantScan(req: NextRequest): Promise<Response> {
+  if (currentCgCaller() !== 'quant-scan') return runWithCgCaller('quant-scan', () => runQuantScan(req));
   if (!verifyCronAuth(req) && !verifyAdminAuth(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

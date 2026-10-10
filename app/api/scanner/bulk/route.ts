@@ -16,6 +16,7 @@ import { proTimeframe } from '@/lib/scanner/timeframes';
 import { summarizeDerivativeSnapshot } from '@/lib/scanner/derivativeSnapshot';
 import { boundedBatch } from '@/lib/scanner/boundedBatch';
 import { fetchCryptoSeries, type CryptoScanTimeframe } from '@/lib/scanner/cryptoBars';
+import { runWithCgCaller } from '@/lib/admin/cgCallers';
 import { evaluateDataTrust } from '@/lib/scanner/dataTrust';
 import { detectPriceDiscontinuity } from '@/lib/scanner/barAggregation';
 import { loadCorporateActions, splitAdjustStoredBars, type CorporateAction } from '@/lib/scanner/corporateActions';
@@ -495,7 +496,7 @@ async function fetchCoinGeckoSeries(symbol: string, timeframe: string = '1d', op
   const coinId = opts.coinId ?? SYMBOL_TO_COINGECKO[upper] ?? (await resolveSymbolToId(upper));
   if (!coinId) return { ohlcv: null, excludedReason: 'no_provider_mapping' };
   try {
-    const series = await fetchCryptoSeries(upper, PRO_TF_TO_SERIES[timeframe] ?? 'daily', Date.now(), { coinId, requestOptions: opts.requestOptions });
+    const series = await runWithCgCaller('scanner-bulk', () => fetchCryptoSeries(upper, PRO_TF_TO_SERIES[timeframe] ?? 'daily', Date.now(), { coinId, requestOptions: opts.requestOptions }));
     if (series.bars.length < 20) return { ohlcv: null, excludedReason: 'insufficient_history' };
     const ohlcv: OHLCV[] = series.bars.map((b) => ({ date: b.t, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume ?? 0 }));
     return { ohlcv, basis: { barInterval: series.barInterval, lastCompletedBarAt: series.lastCompletedBarAt, historyBars: series.bars.length, volumeBasis: series.volumeBasis, coinId: series.coinId } };

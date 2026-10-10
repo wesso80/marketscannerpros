@@ -22,6 +22,7 @@ import { Redis } from '@upstash/redis';
 import { sleep, TokenBucket } from '../lib/rateLimiter';
 import { avTakeToken } from '../lib/avRateGovernor';
 import { runWithAvBudget } from '../lib/avLimiter';
+import { runWithCgCaller } from '../lib/admin/cgCallers';
 // The entrypoint sets the role, so Render does not need AV_PROCESS_ROLE.
 process.env.AV_PROCESS_ROLE ??= 'worker';
 import { calculateAllIndicators, detectSqueeze, getIndicatorWarmupStatus, OHLCVBar } from '../lib/indicators';
@@ -707,13 +708,13 @@ async function refreshCryptoQuoteSnapshot(symbols: string[]): Promise<number> {
     if (coinId) withIds.push({ symbol, coinId });
   }
   if (!withIds.length) return 0;
-  const snapshot = await fetchCryptoQuoteSnapshot(
+  const snapshot = await runWithCgCaller('worker:crypto-quotes', () => fetchCryptoQuoteSnapshot(
     withIds,
     (ids) => getMarketData({ ids, per_page: ids.length, page: 1, precision: 'full' }, {
       retries: 1,
       timeoutMs: getPositiveIntFromEnv('WORKER_CG_OHLC_TIMEOUT_MS', 6000),
     }),
-  );
+  ));
   cryptoQuoteSnapshot = snapshot;
   if (snapshot.quotes.size) {
     try {
@@ -1584,7 +1585,7 @@ async function processCryptoSymbol(symbol: string): Promise<{
   
   try {
     // CoinGecko only for crypto ingestion (held daily history; 0 calls unless a new candle or re-sync is due)
-    const daily = await fetchCoinGeckoDaily(symbol);
+    const daily = await runWithCgCaller('worker:crypto-history', () => fetchCoinGeckoDaily(symbol));
     const bars = daily.bars;
     coingeckoCalls += daily.calls;
     let coingeckoSucceeded = 0;
@@ -1745,8 +1746,8 @@ async function refreshAndCaptureAccounts() {
     return coinId ? [{ symbol: row.symbol, coinId }] : [];
   });
   if (crypto.length) {
-    const snapshot = await fetchCryptoQuoteSnapshot(crypto,
-      ids => getMarketData({ ids, per_page: ids.length, page: 1, precision: 'full' }, { retries: 1, timeoutMs: 6000 }));
+    const snapshot = await runWithCgCaller('worker:crypto-quotes', () => fetchCryptoQuoteSnapshot(crypto,
+      ids => getMarketData({ ids, per_page: ids.length, page: 1, precision: 'full' }, { retries: 1, timeoutMs: 6000 })));
     await upsertQuotesBatch([...snapshot.quotes.entries()]);
   }
   const equities = missing.filter(row => row.asset_type === 'equity').map(row => row.symbol);

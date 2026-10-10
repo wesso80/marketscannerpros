@@ -5,6 +5,7 @@
  *   Stage 3  deep dive (cached OVERVIEW, NEWS_SENTIMENT, DB indicators, options for finalists)
  *   Persist  run history + watchlist lifecycle (private store)
  */
+import { runWithCgCaller } from '../../admin/cgCallers';
 import { computeFeatures, type FeatureInputs } from './features';
 import { scoreAsset } from './priority';
 import { detectPreMove, type PreMove } from './premove';
@@ -71,7 +72,7 @@ export async function runOvernightScan(opt: ScanOptions): Promise<{ report: Morn
   if (dbFb) gaps.push(`${dbFb} core equities used DB bars without volume history — volume confirmation unavailable for them`);
 
   log(`fetching ${cryptoRows.length} CoinGecko market_chart daily series …`);
-  const cgBars = await pool(cryptoRows, 8, async (row) => ({ row, r: await fetchCryptoBars(row, nowMs) }));
+  const cgBars = await runWithCgCaller('jarvis:radar', () => pool(cryptoRows, 8, async (row) => ({ row, r: await fetchCryptoBars(row, nowMs) })));
   const cgOk = cgBars.filter((x) => x.r.bars.length >= 25).length;
   providers.push({ name: 'CoinGecko markets + market_chart/range + derivatives + categories', status: cgOk > cryptoRows.length * 0.9 ? 'OK' : 'DEGRADED', detail: `${cgOk}/${cryptoRows.length} coins with ≥25 daily points` });
 

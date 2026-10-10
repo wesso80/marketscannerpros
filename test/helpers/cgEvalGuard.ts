@@ -17,7 +17,8 @@ export function evalRunsCapScript(evalFn: (...args: never[]) => unknown): boolea
 
 /** Cap reservation script. Foreign stubs must not answer it. */
 export function isCgCapScript(script: string): boolean {
-  return script.includes("redis.call('INCR', KEYS[1])") && script.includes("'cg'");
+  const tagged = script.includes("'cg'");
+  return tagged && (script.includes("redis.call('INCR', KEYS[1])") || script.includes('cjson.decode'));
 }
 
 /** Split hosts and env reads the bypass guard must still see. */
