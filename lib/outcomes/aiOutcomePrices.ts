@@ -7,10 +7,14 @@
  * `entitlement=delayed` by default (override with AI_OUTCOME_AV_ENTITLEMENT = delayed | realtime | none). If Alpha
  * Vantage answers that the key is not entitled, the call is retried once without the parameter (historical /
  * end-of-day data, which is enough to measure horizons that have already passed) and the downgrade is remembered
- * for a few hours so each run wastes at most one call on it. Daily bars come from the shared lib/marketData cache.
+ * for a few hours so each run wastes at most one call on it. Daily bars come from the shared lib/marketData cache
+ * and are split-only. A split in equity_corporate_actions inside the horizon is not a price: the resolver returns
+ * { blocked: 'split' } and the cron stores outcome no_data. A missing table is not a split.
  */
 import { avFetch } from '@/lib/avRateGovernor';
 import { getBars } from '@/lib/marketData';
+import { equitySplitInWindow } from '@/lib/scanner/corporateActions';
+import { nyDateTime } from '@/lib/time/usSession';
 import {
   equityDailyToPriceBars,
   horizonTargetMs,
@@ -147,6 +151,11 @@ export interface ResolvedHorizonPrice extends HorizonPrice {
   source: 'intraday' | 'daily';
 }
 
+/** A recorded split sits inside this horizon. The caller stores outcome no_data and does not score the move. */
+export interface SplitBlockedPrice {
+  blocked: 'split';
+}
+
 /**
  * Per-run resolver: each symbol's bars are fetched at most once per resolution. Intraday (60-min) bars are used
  * first; the 24h horizon may fall back to daily closes. The 4h horizon is intraday-only (a daily close is too coarse
@@ -173,9 +182,19 @@ export function createHorizonPriceResolver(nowMs: number, fetchers: BarFetchers 
     assetClass: OutcomeAssetClass,
     signalAtMs: number,
     horizon: OutcomeHorizon,
-  ): Promise<ResolvedHorizonPrice | null> {
+  ): Promise<ResolvedHorizonPrice | SplitBlockedPrice | null> {
     const target = horizonTargetMs(signalAtMs, horizon);
     if (target > nowMs) return null;
+    if (assetClass === 'equity') {
+      try {
+        const after = nyDateTime(signalAtMs).ymd;
+        const through = nyDateTime(target).ymd;
+        if (await equitySplitInWindow(symbol, after, through)) return { blocked: 'split' };
+      } catch {
+        // Cannot confirm the window. Leave the row pending. Do not score it and do not freeze no_data.
+        return null;
+      }
+    }
     const intraday = await load(assetClass === 'crypto' ? 'cryptoIntraday' : 'equityIntraday', symbol);
     const fromIntraday = intraday ? priceAtOrAfter(intraday, target, nowMs) : null;
     if (fromIntraday) return { ...fromIntraday, source: 'intraday' };

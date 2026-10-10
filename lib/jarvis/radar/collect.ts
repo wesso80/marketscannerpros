@@ -4,6 +4,7 @@
  * + /derivatives; catalysts/CRCS/indicators from production worker tables.
  */
 import { q } from '../../db';
+import { loadCorporateActions, splitAdjustStoredBars } from '../../scanner/corporateActions';
 import { avFetch } from '../../avRateGovernor';
 import { avFetchDailyBars, avFetchOverview } from '../../marketData/client';
 import { STOCK_SECTOR_MAP } from '../../sectorMap';
@@ -50,7 +51,13 @@ export interface BarsResult { bars: Bar[]; source: 'alpha_vantage' | 'coingecko'
 async function dbDailyBars(symbol: string, limit = 260): Promise<Bar[]> {
   budget.db++;
   const rows = await q<any>(`SELECT ts, open, high, low, close, volume FROM ohlcv_bars WHERE symbol = $1 AND timeframe = 'daily' ORDER BY ts DESC LIMIT $2`, [symbol, limit]);
-  return rows.reverse().map((r: any) => ({ date: new Date(r.ts).toISOString().slice(0, 10), open: +r.open, high: +r.high, low: +r.low, close: +r.close, volume: +r.volume }));
+  const bars = rows.reverse().map((r: any) => ({ date: new Date(r.ts).toISOString().slice(0, 10), open: +r.open, high: +r.high, low: +r.low, close: +r.close, volume: +r.volume }));
+  try {
+    const actions = await loadCorporateActions([symbol]);
+    return splitAdjustStoredBars(bars, actions.get(symbol.toUpperCase()) ?? []);
+  } catch {
+    return bars;
+  }
 }
 
 export async function fetchEquityBars(symbol: string, allowDbFallback = true): Promise<BarsResult> {

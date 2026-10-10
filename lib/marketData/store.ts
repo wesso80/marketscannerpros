@@ -6,6 +6,7 @@
  */
 
 import { q } from '@/lib/db';
+import { loadCorporateActions, splitAdjustStoredBars } from '@/lib/scanner/corporateActions';
 import { nextUsTradingDay, usSessionOpenMs } from '@/lib/time/usSession';
 import type {
   OhlcBar,
@@ -49,7 +50,7 @@ export async function pgReadBars(symbol: string, timeframe: BarTimeframe, limit 
     [symbol.toUpperCase(), timeframe, limit],
   );
   if (rows.length === 0) return null;
-  const bars: OhlcBar[] = rows.reverse().map((r) => ({
+  const stored: OhlcBar[] = rows.reverse().map((r) => ({
     date: r.ts.toISOString().slice(0, 10),
     ts: r.ts.getTime(),
     open: Number(r.open),
@@ -58,6 +59,17 @@ export async function pgReadBars(symbol: string, timeframe: BarTimeframe, limit 
     close: Number(r.close),
     volume: Number(r.volume),
   }));
+  // Daily rows in this table are raw. Return them on the split-only basis. A missing
+  // equity_corporate_actions table leaves the raw series, which is today's read.
+  let bars = stored;
+  if (timeframe === 'daily') {
+    try {
+      const actions = await loadCorporateActions([symbol]);
+      bars = splitAdjustStoredBars(stored, actions.get(symbol.toUpperCase()) ?? []);
+    } catch {
+      bars = stored;
+    }
+  }
   // Freshness is judged from the bar's session, NOT now(): intraday bars are stamped events (age from the bar's
   // timestamp); a daily bar is current until the next US session opens (see dailySeriesAsOf).
   const last = bars[bars.length - 1];
@@ -65,6 +77,22 @@ export async function pgReadBars(symbol: string, timeframe: BarTimeframe, limit 
     ? dailySeriesAsOf(new Date(last.ts).toISOString().slice(0, 10))
     : new Date(last.ts).toISOString();
   return { bars, fetchedAt };
+}
+
+/** True when the worker owns this symbol's daily bars. A failed lookup is treated as owned so a blip does not overwrite the worker series. */
+export async function isWorkerOwnedDailySymbol(symbol: string): Promise<boolean> {
+  try {
+    const rows = await q(
+      `SELECT 1 FROM symbol_universe
+        WHERE symbol = $1 AND enabled
+          AND lower(COALESCE(asset_type, 'equity')) IN ('equity', 'equities', 'stock', 'etf')
+        LIMIT 1`,
+      [symbol.toUpperCase()],
+    );
+    return rows.length > 0;
+  } catch {
+    return true;
+  }
 }
 
 export async function pgUpsertBars(symbol: string, timeframe: BarTimeframe, bars: OhlcBar[]): Promise<number> {

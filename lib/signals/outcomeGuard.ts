@@ -154,7 +154,7 @@ export interface HorizonObservation {
   barClass?: 'equity' | 'crypto';
 }
 
-export type HorizonWriteReason = 'labelled' | 'expired' | 'ambiguous' | 'suspect' | 'wrong_asset';
+export type HorizonWriteReason = 'labelled' | 'expired' | 'ambiguous' | 'suspect' | 'wrong_asset' | 'split_in_window';
 
 export type HorizonDecision =
   | { action: 'skip' }

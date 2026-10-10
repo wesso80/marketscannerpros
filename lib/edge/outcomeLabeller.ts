@@ -15,11 +15,12 @@
  */
 
 import { q } from '@/lib/db';
+import { equitySplitInWindow } from '@/lib/scanner/corporateActions';
 import { isUsTradingDay, lastCompletedUsSessionDate, nextUsTradingDay, nyDateTime } from '@/lib/time/usSession';
 
 export interface LabelResult {
   setupId: number;
-  status: 'pending' | 'partial' | 'complete';
+  status: 'pending' | 'partial' | 'complete' | 'no_data';
   mfe1d: number | null; mae1d: number | null;
   mfe5d: number | null; mae5d: number | null;
   mfe20d: number | null; mae20d: number | null;
@@ -127,6 +128,11 @@ export async function labelOutcome(setupId: number): Promise<LabelResult | null>
 
   // The ingest worker already maintains real equity and crypto daily OHLC.
   // Read it directly: a crypto ticker must never fall through to an equity-only AV endpoint.
+  // Stays raw. price_at_signal is the raw print stored with the setup, and this query compares
+  // that print to the raw close. splitAdjustStoredBars would move the exit and leave the entry.
+  // positionHorizonLabeller and aiOutcomePrices are split-only. This labeller is not.
+  // A split in equity_corporate_actions inside the forward window is outcome no_data.
+  // A missing table is not a split. Crypto rows have no equity split coefficient.
   const bars = await q<{ ts: Date | string; high: string; low: string; close: string }>(
     `SELECT ts, high, low, close FROM ohlcv_bars
       WHERE symbol = $1 AND timeframe = 'daily' AND ts >= $2::timestamptz - INTERVAL '1 day'
@@ -135,10 +141,28 @@ export async function labelOutcome(setupId: number): Promise<LabelResult | null>
   const fwd = pickForwardBars(bars.map(b => ({ ts: new Date(b.ts).getTime(), high: Number(b.high), low: Number(b.low), close: Number(b.close) })),
     s.surfaced_at.getTime(), s.market as 'equity' | 'crypto');
 
+  if (s.market === 'equity' && fwd.length > 0) {
+    const after = nyDateTime(s.surfaced_at.getTime()).ymd;
+    const through = new Date(fwd[fwd.length - 1].ts).toISOString().slice(0, 10);
+    try {
+      if (await equitySplitInWindow(s.symbol, after, through)) {
+        return {
+          setupId, status: 'no_data',
+          mfe1d: null, mae1d: null, mfe5d: null, mae5d: null, mfe20d: null, mae20d: null,
+          hitTarget5d: null, hitStop5d: null, hitTarget20d: null, hitStop20d: null,
+          tttDays: null, ttsDays: null, realisedR5d: null, realisedR20d: null, barsUsed: 0,
+        };
+      }
+    } catch {
+      // The table exists but the lookup failed. Leave the row pending rather than freeze no_data.
+      return null;
+    }
+  }
+
   const w1 = computeWindow(fwd, 1, entry, risk, target, stop, s.direction);
   const w5 = computeWindow(fwd, 5, entry, risk, target, stop, s.direction);
   const w20 = computeWindow(fwd, 20, entry, risk, target, stop, s.direction);
-  const overall: 'pending' | 'partial' | 'complete' =
+  const overall: 'pending' | 'partial' | 'complete' | 'no_data' =
     w20.status === 'complete' ? 'complete' :
     w5.status === 'complete' ? 'partial' :
     fwd.length > 0 ? 'partial' : 'pending';
@@ -187,7 +211,7 @@ export async function persistOutcome(workspaceId: string, label: LabelResult): P
 }
 
 /** Label every pending / partial outcome older than 1 day. */
-export async function labelAllPending(opts: { limit?: number } = {}): Promise<{ labelled: number; complete: number; partial: number; pending: number }> {
+export async function labelAllPending(opts: { limit?: number } = {}): Promise<{ labelled: number; complete: number; partial: number; pending: number; noData: number }> {
   const setups = await q<{ id: number; workspace_id: string }>(
     `SELECT s.id, s.workspace_id
        FROM edge_ledger_setups s
@@ -199,14 +223,15 @@ export async function labelAllPending(opts: { limit?: number } = {}): Promise<{ 
       LIMIT $1`,
     [opts.limit ?? 500],
   );
-  let complete = 0, partial = 0, pending = 0;
+  let complete = 0, partial = 0, pending = 0, noData = 0;
   for (const s of setups) {
     const label = await labelOutcome(s.id);
     if (!label) { pending++; continue; }
     await persistOutcome(s.workspace_id, label);
     if (label.status === 'complete') complete++;
     else if (label.status === 'partial') partial++;
+    else if (label.status === 'no_data') noData++;
     else pending++;
   }
-  return { labelled: setups.length, complete, partial, pending };
+  return { labelled: setups.length, complete, partial, pending, noData };
 }

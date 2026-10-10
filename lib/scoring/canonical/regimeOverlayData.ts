@@ -20,6 +20,7 @@ import { isDailySeriesStale } from '@/lib/time/dataFreshness';
 import { FRED_SERIES } from '@/lib/macro/fred';
 import { getFredCsvCached } from '@/lib/macro/fredCsv';
 import { avFetchDailyBars } from '@/lib/marketData/client';
+import { loadCorporateActions, splitAdjustStoredBars } from '@/lib/scanner/corporateActions';
 import { getCboeVixDailyCached } from '@/lib/macro/cboeVix';
 
 const TTL_MS = 15 * 60 * 1000;
@@ -51,7 +52,10 @@ export function trendFromCloses(closesNewestFirst: number[], asOf: string | null
 
 async function storedIndexTrend(symbol: string): Promise<IndexTrend | null> {
   const rows = await q<{ ts: Date | string; close: string | number }>(`SELECT ts, close FROM ohlcv_bars WHERE symbol = $1 AND timeframe = 'daily' ORDER BY ts DESC LIMIT 200`, [symbol]);
-  const closes = rows.map((r) => num(r.close)).filter((v): v is number => v !== null);
+  let actions: Awaited<ReturnType<typeof loadCorporateActions>> = new Map();
+  try { actions = await loadCorporateActions([symbol]); } catch { /* raw closes */ }
+  const adjusted = splitAdjustStoredBars(rows.map((r) => ({ ts: r.ts, close: num(r.close) })), actions.get(symbol.toUpperCase()) ?? []);
+  const closes = adjusted.map((r) => r.close).filter((v): v is number => v !== null);
   const latest = rows[0]?.ts ? new Date(rows[0].ts) : null;
   return trendFromCloses(closes, latest && !Number.isNaN(latest.getTime()) ? latest.toISOString() : null);
 }

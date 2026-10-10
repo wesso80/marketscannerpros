@@ -42,7 +42,7 @@ describe('worker equities wiring (source guard)', () => {
   });
 
   it('daily history and 60min are refetched only when their bar-close planner says so', () => {
-    const daily = processEquity.indexOf("fetchAVTimeSeries(symbol, 'daily', 'full')");
+    const daily = processEquity.indexOf("fetchAVTimeSeries(symbol, 'daily', 'full', captured)");
     const hourly = processEquity.indexOf("fetchAVTimeSeries(symbol, '60min', 'compact')");
     expect(processEquity.lastIndexOf('isDailyRefreshDue(hold.daily?.state, nowMs, cfg)', daily)).toBeGreaterThan(-1);
     expect(processEquity.lastIndexOf('isHourlyRefreshDue(hold.hourly, nowMs, cfg)', hourly)).toBeGreaterThan(-1);

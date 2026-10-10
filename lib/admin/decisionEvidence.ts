@@ -1,3 +1,4 @@
+import { loadCorporateActions, splitAdjustStoredBars } from '@/lib/scanner/corporateActions';
 import { readPositionHistory } from './positionHistory';
 import { q } from '@/lib/db';
 import { lastCompletedUsSessionDate } from '@/lib/time/usSession';
@@ -30,6 +31,10 @@ export async function enrichStoredPositionEvidence(packets: SavedPacket[], nowMs
   } catch { return packets; }
   const bySymbol = new Map<string, DailyBarLike[]>();
   for (const row of rows) { const bars = bySymbol.get(row.symbol) ?? []; bars.push(row); bySymbol.set(row.symbol, bars); }
+  try {
+    const actions = await loadCorporateActions(symbols);
+    for (const [symbol, bars] of bySymbol) bySymbol.set(symbol, splitAdjustStoredBars(bars, actions.get(symbol.toUpperCase()) ?? []));
+  } catch { /* missing table or a read error keeps the raw series */ }
   const completedThrough = lastCompletedUsSessionDate(nowMs);
   return packets.map(p => {
     const dailyBars = p.market === 'EQUITIES' && (!p.snapshot.positionTrend || p.snapshot.positionTrend.status !== 'ok') ? bySymbol.get(p.symbol) : null;

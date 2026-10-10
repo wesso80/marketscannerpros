@@ -36,12 +36,12 @@ type PendingRow = {
 };
 
 type HorizonTally = {
-  labeled: number; correct: number; wrong: number; neutral: number;
+  labeled: number; correct: number; wrong: number; neutral: number; noData: number;
   skippedNoPrice: number; skippedNoDirection: number; skippedUnsupported: number; skippedNotReady: number; alreadyLabeled: number;
 };
 
 function newTally(): HorizonTally {
-  return { labeled: 0, correct: 0, wrong: 0, neutral: 0, skippedNoPrice: 0, skippedNoDirection: 0, skippedUnsupported: 0, skippedNotReady: 0, alreadyLabeled: 0 };
+  return { labeled: 0, correct: 0, wrong: 0, neutral: 0, noData: 0, skippedNoPrice: 0, skippedNoDirection: 0, skippedUnsupported: 0, skippedNotReady: 0, alreadyLabeled: 0 };
 }
 
 /** Which optional outcome columns exist (migration 103 adds the 4h set and price_after_24h_at). */
@@ -163,6 +163,31 @@ export async function POST(req: NextRequest): Promise<Response> {
         if (Date.now() - startedMs >= budgetMs) { deferredOverBudget++; continue; }
 
         const px = await resolve(row.symbol, assetClass, signalAtMs, horizon);
+        if (px && 'blocked' in px) {
+          const provenance = JSON.stringify({ writer: 'label-ai-outcomes', method: 'first-completed-close-v1',
+            horizon, thresholdPct: OUTCOME_MOVE_THRESHOLD_PCT, direction, signalAt: new Date(signalAtMs).toISOString(),
+            entryPrice: entry, outcome: 'no_data', reason: 'split in the outcome window' });
+          const updated = horizon === '24h'
+            ? await q<{ id: number }>(
+                `UPDATE ai_signal_log
+                 SET outcome = $1, price_after_24h = $2, pct_move_24h = $3, price_after_24h_at = $5, outcome_measured_at = NOW(),
+                     outcome_provenance = $6::jsonb || jsonb_build_object('processedAt',NOW())
+                 WHERE id = $4 AND outcome = 'pending'
+                 RETURNING id`,
+                ['no_data', null, null, row.id, null, provenance],
+              )
+            : await q<{ id: number }>(
+                `UPDATE ai_signal_log
+                 SET outcome_4h = $1, price_after_4h = $2, pct_move_4h = $3, price_after_4h_at = $5, outcome_4h_measured_at = NOW(),
+                     outcome_4h_provenance = $6::jsonb || jsonb_build_object('processedAt',NOW())
+                 WHERE id = $4 AND outcome_4h IS NULL
+                 RETURNING id`,
+                ['no_data', null, null, row.id, null, provenance],
+              );
+          if (!updated.length) { t.alreadyLabeled++; continue; }
+          t.noData++;
+          continue;
+        }
         if (!px) { t.skippedNoPrice++; continue; }
 
         const move = pctMove(entry, px.price);

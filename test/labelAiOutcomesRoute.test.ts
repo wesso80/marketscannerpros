@@ -129,6 +129,22 @@ describe('POST /api/cron/label-ai-outcomes', () => {
     expect(sqlCalls(/price_at_signal\s*=/)).toHaveLength(0);
   });
 
+  it('stores no_data when a split sits inside the horizon and does not score the move', async () => {
+    state.rows24 = [row(1, 30)];
+    state.rows4 = [row(2, 5)];
+    mocks.resolve.mockResolvedValue({ blocked: 'split' });
+    const body = await (await POST(req())).json();
+    expect(body.horizons['24h']).toMatchObject({ labeled: 0, noData: 1, skippedNoPrice: 0 });
+    expect(body.horizons['4h']).toMatchObject({ labeled: 0, noData: 1 });
+    const writes = sqlCalls(/SET outcome(_4h)? = \$1/);
+    expect(writes).toHaveLength(2);
+    for (const [, params] of writes) {
+      expect((params as unknown[])[0]).toBe('no_data');
+      expect((params as unknown[])[1]).toBeNull();
+      expect(JSON.parse(String((params as unknown[])[5]))).toMatchObject({ outcome: 'no_data', reason: 'split in the outcome window' });
+    }
+  });
+
   it('writes 4h results into the 4h columns and 24h results into the 24h columns', async () => {
     state.rows24 = [row(1, 30)];
     state.rows4 = [row(2, 5)];
