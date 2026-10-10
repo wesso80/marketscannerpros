@@ -3,6 +3,8 @@
 import { ALERT_LIMITS } from '@/lib/alerts/planLimits';
 import { WATCHLIST_LIMITS } from '@/lib/tiers';
 import { FREE_COPY } from '@/components/free/copy';
+import ProLoungeNote from '@/components/account/ProLoungeNote';
+import { PUBLIC_PRO_LOUNGE_FEATURE } from '@/lib/publicPlans';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    V2 Account Section — Embedded in Workspace Settings tab
@@ -266,7 +268,7 @@ export default function AccountSection() {
   ];
 
   const planFeatures = useMemo(() => {
-    if (isPaid) return ['Unlimited Symbol reports', '20 AI questions a day', 'Macro liquidity research (Global M2, liquidity transmission, market fragility)', 'Historical backtesting (hypothetical, for learning)', 'Options and derivatives tools', 'Unlimited open portfolio positions and journal entries', 'Options research, exports, and stored M2 history'];
+    if (isPaid) return ['Unlimited Symbol reports', '20 AI questions a day', 'Macro liquidity research (Global M2, liquidity transmission, market fragility)', 'Historical backtesting (hypothetical, for learning)', 'Options and derivatives tools', 'Unlimited open portfolio positions and journal entries', 'Options research, exports, and stored M2 history', PUBLIC_PRO_LOUNGE_FEATURE];
     return [FREE_COPY.pricing.scans, 'Watchlists, markets and macro dashboards', FREE_COPY.pricing.macro, FREE_COPY.pricing.journal, 'Educational content and platform guides'];
   }, [isPaid]);
 
@@ -383,6 +385,7 @@ export default function AccountSection() {
               </div>
               <Badge label="Active" color={currentTier.color} small />
             </div>
+            {isPaid ? <ProLoungeNote className="mt-3 text-xs text-slate-300" /> : null}
           </Card>
 
           {/* Usage */}

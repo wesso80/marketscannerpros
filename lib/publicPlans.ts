@@ -8,6 +8,7 @@ export const PUBLIC_DAILY_LIMITS = {
   free: { symbol: 3, ai: 0 },
   pro: { symbol: null, ai: 20 },
 } as const;
+export const PUBLIC_PRO_LOUNGE_FEATURE = 'Private Pro lounge on our Discord';
 export function publicDailyLimit(plan: PublicPlan, kind: PublicQuotaKind): number | null {
   if (!Object.prototype.hasOwnProperty.call(PUBLIC_DAILY_LIMITS, plan) || !['symbol','ai'].includes(kind)) throw new Error('Invalid public quota policy');
   return PUBLIC_DAILY_LIMITS[plan][kind];

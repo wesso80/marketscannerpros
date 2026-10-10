@@ -1,7 +1,7 @@
 "use client";
 import Link from 'next/link';
 import { PLAN_PRICES } from '@/lib/planPrices';
-import { PUBLIC_DAILY_LIMITS, PUBLIC_FREE_RECORD_LIMITS } from '@/lib/publicPlans';
+import { PUBLIC_DAILY_LIMITS, PUBLIC_FREE_RECORD_LIMITS, PUBLIC_PRO_LOUNGE_FEATURE } from '@/lib/publicPlans';
 import styles from './ResearchAccount.module.css';
 
 type Props = {
@@ -49,6 +49,7 @@ export default function ResearchPricing({cycle,onCycle,onChoose,loading,error,on
           <li>Portfolio and Journal advanced analysis</li>
           <li>Unlimited open portfolio positions and journal entries</li>
           <li>Exports and paid workspace tools</li>
+          <li>{PUBLIC_PRO_LOUNGE_FEATURE}</li>
           {quotasEnabled===true && <li>{PUBLIC_DAILY_LIMITS.pro.ai} AI questions a day</li>}
         </ul>
       </article>

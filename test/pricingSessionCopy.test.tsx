@@ -35,6 +35,7 @@ it('an unauthenticated tier claim does not grant plan management',async()=>{
 });
 it('approved pricing uses configured prices, states the AI cap and the 7-day trial from the Terms',async()=>{
  render(<PricingPage/>);await screen.findByText('20 AI questions a day');
+ expect(screen.getByText('Private Pro lounge on our Discord')).toBeTruthy();
  expect(document.body.textContent).toContain('US'+PLAN_PRICES.pro.monthly);
  fireEvent.click(screen.getByRole('button',{name:'Annual'}));
  expect(document.body.textContent).toContain('US'+PLAN_PRICES.pro.yearly);
