@@ -13,6 +13,7 @@ import type { PaperExitPath } from './portfolio-lab/paperExitPath';
  */
 
 import type { AdminResearchPacket } from "./getAdminResearchPacket";
+import { hasRealOptionsData } from "@/lib/engines/optionsIntelligence";
 import type { ResearchLifecycle } from "./adminTypes";
 import type { BiasState } from "./types";
 import {
@@ -348,10 +349,7 @@ export function evidenceCompleteness(packet: AdminResearchPacket): { factor: num
   let penalty = 0;
   const add = (field: string, weight: number) => { missing.push(field); penalty += weight; };
 
-  const oi = packet.optionsIntelligence as Partial<AdminResearchPacket["optionsIntelligence"]> | undefined;
-  const syntheticOptions = !oi || oi.fallbackScore !== undefined
-    || (oi.missingInputs ?? []).some((m) => /options chain/i.test(m))
-    || oi.dataTruth?.status === "MISSING" || !(Number(oi.dataTruth?.trustScore) > 0);
+  const syntheticOptions = !hasRealOptionsData(packet.optionsIntelligence);
   if (packet.assetClass === "crypto") add("options: no options chain for spot crypto", MISSING_CONTEXT_PENALTY.options);
   else if (syntheticOptions) add("options: real chain data unavailable (synthetic placeholder ignored)", MISSING_CONTEXT_PENALTY.options);
 

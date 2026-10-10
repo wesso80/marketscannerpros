@@ -1,5 +1,6 @@
 import type { Market } from "@/types/operator";
 import { q } from "@/lib/db";
+import { hasRealOptionsData } from "@/lib/engines/optionsIntelligence";
 import { getAdminResearchPacketsForSymbols, type AdminResearchPacket } from "@/lib/admin/getAdminResearchPacket";
 import { appendResearchEvent, type ResearchEventType } from "@/lib/admin/researchEventTape";
 import { snapshotResearchPacket, loadPriorPacketSnapshot } from "@/lib/admin/researchPacketHistory";
@@ -170,8 +171,9 @@ export async function runResearchScheduler(input: SchedulerRunInput): Promise<Sc
             }
           }
 
-          // Options pressure changed
+          // Options pressure changed: real options-chain data only (the synthetic placeholder never raises an event).
           if (
+            hasRealOptionsData(packet.optionsIntelligence) &&
             (priorSnapshot.packetJson.optionsIntelligence?.optionsPressureScore || 0) !==
             packet.optionsIntelligence.optionsPressureScore
           ) {

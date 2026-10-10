@@ -1,5 +1,6 @@
 import { priorityDeskTopKey, priorityDeskCalls } from "@/lib/admin/pageCalls";
 import { NextRequest, NextResponse } from "next/server";
+import { hasRealOptionsData } from "@/lib/engines/optionsIntelligence";
 import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
 import { isOperator } from "@/lib/quant/operatorAuth";
@@ -55,7 +56,10 @@ export async function GET(req: NextRequest) {
 
   const bestEquities = topBy(all, (p) => p.assetClass === "equity");
   const bestCrypto = topBy(all, (p) => p.assetClass === "crypto");
-  const bestOptionsPressure = topBy(all, (p) => p.optionsIntelligence.optionsPressureScore >= 65);
+  // Options pressure only ranks on real options-chain data; the options engine is a synthetic placeholder today, so
+  // this list stays empty (with a reason) instead of ranking symbols on made-up numbers.
+  const bestOptionsPressure = topBy(all, (p) => hasRealOptionsData(p.optionsIntelligence) && p.optionsIntelligence.optionsPressureScore >= 65);
+  const optionsDataAvailable = all.some((p) => hasRealOptionsData(p.optionsIntelligence));
   const bestVolatilityCompression = topBy(all, (p) => to100(p.volatilityState.breakoutReadiness) >= 60 && !p.volatilityState.exhaustion);
   const bestTimeConfluence = topBy(all, (p) => p.timeConfluence.score >= 0.7 || p.timeConfluence.hotWindow);
   const bestNewsDriven = topBy(all, (p) => p.newsContext.status === "ELEVATED");
@@ -102,6 +106,10 @@ export async function GET(req: NextRequest) {
     bestEquities,
     bestCrypto,
     bestOptionsPressure,
+    unavailableLists: {
+      ...(optionsDataAvailable ? {} : { bestOptionsPressure: "No real options-chain data is connected; options pressure is not inferred." }),
+      bestNewsDriven: "No news feed is connected to research packets; news-driven setups are not inferred.",
+    },
     bestVolatilityCompression,
     bestTimeConfluence,
     bestNewsDriven,

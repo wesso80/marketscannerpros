@@ -19,7 +19,7 @@ import { classifySetupWithPlaybook, getSetupDefinition } from "@/lib/engines/set
 import { detectTrapRisk, type TrapDetectionResult } from "@/lib/engines/trapDetection";
 import { buildJournalDNA, computeJournalPatternBoost, type JournalCaseRow } from "@/lib/engines/journalLearning";
 import { computeOptionsIntelligence, type OptionsIntelligence } from "@/lib/engines/optionsIntelligence";
-import { computeCryptoRegimeIntelligence, type CryptoRegimeIntelligence } from "@/lib/engines/cryptoRegimeIntelligence";
+import type { CryptoRegimeIntelligence } from "@/lib/engines/cryptoRegimeIntelligence";
 import { computeEarningsRisk, type EarningsRisk } from "@/lib/engines/earningsRisk";
 import { snapshotResearchPacket, loadPriorPacketSnapshot, type PacketSnapshot } from "@/lib/admin/researchPacketHistory";
 import { computeResearchDelta, summarizeResearchDelta } from "@/lib/admin/researchDelta";
@@ -174,11 +174,14 @@ function deriveMacroContext(snapshot: AdminSymbolIntelligence) {
   return { regime: "NEUTRAL" as const, note: "Mixed trend stack; monitor regime confirmation." };
 }
 
-function deriveNewsContext(snapshot: AdminSymbolIntelligence) {
-  const elevated = (snapshot.indicators.atr ?? 0) > 0 && (snapshot.indicators.bbwpPercentile ?? 50) > 85;
+/**
+ * No news feed is connected to research packets. The status used to be inferred from volatility (BBWP > 85 = ELEVATED,
+ * otherwise CALM), which presented a volatility reading as news. It is now UNKNOWN; volatility is reported separately.
+ */
+function deriveNewsContext() {
   return {
-    status: elevated ? ("ELEVATED" as const) : ("CALM" as const),
-    note: elevated ? "Volatility profile suggests elevated event/news sensitivity." : "No elevated news shock signature detected in volatility profile.",
+    status: "UNKNOWN" as const,
+    note: "No news feed is connected to research packets; news status is unknown (volatility is reported separately).",
   };
 }
 
@@ -423,7 +426,8 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
     snapshot,
     dataTruth,
     optionsCrowdingScore: null,
-    hasNewsShock: (snapshot.indicators.bbwpPercentile ?? 0) > 90,
+    // No news feed reaches research packets, so a news shock is unknown (not inferred from volatility, which
+    // trap detection already flags as VOLATILITY_TRAP).
     earningsWindowHours: null,
     higherTimeframeConflict: snapshot.bias === "LONG" ? snapshot.indicators.ema50 > snapshot.indicators.ema20 : snapshot.indicators.ema50 < snapshot.indicators.ema20,
   });
@@ -432,7 +436,7 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
   const invalidations = invalidationConditions(snapshot);
   const checks = nextResearchChecksFromSnapshot(snapshot, dataTruth);
   const macroContext = deriveMacroContext(snapshot);
-  const newsContext = deriveNewsContext(snapshot);
+  const newsContext = deriveNewsContext();
   const assetClass = toAssetClass(market);
   
   // Phase 10: Wire rich intelligence engines
@@ -455,12 +459,10 @@ export async function buildAdminResearchScan(params: AdminResearchPacketParams):
 
   const cryptoContextData: CryptoRegimeIntelligence | { enabled: false; note: string } =
     assetClass === "crypto"
-      ? await computeCryptoRegimeIntelligence({
-          currentPrice: snapshot.price,
-          marketCapChange: 0, // Not available from snapshot; would need external API
-          btcDominance: 45, // Not available from snapshot; would need external API
-          dataTruth,
-        })
+      // Not connected: BTC dominance, market-cap change and derivatives are not in the scan snapshot. This used to call
+      // computeCryptoRegimeIntelligence with fixed inputs (0% change, 45% dominance) and hard-coded category strengths,
+      // presenting a made-up regime as fact. It is reported as unavailable instead (Evidence Quality is reduced for it).
+      ? { enabled: false as const, note: "Crypto market context (BTC dominance, market-cap change, funding/OI) is not connected to research packets; not inferred." }
       : { enabled: false as const, note: "Crypto context not applicable for equities." };
 
   const assessed = assessAlertEligibility({
