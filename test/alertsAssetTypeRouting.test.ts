@@ -135,6 +135,32 @@ describe('price checker routes by asset type', () => {
     await runCheck(new NextRequest('https://example.test/api/alerts/check'));
     expect(String(fetchMock.mock.calls[0][0])).toContain('function=GLOBAL_QUOTE');
   });
+
+  it('prices CVX, MCD, PG, ABBV and PFE equity alerts as stocks', async () => {
+    const symbols = ['CVX', 'MCD', 'PG', 'ABBV', 'PFE'];
+    withAlerts(symbols.map((symbol) => ({
+      id: symbol, workspace_id: 'ws-1', symbol, asset_type: 'equity',
+      condition_type: 'price_below', condition_value: '10', last_price: '12',
+      is_recurring: false, notify_email: false, notify_push: false, name: symbol,
+    })));
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ 'Global Quote': { '05. price': '200', '10. change percent': '1%' } }) });
+    const body = await (await runCheck(new NextRequest('https://example.test/api/alerts/check'))).json();
+    const urls = fetchMock.mock.calls.map((call) => String(call[0]));
+    expect(urls).toHaveLength(symbols.length);
+    for (const symbol of symbols) {
+      expect(urls.some((url) => url.includes('function=GLOBAL_QUOTE') && url.includes(`symbol=${symbol}`))).toBe(true);
+    }
+    expect(urls.some((url) => url.includes('COINGECKO') || url.includes('function=CRYPTO'))).toBe(false);
+    expect(body.errors).toBeUndefined();
+  });
+
+  it('does not price a crypto alert on CVX as the stock', async () => {
+    withAlerts([{ id: 'c1', workspace_id: 'ws-1', symbol: 'CVX', asset_type: 'crypto', condition_type: 'price_above', condition_value: '1', last_price: null, is_recurring: false, notify_email: false, notify_push: false, name: 'CVX' }]);
+    const body = await (await runCheck(new NextRequest('https://example.test/api/alerts/check'))).json();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(body.triggered).toBe(0);
+    expect(JSON.stringify(body.errors)).toMatch(/CVX/);
+  });
 });
 
 describe('UI callers send a market', () => {
