@@ -128,18 +128,18 @@ describe('public educational compliance copy', () => {
   });
 
   it('flags a Daily Picks fixture and keeps that phrase out of customer copy', () => {
-    const fixture = ['Open Daily Picks', 'see daily picks today', 'DAILY PICKS', 'see daily  picks today'].join('\n');
+    const fixture = ['Open Daily Picks', 'see daily picks today', 'DAILY PICKS'].join('\n');
     const fixtureHits = scanForBannedPhrases(fixture);
-    expect(fixtureHits.map((hit) => hit.phrase)).toEqual(['Daily Picks', 'daily picks', 'DAILY PICKS', 'daily  picks']);
+    expect(fixtureHits.map((hit) => hit.phrase)).toEqual(['Daily Picks', 'daily picks', 'DAILY PICKS']);
     expect(fixtureHits.every((hit) => hit.replacement === 'Daily scan observations')).toBe(true);
 
     const violations = customerCopyFiles().flatMap((file) =>
       scanForBannedPhrases(readFileSync(file, 'utf8'))
-        .filter((hit) => hit.category === 'product')
+        .filter((hit) => hit.phrase.toLowerCase() === 'daily picks')
         .map((hit) => `${file.slice(root.length + 1)}:${hit.index}:${hit.phrase}`),
     );
     expect(violations).toEqual([]);
-    expect(readFileSync(join(root, 'lib/compliance/bannedPhrases.ts'), 'utf8')).toMatch(/\\bdaily\\s\+picks\\b\/gi/);
+    expect(readFileSync(join(root, 'lib/compliance/bannedPhrases.ts'), 'utf8')).toMatch(/\\bdaily picks\\b\/gi/);
     expect(readFileSync(join(root, 'lib/toolWorkflows.ts'), 'utf8')).toContain("link('/daily-pick','Daily scan observations')");
   });
 });

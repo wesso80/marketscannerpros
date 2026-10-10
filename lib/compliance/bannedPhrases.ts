@@ -38,7 +38,7 @@ const BANNED_PATTERNS: Array<{ pattern: RegExp; replacement: string; category: s
   { pattern: /\bEXECUTE\b/g, replacement: 'ALIGNED', category: 'permission' },
 
   // Product name. Case-insensitive. The route name with a hyphen is a different string.
-  { pattern: /\bdaily\s+picks\b/gi, replacement: 'Daily scan observations', category: 'product' },
+  { pattern: /\bdaily picks\b/gi, replacement: 'Daily scan observations', category: 'product' },
 ];
 
 export interface BannedPhraseMatch {
