@@ -1,4 +1,5 @@
 import { currentAvBudget, runWithAvBudget } from '@/lib/avLimiter';
+import { runWithCgCaller } from '@/lib/admin/cgCallers';
 import {reportCryptoCycleHealth} from '@/lib/admin/cryptoOpsAlerts';
 import {runCryptoAutomation} from '@/lib/admin/cryptoAutomation';
 import {cryptoMarketsExitsPaused,cryptoMarketsPaused,pausedCryptoMarketsBody} from '@/lib/admin/cryptoMarketsPause';
@@ -81,7 +82,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     // Exit-only work runs before any potentially slow/failed discovery request.
     const monitoring=await runCryptoPaperAll(true).catch(()=>({ok:false,error:'Crypto exit monitoring failed'}));
     const baseMonitoring=await runCryptoBaseSleeveAll(true).catch(()=>({ok:false,error:'Base-breakout exit monitoring failed'}));
-    const scanning=await runCryptoAutomation().catch(()=>({ok:false,error:'Crypto background scan failed'}));
+    const scanning=await runWithCgCaller('arca-cycle:automation',()=>runCryptoAutomation()).catch(()=>({ok:false,error:'Crypto background scan failed'}));
     const scanFailed='ok' in scanning&&!scanning.ok;
     // Full cycle rechecks protection and then uses the newly saved scan immediately.
     const cryptoPaper=scanFailed?{ok:false,skipped:true,reason:'Entry phase skipped because scanning failed'}:await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper entry cycle failed'}));
@@ -97,10 +98,10 @@ export async function POST(req: NextRequest): Promise<Response> {
     // The two Jev equity pages are open while the evening cron is skipped, so their daily scoring step runs here, once per UTC day. Evidence only.
     const newsJev=await equityNewsJevFallback(calibrationRedis,discoveryOnlyAction('/api/cron/evening-packet')==='skip_job',(redis)=>runNewsJevDailyOnce(redis).catch(()=>({ok:false,error:'News verification failed'})));
     // Non-essential CoinGecko market context runs last and never affects this run's health status.
-    const marketData=await runCryptoMarketData().catch(()=>({ok:false,error:'CoinGecko market data failed'}));
-    const newListings=await runNewListings().catch(()=>({ok:false,error:'CoinGecko new listings failed'}));
+    const marketData=await runWithCgCaller('arca-cycle:market-data',()=>runCryptoMarketData()).catch(()=>({ok:false,error:'CoinGecko market data failed'}));
+    const newListings=await runWithCgCaller('arca-cycle:new-listings',()=>runNewListings()).catch(()=>({ok:false,error:'CoinGecko new listings failed'}));
     // Approved history backfill / daily top-up: a small throttled batch per run (does nothing until approved).
-    const history=await historyStep(CG_HISTORY.callsPerCronRun).catch(()=>({ok:false,error:'History batch failed'}));
+    const history=await runWithCgCaller('arca-cycle:history',()=>historyStep(CG_HISTORY.callsPerCronRun)).catch(()=>({ok:false,error:'History batch failed'}));
     // Research only: replays a few skipped signals whose horizon has passed. Never affects this run's health.
     const signalLedger=await resolveSkippedSignals().catch(()=>({ok:false,error:'Signal ledger resolution failed'}));
     const variantE=await runVariantEStep().catch(()=>({ok:false,error:'Variant E shadow step failed'}));
@@ -117,9 +118,9 @@ export async function POST(req: NextRequest): Promise<Response> {
     await runCryptoPaperAll().catch(()=>({ok:false,error:'Crypto paper cycle failed'}));
     const calibrationRedis=getRedis();
     if(calibrationRedis)await runDailyCalibration(calibrationRedis).catch(()=>undefined);
-    await runCryptoMarketData().catch(()=>undefined);
-    await runNewListings().catch(()=>undefined);
-    await historyStep(CG_HISTORY.callsPerCronRun).catch(()=>undefined);
+    await runWithCgCaller('arca-cycle:market-data',()=>runCryptoMarketData()).catch(()=>undefined);
+    await runWithCgCaller('arca-cycle:new-listings',()=>runNewListings()).catch(()=>undefined);
+    await runWithCgCaller('arca-cycle:history',()=>historyStep(CG_HISTORY.callsPerCronRun)).catch(()=>undefined);
     await resolveSkippedSignals().catch(()=>undefined);
     await runVariantEStep().catch(()=>undefined);
     await scoreLiveSignals().catch(()=>undefined);

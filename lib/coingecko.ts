@@ -41,6 +41,7 @@ const getWebSocketUrl = () => process.env.COINGECKO_WS_URL || '';
 import { createHash } from 'node:crypto';
 import { coinGeckoCircuit } from '@/lib/circuitBreaker';
 import { recordCgCall } from '@/lib/admin/cgCredits';
+import { cgEndpointName, currentCgCaller } from '@/lib/admin/cgCallers';
 import { isCgMonthlyCap, reserveCgCall } from '@/lib/admin/cgDailyCap';
 import { getRedis } from '@/lib/redis';
 import {
@@ -340,7 +341,9 @@ async function cgFetch<T>(
 
     try {
       // Every HTTP attempt (retries included) is counted toward the credit budget.
-      const response = await coinGeckoCircuit.call(() => (recordCgCall(endpointFamily), fetch(url, {
+      const caller = currentCgCaller();
+      const endpoint = cgEndpointName(path);
+      const response = await coinGeckoCircuit.call(() => (recordCgCall(endpointFamily, { caller, endpoint }), fetch(url, {
         ...(options?.init || {}),
         headers: {
           ...getHeaders(),

@@ -27,6 +27,7 @@ import { evaluateHardBlocks, macroEventFlags, type HardBlockResult } from '@/lib
 import { boundedBatch } from '@/lib/scanner/boundedBatch';
 import { COINGECKO_ID_MAP, getDerivativesForSymbols, getGlobalData, getOHLC, getOHLCWithVolume, resolveSymbolToId } from "@/lib/coingecko";
 import { fetchCryptoSeries, type CryptoSeries, type CryptoScanTimeframe } from "@/lib/scanner/cryptoBars";
+import { runWithCgCaller } from '@/lib/admin/cgCallers';
 import { aggregateBars, detectPriceDiscontinuity, type Bar as ScanBar } from "@/lib/scanner/barAggregation";
 import { loadCorporateActions, splitAdjustStoredBars } from '@/lib/scanner/corporateActions';
 import { evaluateDataTrust, lastCompletedEquitySession, type DataTrustResult } from "@/lib/scanner/dataTrust";
@@ -1611,12 +1612,12 @@ async function runScanner(req: NextRequest, capturePublicRows?: (rows: readonly 
     if (type === 'crypto') {
       const cryptoSymbols = [...new Set(['BTC', ...limited])];
       const budgetMs = Math.max(0, 22_000 - (Date.now() - requestStartedAt));
-      const [seriesReads, derivativeReads] = await Promise.all([
+      const [seriesReads, derivativeReads] = await runWithCgCaller('scanner-run', () => Promise.all([
         boundedBatch(cryptoSymbols, symbol => fetchCryptoSeries(symbol, cryptoTimeframe, requestStartedAt, {
           requestOptions: { retries: 0, timeoutMs: 4_000 },
         }), { concurrency: 5, budgetMs }),
         boundedBatch([limited], symbols => getDerivativesForSymbols(symbols), { concurrency: 1, budgetMs }),
-      ]);
+      ]));
       cryptoSymbols.forEach((symbol, index) => cryptoSeries.set(symbol, seriesReads[index]));
       // SC-12: never list the same coin twice under different tickers.
       for (const [alias, canonical] of findCryptoAliases(cryptoSymbols.map((symbol, index) => {

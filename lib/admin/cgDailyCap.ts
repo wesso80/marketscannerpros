@@ -1,5 +1,6 @@
 import * as redisModule from '@/lib/redis';
 import { currentAvBudget } from '@/lib/avLimiter';
+import { formatCgCallerCounts, readCgCallerCounts } from '@/lib/admin/cgCallers';
 
 /**
  * Hard daily gate for CoinGecko. The monthly target is CG_MONTHLY_CREDITS * CG_TARGET_PCT
@@ -499,9 +500,9 @@ function noteBudgetLine(calls: number, cap: number, refused: number, now: number
   console.log(`[CoinGecko] budget calls_today=${calls} cap=${cap} refused=${refused}`);
 }
 
-function formatHourlyLine(reserved: number | null, cap: number, spent: RoleCounts, timeouts: number): string {
+function formatHourlyLine(reserved: number | null, cap: number, spent: RoleCounts, timeouts: number, callers: string): string {
   const reservedText = reserved === null ? 'unknown' : String(reserved);
-  return `[CoinGecko] daily reserved=${reservedText} cap=${cap} fallback web=${spent.web} worker=${spent.worker} jarvis=${spent.jarvis} timeouts=${timeouts}`;
+  return `[CoinGecko] daily reserved=${reservedText} cap=${cap} fallback web=${spent.web} worker=${spent.worker} jarvis=${spent.jarvis} timeouts=${timeouts} callers=${callers}`;
 }
 
 async function maybeHourlyLog(now: number, env: Record<string, string | undefined>, reserved: number | null, cap: number): Promise<void> {
@@ -516,7 +517,8 @@ async function maybeHourlyLog(now: number, env: Record<string, string | undefine
   const spent = shelf?.spent ?? emptyRoles();
   const shelfSpent = spent.web + spent.worker + spent.jarvis;
   const total = reserved === null ? (shelf ? shelfSpent : null) : reserved + shelfSpent;
-  console.log(formatHourlyLine(total, cap, spent, shelf?.timeouts ?? 0));
+  const callers = await readCgCallerCounts(now).then(formatCgCallerCounts).catch(() => 'none');
+  console.log(formatHourlyLine(total, cap, spent, shelf?.timeouts ?? 0, callers));
 }
 
 function redisFailureCode(err: unknown): FallbackCode {

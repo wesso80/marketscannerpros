@@ -71,7 +71,9 @@ import {
   resetCgCapStateForTests,
   setCgShelfForTests,
   utcMonthParts,
+  CG_REDIS_PREFIX,
 } from '@/lib/admin/cgDailyCap';
+import { CG_CALLER_REDIS_PREFIX, cgEndpointName, formatCgCallerCounts, readCgCallerCounts, resetCgCallerCountsForTests, runWithCgCaller } from '@/lib/admin/cgCallers';
 import { cgBudgetStatus } from '@/lib/admin/cgCredits';
 import { CG_BYPASS_FIXTURES, evalRunsCapScript, isCgCapScript } from './helpers/cgEvalGuard';
 
@@ -140,6 +142,7 @@ function makeShelf() {
 beforeEach(() => {
   holder.redis = makeRedis();
   resetCgCapStateForTests();
+  resetCgCallerCountsForTests();
   resetCgResponseCacheForTests();
   setCgShelfForTests(makeShelf());
   vi.stubEnv('CG_MONTHLY_CREDITS', '500000');
@@ -273,6 +276,24 @@ describe('daily cap math', () => {
     expect(await getSimplePrices(['solana'], { noStore: true })).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(shelf.rows.get('2026-10-31:web')?.spent).toBe(2);
+  });
+
+  it('records the caller and the endpoint for each attempt', async () => {
+    expect(CG_CALLER_REDIS_PREFIX).toBe(CG_REDIS_PREFIX);
+    expect(cgEndpointName('/simple/price')).toBe('simple/price');
+    expect(cgEndpointName('/coins/markets')).toBe('coins/markets');
+    expect(cgEndpointName('/coins/bitcoin/market_chart')).toBe('market_chart');
+    expect(cgEndpointName('/coins/bitcoin/market_chart/range')).toBe('market_chart/range');
+    expect(cgEndpointName('/coins/bitcoin/ohlc/range')).toBe('ohlc/range');
+    const redis = makeRedis();
+    holder.redis = redis;
+    seedKey(redis, OCT31, 0);
+    vi.stubGlobal('fetch', vi.fn(async () => priceResponse()));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await runWithCgCaller('arca-cycle:history', () => getSimplePrices(['bitcoin'], { noStore: true }));
+    const counts = await readCgCallerCounts(OCT31);
+    expect(counts).toEqual({ 'arca-cycle:history': { 'simple/price': 1 } });
+    expect(formatCgCallerCounts(counts)).toBe('arca-cycle:history|simple/price=1');
   });
 
   it('falls back to 16500 when CG_DAILY_HARD_MAX is not a positive number', async () => {
@@ -490,9 +511,9 @@ describe('cgFetch gate', () => {
     vi.setSystemTime(OCT31 + 60 * 60 * 1000 + 1);
     await getSimplePrices(['ethereum'], { noStore: true });
     const lines = log.mock.calls.map((call) => String(call[0])).filter((line) => line.startsWith('[CoinGecko] daily '));
-    expect(lines).toEqual([
-      expect.stringMatching(/^\[CoinGecko\] daily reserved=\d+ cap=\d+ fallback web=\d+ worker=\d+ jarvis=\d+ timeouts=\d+$/),
-    ]);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/^\[CoinGecko\] daily reserved=\d+ cap=\d+ fallback web=\d+ worker=\d+ jarvis=\d+ timeouts=\d+ callers=/);
+    expect(lines[0]).toContain('callers=unknown|simple/price=1');
   });
 
   it('does not treat a foreign eval tuple as the cap decision', async () => {

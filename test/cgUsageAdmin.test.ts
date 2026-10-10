@@ -26,6 +26,7 @@ const readout = {
   globalReserved: 12,
   fallbackByRole: { web: 2, worker: 0, jarvis: 0 },
   timeouts: 3,
+  callsByCaller: { 'arca-cycle:history': { 'market_chart/range': 40 } },
 };
 
 beforeEach(() => {
@@ -50,6 +51,7 @@ describe('GET /api/admin/cg-usage', () => {
       globalReserved: 12,
       fallbackByRole: { web: 2, worker: 0, jarvis: 0 },
       timeouts: 3,
+      callsByCaller: { 'arca-cycle:history': { 'market_chart/range': 40 } },
     });
   });
 });
