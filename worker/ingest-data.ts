@@ -60,6 +60,7 @@ import {
   type EquityBarSchedule,
   type WorkerEquityQuote,
 } from '../lib/worker/equityBulk';
+import { partitionAvEquitySymbols, unsupportedAvLogOnce } from '../lib/worker/unsupportedAvSymbol';
 
 // ============================================================================
 // Signal Detection Types
@@ -475,12 +476,24 @@ function aggregate1HTo4H(bars: TGMBar[]): TGMBar[] {
   return result;
 }
 
+function supportedAvSymbols(symbols: string[]): string[] {
+  const parted = partitionAvEquitySymbols(symbols);
+  for (const decision of parted.skipped) {
+    const line = unsupportedAvLogOnce(decision);
+    if (line) console.warn(line);
+  }
+  return parted.fetch;
+}
+
 async function fetchAVTimeSeries(
   symbol: string,
   interval: string = 'daily',
   outputsize: string = 'compact',
   captured?: { payload: unknown },
 ): Promise<AVBar[]> {
+  const [callable] = supportedAvSymbols([symbol]);
+  if (!callable) return [];
+  symbol = callable;
   if (!(await takeWorkerAvToken())) return [];
 
   const functionName = interval === 'daily' 
@@ -548,6 +561,9 @@ async function fetchAVGlobalQuote(symbol: string): Promise<{
   changePct: number;
   latestDay: string;
 } | null> {
+  const [callable] = supportedAvSymbols([symbol]);
+  if (!callable) return null;
+  symbol = callable;
   if (!(await takeWorkerAvToken())) return null;
 
   const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&entitlement=realtime&apikey=${getEnv('ALPHA_VANTAGE_API_KEY')}`;
@@ -582,10 +598,11 @@ async function fetchAVGlobalQuote(symbol: string): Promise<{
  * fetchAVGlobalQuote produced. Throws on HTTP errors and AV error / throttle payloads.
  */
 async function fetchAVBulkQuotes(symbols: string[]): Promise<Map<string, WorkerEquityQuote>> {
-  if (symbols.length === 0) return new Map();
+  const callable = supportedAvSymbols(symbols);
+  if (callable.length === 0) return new Map();
   if (!(await takeWorkerAvToken())) return new Map();
 
-  const symbolList = symbols.join(',');
+  const symbolList = callable.join(',');
   const url = `https://www.alphavantage.co/query?function=REALTIME_BULK_QUOTES&symbol=${encodeURIComponent(symbolList)}&entitlement=realtime&apikey=${getEnv('ALPHA_VANTAGE_API_KEY')}`;
 
   const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
@@ -1754,7 +1771,7 @@ async function refreshAndCaptureAccounts() {
       ids => getMarketData({ ids, per_page: ids.length, page: 1, precision: 'full' }, { retries: 1, timeoutMs: 6000 })));
     await upsertQuotesBatch([...snapshot.quotes.entries()]);
   }
-  const equities = missing.filter(row => row.asset_type === 'equity').map(row => row.symbol);
+  const equities = supportedAvSymbols(missing.filter(row => row.asset_type === 'equity').map(row => row.symbol));
   if (isUsRegularSessionOpen(now.getTime())) {
     for (const batch of chunkSymbols(equities)) {
       try {
@@ -1853,9 +1870,9 @@ async function runIngestionCycle(
   const equityQuotesAllowed = equitySessionState.mode === 'market' || runEquityOffhoursScan;
   const bulkQuotes = new Map<string, WorkerEquityQuote>();
   let bulkQuotesPersisted = false;
-  const bulkSymbols = symbols
+  const bulkSymbols = supportedAvSymbols(symbols
     .filter((s) => s.asset_type !== 'crypto' && s.asset_type !== 'forex')
-    .map((s) => s.symbol);
+    .map((s) => s.symbol));
   if (equityQuotesAllowed && bulkSymbols.length > 0) {
     for (const batch of chunkSymbols(bulkSymbols)) {
       try {
@@ -1895,6 +1912,7 @@ async function runIngestionCycle(
     for (const { symbol, tier, asset_type, last_fetched_at } of batch) {
       try {
         const isEquity = asset_type !== 'crypto';
+        if (isEquity && supportedAvSymbols([symbol]).length === 0) continue;
         // Daily / 60min bars are refetched after bar close even outside the quote window (e.g. 16:20 ET, 09:00 ET).
         const equityBarsRefreshDue = isEquity && equityBarsDue(symbol);
         if (isEquity && !equityQuotesAllowed && !equityBarsRefreshDue) {

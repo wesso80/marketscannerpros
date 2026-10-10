@@ -140,16 +140,39 @@ it('workspace account keeps the paid label when the portal reports no billing ac
 const LOUNGE_NOTE = "Get the Pro lounge: email support@marketscannerpros.app from your account address and we'll add your Pro role.";
 const loungeParagraph = () => screen.queryByText((_, node) => node?.tagName === 'P' && node.textContent === LOUNGE_NOTE);
 
-it.each([
- ['pro', true],
- ['pro_trader', true],
- ['free', false],
- ['anonymous', false],
-] as const)('account page lounge note for %s is %s', async (tier, shown) => {
- state.tier = tier;
- render(<AccountPage />);
+type LoungeAccess = 'paid' | 'trial' | 'grant';
+const LOUNGE_CASES = [
+ ['pro', 'paid', true],
+ ['pro_trader', 'paid', true],
+ ['pro', 'trial', true],
+ ['pro_trader', 'trial', true],
+ ['pro', 'grant', true],
+ ['pro_trader', 'grant', true],
+ ['free', 'paid', false],
+ ['free', 'trial', false],
+ ['free', 'grant', false],
+ ['anonymous', 'paid', false],
+ ['anonymous', 'trial', false],
+] as const;
+
+function setLoungeAccess(mode: LoungeAccess) {
+ state.manualGrant = mode === 'grant';
+ state.hasBilling = mode === 'paid';
+ state.isTrial = mode === 'trial';
+ state.trialEndsAt = mode === 'trial' ? '2026-12-01' : null;
+}
+
+function loungeStatus(tier: string, mode: LoungeAccess) {
+ if (tier === 'anonymous') return 'Sign In Required';
+ if (tier === 'free') return 'Free tier · Upgrade any time';
+ if (mode === 'trial') return 'Pro trial · ends 2026-12-01';
+ if (mode === 'grant') return 'Pro access granted manually';
+ return 'Active · Renewal date in billing portal';
+}
+
+async function expectLounge(shown: boolean, tier: string, mode: LoungeAccess) {
  if (tier === 'anonymous') expect(screen.getByText('Sign In Required')).toBeTruthy();
- else await screen.findByText(shown ? 'Active · Renewal date in billing portal' : 'Free tier · Upgrade any time');
+ else await screen.findByText(loungeStatus(tier, mode));
  const note = loungeParagraph();
  if (shown) {
   expect(note).toBeTruthy();
@@ -160,26 +183,18 @@ it.each([
   expect(screen.queryByRole('link', { name: 'support@marketscannerpros.app' })).toBeNull();
   expect(document.body.textContent).not.toContain('Private Pro lounge on our Discord');
  }
+}
+
+it.each(LOUNGE_CASES)('account page lounge note for %s %s is %s', async (tier, mode, shown) => {
+ state.tier = tier;
+ setLoungeAccess(mode);
+ render(<AccountPage />);
+ await expectLounge(shown, tier, mode);
 });
 
-it.each([
- ['pro', true],
- ['pro_trader', true],
- ['free', false],
- ['anonymous', false],
-] as const)('workspace account lounge note for %s is %s', async (tier, shown) => {
+it.each(LOUNGE_CASES)('workspace account lounge note for %s %s is %s', async (tier, mode, shown) => {
  state.tier = tier;
+ setLoungeAccess(mode);
  render(<AccountSection />);
- if (tier === 'anonymous') expect(screen.getByText('Sign In Required')).toBeTruthy();
- else await screen.findByText(shown ? 'Active · Renewal date in billing portal' : 'Free tier · Upgrade any time');
- const note = loungeParagraph();
- if (shown) {
-  expect(note).toBeTruthy();
-  expect(screen.getByRole('link', { name: 'support@marketscannerpros.app' }).getAttribute('href')).toBe('mailto:support@marketscannerpros.app');
-  expect(document.body.textContent).toContain('Private Pro lounge on our Discord');
- } else {
-  expect(note).toBeNull();
-  expect(screen.queryByRole('link', { name: 'support@marketscannerpros.app' })).toBeNull();
-  expect(document.body.textContent).not.toContain('Private Pro lounge on our Discord');
- }
+ await expectLounge(shown, tier, mode);
 });

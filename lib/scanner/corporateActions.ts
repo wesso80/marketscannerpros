@@ -26,7 +26,17 @@ export const LOAD_ACTIONS_SQL = `SELECT symbol, session::text AS session, split_
   FROM equity_corporate_actions
  WHERE symbol = ANY($1::text[])`;
 
-/** A split after the entry session and on or before the horizon session. Dividends do not match. */
+/**
+ * A split session is inside the outcome window when it is after the signal
+ * session and on or before the horizon session. Dividends do not match.
+ *
+ * The signal session is outside. The coefficient on that session reprices
+ * only earlier bars, so the signal print and later sessions already share
+ * one basis.
+ * The horizon session is inside. That close is the post-split print, and a
+ * signal from an earlier session is still on the prior basis.
+ * Keep this predicate identical to splitSessionInOutcomeWindow.
+ */
 export const SPLIT_IN_WINDOW_SQL = `SELECT 1
   FROM equity_corporate_actions
  WHERE symbol = $1
@@ -35,6 +45,13 @@ export const SPLIT_IN_WINDOW_SQL = `SELECT 1
    AND split_coefficient > 0
    AND abs(split_coefficient - 1) > 1e-9
  LIMIT 1`;
+
+/** Same bounds as SPLIT_IN_WINDOW_SQL. The signal session is outside. The horizon session is inside. */
+export function splitSessionInOutcomeWindow(session: string, afterSession: string, throughSession: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(session) || !/^\d{4}-\d{2}-\d{2}$/.test(afterSession) || !/^\d{4}-\d{2}-\d{2}$/.test(throughSession)) return false;
+  if (throughSession <= afterSession) return false;
+  return session > afterSession && session <= throughSession;
+}
 
 type Query = (sql: string, params?: unknown[]) => Promise<unknown>;
 type QueryRows = (sql: string, params?: unknown[]) => Promise<unknown[]>;
@@ -143,7 +160,9 @@ export async function recordCorporateActions(symbol: string, payload: unknown, q
 }
 
 /**
- * True when a recorded split sits after `afterSession` and on or before `throughSession`.
+ * True when a recorded split is inside the outcome window.
+ * The signal session (`afterSession`) is outside. The horizon session
+ * (`throughSession`) is inside. See splitSessionInOutcomeWindow.
  * A missing equity_corporate_actions table is false: there is nothing to apply.
  */
 export async function equitySplitInWindow(

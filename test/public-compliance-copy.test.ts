@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'fs';
+import { readdirSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
+import { scanForBannedPhrases } from '@/lib/compliance/bannedPhrases';
 
 const root = process.cwd();
 
@@ -125,4 +126,41 @@ describe('public educational compliance copy', () => {
     expect(portfolioAnalyzeRoute).toContain('buildDeterministicPortfolioDescription');
     expect(portfolioAnalyzeRoute).toContain('Restate the simulation records in plain English only');
   });
+
+  it('flags a Daily Picks fixture and keeps that phrase out of customer copy', () => {
+    const fixture = ['Open Daily Picks', 'see daily picks today', 'DAILY PICKS'].join('\n');
+    const fixtureHits = scanForBannedPhrases(fixture);
+    expect(fixtureHits.map((hit) => hit.phrase)).toEqual(['Daily Picks', 'daily picks', 'DAILY PICKS']);
+    expect(fixtureHits.every((hit) => hit.replacement === 'Daily scan observations')).toBe(true);
+
+    const violations = customerCopyFiles().flatMap((file) =>
+      scanForBannedPhrases(readFileSync(file, 'utf8'))
+        .filter((hit) => hit.phrase.toLowerCase() === 'daily picks')
+        .map((hit) => `${file.slice(root.length + 1)}:${hit.index}:${hit.phrase}`),
+    );
+    expect(violations).toEqual([]);
+    expect(readFileSync(join(root, 'lib/compliance/bannedPhrases.ts'), 'utf8')).toMatch(/\\bdaily picks\\b\/gi/);
+    expect(readFileSync(join(root, 'lib/toolWorkflows.ts'), 'utf8')).toContain("link('/daily-pick','Daily scan observations')");
+  });
 });
+
+function walkTsx(dir: string, acc: string[] = []): string[] {
+  for (const name of readdirSync(dir)) {
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) walkTsx(path, acc);
+    else if (name.endsWith('.tsx')) acc.push(path);
+  }
+  return acc;
+}
+
+function customerCopyFiles(): string[] {
+  return [
+    ...walkTsx(join(root, 'app')),
+    ...walkTsx(join(root, 'components')),
+    join(root, 'lib/toolWorkflows.ts'),
+    join(root, 'lib/toolCatalog.ts'),
+    join(root, 'lib/og/scanOg.ts'),
+    join(root, 'app/daily-pick/wording.ts'),
+    join(root, 'app/daily-pick/feed.xml/route.ts'),
+  ];
+}

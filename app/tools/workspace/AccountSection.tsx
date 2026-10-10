@@ -4,6 +4,7 @@ import { ALERT_LIMITS } from '@/lib/alerts/planLimits';
 import { WATCHLIST_LIMITS } from '@/lib/tiers';
 import { FREE_COPY } from '@/components/free/copy';
 import ProLoungeNote from '@/components/account/ProLoungeNote';
+import { hasProAccess } from '@/lib/entitlements';
 import { PUBLIC_PRO_LOUNGE_FEATURE } from '@/lib/publicPlans';
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -385,7 +386,7 @@ export default function AccountSection() {
               </div>
               <Badge label="Active" color={currentTier.color} small />
             </div>
-            {isPaid ? <ProLoungeNote className="mt-3 text-xs text-slate-300" /> : null}
+            {hasProAccess(normalizedTier) ? <ProLoungeNote className="mt-3 text-xs text-slate-300" /> : null}
           </Card>
 
           {/* Usage */}

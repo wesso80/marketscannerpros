@@ -291,7 +291,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
   const crGainers = allGainers.filter((m: Mover) => m.asset_class === 'crypto').slice(0, 5);
   const crLosers = allLosers.filter((m: Mover) => m.asset_class === 'crypto').slice(0, 5);
   const articles = (news.data?.articles || []).slice(0, 3);
-  // Top 5 of today's daily picks, in the order the daily-picks feed already returned. Movers are context, not this list.
+  // Top 5 of today's daily scan observations, in feed order. Movers are context, not this list.
   const scannerQueue = cached.all.slice(0, 5);
   const moverQueue: Mover[] = [];
   // Same degraded-feed rule and wording as the Session overview (lib/analysis/sessionDataHealth.ts).
@@ -402,7 +402,7 @@ const fmtMove = (v: number | null) => (v === null ? 'No reading' : `${v >= 0 ? '
           <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
             <div>
               <SectionEyebrow>Today&apos;s research queue · Ranked queue (not yet validated)</SectionEyebrow>
-              <h2 style={{ fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>Top of today&apos;s daily picks.</h2>
+              <h2 style={{ fontSize: 'var(--msp-text-h2)', fontWeight: 500, color: 'var(--msp-text)', marginTop: 2 }}>Top of today&apos;s daily scan observations.</h2>
               <p className="mt-1" style={{ fontSize: 'var(--msp-text-body-sm)', color: 'var(--msp-text-muted)', lineHeight: 1.5 }}>Click a symbol to open Symbol. Review context only; no trade instructions.</p>
             </div>
             <DSButton variant="ghost" size="sm" onClick={() => navigateTo('scanner')}>Open scanner</DSButton>
