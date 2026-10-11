@@ -2,10 +2,13 @@
 
 import { publicDesignEnabled } from '@/lib/publicDesign';
 import { Suspense, useEffect, useState } from 'react';
-import PublicMSPCopilot, { type CopilotUsage } from '@/components/PublicMSPCopilot';
+import dynamic from 'next/dynamic';
+import type { CopilotUsage } from '@/components/PublicMSPCopilot';
 import { COPILOT_SECTION_EVENT, type CopilotSectionEvent } from '@/lib/ai/useCopilotSection';
 import SignedOutBanner from '@/components/free/SignedOutBanner';
-import MSPCopilot from '@/components/MSPCopilot';
+
+const PublicMSPCopilot = dynamic(() => import('@/components/PublicMSPCopilot'), { ssr: false, loading: () => null });
+const MSPCopilot = dynamic(() => import('@/components/MSPCopilot'), { ssr: false, loading: () => null });
 import RegimeBar from '@/app/v2/_components/RegimeBar';
 import { V2Provider } from '@/app/v2/_lib/V2Context';
 import { usePathname } from 'next/navigation';

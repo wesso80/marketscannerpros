@@ -19,7 +19,7 @@ import UpgradeGate from '@/components/UpgradeGate';
 import CryptoMorningDecisionCard, { type CryptoDecisionGate } from '@/components/CryptoMorningDecisionCard';
 import ExplorerActionGrid from '@/components/explorer/ExplorerActionGrid';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
-import { PageHero } from '@/components/ui';
+import PageHero from '@/components/ui/PageHero';
 import CoinGeckoCredit from '@/components/CoinGeckoCredit';
 
 interface CoinData {

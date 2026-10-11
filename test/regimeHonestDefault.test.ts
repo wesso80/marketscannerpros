@@ -154,7 +154,7 @@ describe('regime consumers (OV-1)', () => {
     const dash = readFileSync('components/desk/DeskFolds.tsx', 'utf8');
     expect(dash).toContain('regime not available right now');
     expect(dash).not.toMatch(/sizing/i);
-    const explorer = readFileSync('app/tools/explorer/page.tsx', 'utf8');
+    const explorer = readFileSync('app/tools/explorer/page.tsx', 'utf8') + readFileSync('app/tools/explorer/CrossMarketPanel.tsx', 'utf8');
     expect(explorer).toContain('Market context not collected');
     expect(explorer).not.toContain('Live Market Regime Signals');
     const egg = readFileSync('app/tools/golden-egg/page.tsx', 'utf8');

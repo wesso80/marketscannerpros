@@ -55,10 +55,12 @@ const nextConfig = {
             : 'no-store, no-cache, must-revalidate' },
         ],
       },
-      // Prevent stale API data — always fetch fresh. Everything under /api/ except /api/share/*: the public share-card
-      // PNGs set their own Cache-Control (lib/share/respond.ts) and must stay cacheable for X / Metricool fetches.
+      // Prevent stale API data — always fetch fresh. Everything under /api/ except /api/share/* and the two
+      // short-cached market reads. Share-card PNGs set their own Cache-Control (lib/share/respond.ts). Heatmap and
+      // categories set private, max-age=45 on 200s; their 401/500 responses set private, no-store themselves.
+      // Golden egg stays on this rule: the body is tiered and the route also sends private, no-store.
       {
-        source: '/api/:path((?!share/).*)',
+        source: '/api/:path((?!share/|crypto/heatmap$|crypto/categories$).*)',
         headers: [
           { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
           { key: 'Pragma', value: 'no-cache' },

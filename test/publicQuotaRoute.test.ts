@@ -9,8 +9,9 @@ vi.mock('@/lib/goldenEgg/engine',()=>({computeGoldenEgg:h.compute,tfLabelFor:()=
 vi.mock('@/lib/research/publicSymbolPacket',()=>({toPublicSymbolPacket:(p:unknown)=>p}));
 vi.mock('@/lib/scanner/providerStatus',()=>({buildMarketDataProviderStatus:()=>({})}));
 import { GET } from '@/app/api/golden-egg/route';
+import { clearShortResponseCache } from '@/lib/cache/shortResponse';
 const call=(params='symbol=AAPL')=>GET(new NextRequest('http://localhost/api/golden-egg?'+params));
-beforeEach(()=>{vi.clearAllMocks();h.enabled=true;h.session={workspaceId:'fixture'};h.paid=false;h.resolve.mockResolvedValue({bypass:false,subject:'account:fixture',plan:'free'});h.reserve.mockResolvedValue({status:'reserved',reservation:{token:'fixture'},day:'2026-10-08',resetsAt:'2026-10-09T04:00:00Z',limit:3,used:1});h.settle.mockResolvedValue(true);h.compute.mockResolvedValue({payload:{canonical:{symbol:'AAPL'}},warnings:[],dataQuality:{}});});
+beforeEach(()=>{clearShortResponseCache();vi.clearAllMocks();h.enabled=true;h.session={workspaceId:'fixture'};h.paid=false;h.resolve.mockResolvedValue({bypass:false,subject:'account:fixture',plan:'free'});h.reserve.mockResolvedValue({status:'reserved',reservation:{token:'fixture'},day:'2026-10-08',resetsAt:'2026-10-09T04:00:00Z',limit:3,used:1});h.settle.mockResolvedValue(true);h.compute.mockResolvedValue({payload:{canonical:{symbol:'AAPL'}},warnings:[],dataQuality:{}});});
 it('allows a Free core report, completing only after successful public projection',async()=>{
  const r=await call();expect(r.status).toBe(200);expect(r.headers.get('cache-control')).toBe('private, no-store');
  expect(h.reserve.mock.calls[0][0]).toMatchObject({plan:'free',kind:'symbol',resource:'equity:AAPL'});

@@ -1,18 +1,18 @@
 'use client';
 
-import React, { useEffect, useRef, useCallback } from 'react';
-import {
-  createChart,
-  CandlestickSeries,
-  HistogramSeries,
-  LineSeries,
-  type IChartApi,
-  type ISeriesApi,
-  type CandlestickData,
-  type UTCTimestamp,
-  ColorType,
-  CrosshairMode,
+import React, { useEffect, useRef, useCallback, useState } from 'react';
+import type {
+  IChartApi,
+  ISeriesApi,
+  CandlestickData,
+  UTCTimestamp,
 } from 'lightweight-charts';
+
+let chartsPromise: Promise<typeof import('lightweight-charts')> | null = null;
+function loadLightweightCharts() {
+  chartsPromise ??= import('lightweight-charts');
+  return chartsPromise;
+}
 
 /* ─── Types ─── */
 export interface InteractiveChartCandle {
@@ -60,88 +60,105 @@ export default function InteractiveChart({
   const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
   const emaSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const [chartReady, setChartReady] = useState(false);
 
-  // Build chart once
-  const initChart = useCallback(() => {
-    if (!containerRef.current || chartRef.current) return;
-
-    const chart = createChart(containerRef.current, {
-      width: containerRef.current.clientWidth,
-      height,
-      layout: {
-        background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: 'var(--msp-flat)',
-        fontSize: 11,
-        attributionLogo: true, // Required by Apache 2.0 license
-      },
-      grid: {
-        vertLines: { color: 'rgba(51, 65, 85, 0.3)' },
-        horzLines: { color: 'rgba(51, 65, 85, 0.3)' },
-      },
-      crosshair: {
-        mode: CrosshairMode.Normal,
-        vertLine: { color: 'rgba(16, 185, 129, 0.4)', labelBackgroundColor: 'var(--msp-bull)' },
-        horzLine: { color: 'rgba(16, 185, 129, 0.4)', labelBackgroundColor: 'var(--msp-bull)' },
-      },
-      rightPriceScale: {
-        borderColor: 'rgba(51, 65, 85, 0.5)',
-        scaleMargins: { top: 0.1, bottom: showVolume ? 0.25 : 0.05 },
-      },
-      timeScale: {
-        borderColor: 'rgba(51, 65, 85, 0.5)',
-        timeVisible: true,
-        secondsVisible: false,
-      },
-      handleScroll: { vertTouchDrag: false },
-    });
-
-    // Candlestick series
-    const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: 'var(--msp-bull)',
-      downColor: 'var(--msp-bear)',
-      borderUpColor: 'var(--msp-bull)',
-      borderDownColor: 'var(--msp-bear)',
-      wickUpColor: 'var(--msp-bull)',
-      wickDownColor: 'var(--msp-bear)',
-    });
-    candleSeriesRef.current = candleSeries;
-
-    // Volume histogram (pinned to bottom)
-    if (showVolume) {
-      const volumeSeries = chart.addSeries(HistogramSeries, {
-        priceFormat: { type: 'volume' },
-        priceScaleId: 'volume',
-      });
-      chart.priceScale('volume').applyOptions({
-        scaleMargins: { top: 0.8, bottom: 0 },
-      });
-      volumeSeriesRef.current = volumeSeries;
+  const destroyChart = () => {
+    resizeObserverRef.current?.disconnect();
+    resizeObserverRef.current = null;
+    if (chartRef.current) {
+      chartRef.current.remove();
+      chartRef.current = null;
+      candleSeriesRef.current = null;
+      volumeSeriesRef.current = null;
+      emaSeriesRef.current = null;
     }
+  };
 
-    // EMA 200 line
-    if (showEMA) {
-      const emaSeries = chart.addSeries(LineSeries, {
-        color: 'var(--msp-warn)',
-        lineWidth: 1,
-        priceLineVisible: false,
-        lastValueVisible: false,
-        crosshairMarkerVisible: false,
+  // The chart library loads after first paint so it stays out of the page chunk.
+  useEffect(() => {
+    if (!candles.length) return;
+    let cancelled = false;
+    (async () => {
+      const lib = await loadLightweightCharts();
+      if (cancelled || !containerRef.current || chartRef.current) return;
+      const { createChart, CandlestickSeries, HistogramSeries, LineSeries, ColorType, CrosshairMode } = lib;
+      const chart = createChart(containerRef.current, {
+        width: containerRef.current.clientWidth,
+        height,
+        layout: {
+          background: { type: ColorType.Solid, color: 'transparent' },
+          textColor: 'var(--msp-flat)',
+          fontSize: 11,
+          attributionLogo: true, // Required by Apache 2.0 license
+        },
+        grid: {
+          vertLines: { color: 'rgba(51, 65, 85, 0.3)' },
+          horzLines: { color: 'rgba(51, 65, 85, 0.3)' },
+        },
+        crosshair: {
+          mode: CrosshairMode.Normal,
+          vertLine: { color: 'rgba(16, 185, 129, 0.4)', labelBackgroundColor: 'var(--msp-bull)' },
+          horzLine: { color: 'rgba(16, 185, 129, 0.4)', labelBackgroundColor: 'var(--msp-bull)' },
+        },
+        rightPriceScale: {
+          borderColor: 'rgba(51, 65, 85, 0.5)',
+          scaleMargins: { top: 0.1, bottom: showVolume ? 0.25 : 0.05 },
+        },
+        timeScale: {
+          borderColor: 'rgba(51, 65, 85, 0.5)',
+          timeVisible: true,
+          secondsVisible: false,
+        },
+        handleScroll: { vertTouchDrag: false },
       });
-      emaSeriesRef.current = emaSeries;
-    }
 
-    chartRef.current = chart;
+      candleSeriesRef.current = chart.addSeries(CandlestickSeries, {
+        upColor: 'var(--msp-bull)',
+        downColor: 'var(--msp-bear)',
+        borderUpColor: 'var(--msp-bull)',
+        borderDownColor: 'var(--msp-bear)',
+        wickUpColor: 'var(--msp-bull)',
+        wickDownColor: 'var(--msp-bear)',
+      });
 
-    // Responsive resize
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width } = entry.contentRect;
-        if (width > 0) chart.applyOptions({ width });
+      if (showVolume) {
+        const volumeSeries = chart.addSeries(HistogramSeries, {
+          priceFormat: { type: 'volume' },
+          priceScaleId: 'volume',
+        });
+        chart.priceScale('volume').applyOptions({
+          scaleMargins: { top: 0.8, bottom: 0 },
+        });
+        volumeSeriesRef.current = volumeSeries;
       }
-    });
-    ro.observe(containerRef.current);
-    resizeObserverRef.current = ro;
-  }, [height, showVolume, showEMA]);
+
+      if (showEMA) {
+        emaSeriesRef.current = chart.addSeries(LineSeries, {
+          color: 'var(--msp-warn)',
+          lineWidth: 1,
+          priceLineVisible: false,
+          lastValueVisible: false,
+          crosshairMarkerVisible: false,
+        });
+      }
+
+      chartRef.current = chart;
+      const ro = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const { width } = entry.contentRect;
+          if (width > 0) chart.applyOptions({ width });
+        }
+      });
+      ro.observe(containerRef.current);
+      resizeObserverRef.current = ro;
+      if (!cancelled) setChartReady(true);
+    })();
+    return () => {
+      cancelled = true;
+      destroyChart();
+      setChartReady(false);
+    };
+  }, [height, showVolume, showEMA, candles.length]);
 
   // Update data when candles change
   const updateData = useCallback(() => {
@@ -193,24 +210,9 @@ export default function InteractiveChart({
     chartRef.current!.timeScale().fitContent();
   }, [candles, ema200]);
 
-  // Lifecycle
   useEffect(() => {
-    initChart();
-    return () => {
-      resizeObserverRef.current?.disconnect();
-      if (chartRef.current) {
-        chartRef.current.remove();
-        chartRef.current = null;
-        candleSeriesRef.current = null;
-        volumeSeriesRef.current = null;
-        emaSeriesRef.current = null;
-      }
-    };
-  }, [initChart]);
-
-  useEffect(() => {
-    updateData();
-  }, [updateData]);
+    if (chartReady) updateData();
+  }, [updateData, chartReady]);
 
   if (!candles.length) {
     return (
@@ -241,6 +243,13 @@ export default function InteractiveChart({
         >
           {symbol} {interval && <span style={{ color: 'var(--msp-text-muted)' }}>· {interval}</span>}
         </div>
+      )}
+      {!chartReady && (
+        <div
+          aria-hidden="true"
+          className="animate-pulse"
+          style={{ position: 'absolute', inset: 0, height, background: 'rgba(15, 23, 42, 0.5)', borderRadius: 12 }}
+        />
       )}
       <div ref={containerRef} style={{ width: '100%', height, borderRadius: 12, overflow: 'hidden' }} />
     </div>

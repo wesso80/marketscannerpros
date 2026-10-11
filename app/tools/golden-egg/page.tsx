@@ -29,7 +29,7 @@ import EvidenceStack from '@/components/market/EvidenceStack';
 import MarketStatusStrip from '@/components/market/MarketStatusStrip';
 import RiskFlagPanel, { type RiskFlag } from '@/components/market/RiskFlagPanel';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
-import { PageHero } from '@/components/ui';
+import PageHero from '@/components/ui/PageHero';
 import { describeLevelRelation } from '@/lib/goldenEgg/timing';
 import { formatUsdShort } from '@/lib/goldenEgg/semantics';
 import { priceChangeBasisLabel } from '@/lib/scoring/canonical/display';
@@ -81,7 +81,7 @@ const CRYPTO_SET = new Set([
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
 const SymbolAiSummary = dynamic(() => import('@/components/research/SymbolAiSummary'), { ssr: false });
-const SymbolComparisonChart = dynamic(() => import('@/components/research/SymbolComparisonChart'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Charts…</div> });
+const SymbolComparisonChart = dynamic(() => import('@/components/research/SymbolComparisonChart'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse" aria-busy="true"><div className="mx-auto mb-3 h-40 max-w-3xl rounded-lg bg-slate-800/50" />Loading Charts…</div> });
 const CompanyOverview = dynamic(() => import('@/app/tools/company-overview/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Fundamentals…</div> });
 const OwnershipFlowPanel = dynamic(() => import('@/components/golden-egg/OwnershipFlowPanel'), { ssr: false });
 
