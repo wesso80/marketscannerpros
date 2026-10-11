@@ -39,18 +39,8 @@ export default function RefundPolicyPage() {
       </ul>
 
       <h2>Refund Policy</h2>
-
-      <p><strong style={{ color: 'var(--msp-bull)' }}>7-Day Money-Back Guarantee:</strong></p>
+      <p>Pro includes a 7-day free trial, matching the Terms.</p>
       <ul>
-        <li>If you are not satisfied with your subscription, you may request a <strong>full refund within 7 days</strong> of your first payment.</li>
-        <li>To request a refund, email <a href="mailto:support@marketscannerpros.app">support@marketscannerpros.app</a> with your account email and reason for cancellation.</li>
-        <li>Refunds are processed within 5-10 business days to your original payment method.</li>
-        <li>This guarantee applies to first-time subscribers only.</li>
-      </ul>
-
-      <p><strong>After 7 Days - No Pro-Rated Refunds:</strong></p>
-      <ul>
-        <li>After the 7-day guarantee period, we do <strong>not</strong> provide refunds or credits for partial billing periods of service.</li>
         <li>When you cancel, you retain access until the end of your current billing period.</li>
         <li>No refunds are given for unused time after cancellation.</li>
       </ul>
@@ -59,7 +49,6 @@ export default function RefundPolicyPage() {
       <ul>
         <li><strong>Billing Errors:</strong> If you were charged incorrectly due to a system error, contact us immediately at <a href="mailto:support@marketscannerpros.app">support@marketscannerpros.app</a> with proof of the error.</li>
         <li><strong>Unauthorized Charges:</strong> If you believe you were charged without authorization, contact us within 48 hours of the charge.</li>
-        <li><strong>Technical Issues:</strong> If the App was unavailable for 3+ consecutive days during your billing period, you may be eligible for a pro-rated credit.</li>
       </ul>
 
       <h2>Trial Abuse Prevention</h2>
@@ -92,13 +81,13 @@ export default function RefundPolicyPage() {
 
       <h2>Platform-Specific Policies</h2>
       <ul>
-        <li><strong>Stripe (Web/Android):</strong> Managed through Stripe Customer Portal. Refunds handled per this policy.</li>
-        <li><strong>Apple (iOS):</strong> Managed through Apple App Store. Apple's refund policy applies. Request refunds through Apple, not us.</li>
+        <li><strong>Stripe (Web/Android):</strong> Managed through Stripe Customer Portal.</li>
+        <li><strong>Apple (iOS):</strong> Managed through Apple App Store.</li>
       </ul>
 
       <h2>Contact for Billing Issues</h2>
       <p>
-        For billing questions, errors, or refund requests (subject to this policy), contact us:
+        For billing questions or errors, contact us:
         <br />📧 <a href="mailto:support@marketscannerpros.app">support@marketscannerpros.app</a>
       </p>
       <p>Please include:</p>

@@ -20,8 +20,8 @@ it('shows new daily allowances only when enabled, states the 7-day trial, and do
  const p=props();const view=render(<ResearchPricing {...p}/>);
  expect(screen.getByText('3 Symbol reports per day')).toBeTruthy();expect(screen.getByText('20 AI questions a day')).toBeTruthy();
  expect(view.container.textContent).toMatch(/7-day free trial/);
- expect(view.container.textContent).toContain('If you are not satisfied with your subscription, you may request a full refund within 7 days of your first payment.');
- expect(view.container.textContent).toContain('This guarantee applies to first-time subscribers only.');
+ expect(view.container.textContent).toContain('Pro includes a 7-day free trial, matching the Terms.');
+ expect(view.container.textContent).not.toMatch(/money[\s-]+back|full[\s-]+refund/i);
  expect(view.container.textContent).toContain('No. General information only, not financial advice.');
  expect(view.container.textContent).not.toMatch(/Deep Analysis|Golden Egg|10 AI/i);
  view.rerender(<ResearchPricing {...p} quotasEnabled={false}/>);

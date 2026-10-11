@@ -27,8 +27,10 @@ const BANNED_PATTERNS: Array<{ pattern: RegExp; replacement: string; category: s
   { pattern: /\bstrong sell\b/gi, replacement: 'high confluence bearish', category: 'conviction' },
   { pattern: /\bconviction\b/gi, replacement: 'confluence', category: 'conviction' },
   { pattern: /\banalytical composites\b/gi, replacement: 'measured readings', category: 'product' },
-  // Before the generic guarantee pattern so the full phrase is the match and the shorter word is skipped as overlap.
-  { pattern: /\bmoney-back guarantee\b/gi, replacement: 'free trial', category: 'conviction' },
+  // Longer phrase first so overlap keeps one match. money-back and full refund allow any run of spaces or hyphens.
+  { pattern: /\bmoney-back guarantee\b/gi, replacement: '7-day free trial', category: 'conviction' },
+  { pattern: /\bmoney[\s-]+back\b/gi, replacement: '7-day free trial', category: 'conviction' },
+  { pattern: /\bfull[\s-]+refund\b/gi, replacement: '7-day free trial', category: 'conviction' },
   { pattern: /\bguarantee[ds]?\b/gi, replacement: 'historical pattern', category: 'conviction' },
 
   // Profitability claims

@@ -159,7 +159,7 @@ npm run build
 - Jurisdiction: New South Wales, Australia
 - Financial disclaimers on all trading tools
 - Cookie consent with GDPR granular options
-- 7-day money-back guarantee
+- Pro includes a 7-day free trial, matching the Terms.
 
 ## Quick Reference
 

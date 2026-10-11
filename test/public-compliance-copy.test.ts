@@ -147,6 +147,10 @@ describe('public educational compliance copy', () => {
     const fixture = 'Scores are analytical composites. 7-day money-back guarantee.';
     const hits = scanForBannedPhrases(fixture);
     expect(hits.map((hit) => hit.phrase.toLowerCase())).toEqual(['analytical composites', 'money-back guarantee']);
+    expect(scanForBannedPhrases('MONEY BACK').map((hit) => hit.phrase.toLowerCase())).toEqual(['money back']);
+    expect(scanForBannedPhrases('money  -  back').map((hit) => hit.phrase.toLowerCase())).toEqual(['money  -  back']);
+    expect(scanForBannedPhrases('full-refund').map((hit) => hit.phrase.toLowerCase())).toEqual(['full-refund']);
+    expect(scanForBannedPhrases('FULL  REFUND').map((hit) => hit.phrase.toLowerCase())).toEqual(['full  refund']);
 
     const lockedSurfaces = [
       'app/intelligence/layout.tsx',
@@ -156,11 +160,34 @@ describe('public educational compliance copy', () => {
     ];
     const violations = lockedSurfaces.flatMap((file) =>
       scanForBannedPhrases(readFileSync(join(root, file), 'utf8'))
-        .filter((hit) => /analytical composites|money-back guarantee/i.test(hit.phrase))
+        .filter((hit) => /analytical composites|money[\s-]+back|full[\s-]+refund/i.test(hit.phrase))
         .map((hit) => `${file}:${hit.phrase}`),
     );
     expect(violations).toEqual([]);
     expect(readFileSync(join(root, 'components/free/copy.ts'), 'utf8')).toContain('Pro includes a 7-day free trial, matching the Terms.');
+  });
+
+  it('keeps money-back and full refund out of customer copy, including legal pages and emails', () => {
+    const files = refundPromiseFiles();
+    const legalPages = [
+      'app/terms/page.tsx',
+      'app/refund-policy/page.tsx',
+      'app/cookie-policy/page.tsx',
+      'app/pricing/page.tsx',
+      'app/pricing/layout.tsx',
+    ];
+    for (const file of legalPages) {
+      expect(files.some((path) => path.endsWith(file))).toBe(true);
+    }
+    const violations = files.flatMap((file) =>
+      scanForBannedPhrases(readFileSync(file, 'utf8'))
+        .filter((hit) => /money[\s-]+back|full[\s-]+refund/i.test(hit.phrase))
+        .map((hit) => `${file.slice(root.length + 1)}:${hit.phrase}`),
+    );
+    expect(violations).toEqual([]);
+    const scanner = readFileSync(join(root, 'lib/compliance/bannedPhrases.ts'), 'utf8');
+    expect(scanner).toMatch(/\\bmoney\[\\s-\]\+back\\b\/gi/);
+    expect(scanner).toMatch(/\\bfull\[\\s-\]\+refund\\b\/gi/);
   });
 });
 
@@ -182,5 +209,17 @@ function customerCopyFiles(): string[] {
     join(root, 'lib/og/scanOg.ts'),
     join(root, 'app/daily-pick/wording.ts'),
     join(root, 'app/daily-pick/feed.xml/route.ts'),
+  ];
+}
+
+function refundPromiseFiles(): string[] {
+  return [
+    ...customerCopyFiles(),
+    join(root, 'lib/email.ts'),
+    join(root, 'lib/alerts/email.ts'),
+    join(root, 'lib/alerts/emailPolicy.ts'),
+    join(root, 'lib/admin/cryptoSetupEmail.ts'),
+    join(root, 'lib/jarvis/report/renderEmailHtml.ts'),
+    join(root, 'lib/quant/alertMailer.ts'),
   ];
 }

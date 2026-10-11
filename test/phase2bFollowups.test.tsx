@@ -71,8 +71,9 @@ it('pricing calls the live Intelligence modules live and shows the three-item FA
     expect(source).toContain('Can I cancel anytime?');
     expect(source).toContain('Yes. Access lasts until the end of the current billing period. Cancel from Account &gt; Manage Billing.');
     expect(source).toContain('Do you offer refunds?');
-    expect(source).toContain('If you are not satisfied with your subscription, you may request a full refund within 7 days of your first payment.');
-    expect(source).toContain('This guarantee applies to first-time subscribers only.');
+    expect(source).toMatch(/Pro includes a 7-day free trial, matching the Terms\.|FREE_COPY\.guarantee/);
+    expect(source).not.toContain('full refund');
+    expect(source).not.toContain('money-back');
     expect(source).toContain('Do you provide financial advice?');
     expect(source).toContain('General information only, not financial advice.');
     expect(source).not.toContain('What does Pro include?');
