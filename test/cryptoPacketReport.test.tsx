@@ -35,6 +35,21 @@ it('known unpaid crypto report does not call the signed-in breakdown feed', asyn
   expect(fetchMock).not.toHaveBeenCalled();
 });
 
+it('Pro still shows the loaded report when the breakdown feed fails', async () => {
+  tierState.tier = 'pro';
+  tierState.isLoading = false;
+  tierState.isLoggedIn = true;
+  const fetchMock = vi.fn(async () => ({ ok: false, status: 503, json: async () => ({ error: 'Crypto breakdown unavailable', secret: 'RAW_BREAKDOWN_BARS' }) }));
+  vi.stubGlobal('fetch', fetchMock);
+  const pub = toPublicSymbolPacket(buildPayload('BTC', 'crypto', price, ind, null, null, '1D', null, null, null, { nowMs: now }));
+  render(<CryptoBreakdown compact symbol="BTC" timeframe="1D" packet={pub} />);
+  const needle = pub.priceEvidence?.summary[0] || 'BTC observations from this report.';
+  expect(await screen.findByText(needle)).toBeTruthy();
+  expect(screen.queryByText(/Crypto data feed failed/)).toBeNull();
+  expect(document.body.textContent).not.toContain('RAW_BREAKDOWN_BARS');
+  expect(String(fetchMock.mock.calls[0]?.[0])).toContain('/api/crypto/breakdown');
+});
+
 it('a refused breakdown response is not rendered when the report packet is already loaded', async () => {
   tierState.isLoading = true;
   const fetchMock = vi.fn(async () => ({ ok: false, status: 403, json: async () => ({ error: 'Pro access required', secret: 'RAW_BREAKDOWN_BARS' }) }));

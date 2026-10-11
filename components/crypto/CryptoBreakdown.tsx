@@ -54,14 +54,16 @@ export default function CryptoBreakdown({symbol,timeframe:_,coinId,compact=false
   if(knownUnpaid){setLoading(false);setData(null);setError(null);setPacketFallback(true);return;}
   const abort=new AbortController();setLoading(true);setData(null);setError(null);setPacketFallback(false);onStamp?.(null);publishEvidence(null);
   const params=new URLSearchParams({symbol:base});if(coinId)params.set('id',coinId);
+  const usePacket=()=>{if(!abort.signal.aborted){setPacketFallback(true);setError(null);setData(null);}};
   fetch(`/api/crypto/breakdown?${params}`,{signal:abort.signal}).then(async r=>{
    if(!r.ok){
-    if(packet&&compact&&(r.status===401||r.status===403)){if(!abort.signal.aborted){setPacketFallback(true);setError(null);setData(null);}return;}
+    if(packet&&compact){usePacket();return;}
     throw Error(COPY.error);
    }
-   const body=await r.json();if(!body.sections||!body.budget)throw Error(COPY.error);
+   const body=await r.json();
+   if(!body.sections||!body.budget){if(packet&&compact){usePacket();return;}throw Error(COPY.error);}
    if(!abort.signal.aborted){setPacketFallback(false);setData(body);publishEvidence(body.copilotEvidenceToken);onStamp?.({source:[...new Set([body.top?.daily.source,body.top?.derivatives.source].filter(Boolean))].join(' · '),asOf:body.top?.daily.asOf,basis:body.top?.daily.basis});}
-  }).catch(e=>{if(!abort.signal.aborted)setError(e instanceof Error&&e.name==='AbortError'?null:e.message);}).finally(()=>{if(!abort.signal.aborted)setLoading(false);});
+  }).catch(e=>{if(abort.signal.aborted)return;if(packet&&compact){usePacket();return;}setError(e instanceof Error&&e.name==='AbortError'?null:e.message);}).finally(()=>{if(!abort.signal.aborted)setLoading(false);});
   return ()=>abort.abort();
  },[base,coinId,refresh,onStamp,publishEvidence,knownUnpaid,packet,compact]);
  useEffect(()=>{

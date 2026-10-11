@@ -41,3 +41,15 @@ it('keeps flag-off legacy behavior and does not expose the new summary',async()=
  vi.stubEnv('NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED','false');vi.stubEnv('INTELLIGENCE_LIVE_DATA','false');const {GET}=await import('@/app/api/intelligence/global-m2/route');
  expect((await GET()).status).toBe(200);expect((await GET(req())).status).toBe(404);
 });
+it('Pro summary is served from persisted observations when the redesign flag is off',async()=>{
+ vi.stubEnv('NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED','false');h.access={bypass:false,plan:'pro'};
+ const {GET}=await import('@/app/api/intelligence/global-m2/route');
+ const r=await GET(req());const b=await r.json();
+ expect(r.status).toBe(200);expect(b.data.contract).toBe('public-m2-summary-v1');
+ expect(b.data.enabled).toBe(true);expect(JSON.stringify(b)).not.toMatch(/could not be loaded|Summary unavailable/);
+ const deps=h.compute.mock.calls[0][0];
+ expect((await deps.us()).ok).toBe(false);expect((await deps.us()).error).toMatch(/persisted data only/);
+ const store=h.compute.mock.calls[0][1].store;
+ expect(h.compute.mock.calls[0][1].persist).toBe(true);
+ expect(await store.write('US',[{month:'2026-01',usdM2:1}],{provider:'x',classification:'EXACT'})).toBe(0);
+});
