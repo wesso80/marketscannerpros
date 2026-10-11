@@ -60,27 +60,35 @@ describe('/api/economic-indicators uses daily rate data', () => {
     vi.resetModules();
     urls.length = 0;
     vi.stubEnv('ALPHA_VANTAGE_API_KEY', 'test-key');
+    vi.stubEnv('FRED_API_KEY', 'test-fred-key');
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(NOW);
-    vi.stubGlobal('setTimeout', ((fn: () => void) => { fn(); return 0; }) as unknown as typeof setTimeout);
-    const levels: Record<string, number> = { '10year': 5.16, '2year': 4.9, '3month': 4.4, '5year': 5.0, '30year': 5.3 };
+    const realSetTimeout = global.setTimeout;
+    vi.stubGlobal('setTimeout', ((fn: () => void, ms?: number) => {
+      if (ms != null && ms < 1000) { fn(); return 0 as unknown as ReturnType<typeof setTimeout>; }
+      return realSetTimeout(fn, ms);
+    }) as unknown as typeof setTimeout);
+    const levels: Record<string, number> = { DGS10: 5.16, DGS2: 4.9, DGS3MO: 4.4, DGS5: 5.0, DGS30: 5.3 };
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
       urls.push(url);
       const u = new URL(url);
+      if (u.hostname === 'api.stlouisfed.org') {
+        const id = u.searchParams.get('series_id') ?? '';
+        const observations = id === 'CPIAUCSL'
+          ? [{ date: '2025-08-01', value: '100' }, { date: '2026-07-01', value: '102.9' }, { date: '2026-08-01', value: '103.1' }]
+          : dailySeries(levels[id] ?? 5.16, { holidayFirst: true }).data;
+        return { ok: true, json: async () => ({ observations }) } as Response;
+      }
       const fn = u.searchParams.get('function');
       let body: unknown;
-      if (fn === 'TREASURY_YIELD') {
-        body = u.searchParams.get('interval') === 'daily'
-          ? dailySeries(levels[u.searchParams.get('maturity') ?? '10year'], { holidayFirst: true })
-          : { interval: 'monthly', data: [{ date: '2026-08-01', value: '4.68' }] };
-      } else if (fn === 'FEDERAL_FUNDS_RATE') {
+      if (fn === 'FEDERAL_FUNDS_RATE') {
         body = u.searchParams.get('interval') === 'daily'
           ? { interval: 'daily', data: [{ date: '2026-09-24', value: '3.38' }, { date: '2026-09-15', value: '3.63' }, { date: '2026-08-15', value: '3.63' }] }
           : { interval: 'monthly', data: [{ date: '2026-08-01', value: '3.63' }] };
       } else {
         body = { data: [{ date: '2026-08-01', value: '3.1' }, { date: '2026-07-01', value: '3.0' }] };
       }
-      return { json: async () => body } as Response;
+      return { ok: true, json: async () => body } as Response;
     }));
   });
 
@@ -95,10 +103,13 @@ describe('/api/economic-indicators uses daily rate data', () => {
     const res = await GET(new Request('http://localhost/api/economic-indicators?all=true') as any);
     const body = await res.json();
 
-    const rateUrls = urls.filter((u) => /function=(TREASURY_YIELD|FEDERAL_FUNDS_RATE)/.test(u));
-    expect(rateUrls).toHaveLength(6);
-    expect(rateUrls.every((u) => u.includes('interval=daily'))).toBe(true);
-    expect(urls.filter((u) => /function=(CPI|INFLATION|UNEMPLOYMENT|REAL_GDP)/.test(u)).some((u) => u.includes('interval='))).toBe(false);
+    const avUrls = urls.filter((u) => u.includes('alphavantage.co'));
+    expect(avUrls.some((u) => /function=(TREASURY_YIELD|CPI|INFLATION)(&|$)/.test(u))).toBe(false);
+    expect(avUrls.filter((u) => u.includes('function=FEDERAL_FUNDS_RATE'))).toHaveLength(1);
+    expect(avUrls.find((u) => u.includes('function=FEDERAL_FUNDS_RATE'))).toContain('interval=daily');
+    expect(avUrls.filter((u) => /function=(UNEMPLOYMENT|REAL_GDP)/.test(u)).some((u) => u.includes('interval='))).toBe(false);
+    const fredIds = urls.filter((u) => u.includes('api.stlouisfed.org')).map((u) => new URL(u).searchParams.get('series_id')).sort();
+    expect(fredIds).toEqual(['CPIAUCSL', 'DGS10', 'DGS2', 'DGS30', 'DGS3MO', 'DGS5']);
 
     expect(body.rates.treasury10y.value).toBe(5.16); // not the 4.68 August average; '.' row on 25 Sep skipped
     expect(body.rates.treasury10y.date).toBe('2026-09-24');
@@ -110,25 +121,35 @@ describe('/api/economic-indicators uses daily rate data', () => {
     expect(body.rates.yieldCurve3m10y.value).toBe(0.76);
     expect(body.rates.fedFunds.value).toBe(3.38);
     expect(body.rates.fedFunds.date).toBe('2026-09-24');
-    // determineRegime sees the daily 10Y (> 5%).
+    expect(body.source).toBe('Source: FRED (Federal Reserve Bank of St. Louis)');
+    expect(body.asOf).toBe('2026-09-24');
+    // determineRegime sees the daily 10Y (> 5%) and the CPI year-over-year percent, not the index.
     expect(body.regime.description).toContain('High interest rate environment');
-    // Non-rate indicators unchanged.
+    expect(body.inflation.cpi.value).toBe(103.1);
+    expect(body.inflation.cpi.date).toBe('2026-08-01');
     expect(body.inflation.inflationRate.value).toBe(3.1);
+    expect(body.inflation.inflationRate.date).toBe('2026-08-01');
   });
 
   it('single indicator path defaults rate series to daily and skips non-numeric rows', async () => {
     const { GET } = await import('../app/api/economic-indicators/route');
     const res = await GET(new Request('http://localhost/api/economic-indicators?indicator=TREASURY_YIELD&maturity=10year') as any);
     const body = await res.json();
-    expect(urls[0]).toContain('interval=daily');
+    expect(urls[0]).toContain('series_id=DGS10');
+    expect(urls[0]).not.toContain('alphavantage.co');
     expect(body.latest).toEqual({ date: '2026-09-24', value: 5.16 });
     expect(body.history.every((p: { value: number }) => Number.isFinite(p.value))).toBe(true);
+    expect(body.source).toBe('Source: FRED (Federal Reserve Bank of St. Louis)');
+    expect(body.asOf).toBe('2026-09-24');
 
     const res2 = await GET(new Request('http://localhost/api/economic-indicators?indicator=TREASURY_YIELD&maturity=10year&interval=monthly') as any);
-    expect(urls[1]).toContain('interval=monthly');
+    expect(urls[1]).toContain('series_id=DGS10');
+    expect(urls[1]).not.toContain('alphavantage.co');
     expect((await res2.json()).latest).toEqual({ date: '2026-08-01', value: 4.68 });
 
     await GET(new Request('http://localhost/api/economic-indicators?indicator=CPI') as any);
+    expect(urls[2]).toContain('series_id=CPIAUCSL');
+    expect(urls[2]).not.toContain('alphavantage.co');
     expect(urls[2]).not.toContain('interval=');
   });
 });

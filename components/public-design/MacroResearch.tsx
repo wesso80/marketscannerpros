@@ -1,9 +1,10 @@
 import Link from 'next/link';
+import { fredSourceLine, newestObservationDate } from '@/lib/macro/fredSource';
 import SignInLock from './SignInLock';
 import styles from './EconomicResearch.module.css';
 
 type Observation = {value:number|null;date?:string|null;history?:{date:string;value:number}[]};
-type MacroReading = {timestamp:string;rates:{treasury3m?:Observation;treasury2y:Observation;treasury5y?:Observation;treasury10y:Observation;treasury30y?:Observation;fedFunds:Observation};inflation:{inflationRate:Observation};employment:{unemployment:Observation};growth:{realGDP:Observation & {unit:string}}};
+type MacroReading = {timestamp:string;asOf?:string|null;rates:{treasury3m?:Observation;treasury2y:Observation;treasury5y?:Observation;treasury10y:Observation;treasury30y?:Observation;fedFunds:Observation};inflation:{inflationRate:Observation};employment:{unemployment:Observation};growth:{realGDP:Observation & {unit:string}}};
 const measured=(v:unknown):v is number=>typeof v==='number'&&Number.isFinite(v);
 // History dates are used only when the newest entry matches the displayed value.
 function dateOf(o?:Observation){const latest=o?.history?.[0];return o?.date || (latest && latest.value===o?.value?latest.date:null) || 'Not supplied';}
@@ -19,7 +20,7 @@ export default function MacroResearch({data,loading,error,locked=false,retry,pai
  {paid?<section className={styles.panel} id="yieldcurve"><div className={styles.heading}><div><p className={styles.eyebrow}>Rates across maturities</p><h2>Treasury yield observations</h2></div><span>Percent · equal maturity spacing</span></div><p className={styles.note}>Each maturity retains its own observation date. Different dates are not a simultaneous yield curve; missing maturities are left blank.</p>
  {values.length?<svg role="img" aria-label="Treasury yields by maturity, with individual observation dates listed below" viewBox="0 0 600 245" className={styles.chart}>{[0,1,2,3,4].map(i=>{const v=min+(max-min)*i/4;return <g key={i}><line x1="50" x2="565" y1={y(v)} y2={y(v)} stroke="#30444c"/><text x="4" y={y(v)+4} fill="#a8b9bf" fontSize="12">{v.toFixed(1)}%</text></g>;})}{maturities.map(([label,o],i)=><g key={label}>{measured(o?.value)?<><line x1={70+i*115} x2={70+i*115} y1={y(0)} y2={y(o.value)} stroke="#a5e8cf" strokeWidth="2"/><circle cx={70+i*115} cy={y(o.value)} r="5" fill="#a5e8cf"/></>:null}<text x={70+i*115} y="230" textAnchor="middle" fill="#a8b9bf" fontSize="12">{label}</text></g>)}</svg>:<p>Yield observations are not available.</p>}
  <div className={styles.observations}>{maturities.map(([label,o])=><div key={label}><strong>{label}</strong><span>{measured(o?.value)?`${o.value.toFixed(2)}%`:'Not available'}</span><small>{dateOf(o)}</small></div>)}</div></section>:<p className={styles.note}>Your current access includes the Treasury and inflation summary. <Link href="/pricing">Review Pro research access</Link></p>}
- <section className={styles.explanation}><h2>Read the dates before the narrative.</h2><p>Rates, inflation, employment and GDP follow different release schedules. An observation date describes the measurement; it does not establish its publication time. Publication timestamps are not supplied in this response.</p><p>Source: existing economic-indicators feed. Response assembled: {data.timestamp}. This is not the observation date.</p><Link href="/learn">Learn how to read economic evidence</Link></section>
+ <section className={styles.explanation}><h2>Read the dates before the narrative.</h2><p>Rates, inflation, employment and GDP follow different release schedules. An observation date describes the measurement; it does not establish its publication time. Publication timestamps are not supplied in this response.</p><p>{fredSourceLine(data.asOf || newestObservationDate([data.rates.treasury3m?.date, data.rates.treasury2y?.date, data.rates.treasury5y?.date, data.rates.treasury10y?.date, data.rates.treasury30y?.date, data.inflation.inflationRate?.date]))}</p><Link href="/learn">Learn how to read economic evidence</Link></section>
  </>}
  </article>;
 }

@@ -15,6 +15,7 @@ import SourceLine from '@/components/visual/SourceLine';
 import StatTile from '@/components/visual/StatTile';
 import { openMacroAnchor } from '@/lib/overview/macroAnchor';
 import { macroResponseAccess } from '@/lib/macro/accessState';
+import { FRED_PUBLIC_SOURCE, newestObservationDate } from '@/lib/macro/fredSource';
 
 function followMacroAnchor(event: { preventDefault(): void; currentTarget: { getAttribute(name: string): string | null } }) {
   event.preventDefault();
@@ -41,6 +42,7 @@ interface IndicatorValue {
 
 interface MacroData {
   timestamp: string;
+  asOf?: string | null;
   rates: {
     treasury3m?: IndicatorValue;
     treasury2y: IndicatorValue;
@@ -85,6 +87,20 @@ type MacroGate = {
   drivers: Driver[];
   notes: string;
 };
+
+function macroAsOf(data: MacroData | null): string | null {
+  if (!data) return null;
+  return newestObservationDate([
+    data.asOf,
+    data.rates.treasury10y.date,
+    data.rates.treasury2y.date,
+    data.rates.treasury3m?.date,
+    data.rates.treasury5y?.date,
+    data.rates.treasury30y?.date,
+    data.inflation.inflationRate.date,
+    data.inflation.cpi.date,
+  ]);
+}
 
 function safeNumber(value: unknown, fallback = 0) {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
@@ -390,7 +406,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
         return typeof item.value === 'number' ? <section key={String(label)} className="rounded-xl border border-white/10 p-4"><h2>{String(label)}</h2><p className="text-4xl">{toPct(item.value)}</p><p className="text-xs text-slate-400">{item.date || "Observation date not supplied"}</p></section> : null;
       })}
     </div>}
-    <SourceLine source={FREE_COPY.macroSource} asOf={data?.timestamp} basis={FREE_COPY.observation} />
+    <SourceLine source={FRED_PUBLIC_SOURCE} tradingDay={macroAsOf(data) ? `As of ${macroAsOf(data)}` : undefined} basis={FREE_COPY.observation} />
     <a className="inline-flex min-h-10 items-center underline" href="/intelligence/global-m2">{FREE_COPY.deepMacro}</a><p className="text-xs">{FREE_COPY.research}</p>
   </main>;
 
@@ -474,7 +490,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
             <p className="text-sm text-slate-400">Loading macro regime…</p>
           </div>
         ) : error ? (
-          <><p data-verdict-box className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-amber-200">Macro observations could not be loaded.</p><button type="button" className="min-h-10 underline" onClick={fetchData}>Try again</button><SourceLine source="Macro database" basis="Published observations not collected" /></>
+          <><p data-verdict-box className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-amber-200">Macro observations could not be loaded.</p><button type="button" className="min-h-10 underline" onClick={fetchData}>Try again</button><SourceLine source={FRED_PUBLIC_SOURCE} basis="Published observations not collected" /></>
         ) : data && gate ? (
           <>
             <section data-global-regime className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
@@ -493,7 +509,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                 ].filter(item => typeof item.value === 'number' && Number.isFinite(item.value)).map(item => <div data-macro-tile key={item.label}><StatTile label={item.label} value={item.format(item.value!)} /></div>)}
               </div>
               {incompleteFeeds.length > 0 && <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-200">Not collected: {incompleteFeeds.join(' · ')}.</p>}
-              <SourceLine source="Macro database" asOf={data.timestamp} basis="Published observations" />
+              <SourceLine source={FRED_PUBLIC_SOURCE} tradingDay={macroAsOf(data) ? `As of ${macroAsOf(data)}` : undefined} basis="Published observations" />
             </section>
 
             {/* ─── Yield Curve ─── */}
@@ -667,7 +683,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   <Sparkline data={data.inflation.inflationRate.history} stroke="#f87171" />
                 </div>
                 <div className="text-2xl font-semibold">{toPct(data.inflation.inflationRate.value, 1)}</div>
-                <div className="mt-1 text-xs text-white/60">CPI YoY • {macroLabel(data.inflation.trend)}</div>
+                <div className="mt-1 text-xs text-white/60">CPI YoY{data.inflation.inflationRate.date ? ` (as of ${data.inflation.inflationRate.date})` : ''} • {macroLabel(data.inflation.trend)}</div>
               </div>
 
               <div id="growth" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">

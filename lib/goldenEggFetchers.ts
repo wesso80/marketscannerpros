@@ -5,7 +5,7 @@ import { isMeasuredLevel } from '@/lib/confluenceMeasured';
  */
 
 import { partialBarDate } from '@/lib/research/priceEvidence';
-import { avFetch, avTakeToken } from '@/lib/avRateGovernor';
+import { avFetch } from '@/lib/avRateGovernor';
 import { getIndicators, getQuote } from '@/lib/onDemandFetch';
 import { calculateAllIndicators, detectSqueeze, type OHLCVBar } from '@/lib/indicators';
 import { classifyRegime } from '@/lib/regime-classifier';
@@ -21,7 +21,7 @@ import { confluenceLearningAgent, type ScanMode, type SessionMode } from '@/lib/
 import { getAggregatedFundingRates, getAggregatedOpenInterest, resolveSymbolToId, getCoinDetail, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { fetchCryptoSeries, type CryptoScanTimeframe } from '@/lib/scanner/cryptoBars';
 import * as scannerMath from '@/lib/scanner/indicatorMath';
-import { latestObservation } from '@/lib/macro/avRateSeries';
+import { loadPublicFredMacro } from '@/lib/macro/publicFred';
 import { describeChainSource, fetchSharedOptionsChain } from '@/lib/options/chainCache';
 import { summarizeChain, type CanonicalOptionsSnapshot, type RawContract } from '@/lib/goldenEgg/optionsChain';
 
@@ -771,35 +771,12 @@ export async function fetchMacroRegime(): Promise<MacroRegime | null> {
   const now = Date.now();
   if (macroCache.data && now - macroCache.ts < MACRO_CACHE_TTL) return macroCache.data;
 
-  const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
-  if (!apiKey) return null;
-
   try {
-    // Fetch two key signals: 10Y yield + Fed Funds + Inflation
-    const indicators = [
-      // interval=daily: AV defaults rate series to monthly (newest row = last month's average).
-      { func: 'TREASURY_YIELD', maturity: '10year', interval: 'daily' },
-      { func: 'TREASURY_YIELD', maturity: '2year', interval: 'daily' },
-      { func: 'INFLATION' },
-    ] as Array<{ func: string; maturity?: string; interval?: string }>;
-
-    const values: Record<string, number | null> = {};
-    for (const ind of indicators) {
-      let url = `https://www.alphavantage.co/query?function=${ind.func}&apikey=${apiKey}`;
-      if (ind.maturity) url += `&maturity=${ind.maturity}`;
-      if (ind.interval) url += `&interval=${ind.interval}`;
-      await avTakeToken();
-      const res = await fetch(url);
-      const json = await res.json();
-      // Most recent NUMERIC observation (daily series carry '.' on non-trading days).
-      const val = latestObservation(json)?.value ?? null;
-      values[ind.func + (ind.maturity || '')] = val;
-      await new Promise(r => setTimeout(r, 250));
-    }
-
-    const t10y = values['TREASURY_YIELD10year'];
-    const t2y = values['TREASURY_YIELD2year'];
-    const inflation = values['INFLATION'];
+    // 10Y, 2Y, and CPI year-over-year inflation from FRED (DGS10, DGS2, CPIAUCSL).
+    const macro = await loadPublicFredMacro(now);
+    const t10y = macro.yields.treasury10y.value;
+    const t2y = macro.yields.treasury2y.value;
+    const inflation = macro.inflationRate.value;
     const yieldCurve = t10y != null && t2y != null ? t10y - t2y : null;
 
     const concerns: string[] = [];
