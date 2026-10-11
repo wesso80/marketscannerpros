@@ -56,6 +56,39 @@ function mapEntry(entry: any): TradeRowModel {
   };
 }
 
+/** Row shape for a create that has an id but has not been reloaded from GET /api/journal. */
+export function journalEntryFromCreate(payload: {
+  symbol: string;
+  side: string;
+  assetClass: string;
+  tradeType: string;
+  entryPrice: number;
+  quantity: number;
+  stopLoss?: number;
+  target?: number;
+  strategy?: string;
+  notes?: string;
+  tags?: string[];
+  tradeDate: string;
+}, id: string | number) {
+  return {
+    id,
+    symbol: payload.symbol,
+    side: payload.side,
+    assetClass: payload.assetClass,
+    tradeType: payload.tradeType,
+    isOpen: true,
+    entryPrice: payload.entryPrice,
+    quantity: payload.quantity,
+    date: payload.tradeDate,
+    stopLoss: payload.stopLoss,
+    target: payload.target,
+    strategy: payload.strategy,
+    notes: payload.notes,
+    tags: payload.tags,
+  };
+}
+
 export function mapJournalResponseToPayload(raw: any, nowMs = Date.now()): JournalPayload {
   const rows = Array.isArray(raw?.entries) ? raw.entries : [];
   const trades: TradeRowModel[] = rows.map(mapEntry);

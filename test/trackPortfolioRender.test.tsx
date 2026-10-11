@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import {beforeEach,afterEach,it,expect,vi} from 'vitest';
-import {cleanup,render,screen,within,fireEvent} from '@testing-library/react';
+import {cleanup,render,screen,within,fireEvent,waitFor} from '@testing-library/react';
 const state=vi.hoisted(()=>({tier:'pro',positions:[] as any[],pageData:vi.fn(),query:new URLSearchParams()}));
 vi.mock('next/navigation',()=>({useSearchParams:()=>state.query}));
 vi.mock('@/lib/useUserTier',()=>({useUserTier:()=>({tier:state.tier,isLoading:false}),getPortfolioLimit:()=>5,canExportCSV:()=>true,canAccessPortfolioInsights:()=>false}));
@@ -31,6 +31,47 @@ it('renders saved exposure, one verdict, closed folds and a chart without changi
  expect(screen.getByText('$250')).toBeTruthy();
  expect(container.textContent).not.toMatch(/N\/A|NaN|undefined/);
  expect(state.positions[0].quantity).toBe(2);
+});
+
+it('fills Add Position current price from the cached quote and leaves a typed price alone', async () => {
+  let release: () => void = () => {};
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  state.query = new URLSearchParams('view=add');
+  vi.mocked(fetch).mockImplementation(async (url: RequestInfo | URL) => {
+    const u = String(url);
+    if (u.startsWith('/api/quote')) return { ok: false, json: async () => { throw new Error('live quote'); } };
+    if (u.startsWith('/api/cached/bulk-quotes')) {
+      if (u.includes('BTC')) {
+        await gate;
+        return { ok: true, json: async () => ({ quotes: { 'BTC-USD': { price: 64250.5, observedAt: '2026-10-10T15:04:00.000Z', assetClass: 'crypto' } } }) };
+      }
+      return { ok: true, json: async () => ({ quotes: { AAPL: { price: 189.25, latestDay: '2026-10-10', assetClass: 'equity' } } }) };
+    }
+    return { ok: true, json: async () => ({ syncRevision: 'fixture-revision', positions: [], closedPositions: [], performanceHistory: [], cashState: { startingCapital: 10000, cashLedger: [] } }) };
+  });
+  render(<PortfolioContent embeddedInWorkspace />);
+  await screen.findByText('Add New Position');
+  const symbol = screen.getByPlaceholderText('Symbol (e.g. BTC, AAPL)');
+  fireEvent.change(symbol, { target: { value: 'BTC' } });
+  const price = screen.getByLabelText('Current Price') as HTMLInputElement;
+  await waitFor(() => expect(vi.mocked(fetch).mock.calls.some(([called]) => String(called).includes('/api/cached/bulk-quotes') && String(called).includes('BTC-USD'))).toBe(true));
+  fireEvent.change(price, { target: { value: '12' } });
+  release();
+  await new Promise((r) => setTimeout(r, 40));
+  expect(price.value).toBe('12');
+  expect(screen.queryByText(/^As of/)).toBeNull();
+  expect(vi.mocked(fetch).mock.calls.some(([called]) => String(called).startsWith('/api/quote'))).toBe(false);
+
+  fireEvent.change(symbol, { target: { value: 'AAPL' } });
+  fireEvent.change(screen.getByPlaceholderText('0'), { target: { value: '1' } });
+  const costs = screen.getAllByPlaceholderText('0.00');
+  fireEvent.change(costs[0], { target: { value: '100' } });
+  await waitFor(() => expect(price.value).toBe('189.25'));
+  expect(screen.getByText('As of trading day 2026-10-10')).toBeTruthy();
+  const quotes = vi.mocked(fetch).mock.calls.map(([called]) => String(called)).filter((called) => called.startsWith('/api/cached/bulk-quotes'));
+  expect(quotes.some((called) => called.includes('AAPL') && !called.includes('AAPL-USD'))).toBe(true);
+  const submit = price.closest('.space-y-3')?.querySelector('button');
+  expect(submit?.hasAttribute('disabled')).toBe(false);
 });
 it('shows total cost and side-aware open P&L instead of a stored -121470 pl', async () => {
   state.positions = [

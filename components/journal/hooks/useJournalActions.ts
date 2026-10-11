@@ -103,12 +103,11 @@ export function useJournalActions({ rows, onRefresh }: UseJournalActionsArgs) {
       body: JSON.stringify(payload),
     });
 
-    if (!response.ok) {
-      const json = await response.json().catch(() => ({}));
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok || json?.id == null) {
       throw new Error(json?.error || 'Failed to create trade');
     }
-
-    await onRefresh();
+    return { id: json.id as string | number };
   };
 
   /** TR-28: edit an open trade's stop/target, or add a note (appended with a date stamp server-side). */

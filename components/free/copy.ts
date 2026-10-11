@@ -28,6 +28,6 @@ export const FREE_COPY = {
   picks: 'stored observations',
   seeAll: 'See all', loading: 'Loading…', unavailable: 'Not available right now', retry: 'Try again',
   signIn: 'Sign in', signedIn: 'Signed in. Opening your page…',
-  upgrade: 'Unlock with Pro', guarantee: '7-day money-back guarantee', example: 'Example',
+  upgrade: 'Unlock with Pro', guarantee: 'Pro includes a 7-day free trial, matching the Terms.', example: 'Example',
   startFree: 'Start Free · no card needed',
 } as const;

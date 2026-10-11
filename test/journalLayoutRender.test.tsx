@@ -48,3 +48,37 @@ it('research-only accounts retain a way to reveal saved research from the empty 
  await waitFor(()=>expect(container.querySelectorAll('tbody')[1]?.textContent).toContain('AUTO'));
  expect(container.querySelectorAll('[data-stat-card]')).toHaveLength(0);
 });
+
+it('shows a saved entry before the journal list reload finishes', async () => {
+  let release: () => void = () => {};
+  const pending = new Promise<void>((resolve) => { release = resolve; });
+  let journalGets = 0;
+  vi.stubGlobal('fetch', vi.fn(async (url: RequestInfo | URL) => {
+    const u = String(url);
+    if (u === '/api/journal/add-trade') return { ok: true, json: async () => ({ success: true, id: 77 }) };
+    if (u === '/api/journal') {
+      journalGets += 1;
+      if (journalGets > 1) await pending;
+      const entries = journalGets > 1
+        ? [{ id: 77, symbol: 'SOL', side: 'LONG', date: '2026-10-11', entryPrice: 150, quantity: 2, isOpen: true, tradeType: 'Spot', assetClass: 'equity' }]
+        : [];
+      return { ok: true, json: async () => ({ entries }) };
+    }
+    return { ok: true, json: async () => ({ ok: true }) };
+  }));
+  const { container } = render(<JournalPage tier="pro" embeddedInWorkspace />);
+  await screen.findByText('Add your first trade');
+  fireEvent.click(screen.getByRole('button', { name: 'New Trade' }));
+  fireEvent.change(screen.getByLabelText('Symbol *'), { target: { value: 'SOL' } });
+  fireEvent.change(screen.getByLabelText('Entry Price *'), { target: { value: '150' } });
+  fireEvent.change(screen.getByLabelText('Quantity *'), { target: { value: '2' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Create Trade' }));
+  const saved = await screen.findAllByRole('link', { name: 'SOL' });
+  expect(saved.length).toBeGreaterThan(0);
+  expect(saved.every((link) => link.textContent === 'SOL')).toBe(true);
+  expect(screen.queryByText('Loading trades...')).toBeNull();
+  expect(journalGets).toBeGreaterThanOrEqual(2);
+  expect(container.querySelector('tbody')?.textContent).toContain('SOL');
+  release();
+  await waitFor(() => expect(container.querySelector('tbody')?.textContent).toContain('SOL'));
+});

@@ -4,10 +4,13 @@ import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import ChipRow from '@/components/visual/ChipRow';
 import type {StampLineProps} from '@/components/visual/StampLine';
 import PageSourceLine from '@/components/visual/SourceLine';
-import {readerLabel,readerSourceLabel,symbolText,symbolMetric} from '@/lib/presentation/symbolDisplay';
+import {readerLabel,readerSourceLabel,symbolText,symbolMetric,symbolNumber} from '@/lib/presentation/symbolDisplay';
 import {useEffect,useState} from 'react';
 import {normalizeCryptoSymbol} from '@/lib/crypto/breakdown/symbol';
 import type {Breakdown} from '@/lib/crypto/breakdown/types';
+import type {PublicSymbolPacket} from '@/lib/research/publicSymbolPacket';
+import {isPaidTier} from '@/lib/tiers';
+import {useUserTier} from '@/lib/useUserTier';
 import {COPY} from './copy';
 import CryptoTop from './top/CryptoTop';
 import PriceSection from './sections/PriceSection';
@@ -21,15 +24,52 @@ import LevelsSection from './sections/LevelsSection';
 import RisksSection from './sections/RisksSection';
 import SourcesBadge from './sections/SourcesBadge';
 import HandoffSection from './sections/HandoffSection';
-export default function CryptoBreakdown({symbol,timeframe:_,coinId,compact=false,showSource=true,onStamp}:{symbol:string;timeframe:string;coinId?:string;compact?:boolean;showSource?:boolean;onStamp?:(stamp:StampLineProps|null)=>void}){
+
+/** Compact report from the public symbol packet. No breakdown route, no raw bars. */
+function PacketReport({packet}:{packet:PublicSymbolPacket}){
+ const price=packet.priceEvidence,lead=price?.summary?.[0]||`${packet.meta.symbol} observations from this report.`;
+ const derivatives=packet.canonical?.derivatives,network=packet.canonical?.network,levels=packet.layer2.setup.keyLevels,trend=packet.layer3.structure.trend,vol=packet.layer3.structure.volatility.regime;
+ return <div aria-label="Crypto breakdown" data-packet-report className="space-y-3">
+  <section data-symbol-summary className="space-y-2">
+   <p className="text-sm leading-relaxed">{symbolText(lead)}</p>
+   {price?.basis.lastCompletedBar&&<p className="text-xs text-[var(--msp-text-muted)]">Completed bar {symbolText(price.basis.lastCompletedBar)}{price.basis.source?` · ${symbolText(price.basis.source)}`:''}</p>}
+  </section>
+  {(derivatives||network)&&<dl className="grid grid-cols-2 gap-3 text-sm">
+   {network?.marketCapRank!=null&&<div><dt className="text-xs text-[var(--msp-text-muted)]">Market-cap rank</dt><dd>#{network.marketCapRank}</dd></div>}
+   {derivatives?.fundingRatePercent!=null&&<div><dt className="text-xs text-[var(--msp-text-muted)]">Funding</dt><dd>{derivatives.fundingRatePercent}%</dd></div>}
+   {derivatives?.openInterestUsd!=null&&<div><dt className="text-xs text-[var(--msp-text-muted)]">Open interest</dt><dd>{symbolNumber(derivatives.openInterestUsd,'usd')}</dd></div>}
+  </dl>}
+  {levels.length>0&&<ul>{levels.map(lv=><li key={`${lv.label}-${lv.price}`}>{symbolText(lv.label)}: {symbolNumber(lv.price,'price')}</li>)}</ul>}
+  <p className="text-xs text-[var(--msp-text-muted)]">Close vs 50-day average: {trend.closeVsSma50}. Close vs 20-day average: {trend.closeVsSma20}. Volatility: {vol}.</p>
+  <p className="text-xs text-[var(--msp-text-muted)]">{COPY.footer}</p>
+ </div>;
+}
+
+export default function CryptoBreakdown({symbol,timeframe:_,coinId,compact=false,showSource=true,onStamp,packet=null}:{symbol:string;timeframe:string;coinId?:string;compact?:boolean;showSource?:boolean;onStamp?:(stamp:StampLineProps|null)=>void;packet?:PublicSymbolPacket|null}){
  const publishEvidence=useCopilotSection('crypto',symbol);
- const base=normalizeCryptoSymbol(symbol),[data,setData]=useState<Breakdown|null>(null),[error,setError]=useState<string|null>(null),[loading,setLoading]=useState(true),[refresh,setRefresh]=useState(0);
+ const {tier,isLoading:tierLoading,isAdmin}=useUserTier();
+ const knownUnpaid=Boolean(packet)&&compact&&!tierLoading&&!isAdmin&&!isPaidTier(tier);
+ const base=normalizeCryptoSymbol(symbol),[data,setData]=useState<Breakdown|null>(null),[error,setError]=useState<string|null>(null),[loading,setLoading]=useState(!knownUnpaid),[refresh,setRefresh]=useState(0),[packetFallback,setPacketFallback]=useState(knownUnpaid);
  useEffect(()=>{
-  const abort=new AbortController();setLoading(true);setData(null);setError(null);onStamp?.(null);publishEvidence(null);
+  if(knownUnpaid){setLoading(false);setData(null);setError(null);setPacketFallback(true);return;}
+  const abort=new AbortController();setLoading(true);setData(null);setError(null);setPacketFallback(false);onStamp?.(null);publishEvidence(null);
   const params=new URLSearchParams({symbol:base});if(coinId)params.set('id',coinId);
-  fetch(`/api/crypto/breakdown?${params}`,{signal:abort.signal}).then(async r=>{if(!r.ok)throw Error(COPY.error);const body=await r.json();if(!body.sections||!body.budget)throw Error(COPY.error);if(!abort.signal.aborted){setData(body);publishEvidence(body.copilotEvidenceToken);onStamp?.({source:[...new Set([body.top?.daily.source,body.top?.derivatives.source].filter(Boolean))].join(' · '),asOf:body.top?.daily.asOf,basis:body.top?.daily.basis});}}).catch(e=>{if(!abort.signal.aborted)setError(e.message);}).finally(()=>{if(!abort.signal.aborted)setLoading(false);});
+  fetch(`/api/crypto/breakdown?${params}`,{signal:abort.signal}).then(async r=>{
+   if(!r.ok){
+    if(packet&&compact&&(r.status===401||r.status===403)){if(!abort.signal.aborted){setPacketFallback(true);setError(null);setData(null);}return;}
+    throw Error(COPY.error);
+   }
+   const body=await r.json();if(!body.sections||!body.budget)throw Error(COPY.error);
+   if(!abort.signal.aborted){setPacketFallback(false);setData(body);publishEvidence(body.copilotEvidenceToken);onStamp?.({source:[...new Set([body.top?.daily.source,body.top?.derivatives.source].filter(Boolean))].join(' · '),asOf:body.top?.daily.asOf,basis:body.top?.daily.basis});}
+  }).catch(e=>{if(!abort.signal.aborted)setError(e instanceof Error&&e.name==='AbortError'?null:e.message);}).finally(()=>{if(!abort.signal.aborted)setLoading(false);});
   return ()=>abort.abort();
- },[base,coinId,refresh,onStamp,publishEvidence]);
+ },[base,coinId,refresh,onStamp,publishEvidence,knownUnpaid,packet,compact]);
+ useEffect(()=>{
+  if(!compact||!packet||data||!packetFallback)return;
+  const basis=packet.priceEvidence?.basis;
+  onStamp?.({source:basis?.source||packet.canonical?.source||null,asOf:basis?.lastCompletedBar||packet.meta.asOfTs,basis:basis?.lastCompletedBar?'Completed daily bar':packet.canonical?.priceLabel??undefined});
+ },[compact,packet,data,packetFallback,onStamp]);
+ if(compact&&packet&&packetFallback&&!data)return <PacketReport packet={packet}/>;
  if(compact){
   const metrics=(section:Breakdown['sections'][keyof Breakdown['sections']])=>(section.value?.metrics??[]).filter(m=>m.value!=null&&(typeof m.value!=='number'||Number.isFinite(m.value)));
   const detail=(key:keyof Breakdown['sections'])=>data&&<div className="space-y-2">{metrics(data.sections[key]).length===0&&<p className="text-xs text-amber-300">No observations returned for this section.</p>}<dl className="grid grid-cols-2 gap-3">{metrics(data.sections[key]).map((m,i)=><div key={i}><dt className="text-xs text-[var(--msp-text-muted)]">{symbolText(readerLabel(m.label))}</dt><dd className="break-words text-sm">{symbolMetric(m.value,m.unit)}</dd></div>)}</dl>{data.sections[key].value?.notes.map((n,i)=><p key={i} className="text-xs">{symbolText(readerLabel(n.replace(/Locked rule sha256 prefix [a-f0-9]+\.\s*/i,'')))}</p>)}</div>;

@@ -26,6 +26,9 @@ const BANNED_PATTERNS: Array<{ pattern: RegExp; replacement: string; category: s
   { pattern: /\bstrong buy\b/gi, replacement: 'high confluence bullish', category: 'conviction' },
   { pattern: /\bstrong sell\b/gi, replacement: 'high confluence bearish', category: 'conviction' },
   { pattern: /\bconviction\b/gi, replacement: 'confluence', category: 'conviction' },
+  { pattern: /\banalytical composites\b/gi, replacement: 'measured readings', category: 'product' },
+  // Before the generic guarantee pattern so the full phrase is the match and the shorter word is skipped as overlap.
+  { pattern: /\bmoney-back guarantee\b/gi, replacement: 'free trial', category: 'conviction' },
   { pattern: /\bguarantee[ds]?\b/gi, replacement: 'historical pattern', category: 'conviction' },
 
   // Profitability claims

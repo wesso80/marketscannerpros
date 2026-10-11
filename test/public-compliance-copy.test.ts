@@ -142,6 +142,26 @@ describe('public educational compliance copy', () => {
     expect(readFileSync(join(root, 'lib/compliance/bannedPhrases.ts'), 'utf8')).toMatch(/\\bdaily picks\\b\/gi/);
     expect(readFileSync(join(root, 'lib/toolWorkflows.ts'), 'utf8')).toContain("link('/daily-pick','Daily scan observations')");
   });
+
+  it('flags analytical composites and money-back guarantee, and keeps both off the locked Global M2 surfaces', () => {
+    const fixture = 'Scores are analytical composites. 7-day money-back guarantee.';
+    const hits = scanForBannedPhrases(fixture);
+    expect(hits.map((hit) => hit.phrase.toLowerCase())).toEqual(['analytical composites', 'money-back guarantee']);
+
+    const lockedSurfaces = [
+      'app/intelligence/layout.tsx',
+      'components/free/LockedPreview.tsx',
+      'components/free/copy.ts',
+      'components/free/IntelligenceGate.tsx',
+    ];
+    const violations = lockedSurfaces.flatMap((file) =>
+      scanForBannedPhrases(readFileSync(join(root, file), 'utf8'))
+        .filter((hit) => /analytical composites|money-back guarantee/i.test(hit.phrase))
+        .map((hit) => `${file}:${hit.phrase}`),
+    );
+    expect(violations).toEqual([]);
+    expect(readFileSync(join(root, 'components/free/copy.ts'), 'utf8')).toContain('Pro includes a 7-day free trial, matching the Terms.');
+  });
 });
 
 function walkTsx(dir: string, acc: string[] = []): string[] {
