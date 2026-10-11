@@ -16,6 +16,7 @@ import { detectAssetClass } from '@/lib/goldenEggFetchers';
 import { computeGoldenEgg, tfLabelFor, buildLocalDemoGoldenEggPayload, goldenEggDemoDataQuality, isLocalGoldenEggDemoAllowed } from '@/lib/goldenEgg/engine';
 import { toPublicSymbolPacket } from '@/lib/research/publicSymbolPacket';
 import { buildMarketDataProviderStatus, emitProductionDemoDataAlert, isLocalDemoMarketDataAllowed } from '@/lib/scanner/providerStatus';
+import { goldenEggCacheKey, loadShortCached, responseTier, shortCacheControl } from '@/lib/cache/shortResponse';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -69,32 +70,53 @@ export async function GET(request: NextRequest) {
     fallbackAssetClass = assetClass;
     fallbackTfLabel = tfLabelFor(timeframe);
 
-    const result = await computeGoldenEgg({ symbol, timeframe, assetClass, workspaceId: session?.workspaceId, fresh: searchParams.get('fresh') === '1', expiry: expiryParam });
-    // Provider status is reported at the route boundary so consumers see source/freshness alongside the packet.
-    const providerStatus = result.cached
-      ? buildMarketDataProviderStatus({ source: 'memory_cache', provider: 'memory_cache' })
-      : result.dataQuality;
-    const publicData = toPublicSymbolPacket(result.payload);
+    const tier = responseTier({
+      quotaOn,
+      signedIn: Boolean(session?.workspaceId),
+      paid: !quotaOn && hasPaidSessionAccess(session),
+      plan: access && 'plan' in access ? access.plan : null,
+      bypass: Boolean(access?.bypass),
+    });
+    const fresh = searchParams.get('fresh') === '1';
+    const { value: packet } = await loadShortCached(goldenEggCacheKey(tier, {
+      symbol,
+      timeframe,
+      assetClass,
+      expiry: expiryParam,
+    }), async () => {
+      const result = await computeGoldenEgg({ symbol, timeframe, assetClass, workspaceId: session?.workspaceId, fresh, expiry: expiryParam });
+      // Provider status is reported at the route boundary so consumers see source/freshness alongside the packet.
+      const providerStatus = result.cached
+        ? buildMarketDataProviderStatus({ source: 'memory_cache', provider: 'memory_cache' })
+        : result.dataQuality;
+      return {
+        publicData: toPublicSymbolPacket(result.payload),
+        providerStatus,
+        cached: Boolean(result.cached),
+        localDemo: Boolean(result.localDemo),
+        warnings: result.warnings ?? [],
+      };
+    }, { bypass: fresh });
     produced = true;
     if (reservation) {
-      const settled = await publicQuota.settle(reservation,result.localDemo || !publicData.canonical ? 'released' : 'completed');
+      const settled = await publicQuota.settle(reservation, packet.localDemo || !packet.publicData.canonical ? 'released' : 'completed');
       if (!settled) throw Error('Report quota completion could not be confirmed');
-      if ((result.localDemo || !publicData.canonical) && quotaMeta) quotaMeta.used = Math.max(0,quotaMeta.used-1);
+      if ((packet.localDemo || !packet.publicData.canonical) && quotaMeta) quotaMeta.used = Math.max(0, quotaMeta.used - 1);
     }
     return NextResponse.json({
       success: true,
       // W3: the public contract is built from an allow-list; the internal packet (cached, private consumers) is untouched.
-      data: publicData,
-      copilotEvidenceToken: quotaOn && access && !access.bypass && access.plan === 'pro' && !result.localDemo
-        ? issueSymbolEvidence(publicData, access.subject) : null,
+      data: packet.publicData,
+      copilotEvidenceToken: quotaOn && access && !access.bypass && access.plan === 'pro' && !packet.localDemo
+        ? issueSymbolEvidence(packet.publicData, access.subject) : null,
       quota: quotaMeta,
-      reportUnlocked: quotaOn && Boolean(access) && !result.localDemo && Boolean(publicData.canonical),
-      cached: result.cached || undefined,
-      localDemo: result.localDemo || undefined,
-      warnings: result.warnings.length ? result.warnings : undefined,
-      dataQuality: providerStatus,
-      providerStatus,
-    },{headers:{'Cache-Control':'private, no-store'}});
+      reportUnlocked: quotaOn && Boolean(access) && !packet.localDemo && Boolean(packet.publicData.canonical),
+      cached: packet.cached || undefined,
+      localDemo: packet.localDemo || undefined,
+      warnings: packet.warnings.length ? packet.warnings : undefined,
+      dataQuality: packet.providerStatus,
+      providerStatus: packet.providerStatus,
+    }, { headers: { 'Cache-Control': shortCacheControl(true) } });
   } catch (error) {
     if (reservation && !produced) {
       try { await publicQuota.settle(reservation,'released'); }

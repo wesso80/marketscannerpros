@@ -19,6 +19,7 @@ vi.mock('@/lib/goldenEgg/engine', async (orig) => ({
   computeGoldenEgg: vi.fn(async (p: any) => { h.computeCalls.push(p); return { payload: h.packet, cached: h.computeCalls.length > 1, localDemo: false, warnings: [], dataQuality: { source: 'fixture' } }; }),
 }));
 import { GET } from '@/app/api/golden-egg/route';
+import { clearShortResponseCache } from '@/lib/cache/shortResponse';
 
 function loadedPacket() {
   const p: any = buildPayload('AAPL', 'equity', { ...price, historicalDates: price.historicalCloses!.map((_, i) => new Date(now - (300 - i) * 86400000).toISOString().slice(0, 10)) }, ind, null, null, '1D', null, tc, null, { nowMs: now, timeframeKey: 'daily' });
@@ -58,7 +59,7 @@ function strings(v: any, out: string[] = []): string[] {
 }
 const call = async (qs = 'symbol=AAPL&type=equity') => { const r = await GET(new NextRequest(`https://msp.test/api/golden-egg?${qs}`)); return { status: r.status, body: await r.json() }; };
 
-beforeEach(() => { h.packet = loadedPacket(); h.session = { workspaceId: 'ws-a', tier: 'pro' }; h.paid = true; h.computeCalls = []; });
+beforeEach(() => { clearShortResponseCache(); h.packet = loadedPacket(); h.session = { workspaceId: 'ws-a', tier: 'pro' }; h.paid = true; h.computeCalls = []; });
 
 describe('W3: /api/golden-egg serializes only the public Symbol contract', () => {
   it('complete response: exact key sets, nothing forbidden anywhere', async () => {
@@ -115,7 +116,7 @@ describe('W3: /api/golden-egg serializes only the public Symbol contract', () =>
     const a = await call();
     h.session = { workspaceId: 'ws-b', tier: 'pro' };
     const b = await call();
-    expect(h.computeCalls.map((c) => c.workspaceId)).toEqual(['ws-a', 'ws-b']);
+    expect(h.computeCalls.map((c) => c.workspaceId)).toEqual(['ws-a']);
     const strip = (x: any) => ({ ...x, cached: undefined, dataQuality: undefined, providerStatus: undefined });
     expect(strip(b.body)).toEqual(strip(a.body));
     expect(JSON.stringify(a.body)).not.toMatch(/ws-a|ws-b|workspace/i);

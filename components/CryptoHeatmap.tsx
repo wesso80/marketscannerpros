@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { cryptoHeatmapFreshnessLabel, cryptoHeatmapIsDelayed } from '@/lib/crypto/heatmapFreshnessLabel';
 
 interface CryptoData {
   symbol: string;
@@ -38,7 +39,8 @@ export default function CryptoHeatmap() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [dataSource, setDataSource] = useState('CoinGecko');
-  const [freshnessStatus, setFreshnessStatus] = useState<'fresh' | 'delayed' | 'stale' | 'unknown'>('unknown');
+  const [stale, setStale] = useState(false);
+  const [freshnessStatus, setFreshnessStatus] = useState<string | null>(null);
   const [hoveredCrypto, setHoveredCrypto] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'weight' | 'change'>('weight');
 
@@ -64,8 +66,9 @@ export default function CryptoHeatmap() {
       } else if (typeof data.freshnessStatus === 'string') {
         setFreshnessStatus(data.freshnessStatus);
       } else {
-        setFreshnessStatus('unknown');
+        setFreshnessStatus(null);
       }
+      setStale(data.meta?.stale === true || data.stale === true);
       setError(null);
     } catch (err) {
       setError('Failed to load crypto data');
@@ -187,20 +190,9 @@ export default function CryptoHeatmap() {
   const sortedByChange = [...cryptos].sort((a, b) => b.changePercent - a.changePercent);
   const bestPerformer = sortedByChange[0];
   const worstPerformer = sortedByChange[sortedByChange.length - 1];
-  const freshnessTone = freshnessStatus === 'fresh'
-    ? 'text-emerald-400'
-    : freshnessStatus === 'delayed'
-      ? 'text-amber-400'
-      : freshnessStatus === 'stale'
-        ? 'text-red-400'
-        : 'text-slate-500';
-  const freshnessLabel = freshnessStatus === 'fresh'
-    ? 'Fresh'
-    : freshnessStatus === 'delayed'
-      ? 'Delayed'
-      : freshnessStatus === 'stale'
-        ? 'Stale'
-        : 'Unknown freshness';
+  const freshnessInput = { asOf: lastUpdate, stale, freshnessStatus };
+  const freshnessText = cryptoHeatmapFreshnessLabel(freshnessInput);
+  const freshnessDelayed = cryptoHeatmapIsDelayed(freshnessInput);
 
   return (
     <div className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
@@ -213,7 +205,10 @@ export default function CryptoHeatmap() {
               Crypto Heat Map
             </h3>
             <p className="text-xs text-slate-400 mt-1">
-              Top cryptocurrencies by market cap • 24h change • <span className="text-amber-400">Data updates every 60s</span>
+              Top cryptocurrencies by market cap • 24h change •{' '}
+              <span data-heatmap-freshness className={freshnessDelayed ? 'text-amber-400' : 'text-slate-300'}>
+                {freshnessText}
+              </span>
             </p>
           </div>
           
@@ -418,18 +413,10 @@ export default function CryptoHeatmap() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between mt-2">
-          {lastUpdate && (
-            <p className="text-xs text-slate-500">
-              Last updated: {new Date(lastUpdate).toLocaleTimeString()}
-            </p>
-          )}
-          <div className="flex items-center gap-3 text-xs">
-            <span className={freshnessTone}>{freshnessLabel}</span>
-            <span className="text-slate-500">
-              Data by {dataSource}
-            </span>
-          </div>
+        <div className="flex items-center justify-end mt-2">
+          <span className="text-xs text-slate-500">
+            Data by {dataSource}
+          </span>
         </div>
       </div>
 

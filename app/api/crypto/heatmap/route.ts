@@ -7,6 +7,9 @@ import {
 } from '@/lib/coingecko';
 import { getSessionFromCookie } from '@/lib/auth';
 import { getOiEvidence } from '@/lib/crypto/oiHistory';
+import { loadShortCached, shortCacheControl, UncachedBody } from '@/lib/cache/shortResponse';
+
+const HEATMAP_CACHE_KEY = 'route:crypto-heatmap:v1';
 
 // Crypto sector categorization
 const CRYPTO_SECTORS: Record<string, string> = {
@@ -62,10 +65,11 @@ interface CryptoData {
 export async function GET(req: NextRequest) {
   const session = await getSessionFromCookie();
   if (!session?.workspaceId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: { 'Cache-Control': 'private, no-store' } });
   }
 
   try {
+    const { value } = await loadShortCached(HEATMAP_CACHE_KEY, async () => {
     const fetchedAt = new Date().toISOString();
     // Fetch market data + DeFi stats in parallel (both from CoinGecko)
     const [marketData, defiData] = await Promise.all([
@@ -79,14 +83,14 @@ export async function GET(req: NextRequest) {
         lastUpdated: fetchedAt,
         maxAgeMs: 60_000,
       });
-      return NextResponse.json({
+      throw new UncachedBody(500, {
         cryptos: [],
         timestamp: meta.lastUpdated,
         source: meta.provider,
         freshnessStatus: meta.freshnessStatus,
         meta,
         error: 'Failed to fetch market data'
-      }, { status: 500 });
+      });
     }
 
     const cryptos: CryptoData[] = marketData.map((coin: CoinGeckoMarketData) => {
@@ -131,17 +135,22 @@ export async function GET(req: NextRequest) {
       maxAgeMs: 60_000,
     });
 
-    return NextResponse.json({
+    return {
       cryptos,
       defi: defiData ?? null,
       timestamp: meta.lastUpdated,
       source: meta.provider,
       freshnessStatus: meta.freshnessStatus,
       meta,
+    };
     });
-    
+
+    return NextResponse.json(value, { headers: { 'Cache-Control': shortCacheControl(false) } });
   } catch (error) {
+    if (error instanceof UncachedBody) {
+      return NextResponse.json(error.body, { status: error.status, headers: { 'Cache-Control': 'private, no-store' } });
+    }
     console.error('Error fetching crypto data:', error);
-    return NextResponse.json({ error: 'Failed to fetch crypto data' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch crypto data' }, { status: 500, headers: { 'Cache-Control': 'private, no-store' } });
   }
 }

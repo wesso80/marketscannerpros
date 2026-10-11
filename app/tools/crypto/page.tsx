@@ -11,7 +11,6 @@ import CryptoFeedStatusNotes from '@/components/CryptoFeedStatusNotes';
 
 import Link from 'next/link';
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
-import { usePolling } from '@/hooks/usePolling';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import FreeLoading from '@/components/free/Loading';
@@ -19,7 +18,7 @@ import { useUserTier, canAccessCryptoCommandCenter } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import LockedPreview from '@/components/free/LockedPreview';
 import UpgradeGate from '@/components/UpgradeGate';
-import { PageHero } from '@/components/ui';
+import PageHero from '@/components/ui/PageHero';
 import CoinGeckoCredit from '@/components/CoinGeckoCredit';
 
 const TrendingCoinsWidget = dynamic(() => import('@/components/TrendingCoinsWidget'), {
