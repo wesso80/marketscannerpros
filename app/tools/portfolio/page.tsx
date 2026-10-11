@@ -14,6 +14,7 @@ import type { TradePayload } from '@/lib/workflow/types';
 import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
 import { formatDollar } from '@/lib/riskDisplay';
 import { detectAssetClass } from '@/lib/detectAssetClass';
+import { formatQuoteAsOf } from '@/lib/watchlist/quotes';
 import { cagrFromEquityHistory } from '@/lib/portfolio/cagr';
 import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
@@ -604,6 +605,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     currentPrice: '',
     strategy: '' as Position['strategy'] | ''
   });
+  const currentPriceTouched = useRef(false);
+  const [quotedAsOf, setQuotedAsOf] = useState<string | null>(null);
   const [deployDraft, setDeployDraft] = useState({
     symbol: '',
     side: 'LONG' as 'LONG' | 'SHORT',
@@ -781,6 +784,49 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     const type = explicitCryptoPair || !isLikelyStock(symbol) ? 'crypto' : 'stock';
     return tryFetch(`/api/quote?symbol=${encodeURIComponent(s)}&type=${type}&market=USD`);
   }
+
+  // Add Position fills from the cache-only quote route. It never calls a live provider.
+  useEffect(() => {
+    if (activeTab !== 'add-manual') return;
+    const raw = newPosition.symbol.trim();
+    if (raw.length < 2 || newPosition.strategy === 'options') return;
+    const base = normalizeSymbol(raw);
+    const crypto = detectAssetClass(raw) === 'crypto' || detectAssetClass(base) === 'crypto';
+    const symbols = [...new Set(crypto ? [base, `${base}-USD`] : [base])].filter((s) => s.length > 0);
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const response = await fetch(`/api/cached/bulk-quotes?symbols=${encodeURIComponent(symbols.join(','))}`, { cache: 'no-store', signal: controller.signal });
+          if (!response.ok || controller.signal.aborted) return;
+          const body = await response.json();
+          const quotes = body?.quotes ?? {};
+          const hit = symbols.map((s) => quotes[s]).find((q) => q && typeof q.price === 'number' && Number.isFinite(q.price) && q.price > 0);
+          if (!hit || currentPriceTouched.current) return;
+          const asOf = typeof hit.observedAt === 'string' && hit.observedAt
+            ? hit.observedAt
+            : typeof hit.fetchedAt === 'string' && hit.fetchedAt
+              ? hit.fetchedAt
+              : typeof hit.latestDay === 'string' && hit.latestDay
+                ? hit.latestDay
+                : null;
+          setQuotedAsOf(asOf);
+          setNewPosition((prev) => {
+            if (currentPriceTouched.current || normalizeSymbol(prev.symbol) !== base) return prev;
+            return { ...prev, currentPrice: String(hit.price) };
+          });
+        } catch {
+          /* Aborted, or the cache has no quote: the field stays blank and editable. */
+        }
+      })();
+    }, 300);
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+    // normalizeSymbol is a component function with stable behaviour; the symbol string is the input.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, newPosition.symbol, newPosition.strategy]);
 
   // Option positions: mark the recorded contract itself (EOD unless premium realtime); never the underlying.
   async function fetchOptionMark(contract: NonNullable<ReturnType<typeof positionOptionContract>>): Promise<number | null> {
@@ -1198,6 +1244,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
 
     setPositions([...positions, position]);
     saveRequestedRef.current = true;
+    currentPriceTouched.current = false;
+    setQuotedAsOf(null);
     setNewPosition({ symbol: '', side: 'LONG', quantity: '', entryPrice: '', currentPrice: '', strategy: '' });
     setShowAddForm(false);
     setActiveTab('active-positions');
@@ -2412,7 +2460,11 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                 <div className="space-y-3">
                   <input
                     value={newPosition.symbol}
-                    onChange={(e) => setNewPosition({ ...newPosition, symbol: e.target.value.toUpperCase() })}
+                    onChange={(e) => {
+                      currentPriceTouched.current = false;
+                      setQuotedAsOf(null);
+                      setNewPosition({ ...newPosition, symbol: e.target.value.toUpperCase(), currentPrice: '' });
+                    }}
                     placeholder="Symbol (e.g. BTC, AAPL)"
                     className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500"
                   />
@@ -2462,14 +2514,20 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[11px] uppercase tracking-[0.06em] text-slate-500">Current Price</label>
+                      <label htmlFor="add-position-current-price" className="mb-1 block text-[11px] uppercase tracking-[0.06em] text-slate-500">Current Price</label>
                       <input
+                        id="add-position-current-price"
                         type="number"
                         value={newPosition.currentPrice}
-                        onChange={(e) => setNewPosition({ ...newPosition, currentPrice: e.target.value })}
+                        onChange={(e) => {
+                          currentPriceTouched.current = true;
+                          setQuotedAsOf(null);
+                          setNewPosition({ ...newPosition, currentPrice: e.target.value });
+                        }}
                         placeholder="0.00"
                         className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500"
                       />
+                      {quotedAsOf && <p className="mt-1 text-[11px] text-slate-500">As of {formatQuoteAsOf({ asOf: quotedAsOf, asOfKind: /^\d{4}-\d{2}-\d{2}$/.test(quotedAsOf) ? 'trading_day' : 'timestamp' }) ?? quotedAsOf}</p>}
                     </div>
                   </div>
                   <button

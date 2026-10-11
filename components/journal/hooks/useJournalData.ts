@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { mapJournalResponseToPayload } from '@/lib/journal/mapPayload';
 import { isResearchRecord } from '@/lib/journal/researchRecords';
 import { matchesAssetClassFilter } from '@/lib/journal/assetClassFilter';
@@ -39,25 +39,49 @@ export function useJournalData(query: JournalQueryState, sort: SortModel) {
   const [payload, setPayload] = useState<JournalPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const generation = useRef(0);
+  const entriesRef = useRef<any[]>([]);
+  const loadedRef = useRef(false);
 
-  const fetchData = useCallback(async (signal?: AbortSignal) => {
-    setLoading(true);
-    setError(null);
+  const fetchData = useCallback(async (signal?: AbortSignal, opts?: { silent?: boolean }) => {
+    const ticket = ++generation.current;
+    // GET /api/journal runs schema checks before the SELECT. A reload must not blank rows already on screen.
+    const silent = opts?.silent ?? loadedRef.current;
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const response = await fetch('/api/journal', { cache: 'no-store', signal });
-      if (signal?.aborted) return;
+      if (signal?.aborted || ticket !== generation.current) return;
       const json = await response.json();
+      if (ticket !== generation.current) return;
       if (!response.ok) {
         throw new Error(json?.error || 'Failed to load journal');
       }
+      entriesRef.current = Array.isArray(json?.entries) ? json.entries : [];
+      loadedRef.current = true;
       setPayload(mapJournalResponseToPayload(json));
+      setError(null);
     } catch (e) {
-      if (signal?.aborted) return;
-      setError(e instanceof Error ? e.message : 'Journal records could not be loaded');
-      setPayload(null);
+      if (signal?.aborted || ticket !== generation.current) return;
+      if (!loadedRef.current) {
+        setError(e instanceof Error ? e.message : 'Journal records could not be loaded');
+        setPayload(null);
+      }
     } finally {
-      if (!signal?.aborted) setLoading(false);
+      if (!signal?.aborted && ticket === generation.current) setLoading(false);
     }
+  }, []);
+
+  const showCreated = useCallback((entry: Record<string, unknown>) => {
+    generation.current += 1;
+    const id = String(entry.id ?? '');
+    entriesRef.current = [entry, ...entriesRef.current.filter((row) => String(row?.id ?? '') !== id)];
+    loadedRef.current = true;
+    setError(null);
+    setLoading(false);
+    setPayload(mapJournalResponseToPayload({ entries: entriesRef.current }));
   }, []);
 
   useEffect(() => {
@@ -80,6 +104,7 @@ export function useJournalData(query: JournalQueryState, sort: SortModel) {
     loading,
     error,
     refresh: fetchData,
+    showCreated,
     pageRows,
     total,
   };

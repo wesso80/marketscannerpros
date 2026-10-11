@@ -4,6 +4,7 @@ import {
   getSimplePrices,
   getTrendingCoins,
 } from '@/lib/coingecko';
+import { breadthInputsFromTrending, rememberBreadthSnapshot } from '@/lib/crypto/breadthSnapshot';
 import { getSessionFromCookie } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -64,11 +65,14 @@ export async function GET() {
       lastUpdated: priceUpdatedAt,
       maxAgeMs: 300_000,
     });
+    // Breadth uses the cached trending payload (list + 24h signs + category 1h), not the noStore prices above.
+    const breadth = rememberBreadthSnapshot(breadthInputsFromTrending(trending));
 
     return NextResponse.json({
       success: true,
       coins,
       categories,
+      breadth,
       timestamp: meta.lastUpdated,
       source: meta.provider,
       freshnessStatus: meta.freshnessStatus,

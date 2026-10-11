@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
-import { scanForBannedPhrases } from '@/lib/compliance/bannedPhrases';
+import { LEGAL_REFUND_CARVE_OUT_RADIUS, scanForBannedPhrases, scanLegalRefundAbsolutes } from '@/lib/compliance/bannedPhrases';
 
 const root = process.cwd();
 
@@ -142,6 +142,87 @@ describe('public educational compliance copy', () => {
     expect(readFileSync(join(root, 'lib/compliance/bannedPhrases.ts'), 'utf8')).toMatch(/\\bdaily picks\\b\/gi/);
     expect(readFileSync(join(root, 'lib/toolWorkflows.ts'), 'utf8')).toContain("link('/daily-pick','Daily scan observations')");
   });
+
+  it('flags analytical composites and money-back guarantee, and keeps both off the locked Global M2 surfaces', () => {
+    const fixture = 'Scores are analytical composites. 7-day money-back guarantee.';
+    const hits = scanForBannedPhrases(fixture);
+    expect(hits.map((hit) => hit.phrase.toLowerCase())).toEqual(['analytical composites', 'money-back guarantee']);
+    expect(scanForBannedPhrases('MONEY BACK').map((hit) => hit.phrase.toLowerCase())).toEqual(['money back']);
+    expect(scanForBannedPhrases('money  -  back').map((hit) => hit.phrase.toLowerCase())).toEqual(['money  -  back']);
+    expect(scanForBannedPhrases('full-refund').map((hit) => hit.phrase.toLowerCase())).toEqual(['full-refund']);
+    expect(scanForBannedPhrases('FULL  REFUND').map((hit) => hit.phrase.toLowerCase())).toEqual(['full  refund']);
+
+    const lockedSurfaces = [
+      'app/intelligence/layout.tsx',
+      'components/free/LockedPreview.tsx',
+      'components/free/copy.ts',
+      'components/free/IntelligenceGate.tsx',
+    ];
+    const violations = lockedSurfaces.flatMap((file) =>
+      scanForBannedPhrases(readFileSync(join(root, file), 'utf8'))
+        .filter((hit) => /analytical composites|money[\s-]+back|full[\s-]+refund/i.test(hit.phrase))
+        .map((hit) => `${file}:${hit.phrase}`),
+    );
+    expect(violations).toEqual([]);
+    expect(readFileSync(join(root, 'components/free/copy.ts'), 'utf8')).toContain('Pro includes a 7-day free trial, matching the Terms.');
+  });
+
+  it('keeps money-back and full refund out of customer copy, including legal pages and emails', () => {
+    const files = refundPromiseFiles();
+    const legalPages = [
+      'app/terms/page.tsx',
+      'app/refund-policy/page.tsx',
+      'app/cookie-policy/page.tsx',
+      'app/pricing/page.tsx',
+      'app/pricing/layout.tsx',
+    ];
+    for (const file of legalPages) {
+      expect(files.some((path) => path.endsWith(file))).toBe(true);
+    }
+    const violations = files.flatMap((file) =>
+      scanForBannedPhrases(readFileSync(file, 'utf8'))
+        .filter((hit) => /money[\s-]+back|full[\s-]+refund/i.test(hit.phrase))
+        .map((hit) => `${file.slice(root.length + 1)}:${hit.phrase}`),
+    );
+    expect(violations).toEqual([]);
+    const scanner = readFileSync(join(root, 'lib/compliance/bannedPhrases.ts'), 'utf8');
+    expect(scanner).toMatch(/\\bmoney\[\\s-\]\+back\\b\/gi/);
+    expect(scanner).toMatch(/\\bfull\[\\s-\]\+refund\\b\/gi/);
+  });
+
+  it('flags absolute refund wording on legal pages unless a statutory carve-out is nearby', () => {
+    expect(scanLegalRefundAbsolutes('This purchase is NON-REFUNDABLE.').map((hit) => hit.phrase.toLowerCase())).toEqual(['non-refundable']);
+    expect(scanLegalRefundAbsolutes('non refundable').map((hit) => hit.phrase.toLowerCase())).toEqual(['non refundable']);
+    expect(scanLegalRefundAbsolutes('ALL  SALES  FINAL').map((hit) => hit.phrase.toLowerCase())).toEqual(['all  sales  final']);
+    expect(scanLegalRefundAbsolutes('all-sales-final').map((hit) => hit.phrase.toLowerCase())).toEqual(['all-sales-final']);
+    expect(scanLegalRefundAbsolutes('NO-REFUNDS').map((hit) => hit.phrase.toLowerCase())).toEqual(['no-refunds']);
+
+    const carved = 'Except where required by law, no refunds are given for unused time after cancellation.';
+    expect(scanLegalRefundAbsolutes(carved)).toEqual([]);
+    expect(scanLegalRefundAbsolutes('no refunds. Nothing in this policy excludes your rights under the Australian Consumer Law.')).toEqual([]);
+    expect(scanLegalRefundAbsolutes('ACL carve-out: no refunds in this sentence.')).toEqual([]);
+
+    const far = `${'x'.repeat(LEGAL_REFUND_CARVE_OUT_RADIUS + 40)} no refunds ${'y'.repeat(LEGAL_REFUND_CARVE_OUT_RADIUS + 40)} except where required by law`;
+    expect(scanLegalRefundAbsolutes(far).map((hit) => hit.phrase.toLowerCase())).toEqual(['no refunds']);
+
+    const files = refundPromiseFiles();
+    for (const file of ['app/terms/page.tsx', 'app/refund-policy/page.tsx', 'app/pricing/page.tsx']) {
+      expect(files.some((path) => path.endsWith(file))).toBe(true);
+    }
+    const violations = files.flatMap((file) =>
+      scanLegalRefundAbsolutes(readFileSync(file, 'utf8'))
+        .map((hit) => `${file.slice(root.length + 1)}:${hit.phrase}`),
+    );
+    expect(violations).toEqual([]);
+
+    const policy = readFileSync(join(root, 'app/refund-policy/page.tsx'), 'utf8');
+    expect(policy).toContain('Nothing in this policy excludes your rights under the Australian Consumer Law, including remedies for a major failure.');
+    expect(policy).toContain('Except where required by law, no refunds are given for unused time after cancellation.');
+    expect(policy).toContain('without refund, except where required by law.');
+    const trial = "Pro includes a 7-day free trial, so you can try it before you pay. Cancel any time and you won't be charged again; you keep access until the end of the paid period. Refunds are given where required by the Australian Consumer Law.";
+    expect(readFileSync(join(root, 'app/terms/page.tsx'), 'utf8')).toContain(trial);
+    expect(readFileSync(join(root, 'components/public-design/ResearchPricing.tsx'), 'utf8')).toContain(trial);
+  });
 });
 
 function walkTsx(dir: string, acc: string[] = []): string[] {
@@ -162,5 +243,17 @@ function customerCopyFiles(): string[] {
     join(root, 'lib/og/scanOg.ts'),
     join(root, 'app/daily-pick/wording.ts'),
     join(root, 'app/daily-pick/feed.xml/route.ts'),
+  ];
+}
+
+function refundPromiseFiles(): string[] {
+  return [
+    ...customerCopyFiles(),
+    join(root, 'lib/email.ts'),
+    join(root, 'lib/alerts/email.ts'),
+    join(root, 'lib/alerts/emailPolicy.ts'),
+    join(root, 'lib/admin/cryptoSetupEmail.ts'),
+    join(root, 'lib/jarvis/report/renderEmailHtml.ts'),
+    join(root, 'lib/quant/alertMailer.ts'),
   ];
 }

@@ -4,6 +4,7 @@ import { useUserTier } from '@/lib/useUserTier';
 import FreeLoading from '@/components/free/Loading';
 import Link from "next/link";
 import { PLAN_PRICES } from '@/lib/planPrices';
+import { FREE_COPY } from '@/components/free/copy';
 
 interface UpgradeGateProps {
   // Two access levels only (Free / Pro): the only upgrade path is Pro.
@@ -68,7 +69,7 @@ export default function UpgradeGate({ requiredTier: _requiredTier, feature, chil
           fontSize: "13px",
           marginTop: "16px",
         }}>
-          7-day money-back guarantee • Cancel anytime
+          {FREE_COPY.guarantee} • Cancel anytime
         </p>
       </div>
     </div>

@@ -1,6 +1,7 @@
 'use client';
 
-import { cryptoReviewMissing, cryptoSpotContext, fetchCryptoReviewData } from '@/lib/cryptoReviewData';
+import { cryptoReviewMissing, cryptoSpotContext, displayedBreadth, fetchCryptoReviewData } from '@/lib/cryptoReviewData';
+import { formatBreadthAsOf } from '@/lib/crypto/breadthSnapshot';
 import { marketText } from '@/lib/marketsPresentation';
 import CryptoFeedStatusNotes from '@/components/CryptoFeedStatusNotes';
 
@@ -68,6 +69,7 @@ export default function CryptoMorningDecisionCard({ onDecision, compact = false 
   }, [fetchGateData]);
 
   const decision = useMemo(() => {
+    const shownBreadth = displayedBreadth(marketData);
     const missing = cryptoReviewMissing(marketData);
     if (missing.length) {
       // Risk state, liquidity, hard blocks and the verdict need funding and open
@@ -79,15 +81,13 @@ export default function CryptoMorningDecisionCard({ onDecision, compact = false 
         dataComplete: false, verdict: 'CONDITIONAL' as const, adaptiveConfidence: null,
         hardBlocks: missing, longsAllowed: false, shortsAllowed: false,
         riskContext: 'Data unavailable — refresh to reassess', riskState: 'Unavailable', leadership: spot.leadership,
-        liquidity: 'Unavailable', volatility: spot.volatility, breadthScore: spot.breadthScore, breadthLabel: spot.breadthLabel,
+        liquidity: 'Unavailable', volatility: spot.volatility, breadthScore: spot.breadthScore, breadthLabel: spot.breadthLabel, breadthAsOf: spot.breadthAsOf,
         subClusters: [] as Array<{ name: string; condition: string }>,
         explanation: `${missing.join('; ')}.${spotParts.length ? ` Shown from spot market data only: ${spotParts.join(', ')}.` : ''}`,
       };
     }
 
     const market = marketData?.market;
-    const trendingCoins = marketData?.trending?.coins || [];
-    const trendingCategories = marketData?.trending?.categories || [];
     const funding = marketData?.funding;
     const oi = marketData?.oi;
 
@@ -98,11 +98,9 @@ export default function CryptoMorningDecisionCard({ onDecision, compact = false 
     const usdcDominance = getDominanceValue(dominance, 'USDC');
     const stableDominance = usdtDominance + usdcDominance;
 
-    const trendingPositive = trendingCoins.filter((coin: any) => (coin?.change24h ?? 0) > 0).length;
-    const breadthTop50 = trendingCoins.length ? (trendingPositive / trendingCoins.length) * 100 : 50;
-
-    const categoryPositive = trendingCategories.filter((cat: any) => (cat?.change1h ?? 0) > 0).length;
-    const sectorBreadth = trendingCategories.length ? (categoryPositive / trendingCategories.length) * 100 : breadthTop50;
+    const breadthTop50 = typeof shownBreadth.top50 === 'number' ? shownBreadth.top50 : null;
+    const breadthScore = shownBreadth.score;
+    const breadthLabel = shownBreadth.label;
 
     const volume = typeof market?.totalVolume === 'number' ? market.totalVolume : 0;
     const totalCap = typeof market?.totalMarketCap === 'number' ? market.totalMarketCap : 0;
@@ -131,10 +129,10 @@ export default function CryptoMorningDecisionCard({ onDecision, compact = false 
     if (riskScoreRaw >= 65) riskState = 'Risk-On';
     else if (riskScoreRaw <= 40) riskState = 'Risk-Off';
 
-    let leadership: 'Large Caps Leading' | 'Alts Leading' | 'Defensive Rotation' | 'Fragmented' = 'Fragmented';
-    if (btcDominance >= 56 && breadthTop50 < 40) leadership = 'Defensive Rotation';
-    else if (btcDominance <= 53 && breadthTop50 >= 55) leadership = 'Alts Leading';
-    else if (capMove > 0.5 && btcDominance > 53 && btcDominance < 56) leadership = 'Large Caps Leading';
+    let leadership: 'Large Caps Leading' | 'Alts Leading' | 'Defensive Rotation' | 'Fragmented' | 'Unavailable' = breadthTop50 == null ? 'Unavailable' : 'Fragmented';
+    if (breadthTop50 != null && btcDominance >= 56 && breadthTop50 < 40) leadership = 'Defensive Rotation';
+    else if (breadthTop50 != null && btcDominance <= 53 && breadthTop50 >= 55) leadership = 'Alts Leading';
+    else if (breadthTop50 != null && capMove > 0.5 && btcDominance > 53 && btcDominance < 56) leadership = 'Large Caps Leading';
 
     let liquidity: 'Expanding' | 'Stable' | 'Contracting' = 'Stable';
     if (oiChange > 2 && volumeToCap > 0.04 && stableDominance < 8) liquidity = 'Expanding';
@@ -146,18 +144,15 @@ export default function CryptoMorningDecisionCard({ onDecision, compact = false 
     else if (absCapMove >= 1 && absCapMove < 3) volatility = 'Expansion';
     else if (absCapMove >= 5) volatility = 'Dislocation';
 
-    const breadthScore = Math.round((breadthTop50 * 0.7) + (sectorBreadth * 0.3));
-    const breadthLabel = breadthScore >= 65 ? 'Broad' : breadthScore >= 40 ? 'Mixed' : 'Weak';
-
     const hardBlocksLong: string[] = [];
     const hardBlocksShort: string[] = [];
 
-    if (btcDominance >= 56 && breadthTop50 < 30) hardBlocksLong.push('BTC dominance surge with weak alt breadth');
+    if (breadthTop50 != null && btcDominance >= 56 && breadthTop50 < 30) hardBlocksLong.push('BTC dominance surge with weak alt breadth');
     if (liquidity === 'Contracting' && oiChange < -2) hardBlocksLong.push('Liquidity and OI both contracting');
     if (fundingAvg > 0.04 && capMove < 0) hardBlocksLong.push('Crowded longs with momentum divergence');
     if (isBelowTrend) hardBlocksLong.push('Total market cap below 30D trend');
 
-    if (breadthScore > 65 && liquidity === 'Expanding') hardBlocksShort.push('Broad expansion with liquidity inflow');
+    if (typeof breadthScore === 'number' && breadthScore > 65 && liquidity === 'Expanding') hardBlocksShort.push('Broad expansion with liquidity inflow');
     if (volatility === 'Compression' && capMove > 0.8) hardBlocksShort.push('Post-expansion compression not ideal for shorts');
 
     const longsAllowed = hardBlocksLong.length === 0;
@@ -170,18 +165,18 @@ export default function CryptoMorningDecisionCard({ onDecision, compact = false 
     const liquidityWeight = liquidity === 'Expanding' ? 85 : liquidity === 'Stable' ? 55 : 20;
     const volatilityWeight = volatility === 'Expansion' ? 75 : volatility === 'Compression' ? 55 : volatility === 'Chop' ? 40 : 20;
 
-    const adaptiveConfidence = Math.round(
+    const adaptiveConfidence = typeof breadthScore === 'number' && breadthTop50 != null ? Math.round(
       (riskWeight * 0.25) +
       (leadershipWeight * 0.2) +
       (liquidityWeight * 0.2) +
       (volatilityWeight * 0.15) +
       (breadthScore * 0.2),
-    );
+    ) : null;
 
     let verdict: ConditionVerdict = 'CONDITIONAL';
     if (hardBlockTriggered) verdict = 'NOT ALIGNED';
-    else if (adaptiveConfidence >= 65) verdict = 'ALIGNED';
-    else if (adaptiveConfidence < 40) verdict = 'NOT ALIGNED';
+    else if (adaptiveConfidence != null && adaptiveConfidence >= 65) verdict = 'ALIGNED';
+    else if (adaptiveConfidence != null && adaptiveConfidence < 40) verdict = 'NOT ALIGNED';
     else verdict = 'CONDITIONAL';
 
     if (verdict === 'ALIGNED' && (!longsAllowed || !shortsAllowed)) verdict = 'CONDITIONAL';
@@ -191,11 +186,11 @@ export default function CryptoMorningDecisionCard({ onDecision, compact = false 
     const subClusters = [
       {
         name: 'Large Caps',
-        condition: riskState === 'Risk-Off' ? 'Unfavorable' : leadership === 'Defensive Rotation' ? 'Mixed' : 'Favorable',
+        condition: leadership === 'Unavailable' ? 'Unavailable' : riskState === 'Risk-Off' ? 'Unfavorable' : leadership === 'Defensive Rotation' ? 'Mixed' : 'Favorable',
       },
       {
         name: 'Mid/Alts',
-        condition: !longsAllowed || breadthScore < 45 ? 'Unfavorable' : breadthScore >= 60 ? 'Favorable' : 'Mixed',
+        condition: typeof breadthScore !== 'number' ? 'Unavailable' : !longsAllowed || breadthScore < 45 ? 'Unfavorable' : breadthScore >= 60 ? 'Favorable' : 'Mixed',
       },
       {
         name: 'Meme/High Beta',
@@ -203,7 +198,7 @@ export default function CryptoMorningDecisionCard({ onDecision, compact = false 
       },
       {
         name: 'DeFi',
-        condition: liquidity === 'Expanding' && breadthScore >= 50 ? 'Favorable' : liquidity === 'Contracting' ? 'Unfavorable' : 'Mixed',
+        condition: typeof breadthScore !== 'number' ? 'Unavailable' : liquidity === 'Expanding' && breadthScore >= 50 ? 'Favorable' : liquidity === 'Contracting' ? 'Unfavorable' : 'Mixed',
       },
     ];
 
@@ -221,6 +216,7 @@ export default function CryptoMorningDecisionCard({ onDecision, compact = false 
       volatility,
       breadthScore,
       breadthLabel,
+      breadthAsOf: shownBreadth.asOf,
       subClusters,
     };
   }, [marketData]);
@@ -302,7 +298,7 @@ export default function CryptoMorningDecisionCard({ onDecision, compact = false 
             </div>
             <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1">
               <span className="text-slate-500">Breadth</span>
-              <p className="font-semibold text-slate-200">{decision.breadthLabel} ({decision.breadthScore == null ? "Unavailable" : `${decision.breadthScore}%`})</p>
+              <p className="font-semibold text-slate-200">{decision.breadthLabel} ({decision.breadthScore == null ? "Unavailable" : `${decision.breadthScore}%`}){decision.breadthAsOf ? ` · as of ${formatBreadthAsOf(decision.breadthAsOf)}` : ''}</p>
             </div>
           </div>
           <div className="mt-2 rounded border border-slate-700 bg-slate-900/70 p-1.5 text-[11px] text-slate-400">

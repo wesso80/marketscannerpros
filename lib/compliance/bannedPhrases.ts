@@ -26,6 +26,11 @@ const BANNED_PATTERNS: Array<{ pattern: RegExp; replacement: string; category: s
   { pattern: /\bstrong buy\b/gi, replacement: 'high confluence bullish', category: 'conviction' },
   { pattern: /\bstrong sell\b/gi, replacement: 'high confluence bearish', category: 'conviction' },
   { pattern: /\bconviction\b/gi, replacement: 'confluence', category: 'conviction' },
+  { pattern: /\banalytical composites\b/gi, replacement: 'measured readings', category: 'product' },
+  // Longer phrase first so overlap keeps one match. money-back and full refund allow any run of spaces or hyphens.
+  { pattern: /\bmoney-back guarantee\b/gi, replacement: '7-day free trial', category: 'conviction' },
+  { pattern: /\bmoney[\s-]+back\b/gi, replacement: '7-day free trial', category: 'conviction' },
+  { pattern: /\bfull[\s-]+refund\b/gi, replacement: '7-day free trial', category: 'conviction' },
   { pattern: /\bguarantee[ds]?\b/gi, replacement: 'historical pattern', category: 'conviction' },
 
   // Profitability claims
@@ -42,6 +47,18 @@ const BANNED_PATTERNS: Array<{ pattern: RegExp; replacement: string; category: s
   // Repeated whitespace ("Daily   Picks") is the same phrase. Listed second so a single space stays one match.
   { pattern: /\bdaily\s+picks\b/gi, replacement: 'Daily scan observations', category: 'product' },
 ];
+
+// Absolute refund wording. A nearby statutory carve-out keeps the phrase.
+const LEGAL_REFUND_ABSOLUTES: Array<{ pattern: RegExp; replacement: string }> = [
+  { pattern: /\bnon[\s-]*refundable\b/gi, replacement: '7-day free trial' },
+  { pattern: /\ball[\s-]+sales[\s-]+final\b/gi, replacement: '7-day free trial' },
+  { pattern: /\bno[\s-]+refunds\b/gi, replacement: '7-day free trial' },
+];
+
+const LEGAL_REFUND_CARVE_OUT = /except where required by law|australian consumer law|\bacl\b/i;
+
+/** Characters before and after a match that still count as nearby. */
+export const LEGAL_REFUND_CARVE_OUT_RADIUS = 240;
 
 export interface BannedPhraseMatch {
   phrase: string;
@@ -69,6 +86,30 @@ export function scanForBannedPhrases(text: string): BannedPhraseMatch[] {
         replacement: bp.replacement,
         category: bp.category,
         index,
+      });
+    }
+  }
+  return matches;
+}
+
+/**
+ * Flag non-refundable, all sales final, and no refunds unless a nearby
+ * "except where required by law" or Australian Consumer Law carve-out covers the match.
+ */
+export function scanLegalRefundAbsolutes(text: string): BannedPhraseMatch[] {
+  const matches: BannedPhraseMatch[] = [];
+  for (const bp of LEGAL_REFUND_ABSOLUTES) {
+    const re = new RegExp(bp.pattern.source, bp.pattern.flags);
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      const start = Math.max(0, m.index - LEGAL_REFUND_CARVE_OUT_RADIUS);
+      const end = Math.min(text.length, m.index + m[0].length + LEGAL_REFUND_CARVE_OUT_RADIUS);
+      if (LEGAL_REFUND_CARVE_OUT.test(text.slice(start, end))) continue;
+      matches.push({
+        phrase: m[0],
+        replacement: bp.replacement,
+        category: 'refund',
+        index: m.index,
       });
     }
   }

@@ -6,9 +6,11 @@
  * "serve persisted last-known-good" path for each bloc and runs the same engine. No network, no Alpha Vantage quota.
  * With nothing persisted it returns null (the route answers 503, never an empty image).
  */
-import { buildWave3Bundle, type Wave3Deps } from '@/lib/intelligence/data/globalM2Pipeline';
-import type { ProviderFxRaw, ProviderM2Raw } from '@/lib/intelligence/data/providers/globalM2ProviderTypes';
+import { buildWave3Bundle } from '@/lib/intelligence/data/globalM2Pipeline';
+import { persistedOnlyDeps, readOnlyM2Store } from '@/lib/intelligence/data/globalM2PersistedRead';
 import { dbGlobalM2Store, type PersistedM2Store } from '@/lib/intelligence/data/globalM2Store';
+
+export { persistedOnlyDeps, readOnlyM2Store };
 import { CardFrame, Stat } from './CardFrame';
 import { SHARE_THEME as T } from './theme';
 import { clipText } from './validate';
@@ -31,35 +33,6 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 const monthLabel = (ym: string) => { const [y, m] = ym.split('-').map(Number); return MONTHS[m - 1] ? `${MONTHS[m - 1]} ${y}` : ym; };
 const pct = (n: number | null | undefined) => (n == null || !Number.isFinite(n) ? '—' : `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`);
 const humanState = (s: string) => clipText(s.replace(/_/g, ' ').toLowerCase(), 28);
-
-const offlineM2 = (id: string) => async (): Promise<ProviderM2Raw> => ({
-  ok: false, id, provider: 'persisted', sourceSeries: '', nativeCurrency: '', nativeUnit: '', m2: [],
-  latestObservationMonth: null, retrievedAt: new Date().toISOString(), error: 'share card reads persisted data only',
-});
-const offlineFx = (pair: string) => async (): Promise<ProviderFxRaw> => ({
-  ok: false, pair, daily: [], retrievedAt: new Date().toISOString(), error: 'share card reads persisted data only',
-});
-
-/** Deps that make buildWave3Bundle read only the persisted store (exported for tests). */
-export function persistedOnlyDeps(): Wave3Deps {
-  return {
-    us: offlineM2('US'), china: offlineM2('CN'), swiss: offlineM2('CH'), euro: offlineM2('EU'), uk: offlineM2('GB'),
-    japan: offlineM2('JP'), canada: offlineM2('CA'), australia: offlineM2('AU'), india: offlineM2('IN'), korea: offlineM2('KR'),
-    brazil: offlineM2('BR'),
-    usdcny: offlineFx('USDCNY'), usdchf: offlineFx('USDCHF'), eurusd: offlineFx('EURUSD'), gbpusd: offlineFx('GBPUSD'),
-    usdjpy: offlineFx('USDJPY'), usdcad: offlineFx('USDCAD'), audusd: offlineFx('AUDUSD'), usdinr: offlineFx('USDINR'),
-    usdkrw: offlineFx('USDKRW'), usdbrl: offlineFx('USDBRL'),
-  };
-}
-
-/**
- * The store with writes disabled. The card is a public GET, so it must never write to macro_series. (In practice
- * buildWave3Bundle only writes a bloc after a successful LIVE fetch, and every provider here is offline, so nothing
- * was ever written; this makes it impossible rather than incidental.) Exported for tests.
- */
-export function readOnlyM2Store(store: PersistedM2Store): PersistedM2Store {
-  return { read: (id) => store.read(id), write: async () => 0 };
-}
 
 /** "Jul 2026", or "Jul 2026 (some blocs Jun 2026)" when the blocs in the total end in different months. */
 export function dataThroughLabel(observationMonths: string[]): string {

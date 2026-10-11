@@ -146,3 +146,31 @@ it('Pro crypto full page keeps one source and cleans every compact fold',async()
  expect(container.querySelectorAll('[data-source-line]')).toHaveLength(1);
  expect(JSON.stringify({packet,breakdown})).toBe(before);
 });
+
+it('signed-out BTC report renders the server packet when the breakdown feed is refused', async () => {
+  state.symbol = 'BTC';
+  state.status = 200;
+  const packet = buildPayload('BTC', 'crypto', price, ind, null, null, '1D', null, null, null, { nowMs: now });
+  const pub = toPublicSymbolPacket(packet);
+  const needle = pub.priceEvidence?.summary[0] || 'BTC observations from this report.';
+  vi.mocked(fetch).mockImplementation(async (input: any) => {
+    const url = String(input);
+    if (url.startsWith('/api/crypto/breakdown')) {
+      return { ok: false, status: 401, json: async () => ({ error: 'Please log in', secret: 'RAW_BREAKDOWN_BARS' }) } as Response;
+    }
+    const body = url.startsWith('/api/golden-egg')
+      ? { success: true, data: pub }
+      : url.startsWith('/api/quote')
+        ? quote
+        : url.includes('/api/scanner/')
+          ? { equity: [], crypto: [], topPicks: { equity: [], crypto: [] } }
+          : {};
+    return { ok: true, status: 200, json: async () => body } as Response;
+  });
+  render(<GoldenEggPage />);
+  expect((await screen.findByText(needle)).textContent).toBe(needle);
+  expect(screen.queryByText(/Crypto data feed failed/)).toBeNull();
+  expect(document.body.textContent).not.toContain('Daily chart feed has no bars');
+  expect(document.body.textContent).not.toContain('RAW_BREAKDOWN_BARS');
+  expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).startsWith('/api/crypto/breakdown'))).toBe(true);
+});

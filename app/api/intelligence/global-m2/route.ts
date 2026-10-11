@@ -4,16 +4,17 @@ import { m2ResearchEnabled } from '@/lib/publicDesign';
 import { publicM2Summary } from '@/lib/research/publicM2Summary';
 import { NextRequest, NextResponse } from 'next/server';
 import { buildWave3Bundle } from '@/lib/intelligence/data/globalM2Pipeline';
+import { persistedOnlyDeps, readOnlyM2Store } from '@/lib/intelligence/data/globalM2PersistedRead';
+import { dbGlobalM2Store } from '@/lib/intelligence/data/globalM2Store';
 import { GLOBAL_M2_EXCLUDED_BLOCS } from '@/lib/intelligence/engines/globalM2';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Read-only Global M2 diagnostic. Live providers are gated behind
-// INTELLIGENCE_LIVE_DATA (same switch as Fragility) so production stays quiet
-// until keys are set. Result is cached in-process (M2 is monthly) to avoid
-// hammering ~20 external endpoints per request. The engine stays frozen and the
-// result is DATA_PARITY_PENDING; interpretation is ineligible below 95% coverage.
+// Read-only Global M2 diagnostic. Page loads read persisted GM2_USD rows.
+// Live central-bank fetches stay on the ingest cron. Result is cached in-process
+// (M2 is monthly). The engine stays frozen and the result is DATA_PARITY_PENDING;
+// interpretation is ineligible below 95% coverage.
 // Weighted coverage excludes the permanently unavailable blocs listed in
 // `excludedBlocs` (India, South Korea); `coveragePercent` stays the raw count over all 11.
 
@@ -53,7 +54,7 @@ const TTL_MS = 6 * 60 * 60 * 1000; // 6h — M2 is a monthly aggregate.
 let cache: { at: number; dto: GlobalM2Dto } | null = null;
 
 async function computeDto(): Promise<GlobalM2Dto> {
-  const b = await buildWave3Bundle();
+  const b = await buildWave3Bundle(persistedOnlyDeps(), { persist: true, store: readOnlyM2Store(dbGlobalM2Store) });
   const q = b.result.quality;
   const healthById = new Map(b.providerStatus.map((p) => [p.id, p.health ?? (p.ok ? 'LIVE' : 'DATA_UNAVAILABLE')]));
   return {
@@ -108,10 +109,13 @@ export async function GET(request?: NextRequest) {
     try {
       const session = await getSessionFromCookie();
       if (!session?.workspaceId) return json({error:'Please sign in'},401);
-      if (summary && !redesigned) return json({error:'Summary unavailable'},404);
-      if (!summary) {
+      // The public page always requests ?view=summary. Pro must receive it even when the
+      // rollout flag is off; otherwise the page shows a failed load. Free stays on the flag.
+      if (!summary || !redesigned) {
         const access = await resolvePublicQuotaAccess(session);
-        if (!access.bypass && access.plan !== 'pro') return json({error:'Pro is required for detailed M2 research'},403);
+        const pro = access.bypass || access.plan === 'pro';
+        if (summary && !redesigned && !pro) return json({error:'Upgrade to Pro to read Global M2.'},403);
+        if (!summary && !pro) return json({error:'Pro is required for detailed M2 research'},403);
       }
     } catch { return json({error:'Access could not be verified'},503); }
   }

@@ -224,7 +224,7 @@ export default function PricingPage() {
       priceMonthlyLabel: PLAN_PRICES.pro.monthly,
       priceYearlyLabel: PLAN_PRICES.pro.yearly,
       cta: "Go Pro",
-      subCta: "Cancel anytime · 7-day money-back guarantee",
+      subCta: `Cancel anytime · ${FREE_COPY.guarantee}`,
       highlight: true,
       badge: "Full platform",
       benefits: [
@@ -341,7 +341,7 @@ export default function PricingPage() {
           <div className="mx-auto mt-6 max-w-3xl rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] p-3">
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-white/80">
               <span className="inline-flex items-center gap-1.5">
-                <span className="text-emerald-300">✓</span> 7-day money-back guarantee
+                <span className="text-emerald-300">✓</span> {FREE_COPY.guarantee}
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <span className="text-emerald-300">✓</span> Cancel anytime
@@ -389,7 +389,7 @@ export default function PricingPage() {
             </div>
             <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-4">
               <div className="text-sm font-semibold">Do you offer refunds?</div>
-              <p className="mt-2 text-sm text-white/70">If you are not satisfied with your subscription, you may request a full refund within 7 days of your first payment. This guarantee applies to first-time subscribers only.</p>
+              <p className="mt-2 text-sm text-white/70">Pro includes a 7-day free trial, so you can try it before you pay. Cancel any time and you won't be charged again; you keep access until the end of the paid period. Refunds are given where required by the Australian Consumer Law.</p>
             </div>
             <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-4">
               <div className="text-sm font-semibold">Do you provide financial advice?</div>

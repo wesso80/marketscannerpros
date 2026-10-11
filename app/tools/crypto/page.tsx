@@ -6,7 +6,8 @@ import CollapsibleSection from '@/components/visual/CollapsibleSection';
 import SourceLine from '@/components/visual/SourceLine';
 import { MarketMetrics, MarketSparkline } from '@/components/explorer/MarketsSummary';
 import { marketText } from '@/lib/marketsPresentation';
-import { cryptoReviewFeedNotes, cryptoReviewMissing, cryptoSpotContext, fetchCryptoReviewData } from '@/lib/cryptoReviewData';
+import { cryptoReviewFeedNotes, cryptoReviewMissing, cryptoSpotContext, displayedBreadth, fetchCryptoReviewData } from '@/lib/cryptoReviewData';
+import { formatBreadthAsOf } from '@/lib/crypto/breadthSnapshot';
 import CryptoFeedStatusNotes from '@/components/CryptoFeedStatusNotes';
 
 import Link from 'next/link';
@@ -145,10 +146,29 @@ function CryptoCommandCenterPaid({ embedded = false }: { embedded?: boolean }) {
   );
 }
 
+const SECTION_FROM_QUERY: Record<string, Section> = {
+  heatmap: 'market',
+  market: 'market',
+  trending: 'trending',
+  movers: 'movers',
+  sectors: 'sectors',
+  defi: 'defi',
+  dex: 'dex',
+  newpools: 'newpools',
+  search: 'search',
+  listings: 'listings',
+  overview: 'overview',
+};
+
+function sectionFromQuery(param: string | null): Section {
+  if (!param) return 'overview';
+  return SECTION_FROM_QUERY[param.toLowerCase()] ?? 'overview';
+}
+
 function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }) {
   const { tier, isAdmin, isLoading: tierLoading } = useUserTier();
   const searchParams = useSearchParams();
-  const [activeSection, setActiveSection] = useState<Section>('overview');
+  const [activeSection, setActiveSection] = useState<Section>(() => sectionFromQuery(searchParams.get('section')));
   const [logTab, setLogTab] = useState<LogTab>('alerts');
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [marketData, setMarketData] = useState<any>(null);
@@ -158,21 +178,7 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
     const sectionParam = searchParams.get('section');
     if (!sectionParam) return;
 
-    const sectionMap: Record<string, Section> = {
-      heatmap: 'market',
-      market: 'market',
-      trending: 'trending',
-      movers: 'movers',
-      sectors: 'sectors',
-      defi: 'defi',
-      dex: 'dex',
-      newpools: 'newpools',
-      search: 'search',
-      listings: 'listings',
-      overview: 'overview',
-    };
-
-    const mappedSection = sectionMap[sectionParam.toLowerCase()];
+    const mappedSection = sectionFromQuery(sectionParam);
     if (mappedSection) setActiveSection(mappedSection);
   }, [searchParams]);
 
@@ -195,6 +201,7 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
   const { setPageData } = useAIPageContext();
 
   const morningDecision = useMemo(() => {
+    const shownBreadth = displayedBreadth(marketData);
     const missing = cryptoReviewMissing(marketData);
     if (missing.length) {
       // Risk state, liquidity, hard blocks and the verdict need funding and open
@@ -206,15 +213,13 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
         dataComplete: false, verdict: 'CONDITIONAL' as const, adaptiveConfidence: null,
         hardBlocks: missing, longsAllowed: false, shortsAllowed: false,
         riskContext: 'Data unavailable — refresh to reassess', riskState: 'Unavailable', leadership: spot.leadership,
-        liquidity: 'Unavailable', volatility: spot.volatility, breadthScore: spot.breadthScore, breadthLabel: spot.breadthLabel,
+        liquidity: 'Unavailable', volatility: spot.volatility, breadthScore: spot.breadthScore, breadthLabel: spot.breadthLabel, breadthAsOf: spot.breadthAsOf,
         subClusters: [] as Array<{ name: string; review: string }>,
         explanation: `${missing.join('; ')}.${spotParts.length ? ` Shown from spot market data only: ${spotParts.join(', ')}.` : ''}`,
       };
     }
 
     const market = marketData?.market;
-    const trendingCoins = marketData?.trending?.coins || [];
-    const trendingCategories = marketData?.trending?.categories || [];
     const funding = marketData?.funding;
     const oi = marketData?.oi;
 
@@ -225,11 +230,9 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
     const usdcDominance = getDominanceValue(dominance, 'USDC');
     const stableDominance = usdtDominance + usdcDominance;
 
-    const trendingPositive = trendingCoins.filter((coin: any) => (coin?.change24h ?? 0) > 0).length;
-    const breadthTop50 = trendingCoins.length ? (trendingPositive / trendingCoins.length) * 100 : 50;
-
-    const categoryPositive = trendingCategories.filter((cat: any) => (cat?.change1h ?? 0) > 0).length;
-    const sectorBreadth = trendingCategories.length ? (categoryPositive / trendingCategories.length) * 100 : breadthTop50;
+    const breadthTop50 = typeof shownBreadth.top50 === 'number' ? shownBreadth.top50 : null;
+    const breadthScore = shownBreadth.score;
+    const breadthLabel = shownBreadth.label;
 
     const volume = typeof market?.totalVolume === 'number' ? market.totalVolume : 0;
     const totalCap = typeof market?.totalMarketCap === 'number' ? market.totalMarketCap : 0;
@@ -258,10 +261,10 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
     if (riskScoreRaw >= 65) riskState = 'Risk-On';
     else if (riskScoreRaw <= 40) riskState = 'Risk-Off';
 
-    let leadership: 'Large Caps Leading' | 'Alts Leading' | 'Defensive Rotation' | 'Fragmented' = 'Fragmented';
-    if (btcDominance >= 56 && breadthTop50 < 40) leadership = 'Defensive Rotation';
-    else if (btcDominance <= 53 && breadthTop50 >= 55) leadership = 'Alts Leading';
-    else if (capMove > 0.5 && btcDominance > 53 && btcDominance < 56) leadership = 'Large Caps Leading';
+    let leadership: 'Large Caps Leading' | 'Alts Leading' | 'Defensive Rotation' | 'Fragmented' | 'Unavailable' = breadthTop50 == null ? 'Unavailable' : 'Fragmented';
+    if (breadthTop50 != null && btcDominance >= 56 && breadthTop50 < 40) leadership = 'Defensive Rotation';
+    else if (breadthTop50 != null && btcDominance <= 53 && breadthTop50 >= 55) leadership = 'Alts Leading';
+    else if (breadthTop50 != null && capMove > 0.5 && btcDominance > 53 && btcDominance < 56) leadership = 'Large Caps Leading';
 
     let liquidity: 'Expanding' | 'Stable' | 'Contracting' = 'Stable';
     if (oiChange > 2 && volumeToCap > 0.04 && stableDominance < 8) liquidity = 'Expanding';
@@ -273,18 +276,15 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
     else if (absCapMove >= 1 && absCapMove < 3) volatility = 'Expansion';
     else if (absCapMove >= 5) volatility = 'Dislocation';
 
-    const breadthScore = Math.round((breadthTop50 * 0.7) + (sectorBreadth * 0.3));
-    const breadthLabel = breadthScore >= 65 ? 'Broad' : breadthScore >= 40 ? 'Mixed' : 'Weak';
-
     const hardBlocksLong: string[] = [];
     const hardBlocksShort: string[] = [];
 
-    if (btcDominance >= 56 && breadthTop50 < 30) hardBlocksLong.push('BTC dominance surge with weak alt breadth');
+    if (breadthTop50 != null && btcDominance >= 56 && breadthTop50 < 30) hardBlocksLong.push('BTC dominance surge with weak alt breadth');
     if (liquidity === 'Contracting' && oiChange < -2) hardBlocksLong.push('Liquidity and OI both contracting');
     if (fundingAvg > 0.04 && capMove < 0) hardBlocksLong.push('Crowded longs with momentum divergence');
     if (isBelowTrend) hardBlocksLong.push('Total market cap below 30D trend');
 
-    if (breadthScore > 65 && liquidity === 'Expanding') hardBlocksShort.push('Broad expansion with liquidity inflow');
+    if (typeof breadthScore === 'number' && breadthScore > 65 && liquidity === 'Expanding') hardBlocksShort.push('Broad expansion with liquidity inflow');
     if (volatility === 'Compression' && capMove > 0.8) hardBlocksShort.push('Post-expansion compression not ideal for shorts');
 
     const longsAllowed = hardBlocksLong.length === 0;
@@ -297,18 +297,18 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
     const liquidityWeight = liquidity === 'Expanding' ? 85 : liquidity === 'Stable' ? 55 : 20;
     const volatilityWeight = volatility === 'Expansion' ? 75 : volatility === 'Compression' ? 55 : volatility === 'Chop' ? 40 : 20;
 
-    const adaptiveConfidence = Math.round(
+    const adaptiveConfidence = typeof breadthScore === 'number' && breadthTop50 != null ? Math.round(
       (riskWeight * 0.25) +
       (leadershipWeight * 0.2) +
       (liquidityWeight * 0.2) +
       (volatilityWeight * 0.15) +
       (breadthScore * 0.2),
-    );
+    ) : null;
 
     let verdict: ReviewVerdict = 'CONDITIONAL';
     if (hardBlockTriggered) verdict = 'NOT ALIGNED';
-    else if (adaptiveConfidence >= 65) verdict = 'ALIGNED';
-    else if (adaptiveConfidence < 40) verdict = 'NOT ALIGNED';
+    else if (adaptiveConfidence != null && adaptiveConfidence >= 65) verdict = 'ALIGNED';
+    else if (adaptiveConfidence != null && adaptiveConfidence < 40) verdict = 'NOT ALIGNED';
     else verdict = 'CONDITIONAL';
 
     if (verdict === 'ALIGNED' && (!longsAllowed || !shortsAllowed)) verdict = 'CONDITIONAL';
@@ -318,11 +318,11 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
     const subClusters = [
       {
         name: 'Large Caps',
-        review: riskState === 'Risk-Off' ? 'Weak' : leadership === 'Defensive Rotation' ? 'Mixed' : 'Supportive',
+        review: leadership === 'Unavailable' ? 'Unavailable' : riskState === 'Risk-Off' ? 'Weak' : leadership === 'Defensive Rotation' ? 'Mixed' : 'Supportive',
       },
       {
         name: 'Mid/Alts',
-        review: !longsAllowed || breadthScore < 45 ? 'Weak' : breadthScore >= 60 ? 'Supportive' : 'Mixed',
+        review: typeof breadthScore !== 'number' ? 'Unavailable' : !longsAllowed || breadthScore < 45 ? 'Weak' : breadthScore >= 60 ? 'Supportive' : 'Mixed',
       },
       {
         name: 'Meme/High Beta',
@@ -330,7 +330,7 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
       },
       {
         name: 'DeFi',
-        review: liquidity === 'Expanding' && breadthScore >= 50 ? 'Supportive' : liquidity === 'Contracting' ? 'Weak' : 'Mixed',
+        review: typeof breadthScore !== 'number' ? 'Unavailable' : liquidity === 'Expanding' && breadthScore >= 50 ? 'Supportive' : liquidity === 'Contracting' ? 'Weak' : 'Mixed',
       },
     ];
 
@@ -353,6 +353,7 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
       volatility,
       breadthScore,
       breadthLabel,
+      breadthAsOf: shownBreadth.asOf,
       subClusters,
       explanation,
     };
@@ -469,6 +470,8 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
       {label:'Breadth',value:morningDecision.breadthScore == null ? null : `${morningDecision.breadthScore}%`},
       {label:'BTC dominance',value:marketData?.market?.dominance?.some((d: {symbol:string})=>d.symbol==='BTC') ? `${getDominanceValue(marketData.market.dominance,'BTC').toFixed(1)}%` : null},
     ]}/>
+    {morningDecision.breadthAsOf && <p data-breadth-as-of className="text-xs text-slate-400">Breadth as of {formatBreadthAsOf(morningDecision.breadthAsOf)}</p>}
+    {activeSection !== 'overview' && <div data-crypto-section={activeSection}><Suspense fallback={<WidgetSkeleton/>}>{renderPrimaryWidget()}</Suspense></div>}
     {marketData?.market && <MarketSparkline values={(marketData.market.sparkline || []).map((p: {value:number})=>p.value)} title="Total crypto market cap"/>}
     {!morningDecision.dataComplete && <p className="rounded border border-amber-400/30 p-2 text-xs text-amber-300">{marketText(morningDecision.hardBlocks.join(' · '))}</p>}
     <button type="button" onClick={() => void fetchOverview()} className="min-h-10 text-sm underline">Refresh evidence</button>
@@ -479,7 +482,7 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
       ]}/>
       <p className="my-3 text-xs">{marketText(morningDecision.explanation)}</p>
       <label className="text-sm">Explore <select className="ml-2 rounded border border-slate-700 bg-slate-900 p-2" value={activeSection} onChange={e=>setActiveSection(e.target.value as Section)}>{sectionItems.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
-      <div className="mt-3"><Suspense fallback={<WidgetSkeleton/>}>{renderPrimaryWidget()}</Suspense></div>
+      {activeSection === 'overview' && <div className="mt-3"><Suspense fallback={<WidgetSkeleton/>}>{renderPrimaryWidget()}</Suspense></div>}
     </CollapsibleSection>
     <CollapsibleSection title="Snapshot notes" summary={`${logs.data.length} feed notes`}>
       <p className="text-xs text-slate-400">Notes describe the current snapshot; they are not a history of triggered events.</p>
@@ -518,7 +521,7 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
           metrics={[
             // Until the first CoinGecko payload lands, the decision engine only has defaults — show that honestly.
             { label: 'Verdict', value: marketData ? reviewLabel(morningDecision.verdict) : 'Loading', tone: !marketData ? 'info' : morningDecision.verdict === 'ALIGNED' ? 'bull' : morningDecision.verdict === 'CONDITIONAL' ? 'warn' : 'bear', detail: marketData ? `Confluence ${morningDecision.adaptiveConfidence == null ? "Unavailable" : `${morningDecision.adaptiveConfidence}/100`}` : 'Awaiting market data' },
-            { label: 'Breadth', value: marketData ? morningDecision.breadthLabel : 'Loading', tone: 'info', detail: marketData ? `Score ${morningDecision.breadthScore == null ? "Unavailable" : `${morningDecision.breadthScore}%`}` : 'Awaiting market data' },
+            { label: 'Breadth', value: marketData ? morningDecision.breadthLabel : 'Loading', tone: 'info', detail: marketData ? `${morningDecision.breadthScore == null ? "Unavailable" : `${morningDecision.breadthScore}%`}${morningDecision.breadthAsOf ? ` · as of ${formatBreadthAsOf(morningDecision.breadthAsOf)}` : ''}` : 'Awaiting market data' },
             { label: 'Dominance', value: (() => { const v = getDominanceValue(marketData?.market?.dominance, 'BTC'); return v ? `${v.toFixed(1)}% BTC` : '—'; })(), tone: 'warn', detail: marketData?.market?.totalMarketCapFormatted || 'Mkt cap loading' },
             { label: 'Next check', value: currentSection?.label || 'Pick a section', tone: 'info', detail: lastUpdate ? `Refreshed ${lastUpdate.toLocaleTimeString()}` : 'Awaiting first refresh' },
           ]}
@@ -592,7 +595,7 @@ function CryptoCommandCenterContent({ embedded = false }: { embedded?: boolean }
                 </div>
                 <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1">
                   <span className="text-slate-500">Breadth</span>
-                  <p className="font-semibold text-slate-200">{morningDecision.breadthLabel} ({morningDecision.breadthScore == null ? "Unavailable" : `${morningDecision.breadthScore}%`})</p>
+                  <p className="font-semibold text-slate-200">{morningDecision.breadthLabel} ({morningDecision.breadthScore == null ? "Unavailable" : `${morningDecision.breadthScore}%`}){morningDecision.breadthAsOf ? ` · as of ${formatBreadthAsOf(morningDecision.breadthAsOf)}` : ''}</p>
                 </div>
               </div>
               <div className="mt-2 rounded border border-slate-700 bg-slate-900/70 p-1.5 text-[11px] text-slate-400">

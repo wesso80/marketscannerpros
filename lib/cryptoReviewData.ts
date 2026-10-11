@@ -70,12 +70,38 @@ function dominanceOf(dominance: unknown, symbol: string): number {
 export type CryptoLeadership = 'Large Caps Leading' | 'Alts Leading' | 'Defensive Rotation' | 'Fragmented';
 export type CryptoVolatility = 'Compression' | 'Expansion' | 'Dislocation' | 'Chop';
 
+export function displayedBreadth(data: any): {
+  score: number | null;
+  asOf: string | null;
+  label: 'Broad' | 'Mixed' | 'Weak' | 'Unavailable';
+  top50: number | null;
+} {
+  const unavailable = { score: null, asOf: null, label: 'Unavailable' as const, top50: null };
+  const snap = data?.trending?.breadth;
+  if (snap && typeof snap.percent === 'number' && Number.isFinite(snap.percent)) {
+    const score = Math.round(snap.percent);
+    const top50 = typeof snap.coinUpPct === 'number' && Number.isFinite(snap.coinUpPct) ? snap.coinUpPct : null;
+    const label = score >= 65 ? 'Broad' : score >= 40 ? 'Mixed' : 'Weak';
+    return { score, asOf: typeof snap.asOf === 'string' ? snap.asOf : null, label, top50 };
+  }
+  if (!cryptoReviewCoverage(data).breadth) return unavailable;
+  const trendingCoins = data?.trending?.coins || [];
+  const trendingCategories = data?.trending?.categories || [];
+  const trendingPositive = trendingCoins.filter((coin: any) => (coin?.change24h ?? 0) > 0).length;
+  const top50 = trendingCoins.length ? (trendingPositive / trendingCoins.length) * 100 : 50;
+  const categoryPositive = trendingCategories.filter((cat: any) => (cat?.change1h ?? 0) > 0).length;
+  const sectorBreadth = trendingCategories.length ? (categoryPositive / trendingCategories.length) * 100 : top50;
+  const score = Math.round(top50 * 0.7 + sectorBreadth * 0.3);
+  const label = score >= 65 ? 'Broad' : score >= 40 ? 'Mixed' : 'Weak';
+  return { score, asOf: null, label, top50 };
+}
+
 /**
  * Parts of the crypto review that need only spot market data (CoinGecko market
  * overview and trending coins), not derivatives. They stay available when the
  * funding or open-interest feeds are down:
  *  - volatility: needs the market overview (24h market-cap move)
- *  - breadth:    needs trending coins (and categories when present)
+ *  - breadth:    needs one trending snapshot (cached list and signs together)
  *  - leadership: needs both (BTC dominance, cap move and breadth)
  */
 export function cryptoSpotContext(data: any): {
@@ -84,6 +110,7 @@ export function cryptoSpotContext(data: any): {
   breadthScore: number | null;
   breadthLabel: 'Broad' | 'Mixed' | 'Weak' | 'Unavailable';
   breadthTop50: number | null;
+  breadthAsOf: string | null;
 } {
   const coverage = cryptoReviewCoverage(data);
   const market = data?.market;
@@ -99,19 +126,11 @@ export function cryptoSpotContext(data: any): {
     else if (absCapMove >= 5) volatility = 'Dislocation';
   }
 
-  let breadthTop50: number | null = null;
-  let breadthScore: number | null = null;
-  let breadthLabel: 'Broad' | 'Mixed' | 'Weak' | 'Unavailable' = 'Unavailable';
-  if (coverage.breadth) {
-    const trendingCoins = data?.trending?.coins || [];
-    const trendingCategories = data?.trending?.categories || [];
-    const trendingPositive = trendingCoins.filter((coin: any) => (coin?.change24h ?? 0) > 0).length;
-    breadthTop50 = trendingCoins.length ? (trendingPositive / trendingCoins.length) * 100 : 50;
-    const categoryPositive = trendingCategories.filter((cat: any) => (cat?.change1h ?? 0) > 0).length;
-    const sectorBreadth = trendingCategories.length ? (categoryPositive / trendingCategories.length) * 100 : breadthTop50;
-    breadthScore = Math.round((breadthTop50 * 0.7) + (sectorBreadth * 0.3));
-    breadthLabel = breadthScore >= 65 ? 'Broad' : breadthScore >= 40 ? 'Mixed' : 'Weak';
-  }
+  const shown = displayedBreadth(data);
+  const breadthTop50 = shown.top50;
+  const breadthScore = shown.score;
+  const breadthLabel = shown.label;
+  const breadthAsOf = shown.asOf;
 
   let leadership: CryptoLeadership | 'Unavailable' = 'Unavailable';
   if (coverage.market && breadthTop50 != null) {
@@ -121,7 +140,7 @@ export function cryptoSpotContext(data: any): {
     else if (capMove > 0.5 && btcDominance > 53 && btcDominance < 56) leadership = 'Large Caps Leading';
   }
 
-  return { leadership, volatility, breadthScore, breadthLabel, breadthTop50 };
+  return { leadership, volatility, breadthScore, breadthLabel, breadthTop50, breadthAsOf };
 }
 
 export async function fetchCryptoReviewData() {

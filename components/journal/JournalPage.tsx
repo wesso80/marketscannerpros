@@ -6,6 +6,7 @@ import { FREE_COPY } from '@/components/free/copy';
 import {journalLinkAsset} from '@/lib/market/symbolSnapshot';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { journalEntryFromCreate } from '@/lib/journal/mapPayload';
 import { isResearchRecord } from '@/lib/journal/researchRecords';
 import { computeKpis } from '@/lib/journal/computeKpis';
 import { useAIPageContext } from '@/lib/ai/pageContext';
@@ -27,7 +28,7 @@ import type { UserTier } from '@/lib/useUserTier';
 export default function JournalPage({ tier, embeddedInWorkspace = false }: { tier: UserTier; embeddedInWorkspace?: boolean }) {
   const upgrade = useUpgradeMoment();
   const { query, sort, onQueryChange, onSort, onResetFilters } = useJournalState();
-  const { payload, pageRows, total, loading, error, refresh } = useJournalData(query, sort);
+  const { payload, pageRows, total, loading, error, refresh, showCreated } = useJournalData(query, sort);
 
   // Live price fetching for open trades
   const allTrades = payload?.trades || [];
@@ -256,9 +257,11 @@ export default function JournalPage({ tier, embeddedInWorkspace = false }: { tie
         onRequestCloseTrade={() => setCloseModalOpen(true)}
         onRequestSnapshot={isProTrader ? () => setSnapshotModalOpen(true) : undefined}
         onCreateTrade={async (payload) => {
-          await actions.createTrade(payload);
+          const created = await actions.createTrade(payload);
+          showCreated(journalEntryFromCreate(payload, created.id));
           setDrawerOpen(false);
           setPrefillValues(undefined);
+          void refresh();
         }}
         prefillValues={prefillValues}
         onUpdateLevels={selectedTrade ? (patch) => actions.updateTrade(selectedTrade.id, patch) : undefined}
