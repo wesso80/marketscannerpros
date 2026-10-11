@@ -157,10 +157,14 @@ vi.mock('@/lib/intelligence/data/globalM2Pipeline', async (importActual) => {
   const actual = await importActual<typeof import('@/lib/intelligence/data/globalM2Pipeline')>();
   return {
     ...actual,
-    // The route calls buildWave3Bundle() with no args → feed it the production-like fixture.
-    // Calls with explicit deps (the tests above) pass straight through.
-    buildWave3Bundle: (deps?: Wave3Deps, opts?: Parameters<typeof actual.buildWave3Bundle>[1]) =>
-      actual.buildWave3Bundle(deps ?? prodLikeDeps(), opts ?? { persist: false }),
+    // Page loads pass persisted-only deps (every provider fails closed). This route test has no
+    // macro_series rows, so that call is swapped for the production-like fixture. Explicit live
+    // deps from the tests above pass straight through.
+    buildWave3Bundle: async (deps?: Wave3Deps, opts?: Parameters<typeof actual.buildWave3Bundle>[1]) => {
+      const sample = deps?.us ? await deps.us() : null;
+      const pageLoad = !deps || (sample?.ok === false && String(sample.error).includes('persisted'));
+      return actual.buildWave3Bundle(pageLoad ? prodLikeDeps() : deps, pageLoad ? { persist: false } : (opts ?? { persist: false }));
+    },
   };
 });
 
