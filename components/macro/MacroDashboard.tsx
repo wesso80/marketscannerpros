@@ -15,6 +15,7 @@ import SourceLine from '@/components/visual/SourceLine';
 import StatTile from '@/components/visual/StatTile';
 import { openMacroAnchor } from '@/lib/overview/macroAnchor';
 import { macroResponseAccess } from '@/lib/macro/accessState';
+import { FRED_PUBLIC_SOURCE, FRED_UNAVAILABLE, newestObservationDate } from '@/lib/macro/fredSource';
 
 function followMacroAnchor(event: { preventDefault(): void; currentTarget: { getAttribute(name: string): string | null } }) {
   event.preventDefault();
@@ -37,10 +38,17 @@ interface IndicatorValue {
   /** Observation date of `value` (daily rate series). */
   date?: string | null;
   history?: { date: string; value: number }[];
+  unavailable?: boolean;
+  seriesId?: string;
 }
 
 interface MacroData {
   timestamp: string;
+  asOf?: string | null;
+  source?: string | null;
+  unavailable?: boolean;
+  label?: string | null;
+  failedSeries?: { series: string; label: string }[];
   rates: {
     treasury3m?: IndicatorValue;
     treasury2y: IndicatorValue;
@@ -54,11 +62,11 @@ interface MacroData {
   inflation: {
     cpi: IndicatorValue;
     inflationRate: IndicatorValue;
-    trend: string;
+    trend: string | null;
   };
   employment: {
     unemployment: IndicatorValue;
-    trend: string;
+    trend: string | null;
   };
   growth: {
     realGDP: IndicatorValue & { unit: string };
@@ -67,7 +75,7 @@ interface MacroData {
     label: string;
     description: string;
     riskLevel: 'low' | 'medium' | 'high';
-  };
+  } | null;
 }
 
 type MacroGate = {
@@ -85,6 +93,34 @@ type MacroGate = {
   drivers: Driver[];
   notes: string;
 };
+
+function macroAsOf(data: MacroData | null): string | null {
+  if (!data) return null;
+  return newestObservationDate([
+    data.asOf,
+    data.rates.treasury10y.date,
+    data.rates.treasury2y.date,
+    data.rates.treasury3m?.date,
+    data.rates.treasury5y?.date,
+    data.rates.treasury30y?.date,
+    data.rates.fedFunds?.date,
+    data.inflation.inflationRate.date,
+    data.inflation.cpi.date,
+    data.employment.unemployment?.date,
+    data.growth.realGDP?.date,
+  ]);
+}
+
+function formatRealGdp(gdp: { value: number | null; unit?: string; unavailable?: boolean }) {
+  if (gdp.unavailable) return FRED_UNAVAILABLE;
+  if (typeof gdp.value !== 'number' || !Number.isFinite(gdp.value)) return 'Not collected';
+  if (gdp.unit === '%') return toPct(gdp.value, 1);
+  return `$${(gdp.value / 1000).toFixed(1)}T`;
+}
+
+function realGdpLabel(unit?: string) {
+  return unit === '%' ? 'Real GDP, quarter-on-quarter annualised' : 'Real GDP';
+}
 
 function safeNumber(value: unknown, fallback = 0) {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
@@ -120,28 +156,29 @@ function trendDirection(history?: { date: string; value: number }[]) {
 }
 
 function computeMacroGate(data: MacroData | null): MacroGate | null {
-  if (!data) return null;
+  if (!data || data.unavailable) return null;
 
-  const fedFunds = safeNumber(data.rates.fedFunds.value);
-  const treasury10y = safeNumber(data.rates.treasury10y.value);
-  const yieldCurve = safeNumber(data.rates.yieldCurve.value);
-  const inflationRate = safeNumber(data.inflation.inflationRate.value);
-  const unemployment = safeNumber(data.employment.unemployment.value);
+  const known = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : null);
+  const fedFunds = known(data.rates.fedFunds.value);
+  const treasury10y = known(data.rates.treasury10y.value);
 
   const ratesRegime: MacroGate['ratesRegime'] =
-    fedFunds >= 4 || treasury10y >= 4.25 ? 'tightening' : fedFunds <= 2.5 ? 'easing' : 'neutral';
+    (fedFunds != null && fedFunds >= 4) || (treasury10y != null && treasury10y >= 4.25) ? 'tightening' : fedFunds != null && fedFunds <= 2.5 ? 'easing' : 'neutral';
 
   const liquidity: MacroGate['liquidity'] =
-    data.rates.yieldCurve.inverted && fedFunds >= 4 ? 'contracting' : !data.rates.yieldCurve.inverted && fedFunds <= 3 ? 'expanding' : 'stable';
+    data.rates.yieldCurve.inverted && fedFunds != null && fedFunds >= 4 ? 'contracting' : !data.rates.yieldCurve.inverted && fedFunds != null && fedFunds <= 3 ? 'expanding' : 'stable';
 
   const volRegime: MacroGate['volRegime'] =
-    data.regime.riskLevel === 'high' ? 'expansion' : data.regime.riskLevel === 'low' ? 'compression' : 'normal';
+    data.regime?.riskLevel === 'high' ? 'expansion' : data.regime?.riskLevel === 'low' ? 'compression' : 'normal';
 
   const usdRegime: MacroGate['usdRegime'] =
     ratesRegime === 'tightening' ? 'bullish' : ratesRegime === 'easing' ? 'bearish' : 'neutral';
 
-  const growthDeteriorating = (data.growth.realGDP.history?.length || 0) > 1 && trendDirection(data.growth.realGDP.history) === 'down';
-  const inflationReaccelerating = data.inflation.trend === 'elevated' || trendDirection(data.inflation.inflationRate.history) === 'up';
+  const growthKnown = !data.growth.realGDP.unavailable && (data.growth.realGDP.history?.length || 0) > 1;
+  const growthDeteriorating = growthKnown && trendDirection(data.growth.realGDP.history) === 'down';
+  const inflationHistoryKnown = (data.inflation.inflationRate.history?.length || 0) > 1;
+  const inflationKnown = !data.inflation.inflationRate.unavailable && (data.inflation.trend != null || inflationHistoryKnown);
+  const inflationReaccelerating = data.inflation.trend === 'elevated' || (inflationHistoryKnown && trendDirection(data.inflation.inflationRate.history) === 'up');
 
   let score = 0;
   const drivers: Driver[] = [];
@@ -156,8 +193,8 @@ function computeMacroGate(data: MacroData | null): MacroGate | null {
   // USD regime is inferred from the rates regime (no measured dollar input here), so scoring it too counted the same
   // rates reading twice (Rates −15 and USD −15). It stays as a displayed context label only.
   addFactor('Rates Regime', ratesRegime === 'easing' ? 'pos' : ratesRegime === 'tightening' ? 'neg' : 'neutral', 15);
-  addFactor('Growth', growthDeteriorating ? 'neg' : 'pos', 15);
-  addFactor('Inflation', inflationReaccelerating ? 'neg' : 'pos', 10);
+  addFactor('Growth', !growthKnown ? 'neutral' : growthDeteriorating ? 'neg' : 'pos', 15);
+  addFactor('Inflation', !inflationKnown ? 'neutral' : inflationReaccelerating ? 'neg' : 'pos', 10);
 
   const riskState: RiskState = score >= 25 ? 'risk_on' : score <= -25 ? 'risk_off' : 'neutral';
 
@@ -349,6 +386,15 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
   }, [data, gate, loading]);
 
   useEffect(() => {
+    if (data?.unavailable) {
+      setPageData({
+        skill: 'macro',
+        symbols: [],
+        summary: FRED_UNAVAILABLE,
+        data: { unavailable: true, label: FRED_UNAVAILABLE, source: data.source ?? FRED_PUBLIC_SOURCE, failedSeries: data.failedSeries ?? [] },
+      });
+      return;
+    }
     if (!data || !gate) return;
 
     setPageData({
@@ -377,7 +423,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
   }, [data, gate, setPageData]);
 
   const completeAssessment = !!data && [data.rates.fedFunds.value, data.rates.treasury10y.value, data.rates.yieldCurve.value, data.inflation.inflationRate.value, data.employment.unemployment.value, data.growth.realGDP.value].every(value => typeof value === 'number' && Number.isFinite(value));
-  const assessment = !completeAssessment ? 'Macro assessment not collected' : gate?.permission === 'yes' ? 'Aligned' : gate?.permission === 'conditional' ? 'Mixed' : 'Not aligned';
+  const assessment = data?.unavailable ? FRED_UNAVAILABLE : !completeAssessment ? 'Macro assessment not collected' : gate?.permission === 'yes' ? 'Aligned' : gate?.permission === 'conditional' ? 'Mixed' : 'Not aligned';
   const incompleteFeeds = [!completeAssessment && 'Required macro observations', commoditiesError && 'Commodities', correlationError && 'Cross-asset context', spyPCRError && 'Options positioning'].filter(Boolean);
 
   if (publicDesignEnabled() && !embeddedInDashboard) return <MacroResearch data={data} loading={(loading || tierLoading) && !accessDenied} error={Boolean(error) && !accessDenied} locked={accessDenied} retry={fetchData} paid={isAdmin || tier === 'pro' || tier === 'pro_trader'}/>;
@@ -390,7 +436,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
         return typeof item.value === 'number' ? <section key={String(label)} className="rounded-xl border border-white/10 p-4"><h2>{String(label)}</h2><p className="text-4xl">{toPct(item.value)}</p><p className="text-xs text-slate-400">{item.date || "Observation date not supplied"}</p></section> : null;
       })}
     </div>}
-    <SourceLine source={FREE_COPY.macroSource} asOf={data?.timestamp} basis={FREE_COPY.observation} />
+    <SourceLine source={FRED_PUBLIC_SOURCE} tradingDay={macroAsOf(data) ? `As of ${macroAsOf(data)}` : undefined} basis={FREE_COPY.observation} />
     <a className="inline-flex min-h-10 items-center underline" href="/intelligence/global-m2">{FREE_COPY.deepMacro}</a><p className="text-xs">{FREE_COPY.research}</p>
   </main>;
 
@@ -474,7 +520,14 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
             <p className="text-sm text-slate-400">Loading macro regime…</p>
           </div>
         ) : error ? (
-          <><p data-verdict-box className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-amber-200">Macro observations could not be loaded.</p><button type="button" className="min-h-10 underline" onClick={fetchData}>Try again</button><SourceLine source="Macro database" basis="Published observations not collected" /></>
+          <><p data-verdict-box className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-amber-200">Macro observations could not be loaded.</p><button type="button" className="min-h-10 underline" onClick={fetchData}>Try again</button><SourceLine source={FRED_PUBLIC_SOURCE} basis="Published observations not collected" /></>
+        ) : data?.unavailable ? (
+          <section data-global-regime className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
+            <h2 className="text-sm text-slate-400">Published macro observations</h2>
+            <p data-verdict-box className="rounded-xl border border-white/10 p-3 text-amber-200">{FRED_UNAVAILABLE}</p>
+            {data.failedSeries?.length ? <p className="text-xs text-white/70">{data.failedSeries.map((row) => `${row.label}: ${FRED_UNAVAILABLE}`).join(' · ')}</p> : null}
+            <SourceLine source={FRED_PUBLIC_SOURCE} basis={FRED_UNAVAILABLE} />
+          </section>
         ) : data && gate ? (
           <>
             <section data-global-regime className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
@@ -489,11 +542,12 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   {label: 'Rates', value: data.rates.treasury10y.value, format: (n: number) => toPct(n)},
                   {label: 'Curve', value: data.rates.yieldCurve.value, format: (n: number) => toPct(n)},
                   {label: 'Inflation', value: data.inflation.inflationRate.value, format: (n: number) => toPct(n, 1)},
-                  {label: 'Growth', value: data.growth.realGDP.value, format: (n: number) => `$${(n / 1000).toFixed(1)}T`},
+                  {label: 'Growth', value: data.growth.realGDP.value, format: (n: number) => data.growth.realGDP.unit === '%' ? toPct(n, 1) : `$${(n / 1000).toFixed(1)}T`},
                 ].filter(item => typeof item.value === 'number' && Number.isFinite(item.value)).map(item => <div data-macro-tile key={item.label}><StatTile label={item.label} value={item.format(item.value!)} /></div>)}
               </div>
+              {data.failedSeries?.length ? <p className="text-xs text-amber-200">{data.failedSeries.map((row) => `${row.label}: ${FRED_UNAVAILABLE}`).join(' · ')}</p> : null}
               {incompleteFeeds.length > 0 && <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-200">Not collected: {incompleteFeeds.join(' · ')}.</p>}
-              <SourceLine source="Macro database" asOf={data.timestamp} basis="Published observations" />
+              <SourceLine source={FRED_PUBLIC_SOURCE} tradingDay={macroAsOf(data) ? `As of ${macroAsOf(data)}` : undefined} basis="Published observations" />
             </section>
 
             {/* ─── Yield Curve ─── */}
@@ -550,7 +604,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                         {data.rates.yieldCurve3m10y && (
                           <span className="text-white/60">3m10y Spread: <span className={data.rates.yieldCurve3m10y.inverted ? 'text-rose-400 font-semibold' : 'text-emerald-400 font-semibold'}>{toPct(data.rates.yieldCurve3m10y.value)} {macroLabel(data.rates.yieldCurve3m10y.label)}</span></span>
                         )}
-                        <span className="text-white/60">Fed Funds: <span className="text-white font-semibold">{toPct(data.rates.fedFunds.value)}</span></span>
+                        <span className="text-white/60">Fed Funds: <span className="text-white font-semibold">{data.rates.fedFunds.unavailable ? FRED_UNAVAILABLE : toPct(data.rates.fedFunds.value)}</span>{data.rates.fedFunds.date ? ` (as of ${data.rates.fedFunds.date})` : ''}</span>
                       </div>
                     </div>
                   );
@@ -666,8 +720,8 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   <div className="text-xs text-white/50">Inflation</div>
                   <Sparkline data={data.inflation.inflationRate.history} stroke="#f87171" />
                 </div>
-                <div className="text-2xl font-semibold">{toPct(data.inflation.inflationRate.value, 1)}</div>
-                <div className="mt-1 text-xs text-white/60">CPI YoY • {macroLabel(data.inflation.trend)}</div>
+                <div className="text-2xl font-semibold">{data.inflation.inflationRate.unavailable ? FRED_UNAVAILABLE : toPct(data.inflation.inflationRate.value, 1)}</div>
+                <div className="mt-1 text-xs text-white/60">CPI YoY{data.inflation.inflationRate.date ? ` (as of ${data.inflation.inflationRate.date})` : ''} • {data.inflation.inflationRate.unavailable ? FRED_UNAVAILABLE : macroLabel(data.inflation.trend)}</div>
               </div>
 
               <div id="growth" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
@@ -675,8 +729,8 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   <div className="text-xs text-white/50">Growth</div>
                   <Sparkline data={data.growth.realGDP.history} stroke="#94a3b8" />
                 </div>
-                <div className="text-2xl font-semibold">{typeof data.growth.realGDP.value === 'number' ? `$${(data.growth.realGDP.value / 1000).toFixed(1)}T` : 'Not collected'}</div>
-                <div className="mt-1 text-xs text-white/60">Real GDP • {(data.growth.realGDP.history?.length ?? 0) > 1 ? trendDirection(data.growth.realGDP.history) : 'Not collected'}</div>
+                <div className="text-2xl font-semibold">{formatRealGdp(data.growth.realGDP)}</div>
+                <div className="mt-1 text-xs text-white/60">{realGdpLabel(data.growth.realGDP.unit)}{data.growth.realGDP.date ? ` (as of ${data.growth.realGDP.date})` : ''} • {(data.growth.realGDP.history?.length ?? 0) > 1 ? trendDirection(data.growth.realGDP.history) : 'Not collected'}</div>
               </div>
 
               <div id="employment" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
@@ -684,8 +738,8 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   <div className="text-xs text-white/50">Employment</div>
                   <Sparkline data={data.employment.unemployment.history} stroke="#fbbf24" />
                 </div>
-                <div className="text-2xl font-semibold">{toPct(data.employment.unemployment.value, 1)}</div>
-                <div className="mt-1 text-xs text-white/60">Unemployment • {macroLabel(data.employment.trend)}</div>
+                <div className="text-2xl font-semibold">{data.employment.unemployment.unavailable ? FRED_UNAVAILABLE : toPct(data.employment.unemployment.value, 1)}</div>
+                <div className="mt-1 text-xs text-white/60">Unemployment{data.employment.unemployment.date ? ` (as of ${data.employment.unemployment.date})` : ''} • {data.employment.unemployment.unavailable ? FRED_UNAVAILABLE : macroLabel(data.employment.trend)}</div>
               </div>
             </section>
             </CollapsibleSection>
@@ -889,14 +943,14 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
             <details className="rounded-xl border border-white/10 bg-white/5" open={false}>
               <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-xl">Deep Dive: Employment</summary>
               <div className="border-t border-white/10 p-3 md:p-4 text-xs text-white/75">
-                Unemployment: {toPct(data.employment.unemployment.value, 1)} • Trend: {macroLabel(data.employment.trend)}
+                Unemployment: {data.employment.unemployment.unavailable ? FRED_UNAVAILABLE : toPct(data.employment.unemployment.value, 1)}{data.employment.unemployment.date ? ` (as of ${data.employment.unemployment.date})` : ''} • Trend: {data.employment.unemployment.unavailable ? FRED_UNAVAILABLE : macroLabel(data.employment.trend)}
               </div>
             </details>
 
             <details className="rounded-xl border border-white/10 bg-white/5" open={false}>
               <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-xl">Deep Dive: Growth</summary>
               <div className="border-t border-white/10 p-3 md:p-4 text-xs text-white/75">
-                Real GDP: {typeof data.growth.realGDP.value === 'number' ? `$${(data.growth.realGDP.value / 1000).toFixed(1)}T` : 'Not collected'} • Trend: {(data.growth.realGDP.history?.length ?? 0) > 1 ? trendDirection(data.growth.realGDP.history) : 'Not collected'}
+                {realGdpLabel(data.growth.realGDP.unit)}: {formatRealGdp(data.growth.realGDP)}{data.growth.realGDP.date ? ` (as of ${data.growth.realGDP.date})` : ''} • Trend: {(data.growth.realGDP.history?.length ?? 0) > 1 ? trendDirection(data.growth.realGDP.history) : 'Not collected'}
               </div>
             </details>
 

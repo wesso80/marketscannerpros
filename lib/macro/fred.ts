@@ -83,6 +83,28 @@ export async function fetchFredObservationsRaw(fredId: string, observationStart?
   return fetchFredSeries(apiKey, fredId, observationStart);
 }
 
+/**
+ * Observations for one series, with no database write. Uses the keyed API when
+ * FRED_API_KEY is set, and the keyless CSV when the key is missing or the API
+ * call fails. Same fallback as ingestFred. Public yield and CPI reads use this.
+ */
+export async function fetchFredObservations(fredId: string, observationStart?: string): Promise<FredObservation[]> {
+  const apiKey = process.env.FRED_API_KEY;
+  let apiError: string | undefined;
+  if (apiKey) {
+    try {
+      return await fetchFredSeries(apiKey, fredId, observationStart);
+    } catch (e: unknown) {
+      apiError = errMsg(e);
+    }
+  }
+  try {
+    return await fetchFredCsv(fredId, { sinceISO: observationStart });
+  } catch (e: unknown) {
+    throw new Error(apiError ? `API: ${apiError}; CSV: ${errMsg(e)}` : errMsg(e));
+  }
+}
+
 async function fetchFredSeries(apiKey: string, fredId: string, observationStart?: string): Promise<FredObservation[]> {
   const params = new URLSearchParams({
     series_id: fredId,

@@ -8,6 +8,7 @@ import { useAIPageContext } from '@/lib/ai/pageContext';
 import UpgradeGate from '@/components/UpgradeGate';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { goldAssessment } from '@/lib/commodities/goldAssessment';
+import { FRED_PUBLIC_SOURCE, FRED_UNAVAILABLE, fredReadingCitation, newestObservationDate } from '@/lib/macro/fredSource';
 import { commodityFreshnessLabel } from '@/lib/commodities/quoteFreshnessLabel';
 import { YAHOO_FUTURES_SOURCE_LABEL } from '@/lib/commodities/yahooFutures';
 
@@ -60,19 +61,21 @@ interface CommoditiesResponse {
   lastUpdate: string;
 }
 
+interface MacroSeriesInput {
+  value?: number | null;
+  date?: string | null;
+  history?: { date: string; value: number }[];
+  unavailable?: boolean;
+}
 interface EconomicIndicatorsResponse {
-  rates?: {
-    treasury10y?: { value: number | null; history?: { date: string; value: number }[] };
-  };
-  inflation?: {
-    inflationRate?: { value: number | null; history?: { date: string; value: number }[] };
-  };
-  growth?: {
-    realGDP?: { value: number | null; history?: { date: string; value: number }[] };
-  };
-  regime?: {
-    riskLevel?: 'low' | 'medium' | 'high';
-  };
+  source?: string | null;
+  asOf?: string | null;
+  unavailable?: boolean;
+  failedSeries?: { series: string; label: string }[];
+  rates?: { treasury10y?: MacroSeriesInput };
+  inflation?: { inflationRate?: MacroSeriesInput };
+  growth?: { realGDP?: { value: number | null; history?: { date: string; value: number }[] } };
+  regime?: { riskLevel?: 'low' | 'medium' | 'high' } | null;
 }
 
 type CategoryKey = 'Energy' | 'Metals' | 'Agriculture';
@@ -89,7 +92,7 @@ interface DerivedState {
   reviewState: ReviewState;
   reviewReason: string;
   usdImpact: DriverState;
-  realRatesImpact: RateState;
+  realRatesImpact: RateState | null;
   volRegime: VolRegime;
   breadthScore: number;
   longsAllowed: boolean;
@@ -100,10 +103,11 @@ interface DerivedState {
   signalQuality: 'HIGH' | 'MEDIUM' | 'LOW';
   impulseStability: 'STABLE' | 'CHOPPY';
   usdTrend: TrendDirection;
-  realRatesTrend: TrendDirection;
+  realRatesTrend: TrendDirection | null;
+  goldTrendSource: string;
   growthTrend: TrendDirection | null;
   growthSupport: 'SUPPORTIVE' | 'NEUTRAL' | 'FADING' | null;
-  macroRiskState: 'RISK_ON' | 'NEUTRAL' | 'RISK_OFF';
+  macroRiskState: 'RISK_ON' | 'NEUTRAL' | 'RISK_OFF' | null;
   topGainer: CommodityData | null;
   topLoser: CommodityData | null;
   relative: {
@@ -156,14 +160,18 @@ function freshnessTone(label: string): string {
   return 'text-amber-300';
 }
 
-function trendFromHistory(history?: { date: string; value: number }[], threshold = 0.08): TrendDirection {
-  if (!history || history.length < 2) return 'FLAT';
+function trendFromHistory(history?: { date: string; value: number }[], threshold = 0.08): TrendDirection | null {
+  if (!history || history.length < 2) return null;
   const latest = history[0]?.value;
   const previous = history[1]?.value;
-  if (!Number.isFinite(latest) || !Number.isFinite(previous)) return 'FLAT';
+  if (!Number.isFinite(latest) || !Number.isFinite(previous)) return null;
   const delta = latest - previous;
   if (Math.abs(delta) < threshold) return 'FLAT';
   return delta > 0 ? 'UP' : 'DOWN';
+}
+
+function seriesDate(reading?: MacroSeriesInput): string | null {
+  return reading?.date || reading?.history?.[0]?.date || null;
 }
 
 function clampScore(value: number): number {
@@ -323,19 +331,27 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
     const usdTrend: TrendDirection = usdProxyRaw > 0.2 ? 'UP' : usdProxyRaw < -0.2 ? 'DOWN' : 'FLAT';
     const usdImpact: DriverState = usdTrend === 'UP' ? 'HEADWIND' : usdTrend === 'DOWN' ? 'TAILWIND' : 'NEUTRAL';
 
-    const nominalTrend = trendFromHistory(macroInputs?.rates?.treasury10y?.history, 0.04);
-    const inflationTrend = trendFromHistory(macroInputs?.inflation?.inflationRate?.history, 0.04);
-    const realRatesTrend: TrendDirection =
-      nominalTrend === inflationTrend
-        ? 'FLAT'
-        : nominalTrend === 'UP' && inflationTrend !== 'UP'
-          ? 'UP'
-          : nominalTrend === 'DOWN' && inflationTrend !== 'DOWN'
-            ? 'DOWN'
-            : 'FLAT';
+    const treasury = macroInputs?.rates?.treasury10y;
+    const inflation = macroInputs?.inflation?.inflationRate;
+    const nominalTrend = treasury?.unavailable ? null : trendFromHistory(treasury?.history, 0.04);
+    const inflationTrend = inflation?.unavailable ? null : trendFromHistory(inflation?.history, 0.04);
+    const realRatesTrend: TrendDirection | null =
+      nominalTrend == null || inflationTrend == null
+        ? null
+        : nominalTrend === inflationTrend
+          ? 'FLAT'
+          : nominalTrend === 'UP' && inflationTrend !== 'UP'
+            ? 'UP'
+            : nominalTrend === 'DOWN' && inflationTrend !== 'DOWN'
+              ? 'DOWN'
+              : 'FLAT';
 
-    const realRatesImpact: RateState =
-      realRatesTrend === 'UP' ? 'RESTRICTIVE' : realRatesTrend === 'DOWN' ? 'SUPPORTIVE' : 'NEUTRAL';
+    const realRatesImpact: RateState | null =
+      realRatesTrend == null ? null : realRatesTrend === 'UP' ? 'RESTRICTIVE' : realRatesTrend === 'DOWN' ? 'SUPPORTIVE' : 'NEUTRAL';
+    const goldTrendSource = fredReadingCitation(macroInputs?.asOf || newestObservationDate([seriesDate(treasury), seriesDate(inflation)]), [
+      { label: '10-year Treasury', date: seriesDate(treasury), unavailable: macroInputs?.unavailable || treasury?.unavailable || nominalTrend == null },
+      { label: 'CPI year-over-year', date: seriesDate(inflation), unavailable: macroInputs?.unavailable || inflation?.unavailable || inflationTrend == null },
+    ]);
 
     const assessed = goldAssessment({
       copperChange,
@@ -362,7 +378,7 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
             ? 65
             : 35;
 
-    const ratesAlignment =
+    const ratesAlignment = realRatesTrend == null ? 50 :
       impulseType === 'INFLATION'
         ? realRatesTrend === 'DOWN'
           ? 90
@@ -406,12 +422,16 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
           ? `${impulseType} conditions are incomplete; indicators suggest caution.`
           : `Low participation and poor alignment with USD/rates backdrop; conditions unclear.`;
 
-    const macroRiskState: 'RISK_ON' | 'NEUTRAL' | 'RISK_OFF' =
-      macroInputs?.regime?.riskLevel === 'low'
-        ? 'RISK_ON'
-        : macroInputs?.regime?.riskLevel === 'high'
-          ? 'RISK_OFF'
-          : 'NEUTRAL';
+    const macroRiskState: 'RISK_ON' | 'NEUTRAL' | 'RISK_OFF' | null =
+      macroInputs?.unavailable || macroInputs?.regime == null
+        ? null
+        : macroInputs.regime.riskLevel === 'low'
+          ? 'RISK_ON'
+          : macroInputs.regime.riskLevel === 'high'
+            ? 'RISK_OFF'
+            : macroInputs.regime.riskLevel === 'medium'
+              ? 'NEUTRAL'
+              : null;
 
     return {
       impulseType,
@@ -431,6 +451,7 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
       impulseStability,
       usdTrend,
       realRatesTrend,
+      goldTrendSource,
       growthTrend,
       growthSupport,
       macroRiskState,
@@ -635,9 +656,9 @@ export default function CommoditiesPage({ embedded = false }: { embedded?: boole
           <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-white/65">
             <dt>Assessment score</dt><dd>{derivedState.score}/100</dd>
             <dt>US dollar proxy</dt><dd>{plain(derivedState.usdTrend)} · {plain(derivedState.usdImpact)}</dd>
-            <dt>Real rates</dt><dd>{plain(derivedState.realRatesTrend)} · {plain(derivedState.realRatesImpact)}</dd>
-            <dt>Growth proxy</dt><dd data-growth-proxy>{derivedState.growthTrend == null || derivedState.growthSupport == null ? 'unavailable' : `${plain(derivedState.growthTrend)} · ${plain(derivedState.growthSupport)}`}</dd>
-            <dt>Market context</dt><dd>{plain(derivedState.macroRiskState)}</dd>
+            <dt>Real rates</dt><dd data-real-rates>{derivedState.realRatesTrend == null || derivedState.realRatesImpact == null ? FRED_UNAVAILABLE : `${plain(derivedState.realRatesTrend)} · ${plain(derivedState.realRatesImpact)}`}</dd>
+            <dt>Growth proxy</dt><dd><span data-growth-proxy>{derivedState.growthTrend == null || derivedState.growthSupport == null ? 'unavailable' : `${plain(derivedState.growthTrend)} · ${plain(derivedState.growthSupport)}`}</span><span data-gold-trend-source> {derivedState.goldTrendSource || `${FRED_PUBLIC_SOURCE}. ${FRED_UNAVAILABLE}`}</span></dd>
+            <dt>Market context</dt><dd>{derivedState.macroRiskState == null ? FRED_UNAVAILABLE : plain(derivedState.macroRiskState)}</dd>
             <dt>Price range</dt><dd>{plain(derivedState.volRegime)}</dd>
             <dt>Energy vs metals</dt><dd>{signed(derivedState.relative.energyVsMetals)}</dd>
             <dt>Metals vs agriculture</dt><dd>{signed(derivedState.relative.metalsVsAg)}</dd>

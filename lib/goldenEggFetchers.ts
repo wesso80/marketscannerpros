@@ -5,7 +5,7 @@ import { isMeasuredLevel } from '@/lib/confluenceMeasured';
  */
 
 import { partialBarDate } from '@/lib/research/priceEvidence';
-import { avFetch, avTakeToken } from '@/lib/avRateGovernor';
+import { avFetch } from '@/lib/avRateGovernor';
 import { getIndicators, getQuote } from '@/lib/onDemandFetch';
 import { calculateAllIndicators, detectSqueeze, type OHLCVBar } from '@/lib/indicators';
 import { classifyRegime } from '@/lib/regime-classifier';
@@ -21,7 +21,8 @@ import { confluenceLearningAgent, type ScanMode, type SessionMode } from '@/lib/
 import { getAggregatedFundingRates, getAggregatedOpenInterest, resolveSymbolToId, getCoinDetail, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { fetchCryptoSeries, type CryptoScanTimeframe } from '@/lib/scanner/cryptoBars';
 import * as scannerMath from '@/lib/scanner/indicatorMath';
-import { latestObservation } from '@/lib/macro/avRateSeries';
+import { fredReadingCitation, PUBLIC_FRED_FAILURE_TTL_MS } from '@/lib/macro/fredSource';
+import { FRED_PUBLIC_SOURCE, loadPublicFredMacro } from '@/lib/macro/publicFred';
 import { describeChainSource, fetchSharedOptionsChain } from '@/lib/options/chainCache';
 import { summarizeChain, type CanonicalOptionsSnapshot, type RawContract } from '@/lib/goldenEgg/optionsChain';
 
@@ -758,48 +759,68 @@ export async function fetchTimeConfluence(symbol: string): Promise<TimeConfluenc
 }
 
 // ── Macro regime fetch (reuses /api/economic-indicators logic) ───────
+export interface MacroRegimeObservation {
+  series: string;
+  label: string;
+  date: string | null;
+  unavailable: boolean;
+}
+
 export interface MacroRegime {
   riskState: 'risk_on' | 'neutral' | 'risk_off';
   riskLevel: 'low' | 'medium' | 'high';
   concerns: string[];
+  source: typeof FRED_PUBLIC_SOURCE;
+  asOf: string | null;
+  observations: MacroRegimeObservation[];
 }
 
-const macroCache: { data: MacroRegime | null; ts: number } = { data: null, ts: 0 };
+const macroCache: { data: MacroRegime | null; ts: number; failedAt: number } = { data: null, ts: 0, failedAt: 0 };
 const MACRO_CACHE_TTL = 60 * 60 * 1000; // 1 hour (macro data is slow-moving)
+
+/** Concern text plus the FRED source and the observation date of each series that produced it. */
+export function formatMacroRegimeEvidence(regime: MacroRegime): string {
+  const citation = fredReadingCitation(regime.asOf, regime.observations);
+  const state = regime.riskState.toUpperCase();
+  const body = regime.concerns.length ? `Macro regime ${state} (${regime.concerns.join(', ')}).` : `Macro regime ${state}.`;
+  return `${body} ${citation}`;
+}
+
+export function formatMacroRegimeLine(regime: MacroRegime, kind: 'blocker' | 'flip'): string {
+  const citation = fredReadingCitation(regime.asOf, regime.observations);
+  if (kind === 'flip') {
+    const body = regime.riskState === 'risk_off'
+      ? `Macro regime is RISK_OFF (${regime.concerns.join(', ')}) — wait for macro environment to improve`
+      : 'Macro regime is RISK_ON — a short needs the macro tape to turn before it can align';
+    return `${body} ${citation}`;
+  }
+  const body = regime.riskState === 'risk_off'
+    ? `Macro regime RISK_OFF (${regime.concerns.join(', ')})`
+    : 'Macro regime RISK_ON opposes the short scenario';
+  return `${body}. ${citation}`;
+}
+
+function rememberMacroFailure(now: number): null {
+  macroCache.data = null;
+  macroCache.failedAt = now;
+  return null;
+}
 
 export async function fetchMacroRegime(): Promise<MacroRegime | null> {
   const now = Date.now();
   if (macroCache.data && now - macroCache.ts < MACRO_CACHE_TTL) return macroCache.data;
-
-  const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
-  if (!apiKey) return null;
+  if (macroCache.failedAt && now - macroCache.failedAt < PUBLIC_FRED_FAILURE_TTL_MS) return null;
 
   try {
-    // Fetch two key signals: 10Y yield + Fed Funds + Inflation
-    const indicators = [
-      // interval=daily: AV defaults rate series to monthly (newest row = last month's average).
-      { func: 'TREASURY_YIELD', maturity: '10year', interval: 'daily' },
-      { func: 'TREASURY_YIELD', maturity: '2year', interval: 'daily' },
-      { func: 'INFLATION' },
-    ] as Array<{ func: string; maturity?: string; interval?: string }>;
-
-    const values: Record<string, number | null> = {};
-    for (const ind of indicators) {
-      let url = `https://www.alphavantage.co/query?function=${ind.func}&apikey=${apiKey}`;
-      if (ind.maturity) url += `&maturity=${ind.maturity}`;
-      if (ind.interval) url += `&interval=${ind.interval}`;
-      await avTakeToken();
-      const res = await fetch(url);
-      const json = await res.json();
-      // Most recent NUMERIC observation (daily series carry '.' on non-trading days).
-      const val = latestObservation(json)?.value ?? null;
-      values[ind.func + (ind.maturity || '')] = val;
-      await new Promise(r => setTimeout(r, 250));
-    }
-
-    const t10y = values['TREASURY_YIELD10year'];
-    const t2y = values['TREASURY_YIELD2year'];
-    const inflation = values['INFLATION'];
+    // Public FRED bundle. This regime uses 10Y, 2Y, and CPI year-over-year (DGS10, DGS2, CPIAUCSL).
+    const macro = await loadPublicFredMacro(now);
+    const ten = macro.yields.treasury10y;
+    const two = macro.yields.treasury2y;
+    const inflationReading = macro.inflationRate;
+    const t10y = ten.value;
+    const t2y = two.value;
+    const inflation = inflationReading.value;
+    if (t10y == null && t2y == null && inflation == null) return rememberMacroFailure(now);
     const yieldCurve = t10y != null && t2y != null ? t10y - t2y : null;
 
     const concerns: string[] = [];
@@ -812,12 +833,25 @@ export async function fetchMacroRegime(): Promise<MacroRegime | null> {
     if (concerns.length >= 3) { riskLevel = 'high'; riskState = 'risk_off'; }
     else if (concerns.length === 0 && inflation != null && inflation < 3) { riskLevel = 'low'; riskState = 'risk_on'; }
 
-    const result: MacroRegime = { riskState, riskLevel, concerns };
+    const observations: MacroRegimeObservation[] = [
+      { series: 'DGS10', label: '10-year Treasury', date: ten.date, unavailable: ten.unavailable },
+      { series: 'DGS2', label: '2-year Treasury', date: two.date, unavailable: two.unavailable },
+      { series: 'CPIAUCSL', label: 'CPI year-over-year', date: inflationReading.date, unavailable: inflationReading.unavailable },
+    ];
+    const result: MacroRegime = {
+      riskState,
+      riskLevel,
+      concerns,
+      source: FRED_PUBLIC_SOURCE,
+      asOf: macro.asOf,
+      observations,
+    };
     macroCache.data = result;
     macroCache.ts = now;
+    macroCache.failedAt = 0;
     return result;
   } catch (err) {
     console.warn('[fetchMacroRegime] Error:', err instanceof Error ? err.message : err);
-    return null;
+    return rememberMacroFailure(now);
   }
 }

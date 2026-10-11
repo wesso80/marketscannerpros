@@ -144,4 +144,48 @@ it('shows unavailable growth lines when gold is missing and leaves gold out of t
   expect(context.data.commodityGate.relative.copperVsGold).toBeNull();
   expect(context.data.commodityGate.growthTrend).toBeNull();
   expect(context.data.commodityGate.impulseType).not.toBe('INFLATION');
+  expect(container.querySelector('[data-gold-trend-source]')?.textContent).toContain('10-year Treasury: FRED unavailable');
+  expect(container.querySelector('[data-gold-trend-source]')?.textContent).toContain('CPI year-over-year: FRED unavailable');
+  expect(container.querySelector('[data-real-rates]')?.textContent).toBe('FRED unavailable');
+});
+
+it('attributes the gold trend to the FRED treasury and inflation dates', async () => {
+  vi.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000 + 30 * 60 * 1000);
+  const metal = (symbol: string, name: string, changePercent: number) => row({
+    symbol, name, category: 'Metals', price: 100, change: changePercent, changePercent, eligibleForGate: true, freshnessStatus: 'LIVE', unavailableReason: null, source: 'LEGACY_MONTHLY', sourceLabel: null,
+  });
+  const energy = row({ symbol: 'WTI', name: 'WTI', category: 'Energy', price: 70, change: 0.4, changePercent: 0.4, eligibleForGate: true, freshnessStatus: 'LIVE', source: 'ETF_PROXY', unavailableReason: null, sourceLabel: null });
+  const wheat = row({ symbol: 'WHEAT', name: 'Wheat', category: 'Agriculture', price: 200, change: 0.1, changePercent: 0.1, eligibleForGate: true, freshnessStatus: 'DELAYED', source: 'LEGACY_MONTHLY', unavailableReason: null, sourceLabel: null });
+  const copper = metal('COPPER', 'Copper', 1.2);
+  const gold = metal('GOLD', 'Gold', 0.2);
+  const commodities = [energy, copper, wheat, gold];
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () => (String(url).includes('economic-indicators') ? {
+      source: 'Source: FRED (Federal Reserve Bank of St. Louis)',
+      asOf: '2026-10-02',
+      unavailable: false,
+      failedSeries: [{ series: 'UNRATE', label: 'Unemployment' }],
+      rates: { treasury10y: { value: 4.2, date: '2026-10-02', history: [{ date: '2026-10-02', value: 4.2 }, { date: '2026-09-01', value: 4.0 }] } },
+      inflation: { inflationRate: { value: 2.7, date: '2026-08-01', history: [{ date: '2026-08-01', value: 2.7 }, { date: '2026-07-01', value: 2.6 }] } },
+      regime: { riskLevel: 'medium' },
+    } : {
+      success: true,
+      commodities,
+      byCategory: { Energy: [energy], Metals: [copper, gold], Agriculture: [wheat] },
+      summary: { totalCommodities: 4, gainers: 4, losers: 0, avgChange: 0.4, topGainer: copper, topLoser: null },
+      dataHealth: { gateReady: true, eligibleCount: 4, totalCount: 4, staleSymbols: [] },
+      sourceAsOf: '2026-10-06',
+      lastUpdate: '2026-10-06T04:00:00Z',
+    }),
+  })));
+  const { container } = render(<CommoditiesPage embedded />);
+  await screen.findByText('Growth proxy');
+  const source = container.querySelector('[data-gold-trend-source]')?.textContent ?? '';
+  expect(source).toContain('Source: FRED (Federal Reserve Bank of St. Louis)');
+  expect(source).toContain('As of 2026-10-02');
+  expect(source).toContain('10-year Treasury 2026-10-02');
+  expect(source).toContain('CPI year-over-year 2026-08-01');
+  expect(source).not.toContain('Unemployment');
+  expect(container.querySelector('[data-real-rates]')?.textContent).not.toBe('FRED unavailable');
 });

@@ -12,7 +12,7 @@ export interface GoldAssessmentInput {
   energyChange: number;
   goldChange: number | null;
   usdTrend: GoldTrend;
-  realRatesTrend: GoldTrend;
+  realRatesTrend: GoldTrend | null;
   energyLead: boolean;
   metalsLead: boolean;
   agLead: boolean;
@@ -45,7 +45,7 @@ export function goldAssessment(input: GoldAssessmentInput): GoldAssessment {
         : 'NEUTRAL';
 
   let impulseType: GoldImpulse = 'MIXED';
-  if (input.energyLead && input.copperChange > 0 && input.usdTrend !== 'UP' && input.realRatesTrend !== 'UP') {
+  if (input.energyLead && input.copperChange > 0 && input.usdTrend !== 'UP' && (input.realRatesTrend === 'FLAT' || input.realRatesTrend === 'DOWN')) {
     impulseType = 'GROWTH';
   } else if (goldChange != null && goldChange > 0.25 && input.usdTrend === 'DOWN' && input.realRatesTrend === 'DOWN') {
     impulseType = 'INFLATION';
