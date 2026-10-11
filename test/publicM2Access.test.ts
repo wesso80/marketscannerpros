@@ -39,7 +39,7 @@ it('does not echo raw provider failure text',async()=>{
 });
 it('keeps flag-off legacy behavior and does not expose the new summary',async()=>{
  vi.stubEnv('NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED','false');vi.stubEnv('INTELLIGENCE_LIVE_DATA','false');const {GET}=await import('@/app/api/intelligence/global-m2/route');
- expect((await GET()).status).toBe(200);expect((await GET(req())).status).toBe(404);
+ expect((await GET()).status).toBe(200);const denied=await GET(req());expect(denied.status).toBe(403);expect((await denied.json()).error).toBe('Upgrade to Pro to read Global M2.');expect(h.compute).not.toHaveBeenCalled();
 });
 it('Pro summary is served from persisted observations when the redesign flag is off',async()=>{
  vi.stubEnv('NEXT_PUBLIC_PUBLIC_REDESIGN_ENABLED','false');h.access={bypass:false,plan:'pro'};

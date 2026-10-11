@@ -114,7 +114,7 @@ export async function GET(request?: NextRequest) {
       if (!summary || !redesigned) {
         const access = await resolvePublicQuotaAccess(session);
         const pro = access.bypass || access.plan === 'pro';
-        if (summary && !redesigned && !pro) return json({error:'Summary unavailable'},404);
+        if (summary && !redesigned && !pro) return json({error:'Upgrade to Pro to read Global M2.'},403);
         if (!summary && !pro) return json({error:'Pro is required for detailed M2 research'},403);
       }
     } catch { return json({error:'Access could not be verified'},503); }

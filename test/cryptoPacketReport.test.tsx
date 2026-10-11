@@ -42,9 +42,12 @@ it('Pro still shows the loaded report when the breakdown feed fails', async () =
   const fetchMock = vi.fn(async () => ({ ok: false, status: 503, json: async () => ({ error: 'Crypto breakdown unavailable', secret: 'RAW_BREAKDOWN_BARS' }) }));
   vi.stubGlobal('fetch', fetchMock);
   const pub = toPublicSymbolPacket(buildPayload('BTC', 'crypto', price, ind, null, null, '1D', null, null, null, { nowMs: now }));
+  if (pub.canonical) pub.canonical.dataTrust = { ...pub.canonical.dataTrust, level: 'STALE', label: 'STALE', freshness: 'stale' };
   render(<CryptoBreakdown compact symbol="BTC" timeframe="1D" packet={pub} />);
   const needle = pub.priceEvidence?.summary[0] || 'BTC observations from this report.';
   expect(await screen.findByText(needle)).toBeTruthy();
+  expect(screen.getByText('Full breakdown unavailable')).toBeTruthy();
+  expect(document.querySelector('[data-price-stale]')?.textContent).toBe('STALE');
   expect(screen.queryByText(/Crypto data feed failed/)).toBeNull();
   expect(document.body.textContent).not.toContain('RAW_BREAKDOWN_BARS');
   expect(String(fetchMock.mock.calls[0]?.[0])).toContain('/api/crypto/breakdown');

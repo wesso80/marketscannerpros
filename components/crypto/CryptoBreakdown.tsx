@@ -29,7 +29,11 @@ import HandoffSection from './sections/HandoffSection';
 function PacketReport({packet}:{packet:PublicSymbolPacket}){
  const price=packet.priceEvidence,lead=price?.summary?.[0]||`${packet.meta.symbol} observations from this report.`;
  const derivatives=packet.canonical?.derivatives,network=packet.canonical?.network,levels=packet.layer2.setup.keyLevels,trend=packet.layer3.structure.trend,vol=packet.layer3.structure.volatility.regime;
+ const trust=packet.canonical?.dataTrust;
+ const priceStale=trust?.freshness==='stale';
  return <div aria-label="Crypto breakdown" data-packet-report className="space-y-3">
+  <p role="status">Full breakdown unavailable</p>
+  {priceStale&&<p data-price-stale>{trust?.label}</p>}
   <section data-symbol-summary className="space-y-2">
    <p className="text-sm leading-relaxed">{symbolText(lead)}</p>
    {price?.basis.lastCompletedBar&&<p className="text-xs text-[var(--msp-text-muted)]">Completed bar {symbolText(price.basis.lastCompletedBar)}{price.basis.source?` · ${symbolText(price.basis.source)}`:''}</p>}

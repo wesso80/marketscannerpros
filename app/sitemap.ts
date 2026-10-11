@@ -35,7 +35,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/tools/terminal',
     '/tools/research',
     '/tools/explorer',
-    '/tools/explorer?tab=crypto-command&section=heatmap',
     '/tools/dashboard',
   ];
 
