@@ -98,7 +98,7 @@ export default function CryptoMorningDecisionCard({ onDecision, compact = false 
     const usdcDominance = getDominanceValue(dominance, 'USDC');
     const stableDominance = usdtDominance + usdcDominance;
 
-    const breadthTop50 = shownBreadth.top50 ?? 50;
+    const breadthTop50 = typeof shownBreadth.top50 === 'number' ? shownBreadth.top50 : null;
     const breadthScore = shownBreadth.score;
     const breadthLabel = shownBreadth.label;
 
@@ -129,10 +129,10 @@ export default function CryptoMorningDecisionCard({ onDecision, compact = false 
     if (riskScoreRaw >= 65) riskState = 'Risk-On';
     else if (riskScoreRaw <= 40) riskState = 'Risk-Off';
 
-    let leadership: 'Large Caps Leading' | 'Alts Leading' | 'Defensive Rotation' | 'Fragmented' = 'Fragmented';
-    if (btcDominance >= 56 && breadthTop50 < 40) leadership = 'Defensive Rotation';
-    else if (btcDominance <= 53 && breadthTop50 >= 55) leadership = 'Alts Leading';
-    else if (capMove > 0.5 && btcDominance > 53 && btcDominance < 56) leadership = 'Large Caps Leading';
+    let leadership: 'Large Caps Leading' | 'Alts Leading' | 'Defensive Rotation' | 'Fragmented' | 'Unavailable' = breadthTop50 == null ? 'Unavailable' : 'Fragmented';
+    if (breadthTop50 != null && btcDominance >= 56 && breadthTop50 < 40) leadership = 'Defensive Rotation';
+    else if (breadthTop50 != null && btcDominance <= 53 && breadthTop50 >= 55) leadership = 'Alts Leading';
+    else if (breadthTop50 != null && capMove > 0.5 && btcDominance > 53 && btcDominance < 56) leadership = 'Large Caps Leading';
 
     let liquidity: 'Expanding' | 'Stable' | 'Contracting' = 'Stable';
     if (oiChange > 2 && volumeToCap > 0.04 && stableDominance < 8) liquidity = 'Expanding';
@@ -147,7 +147,7 @@ export default function CryptoMorningDecisionCard({ onDecision, compact = false 
     const hardBlocksLong: string[] = [];
     const hardBlocksShort: string[] = [];
 
-    if (btcDominance >= 56 && breadthTop50 < 30) hardBlocksLong.push('BTC dominance surge with weak alt breadth');
+    if (breadthTop50 != null && btcDominance >= 56 && breadthTop50 < 30) hardBlocksLong.push('BTC dominance surge with weak alt breadth');
     if (liquidity === 'Contracting' && oiChange < -2) hardBlocksLong.push('Liquidity and OI both contracting');
     if (fundingAvg > 0.04 && capMove < 0) hardBlocksLong.push('Crowded longs with momentum divergence');
     if (isBelowTrend) hardBlocksLong.push('Total market cap below 30D trend');
@@ -165,7 +165,7 @@ export default function CryptoMorningDecisionCard({ onDecision, compact = false 
     const liquidityWeight = liquidity === 'Expanding' ? 85 : liquidity === 'Stable' ? 55 : 20;
     const volatilityWeight = volatility === 'Expansion' ? 75 : volatility === 'Compression' ? 55 : volatility === 'Chop' ? 40 : 20;
 
-    const adaptiveConfidence = typeof breadthScore === 'number' ? Math.round(
+    const adaptiveConfidence = typeof breadthScore === 'number' && breadthTop50 != null ? Math.round(
       (riskWeight * 0.25) +
       (leadershipWeight * 0.2) +
       (liquidityWeight * 0.2) +
@@ -186,7 +186,7 @@ export default function CryptoMorningDecisionCard({ onDecision, compact = false 
     const subClusters = [
       {
         name: 'Large Caps',
-        condition: riskState === 'Risk-Off' ? 'Unfavorable' : leadership === 'Defensive Rotation' ? 'Mixed' : 'Favorable',
+        condition: leadership === 'Unavailable' ? 'Unavailable' : riskState === 'Risk-Off' ? 'Unfavorable' : leadership === 'Defensive Rotation' ? 'Mixed' : 'Favorable',
       },
       {
         name: 'Mid/Alts',

@@ -389,7 +389,7 @@ export default function PricingPage() {
             </div>
             <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-4">
               <div className="text-sm font-semibold">Do you offer refunds?</div>
-              <p className="mt-2 text-sm text-white/70">{FREE_COPY.guarantee}</p>
+              <p className="mt-2 text-sm text-white/70">Pro includes a 7-day free trial, so you can try it before you pay. Cancel any time and you won't be charged again; you keep access until the end of the paid period. Refunds are given where required by the Australian Consumer Law.</p>
             </div>
             <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-4">
               <div className="text-sm font-semibold">Do you provide financial advice?</div>

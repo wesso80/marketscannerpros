@@ -31,13 +31,22 @@ for (const slug of ['refund-policy', 'cookie-policy', 'terms'] as const) {
 
 baseline.terms.text = baseline.terms.text.replace(
   'Refunds: We offer a 7-day money-back guarantee. See our Refund Policy for details.',
-  'Pro includes a 7-day free trial, matching the Terms. See our Refund Policy for details.',
+  "Pro includes a 7-day free trial, so you can try it before you pay. Cancel any time and you won't be charged again; you keep access until the end of the paid period. Refunds are given where required by the Australian Consumer Law.",
 );
+baseline.terms.links = baseline.terms.links.filter((link) => link.href !== '/refund-policy');
 
 baseline['refund-policy'].text = baseline['refund-policy'].text
   .replace(
     '7-Day Money-Back Guarantee:If you are not satisfied with your subscription, you may request a full refund within 7 days of your first payment.To request a refund, email support@marketscannerpros.app with your account email and reason for cancellation.Refunds are processed within 5-10 business days to your original payment method.This guarantee applies to first-time subscribers only.After 7 Days - No Pro-Rated Refunds:After the 7-day guarantee period, we do not provide refunds or credits for partial billing periods of service.',
-    'Pro includes a 7-day free trial, matching the Terms.',
+    'Pro includes a 7-day free trial, matching the Terms.Nothing in this policy excludes your rights under the Australian Consumer Law, including remedies for a major failure.',
+  )
+  .replace(
+    'No refunds are given for unused time after cancellation.',
+    'Except where required by law, no refunds are given for unused time after cancellation.',
+  )
+  .replace(
+    'immediate subscription termination without refund.',
+    'immediate subscription termination without refund, except where required by law.',
   )
   .replace(
     'Technical Issues: If the App was unavailable for 3+ consecutive days during your billing period, you may be eligible for a pro-rated credit.',

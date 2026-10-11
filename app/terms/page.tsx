@@ -61,7 +61,7 @@ export default function TermsPage() {
         <li><strong>One Trial Per Email:</strong> Each email address is eligible for one free trial per plan. Using multiple emails or accounts to access repeated trials is prohibited and may result in account termination.</li>
         <li>After your trial period ends, you will be automatically charged the subscription fee for your selected monthly or annual billing interval unless you cancel before the trial expires.</li>
         <li>Subscriptions renew automatically until cancelled through your account, Stripe Customer Portal, or app store settings.</li>
-        <li>Pro includes a 7-day free trial, matching the Terms. See our <a href="/refund-policy">Refund Policy</a> for details.</li>
+        <li>Pro includes a 7-day free trial, so you can try it before you pay. Cancel any time and you won't be charged again; you keep access until the end of the paid period. Refunds are given where required by the Australian Consumer Law.</li>
         <li><strong>Trial Abuse Prevention:</strong> We track trial usage by email address and device to prevent abuse. Attempting to circumvent trial limitations may result in immediate subscription termination without refund.</li>
       </ul>
 

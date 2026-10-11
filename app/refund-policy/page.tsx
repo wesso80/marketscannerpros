@@ -40,9 +40,10 @@ export default function RefundPolicyPage() {
 
       <h2>Refund Policy</h2>
       <p>Pro includes a 7-day free trial, matching the Terms.</p>
+      <p>Nothing in this policy excludes your rights under the Australian Consumer Law, including remedies for a major failure.</p>
       <ul>
         <li>When you cancel, you retain access until the end of your current billing period.</li>
-        <li>No refunds are given for unused time after cancellation.</li>
+        <li>Except where required by law, no refunds are given for unused time after cancellation.</li>
       </ul>
 
       <p><strong>Exceptions:</strong></p>
@@ -55,7 +56,7 @@ export default function RefundPolicyPage() {
       <ul>
         <li>Each email address is eligible for <strong>one free trial per plan</strong>.</li>
         <li>Attempting to circumvent trial limitations (using multiple emails, accounts, or devices) is prohibited.</li>
-        <li>Violations may result in immediate subscription termination without refund.</li>
+        <li>Violations may result in immediate subscription termination without refund, except where required by law.</li>
         <li>We track trial usage by email address and device to enforce this policy.</li>
       </ul>
 
