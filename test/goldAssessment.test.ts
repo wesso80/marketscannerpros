@@ -29,6 +29,13 @@ describe('gold assessment leaves a missing gold change out', () => {
     expect(row.growthSupport).toBe('SUPPORTIVE');
   });
 
+  it('does not treat a missing real-rates trend as a known rate backdrop', () => {
+    const row = goldAssessment({ ...present, goldChange: 0.1, energyLead: true, realRatesTrend: null });
+    expect(row.impulseType).not.toBe('GROWTH');
+    expect(row.impulseType).not.toBe('INFLATION');
+    expect(row.impulseType).not.toBe('DEFLATION');
+  });
+
   it('does not treat a missing gold change as 0', () => {
     const row = goldAssessment({ ...present, goldChange: null });
     expect(row.impulseType).toBe('MIXED');

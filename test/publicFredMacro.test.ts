@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cpiYearOverYear, PUBLIC_CPI_SERIES, PUBLIC_FED_FUNDS_SERIES, PUBLIC_REAL_GDP_GROWTH_SERIES, PUBLIC_UNEMPLOYMENT_SERIES, PUBLIC_YIELD_SERIES } from '@/lib/macro/publicFred';
+import { cpiYearOverYear, PUBLIC_CPI_SERIES, PUBLIC_FED_FUNDS_SERIES, PUBLIC_FRED_FAILURE_TTL_MS, PUBLIC_REAL_GDP_GROWTH_SERIES, PUBLIC_UNEMPLOYMENT_SERIES, PUBLIC_YIELD_SERIES } from '@/lib/macro/publicFred';
 
 const mocks = vi.hoisted(() => ({
   q: vi.fn(() => { throw new Error('public macro must not query the database'); }),
@@ -184,11 +184,18 @@ describe('public macro paths do not call Alpha Vantage', () => {
     expect(urls.some((url) => url.includes('alphavantage.co'))).toBe(false);
     expect(urls.every((url) => url.includes('fred.stlouisfed.org'))).toBe(true);
     expect(urls.map((url) => new URL(url).searchParams.get('id')).sort()).toEqual(PUBLIC_FRED_IDS);
-    expect(regime).toEqual({
+    expect(regime).toMatchObject({
       riskState: 'risk_off',
       riskLevel: 'high',
       concerns: ['Inverted yield curve', 'Elevated inflation', 'High interest rates'],
+      source: 'Source: FRED (Federal Reserve Bank of St. Louis)',
+      asOf: '2026-09-23',
     });
+    expect(regime?.observations).toEqual([
+      { series: 'DGS10', label: '10-year Treasury', date: '2026-09-23', unavailable: false },
+      { series: 'DGS2', label: '2-year Treasury', date: '2026-09-23', unavailable: false },
+      { series: 'CPIAUCSL', label: 'CPI year-over-year', date: '2026-09-01', unavailable: false },
+    ]);
     expect(mocks.avTakeToken).not.toHaveBeenCalled();
     expect(mocks.q).not.toHaveBeenCalled();
   });
@@ -205,5 +212,64 @@ describe('public macro paths do not call Alpha Vantage', () => {
     expect(route).toContain('loadPublicFredMacro');
     expect(macro).not.toMatch(/alphavantage|ALPHA_VANTAGE|TREASURY_YIELD|avTakeToken/);
     expect(macro).toContain('loadPublicFredMacro');
+    expect(existsSync('app/api/economics/route.ts')).toBe(false);
+  });
+
+  it('returns null on a FRED outage and does not cache that miss for an hour', async () => {
+    let now = Date.parse('2026-09-25T00:00:00Z');
+    vi.spyOn(Date, 'now').mockImplementation(() => now);
+    const urls: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (input: string) => {
+      urls.push(String(input));
+      throw new Error('fred down');
+    }));
+    const { GET } = await import('../app/api/economic-indicators/route');
+    const { fetchMacroRegime } = await import('../lib/goldenEggFetchers');
+    const first = await (await GET(new Request('http://localhost/api/economic-indicators?all=true') as any)).json();
+    expect(first.label).toBe('FRED unavailable');
+    expect(first.unavailable).toBe(true);
+    expect(first.regime).toBeNull();
+    expect(first.inflation.trend).toBeNull();
+    expect(first.employment.trend).toBeNull();
+    expect(first.failedSeries.map((row: { series: string }) => row.series).sort()).toEqual(PUBLIC_FRED_IDS);
+    const afterFirst = urls.length;
+    await GET(new Request('http://localhost/api/economic-indicators?all=true') as any);
+    expect(urls).toHaveLength(afterFirst);
+    now += PUBLIC_FRED_FAILURE_TTL_MS + 1000;
+    await GET(new Request('http://localhost/api/economic-indicators?all=true') as any);
+    expect(urls.length).toBeGreaterThan(afterFirst);
+
+    urls.length = 0;
+    const regime = await fetchMacroRegime();
+    expect(regime).toBeNull();
+    const regimeFetches = urls.length;
+    expect(regimeFetches).toBeGreaterThan(0);
+    expect(await fetchMacroRegime()).toBeNull();
+    expect(urls).toHaveLength(regimeFetches);
+    now += PUBLIC_FRED_FAILURE_TTL_MS + 1000;
+    expect(await fetchMacroRegime()).toBeNull();
+    expect(urls.length).toBeGreaterThan(regimeFetches);
+    vi.spyOn(Date, 'now').mockRestore();
+  });
+
+  it('labels one failed series and leaves a null trend unset', async () => {
+    const urls = stubFredFetch();
+    const realFetch = global.fetch;
+    vi.stubGlobal('fetch', vi.fn(async (input: string) => {
+      const url = String(input);
+      if (new URL(url).searchParams.get('series_id') === 'UNRATE' || new URL(url).searchParams.get('id') === 'UNRATE') {
+        urls.push(url);
+        throw new Error('unrate down');
+      }
+      return realFetch(input);
+    }));
+    const { GET } = await import('../app/api/economic-indicators/route');
+    const body = await (await GET(new Request('http://localhost/api/economic-indicators?all=true') as any)).json();
+    expect(body.unavailable).toBe(false);
+    expect(body.employment.unemployment).toMatchObject({ value: null, unavailable: true, seriesId: 'UNRATE' });
+    expect(body.employment.trend).toBeNull();
+    expect(body.failedSeries).toEqual([{ series: 'UNRATE', label: 'Unemployment' }]);
+    expect(body.rates.treasury10y.value).toBe(5.2);
+    expect(body.inflation.trend).toBe('elevated');
   });
 });

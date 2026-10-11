@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { isAvRateInterval } from '@/lib/macro/avRateSeries';
-import { FRED_PUBLIC_SOURCE, isPublicFredIndicator, loadPublicFredMacro, readPublicFredIndicator, type PublicSeriesReading } from '@/lib/macro/publicFred';
+import { FRED_UNAVAILABLE, PUBLIC_FRED_FAILURE_TTL_MS } from '@/lib/macro/fredSource';
+import { FRED_PUBLIC_SOURCE, PUBLIC_SERIES_LABELS, isPublicFredIndicator, loadPublicFredMacro, readPublicFredIndicator, type PublicFredMacro, type PublicSeriesReading } from '@/lib/macro/publicFred';
 
-// Cache for 1 hour (economic data updates infrequently)
-const cache = new Map<string, { data: any; timestamp: number }>();
+// Successful reads stay cached for an hour. A failed read is kept for a few minutes at most.
+const cache = new Map<string, { data: any; timestamp: number; failure?: boolean }>();
 const CACHE_DURATION = 60 * 60 * 1000;
+
+function readCache(key: string, now: number) {
+  const hit = cache.get(key);
+  if (!hit) return null;
+  const ttl = hit.failure ? PUBLIC_FRED_FAILURE_TTL_MS : CACHE_DURATION;
+  return now - hit.timestamp < ttl ? hit.data : null;
+}
 
 const PUBLIC_INDICATORS = ['TREASURY_YIELD', 'FEDERAL_FUNDS_RATE', 'CPI', 'INFLATION', 'UNEMPLOYMENT', 'REAL_GDP'];
 
@@ -43,12 +51,10 @@ export async function GET(req: NextRequest) {
       ? (isAvRateInterval(intervalParam) ? intervalParam : 'daily')
       : null;
     const cacheKey = `${indicator}_${maturity}_${interval ?? ''}`;
-    const cached = cache.get(cacheKey);
-    if (cached && (now - cached.timestamp) < CACHE_DURATION) {
-      return NextResponse.json(cached.data, { headers: cacheHeaders });
-    }
+    const cached = readCache(cacheKey, now);
+    if (cached) return NextResponse.json(cached, { headers: cacheHeaders });
     const formatted = await readPublicFredIndicator(indicator, { maturity, interval, nowMs: now });
-    cache.set(cacheKey, { data: formatted, timestamp: now });
+    cache.set(cacheKey, { data: formatted, timestamp: now, failure: formatted.unavailable === true });
     return NextResponse.json(formatted, { headers: cacheHeaders });
   } catch (error) {
     console.error('Economic indicators error:', error);
@@ -56,19 +62,53 @@ export async function GET(req: NextRequest) {
   }
 }
 
-const emptyReading = (): PublicSeriesReading => ({ value: null, date: null, history: [] });
+const emptyReading = (seriesId = ''): PublicSeriesReading => ({ value: null, date: null, history: [], seriesId, unavailable: false });
+
+function trendFromValue(value: number | null, decide: (n: number) => boolean, yes: string, no: string): string | null {
+  if (value == null) return null;
+  return decide(value) ? yes : no;
+}
+
+function unavailableDashboard(now: number, failedSeries: PublicFredMacro['failedSeries']) {
+  const blank = (seriesId: string): PublicSeriesReading => ({ value: null, date: null, history: [], seriesId, unavailable: true });
+  return {
+    timestamp: new Date(now).toISOString(),
+    source: FRED_PUBLIC_SOURCE,
+    asOf: null,
+    unavailable: true,
+    label: FRED_UNAVAILABLE,
+    failedSeries,
+    rates: {
+      treasury3m: blank('DGS3MO'),
+      treasury2y: blank('DGS2'),
+      treasury5y: blank('DGS5'),
+      treasury10y: blank('DGS10'),
+      treasury30y: blank('DGS30'),
+      yieldCurve: { value: null, inverted: false, label: null },
+      yieldCurve3m10y: { value: null, inverted: false, label: null },
+      fedFunds: blank('DFF'),
+    },
+    inflation: { cpi: blank('CPIAUCSL'), inflationRate: blank('CPIAUCSL'), trend: null },
+    employment: { unemployment: blank('UNRATE'), trend: null },
+    growth: { realGDP: { ...blank('A191RL1Q225SBEA'), unit: '%' } },
+    regime: null,
+  };
+}
 
 async function fetchAllIndicators(now: number) {
-  // Check if we have a fresh "all" cache
-  const allCached = cache.get('ALL_INDICATORS');
-  if (allCached && (now - allCached.timestamp) < CACHE_DURATION) {
-    return allCached.data;
-  }
+  const allCached = readCache('ALL_INDICATORS', now);
+  if (allCached) return allCached;
 
   const fred = await loadPublicFredMacro(now).catch((e: unknown) => {
     console.error('[economic-indicators] FRED macro read failed:', e instanceof Error ? e.message : e);
     return null;
   });
+  if (!fred || fred.unavailable) {
+    const failedSeries = fred?.failedSeries ?? Object.entries(PUBLIC_SERIES_LABELS).map(([series, label]) => ({ series, label }));
+    const dashboard = unavailableDashboard(now, failedSeries);
+    cache.set('ALL_INDICATORS', { data: dashboard, timestamp: now, failure: true });
+    return dashboard;
+  }
 
   const r10y = fred?.yields.treasury10y ?? emptyReading();
   const r2y = fred?.yields.treasury2y ?? emptyReading();
@@ -90,7 +130,10 @@ async function fetchAllIndicators(now: number) {
   const dashboard = {
     timestamp: new Date(now).toISOString(),
     source: FRED_PUBLIC_SOURCE,
-    asOf: fred?.asOf ?? null,
+    asOf: fred.asOf,
+    unavailable: false,
+    label: null,
+    failedSeries: fred.failedSeries,
     
     rates: {
       treasury3m: r3m,
@@ -114,12 +157,12 @@ async function fetchAllIndicators(now: number) {
     inflation: {
       cpi,
       inflationRate,
-      trend: (inflationRate.value ?? 0) > 3 ? 'elevated' : 'moderate',
+      trend: trendFromValue(inflationRate.value, (n) => n > 3, 'elevated', 'moderate'),
     },
     
     employment: {
       unemployment,
-      trend: (unemployment.value ?? 0) < 4 ? 'tight' : 'loosening',
+      trend: trendFromValue(unemployment.value, (n) => n < 4, 'tight', 'loosening'),
     },
     
     growth: {
@@ -130,10 +173,12 @@ async function fetchAllIndicators(now: number) {
     },
     
     // Market regime assessment
-    regime: determineRegime(t10y, yieldCurve, inflationRate.value, unemployment.value),
+    regime: t10y == null && yieldCurve == null && inflationRate.value == null && unemployment.value == null
+      ? null
+      : determineRegime(t10y, yieldCurve, inflationRate.value, unemployment.value),
   };
   
-  cache.set('ALL_INDICATORS', { data: dashboard, timestamp: now });
+  cache.set('ALL_INDICATORS', { data: dashboard, timestamp: now, failure: false });
   
   return dashboard;
 }

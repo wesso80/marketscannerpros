@@ -19,6 +19,8 @@ import {
   fetchMPE,
   fetchTimeConfluence,
   fetchMacroRegime,
+  formatMacroRegimeEvidence,
+  formatMacroRegimeLine,
   type Indicators,
   type OptionsSnapshot,
   type CryptoDerivatives,
@@ -446,7 +448,7 @@ export function buildPayload(
   else if (weakest.val < 55) primaryBlocker = `${weakest.key} holding back at ${weakest.val.toFixed(0)}/100 — ${describeScore(weakest.key, weakest.val, ind, opts, cryptoDerivs, price, structureQ.notes, flow.notes)}`;
   else if (riskScore < 50) primaryBlocker = `Risk conditions ${riskScore}/100 — ${riskQ.reasons[0]}`;
   else if (setup.extended) primaryBlocker = `Extension — ${setup.note}`;
-  else if (macroOpposes) primaryBlocker = macroRegime!.riskState === 'risk_off' ? `Macro regime RISK_OFF (${macroRegime!.concerns.join(', ')})` : 'Macro regime RISK_ON opposes the short scenario';
+  else if (macroOpposes) primaryBlocker = formatMacroRegimeLine(macroRegime!, 'blocker');
 
   if (!hasAtr) { primaryBlocker = 'Measured ATR unavailable; price levels and sizing are withheld.'; permission = 'NO_TRADE'; }
   if (primaryBlocker && permission === 'TRADE') permission = 'WATCH';
@@ -460,7 +462,7 @@ export function buildPayload(
   const flipConditions: GoldenEggPayload['layer1']['flipConditions'] = [];
   if (permission !== 'TRADE') {
     if (trust.level !== 'GOOD') flipConditions.push({ id: 'f8', text: `Data trust is ${trust.level.toLowerCase().replace('_', ' ')} (${trust.reasons.join('; ')}) — inputs need to be clean before the packet can be relied on`, severity: 'must' });
-    if (macroOpposes) flipConditions.push({ id: 'f5', text: macroRegime!.riskState === 'risk_off' ? `Macro regime is RISK_OFF (${macroRegime!.concerns.join(', ')}) — wait for macro environment to improve` : 'Macro regime is RISK_ON — a short needs the macro tape to turn before it can align', severity: 'must' });
+    if (macroOpposes) flipConditions.push({ id: 'f5', text: formatMacroRegimeLine(macroRegime!, 'flip'), severity: 'must' });
     if (structureScore < 60) flipConditions.push({ id: 'f1', text: direction === 'SHORT' ? 'Price needs to break and hold below key moving averages' : 'Price needs to reclaim and hold above key moving averages', severity: 'must' });
     if (flowScore < 50 && opts) flipConditions.push({ id: 'f2', text: `Options positioning needs to confirm direction (P/C ${opts.putCallRatio.toFixed(2)} on ${opts.canonical.expiry})`, severity: 'should' });
     if (momentumScore < 50) flipConditions.push({ id: 'f3', text: `RSI needs to move ${direction === 'SHORT' ? 'below 45' : 'above 55'} to confirm momentum`, severity: 'must' });
@@ -632,6 +634,7 @@ export function buildPayload(
   if (tcRaw?.candleCloseConfluence.isMonthEnd) narrativeRisks.push('Month-end rebalancing — expect irregular flows and positioning.');
   if (extras.fundamentals?.daysToEarnings != null && extras.fundamentals.daysToEarnings >= 0 && extras.fundamentals.daysToEarnings <= 14) narrativeRisks.push(`Earnings scheduled ${extras.fundamentals.nextEarningsDate} (${extras.fundamentals.daysToEarnings} days) — event risk.`);
   else if (assetClass === 'equity' && (!extras.fundamentals || extras.fundamentals.nextEarningsStatus === 'UNKNOWN')) narrativeRisks.push('Earnings date UNKNOWN — calendar unavailable; not verified clear of the holding window.');
+  if (macroRegime) narrativeRisks.push(formatMacroRegimeEvidence(macroRegime));
   if (narrativeRisks.length === 0) narrativeRisks.push('No major risk flags at current levels.');
 
   const timeConfluenceVerdict: Verdict | undefined = tcRaw ? timingVerdict(timing) : undefined;
@@ -1101,7 +1104,7 @@ export async function computeGoldenEgg(params: GoldenEggComputeParams): Promise<
       dataFreshness: payload.canonical?.dataTrust.freshness === 'stale' ? 'stale' : 'unknown',
       inputs: { symbol, assetClass, timeframe: tfLabel, price: priceData.price, rsi: indData?.rsi, macdHist: indData?.macdHist, adx: indData?.adx, mpeComposite: mpeData?.composite, macroRegime: macroRegime?.riskState },
       scoreSnapshot: { direction: payload.layer1.direction, assessment: payload.layer1.assessment, confidence: payload.layer1.confidence, canonicalPermission: payload.canonicalVerdict?.permission ?? null, canonicalGrade: payload.canonicalVerdict?.grade ?? null, canonicalScore: payload.canonicalVerdict?.score ?? null, invalidation: payload.canonical?.levels.invalidation.price ?? null, trust: payload.canonical?.dataTrust.level ?? null },
-      meta: { primaryBlocker: payload.layer1.primaryBlocker, timing: payload.canonical?.timing.relation ?? null },
+      meta: { primaryBlocker: payload.layer1.primaryBlocker, macroEvidence: macroRegime ? formatMacroRegimeEvidence(macroRegime) : null, timing: payload.canonical?.timing.relation ?? null },
       adminOnly: true,
     }).catch(() => {});
   }
