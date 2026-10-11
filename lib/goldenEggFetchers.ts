@@ -772,7 +772,8 @@ export async function fetchMacroRegime(): Promise<MacroRegime | null> {
   if (macroCache.data && now - macroCache.ts < MACRO_CACHE_TTL) return macroCache.data;
 
   try {
-    // 10Y, 2Y, and CPI year-over-year inflation from FRED (DGS10, DGS2, CPIAUCSL).
+    // Public FRED bundle: yields, CPI year-over-year, fed funds, unemployment, and real GDP growth.
+    // This regime uses 10Y, 2Y, and CPI year-over-year (DGS10, DGS2, CPIAUCSL).
     const macro = await loadPublicFredMacro(now);
     const t10y = macro.yields.treasury10y.value;
     const t2y = macro.yields.treasury2y.value;

@@ -1,37 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { avTakeToken } from '@/lib/avRateGovernor';
-import { isAvRateInterval, latestObservation, monthlyAverages, numericObservations } from '@/lib/macro/avRateSeries';
+import { isAvRateInterval } from '@/lib/macro/avRateSeries';
 import { FRED_PUBLIC_SOURCE, isPublicFredIndicator, loadPublicFredMacro, readPublicFredIndicator, type PublicSeriesReading } from '@/lib/macro/publicFred';
 
 // Cache for 1 hour (economic data updates infrequently)
 const cache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_DURATION = 60 * 60 * 1000;
 
-const INDICATORS = {
-  // Interest Rates
-  TREASURY_YIELD: { name: 'Treasury Yields', category: 'rates' },
-  FEDERAL_FUNDS_RATE: { name: 'Federal Funds Rate', category: 'rates' },
-  
-  // Growth & Output
-  REAL_GDP: { name: 'Real GDP', category: 'growth' },
-  REAL_GDP_PER_CAPITA: { name: 'GDP Per Capita', category: 'growth' },
-  
-  // Inflation
-  CPI: { name: 'Consumer Price Index', category: 'inflation' },
-  INFLATION: { name: 'Inflation Rate', category: 'inflation' },
-  
-  // Employment
-  UNEMPLOYMENT: { name: 'Unemployment Rate', category: 'employment' },
-  NONFARM_PAYROLL: { name: 'Nonfarm Payroll', category: 'employment' },
-  
-  // Consumer
-  RETAIL_SALES: { name: 'Retail Sales', category: 'consumer' },
-  DURABLES: { name: 'Durable Goods Orders', category: 'consumer' },
-};
+const PUBLIC_INDICATORS = ['TREASURY_YIELD', 'FEDERAL_FUNDS_RATE', 'CPI', 'INFLATION', 'UNEMPLOYMENT', 'REAL_GDP'];
 
 export async function GET(req: NextRequest) {
-  // Auth guard: AV license requires authenticated users only
+  // Session check stays. The series on this route are FRED observations.
   const session = await getSessionFromCookie();
   if (!session?.workspaceId) {
     return NextResponse.json({ error: 'Please log in to access market data' }, { status: 401 });
@@ -46,63 +25,30 @@ export async function GET(req: NextRequest) {
     const now = Date.now();
     const cacheHeaders = { 'Cache-Control': 'private, max-age=1800, stale-while-revalidate=3600' };
 
-    // Yields, CPI, and the CPI year-over-year inflation rate come from FRED.
-    // Fed funds, unemployment, and real GDP still use Alpha Vantage.
+    // Yields, CPI, inflation, fed funds, unemployment, and real GDP growth all come from FRED.
     if (all) {
-      const allData = await fetchAllIndicators(process.env.ALPHA_VANTAGE_API_KEY, now);
+      const allData = await fetchAllIndicators(now);
       return NextResponse.json(allData, { headers: cacheHeaders });
     }
 
-    if (isPublicFredIndicator(indicator)) {
-      const intervalParam = searchParams.get('interval');
-      const interval = indicator === 'TREASURY_YIELD'
-        ? (isAvRateInterval(intervalParam) ? intervalParam : 'daily')
-        : null;
-      const cacheKey = `${indicator}_${maturity}_${interval ?? ''}`;
-      const cached = cache.get(cacheKey);
-      if (cached && (now - cached.timestamp) < CACHE_DURATION) {
-        return NextResponse.json(cached.data, { headers: cacheHeaders });
-      }
-      const formatted = await readPublicFredIndicator(indicator, { maturity, interval, nowMs: now });
-      cache.set(cacheKey, { data: formatted, timestamp: now });
-      return NextResponse.json(formatted, { headers: cacheHeaders });
-    }
-
-    const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
-    }
-
-    if (!indicator) {
-      return NextResponse.json({ 
+    if (!isPublicFredIndicator(indicator)) {
+      return NextResponse.json({
         error: 'Indicator required',
-        available: Object.keys(INDICATORS),
+        available: PUBLIC_INDICATORS,
       }, { status: 400 });
     }
-    
-    // FEDERAL_FUNDS_RATE defaults to monthly at Alpha Vantage (latest = last month's average); use daily unless asked.
-    const isRateSeries = indicator === 'FEDERAL_FUNDS_RATE';
-    const intervalParam = searchParams.get('interval');
-    const interval = isRateSeries ? (isAvRateInterval(intervalParam) ? intervalParam : 'daily') : null;
 
+    const intervalParam = searchParams.get('interval');
+    const interval = indicator === 'TREASURY_YIELD' || indicator === 'FEDERAL_FUNDS_RATE'
+      ? (isAvRateInterval(intervalParam) ? intervalParam : 'daily')
+      : null;
     const cacheKey = `${indicator}_${maturity}_${interval ?? ''}`;
     const cached = cache.get(cacheKey);
     if (cached && (now - cached.timestamp) < CACHE_DURATION) {
-      return NextResponse.json(cached.data, {
-        headers: { 'Cache-Control': 'private, max-age=1800, stale-while-revalidate=3600' },
-      });
+      return NextResponse.json(cached.data, { headers: cacheHeaders });
     }
-    
-    let url = `https://www.alphavantage.co/query?function=${indicator}&apikey=${apiKey}`;
-    if (interval) url += `&interval=${interval}`;
-    
-    await avTakeToken();
-    const response = await fetch(url);
-    const data = await response.json();
-    
-    const formatted = formatIndicator(indicator, data, maturity);
+    const formatted = await readPublicFredIndicator(indicator, { maturity, interval, nowMs: now });
     cache.set(cacheKey, { data: formatted, timestamp: now });
-    
     return NextResponse.json(formatted, { headers: cacheHeaders });
   } catch (error) {
     console.error('Economic indicators error:', error);
@@ -112,92 +58,25 @@ export async function GET(req: NextRequest) {
 
 const emptyReading = (): PublicSeriesReading => ({ value: null, date: null, history: [] });
 
-async function fetchAvDashboardSeries(
-  apiKey: string | undefined,
-  indicatorsToFetch: Array<{ func: string; maturity?: string; interval?: string }>,
-) {
-  const avResults: any[] = [];
-  if (!apiKey) return avResults;
-  for (const ind of indicatorsToFetch) {
-    try {
-      let url = `https://www.alphavantage.co/query?function=${ind.func}&apikey=${apiKey}`;
-      if (ind.maturity) url += `&maturity=${ind.maturity}`;
-      if (ind.interval) url += `&interval=${ind.interval}`;
-      await avTakeToken();
-      const response = await fetch(url);
-      const data = await response.json();
-      if (data.Note || data['Error Message']) {
-        console.warn(`Economic indicator ${ind.func} rate limited or error:`, data.Note || data['Error Message']);
-      }
-      avResults.push({ indicator: ind.func, maturity: ind.maturity, data });
-      await new Promise(resolve => setTimeout(resolve, 250));
-    } catch (e) {
-      console.error(`Error fetching ${ind.func}:`, e);
-      avResults.push({ indicator: ind.func, maturity: ind.maturity, error: true });
-    }
-  }
-  return avResults;
-}
-
-async function fetchAllIndicators(apiKey: string | undefined, now: number) {
+async function fetchAllIndicators(now: number) {
   // Check if we have a fresh "all" cache
   const allCached = cache.get('ALL_INDICATORS');
   if (allCached && (now - allCached.timestamp) < CACHE_DURATION) {
     return allCached.data;
   }
 
-  const fredPromise = loadPublicFredMacro(now).catch((e: unknown) => {
-    console.error('[economic-indicators] FRED yields and CPI failed:', e instanceof Error ? e.message : e);
+  const fred = await loadPublicFredMacro(now).catch((e: unknown) => {
+    console.error('[economic-indicators] FRED macro read failed:', e instanceof Error ? e.message : e);
     return null;
   });
 
-  // Fed funds, unemployment, and real GDP stay on Alpha Vantage.
-  const indicatorsToFetch: Array<{ func: string; maturity?: string; interval?: string }> = [
-    { func: 'FEDERAL_FUNDS_RATE', interval: 'daily' },
-    { func: 'UNEMPLOYMENT' },
-    { func: 'REAL_GDP' },
-  ];
-  
-  const [fred, results] = await Promise.all([
-    fredPromise,
-    fetchAvDashboardSeries(apiKey, indicatorsToFetch),
-  ]);
-  
-  // Process results
-  const fedFunds = results.find(r => r.indicator === 'FEDERAL_FUNDS_RATE');
-  const unemployment = results.find(r => r.indicator === 'UNEMPLOYMENT');
-  const gdp = results.find(r => r.indicator === 'REAL_GDP');
-  
-  // Extract latest values
-  const getValue = (result: any, key = 'value') => {
-    if (!result?.data?.data?.[0]) return null;
-    return parseFloat(result.data.data[0][key]);
-  };
-  
-  const getHistory = (result: any, count = 12) => {
-    if (!result?.data?.data) return [];
-    return result.data.data.slice(0, count).map((d: any) => ({
-      date: d.date,
-      value: parseFloat(d.value),
-    }));
-  };
-  
-  // Daily rate series: latest numeric observation (skips '.' holiday rows) + its date; history stays
-  // 12 monthly averages rebuilt from the same daily payload so sparklines/trends keep a monthly shape.
-  const rate = (result: any) => {
-    const latest = latestObservation(result?.data);
-    return {
-      value: latest?.value ?? null,
-      date: latest?.date ?? null,
-      history: monthlyAverages(numericObservations(result?.data), 12, now),
-    };
-  };
   const r10y = fred?.yields.treasury10y ?? emptyReading();
   const r2y = fred?.yields.treasury2y ?? emptyReading();
   const r3m = fred?.yields.treasury3m ?? emptyReading();
   const r5y = fred?.yields.treasury5y ?? emptyReading();
   const r30y = fred?.yields.treasury30y ?? emptyReading();
-  const rFed = rate(fedFunds);
+  const rFed = fred?.fedFunds ?? emptyReading();
+  const unemployment = fred?.unemployment ?? emptyReading();
   const t10y = r10y.value;
   const t2y = r2y.value;
   const t3m = r3m.value;
@@ -239,54 +118,24 @@ async function fetchAllIndicators(apiKey: string | undefined, now: number) {
     },
     
     employment: {
-      unemployment: { value: getValue(unemployment), history: getHistory(unemployment, 24) },
-      trend: (getValue(unemployment) ?? 0) < 4 ? 'tight' : 'loosening',
+      unemployment,
+      trend: (unemployment.value ?? 0) < 4 ? 'tight' : 'loosening',
     },
     
     growth: {
-      realGDP: { 
-        value: getValue(gdp), 
-        history: getHistory(gdp, 8),
-        unit: 'billions USD',
+      realGDP: {
+        ...(fred?.realGdp ?? emptyReading()),
+        unit: '%',
       },
     },
     
     // Market regime assessment
-    regime: determineRegime(t10y, yieldCurve, inflationRate.value, getValue(unemployment)),
+    regime: determineRegime(t10y, yieldCurve, inflationRate.value, unemployment.value),
   };
   
   cache.set('ALL_INDICATORS', { data: dashboard, timestamp: now });
   
   return dashboard;
-}
-
-function formatIndicator(indicator: string, data: any, maturity?: string) {
-  // Numeric rows only, newest first (daily rate series carry '.' on non-trading days).
-  const dataPoints = numericObservations(data);
-  const info = INDICATORS[indicator as keyof typeof INDICATORS] || { name: indicator, category: 'other' };
-  
-  const latest = dataPoints[0];
-  const previous = dataPoints[1];
-  const change = latest && previous 
-    ? Math.round((latest.value - previous.value) * 100) / 100 
-    : null;
-  
-  return {
-    timestamp: new Date().toISOString(),
-    indicator,
-    name: info.name,
-    category: info.category,
-    unit: data.unit || '%',
-    interval: data.interval,
-    maturity: maturity || null,
-    
-    latest: latest ? { date: latest.date, value: latest.value } : null,
-    
-    change,
-    trend: change !== null ? (change > 0 ? 'rising' : change < 0 ? 'falling' : 'flat') : null,
-    
-    history: dataPoints.slice(0, 24),
-  };
 }
 
 function determineRegime(

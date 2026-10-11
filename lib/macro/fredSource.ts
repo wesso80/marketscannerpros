@@ -1,4 +1,4 @@
-/** Visible attribution for public yield and CPI readings. No server imports: client pages use this file. */
+/** Visible attribution for public macro readings. No server imports: client pages use this file. */
 
 export const FRED_PUBLIC_SOURCE = 'Source: FRED (Federal Reserve Bank of St. Louis)';
 

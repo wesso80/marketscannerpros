@@ -1,6 +1,7 @@
 /**
- * Public yield curve and CPI readings from FRED. No database writes.
+ * Public macro readings from FRED. No database writes.
  * Inflation is the CPI index year-over-year percent, not a separate series.
+ * Real GDP is the quarter-on-quarter annualised growth rate.
  */
 
 import { monthlyAverages, type RatePoint } from '@/lib/macro/avRateSeries';
@@ -23,11 +24,23 @@ export type PublicYieldMaturity = keyof typeof PUBLIC_YIELD_SERIES;
 /** CPI index. Inflation percent is derived from this series. */
 export const PUBLIC_CPI_SERIES = 'CPIAUCSL';
 
-const PUBLIC_FRED_INDICATORS = ['TREASURY_YIELD', 'CPI', 'INFLATION'] as const;
+/** Daily effective federal funds rate. Same series the FRED ingest map already uses. */
+export const PUBLIC_FED_FUNDS_SERIES = 'DFF';
+
+/** Monthly unemployment rate. */
+export const PUBLIC_UNEMPLOYMENT_SERIES = 'UNRATE';
+
+/**
+ * Real GDP, percent change from the preceding quarter, seasonally adjusted annual rate.
+ * This is the quarter-on-quarter annualised growth rate, so the level series GDPC1 is not required.
+ */
+export const PUBLIC_REAL_GDP_GROWTH_SERIES = 'A191RL1Q225SBEA';
+
+const PUBLIC_FRED_INDICATORS = ['TREASURY_YIELD', 'FEDERAL_FUNDS_RATE', 'CPI', 'INFLATION', 'UNEMPLOYMENT', 'REAL_GDP'] as const;
 export type PublicFredIndicator = typeof PUBLIC_FRED_INDICATORS[number];
 
 export function isPublicFredIndicator(indicator: string | null): indicator is PublicFredIndicator {
-  return indicator === 'TREASURY_YIELD' || indicator === 'CPI' || indicator === 'INFLATION';
+  return (PUBLIC_FRED_INDICATORS as readonly string[]).includes(indicator ?? '');
 }
 
 export interface PublicSeriesReading {
@@ -42,6 +55,10 @@ export interface PublicFredMacro {
   yields: Record<'treasury3m' | 'treasury2y' | 'treasury5y' | 'treasury10y' | 'treasury30y', PublicSeriesReading>;
   cpi: PublicSeriesReading;
   inflationRate: PublicSeriesReading;
+  fedFunds: PublicSeriesReading;
+  unemployment: PublicSeriesReading;
+  /** Quarter-on-quarter annualised real GDP growth, percent. */
+  realGdp: PublicSeriesReading;
 }
 
 const YIELD_KEYS = {
@@ -109,10 +126,15 @@ async function loadSeries(fredId: string, nowMs: number): Promise<RatePoint[]> {
   return fredPoints(rows);
 }
 
+type LoadedKey = PublicYieldMaturity | 'cpi' | 'fedFunds' | 'unemployment' | 'realGdp';
+
 export async function loadPublicFredMacro(nowMs = Date.now()): Promise<PublicFredMacro> {
-  const jobs: Array<readonly [PublicYieldMaturity | 'cpi', string]> = [
+  const jobs: Array<readonly [LoadedKey, string]> = [
     ...Object.entries(PUBLIC_YIELD_SERIES).map(([maturity, fredId]) => [maturity as PublicYieldMaturity, fredId] as const),
     ['cpi', PUBLIC_CPI_SERIES] as const,
+    ['fedFunds', PUBLIC_FED_FUNDS_SERIES] as const,
+    ['unemployment', PUBLIC_UNEMPLOYMENT_SERIES] as const,
+    ['realGdp', PUBLIC_REAL_GDP_GROWTH_SERIES] as const,
   ];
   const loaded = await Promise.all(jobs.map(async ([key, fredId]) => {
     try {
@@ -137,12 +159,24 @@ export async function loadPublicFredMacro(nowMs = Date.now()): Promise<PublicFre
   const cpi = levelReading(cpiPoints, 12);
   const inflationPoints = cpiYearOverYear(cpiPoints);
   const inflationRate = levelReading(inflationPoints, 24);
+  const fedPoints = byKey.get('fedFunds') ?? [];
+  const fedLatest = fedPoints[0];
+  const fedFunds: PublicSeriesReading = {
+    value: fedLatest?.value ?? null,
+    date: fedLatest?.date ?? null,
+    history: monthlyAverages(fedPoints, 12, nowMs),
+  };
+  const unemployment = levelReading(byKey.get('unemployment') ?? [], 24);
+  const realGdp = levelReading(byKey.get('realGdp') ?? [], 8);
   const asOf = newestObservationDate([
     ...Object.values(yields).map((row) => row.date),
     cpi.date,
     inflationRate.date,
+    fedFunds.date,
+    unemployment.date,
+    realGdp.date,
   ]);
-  return { source: FRED_PUBLIC_SOURCE, asOf, yields, cpi, inflationRate };
+  return { source: FRED_PUBLIC_SOURCE, asOf, yields, cpi, inflationRate, fedFunds, unemployment, realGdp };
 }
 
 function formatSeries(input: {
@@ -193,6 +227,44 @@ export async function readPublicFredIndicator(
       interval: monthly ? 'monthly' : 'daily',
       maturity,
       points: monthly ? monthlyAverages(points, 24, nowMs) : points,
+      nowMs,
+    });
+  }
+  if (indicator === 'FEDERAL_FUNDS_RATE') {
+    const points = await loadSeries(PUBLIC_FED_FUNDS_SERIES, nowMs);
+    const monthly = opts.interval === 'monthly';
+    return formatSeries({
+      indicator,
+      name: 'Federal Funds Rate',
+      category: 'rates',
+      unit: '%',
+      interval: monthly ? 'monthly' : 'daily',
+      maturity: null,
+      points: monthly ? monthlyAverages(points, 24, nowMs) : points,
+      nowMs,
+    });
+  }
+  if (indicator === 'UNEMPLOYMENT') {
+    return formatSeries({
+      indicator,
+      name: 'Unemployment Rate',
+      category: 'employment',
+      unit: '%',
+      interval: 'monthly',
+      maturity: null,
+      points: await loadSeries(PUBLIC_UNEMPLOYMENT_SERIES, nowMs),
+      nowMs,
+    });
+  }
+  if (indicator === 'REAL_GDP') {
+    return formatSeries({
+      indicator,
+      name: 'Real GDP, quarter-on-quarter annualised',
+      category: 'growth',
+      unit: '%',
+      interval: 'quarterly',
+      maturity: null,
+      points: await loadSeries(PUBLIC_REAL_GDP_GROWTH_SERIES, nowMs),
       nowMs,
     });
   }

@@ -97,9 +97,22 @@ function macroAsOf(data: MacroData | null): string | null {
     data.rates.treasury3m?.date,
     data.rates.treasury5y?.date,
     data.rates.treasury30y?.date,
+    data.rates.fedFunds?.date,
     data.inflation.inflationRate.date,
     data.inflation.cpi.date,
+    data.employment.unemployment?.date,
+    data.growth.realGDP?.date,
   ]);
+}
+
+function formatRealGdp(gdp: { value: number | null; unit?: string }) {
+  if (typeof gdp.value !== 'number' || !Number.isFinite(gdp.value)) return 'Not collected';
+  if (gdp.unit === '%') return toPct(gdp.value, 1);
+  return `$${(gdp.value / 1000).toFixed(1)}T`;
+}
+
+function realGdpLabel(unit?: string) {
+  return unit === '%' ? 'Real GDP, quarter-on-quarter annualised' : 'Real GDP';
 }
 
 function safeNumber(value: unknown, fallback = 0) {
@@ -505,7 +518,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   {label: 'Rates', value: data.rates.treasury10y.value, format: (n: number) => toPct(n)},
                   {label: 'Curve', value: data.rates.yieldCurve.value, format: (n: number) => toPct(n)},
                   {label: 'Inflation', value: data.inflation.inflationRate.value, format: (n: number) => toPct(n, 1)},
-                  {label: 'Growth', value: data.growth.realGDP.value, format: (n: number) => `$${(n / 1000).toFixed(1)}T`},
+                  {label: 'Growth', value: data.growth.realGDP.value, format: (n: number) => data.growth.realGDP.unit === '%' ? toPct(n, 1) : `$${(n / 1000).toFixed(1)}T`},
                 ].filter(item => typeof item.value === 'number' && Number.isFinite(item.value)).map(item => <div data-macro-tile key={item.label}><StatTile label={item.label} value={item.format(item.value!)} /></div>)}
               </div>
               {incompleteFeeds.length > 0 && <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-200">Not collected: {incompleteFeeds.join(' · ')}.</p>}
@@ -566,7 +579,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                         {data.rates.yieldCurve3m10y && (
                           <span className="text-white/60">3m10y Spread: <span className={data.rates.yieldCurve3m10y.inverted ? 'text-rose-400 font-semibold' : 'text-emerald-400 font-semibold'}>{toPct(data.rates.yieldCurve3m10y.value)} {macroLabel(data.rates.yieldCurve3m10y.label)}</span></span>
                         )}
-                        <span className="text-white/60">Fed Funds: <span className="text-white font-semibold">{toPct(data.rates.fedFunds.value)}</span></span>
+                        <span className="text-white/60">Fed Funds: <span className="text-white font-semibold">{toPct(data.rates.fedFunds.value)}</span>{data.rates.fedFunds.date ? ` (as of ${data.rates.fedFunds.date})` : ''}</span>
                       </div>
                     </div>
                   );
@@ -691,8 +704,8 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   <div className="text-xs text-white/50">Growth</div>
                   <Sparkline data={data.growth.realGDP.history} stroke="#94a3b8" />
                 </div>
-                <div className="text-2xl font-semibold">{typeof data.growth.realGDP.value === 'number' ? `$${(data.growth.realGDP.value / 1000).toFixed(1)}T` : 'Not collected'}</div>
-                <div className="mt-1 text-xs text-white/60">Real GDP • {(data.growth.realGDP.history?.length ?? 0) > 1 ? trendDirection(data.growth.realGDP.history) : 'Not collected'}</div>
+                <div className="text-2xl font-semibold">{formatRealGdp(data.growth.realGDP)}</div>
+                <div className="mt-1 text-xs text-white/60">{realGdpLabel(data.growth.realGDP.unit)}{data.growth.realGDP.date ? ` (as of ${data.growth.realGDP.date})` : ''} • {(data.growth.realGDP.history?.length ?? 0) > 1 ? trendDirection(data.growth.realGDP.history) : 'Not collected'}</div>
               </div>
 
               <div id="employment" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
@@ -701,7 +714,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   <Sparkline data={data.employment.unemployment.history} stroke="#fbbf24" />
                 </div>
                 <div className="text-2xl font-semibold">{toPct(data.employment.unemployment.value, 1)}</div>
-                <div className="mt-1 text-xs text-white/60">Unemployment • {macroLabel(data.employment.trend)}</div>
+                <div className="mt-1 text-xs text-white/60">Unemployment{data.employment.unemployment.date ? ` (as of ${data.employment.unemployment.date})` : ''} • {macroLabel(data.employment.trend)}</div>
               </div>
             </section>
             </CollapsibleSection>
@@ -905,14 +918,14 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
             <details className="rounded-xl border border-white/10 bg-white/5" open={false}>
               <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-xl">Deep Dive: Employment</summary>
               <div className="border-t border-white/10 p-3 md:p-4 text-xs text-white/75">
-                Unemployment: {toPct(data.employment.unemployment.value, 1)} • Trend: {macroLabel(data.employment.trend)}
+                Unemployment: {toPct(data.employment.unemployment.value, 1)}{data.employment.unemployment.date ? ` (as of ${data.employment.unemployment.date})` : ''} • Trend: {macroLabel(data.employment.trend)}
               </div>
             </details>
 
             <details className="rounded-xl border border-white/10 bg-white/5" open={false}>
               <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-xl">Deep Dive: Growth</summary>
               <div className="border-t border-white/10 p-3 md:p-4 text-xs text-white/75">
-                Real GDP: {typeof data.growth.realGDP.value === 'number' ? `$${(data.growth.realGDP.value / 1000).toFixed(1)}T` : 'Not collected'} • Trend: {(data.growth.realGDP.history?.length ?? 0) > 1 ? trendDirection(data.growth.realGDP.history) : 'Not collected'}
+                {realGdpLabel(data.growth.realGDP.unit)}: {formatRealGdp(data.growth.realGDP)}{data.growth.realGDP.date ? ` (as of ${data.growth.realGDP.date})` : ''} • Trend: {(data.growth.realGDP.history?.length ?? 0) > 1 ? trendDirection(data.growth.realGDP.history) : 'Not collected'}
               </div>
             </details>
 
